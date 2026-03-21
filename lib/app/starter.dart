@@ -11,12 +11,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:monitoring/monitoring.dart';
-import 'package:nota/app/bloc/app_bloc_observer.dart';
-import 'package:nota/app/bloc/bloc_transformer.dart';
-import 'package:nota/app/composition.dart';
-import 'package:nota/app/config/application_config.dart';
-import 'package:nota/app/initialization_failed_screen.dart';
-import 'package:nota/app/root_context.dart';
+import 'package:readflex/app/bloc/app_bloc_observer.dart';
+import 'package:readflex/app/bloc/bloc_transformer.dart';
+import 'package:readflex/app/composition.dart';
+import 'package:readflex/app/config/application_config.dart';
+import 'package:readflex/app/initialization_failed_screen.dart';
+import 'package:readflex/app/root_context.dart';
 
 /// Initializes dependencies and runs app.
 Future<void> starter() async {

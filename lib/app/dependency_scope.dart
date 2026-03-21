@@ -5,8 +5,8 @@
 // it being passed through every intermediate constructor.
 
 import 'package:flutter/widgets.dart';
-import 'package:nota/app/dependency_container.dart';
-import 'package:nota/utils/inherited_extension.dart';
+import 'package:readflex/app/dependency_container.dart';
+import 'package:readflex/utils/inherited_extension.dart';
 
 /// A scope that provides [DependenciesContainer] to the application.
 class DependenciesScope extends StatelessWidget {

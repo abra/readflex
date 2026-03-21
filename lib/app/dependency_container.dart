@@ -4,8 +4,9 @@
 // singletons or a service locator. This keeps dependencies explicit and makes
 // them easy to substitute in tests via TestDependenciesContainer.
 
-import 'package:nota/app/config/application_config.dart';
+import 'package:monitoring/monitoring.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:readflex/app/config/application_config.dart';
 
 /// Container for global dependencies.
 class DependenciesContainer {

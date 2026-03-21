@@ -5,11 +5,9 @@
 // initialization logic.
 
 import 'package:flutter/widgets.dart';
-import 'package:nota/app/composition.dart';
-import 'package:nota/app/dependency_scope.dart';
-import 'package:nota/app/material_context.dart';
-import 'package:preferences_service/preferences_service.dart'
-    show PreferencesScope;
+import 'package:readflex/app/composition.dart';
+import 'package:readflex/app/dependency_scope.dart';
+import 'package:readflex/app/material_context.dart';
 
 class RootContext extends StatelessWidget {
   const RootContext({required this.compositionResult, super.key});
@@ -20,10 +18,7 @@ class RootContext extends StatelessWidget {
   Widget build(BuildContext context) {
     return DependenciesScope(
       dependencies: compositionResult.dependencies,
-      child: PreferencesScope(
-        service: compositionResult.dependencies.preferencesService,
-        child: const MaterialContext(),
-      ),
+      child: const MaterialContext(),
     );
   }
 }

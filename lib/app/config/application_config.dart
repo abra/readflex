@@ -5,7 +5,7 @@
 // TestConfig uses noSuchMethod to fail loudly when a test accesses
 // a config value it did not provide.
 
-import 'package:nota/app/config/environment.dart';
+import 'package:readflex/app/config/environment.dart';
 
 /// Application configuration
 class ApplicationConfig {

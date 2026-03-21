@@ -5,9 +5,9 @@
 // with substituted implementations.
 
 import 'package:monitoring/monitoring.dart';
-import 'package:nota/app/config/application_config.dart';
-import 'package:nota/app/config/supported_locales.dart';
-import 'package:nota/app/dependency_container.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:readflex/app/config/application_config.dart';
+import 'package:readflex/app/dependency_container.dart';
 
 /// Creates the [Logger] instance and attaches any provided observers.
 Logger createAppLogger({List<LogObserver> observers = const []}) {
@@ -87,19 +87,11 @@ Future<DependenciesContainer> createDependenciesContainer(
   ErrorReportingService errorReporter,
 ) async {
   final packageInfo = await PackageInfo.fromPlatform();
-  final preferencesService = await PreferencesService.create(
-    supportedCodes: SupportedLocales.codes,
-  );
-  final noteRepository = NoteRepository();
-  final imageFiles = ImageFiles();
 
   return DependenciesContainer(
     logger: logger,
     config: config,
     errorReporter: errorReporter,
     packageInfo: packageInfo,
-    preferencesService: preferencesService,
-    noteRepository: noteRepository,
-    imageFiles: imageFiles,
   );
 }
