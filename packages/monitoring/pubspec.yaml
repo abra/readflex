@@ -1,0 +1,16 @@
+name: monitoring
+description: "Stub monitoring package — Logger base class and ErrorReportingService interface. Not production-ready: extend Logger and implement ErrorReportingService for real use."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  clock: ^1.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
