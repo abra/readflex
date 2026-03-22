@@ -47,6 +47,14 @@ dependencies:
     path: packages/features/splash
   onboarding:
     path: packages/features/onboarding
+  library_feature:
+    path: packages/features/library
+  import_flow:
+    path: packages/features/import_flow
+  home_feature:
+    path: packages/features/home
+  profile_feature:
+    path: packages/features/profile
 
   # External packages
   cupertino_icons: ^1.0.8

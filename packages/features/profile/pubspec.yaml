@@ -1,0 +1,31 @@
+name: profile_feature
+description: Profile screen with settings, auth, and premium status
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  flutter_bloc: ^9.1.1
+  equatable: ^2.0.8
+
+  auth_service:
+    path: ../../auth_service
+  subscription_service:
+    path: ../../subscription_service
+  component_library:
+    path: ../../component_library
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+  bloc_test: ^10.0.0
+
+flutter:
+  uses-material-design: true

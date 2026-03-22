@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:home_feature/home_feature.dart';
+import 'package:import_flow/import_flow.dart';
+import 'package:library_feature/library_feature.dart';
 import 'package:onboarding/onboarding.dart';
+import 'package:profile_feature/profile_feature.dart';
 import 'package:readflex/app/dependency_container.dart';
+import 'package:readflex/app/dependency_scope.dart';
 import 'package:splash/splash.dart';
 
 abstract final class AppRoutes {
@@ -38,8 +43,23 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
             routes: [
               GoRoute(
                 path: AppRoutes.home,
-                builder: (context, state) =>
-                    const _PlaceholderTab(label: 'Home'),
+                builder: (context, state) {
+                  final deps = DependenciesScope.of(context);
+                  return HomeScreen(
+                    bookRepository: deps.bookRepository,
+                    highlightRepository: deps.highlightRepository,
+                    flashcardRepository: deps.flashcardRepository,
+                    onBookPressed: (book) => _router(context).go(
+                      '/reader/${book.id}',
+                    ),
+                    onArticlePressed: (article) => _router(context).go(
+                      '/reader/${article.id}',
+                    ),
+                    onPracticePressed: () => _router(context).go(
+                      AppRoutes.practice,
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -47,8 +67,29 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
             routes: [
               GoRoute(
                 path: AppRoutes.library,
-                builder: (context, state) =>
-                    const _PlaceholderTab(label: 'Library'),
+                builder: (context, state) {
+                  final deps = DependenciesScope.of(context);
+                  return LibraryScreen(
+                    bookRepository: deps.bookRepository,
+                    onBookPressed: (book) => _router(context).go(
+                      '/reader/${book.id}',
+                    ),
+                    onArticlePressed: (article) => _router(context).go(
+                      '/reader/${article.id}',
+                    ),
+                    onAddPressed: () => showImportFlowSheet(
+                      context,
+                      articleParser: deps.articleParser,
+                      bookRepository: deps.bookRepository,
+                      onBookFilePicked: () {
+                        // TODO: integrate file_picker
+                      },
+                      onArticleImported: () {
+                        // Library will refresh via BLoC
+                      },
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -74,8 +115,19 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
             routes: [
               GoRoute(
                 path: AppRoutes.profile,
-                builder: (context, state) =>
-                    const _PlaceholderTab(label: 'Profile'),
+                builder: (context, state) {
+                  final deps = DependenciesScope.of(context);
+                  return ProfileScreen(
+                    authService: deps.authService,
+                    subscriptionService: deps.subscriptionService,
+                    onSignInPressed: () {
+                      // TODO: navigate to sign in flow
+                    },
+                    onPremiumPressed: () {
+                      // TODO: show paywall
+                    },
+                  );
+                },
               ),
             ],
           ),

@@ -38,6 +38,10 @@ run "subscription_service"         "flutter test test/" "$SCRIPT_DIR/packages/su
 run "notification_service"         "flutter test test/" "$SCRIPT_DIR/packages/notification_service"
 run "splash"                       "flutter test test/" "$SCRIPT_DIR/packages/features/splash"
 run "onboarding"                   "flutter test test/" "$SCRIPT_DIR/packages/features/onboarding"
+run "library"                      "flutter test test/" "$SCRIPT_DIR/packages/features/library"
+run "import_flow"                  "flutter test test/" "$SCRIPT_DIR/packages/features/import_flow"
+run "home"                         "flutter test test/" "$SCRIPT_DIR/packages/features/home"
+run "profile"                      "flutter test test/" "$SCRIPT_DIR/packages/features/profile"
 
 echo ""
 echo "────────────────────────────"
