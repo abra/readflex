@@ -1,0 +1,22 @@
+name: highlight_repository
+description: "Highlight domain logic. Maps storage to domain models."
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  shared:
+    path: ../shared
+  local_storage:
+    path: ../local_storage
+  drift: ^2.23.1
+  uuid: ^4.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  sqlite3: ^2.7.0

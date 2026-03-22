@@ -26,6 +26,9 @@ run "monitoring"                   "flutter test test/" "$SCRIPT_DIR/packages/mo
 run "component_library"            "flutter test test/" "$SCRIPT_DIR/packages/component_library"
 run "local_storage"                "flutter test test/" "$SCRIPT_DIR/packages/local_storage"
 run "book_repository"              "flutter test test/" "$SCRIPT_DIR/packages/book_repository"
+run "highlight_repository"         "flutter test test/" "$SCRIPT_DIR/packages/highlight_repository"
+run "dictionary_repository"        "flutter test test/" "$SCRIPT_DIR/packages/dictionary_repository"
+run "flashcard_repository"         "flutter test test/" "$SCRIPT_DIR/packages/flashcard_repository"
 
 echo ""
 echo "────────────────────────────"
