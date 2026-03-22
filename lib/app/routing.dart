@@ -1,9 +1,11 @@
+import 'package:dictionary_feature/dictionary_feature.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:home_feature/home_feature.dart';
 import 'package:import_flow/import_flow.dart';
 import 'package:library_feature/library_feature.dart';
 import 'package:onboarding/onboarding.dart';
+import 'package:practice_feature/practice_feature.dart';
 import 'package:profile_feature/profile_feature.dart';
 import 'package:readflex/app/dependency_container.dart';
 import 'package:readflex/app/dependency_scope.dart';
@@ -97,8 +99,12 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
             routes: [
               GoRoute(
                 path: AppRoutes.dictionary,
-                builder: (context, state) =>
-                    const _PlaceholderTab(label: 'Dictionary'),
+                builder: (context, state) {
+                  final deps = DependenciesScope.of(context);
+                  return DictionaryScreen(
+                    dictionaryRepository: deps.dictionaryRepository,
+                  );
+                },
               ),
             ],
           ),
@@ -106,8 +112,12 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
             routes: [
               GoRoute(
                 path: AppRoutes.practice,
-                builder: (context, state) =>
-                    const _PlaceholderTab(label: 'Practice'),
+                builder: (context, state) {
+                  final deps = DependenciesScope.of(context);
+                  return PracticeScreen(
+                    flashcardRepository: deps.flashcardRepository,
+                  );
+                },
               ),
             ],
           ),

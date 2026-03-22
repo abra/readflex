@@ -42,6 +42,8 @@ run "library"                      "flutter test test/" "$SCRIPT_DIR/packages/fe
 run "import_flow"                  "flutter test test/" "$SCRIPT_DIR/packages/features/import_flow"
 run "home"                         "flutter test test/" "$SCRIPT_DIR/packages/features/home"
 run "profile"                      "flutter test test/" "$SCRIPT_DIR/packages/features/profile"
+run "dictionary"                   "flutter test test/" "$SCRIPT_DIR/packages/features/dictionary"
+run "practice"                     "flutter test test/" "$SCRIPT_DIR/packages/features/practice"
 
 echo ""
 echo "────────────────────────────"
