@@ -156,9 +156,8 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
                   return ProfileScreen(
                     authService: dependencies.authService,
                     subscriptionService: dependencies.subscriptionService,
-                    onSignInPressed: () {
-                      // TODO: navigate to sign in flow
-                    },
+                    // TODO: navigate to sign in flow.
+                    onSignInPressed: () {},
                     onPremiumPressed: () => showPaywallSheet(
                       context,
                       subscriptionService: dependencies.subscriptionService,

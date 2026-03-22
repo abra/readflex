@@ -34,8 +34,7 @@ Logger createAppLogger({List<LogObserver> observers = const []}) {
 
 /// Creates the [ErrorReportingService] instance.
 ///
-/// Replace [NoopErrorReporter] with a real implementation (e.g. Crashlytics)
-/// from packages/monitoring when ready.
+// TODO: replace NoopErrorReporter with real implementation (e.g. Sentry).
 Future<ErrorReportingService> createErrorReporter(
   ApplicationConfig config,
 ) async {
@@ -123,7 +122,7 @@ Future<DependenciesContainer> createDependenciesContainer(
     supportedCodes: ['en', 'ru'],
   );
 
-  // ─── Services (stubs for now) ───
+  // TODO: replace Noop stubs with real implementations.
   final authService = NoopAuthService();
   const articleParser = NoopArticleParser();
   const translationService = NoopTranslationService();

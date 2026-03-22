@@ -68,7 +68,7 @@ class _ReaderView extends StatelessWidget {
             child: IconButton(
               icon: const Icon(Icons.highlight),
               onPressed: () {
-                // TODO: show highlights list
+                // TODO: show highlights list as bottom sheet.
               },
             ),
           ),
@@ -117,7 +117,7 @@ class _ReadyContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Main content area — placeholder for WebView
+        // TODO: replace placeholder with WebView (foliate-js / flutter_inappwebview).
         Center(
           child: Padding(
             padding: const EdgeInsets.all(Spacing.large),
@@ -188,7 +188,7 @@ class _ReadyContent extends StatelessWidget {
             bottom: state.hasSelection ? 80 : Spacing.medium,
             child: _ReviewReminderBanner(
               onReview: () {
-                // TODO: start mini review session
+                // TODO: start mini review session as overlay.
               },
               onDismiss: () {
                 context.read<ReaderBloc>().add(
