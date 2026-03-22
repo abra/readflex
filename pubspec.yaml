@@ -42,6 +42,12 @@ dependencies:
   notification_service:
     path: packages/notification_service
 
+  # Feature packages
+  splash:
+    path: packages/features/splash
+  onboarding:
+    path: packages/features/onboarding
+
   # External packages
   cupertino_icons: ^1.0.8
   flutter_bloc: ^9.1.1

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:onboarding/onboarding.dart';
 import 'package:readflex/app/dependency_container.dart';
+import 'package:splash/splash.dart';
 
 abstract final class AppRoutes {
+  static const splash = '/';
   static const home = '/home';
   static const library = '/library';
   static const dictionary = '/dictionary';
@@ -17,8 +20,15 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
 
   return GoRouter(
     debugLogDiagnostics: dependencies.config.isDev,
-    initialLocation: AppRoutes.home,
+    initialLocation: AppRoutes.splash,
     routes: [
+      GoRoute(
+        path: AppRoutes.splash,
+        builder: (context, state) => SplashScreen(
+          onFirstLaunch: () => _router(context).go(AppRoutes.onboarding),
+          onHome: () => _router(context).go(AppRoutes.home),
+        ),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return _ScaffoldWithNavBar(navigationShell: navigationShell);
@@ -80,11 +90,15 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
       ),
       GoRoute(
         path: AppRoutes.onboarding,
-        builder: (context, state) => const _PlaceholderTab(label: 'Onboarding'),
+        builder: (context, state) => OnboardingScreen(
+          onComplete: () => _router(context).go(AppRoutes.home),
+        ),
       ),
     ],
   );
 }
+
+GoRouter _router(BuildContext context) => GoRouter.of(context);
 
 /// Shell scaffold with bottom navigation bar.
 class _ScaffoldWithNavBar extends StatelessWidget {

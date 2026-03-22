@@ -3,8 +3,7 @@ enum Rating {
   again,
   hard,
   good,
-  easy
-  ;
+  easy;
 
   static Rating from(String value) => Rating.values.firstWhere(
     (e) => e.name == value,
