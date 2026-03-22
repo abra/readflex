@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:fsrs/fsrs.dart' as fsrs;
 import 'package:local_storage/local_storage.dart';
 import 'package:shared/shared.dart';
@@ -13,63 +12,35 @@ const _uuid = Uuid();
 /// Domain repository for flashcards with FSRS v6 scheduling.
 class FlashcardRepository {
   FlashcardRepository({
-    @visibleForTesting FlashcardsDao? flashcardsDao,
-    @visibleForTesting fsrs.Scheduler? scheduler,
+    required FlashcardsDao flashcardsDao,
+    fsrs.Scheduler? scheduler,
   }) : _dao = flashcardsDao,
        _scheduler = scheduler ?? fsrs.Scheduler();
 
-  FlashcardsDao? _dao;
+  final FlashcardsDao _dao;
   final fsrs.Scheduler _scheduler;
-
-  void init(FlashcardsDao dao) => _dao = dao;
-
-  FlashcardsDao get _cards {
-    final dao = _dao;
-    if (dao == null) {
-      throw StateError(
-        'FlashcardRepository not initialized. Call init() first.',
-      );
-    }
-    return dao;
-  }
 
   // ─── CRUD ───
 
   Future<List<Flashcard>> getFlashcards() async {
-    try {
-      final rows = await _cards.allFlashcards();
-      return rows.map((r) => r.toDomainModel()).toList();
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    final rows = await _dao.allFlashcards();
+    return rows.map((r) => r.toDomainModel()).toList();
   }
 
   Future<List<Flashcard>> getFlashcardsByDeck(String deckId) async {
-    try {
-      final rows = await _cards.flashcardsByDeck(deckId);
-      return rows.map((r) => r.toDomainModel()).toList();
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    final rows = await _dao.flashcardsByDeck(deckId);
+    return rows.map((r) => r.toDomainModel()).toList();
   }
 
   Future<List<Flashcard>> getDueFlashcards() async {
-    try {
-      final now = DateTime.now().toUtc().toIso8601String();
-      final rows = await _cards.dueFlashcards(now);
-      return rows.map((r) => r.toDomainModel()).toList();
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    final now = DateTime.now().toUtc().toIso8601String();
+    final rows = await _dao.dueFlashcards(now);
+    return rows.map((r) => r.toDomainModel()).toList();
   }
 
   Future<Flashcard?> getFlashcardById(String id) async {
-    try {
-      final row = await _cards.flashcardById(id);
-      return row?.toDomainModel();
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    final row = await _dao.flashcardById(id);
+    return row?.toDomainModel();
   }
 
   Future<Flashcard> addFlashcard({
@@ -90,29 +61,17 @@ class FlashcardRepository {
       creationSource: creationSource,
       createdAt: DateTime.now(),
     );
-    try {
-      await _cards.insertFlashcard(card.toStorageModel());
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    await _dao.insertFlashcard(card.toStorageModel());
     return card;
   }
 
   Future<Flashcard> updateFlashcard(Flashcard card) async {
-    try {
-      await _cards.updateFlashcard(card.toStorageModel());
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    await _dao.updateFlashcard(card.toStorageModel());
     return card;
   }
 
   Future<void> deleteFlashcard(String id) async {
-    try {
-      await _cards.deleteFlashcard(id);
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    await _dao.deleteFlashcard(id);
   }
 
   // ─── Review (FSRS) ───
@@ -196,12 +155,8 @@ class FlashcardRepository {
       reviewedAt: now,
     );
 
-    try {
-      await _cards.updateFlashcard(updatedFlashcard.toStorageModel());
-      await _cards.insertReviewLog(log.toStorageModel());
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    await _dao.updateFlashcard(updatedFlashcard.toStorageModel());
+    await _dao.insertReviewLog(log.toStorageModel());
 
     return updatedFlashcard;
   }

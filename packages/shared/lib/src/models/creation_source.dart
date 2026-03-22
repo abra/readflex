@@ -5,8 +5,10 @@ enum CreationSource {
   aiSelection
   ;
 
-  static CreationSource from(String value) => CreationSource.values.firstWhere(
-    (e) => e.name == value,
-    orElse: () => CreationSource.manual,
-  );
+  static CreationSource from(String value) => switch (value) {
+    'manual' => manual,
+    'aiHighlight' => aiHighlight,
+    'aiSelection' => aiSelection,
+    _ => manual,
+  };
 }

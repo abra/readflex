@@ -41,6 +41,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           status: HomeStatus.success,
           recentBooks: books,
           recentArticles: articles,
+          recentItems: _recentItems(books, articles),
           totalHighlights: highlights.length,
           dueFlashcards: dueCards.length,
         ),
@@ -48,5 +49,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     } catch (e) {
       emit(state.copyWith(status: HomeStatus.failure));
     }
+  }
+
+  static List<Object> _recentItems(List<Book> books, List<Article> articles) {
+    final all = <({DateTime date, Object item})>[
+      for (final b in books) (date: b.lastOpenedAt ?? b.addedAt, item: b),
+      for (final a in articles) (date: a.lastOpenedAt ?? a.addedAt, item: a),
+    ];
+    all.sort((a, b) => b.date.compareTo(a.date));
+    return all.take(5).map((e) => e.item).toList();
   }
 }

@@ -43,6 +43,7 @@ void main() {
           status: LibraryStatus.success,
           books: [_book],
           articles: [_article],
+          items: [_article, _book],
         ),
       ],
     );
@@ -122,6 +123,7 @@ void main() {
         status: LibraryStatus.success,
         books: [older],
         articles: [newer],
+        items: [newer, older],
       );
 
       expect(state.items, [newer, older]);

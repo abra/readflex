@@ -6,37 +6,32 @@ final class DictionaryState extends Equatable {
   const DictionaryState({
     this.status = DictionaryStatus.initial,
     this.entries = const [],
+    this.filteredEntries = const [],
     this.searchQuery = '',
   });
 
   final DictionaryStatus status;
   final List<DictionaryEntry> entries;
-  final String searchQuery;
 
-  List<DictionaryEntry> get filteredEntries {
-    if (searchQuery.isEmpty) return entries;
-    final query = searchQuery.toLowerCase();
-    return entries
-        .where(
-          (e) =>
-              e.word.toLowerCase().contains(query) ||
-              e.translation.toLowerCase().contains(query),
-        )
-        .toList();
-  }
+  /// Pre-computed filtered results.
+  final List<DictionaryEntry> filteredEntries;
+
+  final String searchQuery;
 
   bool get isEmpty => entries.isEmpty;
 
   DictionaryState copyWith({
     DictionaryStatus? status,
     List<DictionaryEntry>? entries,
+    List<DictionaryEntry>? filteredEntries,
     String? searchQuery,
   }) => DictionaryState(
     status: status ?? this.status,
     entries: entries ?? this.entries,
+    filteredEntries: filteredEntries ?? this.filteredEntries,
     searchQuery: searchQuery ?? this.searchQuery,
   );
 
   @override
-  List<Object?> get props => [status, entries, searchQuery];
+  List<Object?> get props => [status, entries, filteredEntries, searchQuery];
 }

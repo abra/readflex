@@ -6,8 +6,11 @@ enum Rating {
   easy
   ;
 
-  static Rating from(String value) => Rating.values.firstWhere(
-    (e) => e.name == value,
-    orElse: () => Rating.again,
-  );
+  static Rating from(String value) => switch (value) {
+    'again' => again,
+    'hard' => hard,
+    'good' => good,
+    'easy' => easy,
+    _ => again,
+  };
 }

@@ -135,9 +135,7 @@ class _HighlightSheetView extends StatelessWidget {
                         : () => context.read<HighlightCubit>().save(
                             text: selection.selectedText,
                             sourceId: selection.sourceId,
-                            sourceType: SourceType.from(
-                              selection.sourceType,
-                            ),
+                            sourceType: selection.sourceType,
                             cfiRange: selection.cfiRange,
                             pageNumber: selection.pageNumber,
                             scrollOffset: selection.scrollOffset,

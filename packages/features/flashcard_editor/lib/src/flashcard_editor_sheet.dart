@@ -141,9 +141,7 @@ class _FlashcardEditorSheetView extends StatelessWidget {
                         ? null
                         : () => context.read<FlashcardEditorCubit>().save(
                             sourceId: selection.sourceId,
-                            sourceType: SourceType.from(
-                              selection.sourceType,
-                            ),
+                            sourceType: selection.sourceType,
                           ),
                     child: isSaving
                         ? const SizedBox(

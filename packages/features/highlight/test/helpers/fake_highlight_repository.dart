@@ -1,7 +1,10 @@
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:shared/shared.dart';
 
-class FakeHighlightRepository extends HighlightRepository {
+class FakeHighlightRepository implements HighlightRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
   bool shouldThrow = false;
 
   final List<Highlight> highlights = [];

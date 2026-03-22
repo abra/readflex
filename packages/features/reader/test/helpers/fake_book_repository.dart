@@ -1,7 +1,10 @@
 import 'package:book_repository/book_repository.dart';
 import 'package:shared/shared.dart';
 
-class FakeBookRepository extends BookRepository {
+class FakeBookRepository implements BookRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
   bool shouldThrow = false;
 
   final List<Book> books = [];
@@ -11,6 +14,7 @@ class FakeBookRepository extends BookRepository {
   Article? updatedArticle;
 
   void seedBook(Book book) => books.add(book);
+
   void seedArticle(Article article) => articles.add(article);
 
   @override

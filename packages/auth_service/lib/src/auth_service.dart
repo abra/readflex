@@ -1,5 +1,3 @@
-import 'dart:async';
-
 /// User authentication state.
 enum AuthStatus { unauthenticated, authenticated }
 
@@ -40,9 +38,7 @@ abstract class AuthService {
 
 /// Stub auth service — always unauthenticated.
 class NoopAuthService implements AuthService {
-  NoopAuthService();
-
-  final _controller = StreamController<AuthStatus>.broadcast();
+  const NoopAuthService();
 
   @override
   AuthStatus get status => AuthStatus.unauthenticated;
@@ -51,7 +47,7 @@ class NoopAuthService implements AuthService {
   AuthUser? get currentUser => null;
 
   @override
-  Stream<AuthStatus> get statusStream => _controller.stream;
+  Stream<AuthStatus> get statusStream => const Stream.empty();
 
   @override
   Future<void> signIn({
@@ -69,5 +65,5 @@ class NoopAuthService implements AuthService {
   Future<void> signOut() async {}
 
   @override
-  void dispose() => _controller.close();
+  void dispose() {}
 }

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared/shared.dart';
 
 part 'library_event.dart';
+
 part 'library_state.dart';
 
 class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
@@ -66,10 +67,20 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
           status: LibraryStatus.success,
           books: books,
           articles: articles,
+          items: _sortedItems(books, articles),
         ),
       );
     } catch (e) {
       emit(state.copyWith(status: LibraryStatus.failure));
     }
+  }
+
+  static List<Object> _sortedItems(List<Book> books, List<Article> articles) {
+    final all = <({DateTime addedAt, Object item})>[
+      for (final b in books) (addedAt: b.addedAt, item: b),
+      for (final a in articles) (addedAt: a.addedAt, item: a),
+    ];
+    all.sort((a, b) => b.addedAt.compareTo(a.addedAt));
+    return all.map((e) => e.item).toList();
   }
 }

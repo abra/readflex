@@ -37,6 +37,7 @@ class DependenciesContainer {
     required this.subscriptionService,
     required this.connectivityService,
     required this.notificationService,
+    this.dispose,
   });
 
   final Logger logger;
@@ -54,6 +55,9 @@ class DependenciesContainer {
   final SubscriptionService subscriptionService;
   final ConnectivityService connectivityService;
   final NotificationService notificationService;
+
+  /// Releases resources (database, streams, etc.).
+  final Future<void> Function()? dispose;
 }
 
 /// A special version of [DependenciesContainer] that is used in tests.

@@ -1,6 +1,5 @@
 import 'package:dictionary_feature/dictionary_feature.dart';
 import 'package:flashcard_editor/flashcard_editor.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:highlight_feature/highlight_feature.dart';
 import 'package:home_feature/home_feature.dart';
@@ -10,11 +9,11 @@ import 'package:onboarding/onboarding.dart';
 import 'package:paywall_feature/paywall_feature.dart';
 import 'package:practice_feature/practice_feature.dart';
 import 'package:profile_feature/profile_feature.dart';
-import 'package:translate_feature/translate_feature.dart';
 import 'package:reader_feature/reader_feature.dart';
+import 'package:readflex/app/bottom_navigation_bar.dart';
 import 'package:readflex/app/dependency_container.dart';
-import 'package:readflex/app/dependency_scope.dart';
 import 'package:splash/splash.dart';
+import 'package:translate_feature/translate_feature.dart';
 
 abstract final class AppRoutes {
   static const splash = '/';
@@ -23,8 +22,9 @@ abstract final class AppRoutes {
   static const dictionary = '/dictionary';
   static const practice = '/practice';
   static const profile = '/profile';
-  static const reader = '/reader/:sourceId';
   static const onboarding = '/onboarding';
+
+  static String reader(String sourceId) => '/reader/$sourceId';
 }
 
 GoRouter buildRouter({required DependenciesContainer dependencies}) {
@@ -37,13 +37,13 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
       GoRoute(
         path: AppRoutes.splash,
         builder: (context, state) => SplashScreen(
-          onFirstLaunch: () => _router(context).go(AppRoutes.onboarding),
-          onHome: () => _router(context).go(AppRoutes.home),
+          onFirstLaunch: () => context.go(AppRoutes.onboarding),
+          onHome: () => context.go(AppRoutes.home),
         ),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
-          return _ScaffoldWithNavBar(navigationShell: navigationShell);
+          return BottomNavigationShell(navigationShell: navigationShell);
         },
         branches: [
           StatefulShellBranch(
@@ -51,18 +51,17 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
               GoRoute(
                 path: AppRoutes.home,
                 builder: (context, state) {
-                  final deps = DependenciesScope.of(context);
                   return HomeScreen(
-                    bookRepository: deps.bookRepository,
-                    highlightRepository: deps.highlightRepository,
-                    flashcardRepository: deps.flashcardRepository,
-                    onBookPressed: (book) => _router(context).go(
-                      '/reader/${book.id}',
+                    bookRepository: dependencies.bookRepository,
+                    highlightRepository: dependencies.highlightRepository,
+                    flashcardRepository: dependencies.flashcardRepository,
+                    onBookPressed: (book) => context.push(
+                      AppRoutes.reader(book.id),
                     ),
-                    onArticlePressed: (article) => _router(context).go(
-                      '/reader/${article.id}',
+                    onArticlePressed: (article) => context.push(
+                      AppRoutes.reader(article.id),
                     ),
-                    onPracticePressed: () => _router(context).go(
+                    onPracticePressed: () => context.go(
                       AppRoutes.practice,
                     ),
                   );
@@ -75,19 +74,18 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
               GoRoute(
                 path: AppRoutes.library,
                 builder: (context, state) {
-                  final deps = DependenciesScope.of(context);
                   return LibraryScreen(
-                    bookRepository: deps.bookRepository,
-                    onBookPressed: (book) => _router(context).go(
-                      '/reader/${book.id}',
+                    bookRepository: dependencies.bookRepository,
+                    onBookPressed: (book) => context.push(
+                      AppRoutes.reader(book.id),
                     ),
-                    onArticlePressed: (article) => _router(context).go(
-                      '/reader/${article.id}',
+                    onArticlePressed: (article) => context.push(
+                      AppRoutes.reader(article.id),
                     ),
                     onAddPressed: () => showImportFlowSheet(
                       context,
-                      articleParser: deps.articleParser,
-                      bookRepository: deps.bookRepository,
+                      articleParser: dependencies.articleParser,
+                      bookRepository: dependencies.bookRepository,
                       onBookFilePicked: () {
                         // TODO: integrate file_picker
                       },
@@ -105,9 +103,8 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
               GoRoute(
                 path: AppRoutes.dictionary,
                 builder: (context, state) {
-                  final deps = DependenciesScope.of(context);
                   return DictionaryScreen(
-                    dictionaryRepository: deps.dictionaryRepository,
+                    dictionaryRepository: dependencies.dictionaryRepository,
                   );
                 },
               ),
@@ -118,9 +115,8 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
               GoRoute(
                 path: AppRoutes.practice,
                 builder: (context, state) {
-                  final deps = DependenciesScope.of(context);
                   return PracticeScreen(
-                    flashcardRepository: deps.flashcardRepository,
+                    flashcardRepository: dependencies.flashcardRepository,
                   );
                 },
               ),
@@ -131,16 +127,15 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
               GoRoute(
                 path: AppRoutes.profile,
                 builder: (context, state) {
-                  final deps = DependenciesScope.of(context);
                   return ProfileScreen(
-                    authService: deps.authService,
-                    subscriptionService: deps.subscriptionService,
+                    authService: dependencies.authService,
+                    subscriptionService: dependencies.subscriptionService,
                     onSignInPressed: () {
                       // TODO: navigate to sign in flow
                     },
                     onPremiumPressed: () => showPaywallSheet(
                       context,
-                      subscriptionService: deps.subscriptionService,
+                      subscriptionService: dependencies.subscriptionService,
                     ),
                   );
                 },
@@ -150,24 +145,23 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
         ],
       ),
       GoRoute(
-        path: AppRoutes.reader,
+        path: '/reader/:sourceId',
         builder: (context, state) {
           final sourceId = state.pathParameters['sourceId']!;
-          final deps = DependenciesScope.of(context);
           return ReaderScreen(
             sourceId: sourceId,
-            bookRepository: deps.bookRepository,
-            highlightRepository: deps.highlightRepository,
+            bookRepository: dependencies.bookRepository,
+            highlightRepository: dependencies.highlightRepository,
             textActions: [
               HighlightAction(
-                highlightRepository: deps.highlightRepository,
+                highlightRepository: dependencies.highlightRepository,
               ),
               FlashcardEditorAction(
-                flashcardRepository: deps.flashcardRepository,
+                flashcardRepository: dependencies.flashcardRepository,
               ),
               TranslateAction(
-                translationService: deps.translationService,
-                dictionaryRepository: deps.dictionaryRepository,
+                translationService: dependencies.translationService,
+                dictionaryRepository: dependencies.dictionaryRepository,
               ),
             ],
           );
@@ -176,78 +170,9 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
       GoRoute(
         path: AppRoutes.onboarding,
         builder: (context, state) => OnboardingScreen(
-          onComplete: () => _router(context).go(AppRoutes.home),
+          onComplete: () => context.go(AppRoutes.home),
         ),
       ),
     ],
   );
-}
-
-GoRouter _router(BuildContext context) => GoRouter.of(context);
-
-/// Shell scaffold with bottom navigation bar.
-class _ScaffoldWithNavBar extends StatelessWidget {
-  const _ScaffoldWithNavBar({required this.navigationShell});
-
-  final StatefulNavigationShell navigationShell;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: navigationShell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) {
-          navigationShell.goBranch(
-            index,
-            initialLocation: index == navigationShell.currentIndex,
-          );
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.library_books_outlined),
-            selectedIcon: Icon(Icons.library_books),
-            label: 'Library',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.book_outlined),
-            selectedIcon: Icon(Icons.book),
-            label: 'Dictionary',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.school_outlined),
-            selectedIcon: Icon(Icons.school),
-            label: 'Practice',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outlined),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Temporary placeholder screen for tabs not yet implemented.
-class _PlaceholderTab extends StatelessWidget {
-  const _PlaceholderTab({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(label)),
-      body: Center(
-        child: Text(label, style: Theme.of(context).textTheme.headlineMedium),
-      ),
-    );
-  }
 }

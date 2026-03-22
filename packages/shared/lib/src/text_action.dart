@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import 'models/source_type.dart';
+
 /// Context passed to a [TextAction] when the user selects text in the reader.
 class TextSelectionContext {
   const TextSelectionContext({
@@ -17,8 +19,8 @@ class TextSelectionContext {
   /// ID of the book or article being read.
   final String sourceId;
 
-  /// 'book' or 'article'.
-  final String sourceType;
+  /// Source type (book or article).
+  final SourceType sourceType;
 
   /// CFI range for epub books.
   final String? cfiRange;

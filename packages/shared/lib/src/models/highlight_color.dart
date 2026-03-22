@@ -7,8 +7,12 @@ enum HighlightColor {
   purple
   ;
 
-  static HighlightColor from(String value) => HighlightColor.values.firstWhere(
-    (e) => e.name == value,
-    orElse: () => HighlightColor.yellow,
-  );
+  static HighlightColor from(String value) => switch (value) {
+    'yellow' => yellow,
+    'green' => green,
+    'blue' => blue,
+    'pink' => pink,
+    'purple' => purple,
+    _ => yellow,
+  };
 }

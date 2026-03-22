@@ -1,7 +1,10 @@
 import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:shared/shared.dart';
 
-class FakeFlashcardRepository extends FlashcardRepository {
+class FakeFlashcardRepository implements FlashcardRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
   bool shouldThrow = false;
 
   final List<Flashcard> flashcards = [];

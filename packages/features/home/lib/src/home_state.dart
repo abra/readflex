@@ -7,6 +7,7 @@ final class HomeState extends Equatable {
     this.status = HomeStatus.initial,
     this.recentBooks = const [],
     this.recentArticles = const [],
+    this.recentItems = const [],
     this.totalHighlights = 0,
     this.dueFlashcards = 0,
   });
@@ -14,6 +15,10 @@ final class HomeState extends Equatable {
   final HomeStatus status;
   final List<Book> recentBooks;
   final List<Article> recentArticles;
+
+  /// Up to 5 most recently opened or added items (pre-computed in bloc).
+  final List<Object> recentItems;
+
   final int totalHighlights;
   final int dueFlashcards;
 
@@ -23,27 +28,18 @@ final class HomeState extends Equatable {
 
   int get totalSources => totalBooks + totalArticles;
 
-  /// Up to 5 most recently opened or added items.
-  List<Object> get recentItems {
-    final all = <({DateTime date, Object item})>[
-      for (final b in recentBooks) (date: b.lastOpenedAt ?? b.addedAt, item: b),
-      for (final a in recentArticles)
-        (date: a.lastOpenedAt ?? a.addedAt, item: a),
-    ];
-    all.sort((a, b) => b.date.compareTo(a.date));
-    return all.take(5).map((e) => e.item).toList();
-  }
-
   HomeState copyWith({
     HomeStatus? status,
     List<Book>? recentBooks,
     List<Article>? recentArticles,
+    List<Object>? recentItems,
     int? totalHighlights,
     int? dueFlashcards,
   }) => HomeState(
     status: status ?? this.status,
     recentBooks: recentBooks ?? this.recentBooks,
     recentArticles: recentArticles ?? this.recentArticles,
+    recentItems: recentItems ?? this.recentItems,
     totalHighlights: totalHighlights ?? this.totalHighlights,
     dueFlashcards: dueFlashcards ?? this.dueFlashcards,
   );
@@ -53,6 +49,7 @@ final class HomeState extends Equatable {
     status,
     recentBooks,
     recentArticles,
+    recentItems,
     totalHighlights,
     dueFlashcards,
   ];

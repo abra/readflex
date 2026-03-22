@@ -1,7 +1,10 @@
 import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:shared/shared.dart';
 
-class FakeFlashcardRepository extends FlashcardRepository {
+class FakeFlashcardRepository implements FlashcardRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
   List<Flashcard> dueCards = [];
   bool shouldThrow = false;
   final List<({Flashcard card, Rating rating})> reviews = [];

@@ -158,13 +158,20 @@ class _ReadyContent extends StatelessWidget {
         ),
 
         // Context panel (text actions) — shown when text is selected
-        if (state.hasSelection)
+        if (state.hasSelection &&
+            state.sourceId != null &&
+            state.sourceType != null)
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             child: _ContextPanel(
-              state: state,
+              selectedText: state.selectedText,
+              sourceId: state.sourceId!,
+              sourceType: state.sourceType!,
+              selectionCfiRange: state.selectionCfiRange,
+              selectionPageNumber: state.selectionPageNumber,
+              selectionScrollOffset: state.selectionScrollOffset,
               textActions: textActions,
             ),
           ),
@@ -193,17 +200,25 @@ class _ReadyContent extends StatelessWidget {
 
 class _ContextPanel extends StatelessWidget {
   const _ContextPanel({
-    required this.state,
+    required this.selectedText,
+    required this.sourceId,
+    required this.sourceType,
     required this.textActions,
+    this.selectionCfiRange,
+    this.selectionPageNumber,
+    this.selectionScrollOffset,
   });
 
-  final ReaderState state;
+  final String selectedText;
+  final String sourceId;
+  final SourceType sourceType;
   final List<TextAction> textActions;
+  final String? selectionCfiRange;
+  final int? selectionPageNumber;
+  final double? selectionScrollOffset;
 
   @override
   Widget build(BuildContext context) {
-    final sourceTypeStr = state.isBook ? 'book' : 'article';
-
     return Material(
       elevation: 8,
       child: SafeArea(
@@ -223,12 +238,12 @@ class _ContextPanel extends StatelessWidget {
                   action.onExecute(
                     context,
                     TextSelectionContext(
-                      selectedText: state.selectedText,
-                      sourceId: state.sourceId!,
-                      sourceType: sourceTypeStr,
-                      cfiRange: state.selectionCfiRange,
-                      pageNumber: state.selectionPageNumber,
-                      scrollOffset: state.selectionScrollOffset,
+                      selectedText: selectedText,
+                      sourceId: sourceId,
+                      sourceType: sourceType,
+                      cfiRange: selectionCfiRange,
+                      pageNumber: selectionPageNumber,
+                      scrollOffset: selectionScrollOffset,
                     ),
                   );
                 },

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:local_storage/local_storage.dart';
 import 'package:shared/shared.dart';
 import 'package:uuid/uuid.dart' show Uuid;
@@ -12,41 +11,23 @@ const _uuid = Uuid();
 
 /// Domain repository for books and articles.
 ///
-/// Wraps [BooksDao] from `local_storage`, maps between storage and domain
-/// models, and translates storage exceptions into [StorageException].
+/// Wraps [BooksDao] from `local_storage` and maps between storage and domain
+/// models. Exceptions from the DAO propagate to callers (BLoCs).
 class BookRepository {
-  BookRepository({@visibleForTesting BooksDao? booksDao}) : _dao = booksDao;
+  BookRepository({required BooksDao booksDao}) : _dao = booksDao;
 
-  BooksDao? _dao;
-
-  void init(BooksDao dao) => _dao = dao;
-
-  BooksDao get _books {
-    final dao = _dao;
-    if (dao == null) {
-      throw StateError('BookRepository not initialized. Call init() first.');
-    }
-    return dao;
-  }
+  final BooksDao _dao;
 
   // ─── Books ───
 
   Future<List<Book>> getBooks() async {
-    try {
-      final rows = await _books.allBooks();
-      return rows.map((r) => r.toDomainModel()).toList();
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    final rows = await _dao.allBooks();
+    return rows.map((r) => r.toDomainModel()).toList();
   }
 
   Future<Book?> getBookById(String id) async {
-    try {
-      final row = await _books.bookById(id);
-      return row?.toDomainModel();
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    final row = await _dao.bookById(id);
+    return row?.toDomainModel();
   }
 
   Future<Book> addBook({
@@ -68,49 +49,29 @@ class BookRepository {
       coverImagePath: coverImagePath,
       totalLocations: totalLocations,
     );
-    try {
-      await _books.insertBook(book.toStorageModel());
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    await _dao.insertBook(book.toStorageModel());
     return book;
   }
 
   Future<Book> updateBook(Book book) async {
-    try {
-      await _books.updateBook(book.toStorageModel());
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    await _dao.updateBook(book.toStorageModel());
     return book;
   }
 
   Future<void> deleteBook(String id) async {
-    try {
-      await _books.deleteBook(id);
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    await _dao.deleteBook(id);
   }
 
   // ─── Articles ───
 
   Future<List<Article>> getArticles() async {
-    try {
-      final rows = await _books.allArticles();
-      return rows.map((r) => r.toDomainModel()).toList();
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    final rows = await _dao.allArticles();
+    return rows.map((r) => r.toDomainModel()).toList();
   }
 
   Future<Article?> getArticleById(String id) async {
-    try {
-      final row = await _books.articleById(id);
-      return row?.toDomainModel();
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    final row = await _dao.articleById(id);
+    return row?.toDomainModel();
   }
 
   Future<Article> addArticle({
@@ -132,28 +93,16 @@ class BookRepository {
       coverImageUrl: coverImageUrl,
       estimatedWordCount: estimatedWordCount,
     );
-    try {
-      await _books.insertArticle(article.toStorageModel());
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    await _dao.insertArticle(article.toStorageModel());
     return article;
   }
 
   Future<Article> updateArticle(Article article) async {
-    try {
-      await _books.updateArticle(article.toStorageModel());
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    await _dao.updateArticle(article.toStorageModel());
     return article;
   }
 
   Future<void> deleteArticle(String id) async {
-    try {
-      await _books.deleteArticle(id);
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    await _dao.deleteArticle(id);
   }
 }

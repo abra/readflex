@@ -104,10 +104,16 @@ Future<DependenciesContainer> createDependenciesContainer(
   final db = AppDatabase();
 
   // ─── Repositories ───
-  final bookRepository = BookRepository()..init(db.booksDao);
-  final highlightRepository = HighlightRepository()..init(db.highlightsDao);
-  final flashcardRepository = FlashcardRepository()..init(db.flashcardsDao);
-  final dictionaryRepository = DictionaryRepository()..init(db.dictionaryDao);
+  final bookRepository = BookRepository(booksDao: db.booksDao);
+  final highlightRepository = HighlightRepository(
+    highlightsDao: db.highlightsDao,
+  );
+  final flashcardRepository = FlashcardRepository(
+    flashcardsDao: db.flashcardsDao,
+  );
+  final dictionaryRepository = DictionaryRepository(
+    dictionaryDao: db.dictionaryDao,
+  );
 
   // ─── Services (stubs for now) ───
   final authService = NoopAuthService();
@@ -134,5 +140,10 @@ Future<DependenciesContainer> createDependenciesContainer(
     subscriptionService: subscriptionService,
     connectivityService: connectivityService,
     notificationService: notificationService,
+    dispose: () async {
+      await db.close();
+      authService.dispose();
+      logger.destroy();
+    },
   );
 }

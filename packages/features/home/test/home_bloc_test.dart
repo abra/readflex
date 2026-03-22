@@ -74,6 +74,7 @@ void main() {
           status: HomeStatus.success,
           recentBooks: [_book],
           recentArticles: [_article],
+          recentItems: [_article, _book],
           totalHighlights: 1,
           dueFlashcards: 1,
         ),
@@ -133,10 +134,16 @@ void main() {
         ),
       );
 
+      final recentItems = <Object>[
+        ...articles.reversed,
+        ...books.reversed,
+      ].take(5).toList();
+
       final state = HomeState(
         status: HomeStatus.success,
         recentBooks: books,
         recentArticles: articles,
+        recentItems: recentItems,
       );
 
       expect(state.recentItems, hasLength(5));

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 /// Network connectivity status.
 enum ConnectivityStatus { online, offline }
 
@@ -20,16 +18,14 @@ abstract class ConnectivityService {
 
 /// Stub — always online.
 class NoopConnectivityService implements ConnectivityService {
-  NoopConnectivityService();
-
-  final _controller = StreamController<ConnectivityStatus>.broadcast();
+  const NoopConnectivityService();
 
   @override
   ConnectivityStatus get status => ConnectivityStatus.online;
 
   @override
-  Stream<ConnectivityStatus> get statusStream => _controller.stream;
+  Stream<ConnectivityStatus> get statusStream => const Stream.empty();
 
   @override
-  void dispose() => _controller.close();
+  void dispose() {}
 }

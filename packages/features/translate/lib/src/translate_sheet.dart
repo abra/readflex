@@ -157,9 +157,7 @@ class _TranslateSheetView extends StatelessWidget {
                                 context.read<TranslateCubit>().saveToDictionary(
                                   word: selection.selectedText,
                                   sourceId: selection.sourceId,
-                                  sourceType: SourceType.from(
-                                    selection.sourceType,
-                                  ),
+                                  sourceType: selection.sourceType,
                                 ),
                       icon: const Icon(Icons.bookmark_add),
                       label: const Text('Save to Dictionary'),

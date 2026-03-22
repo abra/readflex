@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:local_storage/local_storage.dart';
 import 'package:shared/shared.dart';
 import 'package:uuid/uuid.dart' show Uuid;
@@ -10,48 +9,24 @@ const _uuid = Uuid();
 
 /// Domain repository for text highlights.
 class HighlightRepository {
-  HighlightRepository({@visibleForTesting HighlightsDao? highlightsDao})
+  HighlightRepository({required HighlightsDao highlightsDao})
     : _dao = highlightsDao;
 
-  HighlightsDao? _dao;
-
-  void init(HighlightsDao dao) => _dao = dao;
-
-  HighlightsDao get _highlights {
-    final dao = _dao;
-    if (dao == null) {
-      throw StateError(
-        'HighlightRepository not initialized. Call init() first.',
-      );
-    }
-    return dao;
-  }
+  final HighlightsDao _dao;
 
   Future<List<Highlight>> getHighlights() async {
-    try {
-      final rows = await _highlights.allHighlights();
-      return rows.map((r) => r.toDomainModel()).toList();
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    final rows = await _dao.allHighlights();
+    return rows.map((r) => r.toDomainModel()).toList();
   }
 
   Future<List<Highlight>> getHighlightsBySource(String sourceId) async {
-    try {
-      final rows = await _highlights.highlightsBySource(sourceId);
-      return rows.map((r) => r.toDomainModel()).toList();
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    final rows = await _dao.highlightsBySource(sourceId);
+    return rows.map((r) => r.toDomainModel()).toList();
   }
 
   Future<Highlight?> getHighlightById(String id) async {
-    try {
-      final row = await _highlights.highlightById(id);
-      return row?.toDomainModel();
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    final row = await _dao.highlightById(id);
+    return row?.toDomainModel();
   }
 
   Future<Highlight> addHighlight({
@@ -76,36 +51,20 @@ class HighlightRepository {
       color: color,
       createdAt: DateTime.now(),
     );
-    try {
-      await _highlights.insertHighlight(highlight.toStorageModel());
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    await _dao.insertHighlight(highlight.toStorageModel());
     return highlight;
   }
 
   Future<Highlight> updateHighlight(Highlight highlight) async {
-    try {
-      await _highlights.updateHighlight(highlight.toStorageModel());
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    await _dao.updateHighlight(highlight.toStorageModel());
     return highlight;
   }
 
   Future<void> deleteHighlight(String id) async {
-    try {
-      await _highlights.deleteHighlight(id);
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    await _dao.deleteHighlight(id);
   }
 
   Future<void> deleteHighlightsBySource(String sourceId) async {
-    try {
-      await _highlights.deleteHighlightsBySource(sourceId);
-    } catch (e) {
-      throw StorageException(cause: e);
-    }
+    await _dao.deleteHighlightsBySource(sourceId);
   }
 }

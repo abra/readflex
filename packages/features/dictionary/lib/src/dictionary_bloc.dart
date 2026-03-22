@@ -29,7 +29,12 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
     DictionarySearchChanged event,
     Emitter<DictionaryState> emit,
   ) {
-    emit(state.copyWith(searchQuery: event.query));
+    emit(
+      state.copyWith(
+        searchQuery: event.query,
+        filteredEntries: _filter(state.entries, event.query),
+      ),
+    );
   }
 
   Future<void> _onEntryDeleted(
@@ -51,10 +56,25 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
         state.copyWith(
           status: DictionaryStatus.success,
           entries: entries,
+          filteredEntries: _filter(entries, state.searchQuery),
         ),
       );
     } catch (e) {
       emit(state.copyWith(status: DictionaryStatus.failure));
     }
+  }
+
+  static List<DictionaryEntry> _filter(
+    List<DictionaryEntry> entries,
+    String query,
+  ) {
+    if (query.isEmpty) return entries;
+    final q = query.toLowerCase();
+    return [
+      for (final e in entries)
+        if (e.word.toLowerCase().contains(q) ||
+            e.translation.toLowerCase().contains(q))
+          e,
+    ];
   }
 }
