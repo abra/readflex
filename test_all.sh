@@ -21,7 +21,7 @@ run() {
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-run "shared"                       "dart test test/"    "$SCRIPT_DIR/packages/shared"
+run "shared"                       "flutter test test/" "$SCRIPT_DIR/packages/shared"
 run "monitoring"                   "flutter test test/" "$SCRIPT_DIR/packages/monitoring"
 run "component_library"            "flutter test test/" "$SCRIPT_DIR/packages/component_library"
 run "local_storage"                "flutter test test/" "$SCRIPT_DIR/packages/local_storage"
@@ -44,6 +44,10 @@ run "home"                         "flutter test test/" "$SCRIPT_DIR/packages/fe
 run "profile"                      "flutter test test/" "$SCRIPT_DIR/packages/features/profile"
 run "dictionary"                   "flutter test test/" "$SCRIPT_DIR/packages/features/dictionary"
 run "practice"                     "flutter test test/" "$SCRIPT_DIR/packages/features/practice"
+run "highlight"                    "flutter test test/" "$SCRIPT_DIR/packages/features/highlight"
+run "flashcard_editor"             "flutter test test/" "$SCRIPT_DIR/packages/features/flashcard_editor"
+run "translate"                    "flutter test test/" "$SCRIPT_DIR/packages/features/translate"
+run "paywall"                      "flutter test test/" "$SCRIPT_DIR/packages/features/paywall"
 
 echo ""
 echo "────────────────────────────"

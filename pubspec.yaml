@@ -59,6 +59,14 @@ dependencies:
     path: packages/features/dictionary
   practice_feature:
     path: packages/features/practice
+  highlight_feature:
+    path: packages/features/highlight
+  flashcard_editor:
+    path: packages/features/flashcard_editor
+  translate_feature:
+    path: packages/features/translate
+  paywall_feature:
+    path: packages/features/paywall
 
   # External packages
   cupertino_icons: ^1.0.8

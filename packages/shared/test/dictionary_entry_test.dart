@@ -1,5 +1,5 @@
 import 'package:shared/shared.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   final now = DateTime(2026, 1, 1);

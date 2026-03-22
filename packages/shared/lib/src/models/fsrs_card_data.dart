@@ -5,7 +5,8 @@ enum FsrsState {
   newCard,
   learning,
   review,
-  relearning;
+  relearning
+  ;
 
   static FsrsState from(String value) => switch (value) {
     'new' => FsrsState.newCard,

@@ -3,7 +3,8 @@ enum BookFormat {
   epub,
   fb2,
   mobi,
-  pdf;
+  pdf
+  ;
 
   /// Parses a [BookFormat] from a stored string value.
   static BookFormat from(String? value) => switch (value) {
