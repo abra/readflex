@@ -33,12 +33,23 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
   return GoRouter(
     debugLogDiagnostics: dependencies.config.isDev,
     initialLocation: AppRoutes.splash,
+    redirect: (context, state) {
+      final location = state.uri.path;
+      final isFirstLaunch =
+          dependencies.preferencesService.current.isFirstLaunch;
+
+      // After splash, redirect based on first launch state.
+      if (location == AppRoutes.home && isFirstLaunch) {
+        return AppRoutes.onboarding;
+      }
+
+      return null;
+    },
     routes: [
       GoRoute(
         path: AppRoutes.splash,
         builder: (context, state) => SplashScreen(
-          onFirstLaunch: () => context.go(AppRoutes.onboarding),
-          onHome: () => context.go(AppRoutes.home),
+          onReady: () => context.go(AppRoutes.home),
         ),
       ),
       StatefulShellRoute.indexedStack(
@@ -170,7 +181,12 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
       GoRoute(
         path: AppRoutes.onboarding,
         builder: (context, state) => OnboardingScreen(
-          onComplete: () => context.go(AppRoutes.home),
+          onComplete: () {
+            dependencies.preferencesService.update(
+              (p) => p.copyWith(isFirstLaunch: false),
+            );
+            context.go(AppRoutes.home);
+          },
         ),
       ),
     ],

@@ -1,10 +1,7 @@
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'onboarding_page_data.dart';
-
-const _firstLaunchKey = 'readflex_first_launch_done';
 
 /// Five-screen onboarding intro.
 ///
@@ -31,9 +28,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
-  Future<void> _complete() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_firstLaunchKey, true);
+  void _complete() {
     widget.onComplete();
   }
 

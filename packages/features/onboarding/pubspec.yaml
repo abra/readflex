@@ -13,7 +13,6 @@ dependencies:
   component_library:
     path: ../../component_library
 
-  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:

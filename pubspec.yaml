@@ -41,6 +41,8 @@ dependencies:
     path: packages/subscription_service
   notification_service:
     path: packages/notification_service
+  preferences_service:
+    path: packages/preferences_service
 
   # Feature packages
   splash:

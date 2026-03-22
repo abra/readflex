@@ -15,6 +15,7 @@ import 'package:highlight_repository/highlight_repository.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:notification_service/notification_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex/app/config/application_config.dart';
 import 'package:subscription_service/subscription_service.dart';
 import 'package:translation_service/translation_service.dart';
@@ -26,6 +27,7 @@ class DependenciesContainer {
     required this.config,
     required this.errorReporter,
     required this.packageInfo,
+    required this.preferencesService,
     required this.authService,
     required this.bookRepository,
     required this.highlightRepository,
@@ -44,6 +46,7 @@ class DependenciesContainer {
   final ApplicationConfig config;
   final ErrorReportingService errorReporter;
   final PackageInfo packageInfo;
+  final PreferencesService preferencesService;
   final AuthService authService;
   final BookRepository bookRepository;
   final HighlightRepository highlightRepository;

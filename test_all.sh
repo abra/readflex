@@ -36,6 +36,7 @@ run "auth_service"                 "flutter test test/" "$SCRIPT_DIR/packages/au
 run "connectivity_service"         "flutter test test/" "$SCRIPT_DIR/packages/connectivity_service"
 run "subscription_service"         "flutter test test/" "$SCRIPT_DIR/packages/subscription_service"
 run "notification_service"         "flutter test test/" "$SCRIPT_DIR/packages/notification_service"
+run "preferences_service"         "flutter test test/" "$SCRIPT_DIR/packages/preferences_service"
 run "splash"                       "flutter test test/" "$SCRIPT_DIR/packages/features/splash"
 run "onboarding"                   "flutter test test/" "$SCRIPT_DIR/packages/features/onboarding"
 run "library"                      "flutter test test/" "$SCRIPT_DIR/packages/features/library"

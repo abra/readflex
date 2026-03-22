@@ -1,5 +1,5 @@
 name: splash
-description: Splash screen with logo and first-launch check
+description: Splash screen with logo
 version: 0.1.0
 publish_to: 'none'
 
@@ -13,7 +13,6 @@ dependencies:
   component_library:
     path: ../../component_library
 
-  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:

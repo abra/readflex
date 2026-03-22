@@ -2,13 +2,8 @@ import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onboarding/onboarding.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  setUp(() {
-    SharedPreferences.setMockInitialValues({});
-  });
-
   group('OnboardingScreen', () {
     testWidgets('displays first page on launch', (tester) async {
       await tester.pumpWidget(
@@ -50,9 +45,7 @@ void main() {
       expect(find.text('Practice & remember'), findsOneWidget);
     });
 
-    testWidgets('Get Started calls onComplete and saves preference', (
-      tester,
-    ) async {
+    testWidgets('Get Started calls onComplete', (tester) async {
       var completed = false;
 
       await tester.pumpWidget(
@@ -71,9 +64,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(completed, isTrue);
-
-      final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getBool('readflex_first_launch_done'), isTrue);
     });
 
     testWidgets('Skip calls onComplete', (tester) async {

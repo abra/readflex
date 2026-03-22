@@ -16,6 +16,7 @@ import 'package:local_storage/local_storage.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:notification_service/notification_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex/app/config/application_config.dart';
 import 'package:readflex/app/dependency_container.dart';
 import 'package:subscription_service/subscription_service.dart';
@@ -115,6 +116,11 @@ Future<DependenciesContainer> createDependenciesContainer(
     dictionaryDao: db.dictionaryDao,
   );
 
+  // ─── Preferences ───
+  final preferencesService = await PreferencesService.create(
+    supportedCodes: ['en', 'ru'],
+  );
+
   // ─── Services (stubs for now) ───
   final authService = NoopAuthService();
   const articleParser = NoopArticleParser();
@@ -129,6 +135,7 @@ Future<DependenciesContainer> createDependenciesContainer(
     config: config,
     errorReporter: errorReporter,
     packageInfo: packageInfo,
+    preferencesService: preferencesService,
     authService: authService,
     bookRepository: bookRepository,
     highlightRepository: highlightRepository,
