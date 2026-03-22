@@ -29,6 +29,13 @@ run "book_repository"              "flutter test test/" "$SCRIPT_DIR/packages/bo
 run "highlight_repository"         "flutter test test/" "$SCRIPT_DIR/packages/highlight_repository"
 run "dictionary_repository"        "flutter test test/" "$SCRIPT_DIR/packages/dictionary_repository"
 run "flashcard_repository"         "flutter test test/" "$SCRIPT_DIR/packages/flashcard_repository"
+run "article_parser"               "flutter test test/" "$SCRIPT_DIR/packages/article_parser"
+run "translation_service"          "flutter test test/" "$SCRIPT_DIR/packages/translation_service"
+run "ai_service"                   "flutter test test/" "$SCRIPT_DIR/packages/ai_service"
+run "auth_service"                 "flutter test test/" "$SCRIPT_DIR/packages/auth_service"
+run "connectivity_service"         "flutter test test/" "$SCRIPT_DIR/packages/connectivity_service"
+run "subscription_service"         "flutter test test/" "$SCRIPT_DIR/packages/subscription_service"
+run "notification_service"         "flutter test test/" "$SCRIPT_DIR/packages/notification_service"
 
 echo ""
 echo "────────────────────────────"

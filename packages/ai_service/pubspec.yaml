@@ -1,0 +1,15 @@
+name: ai_service
+description: "HTTP client to own backend → DeepSeek API."
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
