@@ -60,6 +60,19 @@ class FirstImportScreen extends StatelessWidget {
                 icon: const Icon(Icons.add),
                 label: const Text('Add'),
               ),
+              const SizedBox(height: 12),
+              // TODO: remove — temporary stub for testing the flow.
+              OutlinedButton(
+                onPressed: () async {
+                  await articleRepository.addArticle(
+                    title: 'Sample Article',
+                    url: 'https://example.com/sample',
+                    cleanedHtml: '<p>This is a sample article.</p>',
+                  );
+                  onContentAdded();
+                },
+                child: const Text('Add sample (dev)'),
+              ),
             ],
           ),
         ),
