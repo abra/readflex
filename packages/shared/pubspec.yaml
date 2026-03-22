@@ -1,0 +1,13 @@
+name: shared
+description: "Domain models, enums, exceptions and contracts shared across features."
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  equatable: ^2.0.8
+
+dev_dependencies:
+  test: ^1.30.0
