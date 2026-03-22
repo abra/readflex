@@ -4,7 +4,7 @@ import 'package:shared/shared.dart';
 void main() {
   final now = DateTime(2026, 1, 1);
 
-  Highlight _highlight() => Highlight(
+  Highlight highlight() => Highlight(
     id: 'h1',
     sourceId: 's1',
     sourceType: SourceType.book,
@@ -14,14 +14,14 @@ void main() {
 
   group('Highlight copyWith()', () {
     test('preserves id and createdAt', () {
-      final h = _highlight().copyWith(text: 'New text');
+      final h = highlight().copyWith(text: 'New text');
       expect(h.id, 'h1');
       expect(h.createdAt, now);
       expect(h.text, 'New text');
     });
 
     test('updates note', () {
-      final h = _highlight().copyWith(note: 'My note');
+      final h = highlight().copyWith(note: 'My note');
       expect(h.note, 'My note');
     });
 
@@ -50,18 +50,18 @@ void main() {
     });
 
     test('updates color', () {
-      final h = _highlight().copyWith(color: HighlightColor.blue);
+      final h = highlight().copyWith(color: HighlightColor.blue);
       expect(h.color, HighlightColor.blue);
     });
   });
 
   group('Highlight equality', () {
     test('same fields are equal', () {
-      expect(_highlight(), equals(_highlight()));
+      expect(highlight(), equals(highlight()));
     });
 
     test('different text are not equal', () {
-      expect(_highlight(), isNot(equals(_highlight().copyWith(text: 'other'))));
+      expect(highlight(), isNot(equals(highlight().copyWith(text: 'other'))));
     });
   });
 

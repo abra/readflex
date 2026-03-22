@@ -94,7 +94,7 @@ class _EntryList extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.only(bottom: Spacing.xxxLarge),
       itemCount: entries.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
+      separatorBuilder: (_, _) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final entry = entries[index];
         return Dismissible(

@@ -4,7 +4,7 @@ import 'package:shared/shared.dart';
 void main() {
   final now = DateTime(2026, 1, 1);
 
-  DictionaryEntry _entry() => DictionaryEntry(
+  DictionaryEntry entry() => DictionaryEntry(
     id: 'e1',
     word: 'hello',
     translation: 'привет',
@@ -13,19 +13,19 @@ void main() {
 
   group('DictionaryEntry copyWith()', () {
     test('preserves id and addedAt', () {
-      final e = _entry().copyWith(word: 'hi');
+      final e = entry().copyWith(word: 'hi');
       expect(e.id, 'e1');
       expect(e.addedAt, now);
       expect(e.word, 'hi');
     });
 
     test('updates translation', () {
-      final e = _entry().copyWith(translation: 'updated');
+      final e = entry().copyWith(translation: 'updated');
       expect(e.translation, 'updated');
     });
 
     test('updates usageExamples', () {
-      final e = _entry().copyWith(usageExamples: ['Hello world']);
+      final e = entry().copyWith(usageExamples: ['Hello world']);
       expect(e.usageExamples, ['Hello world']);
     });
 
@@ -54,11 +54,11 @@ void main() {
 
   group('DictionaryEntry equality', () {
     test('same fields are equal', () {
-      expect(_entry(), equals(_entry()));
+      expect(entry(), equals(entry()));
     });
 
     test('different word are not equal', () {
-      expect(_entry(), isNot(equals(_entry().copyWith(word: 'bye'))));
+      expect(entry(), isNot(equals(entry().copyWith(word: 'bye'))));
     });
   });
 }

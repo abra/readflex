@@ -4,7 +4,7 @@ import 'package:shared/shared.dart';
 void main() {
   final now = DateTime(2026, 1, 1);
 
-  Flashcard _card() => Flashcard(
+  Flashcard card() => Flashcard(
     id: 'f1',
     deckId: 'd1',
     front: 'Front',
@@ -14,14 +14,14 @@ void main() {
 
   group('Flashcard copyWith()', () {
     test('preserves id and createdAt', () {
-      final c = _card().copyWith(front: 'New front');
+      final c = card().copyWith(front: 'New front');
       expect(c.id, 'f1');
       expect(c.createdAt, now);
       expect(c.front, 'New front');
     });
 
     test('updates hint', () {
-      final c = _card().copyWith(hint: 'A hint');
+      final c = card().copyWith(hint: 'A hint');
       expect(c.hint, 'A hint');
     });
 
@@ -38,7 +38,7 @@ void main() {
     });
 
     test('updates fsrs data', () {
-      final c = _card().copyWith(
+      final c = card().copyWith(
         fsrs: const FsrsCardData(
           state: FsrsState.review,
           stability: 5.0,
@@ -52,11 +52,11 @@ void main() {
 
   group('Flashcard equality', () {
     test('same fields are equal', () {
-      expect(_card(), equals(_card()));
+      expect(card(), equals(card()));
     });
 
     test('different front are not equal', () {
-      expect(_card(), isNot(equals(_card().copyWith(front: 'other'))));
+      expect(card(), isNot(equals(card().copyWith(front: 'other'))));
     });
   });
 
