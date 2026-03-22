@@ -67,6 +67,8 @@ dependencies:
     path: packages/features/translate
   paywall_feature:
     path: packages/features/paywall
+  reader_feature:
+    path: packages/features/reader
 
   # External packages
   cupertino_icons: ^1.0.8

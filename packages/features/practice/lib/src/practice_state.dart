@@ -19,6 +19,7 @@ final class PracticeState extends Equatable {
       currentIndex < dueCards.length ? dueCards[currentIndex] : null;
 
   int get remaining => dueCards.length - currentIndex;
+
   int get reviewed => currentIndex;
 
   PracticeState copyWith({

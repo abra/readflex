@@ -1,8 +1,8 @@
+import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:splash/splash.dart';
-import 'package:component_library/component_library.dart';
 
 void main() {
   group('SplashScreen', () {

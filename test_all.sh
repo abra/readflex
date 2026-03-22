@@ -48,6 +48,7 @@ run "highlight"                    "flutter test test/" "$SCRIPT_DIR/packages/fe
 run "flashcard_editor"             "flutter test test/" "$SCRIPT_DIR/packages/features/flashcard_editor"
 run "translate"                    "flutter test test/" "$SCRIPT_DIR/packages/features/translate"
 run "paywall"                      "flutter test test/" "$SCRIPT_DIR/packages/features/paywall"
+run "reader"                       "flutter test test/" "$SCRIPT_DIR/packages/features/reader"
 
 echo ""
 echo "────────────────────────────"

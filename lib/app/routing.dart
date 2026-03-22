@@ -1,12 +1,17 @@
 import 'package:dictionary_feature/dictionary_feature.dart';
+import 'package:flashcard_editor/flashcard_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:highlight_feature/highlight_feature.dart';
 import 'package:home_feature/home_feature.dart';
 import 'package:import_flow/import_flow.dart';
 import 'package:library_feature/library_feature.dart';
 import 'package:onboarding/onboarding.dart';
+import 'package:paywall_feature/paywall_feature.dart';
 import 'package:practice_feature/practice_feature.dart';
 import 'package:profile_feature/profile_feature.dart';
+import 'package:translate_feature/translate_feature.dart';
+import 'package:reader_feature/reader_feature.dart';
 import 'package:readflex/app/dependency_container.dart';
 import 'package:readflex/app/dependency_scope.dart';
 import 'package:splash/splash.dart';
@@ -133,9 +138,10 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
                     onSignInPressed: () {
                       // TODO: navigate to sign in flow
                     },
-                    onPremiumPressed: () {
-                      // TODO: show paywall
-                    },
+                    onPremiumPressed: () => showPaywallSheet(
+                      context,
+                      subscriptionService: deps.subscriptionService,
+                    ),
                   );
                 },
               ),
@@ -147,7 +153,24 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
         path: AppRoutes.reader,
         builder: (context, state) {
           final sourceId = state.pathParameters['sourceId']!;
-          return _PlaceholderTab(label: 'Reader: $sourceId');
+          final deps = DependenciesScope.of(context);
+          return ReaderScreen(
+            sourceId: sourceId,
+            bookRepository: deps.bookRepository,
+            highlightRepository: deps.highlightRepository,
+            textActions: [
+              HighlightAction(
+                highlightRepository: deps.highlightRepository,
+              ),
+              FlashcardEditorAction(
+                flashcardRepository: deps.flashcardRepository,
+              ),
+              TranslateAction(
+                translationService: deps.translationService,
+                dictionaryRepository: deps.dictionaryRepository,
+              ),
+            ],
+          );
         },
       ),
       GoRoute(

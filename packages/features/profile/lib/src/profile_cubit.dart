@@ -17,6 +17,7 @@ final class ProfileState extends Equatable {
   final bool isLoading;
 
   bool get isAuthenticated => authStatus == AuthStatus.authenticated;
+
   bool get isPremium => subscriptionStatus == SubscriptionStatus.premium;
 
   ProfileState copyWith({

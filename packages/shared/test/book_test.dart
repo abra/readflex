@@ -1,5 +1,5 @@
-import 'package:shared/shared.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared/shared.dart';
 
 Book _book({
   String id = '1',

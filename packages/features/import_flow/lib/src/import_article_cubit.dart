@@ -2,7 +2,6 @@ import 'package:article_parser/article_parser.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared/shared.dart';
 
 enum ImportArticleStatus { idle, loading, success, failure }
 

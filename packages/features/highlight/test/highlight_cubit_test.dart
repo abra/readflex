@@ -1,7 +1,6 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:highlight_feature/src/highlight_cubit.dart';
-import 'package:highlight_repository/highlight_repository.dart';
 import 'package:shared/shared.dart';
 
 import 'helpers/fake_highlight_repository.dart';

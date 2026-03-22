@@ -37,6 +37,8 @@ class TextSelectionContext {
 /// specific features — it just calls [onExecute].
 abstract class TextAction {
   String get label;
+
   IconData get icon;
+
   void onExecute(BuildContext context, TextSelectionContext selection);
 }

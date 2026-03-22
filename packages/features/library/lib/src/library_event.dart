@@ -14,10 +14,12 @@ final class LibraryRefreshRequested extends LibraryEvent {
 
 final class LibraryBookDeleted extends LibraryEvent {
   const LibraryBookDeleted(this.bookId);
+
   final String bookId;
 }
 
 final class LibraryArticleDeleted extends LibraryEvent {
   const LibraryArticleDeleted(this.articleId);
+
   final String articleId;
 }

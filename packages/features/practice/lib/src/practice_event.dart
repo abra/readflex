@@ -14,5 +14,6 @@ final class PracticeCardRevealed extends PracticeEvent {
 
 final class PracticeCardRated extends PracticeEvent {
   const PracticeCardRated(this.rating);
+
   final Rating rating;
 }

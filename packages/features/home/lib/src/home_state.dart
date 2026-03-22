@@ -18,7 +18,9 @@ final class HomeState extends Equatable {
   final int dueFlashcards;
 
   int get totalBooks => recentBooks.length;
+
   int get totalArticles => recentArticles.length;
+
   int get totalSources => totalBooks + totalArticles;
 
   /// Up to 5 most recently opened or added items.

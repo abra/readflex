@@ -1,0 +1,18 @@
+import 'package:highlight_repository/highlight_repository.dart';
+import 'package:shared/shared.dart';
+
+class FakeHighlightRepository extends HighlightRepository {
+  bool shouldThrow = false;
+
+  final Map<String, List<Highlight>> highlightsBySourceId = {};
+
+  void seedHighlights(String sourceId, List<Highlight> highlights) {
+    highlightsBySourceId[sourceId] = highlights;
+  }
+
+  @override
+  Future<List<Highlight>> getHighlightsBySource(String sourceId) async {
+    if (shouldThrow) throw Exception('getHighlightsBySource failed');
+    return highlightsBySourceId[sourceId] ?? [];
+  }
+}
