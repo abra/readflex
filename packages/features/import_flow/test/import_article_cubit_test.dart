@@ -3,23 +3,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:import_flow/src/import_article_cubit.dart';
 
 import 'helpers/fake_article_parser.dart';
-import 'helpers/fake_book_repository.dart';
+import 'helpers/fake_article_repository.dart';
 
 void main() {
   group('ImportArticleCubit', () {
     late FakeArticleParser parser;
-    late FakeBookRepository repository;
+    late FakeArticleRepository repository;
 
     setUp(() {
       parser = FakeArticleParser();
-      repository = FakeBookRepository();
+      repository = FakeArticleRepository();
     });
 
     blocTest<ImportArticleCubit, ImportArticleState>(
       'emits loading then success on valid URL',
       build: () => ImportArticleCubit(
         articleParser: parser,
-        bookRepository: repository,
+        articleRepository: repository,
       ),
       act: (cubit) => cubit.importUrl('https://example.com/article'),
       expect: () => [
@@ -36,7 +36,7 @@ void main() {
       'emits failure on empty URL',
       build: () => ImportArticleCubit(
         articleParser: parser,
-        bookRepository: repository,
+        articleRepository: repository,
       ),
       act: (cubit) => cubit.importUrl(''),
       expect: () => [
@@ -52,7 +52,7 @@ void main() {
       setUp: () => parser.shouldThrow = true,
       build: () => ImportArticleCubit(
         articleParser: parser,
-        bookRepository: repository,
+        articleRepository: repository,
       ),
       act: (cubit) => cubit.importUrl('https://example.com'),
       expect: () => [
@@ -69,7 +69,7 @@ void main() {
       setUp: () => repository.shouldThrow = true,
       build: () => ImportArticleCubit(
         articleParser: parser,
-        bookRepository: repository,
+        articleRepository: repository,
       ),
       act: (cubit) => cubit.importUrl('https://example.com'),
       expect: () => [

@@ -12,6 +12,7 @@ import 'package:profile_feature/profile_feature.dart';
 import 'package:reader_feature/reader_feature.dart';
 import 'package:readflex/app/bottom_navigation_bar.dart';
 import 'package:readflex/app/dependency_container.dart';
+import 'package:readflex/app/first_import_screen.dart';
 import 'package:splash/splash.dart';
 import 'package:translate_feature/translate_feature.dart';
 
@@ -23,6 +24,8 @@ abstract final class AppRoutes {
   static const practice = '/practice';
   static const profile = '/profile';
   static const onboarding = '/onboarding';
+  static const firstImport = '/first-import';
+  static const readerPath = '/reader/:sourceId';
 
   static String reader(String sourceId) => '/reader/$sourceId';
 }
@@ -33,14 +36,24 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
   return GoRouter(
     debugLogDiagnostics: dependencies.config.isDev,
     initialLocation: AppRoutes.splash,
-    redirect: (context, state) {
+    redirect: (context, state) async {
       final location = state.uri.path;
-      final isFirstLaunch =
-          dependencies.preferencesService.current.isFirstLaunch;
+      final prefs = dependencies.preferencesService.current;
 
-      // After splash, redirect based on first launch state.
-      if (location == AppRoutes.home && isFirstLaunch) {
+      if (location == AppRoutes.home && !prefs.onboardingCompleted) {
         return AppRoutes.onboarding;
+      }
+
+      if (location == AppRoutes.home && !prefs.hasCompletedSetup) {
+        final books = await dependencies.bookRepository.getBooks();
+        final articles = await dependencies.articleRepository.getArticles();
+        if (books.isEmpty && articles.isEmpty) {
+          return AppRoutes.firstImport;
+        }
+        // User somehow has books — mark setup as complete.
+        await dependencies.preferencesService.update(
+          (p) => p.copyWith(hasCompletedSetup: true),
+        );
       }
 
       return null;
@@ -64,6 +77,7 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
                 builder: (context, state) {
                   return HomeScreen(
                     bookRepository: dependencies.bookRepository,
+                    articleRepository: dependencies.articleRepository,
                     highlightRepository: dependencies.highlightRepository,
                     flashcardRepository: dependencies.flashcardRepository,
                     onBookPressed: (book) => context.push(
@@ -87,6 +101,7 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
                 builder: (context, state) {
                   return LibraryScreen(
                     bookRepository: dependencies.bookRepository,
+                    articleRepository: dependencies.articleRepository,
                     onBookPressed: (book) => context.push(
                       AppRoutes.reader(book.id),
                     ),
@@ -96,7 +111,7 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
                     onAddPressed: () => showImportFlowSheet(
                       context,
                       articleParser: dependencies.articleParser,
-                      bookRepository: dependencies.bookRepository,
+                      articleRepository: dependencies.articleRepository,
                       onBookFilePicked: () {
                         // TODO: integrate file_picker
                       },
@@ -156,12 +171,13 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
         ],
       ),
       GoRoute(
-        path: '/reader/:sourceId',
+        path: AppRoutes.readerPath,
         builder: (context, state) {
           final sourceId = state.pathParameters['sourceId']!;
           return ReaderScreen(
             sourceId: sourceId,
             bookRepository: dependencies.bookRepository,
+            articleRepository: dependencies.articleRepository,
             highlightRepository: dependencies.highlightRepository,
             textActions: [
               HighlightAction(
@@ -183,7 +199,23 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
         builder: (context, state) => OnboardingScreen(
           onComplete: () {
             dependencies.preferencesService.update(
-              (p) => p.copyWith(isFirstLaunch: false),
+              (p) => p.copyWith(onboardingCompleted: true),
+            );
+            context.go(AppRoutes.firstImport);
+          },
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.firstImport,
+        builder: (context, state) => FirstImportScreen(
+          articleParser: dependencies.articleParser,
+          articleRepository: dependencies.articleRepository,
+          onBookFilePicked: () {
+            // TODO: integrate file_picker
+          },
+          onContentAdded: () {
+            dependencies.preferencesService.update(
+              (p) => p.copyWith(hasCompletedSetup: true),
             );
             context.go(AppRoutes.home);
           },

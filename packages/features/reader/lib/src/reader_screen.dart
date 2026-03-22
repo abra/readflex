@@ -1,3 +1,4 @@
+import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ class ReaderScreen extends StatelessWidget {
   const ReaderScreen({
     required this.sourceId,
     required this.bookRepository,
+    required this.articleRepository,
     required this.highlightRepository,
     required this.textActions,
     super.key,
@@ -18,6 +20,7 @@ class ReaderScreen extends StatelessWidget {
 
   final String sourceId;
   final BookRepository bookRepository;
+  final ArticleRepository articleRepository;
   final HighlightRepository highlightRepository;
   final List<TextAction> textActions;
 
@@ -26,6 +29,7 @@ class ReaderScreen extends StatelessWidget {
     return BlocProvider(
       create: (_) => ReaderBloc(
         bookRepository: bookRepository,
+        articleRepository: articleRepository,
         highlightRepository: highlightRepository,
       )..add(ReaderSourceLoadRequested(sourceId: sourceId)),
       child: _ReaderView(textActions: textActions),

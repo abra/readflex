@@ -31,7 +31,6 @@ class _MaterialContextState extends State<MaterialContext> {
   @override
   void dispose() {
     _router.dispose();
-    DependenciesScope.of(context).dispose?.call();
     super.dispose();
   }
 

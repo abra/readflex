@@ -1,16 +1,16 @@
-import 'package:book_repository/book_repository.dart';
+import 'package:article_repository/article_repository.dart';
 import 'package:shared/shared.dart';
 
-class FakeBookRepository implements BookRepository {
+class FakeArticleRepository implements ArticleRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 
-  List<Book> books = [];
+  List<Article> articles = [];
   bool shouldThrow = false;
 
   @override
-  Future<List<Book>> getBooks() async {
+  Future<List<Article>> getArticles() async {
     if (shouldThrow) throw StorageException(cause: 'fake');
-    return books;
+    return articles;
   }
 }

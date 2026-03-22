@@ -25,6 +25,7 @@ run "shared"                       "flutter test test/" "$SCRIPT_DIR/packages/sh
 run "monitoring"                   "flutter test test/" "$SCRIPT_DIR/packages/monitoring"
 run "component_library"            "flutter test test/" "$SCRIPT_DIR/packages/component_library"
 run "local_storage"                "flutter test test/" "$SCRIPT_DIR/packages/local_storage"
+run "article_repository"            "flutter test test/" "$SCRIPT_DIR/packages/article_repository"
 run "book_repository"              "flutter test test/" "$SCRIPT_DIR/packages/book_repository"
 run "highlight_repository"         "flutter test test/" "$SCRIPT_DIR/packages/highlight_repository"
 run "dictionary_repository"        "flutter test test/" "$SCRIPT_DIR/packages/dictionary_repository"

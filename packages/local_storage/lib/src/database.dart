@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'daos/articles_dao.dart';
 import 'daos/books_dao.dart';
 import 'daos/dictionary_dao.dart';
 import 'daos/flashcards_dao.dart';
@@ -28,7 +29,7 @@ part 'database.g.dart';
     DictionaryEntriesTable,
     ReviewLogsTable,
   ],
-  daos: [BooksDao, HighlightsDao, FlashcardsDao, DictionaryDao],
+  daos: [ArticlesDao, BooksDao, HighlightsDao, FlashcardsDao, DictionaryDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());

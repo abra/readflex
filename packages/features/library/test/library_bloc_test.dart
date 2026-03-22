@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_bloc.dart';
 import 'package:shared/shared.dart';
 
+import 'helpers/fake_article_repository.dart';
 import 'helpers/fake_book_repository.dart';
 
 final _book = Book(
@@ -24,18 +25,23 @@ final _article = Article(
 void main() {
   group('LibraryBloc', () {
     late FakeBookRepository repository;
+    late FakeArticleRepository articleRepository;
 
     setUp(() {
       repository = FakeBookRepository();
+      articleRepository = FakeArticleRepository();
     });
 
     blocTest<LibraryBloc, LibraryState>(
       'emits loading then success with items on LibraryLoadRequested',
       setUp: () {
         repository.seedBooks([_book]);
-        repository.seedArticles([_article]);
+        articleRepository.seedArticles([_article]);
       },
-      build: () => LibraryBloc(bookRepository: repository),
+      build: () => LibraryBloc(
+        bookRepository: repository,
+        articleRepository: articleRepository,
+      ),
       act: (bloc) => bloc.add(const LibraryLoadRequested()),
       expect: () => [
         const LibraryState(status: LibraryStatus.loading),
@@ -50,7 +56,10 @@ void main() {
 
     blocTest<LibraryBloc, LibraryState>(
       'emits success with empty lists when library is empty',
-      build: () => LibraryBloc(bookRepository: repository),
+      build: () => LibraryBloc(
+        bookRepository: repository,
+        articleRepository: articleRepository,
+      ),
       act: (bloc) => bloc.add(const LibraryLoadRequested()),
       expect: () => [
         const LibraryState(status: LibraryStatus.loading),
@@ -61,7 +70,10 @@ void main() {
     blocTest<LibraryBloc, LibraryState>(
       'emits failure when repository throws',
       setUp: () => repository.shouldThrow = true,
-      build: () => LibraryBloc(bookRepository: repository),
+      build: () => LibraryBloc(
+        bookRepository: repository,
+        articleRepository: articleRepository,
+      ),
       act: (bloc) => bloc.add(const LibraryLoadRequested()),
       expect: () => [
         const LibraryState(status: LibraryStatus.loading),
@@ -74,7 +86,10 @@ void main() {
       setUp: () {
         repository.seedBooks([_book]);
       },
-      build: () => LibraryBloc(bookRepository: repository),
+      build: () => LibraryBloc(
+        bookRepository: repository,
+        articleRepository: articleRepository,
+      ),
       seed: () => LibraryState(
         status: LibraryStatus.success,
         books: [_book],
@@ -88,9 +103,12 @@ void main() {
     blocTest<LibraryBloc, LibraryState>(
       'LibraryArticleDeleted removes article and reloads',
       setUp: () {
-        repository.seedArticles([_article]);
+        articleRepository.seedArticles([_article]);
       },
-      build: () => LibraryBloc(bookRepository: repository),
+      build: () => LibraryBloc(
+        bookRepository: repository,
+        articleRepository: articleRepository,
+      ),
       seed: () => LibraryState(
         status: LibraryStatus.success,
         articles: [_article],

@@ -1,5 +1,5 @@
 import 'package:article_parser/article_parser.dart';
-import 'package:book_repository/book_repository.dart';
+import 'package:article_repository/article_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -29,13 +29,13 @@ final class ImportArticleState extends Equatable {
 class ImportArticleCubit extends Cubit<ImportArticleState> {
   ImportArticleCubit({
     required ArticleParser articleParser,
-    required BookRepository bookRepository,
+    required ArticleRepository articleRepository,
   }) : _parser = articleParser,
-       _bookRepository = bookRepository,
+       _articleRepository = articleRepository,
        super(const ImportArticleState());
 
   final ArticleParser _parser;
-  final BookRepository _bookRepository;
+  final ArticleRepository _articleRepository;
 
   Future<void> importUrl(String url) async {
     if (url.trim().isEmpty) {
@@ -53,7 +53,7 @@ class ImportArticleCubit extends Cubit<ImportArticleState> {
     try {
       final parsed = await _parser.parse(url.trim());
 
-      await _bookRepository.addArticle(
+      await _articleRepository.addArticle(
         title: parsed.title,
         url: url.trim(),
         cleanedHtml: parsed.cleanedHtml,

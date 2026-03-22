@@ -19,6 +19,8 @@ dependencies:
     path: packages/component_library
   local_storage:
     path: packages/local_storage
+  article_repository:
+    path: packages/article_repository
   book_repository:
     path: packages/book_repository
   highlight_repository:

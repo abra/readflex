@@ -1,3 +1,4 @@
+import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
@@ -11,9 +12,11 @@ part 'home_state.dart';
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
   HomeBloc({
     required BookRepository bookRepository,
+    required ArticleRepository articleRepository,
     required HighlightRepository highlightRepository,
     required FlashcardRepository flashcardRepository,
   }) : _bookRepository = bookRepository,
+       _articleRepository = articleRepository,
        _highlightRepository = highlightRepository,
        _flashcardRepository = flashcardRepository,
        super(const HomeState()) {
@@ -21,6 +24,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   }
 
   final BookRepository _bookRepository;
+  final ArticleRepository _articleRepository;
   final HighlightRepository _highlightRepository;
   final FlashcardRepository _flashcardRepository;
 
@@ -32,7 +36,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     try {
       final books = await _bookRepository.getBooks();
-      final articles = await _bookRepository.getArticles();
+      final articles = await _articleRepository.getArticles();
       final highlights = await _highlightRepository.getHighlights();
       final dueCards = await _flashcardRepository.getDueFlashcards();
 

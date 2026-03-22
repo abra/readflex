@@ -6,6 +6,7 @@
 
 import 'package:ai_service/ai_service.dart';
 import 'package:article_parser/article_parser.dart';
+import 'package:article_repository/article_repository.dart';
 import 'package:auth_service/auth_service.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
@@ -29,6 +30,7 @@ class DependenciesContainer {
     required this.packageInfo,
     required this.preferencesService,
     required this.authService,
+    required this.articleRepository,
     required this.bookRepository,
     required this.highlightRepository,
     required this.flashcardRepository,
@@ -39,7 +41,6 @@ class DependenciesContainer {
     required this.subscriptionService,
     required this.connectivityService,
     required this.notificationService,
-    this.dispose,
   });
 
   final Logger logger;
@@ -48,6 +49,7 @@ class DependenciesContainer {
   final PackageInfo packageInfo;
   final PreferencesService preferencesService;
   final AuthService authService;
+  final ArticleRepository articleRepository;
   final BookRepository bookRepository;
   final HighlightRepository highlightRepository;
   final FlashcardRepository flashcardRepository;
@@ -58,9 +60,6 @@ class DependenciesContainer {
   final SubscriptionService subscriptionService;
   final ConnectivityService connectivityService;
   final NotificationService notificationService;
-
-  /// Releases resources (database, streams, etc.).
-  final Future<void> Function()? dispose;
 }
 
 /// A special version of [DependenciesContainer] that is used in tests.

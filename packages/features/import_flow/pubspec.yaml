@@ -15,8 +15,8 @@ dependencies:
 
   shared:
     path: ../../shared
-  book_repository:
-    path: ../../book_repository
+  article_repository:
+    path: ../../article_repository
   article_parser:
     path: ../../article_parser
   component_library:

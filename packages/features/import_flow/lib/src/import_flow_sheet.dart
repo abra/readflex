@@ -1,5 +1,5 @@
 import 'package:article_parser/article_parser.dart';
-import 'package:book_repository/book_repository.dart';
+import 'package:article_repository/article_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,7 +14,7 @@ import 'import_article_cubit.dart';
 void showImportFlowSheet(
   BuildContext context, {
   required ArticleParser articleParser,
-  required BookRepository bookRepository,
+  required ArticleRepository articleRepository,
   required VoidCallback onBookFilePicked,
   required VoidCallback onArticleImported,
 }) {
@@ -23,7 +23,7 @@ void showImportFlowSheet(
     isScrollControlled: true,
     builder: (_) => _ImportFlowSheet(
       articleParser: articleParser,
-      bookRepository: bookRepository,
+      articleRepository: articleRepository,
       onBookFilePicked: onBookFilePicked,
       onArticleImported: onArticleImported,
     ),
@@ -33,13 +33,13 @@ void showImportFlowSheet(
 class _ImportFlowSheet extends StatefulWidget {
   const _ImportFlowSheet({
     required this.articleParser,
-    required this.bookRepository,
+    required this.articleRepository,
     required this.onBookFilePicked,
     required this.onArticleImported,
   });
 
   final ArticleParser articleParser;
-  final BookRepository bookRepository;
+  final ArticleRepository articleRepository;
   final VoidCallback onBookFilePicked;
   final VoidCallback onArticleImported;
 
@@ -84,7 +84,7 @@ class _ImportFlowSheetState extends State<_ImportFlowSheet> {
             ] else
               _ArticleUrlInput(
                 articleParser: widget.articleParser,
-                bookRepository: widget.bookRepository,
+                articleRepository: widget.articleRepository,
                 onImported: () {
                   Navigator.of(context).pop();
                   widget.onArticleImported();
@@ -100,12 +100,12 @@ class _ImportFlowSheetState extends State<_ImportFlowSheet> {
 class _ArticleUrlInput extends StatefulWidget {
   const _ArticleUrlInput({
     required this.articleParser,
-    required this.bookRepository,
+    required this.articleRepository,
     required this.onImported,
   });
 
   final ArticleParser articleParser;
-  final BookRepository bookRepository;
+  final ArticleRepository articleRepository;
   final VoidCallback onImported;
 
   @override
@@ -126,7 +126,7 @@ class _ArticleUrlInputState extends State<_ArticleUrlInput> {
     return BlocProvider(
       create: (_) => ImportArticleCubit(
         articleParser: widget.articleParser,
-        bookRepository: widget.bookRepository,
+        articleRepository: widget.articleRepository,
       ),
       child: BlocConsumer<ImportArticleCubit, ImportArticleState>(
         listener: (context, state) {

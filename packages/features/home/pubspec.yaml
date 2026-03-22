@@ -17,6 +17,8 @@ dependencies:
     path: ../../shared
   book_repository:
     path: ../../book_repository
+  article_repository:
+    path: ../../article_repository
   highlight_repository:
     path: ../../highlight_repository
   flashcard_repository:

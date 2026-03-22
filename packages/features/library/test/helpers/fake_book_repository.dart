@@ -6,16 +6,11 @@ class FakeBookRepository implements BookRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 
   final List<Book> _books = [];
-  final List<Article> _articles = [];
   bool shouldThrow = false;
 
   void seedBooks(List<Book> books) => _books
     ..clear()
     ..addAll(books);
-
-  void seedArticles(List<Article> articles) => _articles
-    ..clear()
-    ..addAll(articles);
 
   @override
   Future<List<Book>> getBooks() async {
@@ -24,20 +19,8 @@ class FakeBookRepository implements BookRepository {
   }
 
   @override
-  Future<List<Article>> getArticles() async {
-    if (shouldThrow) throw StorageException(cause: 'fake error');
-    return List.unmodifiable(_articles);
-  }
-
-  @override
   Future<void> deleteBook(String id) async {
     if (shouldThrow) throw StorageException(cause: 'fake error');
     _books.removeWhere((b) => b.id == id);
-  }
-
-  @override
-  Future<void> deleteArticle(String id) async {
-    if (shouldThrow) throw StorageException(cause: 'fake error');
-    _articles.removeWhere((a) => a.id == id);
   }
 }

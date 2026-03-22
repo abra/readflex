@@ -26,7 +26,8 @@ class PreferencesRepository {
           map['themeMode'] as String? ?? 'system',
         ),
         locale: _resolveLocale(map['locale'] as String?, supportedCodes),
-        isFirstLaunch: map['isFirstLaunch'] as bool? ?? true,
+        onboardingCompleted: map['onboardingCompleted'] as bool? ?? false,
+        hasCompletedSetup: map['hasCompletedSetup'] as bool? ?? false,
       );
     } catch (_) {
       return const Preferences();
@@ -37,7 +38,8 @@ class PreferencesRepository {
     final map = <String, Object?>{
       'themeMode': prefs.themeMode.name,
       'locale': prefs.locale.languageCode,
-      'isFirstLaunch': prefs.isFirstLaunch,
+      'onboardingCompleted': prefs.onboardingCompleted,
+      'hasCompletedSetup': prefs.hasCompletedSetup,
     };
     await _storage.setString(_key, jsonEncode(map));
   }

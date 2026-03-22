@@ -1,3 +1,4 @@
+import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import 'library_bloc.dart';
 class LibraryScreen extends StatelessWidget {
   const LibraryScreen({
     required this.bookRepository,
+    required this.articleRepository,
     required this.onBookPressed,
     required this.onArticlePressed,
     required this.onAddPressed,
@@ -17,6 +19,7 @@ class LibraryScreen extends StatelessWidget {
   });
 
   final BookRepository bookRepository;
+  final ArticleRepository articleRepository;
   final void Function(Book book) onBookPressed;
   final void Function(Article article) onArticlePressed;
   final VoidCallback onAddPressed;
@@ -24,9 +27,10 @@ class LibraryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) =>
-          LibraryBloc(bookRepository: bookRepository)
-            ..add(const LibraryLoadRequested()),
+      create: (_) => LibraryBloc(
+        bookRepository: bookRepository,
+        articleRepository: articleRepository,
+      )..add(const LibraryLoadRequested()),
       child: LibraryView(
         onBookPressed: onBookPressed,
         onArticlePressed: onArticlePressed,

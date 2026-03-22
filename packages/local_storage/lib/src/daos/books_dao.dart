@@ -1,12 +1,11 @@
 import 'package:drift/drift.dart';
 
 import '../database.dart';
-import '../tables/articles_table.dart';
 import '../tables/books_table.dart';
 
 part 'books_dao.g.dart';
 
-@DriftAccessor(tables: [BooksTable, ArticlesTable])
+@DriftAccessor(tables: [BooksTable])
 class BooksDao extends DatabaseAccessor<AppDatabase> with _$BooksDaoMixin {
   BooksDao(super.db);
 
@@ -29,24 +28,4 @@ class BooksDao extends DatabaseAccessor<AppDatabase> with _$BooksDaoMixin {
 
   Future<void> deleteBook(String id) =>
       (delete(booksTable)..where((t) => t.id.equals(id))).go();
-
-  Future<List<ArticlesTableData>> allArticles() =>
-      (select(articlesTable)..orderBy([
-            (t) => OrderingTerm.desc(t.lastOpenedAt),
-            (t) => OrderingTerm.desc(t.addedAt),
-          ]))
-          .get();
-
-  Future<ArticlesTableData?> articleById(String id) =>
-      (select(articlesTable)..where((t) => t.id.equals(id))).getSingleOrNull();
-
-  Future<void> insertArticle(ArticlesTableCompanion article) =>
-      into(articlesTable).insert(article);
-
-  Future<void> updateArticle(ArticlesTableCompanion article) => (update(
-    articlesTable,
-  )..where((t) => t.id.equals(article.id.value))).write(article);
-
-  Future<void> deleteArticle(String id) =>
-      (delete(articlesTable)..where((t) => t.id.equals(id))).go();
 }

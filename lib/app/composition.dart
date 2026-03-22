@@ -6,6 +6,7 @@
 
 import 'package:ai_service/ai_service.dart';
 import 'package:article_parser/article_parser.dart';
+import 'package:article_repository/article_repository.dart';
 import 'package:auth_service/auth_service.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
@@ -105,6 +106,7 @@ Future<DependenciesContainer> createDependenciesContainer(
   final db = AppDatabase();
 
   // ─── Repositories ───
+  final articleRepository = ArticleRepository(articlesDao: db.articlesDao);
   final bookRepository = BookRepository(booksDao: db.booksDao);
   final highlightRepository = HighlightRepository(
     highlightsDao: db.highlightsDao,
@@ -137,6 +139,7 @@ Future<DependenciesContainer> createDependenciesContainer(
     packageInfo: packageInfo,
     preferencesService: preferencesService,
     authService: authService,
+    articleRepository: articleRepository,
     bookRepository: bookRepository,
     highlightRepository: highlightRepository,
     flashcardRepository: flashcardRepository,
@@ -147,10 +150,5 @@ Future<DependenciesContainer> createDependenciesContainer(
     subscriptionService: subscriptionService,
     connectivityService: connectivityService,
     notificationService: notificationService,
-    dispose: () async {
-      await db.close();
-      authService.dispose();
-      logger.destroy();
-    },
   );
 }

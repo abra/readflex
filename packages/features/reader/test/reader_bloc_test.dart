@@ -3,11 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:reader_feature/src/reader_bloc.dart';
 import 'package:shared/shared.dart';
 
+import 'helpers/fake_article_repository.dart';
 import 'helpers/fake_book_repository.dart';
 import 'helpers/fake_highlight_repository.dart';
 
 void main() {
   late FakeBookRepository bookRepository;
+  late FakeArticleRepository articleRepository;
   late FakeHighlightRepository highlightRepository;
 
   final testBook = Book(
@@ -42,11 +44,13 @@ void main() {
 
   setUp(() {
     bookRepository = FakeBookRepository();
+    articleRepository = FakeArticleRepository();
     highlightRepository = FakeHighlightRepository();
   });
 
   ReaderBloc buildBloc() => ReaderBloc(
     bookRepository: bookRepository,
+    articleRepository: articleRepository,
     highlightRepository: highlightRepository,
   );
 
@@ -92,7 +96,7 @@ void main() {
       blocTest<ReaderBloc, ReaderState>(
         'loads article by ID when no book matches',
         setUp: () {
-          bookRepository.seedArticle(testArticle);
+          articleRepository.seedArticle(testArticle);
         },
         build: buildBloc,
         act: (bloc) =>
@@ -106,8 +110,8 @@ void main() {
               .having((s) => s.article, 'article', isNotNull),
         ],
         verify: (_) {
-          expect(bookRepository.updatedArticle, isNotNull);
-          expect(bookRepository.updatedArticle!.lastOpenedAt, isNotNull);
+          expect(articleRepository.updatedArticle, isNotNull);
+          expect(articleRepository.updatedArticle!.lastOpenedAt, isNotNull);
         },
       );
 
@@ -163,7 +167,7 @@ void main() {
       blocTest<ReaderBloc, ReaderState>(
         'updates article scroll offset',
         setUp: () {
-          bookRepository.seedArticle(testArticle);
+          articleRepository.seedArticle(testArticle);
         },
         build: buildBloc,
         seed: () => ReaderState(
@@ -176,8 +180,8 @@ void main() {
           const ReaderPositionUpdated(scrollOffset: 0.75),
         ),
         verify: (_) {
-          expect(bookRepository.updatedArticle, isNotNull);
-          expect(bookRepository.updatedArticle!.currentScrollOffset, 0.75);
+          expect(articleRepository.updatedArticle, isNotNull);
+          expect(articleRepository.updatedArticle!.currentScrollOffset, 0.75);
         },
       );
     });

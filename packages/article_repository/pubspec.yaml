@@ -1,5 +1,5 @@
-name: book_repository
-description: "Book domain logic. Maps storage to domain models."
+name: article_repository
+description: "Article domain logic. Maps storage to domain models."
 publish_to: none
 version: 0.1.0
 

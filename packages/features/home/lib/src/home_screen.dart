@@ -1,3 +1,4 @@
+import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
@@ -12,6 +13,7 @@ import 'home_bloc.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({
     required this.bookRepository,
+    required this.articleRepository,
     required this.highlightRepository,
     required this.flashcardRepository,
     required this.onBookPressed,
@@ -21,6 +23,7 @@ class HomeScreen extends StatelessWidget {
   });
 
   final BookRepository bookRepository;
+  final ArticleRepository articleRepository;
   final HighlightRepository highlightRepository;
   final FlashcardRepository flashcardRepository;
   final void Function(Book book) onBookPressed;
@@ -32,6 +35,7 @@ class HomeScreen extends StatelessWidget {
     return BlocProvider(
       create: (_) => HomeBloc(
         bookRepository: bookRepository,
+        articleRepository: articleRepository,
         highlightRepository: highlightRepository,
         flashcardRepository: flashcardRepository,
       )..add(const HomeLoadRequested()),

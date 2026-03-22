@@ -1,3 +1,4 @@
+import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,9 +8,12 @@ part 'library_event.dart';
 part 'library_state.dart';
 
 class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
-  LibraryBloc({required BookRepository bookRepository})
-    : _bookRepository = bookRepository,
-      super(const LibraryState()) {
+  LibraryBloc({
+    required BookRepository bookRepository,
+    required ArticleRepository articleRepository,
+  }) : _bookRepository = bookRepository,
+       _articleRepository = articleRepository,
+       super(const LibraryState()) {
     on<LibraryLoadRequested>(_onLoadRequested);
     on<LibraryBookDeleted>(_onBookDeleted);
     on<LibraryArticleDeleted>(_onArticleDeleted);
@@ -17,6 +21,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
   }
 
   final BookRepository _bookRepository;
+  final ArticleRepository _articleRepository;
 
   Future<void> _onLoadRequested(
     LibraryLoadRequested event,
@@ -50,7 +55,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     Emitter<LibraryState> emit,
   ) async {
     try {
-      await _bookRepository.deleteArticle(event.articleId);
+      await _articleRepository.deleteArticle(event.articleId);
       await _loadItems(emit);
     } catch (e) {
       emit(state.copyWith(status: LibraryStatus.failure));
@@ -60,7 +65,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
   Future<void> _loadItems(Emitter<LibraryState> emit) async {
     try {
       final books = await _bookRepository.getBooks();
-      final articles = await _bookRepository.getArticles();
+      final articles = await _articleRepository.getArticles();
       emit(
         state.copyWith(
           status: LibraryStatus.success,

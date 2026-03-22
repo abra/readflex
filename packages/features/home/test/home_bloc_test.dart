@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:home_feature/src/home_bloc.dart';
 import 'package:shared/shared.dart';
 
+import 'helpers/fake_article_repository.dart';
 import 'helpers/fake_book_repository.dart';
 import 'helpers/fake_flashcard_repository.dart';
 import 'helpers/fake_highlight_repository.dart';
@@ -45,11 +46,13 @@ final _flashcard = Flashcard(
 void main() {
   group('HomeBloc', () {
     late FakeBookRepository bookRepo;
+    late FakeArticleRepository articleRepo;
     late FakeHighlightRepository highlightRepo;
     late FakeFlashcardRepository flashcardRepo;
 
     setUp(() {
       bookRepo = FakeBookRepository();
+      articleRepo = FakeArticleRepository();
       highlightRepo = FakeHighlightRepository();
       flashcardRepo = FakeFlashcardRepository();
     });
@@ -58,12 +61,13 @@ void main() {
       'emits loading then success with stats',
       setUp: () {
         bookRepo.books = [_book];
-        bookRepo.articles = [_article];
+        articleRepo.articles = [_article];
         highlightRepo.highlights = [_highlight];
         flashcardRepo.dueCards = [_flashcard];
       },
       build: () => HomeBloc(
         bookRepository: bookRepo,
+        articleRepository: articleRepo,
         highlightRepository: highlightRepo,
         flashcardRepository: flashcardRepo,
       ),
@@ -85,6 +89,7 @@ void main() {
       'emits success with zeros when empty',
       build: () => HomeBloc(
         bookRepository: bookRepo,
+        articleRepository: articleRepo,
         highlightRepository: highlightRepo,
         flashcardRepository: flashcardRepo,
       ),
@@ -100,6 +105,7 @@ void main() {
       setUp: () => bookRepo.shouldThrow = true,
       build: () => HomeBloc(
         bookRepository: bookRepo,
+        articleRepository: articleRepo,
         highlightRepository: highlightRepo,
         flashcardRepository: flashcardRepo,
       ),

@@ -2,26 +2,34 @@ import 'dart:ui' show Locale;
 
 import 'package:flutter/material.dart' show ThemeMode;
 
-/// Stores user preferences: theme mode, locale and first launch flag.
+/// Stores user preferences: theme mode, locale, onboarding and setup flags.
 final class Preferences {
   const Preferences({
     this.themeMode = ThemeMode.system,
     this.locale = const Locale('en'),
-    this.isFirstLaunch = true,
+    this.onboardingCompleted = false,
+    this.hasCompletedSetup = false,
   });
 
   final ThemeMode themeMode;
   final Locale locale;
-  final bool isFirstLaunch;
+
+  /// Whether the user has completed the onboarding flow.
+  final bool onboardingCompleted;
+
+  /// Whether the user has completed the initial setup (added first content).
+  final bool hasCompletedSetup;
 
   Preferences copyWith({
     ThemeMode? themeMode,
     Locale? locale,
-    bool? isFirstLaunch,
+    bool? onboardingCompleted,
+    bool? hasCompletedSetup,
   }) => Preferences(
     themeMode: themeMode ?? this.themeMode,
     locale: locale ?? this.locale,
-    isFirstLaunch: isFirstLaunch ?? this.isFirstLaunch,
+    onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
+    hasCompletedSetup: hasCompletedSetup ?? this.hasCompletedSetup,
   );
 
   @override
@@ -30,8 +38,10 @@ final class Preferences {
       other is Preferences &&
           themeMode == other.themeMode &&
           locale == other.locale &&
-          isFirstLaunch == other.isFirstLaunch;
+          onboardingCompleted == other.onboardingCompleted &&
+          hasCompletedSetup == other.hasCompletedSetup;
 
   @override
-  int get hashCode => Object.hash(themeMode, locale, isFirstLaunch);
+  int get hashCode =>
+      Object.hash(themeMode, locale, onboardingCompleted, hasCompletedSetup);
 }

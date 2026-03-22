@@ -1,7 +1,7 @@
-import 'package:book_repository/book_repository.dart';
+import 'package:article_repository/article_repository.dart';
 import 'package:shared/shared.dart';
 
-class FakeBookRepository implements BookRepository {
+class FakeArticleRepository implements ArticleRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 

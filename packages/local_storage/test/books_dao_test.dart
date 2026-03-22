@@ -28,20 +28,6 @@ void main() {
     addedAt: addedAt,
   );
 
-  ArticlesTableCompanion _article({
-    String id = 'a1',
-    String title = 'Test Article',
-    String url = 'https://example.com',
-    String cleanedHtml = '<p>Content</p>',
-    String addedAt = '2026-01-01T00:00:00.000Z',
-  }) => ArticlesTableCompanion.insert(
-    id: id,
-    title: title,
-    url: url,
-    cleanedHtml: cleanedHtml,
-    addedAt: addedAt,
-  );
-
   group('BooksDao', () {
     test('insertBook and allBooks returns inserted book', () async {
       await dao.insertBook(_book());
@@ -80,29 +66,6 @@ void main() {
       await dao.deleteBook('b1');
       final books = await dao.allBooks();
       expect(books, isEmpty);
-    });
-  });
-
-  group('BooksDao — articles', () {
-    test('insertArticle and allArticles returns inserted article', () async {
-      await dao.insertArticle(_article());
-      final articles = await dao.allArticles();
-      expect(articles, hasLength(1));
-      expect(articles.first.title, 'Test Article');
-    });
-
-    test('articleById returns correct article', () async {
-      await dao.insertArticle(_article());
-      final article = await dao.articleById('a1');
-      expect(article, isNotNull);
-      expect(article!.url, 'https://example.com');
-    });
-
-    test('deleteArticle removes article', () async {
-      await dao.insertArticle(_article());
-      await dao.deleteArticle('a1');
-      final articles = await dao.allArticles();
-      expect(articles, isEmpty);
     });
   });
 }

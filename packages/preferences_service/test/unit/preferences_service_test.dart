@@ -81,18 +81,18 @@ void main() {
       expect(service2.current.locale, const Locale('ru'));
     });
 
-    test('isFirstLaunch defaults to true and persists false', () async {
+    test('onboardingCompleted defaults to false and persists true', () async {
       final service = await PreferencesService.create(
         supportedCodes: _supportedCodes,
       );
-      expect(service.current.isFirstLaunch, isTrue);
+      expect(service.current.onboardingCompleted, isFalse);
 
-      await service.update((s) => s.copyWith(isFirstLaunch: false));
+      await service.update((s) => s.copyWith(onboardingCompleted: true));
 
       final service2 = await PreferencesService.create(
         supportedCodes: _supportedCodes,
       );
-      expect(service2.current.isFirstLaunch, isFalse);
+      expect(service2.current.onboardingCompleted, isTrue);
     });
 
     test('create() returns defaults when stored data is corrupted', () async {

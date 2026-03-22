@@ -6,15 +6,12 @@ part of 'dictionary_dao.dart';
 mixin _$DictionaryDaoMixin on DatabaseAccessor<AppDatabase> {
   $DictionaryEntriesTableTable get dictionaryEntriesTable =>
       attachedDatabase.dictionaryEntriesTable;
-
   DictionaryDaoManager get managers => DictionaryDaoManager(this);
 }
 
 class DictionaryDaoManager {
   final _$DictionaryDaoMixin _db;
-
   DictionaryDaoManager(this._db);
-
   $$DictionaryEntriesTableTableTableManager get dictionaryEntriesTable =>
       $$DictionaryEntriesTableTableTableManager(
         _db.attachedDatabase,

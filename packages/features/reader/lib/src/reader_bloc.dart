@@ -1,3 +1,4 @@
+import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,8 +11,10 @@ part 'reader_state.dart';
 class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   ReaderBloc({
     required BookRepository bookRepository,
+    required ArticleRepository articleRepository,
     required HighlightRepository highlightRepository,
   }) : _bookRepository = bookRepository,
+       _articleRepository = articleRepository,
        _highlightRepository = highlightRepository,
        super(const ReaderState()) {
     on<ReaderSourceLoadRequested>(_onSourceLoadRequested);
@@ -23,6 +26,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   }
 
   final BookRepository _bookRepository;
+  final ArticleRepository _articleRepository;
   final HighlightRepository _highlightRepository;
 
   Future<void> _onSourceLoadRequested(
@@ -56,14 +60,14 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         return;
       }
 
-      final article = await _bookRepository.getArticleById(event.sourceId);
+      final article = await _articleRepository.getArticleById(event.sourceId);
       if (article != null) {
         final highlights = await _highlightRepository.getHighlightsBySource(
           event.sourceId,
         );
 
         // Update lastOpenedAt
-        await _bookRepository.updateArticle(
+        await _articleRepository.updateArticle(
           article.copyWith(lastOpenedAt: DateTime.now()),
         );
 
@@ -101,7 +105,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         final updated = state.article!.copyWith(
           currentScrollOffset: event.scrollOffset,
         );
-        await _bookRepository.updateArticle(updated);
+        await _articleRepository.updateArticle(updated);
         emit(state.copyWith(article: updated));
       }
     } catch (_) {
