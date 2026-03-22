@@ -1,6 +1,7 @@
 /// Thrown when AI service is unavailable (no network, backend error).
 class AiServiceException implements Exception {
   const AiServiceException(this.message);
+
   final String message;
 
   @override

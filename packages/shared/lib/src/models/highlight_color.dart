@@ -4,7 +4,8 @@ enum HighlightColor {
   green,
   blue,
   pink,
-  purple;
+  purple
+  ;
 
   static HighlightColor from(String value) => HighlightColor.values.firstWhere(
     (e) => e.name == value,

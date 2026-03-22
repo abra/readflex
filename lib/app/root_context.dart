@@ -4,6 +4,7 @@
 // knowledge of widgets, and the widget layer has no knowledge of
 // initialization logic.
 
+import 'package:auth_service/auth_service.dart';
 import 'package:flutter/widgets.dart';
 import 'package:readflex/app/composition.dart';
 import 'package:readflex/app/dependency_scope.dart';
@@ -18,7 +19,10 @@ class RootContext extends StatelessWidget {
   Widget build(BuildContext context) {
     return DependenciesScope(
       dependencies: compositionResult.dependencies,
-      child: const MaterialContext(),
+      child: AuthScope(
+        service: compositionResult.dependencies.authService,
+        child: const MaterialContext(),
+      ),
     );
   }
 }

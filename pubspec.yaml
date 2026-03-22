@@ -10,9 +10,39 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Internal packages
+  shared:
+    path: packages/shared
   monitoring:
     path: packages/monitoring
+  component_library:
+    path: packages/component_library
+  local_storage:
+    path: packages/local_storage
+  book_repository:
+    path: packages/book_repository
+  highlight_repository:
+    path: packages/highlight_repository
+  dictionary_repository:
+    path: packages/dictionary_repository
+  flashcard_repository:
+    path: packages/flashcard_repository
+  article_parser:
+    path: packages/article_parser
+  translation_service:
+    path: packages/translation_service
+  ai_service:
+    path: packages/ai_service
+  auth_service:
+    path: packages/auth_service
+  connectivity_service:
+    path: packages/connectivity_service
+  subscription_service:
+    path: packages/subscription_service
+  notification_service:
+    path: packages/notification_service
 
+  # External packages
   cupertino_icons: ^1.0.8
   flutter_bloc: ^9.1.1
   package_info_plus: ^9.0.0

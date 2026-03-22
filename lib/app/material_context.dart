@@ -3,6 +3,7 @@
 // StatefulWidget so that GoRouter is created once in initState and disposed
 // properly, avoiding recreation on every settings change (theme/locale).
 
+import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:readflex/app/dependency_scope.dart';
@@ -35,15 +36,24 @@ class _MaterialContextState extends State<MaterialContext> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      debugShowCheckedModeBanner: false,
-      routerConfig: _router,
-      builder: (context, child) {
-        return KeyedSubtree(
-          key: _globalKey,
-          child: _MediaQueryRootOverride(child: child!),
-        );
-      },
+    const lightTheme = LightAppThemeData();
+    const darkTheme = DarkAppThemeData();
+
+    return AppTheme(
+      lightTheme: lightTheme,
+      darkTheme: darkTheme,
+      child: MaterialApp.router(
+        debugShowCheckedModeBanner: false,
+        theme: lightTheme.materialThemeData,
+        darkTheme: darkTheme.materialThemeData,
+        routerConfig: _router,
+        builder: (context, child) {
+          return KeyedSubtree(
+            key: _globalKey,
+            child: _MediaQueryRootOverride(child: child!),
+          );
+        },
+      ),
     );
   }
 }

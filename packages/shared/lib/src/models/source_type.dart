@@ -1,7 +1,8 @@
 /// The type of reading source.
 enum SourceType {
   book,
-  article;
+  article
+  ;
 
   /// Parses a [SourceType] from a stored string value.
   static SourceType from(String? value) => switch (value) {

@@ -25,6 +25,7 @@ class TranslationResult {
 /// Thrown when translation fails on both remote and platform.
 class TranslationException implements Exception {
   const TranslationException(this.message);
+
   final String message;
 
   @override

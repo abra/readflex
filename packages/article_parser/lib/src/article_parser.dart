@@ -18,6 +18,7 @@ class ParsedArticle {
 /// Thrown when article parsing fails.
 class ArticleParserException implements Exception {
   const ArticleParserException(this.message);
+
   final String message;
 
   @override
