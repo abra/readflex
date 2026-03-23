@@ -1,47 +1,38 @@
-import 'package:article_parser/article_parser.dart';
-import 'package:article_repository/article_repository.dart';
 import 'package:component_library/component_library.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'import_article_cubit.dart';
+enum ImportFlowResult { bookImported, articleImported }
 
 /// Shows the import bottom sheet.
 ///
 /// Two options: import book (file picker) or import article (URL).
-/// [onBookFilePicked] is called when the user chooses to pick a book file —
-/// the actual file picker is handled by the caller (composition root).
-void showImportFlowSheet(
+/// [onImportBook] and [onImportArticle] must return `true` only when content
+/// was actually added. This keeps the flow reusable and lets the caller own
+/// the real import side effects, including current stub implementations.
+Future<ImportFlowResult?> showImportFlowSheet(
   BuildContext context, {
-  required ArticleParser articleParser,
-  required ArticleRepository articleRepository,
-  required VoidCallback onBookFilePicked,
-  required VoidCallback onArticleImported,
+  required AsyncValueGetter<bool> onImportBook,
+  required Future<bool> Function(String url) onImportArticle,
 }) {
-  showModalBottomSheet<void>(
+  return showModalBottomSheet<ImportFlowResult>(
     context: context,
     isScrollControlled: true,
     builder: (_) => _ImportFlowSheet(
-      articleParser: articleParser,
-      articleRepository: articleRepository,
-      onBookFilePicked: onBookFilePicked,
-      onArticleImported: onArticleImported,
+      onImportBook: onImportBook,
+      onImportArticle: onImportArticle,
     ),
   );
 }
 
 class _ImportFlowSheet extends StatefulWidget {
   const _ImportFlowSheet({
-    required this.articleParser,
-    required this.articleRepository,
-    required this.onBookFilePicked,
-    required this.onArticleImported,
+    required this.onImportBook,
+    required this.onImportArticle,
   });
 
-  final ArticleParser articleParser;
-  final ArticleRepository articleRepository;
-  final VoidCallback onBookFilePicked;
-  final VoidCallback onArticleImported;
+  final AsyncValueGetter<bool> onImportBook;
+  final Future<bool> Function(String url) onImportArticle;
 
   @override
   State<_ImportFlowSheet> createState() => _ImportFlowSheetState();
@@ -49,6 +40,7 @@ class _ImportFlowSheet extends StatefulWidget {
 
 class _ImportFlowSheetState extends State<_ImportFlowSheet> {
   bool _showUrlInput = false;
+  bool _isImportingBook = false;
 
   @override
   Widget build(BuildContext context) {
@@ -69,10 +61,8 @@ class _ImportFlowSheetState extends State<_ImportFlowSheet> {
                 leading: const Icon(Icons.upload_file),
                 title: const Text('Import book file'),
                 subtitle: const Text('EPUB, PDF, FB2, MOBI'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  widget.onBookFilePicked();
-                },
+                enabled: !_isImportingBook,
+                onTap: _isImportingBook ? null : _handleBookImport,
               ),
               ListTile(
                 leading: const Icon(Icons.link),
@@ -83,11 +73,9 @@ class _ImportFlowSheetState extends State<_ImportFlowSheet> {
               const SizedBox(height: Spacing.medium),
             ] else
               _ArticleUrlInput(
-                articleParser: widget.articleParser,
-                articleRepository: widget.articleRepository,
+                onImportArticle: widget.onImportArticle,
                 onImported: () {
-                  Navigator.of(context).pop();
-                  widget.onArticleImported();
+                  Navigator.of(context).pop(ImportFlowResult.articleImported);
                 },
               ),
           ],
@@ -95,17 +83,28 @@ class _ImportFlowSheetState extends State<_ImportFlowSheet> {
       ),
     );
   }
+
+  Future<void> _handleBookImport() async {
+    setState(() => _isImportingBook = true);
+
+    final imported = await widget.onImportBook();
+    if (!mounted) return;
+
+    setState(() => _isImportingBook = false);
+
+    if (imported) {
+      Navigator.of(context).pop(ImportFlowResult.bookImported);
+    }
+  }
 }
 
 class _ArticleUrlInput extends StatefulWidget {
   const _ArticleUrlInput({
-    required this.articleParser,
-    required this.articleRepository,
+    required this.onImportArticle,
     required this.onImported,
   });
 
-  final ArticleParser articleParser;
-  final ArticleRepository articleRepository;
+  final Future<bool> Function(String url) onImportArticle;
   final VoidCallback onImported;
 
   @override
@@ -114,6 +113,8 @@ class _ArticleUrlInput extends StatefulWidget {
 
 class _ArticleUrlInputState extends State<_ArticleUrlInput> {
   final _controller = TextEditingController();
+  String? _errorMessage;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -123,61 +124,79 @@ class _ArticleUrlInputState extends State<_ArticleUrlInput> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => ImportArticleCubit(
-        articleParser: widget.articleParser,
-        articleRepository: widget.articleRepository,
-      ),
-      child: BlocConsumer<ImportArticleCubit, ImportArticleState>(
-        listener: (context, state) {
-          if (state.status == ImportArticleStatus.success) {
-            widget.onImported();
-          }
-        },
-        builder: (context, state) {
-          final isLoading = state.status == ImportArticleStatus.loading;
-
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Spacing.large),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextField(
-                  controller: _controller,
-                  autofocus: true,
-                  enabled: !isLoading,
-                  decoration: InputDecoration(
-                    hintText: 'https://...',
-                    labelText: 'Article URL',
-                    errorText: state.status == ImportArticleStatus.failure
-                        ? state.errorMessage
-                        : null,
-                  ),
-                  keyboardType: TextInputType.url,
-                  onSubmitted: (_) => _submit(context),
-                ),
-                const SizedBox(height: Spacing.medium),
-                FilledButton(
-                  onPressed: isLoading ? null : () => _submit(context),
-                  child: isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Import'),
-                ),
-                const SizedBox(height: Spacing.large),
-              ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: Spacing.large),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            enabled: !_isLoading,
+            decoration: InputDecoration(
+              hintText: 'https://...',
+              labelText: 'Article URL',
+              errorText: _errorMessage,
             ),
-          );
-        },
+            keyboardType: TextInputType.url,
+            onChanged: (_) {
+              if (_errorMessage != null) {
+                setState(() => _errorMessage = null);
+              }
+            },
+            onSubmitted: (_) => _submit(),
+          ),
+          const SizedBox(height: Spacing.medium),
+          FilledButton(
+            onPressed: _isLoading ? null : _submit,
+            child: _isLoading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Import'),
+          ),
+          const SizedBox(height: Spacing.large),
+        ],
       ),
     );
   }
 
-  void _submit(BuildContext context) {
-    context.read<ImportArticleCubit>().importUrl(_controller.text);
+  Future<void> _submit() async {
+    if (_isLoading) return;
+
+    final url = _controller.text.trim();
+    if (url.isEmpty) {
+      setState(() => _errorMessage = 'Please enter a URL');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final imported = await widget.onImportArticle(url);
+      if (!mounted) return;
+
+      if (imported) {
+        widget.onImported();
+        return;
+      }
+
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Failed to import article';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Failed to import article';
+      });
+    }
   }
 }

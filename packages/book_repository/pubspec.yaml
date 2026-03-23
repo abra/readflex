@@ -19,6 +19,4 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  drift:
-    version: ^2.23.1
   sqlite3: ^2.7.0

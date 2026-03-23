@@ -8,7 +8,9 @@ class $BooksTableTable extends BooksTable
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
+
   $BooksTableTable(this.attachedDatabase, [this._alias]);
+
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -140,6 +142,7 @@ class $BooksTableTable extends BooksTable
     ),
     defaultValue: const Constant(false),
   );
+
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -155,11 +158,14 @@ class $BooksTableTable extends BooksTable
     lastOpenedAt,
     isFinished,
   ];
+
   @override
   String get aliasedName => _alias ?? actualTableName;
+
   @override
   String get actualTableName => $name;
   static const String $name = 'books_table';
+
   @override
   VerificationContext validateIntegrity(
     Insertable<BooksTableData> instance, {
@@ -266,6 +272,7 @@ class $BooksTableTable extends BooksTable
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
+
   @override
   BooksTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -340,6 +347,7 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
   final String addedAt;
   final String? lastOpenedAt;
   final bool isFinished;
+
   const BooksTableData({
     required this.id,
     required this.title,
@@ -354,6 +362,7 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
     this.lastOpenedAt,
     required this.isFinished,
   });
+
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -421,6 +430,7 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
       isFinished: serializer.fromJson<bool>(json['isFinished']),
     );
   }
+
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -469,6 +479,7 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
     lastOpenedAt: lastOpenedAt.present ? lastOpenedAt.value : this.lastOpenedAt,
     isFinished: isFinished ?? this.isFinished,
   );
+
   BooksTableData copyWithCompanion(BooksTableCompanion data) {
     return BooksTableData(
       id: data.id.present ? data.id.value : this.id,
@@ -532,6 +543,7 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
     lastOpenedAt,
     isFinished,
   );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -564,6 +576,7 @@ class BooksTableCompanion extends UpdateCompanion<BooksTableData> {
   final Value<String?> lastOpenedAt;
   final Value<bool> isFinished;
   final Value<int> rowid;
+
   const BooksTableCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -579,6 +592,7 @@ class BooksTableCompanion extends UpdateCompanion<BooksTableData> {
     this.isFinished = const Value.absent(),
     this.rowid = const Value.absent(),
   });
+
   BooksTableCompanion.insert({
     required String id,
     required String title,
@@ -598,6 +612,7 @@ class BooksTableCompanion extends UpdateCompanion<BooksTableData> {
        format = Value(format),
        filePath = Value(filePath),
        addedAt = Value(addedAt);
+
   static Insertable<BooksTableData> custom({
     Expression<String>? id,
     Expression<String>? title,
@@ -733,7 +748,9 @@ class $ArticlesTableTable extends ArticlesTable
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
+
   $ArticlesTableTable(this.attachedDatabase, [this._alias]);
+
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -854,6 +871,7 @@ class $ArticlesTableTable extends ArticlesTable
     ),
     defaultValue: const Constant(false),
   );
+
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -868,11 +886,14 @@ class $ArticlesTableTable extends ArticlesTable
     lastOpenedAt,
     isFinished,
   ];
+
   @override
   String get aliasedName => _alias ?? actualTableName;
+
   @override
   String get actualTableName => $name;
   static const String $name = 'articles_table';
+
   @override
   VerificationContext validateIntegrity(
     Insertable<ArticlesTableData> instance, {
@@ -973,6 +994,7 @@ class $ArticlesTableTable extends ArticlesTable
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
+
   @override
   ArticlesTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -1043,6 +1065,7 @@ class ArticlesTableData extends DataClass
   final String addedAt;
   final String? lastOpenedAt;
   final bool isFinished;
+
   const ArticlesTableData({
     required this.id,
     required this.title,
@@ -1056,6 +1079,7 @@ class ArticlesTableData extends DataClass
     this.lastOpenedAt,
     required this.isFinished,
   });
+
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1122,6 +1146,7 @@ class ArticlesTableData extends DataClass
       isFinished: serializer.fromJson<bool>(json['isFinished']),
     );
   }
+
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -1167,6 +1192,7 @@ class ArticlesTableData extends DataClass
     lastOpenedAt: lastOpenedAt.present ? lastOpenedAt.value : this.lastOpenedAt,
     isFinished: isFinished ?? this.isFinished,
   );
+
   ArticlesTableData copyWithCompanion(ArticlesTableCompanion data) {
     return ArticlesTableData(
       id: data.id.present ? data.id.value : this.id,
@@ -1227,6 +1253,7 @@ class ArticlesTableData extends DataClass
     lastOpenedAt,
     isFinished,
   );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1257,6 +1284,7 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
   final Value<String?> lastOpenedAt;
   final Value<bool> isFinished;
   final Value<int> rowid;
+
   const ArticlesTableCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -1271,6 +1299,7 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     this.isFinished = const Value.absent(),
     this.rowid = const Value.absent(),
   });
+
   ArticlesTableCompanion.insert({
     required String id,
     required String title,
@@ -1289,6 +1318,7 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
        url = Value(url),
        cleanedHtml = Value(cleanedHtml),
        addedAt = Value(addedAt);
+
   static Insertable<ArticlesTableData> custom({
     Expression<String>? id,
     Expression<String>? title,
@@ -1420,7 +1450,9 @@ class $HighlightsTableTable extends HighlightsTable
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
+
   $HighlightsTableTable(this.attachedDatabase, [this._alias]);
+
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -1526,6 +1558,7 @@ class $HighlightsTableTable extends HighlightsTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1539,11 +1572,14 @@ class $HighlightsTableTable extends HighlightsTable
     color,
     createdAt,
   ];
+
   @override
   String get aliasedName => _alias ?? actualTableName;
+
   @override
   String get actualTableName => $name;
   static const String $name = 'highlights_table';
+
   @override
   VerificationContext validateIntegrity(
     Insertable<HighlightsTableData> instance, {
@@ -1629,6 +1665,7 @@ class $HighlightsTableTable extends HighlightsTable
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
+
   @override
   HighlightsTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -1694,6 +1731,7 @@ class HighlightsTableData extends DataClass
   final double? scrollOffset;
   final String color;
   final String createdAt;
+
   const HighlightsTableData({
     required this.id,
     required this.sourceId,
@@ -1706,6 +1744,7 @@ class HighlightsTableData extends DataClass
     required this.color,
     required this.createdAt,
   });
+
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1769,6 +1808,7 @@ class HighlightsTableData extends DataClass
       createdAt: serializer.fromJson<String>(json['createdAt']),
     );
   }
+
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -1809,6 +1849,7 @@ class HighlightsTableData extends DataClass
     color: color ?? this.color,
     createdAt: createdAt ?? this.createdAt,
   );
+
   HighlightsTableData copyWithCompanion(HighlightsTableCompanion data) {
     return HighlightsTableData(
       id: data.id.present ? data.id.value : this.id,
@@ -1862,6 +1903,7 @@ class HighlightsTableData extends DataClass
     color,
     createdAt,
   );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1890,6 +1932,7 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
   final Value<String> color;
   final Value<String> createdAt;
   final Value<int> rowid;
+
   const HighlightsTableCompanion({
     this.id = const Value.absent(),
     this.sourceId = const Value.absent(),
@@ -1903,6 +1946,7 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
+
   HighlightsTableCompanion.insert({
     required String id,
     required String sourceId,
@@ -1920,6 +1964,7 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
        sourceType = Value(sourceType),
        highlightText = Value(highlightText),
        createdAt = Value(createdAt);
+
   static Insertable<HighlightsTableData> custom({
     Expression<String>? id,
     Expression<String>? sourceId,
@@ -2039,7 +2084,9 @@ class $FlashcardsTableTable extends FlashcardsTable
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
+
   $FlashcardsTableTable(this.attachedDatabase, [this._alias]);
+
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -2234,6 +2281,7 @@ class $FlashcardsTableTable extends FlashcardsTable
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2255,11 +2303,14 @@ class $FlashcardsTableTable extends FlashcardsTable
     scheduledDays,
     elapsedDays,
   ];
+
   @override
   String get aliasedName => _alias ?? actualTableName;
+
   @override
   String get actualTableName => $name;
   static const String $name = 'flashcards_table';
+
   @override
   VerificationContext validateIntegrity(
     Insertable<FlashcardsTableData> instance, {
@@ -2408,6 +2459,7 @@ class $FlashcardsTableTable extends FlashcardsTable
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
+
   @override
   FlashcardsTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -2513,6 +2565,7 @@ class FlashcardsTableData extends DataClass
   final String? nextReviewAt;
   final int scheduledDays;
   final int elapsedDays;
+
   const FlashcardsTableData({
     required this.id,
     required this.deckId,
@@ -2533,6 +2586,7 @@ class FlashcardsTableData extends DataClass
     required this.scheduledDays,
     required this.elapsedDays,
   });
+
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -2622,6 +2676,7 @@ class FlashcardsTableData extends DataClass
       elapsedDays: serializer.fromJson<int>(json['elapsedDays']),
     );
   }
+
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -2688,6 +2743,7 @@ class FlashcardsTableData extends DataClass
     scheduledDays: scheduledDays ?? this.scheduledDays,
     elapsedDays: elapsedDays ?? this.elapsedDays,
   );
+
   FlashcardsTableData copyWithCompanion(FlashcardsTableCompanion data) {
     return FlashcardsTableData(
       id: data.id.present ? data.id.value : this.id,
@@ -2773,6 +2829,7 @@ class FlashcardsTableData extends DataClass
     scheduledDays,
     elapsedDays,
   );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2817,6 +2874,7 @@ class FlashcardsTableCompanion extends UpdateCompanion<FlashcardsTableData> {
   final Value<int> scheduledDays;
   final Value<int> elapsedDays;
   final Value<int> rowid;
+
   const FlashcardsTableCompanion({
     this.id = const Value.absent(),
     this.deckId = const Value.absent(),
@@ -2838,6 +2896,7 @@ class FlashcardsTableCompanion extends UpdateCompanion<FlashcardsTableData> {
     this.elapsedDays = const Value.absent(),
     this.rowid = const Value.absent(),
   });
+
   FlashcardsTableCompanion.insert({
     required String id,
     required String deckId,
@@ -2863,6 +2922,7 @@ class FlashcardsTableCompanion extends UpdateCompanion<FlashcardsTableData> {
        front = Value(front),
        back = Value(back),
        createdAt = Value(createdAt);
+
   static Insertable<FlashcardsTableData> custom({
     Expression<String>? id,
     Expression<String>? deckId,
@@ -3046,7 +3106,9 @@ class $DictionaryEntriesTableTable extends DictionaryEntriesTable
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
+
   $DictionaryEntriesTableTable(this.attachedDatabase, [this._alias]);
+
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -3131,6 +3193,7 @@ class $DictionaryEntriesTableTable extends DictionaryEntriesTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3142,11 +3205,14 @@ class $DictionaryEntriesTableTable extends DictionaryEntriesTable
     usageExamples,
     addedAt,
   ];
+
   @override
   String get aliasedName => _alias ?? actualTableName;
+
   @override
   String get actualTableName => $name;
   static const String $name = 'dictionary_entries_table';
+
   @override
   VerificationContext validateIntegrity(
     Insertable<DictionaryEntriesTableData> instance, {
@@ -3218,6 +3284,7 @@ class $DictionaryEntriesTableTable extends DictionaryEntriesTable
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
+
   @override
   DictionaryEntriesTableData map(
     Map<String, dynamic> data, {
@@ -3276,6 +3343,7 @@ class DictionaryEntriesTableData extends DataClass
   final String? sourceType;
   final String? usageExamples;
   final String addedAt;
+
   const DictionaryEntriesTableData({
     required this.id,
     required this.word,
@@ -3286,6 +3354,7 @@ class DictionaryEntriesTableData extends DataClass
     this.usageExamples,
     required this.addedAt,
   });
+
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -3345,6 +3414,7 @@ class DictionaryEntriesTableData extends DataClass
       addedAt: serializer.fromJson<String>(json['addedAt']),
     );
   }
+
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -3381,6 +3451,7 @@ class DictionaryEntriesTableData extends DataClass
         : this.usageExamples,
     addedAt: addedAt ?? this.addedAt,
   );
+
   DictionaryEntriesTableData copyWithCompanion(
     DictionaryEntriesTableCompanion data,
   ) {
@@ -3428,6 +3499,7 @@ class DictionaryEntriesTableData extends DataClass
     usageExamples,
     addedAt,
   );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3453,6 +3525,7 @@ class DictionaryEntriesTableCompanion
   final Value<String?> usageExamples;
   final Value<String> addedAt;
   final Value<int> rowid;
+
   const DictionaryEntriesTableCompanion({
     this.id = const Value.absent(),
     this.word = const Value.absent(),
@@ -3464,6 +3537,7 @@ class DictionaryEntriesTableCompanion
     this.addedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
+
   DictionaryEntriesTableCompanion.insert({
     required String id,
     required String word,
@@ -3478,6 +3552,7 @@ class DictionaryEntriesTableCompanion
        word = Value(word),
        translation = Value(translation),
        addedAt = Value(addedAt);
+
   static Insertable<DictionaryEntriesTableData> custom({
     Expression<String>? id,
     Expression<String>? word,
@@ -3581,7 +3656,9 @@ class $ReviewLogsTableTable extends ReviewLogsTable
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
+
   $ReviewLogsTableTable(this.attachedDatabase, [this._alias]);
+
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -3699,6 +3776,7 @@ class $ReviewLogsTableTable extends ReviewLogsTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3713,11 +3791,14 @@ class $ReviewLogsTableTable extends ReviewLogsTable
     reviewDurationMs,
     reviewedAt,
   ];
+
   @override
   String get aliasedName => _alias ?? actualTableName;
+
   @override
   String get actualTableName => $name;
   static const String $name = 'review_logs_table';
+
   @override
   VerificationContext validateIntegrity(
     Insertable<ReviewLogsTableData> instance, {
@@ -3837,6 +3918,7 @@ class $ReviewLogsTableTable extends ReviewLogsTable
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
+
   @override
   ReviewLogsTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -3907,6 +3989,7 @@ class ReviewLogsTableData extends DataClass
   final int elapsedDays;
   final int? reviewDurationMs;
   final String reviewedAt;
+
   const ReviewLogsTableData({
     required this.id,
     required this.flashcardId,
@@ -3920,6 +4003,7 @@ class ReviewLogsTableData extends DataClass
     this.reviewDurationMs,
     required this.reviewedAt,
   });
+
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -3978,6 +4062,7 @@ class ReviewLogsTableData extends DataClass
       reviewedAt: serializer.fromJson<String>(json['reviewedAt']),
     );
   }
+
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -4026,6 +4111,7 @@ class ReviewLogsTableData extends DataClass
         : this.reviewDurationMs,
     reviewedAt: reviewedAt ?? this.reviewedAt,
   );
+
   ReviewLogsTableData copyWithCompanion(ReviewLogsTableCompanion data) {
     return ReviewLogsTableData(
       id: data.id.present ? data.id.value : this.id,
@@ -4092,6 +4178,7 @@ class ReviewLogsTableData extends DataClass
     reviewDurationMs,
     reviewedAt,
   );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4122,6 +4209,7 @@ class ReviewLogsTableCompanion extends UpdateCompanion<ReviewLogsTableData> {
   final Value<int?> reviewDurationMs;
   final Value<String> reviewedAt;
   final Value<int> rowid;
+
   const ReviewLogsTableCompanion({
     this.id = const Value.absent(),
     this.flashcardId = const Value.absent(),
@@ -4136,6 +4224,7 @@ class ReviewLogsTableCompanion extends UpdateCompanion<ReviewLogsTableData> {
     this.reviewedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
+
   ReviewLogsTableCompanion.insert({
     required String id,
     required String flashcardId,
@@ -4159,6 +4248,7 @@ class ReviewLogsTableCompanion extends UpdateCompanion<ReviewLogsTableData> {
        scheduledDays = Value(scheduledDays),
        elapsedDays = Value(elapsedDays),
        reviewedAt = Value(reviewedAt);
+
   static Insertable<ReviewLogsTableData> custom({
     Expression<String>? id,
     Expression<String>? flashcardId,
@@ -4287,6 +4377,7 @@ class ReviewLogsTableCompanion extends UpdateCompanion<ReviewLogsTableData> {
 
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
+
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $BooksTableTable booksTable = $BooksTableTable(this);
   late final $ArticlesTableTable articlesTable = $ArticlesTableTable(this);
@@ -4306,9 +4397,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final HighlightsDao highlightsDao = HighlightsDao(this as AppDatabase);
   late final FlashcardsDao flashcardsDao = FlashcardsDao(this as AppDatabase);
   late final DictionaryDao dictionaryDao = DictionaryDao(this as AppDatabase);
+
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
+
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     booksTable,
@@ -4362,6 +4455,7 @@ class $$BooksTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -4432,6 +4526,7 @@ class $$BooksTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -4502,6 +4597,7 @@ class $$BooksTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -4705,6 +4801,7 @@ class $$ArticlesTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -4770,6 +4867,7 @@ class $$ArticlesTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -4835,6 +4933,7 @@ class $$ArticlesTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -5033,6 +5132,7 @@ class $$HighlightsTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -5093,6 +5193,7 @@ class $$HighlightsTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -5153,6 +5254,7 @@ class $$HighlightsTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -5362,6 +5464,7 @@ class $$FlashcardsTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -5462,6 +5565,7 @@ class $$FlashcardsTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -5562,6 +5666,7 @@ class $$FlashcardsTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -5815,6 +5920,7 @@ class $$DictionaryEntriesTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -5865,6 +5971,7 @@ class $$DictionaryEntriesTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -5915,6 +6022,7 @@ class $$DictionaryEntriesTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -6103,6 +6211,7 @@ class $$ReviewLogsTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -6168,6 +6277,7 @@ class $$ReviewLogsTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -6233,6 +6343,7 @@ class $$ReviewLogsTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -6408,20 +6519,27 @@ typedef $$ReviewLogsTableTableProcessedTableManager =
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
+
   $AppDatabaseManager(this._db);
+
   $$BooksTableTableTableManager get booksTable =>
       $$BooksTableTableTableManager(_db, _db.booksTable);
+
   $$ArticlesTableTableTableManager get articlesTable =>
       $$ArticlesTableTableTableManager(_db, _db.articlesTable);
+
   $$HighlightsTableTableTableManager get highlightsTable =>
       $$HighlightsTableTableTableManager(_db, _db.highlightsTable);
+
   $$FlashcardsTableTableTableManager get flashcardsTable =>
       $$FlashcardsTableTableTableManager(_db, _db.flashcardsTable);
+
   $$DictionaryEntriesTableTableTableManager get dictionaryEntriesTable =>
       $$DictionaryEntriesTableTableTableManager(
         _db,
         _db.dictionaryEntriesTable,
       );
+
   $$ReviewLogsTableTableTableManager get reviewLogsTable =>
       $$ReviewLogsTableTableTableManager(_db, _db.reviewLogsTable);
 }

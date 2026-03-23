@@ -1,26 +1,45 @@
 // Full-screen setup screen shown once after onboarding.
 //
-// Prompts the user to add their first book or article via the import flow.
-// After a successful import the caller navigates to the main app.
+// Prompts the user to add their first book or article.
+// The actual import flow is orchestrated by the caller.
 
-import 'package:article_parser/article_parser.dart';
-import 'package:article_repository/article_repository.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:import_flow/import_flow.dart';
 
-class FirstImportScreen extends StatelessWidget {
+class FirstImportScreen extends StatefulWidget {
   const FirstImportScreen({
-    required this.articleParser,
-    required this.articleRepository,
-    required this.onBookFilePicked,
+    required this.onAddPressed,
     required this.onContentAdded,
     super.key,
   });
 
-  final ArticleParser articleParser;
-  final ArticleRepository articleRepository;
-  final VoidCallback onBookFilePicked;
+  final AsyncValueGetter<bool> onAddPressed;
   final VoidCallback onContentAdded;
+
+  @override
+  State<FirstImportScreen> createState() => _FirstImportScreenState();
+}
+
+class _FirstImportScreenState extends State<FirstImportScreen> {
+  bool _isLoading = false;
+
+  Future<void> _handleAddPressed() async {
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final contentAdded = await widget.onAddPressed();
+      if (!mounted) return;
+      if (contentAdded) {
+        widget.onContentAdded();
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,28 +69,15 @@ class FirstImportScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               FilledButton.icon(
-                onPressed: () => showImportFlowSheet(
-                  context,
-                  articleParser: articleParser,
-                  articleRepository: articleRepository,
-                  onBookFilePicked: onBookFilePicked,
-                  onArticleImported: onContentAdded,
-                ),
-                icon: const Icon(Icons.add),
-                label: const Text('Add'),
-              ),
-              const SizedBox(height: 12),
-              // TODO: remove — temporary stub for testing the flow.
-              OutlinedButton(
-                onPressed: () async {
-                  await articleRepository.addArticle(
-                    title: 'Sample Article',
-                    url: 'https://example.com/sample',
-                    cleanedHtml: '<p>This is a sample article.</p>',
-                  );
-                  onContentAdded();
-                },
-                child: const Text('Add sample (dev)'),
+                onPressed: _isLoading ? null : _handleAddPressed,
+                icon: _isLoading
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.add),
+                label: Text(_isLoading ? 'Opening...' : 'Add'),
               ),
             ],
           ),

@@ -4,6 +4,7 @@ sealed class PracticeItem extends Equatable {
   const PracticeItem();
 
   factory PracticeItem.flashcard(Flashcard card) = FlashcardItem;
+
   factory PracticeItem.highlight(Highlight highlight) = HighlightItem;
 }
 

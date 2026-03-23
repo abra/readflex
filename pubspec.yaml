@@ -52,7 +52,7 @@ dependencies:
   onboarding:
     path: packages/features/onboarding
   content_library:
-    path: packages/features/library
+    path: packages/features/content_library
   import_flow:
     path: packages/features/import_flow
   home:
@@ -63,14 +63,14 @@ dependencies:
     path: packages/features/dictionary
   practice:
     path: packages/features/practice
-  highlight:
-    path: packages/features/highlight
-  flashcards:
-    path: packages/features/flashcards
-  translate:
-    path: packages/features/translate
-  paywall:
-    path: packages/features/paywall
+  highlight_actions:
+    path: packages/features/highlight_actions
+  flashcard_actions:
+    path: packages/features/flashcard_actions
+  translate_text:
+    path: packages/features/translate_text
+  subscription_paywall:
+    path: packages/features/subscription_paywall
   reader:
     path: packages/features/reader
 
