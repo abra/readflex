@@ -1,6 +1,6 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:library_feature/src/library_bloc.dart';
+import 'package:content_library/src/library_bloc.dart';
 import 'package:shared/shared.dart';
 
 import 'helpers/fake_article_repository.dart';

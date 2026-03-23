@@ -1,4 +1,4 @@
-name: dictionary_feature
+name: dictionary
 description: Saved words and phrases browser with search
 version: 0.1.0
 publish_to: 'none'

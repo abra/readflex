@@ -1,6 +1,6 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:practice_feature/src/practice_bloc.dart';
+import 'package:practice/src/practice_bloc.dart';
 import 'package:shared/shared.dart';
 
 import 'helpers/fake_flashcard_repository.dart';

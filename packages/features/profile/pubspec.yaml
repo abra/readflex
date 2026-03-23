@@ -1,4 +1,4 @@
-name: profile_feature
+name: profile
 description: Profile screen with settings, auth, and premium status
 version: 0.1.0
 publish_to: 'none'

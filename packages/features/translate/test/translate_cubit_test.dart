@@ -1,7 +1,7 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared/shared.dart';
-import 'package:translate_feature/src/translate_cubit.dart';
+import 'package:translate/src/translate_cubit.dart';
 import 'package:translation_service/translation_service.dart';
 
 import 'helpers/fake_dictionary_repository.dart';

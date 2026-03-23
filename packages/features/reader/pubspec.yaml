@@ -1,4 +1,4 @@
-name: reader_feature
+name: reader
 description: Book and article reader with text selection actions
 version: 0.1.0
 publish_to: 'none'

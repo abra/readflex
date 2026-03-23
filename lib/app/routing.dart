@@ -1,20 +1,20 @@
-import 'package:dictionary_feature/dictionary_feature.dart';
+import 'package:dictionary/dictionary.dart';
 import 'package:flashcards/flashcards.dart';
 import 'package:go_router/go_router.dart';
-import 'package:highlight_feature/highlight_feature.dart';
-import 'package:home_feature/home_feature.dart';
+import 'package:highlight/highlight.dart';
+import 'package:home/home.dart';
 import 'package:import_flow/import_flow.dart';
-import 'package:library_feature/library_feature.dart';
+import 'package:content_library/content_library.dart';
 import 'package:onboarding/onboarding.dart';
-import 'package:paywall_feature/paywall_feature.dart';
-import 'package:practice_feature/practice_feature.dart';
-import 'package:profile_feature/profile_feature.dart';
-import 'package:reader_feature/reader_feature.dart';
+import 'package:paywall/paywall.dart';
+import 'package:practice/practice.dart';
+import 'package:profile/profile.dart';
+import 'package:reader/reader.dart';
 import 'package:readflex/app/bottom_navigation_bar.dart';
 import 'package:readflex/app/dependency_container.dart';
 import 'package:readflex/app/first_import_screen.dart';
 import 'package:splash/splash.dart';
-import 'package:translate_feature/translate_feature.dart';
+import 'package:translate/translate.dart';
 
 abstract final class AppRoutes {
   static const splash = '/';

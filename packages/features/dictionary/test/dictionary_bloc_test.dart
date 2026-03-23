@@ -1,5 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
-import 'package:dictionary_feature/src/dictionary_bloc.dart';
+import 'package:dictionary/src/dictionary_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared/shared.dart';
 

@@ -1,4 +1,4 @@
-name: library_feature
+name: content_library
 description: Book and article list with empty state
 version: 0.1.0
 publish_to: 'none'

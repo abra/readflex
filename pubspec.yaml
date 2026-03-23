@@ -51,27 +51,27 @@ dependencies:
     path: packages/features/splash
   onboarding:
     path: packages/features/onboarding
-  library_feature:
+  content_library:
     path: packages/features/library
   import_flow:
     path: packages/features/import_flow
-  home_feature:
+  home:
     path: packages/features/home
-  profile_feature:
+  profile:
     path: packages/features/profile
-  dictionary_feature:
+  dictionary:
     path: packages/features/dictionary
-  practice_feature:
+  practice:
     path: packages/features/practice
-  highlight_feature:
+  highlight:
     path: packages/features/highlight
   flashcards:
     path: packages/features/flashcards
-  translate_feature:
+  translate:
     path: packages/features/translate
-  paywall_feature:
+  paywall:
     path: packages/features/paywall
-  reader_feature:
+  reader:
     path: packages/features/reader
 
   # External packages

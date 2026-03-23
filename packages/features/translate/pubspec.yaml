@@ -1,4 +1,4 @@
-name: translate_feature
+name: translate
 description: Bottom sheet for translation and dictionary save
 version: 0.1.0
 publish_to: 'none'

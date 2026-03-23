@@ -1,6 +1,6 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:reader_feature/src/reader_bloc.dart';
+import 'package:reader/src/reader_bloc.dart';
 import 'package:shared/shared.dart';
 
 import 'helpers/fake_article_repository.dart';

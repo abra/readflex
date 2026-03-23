@@ -1,6 +1,6 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:paywall_feature/src/paywall_cubit.dart';
+import 'package:paywall/src/paywall_cubit.dart';
 
 import 'helpers/fake_subscription_service.dart';
 

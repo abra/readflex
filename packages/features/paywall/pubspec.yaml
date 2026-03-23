@@ -1,4 +1,4 @@
-name: paywall_feature
+name: paywall
 description: Full-screen bottom sheet for subscription paywall
 version: 0.1.0
 publish_to: 'none'

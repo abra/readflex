@@ -1,7 +1,7 @@
 import 'package:auth_service/auth_service.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:profile_feature/src/profile_cubit.dart';
+import 'package:profile/src/profile_cubit.dart';
 import 'package:subscription_service/subscription_service.dart';
 
 void main() {

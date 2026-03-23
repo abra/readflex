@@ -1,4 +1,4 @@
-name: highlight_feature
+name: highlight
 description: Bottom sheet for creating and editing highlights
 version: 0.1.0
 publish_to: 'none'
