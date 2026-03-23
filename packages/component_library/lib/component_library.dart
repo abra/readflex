@@ -13,4 +13,5 @@ export 'src/theme/app_theme_data.dart';
 export 'src/theme/font_size.dart';
 export 'src/theme/icon_size.dart';
 export 'src/theme/nord.dart';
+export 'src/theme/reader_appearance.dart';
 export 'src/theme/spacing.dart';

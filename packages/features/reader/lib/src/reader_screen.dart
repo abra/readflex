@@ -5,6 +5,7 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:highlight_repository/highlight_repository.dart';
+import 'package:preferences_service/preferences_service.dart';
 import 'package:shared/shared.dart';
 
 import 'reader_bloc.dart';
@@ -45,11 +46,21 @@ class _ReaderView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final preferences = PreferencesScope.of(context);
+    final readerTheme = ReaderThemePreset.fromId(preferences.readerThemeId).data;
+    final readerFont = ReaderFontPreset.fromId(preferences.readerFontId);
+
     return BlocBuilder<ReaderBloc, ReaderState>(
       builder: (context, state) {
         return Scaffold(
           appBar: _buildAppBar(context, state),
-          body: _buildBody(context, state),
+          body: _buildBody(
+            context,
+            state,
+            preferences,
+            readerTheme,
+            readerFont,
+          ),
         );
       },
     );
@@ -77,7 +88,13 @@ class _ReaderView extends StatelessWidget {
     );
   }
 
-  Widget _buildBody(BuildContext context, ReaderState state) {
+  Widget _buildBody(
+    BuildContext context,
+    ReaderState state,
+    Preferences preferences,
+    ReaderThemeData readerTheme,
+    ReaderFontPreset readerFont,
+  ) {
     return switch (state.status) {
       ReaderStatus.initial || ReaderStatus.loading => const Center(
         child: CircularProgressIndicator(),
@@ -100,6 +117,9 @@ class _ReaderView extends StatelessWidget {
       ReaderStatus.ready => _ReadyContent(
         state: state,
         textActions: textActions,
+        preferences: preferences,
+        readerTheme: readerTheme,
+        readerFont: readerFont,
       ),
     };
   }
@@ -109,55 +129,92 @@ class _ReadyContent extends StatelessWidget {
   const _ReadyContent({
     required this.state,
     required this.textActions,
+    required this.preferences,
+    required this.readerTheme,
+    required this.readerFont,
   });
 
   final ReaderState state;
   final List<TextAction> textActions;
+  final Preferences preferences;
+  final ReaderThemeData readerTheme;
+  final ReaderFontPreset readerFont;
 
   @override
   Widget build(BuildContext context) {
+    final readerTextStyle = Theme.of(context).textTheme.bodyLarge!.copyWith(
+      fontFamily: readerFont.fontFamily,
+      fontSize:
+          Theme.of(context).textTheme.bodyLarge!.fontSize! *
+          preferences.readerTextScale,
+      height: preferences.readerLineHeight,
+      color: readerTheme.primaryTextColor,
+    );
+
     return Stack(
       children: [
         // TODO: replace placeholder with WebView (foliate-js / flutter_inappwebview).
-        Center(
-          child: Padding(
-            padding: const EdgeInsets.all(Spacing.large),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  state.isBook ? Icons.menu_book : Icons.article,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(height: Spacing.medium),
-                Text(
-                  state.title,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: Spacing.small),
-                Text(
-                  state.isBook
-                      ? 'Book reader (WebView) will render here'
-                      : 'Article reader (WebView) will render here',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.outline,
+        ColoredBox(
+          color: readerTheme.backgroundColor,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: Padding(
+                padding: const EdgeInsets.all(Spacing.xLarge),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: readerTheme.surfaceColor,
+                    borderRadius: BorderRadius.circular(AppRadius.large),
+                    border: Border.all(color: readerTheme.dividerColor),
                   ),
-                  textAlign: TextAlign.center,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Spacing.xLarge,
+                      vertical: Spacing.xxLarge,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          state.isBook ? Icons.menu_book : Icons.article,
+                          size: 48,
+                          color: readerTheme.accentColor,
+                        ),
+                        const SizedBox(height: Spacing.mediumLarge),
+                        Text(
+                          state.title,
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(color: readerTheme.primaryTextColor),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: Spacing.mediumLarge),
+                        Text(
+                          state.isBook
+                              ? 'This is where the book content will be rendered. The final reader should inherit the selected reading theme, font and typography settings.'
+                              : 'This is where the article content will be rendered. The final reader should inherit the selected reading theme, font and typography settings.',
+                          style: readerTextStyle,
+                          textAlign: TextAlign.start,
+                        ),
+                        if (state.isBook && state.book != null) ...[
+                          const SizedBox(height: Spacing.large),
+                          LinearProgressIndicator(
+                            value: state.book!.readingProgress,
+                            minHeight: 4,
+                          ),
+                          const SizedBox(height: Spacing.small),
+                          Text(
+                            '${(state.book!.readingProgress * 100).toInt()}% read',
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: readerTheme.secondaryTextColor,
+                                ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
-                if (state.isBook && state.book != null) ...[
-                  const SizedBox(height: Spacing.small),
-                  LinearProgressIndicator(
-                    value: state.book!.readingProgress,
-                  ),
-                  const SizedBox(height: Spacing.xSmall),
-                  Text(
-                    '${(state.book!.readingProgress * 100).toInt()}%',
-                    style: Theme.of(context).textTheme.labelSmall,
-                  ),
-                ],
-              ],
+              ),
             ),
           ),
         ),
@@ -178,6 +235,9 @@ class _ReadyContent extends StatelessWidget {
               selectionPageNumber: state.selectionPageNumber,
               selectionScrollOffset: state.selectionScrollOffset,
               textActions: textActions,
+              panelColor: readerTheme.panelColor,
+              iconColor: readerTheme.primaryTextColor,
+              dividerColor: readerTheme.dividerColor,
             ),
           ),
 
@@ -209,6 +269,9 @@ class _ContextPanel extends StatelessWidget {
     required this.sourceId,
     required this.sourceType,
     required this.textActions,
+    required this.panelColor,
+    required this.iconColor,
+    required this.dividerColor,
     this.selectionCfiRange,
     this.selectionPageNumber,
     this.selectionScrollOffset,
@@ -218,6 +281,9 @@ class _ContextPanel extends StatelessWidget {
   final String sourceId;
   final SourceType sourceType;
   final List<TextAction> textActions;
+  final Color panelColor;
+  final Color iconColor;
+  final Color dividerColor;
   final String? selectionCfiRange;
   final int? selectionPageNumber;
   final double? selectionScrollOffset;
@@ -225,35 +291,41 @@ class _ContextPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      elevation: 8,
+      color: panelColor,
+      elevation: 0,
       child: SafeArea(
         top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.medium,
-            vertical: Spacing.small,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: dividerColor)),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: textActions.map((action) {
-              return IconButton(
-                icon: Icon(action.icon),
-                tooltip: action.label,
-                onPressed: () {
-                  action.onExecute(
-                    context,
-                    TextSelectionContext(
-                      selectedText: selectedText,
-                      sourceId: sourceId,
-                      sourceType: sourceType,
-                      cfiRange: selectionCfiRange,
-                      pageNumber: selectionPageNumber,
-                      scrollOffset: selectionScrollOffset,
-                    ),
-                  );
-                },
-              );
-            }).toList(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Spacing.medium,
+              vertical: Spacing.small,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: textActions.map((action) {
+                return IconButton(
+                  icon: Icon(action.icon, color: iconColor),
+                  tooltip: action.label,
+                  onPressed: () {
+                    action.onExecute(
+                      context,
+                      TextSelectionContext(
+                        selectedText: selectedText,
+                        sourceId: sourceId,
+                        sourceType: sourceType,
+                        cfiRange: selectionCfiRange,
+                        pageNumber: selectionPageNumber,
+                        scrollOffset: selectionScrollOffset,
+                      ),
+                    );
+                  },
+                );
+              }).toList(),
+            ),
           ),
         ),
       ),

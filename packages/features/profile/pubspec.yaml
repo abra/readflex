@@ -17,6 +17,8 @@ dependencies:
     path: ../../auth_service
   subscription_service:
     path: ../../subscription_service
+  preferences_service:
+    path: ../../preferences_service
   component_library:
     path: ../../component_library
 

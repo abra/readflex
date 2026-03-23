@@ -140,29 +140,60 @@ class _StatsRow extends StatelessWidget {
 
     return Row(
       children: [
-        _StatCard(
-          icon: Icons.library_books,
-          label: 'Sources',
-          value: '${state.totalSources}',
-          color: colorScheme.primary,
-        ),
-        const SizedBox(width: Spacing.small),
-        _StatCard(
-          icon: Icons.highlight,
-          label: 'Highlights',
-          value: '${state.totalHighlights}',
-          color: colorScheme.secondary,
-        ),
-        const SizedBox(width: Spacing.small),
-        GestureDetector(
-          onTap: state.dueFlashcards > 0 ? onPracticePressed : null,
+        Expanded(
           child: _StatCard(
-            icon: Icons.school,
-            label: 'Due',
-            value: '${state.dueFlashcards}',
-            color: state.dueFlashcards > 0
-                ? colorScheme.error
-                : colorScheme.outline,
+            icon: Icons.library_books,
+            label: 'Sources',
+            value: '${state.totalSources}',
+            color: colorScheme.primary,
+          ),
+        ),
+        const SizedBox(width: Spacing.small),
+        Expanded(
+          child: _StatCard(
+            icon: Icons.highlight,
+            label: 'Highlights',
+            value: '${state.totalHighlights}',
+            color: colorScheme.secondary,
+          ),
+        ),
+        const SizedBox(width: Spacing.small),
+        Expanded(
+          child: GestureDetector(
+            onTap: state.dueFlashcards > 0 ? onPracticePressed : null,
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: Spacing.medium,
+                  horizontal: Spacing.small,
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.school,
+                      color: state.dueFlashcards > 0
+                          ? colorScheme.error
+                          : colorScheme.outline,
+                    ),
+                    const SizedBox(height: Spacing.xSmall),
+                    Text(
+                      '${state.dueFlashcards}',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: state.dueFlashcards > 0
+                                ? colorScheme.error
+                                : colorScheme.outline,
+                          ),
+                    ),
+                    Text(
+                      'Due',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ],
@@ -185,30 +216,28 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            vertical: Spacing.medium,
-            horizontal: Spacing.small,
-          ),
-          child: Column(
-            children: [
-              Icon(icon, color: color),
-              const SizedBox(height: Spacing.xSmall),
-              Text(
-                value,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          vertical: Spacing.medium,
+          horizontal: Spacing.small,
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(height: Spacing.xSmall),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: color,
               ),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
+            ),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
         ),
       ),
     );

@@ -36,6 +36,26 @@ void main() {
       expect(service.current.themeMode, ThemeMode.dark);
     });
 
+    test('update() changes reader appearance preferences', () async {
+      final service = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+
+      await service.update(
+        (s) => s.copyWith(
+          readerThemeId: 'night',
+          readerFontId: 'geist',
+          readerTextScale: 1.2,
+          readerLineHeight: 1.8,
+        ),
+      );
+
+      expect(service.current.readerThemeId, 'night');
+      expect(service.current.readerFontId, 'geist');
+      expect(service.current.readerTextScale, 1.2);
+      expect(service.current.readerLineHeight, 1.8);
+    });
+
     test('update() emits updated preferences on stream', () async {
       final service = await PreferencesService.create(
         supportedCodes: _supportedCodes,
@@ -59,13 +79,23 @@ void main() {
       final service = await PreferencesService.create(
         supportedCodes: _supportedCodes,
       );
-      await service.update((s) => s.copyWith(themeMode: ThemeMode.dark));
+      await service.update(
+        (s) => s.copyWith(
+          themeMode: ThemeMode.dark,
+          readerThemeId: 'mist',
+          readerFontId: 'sans',
+          readerTextScale: 1.1,
+        ),
+      );
 
       final service2 = await PreferencesService.create(
         supportedCodes: _supportedCodes,
       );
 
       expect(service2.current.themeMode, ThemeMode.dark);
+      expect(service2.current.readerThemeId, 'mist');
+      expect(service2.current.readerFontId, 'sans');
+      expect(service2.current.readerTextScale, 1.1);
     });
 
     test('persists locale correctly', () async {

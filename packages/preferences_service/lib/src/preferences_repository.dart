@@ -26,6 +26,12 @@ class PreferencesRepository {
           map['themeMode'] as String? ?? 'system',
         ),
         locale: _resolveLocale(map['locale'] as String?, supportedCodes),
+        readerThemeId: map['readerThemeId'] as String? ?? 'paper',
+        readerFontId: map['readerFontId'] as String? ?? 'serif',
+        readerTextScale:
+            (map['readerTextScale'] as num?)?.toDouble() ?? 1.0,
+        readerLineHeight:
+            (map['readerLineHeight'] as num?)?.toDouble() ?? 1.55,
         onboardingCompleted: map['onboardingCompleted'] as bool? ?? false,
         hasCompletedSetup: map['hasCompletedSetup'] as bool? ?? false,
       );
@@ -38,6 +44,10 @@ class PreferencesRepository {
     final map = <String, Object?>{
       'themeMode': prefs.themeMode.name,
       'locale': prefs.locale.languageCode,
+      'readerThemeId': prefs.readerThemeId,
+      'readerFontId': prefs.readerFontId,
+      'readerTextScale': prefs.readerTextScale,
+      'readerLineHeight': prefs.readerLineHeight,
       'onboardingCompleted': prefs.onboardingCompleted,
       'hasCompletedSetup': prefs.hasCompletedSetup,
     };

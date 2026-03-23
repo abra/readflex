@@ -11,6 +11,7 @@ import 'package:profile/profile.dart';
 import 'package:reader/reader.dart';
 import 'package:readflex/app/bottom_navigation_bar.dart';
 import 'package:readflex/app/dependency_container.dart';
+import 'package:readflex/app/design_system_screen.dart';
 import 'package:readflex/app/first_import_screen.dart';
 import 'package:splash/splash.dart';
 import 'package:subscription_paywall/subscription_paywall.dart';
@@ -25,6 +26,7 @@ abstract final class AppRoutes {
   static const profile = '/profile';
   static const onboarding = '/onboarding';
   static const firstImport = '/first-import';
+  static const designSystem = '/design-system';
   static const readerPath = '/reader/:sourceId';
 
   static String reader(String sourceId) => '/reader/$sourceId';
@@ -150,8 +152,12 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
                 builder: (context, state) => ProfileScreen(
                   authService: dependencies.authService,
                   subscriptionService: dependencies.subscriptionService,
+                  preferencesService: dependencies.preferencesService,
                   // TODO: navigate to sign in flow.
                   onSignInPressed: () {},
+                  onDesignSystemPressed: () => context.push(
+                    AppRoutes.designSystem,
+                  ),
                   onPremiumPressed: () => showSubscriptionPaywallSheet(
                     context,
                     subscriptionService: dependencies.subscriptionService,
@@ -224,6 +230,10 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
             context.go(AppRoutes.home);
           },
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.designSystem,
+        builder: (context, state) => const DesignSystemScreen(),
       ),
     ],
   );

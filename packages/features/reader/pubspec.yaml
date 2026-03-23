@@ -17,6 +17,8 @@ dependencies:
     path: ../../domain_models
   shared:
     path: ../../shared
+  preferences_service:
+    path: ../../preferences_service
   book_repository:
     path: ../../book_repository
   article_repository:
