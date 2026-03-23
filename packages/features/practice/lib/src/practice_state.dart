@@ -5,35 +5,40 @@ enum PracticeStatus { initial, loading, reviewing, empty, completed, failure }
 final class PracticeState extends Equatable {
   const PracticeState({
     this.status = PracticeStatus.initial,
-    this.dueCards = const [],
+    this.items = const [],
     this.currentIndex = 0,
     this.isRevealed = false,
   });
 
   final PracticeStatus status;
-  final List<Flashcard> dueCards;
+  final List<PracticeItem> items;
   final int currentIndex;
   final bool isRevealed;
 
-  Flashcard? get currentCard =>
-      currentIndex < dueCards.length ? dueCards[currentIndex] : null;
+  PracticeItem? get currentItem =>
+      currentIndex < items.length ? items[currentIndex] : null;
 
-  int get remaining => dueCards.length - currentIndex;
+  Flashcard? get currentCard => switch (currentItem) {
+    FlashcardItem(:final flashcard) => flashcard,
+    _ => null,
+  };
+
+  int get remaining => items.length - currentIndex;
 
   int get reviewed => currentIndex;
 
   PracticeState copyWith({
     PracticeStatus? status,
-    List<Flashcard>? dueCards,
+    List<PracticeItem>? items,
     int? currentIndex,
     bool? isRevealed,
   }) => PracticeState(
     status: status ?? this.status,
-    dueCards: dueCards ?? this.dueCards,
+    items: items ?? this.items,
     currentIndex: currentIndex ?? this.currentIndex,
     isRevealed: isRevealed ?? this.isRevealed,
   );
 
   @override
-  List<Object?> get props => [status, dueCards, currentIndex, isRevealed];
+  List<Object?> get props => [status, items, currentIndex, isRevealed];
 }

@@ -17,3 +17,8 @@ final class PracticeCardRated extends PracticeEvent {
 
   final Rating rating;
 }
+
+/// Advances past a highlight (no rating needed).
+final class PracticeItemNext extends PracticeEvent {
+  const PracticeItemNext();
+}

@@ -143,6 +143,7 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
                 builder: (context, state) {
                   return PracticeScreen(
                     flashcardRepository: dependencies.flashcardRepository,
+                    highlightRepository: dependencies.highlightRepository,
                   );
                 },
               ),

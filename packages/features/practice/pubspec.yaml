@@ -17,6 +17,8 @@ dependencies:
     path: ../../shared
   flashcard_repository:
     path: ../../flashcard_repository
+  highlight_repository:
+    path: ../../highlight_repository
   component_library:
     path: ../../component_library
 

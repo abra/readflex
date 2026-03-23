@@ -2,25 +2,29 @@ import 'package:component_library/component_library.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:highlight_repository/highlight_repository.dart';
 import 'package:shared/shared.dart';
 
 import 'practice_bloc.dart';
 
-/// Practice tab: review due flashcards.
+/// Practice tab: review due flashcards and highlights.
 class PracticeScreen extends StatelessWidget {
   const PracticeScreen({
     required this.flashcardRepository,
+    required this.highlightRepository,
     super.key,
   });
 
   final FlashcardRepository flashcardRepository;
+  final HighlightRepository highlightRepository;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) =>
-          PracticeBloc(flashcardRepository: flashcardRepository)
-            ..add(const PracticeLoadRequested()),
+      create: (_) => PracticeBloc(
+        flashcardRepository: flashcardRepository,
+        highlightRepository: highlightRepository,
+      )..add(const PracticeLoadRequested()),
       child: const PracticeView(),
     );
   }
@@ -38,7 +42,7 @@ class PracticeView extends StatelessWidget {
           BlocBuilder<PracticeBloc, PracticeState>(
             buildWhen: (prev, curr) =>
                 prev.reviewed != curr.reviewed ||
-                prev.dueCards.length != curr.dueCards.length,
+                prev.items.length != curr.items.length,
             builder: (context, state) {
               if (state.status != PracticeStatus.reviewing) {
                 return const SizedBox.shrink();
@@ -47,7 +51,7 @@ class PracticeView extends StatelessWidget {
                 padding: const EdgeInsets.only(right: Spacing.medium),
                 child: Center(
                   child: Text(
-                    '${state.reviewed}/${state.dueCards.length}',
+                    '${state.reviewed}/${state.items.length}',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
@@ -69,18 +73,24 @@ class PracticeView extends StatelessWidget {
               ),
             ),
             PracticeStatus.empty => const EmptyState(
-              message: 'No cards due for review.\nGreat job!',
+              message: 'No items due for review.\nGreat job!',
             ),
             PracticeStatus.completed => _CompletedView(
-              reviewed: state.dueCards.length,
+              reviewed: state.items.length,
               onRestart: () => context.read<PracticeBloc>().add(
                 const PracticeLoadRequested(),
               ),
             ),
-            PracticeStatus.reviewing => _CardView(
-              card: state.currentCard!,
-              isRevealed: state.isRevealed,
-            ),
+            PracticeStatus.reviewing => switch (state.currentItem) {
+              FlashcardItem(:final flashcard) => _CardView(
+                card: flashcard,
+                isRevealed: state.isRevealed,
+              ),
+              HighlightItem(:final highlight) => _HighlightView(
+                highlight: highlight,
+              ),
+              _ => const SizedBox.shrink(),
+            },
           };
         },
       ),
@@ -166,6 +176,72 @@ class _CardView extends StatelessWidget {
   }
 }
 
+class _HighlightView extends StatelessWidget {
+  const _HighlightView({required this.highlight});
+
+  final Highlight highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.all(Spacing.xLarge),
+      child: Column(
+        children: [
+          Expanded(
+            child: Center(
+              child: Card(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Padding(
+                    padding: const EdgeInsets.all(Spacing.xLarge),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.format_quote,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(height: Spacing.medium),
+                        Text(
+                          highlight.text,
+                          style: theme.textTheme.bodyLarge,
+                          textAlign: TextAlign.center,
+                        ),
+                        if (highlight.note != null) ...[
+                          const SizedBox(height: Spacing.medium),
+                          Text(
+                            highlight.note!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontStyle: FontStyle.italic,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: Spacing.medium),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () => context.read<PracticeBloc>().add(
+                const PracticeItemNext(),
+              ),
+              child: const Text('Next'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _RatingButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -219,7 +295,7 @@ class _CompletedView extends StatelessWidget {
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: Spacing.small),
-          Text('$reviewed cards reviewed'),
+          Text('$reviewed items reviewed'),
           const SizedBox(height: Spacing.large),
           FilledButton(
             onPressed: onRestart,
