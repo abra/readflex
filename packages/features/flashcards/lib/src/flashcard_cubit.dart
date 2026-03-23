@@ -3,29 +3,29 @@ import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared/shared.dart';
 
-enum FlashcardEditorStatus { idle, saving, success, failure }
+enum FlashcardStatus { idle, saving, success, failure }
 
-final class FlashcardEditorState extends Equatable {
-  const FlashcardEditorState({
-    this.status = FlashcardEditorStatus.idle,
+final class FlashcardState extends Equatable {
+  const FlashcardState({
+    this.status = FlashcardStatus.idle,
     this.front = '',
     this.back = '',
     this.hint = '',
   });
 
-  final FlashcardEditorStatus status;
+  final FlashcardStatus status;
   final String front;
   final String back;
   final String hint;
 
   bool get canSave => front.isNotEmpty && back.isNotEmpty;
 
-  FlashcardEditorState copyWith({
-    FlashcardEditorStatus? status,
+  FlashcardState copyWith({
+    FlashcardStatus? status,
     String? front,
     String? back,
     String? hint,
-  }) => FlashcardEditorState(
+  }) => FlashcardState(
     status: status ?? this.status,
     front: front ?? this.front,
     back: back ?? this.back,
@@ -36,10 +36,10 @@ final class FlashcardEditorState extends Equatable {
   List<Object?> get props => [status, front, back, hint];
 }
 
-class FlashcardEditorCubit extends Cubit<FlashcardEditorState> {
-  FlashcardEditorCubit({required FlashcardRepository flashcardRepository})
+class FlashcardCubit extends Cubit<FlashcardState> {
+  FlashcardCubit({required FlashcardRepository flashcardRepository})
     : _repository = flashcardRepository,
-      super(const FlashcardEditorState());
+      super(const FlashcardState());
 
   final FlashcardRepository _repository;
 
@@ -62,7 +62,7 @@ class FlashcardEditorCubit extends Cubit<FlashcardEditorState> {
   }) async {
     if (!state.canSave) return;
 
-    emit(state.copyWith(status: FlashcardEditorStatus.saving));
+    emit(state.copyWith(status: FlashcardStatus.saving));
 
     try {
       await _repository.addFlashcard(
@@ -72,9 +72,9 @@ class FlashcardEditorCubit extends Cubit<FlashcardEditorState> {
         hint: state.hint.isEmpty ? null : state.hint,
         sourceHighlightId: sourceHighlightId,
       );
-      emit(state.copyWith(status: FlashcardEditorStatus.success));
+      emit(state.copyWith(status: FlashcardStatus.success));
     } catch (e) {
-      emit(state.copyWith(status: FlashcardEditorStatus.failure));
+      emit(state.copyWith(status: FlashcardStatus.failure));
     }
   }
 }

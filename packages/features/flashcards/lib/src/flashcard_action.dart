@@ -2,11 +2,11 @@ import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:shared/shared.dart';
 
-import 'flashcard_editor_sheet.dart';
+import 'flashcard_sheet.dart';
 
-/// TextAction implementation that opens the flashcard editor bottom sheet.
-class FlashcardEditorAction extends TextAction {
-  FlashcardEditorAction({required this.flashcardRepository});
+/// TextAction implementation that opens the flashcard bottom sheet.
+class FlashcardAction extends TextAction {
+  FlashcardAction({required this.flashcardRepository});
 
   final FlashcardRepository flashcardRepository;
 
@@ -18,7 +18,7 @@ class FlashcardEditorAction extends TextAction {
 
   @override
   void onExecute(BuildContext context, TextSelectionContext selection) {
-    showFlashcardEditorSheet(
+    showFlashcardSheet(
       context,
       flashcardRepository: flashcardRepository,
       selection: selection,

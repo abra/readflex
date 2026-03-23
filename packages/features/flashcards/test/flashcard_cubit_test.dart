@@ -1,5 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flashcard_editor/src/flashcard_editor_cubit.dart';
+import 'package:flashcards/src/flashcard_cubit.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared/shared.dart';
 
@@ -12,12 +12,12 @@ void main() {
     repository = FakeFlashcardRepository();
   });
 
-  group('FlashcardEditorCubit', () {
-    blocTest<FlashcardEditorCubit, FlashcardEditorState>(
+  group('FlashcardCubit', () {
+    blocTest<FlashcardCubit, FlashcardState>(
       'initial state has idle status and empty fields',
-      build: () => FlashcardEditorCubit(flashcardRepository: repository),
+      build: () => FlashcardCubit(flashcardRepository: repository),
       verify: (cubit) {
-        expect(cubit.state.status, FlashcardEditorStatus.idle);
+        expect(cubit.state.status, FlashcardStatus.idle);
         expect(cubit.state.front, '');
         expect(cubit.state.back, '');
         expect(cubit.state.hint, '');
@@ -25,37 +25,37 @@ void main() {
       },
     );
 
-    blocTest<FlashcardEditorCubit, FlashcardEditorState>(
+    blocTest<FlashcardCubit, FlashcardState>(
       'setFront emits state with new front',
-      build: () => FlashcardEditorCubit(flashcardRepository: repository),
+      build: () => FlashcardCubit(flashcardRepository: repository),
       act: (cubit) => cubit.setFront('What is X?'),
       expect: () => [
-        const FlashcardEditorState(front: 'What is X?'),
+        const FlashcardState(front: 'What is X?'),
       ],
     );
 
-    blocTest<FlashcardEditorCubit, FlashcardEditorState>(
+    blocTest<FlashcardCubit, FlashcardState>(
       'setBack emits state with new back',
-      build: () => FlashcardEditorCubit(flashcardRepository: repository),
+      build: () => FlashcardCubit(flashcardRepository: repository),
       act: (cubit) => cubit.setBack('Answer'),
       expect: () => [
-        const FlashcardEditorState(back: 'Answer'),
+        const FlashcardState(back: 'Answer'),
       ],
     );
 
-    blocTest<FlashcardEditorCubit, FlashcardEditorState>(
+    blocTest<FlashcardCubit, FlashcardState>(
       'setHint emits state with new hint',
-      build: () => FlashcardEditorCubit(flashcardRepository: repository),
+      build: () => FlashcardCubit(flashcardRepository: repository),
       act: (cubit) => cubit.setHint('Think about...'),
       expect: () => [
-        const FlashcardEditorState(hint: 'Think about...'),
+        const FlashcardState(hint: 'Think about...'),
       ],
     );
 
-    blocTest<FlashcardEditorCubit, FlashcardEditorState>(
+    blocTest<FlashcardCubit, FlashcardState>(
       'canSave is true when front and back are non-empty',
-      build: () => FlashcardEditorCubit(flashcardRepository: repository),
-      seed: () => const FlashcardEditorState(
+      build: () => FlashcardCubit(flashcardRepository: repository),
+      seed: () => const FlashcardState(
         front: 'Q',
         back: 'A',
       ),
@@ -64,9 +64,9 @@ void main() {
       },
     );
 
-    blocTest<FlashcardEditorCubit, FlashcardEditorState>(
+    blocTest<FlashcardCubit, FlashcardState>(
       'save does nothing when canSave is false',
-      build: () => FlashcardEditorCubit(flashcardRepository: repository),
+      build: () => FlashcardCubit(flashcardRepository: repository),
       act: (cubit) => cubit.save(
         sourceId: 'book-1',
         sourceType: SourceType.book,
@@ -77,24 +77,24 @@ void main() {
       },
     );
 
-    blocTest<FlashcardEditorCubit, FlashcardEditorState>(
+    blocTest<FlashcardCubit, FlashcardState>(
       'save emits saving then success',
-      build: () => FlashcardEditorCubit(flashcardRepository: repository),
-      seed: () => const FlashcardEditorState(front: 'Q', back: 'A'),
+      build: () => FlashcardCubit(flashcardRepository: repository),
+      seed: () => const FlashcardState(front: 'Q', back: 'A'),
       act: (cubit) => cubit.save(
         sourceId: 'book-1',
         sourceType: SourceType.book,
       ),
       expect: () => [
-        const FlashcardEditorState(
+        const FlashcardState(
           front: 'Q',
           back: 'A',
-          status: FlashcardEditorStatus.saving,
+          status: FlashcardStatus.saving,
         ),
-        const FlashcardEditorState(
+        const FlashcardState(
           front: 'Q',
           back: 'A',
-          status: FlashcardEditorStatus.success,
+          status: FlashcardStatus.success,
         ),
       ],
       verify: (_) {
@@ -105,10 +105,10 @@ void main() {
       },
     );
 
-    blocTest<FlashcardEditorCubit, FlashcardEditorState>(
+    blocTest<FlashcardCubit, FlashcardState>(
       'save passes hint when non-empty',
-      build: () => FlashcardEditorCubit(flashcardRepository: repository),
-      seed: () => const FlashcardEditorState(
+      build: () => FlashcardCubit(flashcardRepository: repository),
+      seed: () => const FlashcardState(
         front: 'Q',
         back: 'A',
         hint: 'Hint',
@@ -122,10 +122,10 @@ void main() {
       },
     );
 
-    blocTest<FlashcardEditorCubit, FlashcardEditorState>(
+    blocTest<FlashcardCubit, FlashcardState>(
       'save passes null hint when empty',
-      build: () => FlashcardEditorCubit(flashcardRepository: repository),
-      seed: () => const FlashcardEditorState(front: 'Q', back: 'A'),
+      build: () => FlashcardCubit(flashcardRepository: repository),
+      seed: () => const FlashcardState(front: 'Q', back: 'A'),
       act: (cubit) => cubit.save(
         sourceId: 'book-1',
         sourceType: SourceType.book,
@@ -135,27 +135,27 @@ void main() {
       },
     );
 
-    blocTest<FlashcardEditorCubit, FlashcardEditorState>(
+    blocTest<FlashcardCubit, FlashcardState>(
       'save emits saving then failure on error',
       build: () {
         repository.shouldThrow = true;
-        return FlashcardEditorCubit(flashcardRepository: repository);
+        return FlashcardCubit(flashcardRepository: repository);
       },
-      seed: () => const FlashcardEditorState(front: 'Q', back: 'A'),
+      seed: () => const FlashcardState(front: 'Q', back: 'A'),
       act: (cubit) => cubit.save(
         sourceId: 'book-1',
         sourceType: SourceType.book,
       ),
       expect: () => [
-        const FlashcardEditorState(
+        const FlashcardState(
           front: 'Q',
           back: 'A',
-          status: FlashcardEditorStatus.saving,
+          status: FlashcardStatus.saving,
         ),
-        const FlashcardEditorState(
+        const FlashcardState(
           front: 'Q',
           back: 'A',
-          status: FlashcardEditorStatus.failure,
+          status: FlashcardStatus.failure,
         ),
       ],
     );

@@ -1,4 +1,4 @@
-name: flashcard_editor
+name: flashcards
 description: Bottom sheet for creating flashcards from text selections
 version: 0.1.0
 publish_to: 'none'

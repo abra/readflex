@@ -47,7 +47,7 @@ run "profile"                      "flutter test test/" "$SCRIPT_DIR/packages/fe
 run "dictionary"                   "flutter test test/" "$SCRIPT_DIR/packages/features/dictionary"
 run "practice"                     "flutter test test/" "$SCRIPT_DIR/packages/features/practice"
 run "highlight"                    "flutter test test/" "$SCRIPT_DIR/packages/features/highlight"
-run "flashcard_editor"             "flutter test test/" "$SCRIPT_DIR/packages/features/flashcard_editor"
+run "flashcards"                   "flutter test test/" "$SCRIPT_DIR/packages/features/flashcards"
 run "translate"                    "flutter test test/" "$SCRIPT_DIR/packages/features/translate"
 run "paywall"                      "flutter test test/" "$SCRIPT_DIR/packages/features/paywall"
 run "reader"                       "flutter test test/" "$SCRIPT_DIR/packages/features/reader"

@@ -65,8 +65,8 @@ dependencies:
     path: packages/features/practice
   highlight_feature:
     path: packages/features/highlight
-  flashcard_editor:
-    path: packages/features/flashcard_editor
+  flashcards:
+    path: packages/features/flashcards
   translate_feature:
     path: packages/features/translate
   paywall_feature:

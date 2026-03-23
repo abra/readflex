@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared/shared.dart';
 
-import 'flashcard_editor_cubit.dart';
+import 'flashcard_cubit.dart';
 
-void showFlashcardEditorSheet(
+void showFlashcardSheet(
   BuildContext context, {
   required FlashcardRepository flashcardRepository,
   required TextSelectionContext selection,
@@ -14,15 +14,15 @@ void showFlashcardEditorSheet(
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => _FlashcardEditorSheet(
+    builder: (_) => _FlashcardSheet(
       flashcardRepository: flashcardRepository,
       selection: selection,
     ),
   );
 }
 
-class _FlashcardEditorSheet extends StatelessWidget {
-  const _FlashcardEditorSheet({
+class _FlashcardSheet extends StatelessWidget {
+  const _FlashcardSheet({
     required this.flashcardRepository,
     required this.selection,
   });
@@ -33,29 +33,29 @@ class _FlashcardEditorSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => FlashcardEditorCubit(
+      create: (_) => FlashcardCubit(
         flashcardRepository: flashcardRepository,
       ),
-      child: _FlashcardEditorSheetView(selection: selection),
+      child: _FlashcardSheetView(selection: selection),
     );
   }
 }
 
-class _FlashcardEditorSheetView extends StatelessWidget {
-  const _FlashcardEditorSheetView({required this.selection});
+class _FlashcardSheetView extends StatelessWidget {
+  const _FlashcardSheetView({required this.selection});
 
   final TextSelectionContext selection;
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<FlashcardEditorCubit, FlashcardEditorState>(
+    return BlocConsumer<FlashcardCubit, FlashcardState>(
       listener: (context, state) {
-        if (state.status == FlashcardEditorStatus.success) {
+        if (state.status == FlashcardStatus.success) {
           Navigator.of(context).pop();
         }
       },
       builder: (context, state) {
-        final isSaving = state.status == FlashcardEditorStatus.saving;
+        final isSaving = state.status == FlashcardStatus.saving;
 
         return Padding(
           padding: EdgeInsets.only(
@@ -99,7 +99,7 @@ class _FlashcardEditorSheetView extends StatelessWidget {
                     maxLines: 2,
                     enabled: !isSaving,
                     onChanged: (v) =>
-                        context.read<FlashcardEditorCubit>().setFront(v),
+                        context.read<FlashcardCubit>().setFront(v),
                   ),
                   const SizedBox(height: Spacing.small),
                   // Back field
@@ -111,8 +111,7 @@ class _FlashcardEditorSheetView extends StatelessWidget {
                     ),
                     maxLines: 2,
                     enabled: !isSaving,
-                    onChanged: (v) =>
-                        context.read<FlashcardEditorCubit>().setBack(v),
+                    onChanged: (v) => context.read<FlashcardCubit>().setBack(v),
                   ),
                   const SizedBox(height: Spacing.small),
                   // Hint field
@@ -122,11 +121,10 @@ class _FlashcardEditorSheetView extends StatelessWidget {
                       isDense: true,
                     ),
                     enabled: !isSaving,
-                    onChanged: (v) =>
-                        context.read<FlashcardEditorCubit>().setHint(v),
+                    onChanged: (v) => context.read<FlashcardCubit>().setHint(v),
                   ),
                   const SizedBox(height: Spacing.medium),
-                  if (state.status == FlashcardEditorStatus.failure)
+                  if (state.status == FlashcardStatus.failure)
                     Padding(
                       padding: const EdgeInsets.only(bottom: Spacing.small),
                       child: Text(
@@ -139,7 +137,7 @@ class _FlashcardEditorSheetView extends StatelessWidget {
                   FilledButton(
                     onPressed: isSaving || !state.canSave
                         ? null
-                        : () => context.read<FlashcardEditorCubit>().save(
+                        : () => context.read<FlashcardCubit>().save(
                             sourceId: selection.sourceId,
                             sourceType: selection.sourceType,
                           ),

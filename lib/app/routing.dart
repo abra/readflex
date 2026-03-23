@@ -1,5 +1,5 @@
 import 'package:dictionary_feature/dictionary_feature.dart';
-import 'package:flashcard_editor/flashcard_editor.dart';
+import 'package:flashcards/flashcards.dart';
 import 'package:go_router/go_router.dart';
 import 'package:highlight_feature/highlight_feature.dart';
 import 'package:home_feature/home_feature.dart';
@@ -183,7 +183,7 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
               HighlightAction(
                 highlightRepository: dependencies.highlightRepository,
               ),
-              FlashcardEditorAction(
+              FlashcardAction(
                 flashcardRepository: dependencies.flashcardRepository,
               ),
               TranslateAction(
