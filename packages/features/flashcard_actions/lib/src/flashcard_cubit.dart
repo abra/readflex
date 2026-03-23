@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared/shared.dart';
+import 'package:domain_models/domain_models.dart';
 
 enum FlashcardStatus { idle, saving, success, failure }
 

@@ -100,11 +100,7 @@ class _SubscriptionPaywallSheetView extends StatelessWidget {
                       : () =>
                             context.read<SubscriptionPaywallCubit>().purchase(),
                   child: isPurchasing
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                      ? const ButtonLoadingIndicator()
                       : const Text('Subscribe'),
                 ),
                 const SizedBox(height: Spacing.small),

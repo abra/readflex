@@ -2,7 +2,7 @@ import 'package:component_library/component_library.dart';
 import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared/shared.dart';
+import 'package:domain_models/domain_models.dart';
 
 import 'dictionary_bloc.dart';
 
@@ -100,15 +100,7 @@ class _EntryList extends StatelessWidget {
         return Dismissible(
           key: ValueKey(entry.id),
           direction: DismissDirection.endToStart,
-          background: Container(
-            color: Theme.of(context).colorScheme.error,
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.only(right: Spacing.large),
-            child: Icon(
-              Icons.delete,
-              color: Theme.of(context).colorScheme.onError,
-            ),
-          ),
+          background: const DestructiveDismissBackground(),
           onDismissed: (_) => context.read<DictionaryBloc>().add(
             DictionaryEntryDeleted(entry.id),
           ),

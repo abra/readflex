@@ -1,5 +1,5 @@
 import 'package:local_storage/local_storage.dart';
-import 'package:shared/shared.dart';
+import 'package:domain_models/domain_models.dart';
 import 'package:uuid/uuid.dart' show Uuid;
 
 import 'mappers/entry_to_domain.dart';

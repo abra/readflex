@@ -9,8 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  shared:
-    path: ../shared
+  domain_models:
+    path: ../domain_models
   local_storage:
     path: ../local_storage
   drift: ^2.23.1

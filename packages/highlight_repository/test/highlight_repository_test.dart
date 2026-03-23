@@ -2,7 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:local_storage/local_storage.dart';
-import 'package:shared/shared.dart';
+import 'package:domain_models/domain_models.dart';
 
 void main() {
   late AppDatabase db;

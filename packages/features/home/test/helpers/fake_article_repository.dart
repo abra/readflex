@@ -1,5 +1,5 @@
 import 'package:article_repository/article_repository.dart';
-import 'package:shared/shared.dart';
+import 'package:domain_models/domain_models.dart';
 
 class FakeArticleRepository implements ArticleRepository {
   @override

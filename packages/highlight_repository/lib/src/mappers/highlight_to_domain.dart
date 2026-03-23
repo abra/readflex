@@ -1,5 +1,5 @@
 import 'package:local_storage/local_storage.dart';
-import 'package:shared/shared.dart';
+import 'package:domain_models/domain_models.dart';
 
 extension HighlightToDomain on HighlightsTableData {
   Highlight toDomainModel() => Highlight(

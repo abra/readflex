@@ -3,6 +3,7 @@
 // Prompts the user to add their first book or article.
 // The actual import flow is orchestrated by the caller.
 
+import 'package:component_library/component_library.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -71,11 +72,7 @@ class _FirstImportScreenState extends State<FirstImportScreen> {
               FilledButton.icon(
                 onPressed: _isLoading ? null : _handleAddPressed,
                 icon: _isLoading
-                    ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? const ButtonLoadingIndicator(size: 18)
                     : const Icon(Icons.add),
                 label: Text(_isLoading ? 'Opening...' : 'Add'),
               ),

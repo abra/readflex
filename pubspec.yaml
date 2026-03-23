@@ -11,6 +11,8 @@ dependencies:
     sdk: flutter
 
   # Internal packages
+  domain_models:
+    path: packages/domain_models
   shared:
     path: packages/shared
   monitoring:

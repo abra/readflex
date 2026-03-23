@@ -13,8 +13,8 @@ dependencies:
   flutter_bloc: ^9.1.1
   equatable: ^2.0.8
 
-  shared:
-    path: ../../shared
+  domain_models:
+    path: ../../domain_models
   flashcard_repository:
     path: ../../flashcard_repository
   highlight_repository:

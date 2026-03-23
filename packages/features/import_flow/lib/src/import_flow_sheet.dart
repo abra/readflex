@@ -44,43 +44,35 @@ class _ImportFlowSheetState extends State<_ImportFlowSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            BottomSheetHeader(
-              title: 'Add to Library',
-              onClose: () => Navigator.of(context).pop(),
+    return ActionBottomSheetLayout(
+      title: 'Add to Library',
+      onClose: () => Navigator.of(context).pop(),
+      child: !_showUrlInput
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.upload_file),
+                  title: const Text('Import book file'),
+                  subtitle: const Text('EPUB, PDF, FB2, MOBI'),
+                  enabled: !_isImportingBook,
+                  onTap: _isImportingBook ? null : _handleBookImport,
+                ),
+                ListTile(
+                  leading: const Icon(Icons.link),
+                  title: const Text('Add article by URL'),
+                  subtitle: const Text('Paste a web article link'),
+                  onTap: () => setState(() => _showUrlInput = true),
+                ),
+                const SizedBox(height: Spacing.medium),
+              ],
+            )
+          : _ArticleUrlInput(
+              onImportArticle: widget.onImportArticle,
+              onImported: () {
+                Navigator.of(context).pop(ImportFlowResult.articleImported);
+              },
             ),
-            if (!_showUrlInput) ...[
-              ListTile(
-                leading: const Icon(Icons.upload_file),
-                title: const Text('Import book file'),
-                subtitle: const Text('EPUB, PDF, FB2, MOBI'),
-                enabled: !_isImportingBook,
-                onTap: _isImportingBook ? null : _handleBookImport,
-              ),
-              ListTile(
-                leading: const Icon(Icons.link),
-                title: const Text('Add article by URL'),
-                subtitle: const Text('Paste a web article link'),
-                onTap: () => setState(() => _showUrlInput = true),
-              ),
-              const SizedBox(height: Spacing.medium),
-            ] else
-              _ArticleUrlInput(
-                onImportArticle: widget.onImportArticle,
-                onImported: () {
-                  Navigator.of(context).pop(ImportFlowResult.articleImported);
-                },
-              ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -151,11 +143,7 @@ class _ArticleUrlInputState extends State<_ArticleUrlInput> {
           FilledButton(
             onPressed: _isLoading ? null : _submit,
             child: _isLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                ? const ButtonLoadingIndicator()
                 : const Text('Import'),
           ),
           const SizedBox(height: Spacing.large),

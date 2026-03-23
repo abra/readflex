@@ -57,101 +57,74 @@ class _FlashcardSheetView extends StatelessWidget {
       builder: (context, state) {
         final isSaving = state.status == FlashcardStatus.saving;
 
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(Spacing.large),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  BottomSheetHeader(
-                    title: 'Create Flashcard',
-                    onClose: () => Navigator.of(context).pop(),
-                  ),
-                  const SizedBox(height: Spacing.small),
-                  // Selected text preview
-                  Container(
-                    padding: const EdgeInsets.all(Spacing.medium),
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(AppRadius.small),
-                    ),
-                    child: Text(
-                      selection.selectedText,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(height: Spacing.medium),
-                  // Front field
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Front',
-                      hintText: 'Question or term',
-                      isDense: true,
-                    ),
-                    maxLines: 2,
-                    enabled: !isSaving,
-                    onChanged: (v) =>
-                        context.read<FlashcardCubit>().setFront(v),
-                  ),
-                  const SizedBox(height: Spacing.small),
-                  // Back field
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Back',
-                      hintText: 'Answer or definition',
-                      isDense: true,
-                    ),
-                    maxLines: 2,
-                    enabled: !isSaving,
-                    onChanged: (v) => context.read<FlashcardCubit>().setBack(v),
-                  ),
-                  const SizedBox(height: Spacing.small),
-                  // Hint field
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Hint (optional)',
-                      isDense: true,
-                    ),
-                    enabled: !isSaving,
-                    onChanged: (v) => context.read<FlashcardCubit>().setHint(v),
-                  ),
-                  const SizedBox(height: Spacing.medium),
-                  if (state.status == FlashcardStatus.failure)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: Spacing.small),
-                      child: Text(
-                        'Failed to save flashcard',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                      ),
-                    ),
-                  FilledButton(
-                    onPressed: isSaving || !state.canSave
-                        ? null
-                        : () => context.read<FlashcardCubit>().save(
-                            sourceId: selection.sourceId,
-                            sourceType: selection.sourceType,
-                          ),
-                    child: isSaving
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Save'),
-                  ),
-                ],
+        return ActionBottomSheetLayout(
+          title: 'Create Flashcard',
+          onClose: () => Navigator.of(context).pop(),
+          headerSpacing: Spacing.small,
+          bodyPadding: const EdgeInsets.all(Spacing.large),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Selected text preview
+              SelectionPreviewCard(text: selection.selectedText),
+              const SizedBox(height: Spacing.medium),
+              // Front field
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Front',
+                  hintText: 'Question or term',
+                  isDense: true,
+                ),
+                maxLines: 2,
+                enabled: !isSaving,
+                onChanged: (v) => context.read<FlashcardCubit>().setFront(v),
               ),
-            ),
+              const SizedBox(height: Spacing.small),
+              // Back field
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Back',
+                  hintText: 'Answer or definition',
+                  isDense: true,
+                ),
+                maxLines: 2,
+                enabled: !isSaving,
+                onChanged: (v) => context.read<FlashcardCubit>().setBack(v),
+              ),
+              const SizedBox(height: Spacing.small),
+              // Hint field
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Hint (optional)',
+                  isDense: true,
+                ),
+                enabled: !isSaving,
+                onChanged: (v) => context.read<FlashcardCubit>().setHint(v),
+              ),
+              const SizedBox(height: Spacing.medium),
+              if (state.status == FlashcardStatus.failure)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: Spacing.small),
+                  child: Text(
+                    'Failed to save flashcard',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              FilledButton(
+                onPressed: isSaving || !state.canSave
+                    ? null
+                    : () => context.read<FlashcardCubit>().save(
+                        sourceId: selection.sourceId,
+                        sourceType: selection.sourceType,
+                      ),
+                child: isSaving
+                    ? const ButtonLoadingIndicator()
+                    : const Text('Save'),
+              ),
+            ],
           ),
         );
       },

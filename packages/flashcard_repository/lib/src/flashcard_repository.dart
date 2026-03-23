@@ -1,6 +1,6 @@
 import 'package:fsrs/fsrs.dart' as fsrs;
 import 'package:local_storage/local_storage.dart';
-import 'package:shared/shared.dart';
+import 'package:domain_models/domain_models.dart';
 import 'package:uuid/uuid.dart' show Uuid;
 
 import 'mappers/flashcard_to_domain.dart';

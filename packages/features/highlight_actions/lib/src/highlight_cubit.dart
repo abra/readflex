@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:highlight_repository/highlight_repository.dart';
-import 'package:shared/shared.dart';
+import 'package:domain_models/domain_models.dart';
 
 enum HighlightSheetStatus { idle, saving, success, failure }
 

@@ -1,6 +1,6 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared/shared.dart';
+import 'package:domain_models/domain_models.dart';
 import 'package:translate_text/src/translate_text_cubit.dart';
 import 'package:translation_service/translation_service.dart';
 

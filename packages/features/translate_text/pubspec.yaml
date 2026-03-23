@@ -13,6 +13,8 @@ dependencies:
   flutter_bloc: ^9.1.1
   equatable: ^2.0.8
 
+  domain_models:
+    path: ../../domain_models
   shared:
     path: ../../shared
   translation_service:

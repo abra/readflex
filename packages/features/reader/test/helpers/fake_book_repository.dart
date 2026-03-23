@@ -1,5 +1,5 @@
 import 'package:book_repository/book_repository.dart';
-import 'package:shared/shared.dart';
+import 'package:domain_models/domain_models.dart';
 
 class FakeBookRepository implements BookRepository {
   @override

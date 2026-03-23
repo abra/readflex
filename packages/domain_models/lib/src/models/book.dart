@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart' show Equatable;
-import 'package:shared/src/models/book_format.dart';
+
+import 'book_format.dart';
 
 /// A book entity stored in the user's library.
 final class Book extends Equatable {

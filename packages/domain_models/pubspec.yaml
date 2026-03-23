@@ -1,0 +1,16 @@
+name: domain_models
+description: Domain models, enums, value objects, and exceptions.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  equatable: ^2.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+

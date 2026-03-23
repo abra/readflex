@@ -1,7 +1,7 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dictionary/src/dictionary_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared/shared.dart';
+import 'package:domain_models/domain_models.dart';
 
 import 'helpers/fake_dictionary_repository.dart';
 

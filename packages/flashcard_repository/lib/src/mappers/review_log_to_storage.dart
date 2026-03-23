@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:local_storage/local_storage.dart';
-import 'package:shared/shared.dart';
+import 'package:domain_models/domain_models.dart';
 
 extension ReviewLogToStorage on ReviewLog {
   ReviewLogsTableCompanion toStorageModel() => ReviewLogsTableCompanion(

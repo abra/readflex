@@ -1,5 +1,5 @@
 import 'package:dictionary_repository/dictionary_repository.dart';
-import 'package:shared/shared.dart';
+import 'package:domain_models/domain_models.dart';
 
 class FakeDictionaryRepository implements DictionaryRepository {
   @override

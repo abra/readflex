@@ -1,7 +1,7 @@
 import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared/shared.dart';
+import 'package:domain_models/domain_models.dart';
 import 'package:translation_service/translation_service.dart';
 
 enum TranslateStatus { idle, translating, translated, saving, saved, failure }

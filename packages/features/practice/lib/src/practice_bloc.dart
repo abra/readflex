@@ -2,7 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:highlight_repository/highlight_repository.dart';
-import 'package:shared/shared.dart';
+import 'package:domain_models/domain_models.dart';
 
 part 'practice_event.dart';
 part 'practice_item.dart';

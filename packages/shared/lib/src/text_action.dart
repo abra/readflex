@@ -1,6 +1,5 @@
+import 'package:domain_models/domain_models.dart' show SourceType;
 import 'package:flutter/widgets.dart';
-
-import 'models/source_type.dart';
 
 /// Context passed to a [TextAction] when the user selects text in the reader.
 class TextSelectionContext {

@@ -70,101 +70,80 @@ class _TranslateSheetView extends StatelessWidget {
             state.status == TranslateStatus.translating ||
             state.status == TranslateStatus.saving;
 
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(Spacing.large),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  BottomSheetHeader(
-                    title: 'Translate',
-                    onClose: () => Navigator.of(context).pop(),
+        return ActionBottomSheetLayout(
+          title: 'Translate',
+          onClose: () => Navigator.of(context).pop(),
+          headerSpacing: Spacing.small,
+          bodyPadding: const EdgeInsets.all(Spacing.large),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Original text
+              SelectionPreviewCard(text: selection.selectedText),
+              const SizedBox(height: Spacing.medium),
+              // Translation result
+              if (state.status == TranslateStatus.translating)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(Spacing.medium),
+                    child: CircularProgressIndicator(),
                   ),
+                )
+              else if (state.translatedText.isNotEmpty) ...[
+                Container(
+                  padding: const EdgeInsets.all(Spacing.medium),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(AppRadius.small),
+                  ),
+                  child: Text(
+                    state.translatedText,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ),
+                if (state.usageExamples.isNotEmpty) ...[
                   const SizedBox(height: Spacing.small),
-                  // Original text
-                  Container(
-                    padding: const EdgeInsets.all(Spacing.medium),
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(AppRadius.small),
-                    ),
-                    child: Text(
-                      selection.selectedText,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
+                  ...state.usageExamples.map(
+                    (example) => Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: Spacing.xSmall,
+                      ),
+                      child: Text(
+                        example,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: Spacing.medium),
-                  // Translation result
-                  if (state.status == TranslateStatus.translating)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(Spacing.medium),
-                        child: CircularProgressIndicator(),
-                      ),
-                    )
-                  else if (state.translatedText.isNotEmpty) ...[
-                    Container(
-                      padding: const EdgeInsets.all(Spacing.medium),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(AppRadius.small),
-                      ),
-                      child: Text(
-                        state.translatedText,
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                    ),
-                    if (state.usageExamples.isNotEmpty) ...[
-                      const SizedBox(height: Spacing.small),
-                      ...state.usageExamples.map(
-                        (example) => Padding(
-                          padding: const EdgeInsets.only(
-                            bottom: Spacing.xSmall,
-                          ),
-                          child: Text(
-                            example,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                  if (state.status == TranslateStatus.failure)
-                    Padding(
-                      padding: const EdgeInsets.only(top: Spacing.small),
-                      child: Text(
-                        state.errorMessage ?? 'An error occurred',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: Spacing.medium),
-                  if (state.status == TranslateStatus.translated ||
-                      state.status == TranslateStatus.failure)
-                    FilledButton.icon(
-                      onPressed: isWorking
-                          ? null
-                          : () =>
-                                context.read<TranslateCubit>().saveToDictionary(
-                                  word: selection.selectedText,
-                                  sourceId: selection.sourceId,
-                                  sourceType: selection.sourceType,
-                                ),
-                      icon: const Icon(Icons.bookmark_add),
-                      label: const Text('Save to Dictionary'),
-                    ),
                 ],
-              ),
-            ),
+              ],
+              if (state.status == TranslateStatus.failure)
+                Padding(
+                  padding: const EdgeInsets.only(top: Spacing.small),
+                  child: Text(
+                    state.errorMessage ?? 'An error occurred',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: Spacing.medium),
+              if (state.status == TranslateStatus.translated ||
+                  state.status == TranslateStatus.failure)
+                FilledButton.icon(
+                  onPressed: isWorking
+                      ? null
+                      : () => context.read<TranslateCubit>().saveToDictionary(
+                            word: selection.selectedText,
+                            sourceId: selection.sourceId,
+                            sourceType: selection.sourceType,
+                          ),
+                  icon: state.status == TranslateStatus.saving
+                      ? const ButtonLoadingIndicator(size: 18)
+                      : const Icon(Icons.bookmark_add),
+                  label: const Text('Save to Dictionary'),
+                ),
+            ],
           ),
         );
       },

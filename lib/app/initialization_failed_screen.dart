@@ -4,6 +4,7 @@
 // fails. The retry button re-invokes composeAndRun() without restarting
 // the process.
 
+import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 
 /// Screen shown when app initialization fails, with an optional retry button.
@@ -66,11 +67,7 @@ class _InitializationFailedScreenState
                   builder: (context, inProgress, _) => FilledButton.icon(
                     onPressed: inProgress ? null : _retryInitialization,
                     icon: inProgress
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
+                        ? const ButtonLoadingIndicator(size: 16)
                         : const Icon(Icons.refresh),
                     label: Text(inProgress ? 'Retrying...' : 'Retry'),
                   ),

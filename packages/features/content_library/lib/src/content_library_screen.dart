@@ -4,7 +4,7 @@ import 'package:component_library/component_library.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared/shared.dart';
+import 'package:domain_models/domain_models.dart';
 
 import 'content_library_bloc.dart';
 
@@ -145,7 +145,7 @@ class _BookTile extends StatelessWidget {
     return Dismissible(
       key: ValueKey('book-${book.id}'),
       direction: DismissDirection.endToStart,
-      background: _DismissBackground(),
+      background: const DestructiveDismissBackground(),
       onDismissed: (_) => onDelete(),
       child: ListTile(
         leading: const Icon(Icons.book),
@@ -181,7 +181,7 @@ class _ArticleTile extends StatelessWidget {
     return Dismissible(
       key: ValueKey('article-${article.id}'),
       direction: DismissDirection.endToStart,
-      background: _DismissBackground(),
+      background: const DestructiveDismissBackground(),
       onDismissed: (_) => onDelete(),
       child: ListTile(
         leading: const Icon(Icons.article),
@@ -195,21 +195,6 @@ class _ArticleTile extends StatelessWidget {
             ? const Icon(Icons.check_circle, color: Colors.green)
             : null,
         onTap: onTap,
-      ),
-    );
-  }
-}
-
-class _DismissBackground extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Theme.of(context).colorScheme.error,
-      alignment: Alignment.centerRight,
-      padding: const EdgeInsets.only(right: Spacing.large),
-      child: Icon(
-        Icons.delete,
-        color: Theme.of(context).colorScheme.onError,
       ),
     );
   }

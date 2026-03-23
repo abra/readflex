@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:local_storage/local_storage.dart';
-import 'package:shared/shared.dart';
+import 'package:domain_models/domain_models.dart';
 
 extension EntryToDomain on DictionaryEntriesTableData {
   DictionaryEntry toDomainModel() => DictionaryEntry(

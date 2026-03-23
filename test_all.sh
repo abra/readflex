@@ -22,6 +22,7 @@ run() {
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 run "app"                          "flutter test test/" "$SCRIPT_DIR"
+run "domain_models"                "flutter test test/" "$SCRIPT_DIR/packages/domain_models"
 run "shared"                       "flutter test test/" "$SCRIPT_DIR/packages/shared"
 run "monitoring"                   "flutter test test/" "$SCRIPT_DIR/packages/monitoring"
 run "component_library"            "flutter test test/" "$SCRIPT_DIR/packages/component_library"

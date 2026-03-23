@@ -3,7 +3,7 @@ import 'package:book_repository/book_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:highlight_repository/highlight_repository.dart';
-import 'package:shared/shared.dart';
+import 'package:domain_models/domain_models.dart';
 
 part 'reader_event.dart';
 part 'reader_state.dart';
