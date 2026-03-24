@@ -46,55 +46,30 @@ class _ReaderView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final preferences = PreferencesScope.of(context);
-    final readerTheme = ReaderThemePreset.fromId(preferences.readerThemeId).data;
-    final readerFont = ReaderFontPreset.fromId(preferences.readerFontId);
-
-    return BlocBuilder<ReaderBloc, ReaderState>(
-      builder: (context, state) {
-        return Scaffold(
-          appBar: _buildAppBar(context, state),
-          body: _buildBody(
-            context,
-            state,
-            preferences,
-            readerTheme,
-            readerFont,
+    return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: BlocSelector<ReaderBloc, ReaderState, _ReaderAppBarState>(
+          selector: (state) => _ReaderAppBarState(
+            title: state.title,
+            highlightCount: state.highlights.length,
           ),
-        );
-      },
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar(BuildContext context, ReaderState state) {
-    return AppBar(
-      title: Text(
-        state.title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+          builder: (context, appBarState) {
+            return _ReaderAppBar(
+              title: appBarState.title,
+              highlightCount: appBarState.highlightCount,
+            );
+          },
+        ),
       ),
-      actions: [
-        if (state.highlights.isNotEmpty)
-          Badge(
-            label: Text('${state.highlights.length}'),
-            child: IconButton(
-              icon: const Icon(Icons.highlight),
-              onPressed: () {
-                // TODO: show highlights list as bottom sheet.
-              },
-            ),
-          ),
-      ],
+      body: BlocBuilder<ReaderBloc, ReaderState>(
+        buildWhen: (previous, current) => previous != current,
+        builder: (context, state) => _buildBody(context, state),
+      ),
     );
   }
 
-  Widget _buildBody(
-    BuildContext context,
-    ReaderState state,
-    Preferences preferences,
-    ReaderThemeData readerTheme,
-    ReaderFontPreset readerFont,
-  ) {
+  Widget _buildBody(BuildContext context, ReaderState state) {
     return switch (state.status) {
       ReaderStatus.initial || ReaderStatus.loading => const Center(
         child: CircularProgressIndicator(),
@@ -117,11 +92,61 @@ class _ReaderView extends StatelessWidget {
       ReaderStatus.ready => _ReadyContent(
         state: state,
         textActions: textActions,
-        preferences: preferences,
-        readerTheme: readerTheme,
-        readerFont: readerFont,
       ),
     };
+  }
+}
+
+final class _ReaderAppBarState {
+  const _ReaderAppBarState({
+    required this.title,
+    required this.highlightCount,
+  });
+
+  final String title;
+  final int highlightCount;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _ReaderAppBarState &&
+          title == other.title &&
+          highlightCount == other.highlightCount;
+
+  @override
+  int get hashCode => Object.hash(title, highlightCount);
+}
+
+class _ReaderAppBar extends StatelessWidget {
+  const _ReaderAppBar({
+    required this.title,
+    required this.highlightCount,
+  });
+
+  final String title;
+  final int highlightCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(
+      title: Text(
+        title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      actions: [
+        if (highlightCount > 0)
+          Badge(
+            label: Text('$highlightCount'),
+            child: IconButton(
+              icon: const Icon(Icons.highlight),
+              onPressed: () {
+                // TODO: show highlights list as bottom sheet.
+              },
+            ),
+          ),
+      ],
+    );
   }
 }
 
@@ -129,25 +154,21 @@ class _ReadyContent extends StatelessWidget {
   const _ReadyContent({
     required this.state,
     required this.textActions,
-    required this.preferences,
-    required this.readerTheme,
-    required this.readerFont,
   });
 
   final ReaderState state;
   final List<TextAction> textActions;
-  final Preferences preferences;
-  final ReaderThemeData readerTheme;
-  final ReaderFontPreset readerFont;
 
   @override
   Widget build(BuildContext context) {
+    final appearance = PreferencesScope.readerAppearanceOf(context);
+    final readerTheme = ReaderThemePreset.fromId(appearance.themeId).data;
+    final readerFont = ReaderFontPreset.fromId(appearance.fontId);
+    final bodyLarge = Theme.of(context).textTheme.bodyLarge!;
     final readerTextStyle = Theme.of(context).textTheme.bodyLarge!.copyWith(
       fontFamily: readerFont.fontFamily,
-      fontSize:
-          Theme.of(context).textTheme.bodyLarge!.fontSize! *
-          preferences.readerTextScale,
-      height: preferences.readerLineHeight,
+      fontSize: bodyLarge.fontSize! * appearance.textScale,
+      height: appearance.lineHeight,
       color: readerTheme.primaryTextColor,
     );
 

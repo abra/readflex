@@ -16,7 +16,7 @@ void showTranslateSheet(
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => _TranslateSheet(
+    builder: (_) => TranslateSheet(
       translationService: translationService,
       dictionaryRepository: dictionaryRepository,
       selection: selection,
@@ -24,11 +24,12 @@ void showTranslateSheet(
   );
 }
 
-class _TranslateSheet extends StatelessWidget {
-  const _TranslateSheet({
+class TranslateSheet extends StatelessWidget {
+  const TranslateSheet({
     required this.translationService,
     required this.dictionaryRepository,
     required this.selection,
+    super.key,
   });
 
   final TranslationService translationService;

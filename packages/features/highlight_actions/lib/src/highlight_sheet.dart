@@ -15,17 +15,18 @@ void showHighlightSheet(
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => _HighlightSheet(
+    builder: (_) => HighlightSheet(
       highlightRepository: highlightRepository,
       selection: selection,
     ),
   );
 }
 
-class _HighlightSheet extends StatelessWidget {
-  const _HighlightSheet({
+class HighlightSheet extends StatelessWidget {
+  const HighlightSheet({
     required this.highlightRepository,
     required this.selection,
+    super.key,
   });
 
   final HighlightRepository highlightRepository;

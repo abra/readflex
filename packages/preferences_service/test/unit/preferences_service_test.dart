@@ -31,9 +31,15 @@ void main() {
         supportedCodes: _supportedCodes,
       );
 
-      await service.update((s) => s.copyWith(themeMode: ThemeMode.dark));
+      await service.update(
+        (s) => s.copyWith(
+          themeMode: ThemeMode.dark,
+          contentLibraryLayoutMode: 'list',
+        ),
+      );
 
       expect(service.current.themeMode, ThemeMode.dark);
+      expect(service.current.contentLibraryLayoutMode, 'list');
     });
 
     test('update() changes reader appearance preferences', () async {
@@ -82,6 +88,7 @@ void main() {
       await service.update(
         (s) => s.copyWith(
           themeMode: ThemeMode.dark,
+          contentLibraryLayoutMode: 'list',
           readerThemeId: 'mist',
           readerFontId: 'sans',
           readerTextScale: 1.1,
@@ -93,6 +100,7 @@ void main() {
       );
 
       expect(service2.current.themeMode, ThemeMode.dark);
+      expect(service2.current.contentLibraryLayoutMode, 'list');
       expect(service2.current.readerThemeId, 'mist');
       expect(service2.current.readerFontId, 'sans');
       expect(service2.current.readerTextScale, 1.1);

@@ -1,18 +1,23 @@
 import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
+import 'package:domain_models/domain_models.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:domain_models/domain_models.dart';
+import 'package:preferences_service/preferences_service.dart';
 
 import 'content_library_bloc.dart';
+import 'content_library_grid_view.dart';
+import 'content_library_layout_cubit.dart';
+import 'content_library_list_view.dart';
 
 /// Content library tab: shows all books and articles.
 class ContentLibraryScreen extends StatelessWidget {
   const ContentLibraryScreen({
     required this.bookRepository,
     required this.articleRepository,
+    required this.preferencesService,
     required this.onBookPressed,
     required this.onArticlePressed,
     required this.onAddPressed,
@@ -21,17 +26,27 @@ class ContentLibraryScreen extends StatelessWidget {
 
   final BookRepository bookRepository;
   final ArticleRepository articleRepository;
+  final PreferencesService preferencesService;
   final void Function(Book book) onBookPressed;
   final void Function(Article article) onArticlePressed;
   final AsyncCallback onAddPressed;
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => ContentLibraryBloc(
-        bookRepository: bookRepository,
-        articleRepository: articleRepository,
-      )..add(const ContentLibraryLoadRequested()),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => ContentLibraryBloc(
+            bookRepository: bookRepository,
+            articleRepository: articleRepository,
+          )..add(const ContentLibraryLoadRequested()),
+        ),
+        BlocProvider(
+          create: (_) => ContentLibraryLayoutCubit(
+            preferencesService: preferencesService,
+          ),
+        ),
+      ],
       child: ContentLibraryView(
         onBookPressed: onBookPressed,
         onArticlePressed: onArticlePressed,
@@ -56,7 +71,42 @@ class ContentLibraryView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Library')),
+      appBar: AppBar(
+        title: const Text('Library'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: Spacing.medium),
+            child: BlocBuilder<
+              ContentLibraryLayoutCubit,
+              ContentLibraryLayoutMode
+            >(
+              builder: (context, layoutMode) {
+                return SegmentedButton<ContentLibraryLayoutMode>(
+                  showSelectedIcon: false,
+                  segments: const [
+                    ButtonSegment(
+                      value: ContentLibraryLayoutMode.list,
+                      icon: Icon(Icons.view_list_outlined),
+                      label: Text('List'),
+                    ),
+                    ButtonSegment(
+                      value: ContentLibraryLayoutMode.grid,
+                      icon: Icon(Icons.grid_view_outlined),
+                      label: Text('Grid'),
+                    ),
+                  ],
+                  selected: {layoutMode},
+                  onSelectionChanged: (value) {
+                    context.read<ContentLibraryLayoutCubit>().setLayoutMode(
+                      value.first,
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           await onAddPressed();
@@ -91,31 +141,32 @@ class ContentLibraryView extends StatelessWidget {
                           const ContentLibraryRefreshRequested(),
                         );
                       },
-                      child: ListView.builder(
-                        padding: const EdgeInsets.only(
-                          bottom: Spacing.xxxLarge,
-                        ),
-                        itemCount: state.items.length,
-                        itemBuilder: (context, index) {
-                          final item = state.items[index];
-                          return switch (item) {
-                            Book book => _BookTile(
-                              book: book,
-                              onTap: () => onBookPressed(book),
-                              onDelete: () =>
-                                  context.read<ContentLibraryBloc>().add(
-                                    ContentLibraryBookDeleted(book.id),
-                                  ),
-                            ),
-                            Article article => _ArticleTile(
-                              article: article,
-                              onTap: () => onArticlePressed(article),
-                              onDelete: () =>
-                                  context.read<ContentLibraryBloc>().add(
-                                    ContentLibraryArticleDeleted(article.id),
-                                  ),
-                            ),
-                            _ => const SizedBox.shrink(),
+                      child: BlocBuilder<
+                        ContentLibraryLayoutCubit,
+                        ContentLibraryLayoutMode
+                      >(
+                        builder: (context, layoutMode) {
+                          return switch (layoutMode) {
+                            ContentLibraryLayoutMode.list =>
+                              ContentLibraryListView(
+                                items: state.items,
+                                onBookPressed: onBookPressed,
+                                onArticlePressed: onArticlePressed,
+                                onBookDeleted: (book) =>
+                                    _deleteBook(context, book),
+                                onArticleDeleted: (article) =>
+                                    _deleteArticle(context, article),
+                              ),
+                            ContentLibraryLayoutMode.grid =>
+                              ContentLibraryGridView(
+                                items: state.items,
+                                onBookPressed: onBookPressed,
+                                onArticlePressed: onArticlePressed,
+                                onBookDeleted: (book) =>
+                                    _deleteBook(context, book),
+                                onArticleDeleted: (article) =>
+                                    _deleteArticle(context, article),
+                              ),
                           };
                         },
                       ),
@@ -125,77 +176,14 @@ class ContentLibraryView extends StatelessWidget {
       ),
     );
   }
-}
 
-class _BookTile extends StatelessWidget {
-  const _BookTile({
-    required this.book,
-    required this.onTap,
-    required this.onDelete,
-  });
-
-  final Book book;
-  final VoidCallback onTap;
-  final VoidCallback onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    final progress = (book.readingProgress * 100).round();
-
-    return Dismissible(
-      key: ValueKey('book-${book.id}'),
-      direction: DismissDirection.endToStart,
-      background: const DestructiveDismissBackground(),
-      onDismissed: (_) => onDelete(),
-      child: ListTile(
-        leading: const Icon(Icons.book),
-        title: Text(book.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text(
-          [
-            if (book.author != null) book.author!,
-            if (progress > 0) '$progress%',
-          ].join(' · '),
-        ),
-        trailing: book.isFinished
-            ? const Icon(Icons.check_circle, color: Colors.green)
-            : null,
-        onTap: onTap,
-      ),
-    );
+  void _deleteBook(BuildContext context, Book book) {
+    context.read<ContentLibraryBloc>().add(ContentLibraryBookDeleted(book.id));
   }
-}
 
-class _ArticleTile extends StatelessWidget {
-  const _ArticleTile({
-    required this.article,
-    required this.onTap,
-    required this.onDelete,
-  });
-
-  final Article article;
-  final VoidCallback onTap;
-  final VoidCallback onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    return Dismissible(
-      key: ValueKey('article-${article.id}'),
-      direction: DismissDirection.endToStart,
-      background: const DestructiveDismissBackground(),
-      onDismissed: (_) => onDelete(),
-      child: ListTile(
-        leading: const Icon(Icons.article),
-        title: Text(
-          article.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Text(article.siteName ?? article.url),
-        trailing: article.isFinished
-            ? const Icon(Icons.check_circle, color: Colors.green)
-            : null,
-        onTap: onTap,
-      ),
+  void _deleteArticle(BuildContext context, Article article) {
+    context.read<ContentLibraryBloc>().add(
+      ContentLibraryArticleDeleted(article.id),
     );
   }
 }

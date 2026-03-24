@@ -14,17 +14,18 @@ void showFlashcardSheet(
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => _FlashcardSheet(
+    builder: (_) => FlashcardSheet(
       flashcardRepository: flashcardRepository,
       selection: selection,
     ),
   );
 }
 
-class _FlashcardSheet extends StatelessWidget {
-  const _FlashcardSheet({
+class FlashcardSheet extends StatelessWidget {
+  const FlashcardSheet({
     required this.flashcardRepository,
     required this.selection,
+    super.key,
   });
 
   final FlashcardRepository flashcardRepository;

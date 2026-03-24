@@ -6,6 +6,7 @@ export 'src/destructive_dismiss_background.dart';
 export 'src/empty_state.dart';
 export 'src/error_state.dart';
 export 'src/fade_gradient_overlay.dart';
+export 'src/media_collection_card.dart';
 export 'src/selection_preview_card.dart';
 export 'src/theme/app_radius.dart';
 export 'src/theme/app_theme.dart';

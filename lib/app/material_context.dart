@@ -37,7 +37,7 @@ class _MaterialContextState extends State<MaterialContext> {
 
   @override
   Widget build(BuildContext context) {
-    final preferences = PreferencesScope.of(context);
+    final themeMode = PreferencesScope.themeModeOf(context);
     const lightTheme = LightAppThemeData();
     const darkTheme = DarkAppThemeData();
 
@@ -46,7 +46,7 @@ class _MaterialContextState extends State<MaterialContext> {
       darkTheme: darkTheme,
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
-        themeMode: preferences.themeMode,
+        themeMode: themeMode,
         theme: lightTheme.materialThemeData,
         darkTheme: darkTheme.materialThemeData,
         routerConfig: _router,

@@ -13,14 +13,17 @@ void showSubscriptionPaywallSheet(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (_) => _SubscriptionPaywallSheet(
+    builder: (_) => SubscriptionPaywallSheet(
       subscriptionService: subscriptionService,
     ),
   );
 }
 
-class _SubscriptionPaywallSheet extends StatelessWidget {
-  const _SubscriptionPaywallSheet({required this.subscriptionService});
+class SubscriptionPaywallSheet extends StatelessWidget {
+  const SubscriptionPaywallSheet({
+    required this.subscriptionService,
+    super.key,
+  });
 
   final SubscriptionService subscriptionService;
 

@@ -220,6 +220,44 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                 ),
                 const SizedBox(height: Spacing.large),
                 _SectionCard(
+                  title: 'Library Grid',
+                  child: GridView.count(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: Spacing.medium,
+                    mainAxisSpacing: Spacing.medium,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    childAspectRatio: 0.58,
+                    children: const [
+                      _DemoLibraryCard(
+                        title: 'Atomic Habits',
+                        subtitle: 'James Clear',
+                        meta: '42% read',
+                        media: _DemoBookMedia(label: 'AB'),
+                      ),
+                      _DemoLibraryCard(
+                        title: 'Matter-style Reading Interfaces',
+                        subtitle: 'matter.com',
+                        meta: 'Article',
+                        media: _DemoArticleMedia(domain: 'matter.com'),
+                      ),
+                      _DemoLibraryCard(
+                        title: 'Deep Work',
+                        subtitle: 'Cal Newport',
+                        meta: 'New book',
+                        media: _DemoBookMedia(label: 'DW'),
+                      ),
+                      _DemoLibraryCard(
+                        title: 'Long-form UX for Focused Reading',
+                        subtitle: 'readwise.io',
+                        meta: '1,248 words',
+                        media: _DemoArticleMedia(domain: 'readwise.io'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: Spacing.large),
+                _SectionCard(
                   title: 'Cards And Rows',
                   child: Column(
                     children: [
@@ -420,6 +458,132 @@ class _ReaderPresetCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DemoLibraryCard extends StatelessWidget {
+  const _DemoLibraryCard({
+    required this.title,
+    required this.subtitle,
+    required this.meta,
+    required this.media,
+  });
+
+  final String title;
+  final String subtitle;
+  final String meta;
+  final Widget media;
+
+  @override
+  Widget build(BuildContext context) {
+    return MediaCollectionCard(
+      media: media,
+      title: title,
+      subtitle: subtitle,
+      meta: meta,
+      topRight: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.86),
+          borderRadius: BorderRadius.circular(AppRadius.small),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.all(Spacing.xSmall),
+          child: Icon(Icons.more_horiz, size: 18),
+        ),
+      ),
+    );
+  }
+}
+
+class _DemoBookMedia extends StatelessWidget {
+  const _DemoBookMedia({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            theme.colorScheme.surfaceContainerHighest,
+            theme.colorScheme.surfaceContainer,
+          ],
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(Spacing.mediumLarge),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface.withValues(alpha: 0.85),
+                borderRadius: BorderRadius.circular(AppRadius.small),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Spacing.small,
+                  vertical: 6,
+                ),
+                child: Text('BOOK', style: theme.textTheme.labelSmall),
+              ),
+            ),
+            const Spacer(),
+            Text(
+              label,
+              style: theme.textTheme.displaySmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DemoArticleMedia extends StatelessWidget {
+  const _DemoArticleMedia({required this.domain});
+
+  final String domain;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(Spacing.mediumLarge),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'WWW',
+              style: theme.textTheme.displaySmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const Spacer(),
+            Text(domain, style: theme.textTheme.titleMedium),
+            const SizedBox(height: Spacing.small),
+            Text(
+              'ARTICLE',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -21,6 +21,8 @@ dependencies:
     path: ../../article_repository
   component_library:
     path: ../../component_library
+  preferences_service:
+    path: ../../preferences_service
 
 dev_dependencies:
   flutter_test:

@@ -53,28 +53,28 @@ const _lightPalette = _ThemePalette(
   scaffold: Color(0xFFFFFFFF),
   surface: Color(0xFFFFFFFF),
   surfaceRaised: Color(0xFFFFFEFC),
-  surfaceTint: Color(0xFFF6F5F2),
-  primary: Color(0xFF17191C),
+  surfaceTint: Color(0xFFF5F5F2),
+  primary: Color(0xFF111315),
   onPrimary: Colors.white,
-  textPrimary: Color(0xFF14171A),
-  textSecondary: Color(0xFF6C7179),
-  border: Color(0xFFE6E7EA),
-  borderStrong: Color(0xFFD0D4D9),
+  textPrimary: Color(0xFF121416),
+  textSecondary: Color(0xFF73777F),
+  border: Color(0xFFECEDE8),
+  borderStrong: Color(0xFFD8DAD5),
   error: Color(0xFFB04343),
   onError: Colors.white,
 );
 
 const _darkPalette = _ThemePalette(
   scaffold: Color(0xFF1C1C1E),
-  surface: Color(0xFF232326),
-  surfaceRaised: Color(0xFF2A2A2E),
-  surfaceTint: Color(0xFF323236),
+  surface: Color(0xFF202124),
+  surfaceRaised: Color(0xFF27282C),
+  surfaceTint: Color(0xFF313238),
   primary: Color(0xFFF5F5F7),
   onPrimary: Color(0xFF1C1C1E),
   textPrimary: Color(0xFFF5F5F7),
   textSecondary: Color(0xFFAEAEB2),
-  border: Color(0xFF38383C),
-  borderStrong: Color(0xFF48484D),
+  border: Color(0xFF34353B),
+  borderStrong: Color(0xFF45464D),
   error: Color(0xFFE47070),
   onError: Color(0xFF1A0E0E),
 );
@@ -141,11 +141,11 @@ ThemeData _buildTheme({
   );
 
   final cardShape = RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(22),
+    borderRadius: BorderRadius.circular(20),
     side: BorderSide(color: palette.border),
   );
   final controlShape = RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(16),
+    borderRadius: BorderRadius.circular(18),
   );
 
   return ThemeData(
@@ -175,8 +175,10 @@ ThemeData _buildTheme({
       surfaceTintColor: Colors.transparent,
       scrolledUnderElevation: 0,
       elevation: 0,
-      toolbarHeight: 56,
-      titleTextStyle: textTheme.titleLarge,
+      toolbarHeight: 52,
+      titleTextStyle: textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.w600,
+      ),
     ),
     cardTheme: CardThemeData(
       color: palette.surfaceRaised,
@@ -185,23 +187,22 @@ ThemeData _buildTheme({
       shape: cardShape,
     ),
     listTileTheme: ListTileThemeData(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
       iconColor: palette.textSecondary,
       textColor: palette.textPrimary,
-      tileColor: palette.surfaceRaised,
+      tileColor: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: palette.border),
+        borderRadius: BorderRadius.circular(18),
       ),
     ),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: palette.surface,
+      backgroundColor: palette.surfaceRaised,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       indicatorColor: brightness == Brightness.light
-          ? palette.textPrimary.withValues(alpha: 0.08)
-          : Colors.white.withValues(alpha: 0.10),
-      height: 72,
+          ? palette.textPrimary.withValues(alpha: 0.07)
+          : Colors.white.withValues(alpha: 0.09),
+      height: 70,
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       labelPadding: const EdgeInsets.only(top: 4),
       iconTheme: WidgetStateProperty.resolveWith((states) {
@@ -233,8 +234,8 @@ ThemeData _buildTheme({
         textStyle: textTheme.labelLarge,
         elevation: 0,
         shadowColor: Colors.transparent,
-        minimumSize: const Size.fromHeight(52),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        minimumSize: const Size.fromHeight(50),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
         shape: controlShape,
       ),
     ),
@@ -242,10 +243,12 @@ ThemeData _buildTheme({
       style: OutlinedButton.styleFrom(
         foregroundColor: palette.textPrimary,
         textStyle: textTheme.labelLarge,
-        minimumSize: const Size.fromHeight(52),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        side: BorderSide(color: palette.borderStrong),
-        backgroundColor: palette.surfaceRaised,
+        minimumSize: const Size.fromHeight(50),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+        side: BorderSide(color: palette.border),
+        backgroundColor: brightness == Brightness.light
+            ? palette.surfaceTint
+            : palette.surfaceTint.withValues(alpha: 0.8),
         shape: controlShape,
       ),
     ),
@@ -266,37 +269,36 @@ ThemeData _buildTheme({
         minimumSize: const Size.square(40),
         padding: const EdgeInsets.all(8),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: palette.border),
+          borderRadius: BorderRadius.circular(14),
         ),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: brightness == Brightness.light
-          ? palette.surface
+          ? palette.surfaceTint
           : palette.surfaceTint.withValues(alpha: 0.72),
       hintStyle: textTheme.bodyMedium?.copyWith(color: palette.textSecondary),
       labelStyle: textTheme.bodyMedium?.copyWith(color: palette.textSecondary),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         borderSide: BorderSide(color: palette.border),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         borderSide: BorderSide(color: palette.border),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         borderSide: BorderSide(color: palette.primary, width: 1.2),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         borderSide: BorderSide(color: palette.error),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         borderSide: BorderSide(color: palette.error, width: 1.2),
       ),
     ),
@@ -304,7 +306,9 @@ ThemeData _buildTheme({
       style: ButtonStyle(
         backgroundColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return palette.surfaceRaised;
+            return brightness == Brightness.light
+                ? palette.surface
+                : palette.surfaceRaised;
           }
           return palette.surfaceTint;
         }),
@@ -316,17 +320,17 @@ ThemeData _buildTheme({
         }),
         textStyle: WidgetStatePropertyAll(textTheme.labelMedium),
         side: WidgetStatePropertyAll(BorderSide(color: palette.border)),
-      shape: WidgetStatePropertyAll(
+        shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         ),
       ),
     ),
     chipTheme: ChipThemeData(
       backgroundColor: brightness == Brightness.light
-          ? palette.surface
+          ? palette.surfaceTint
           : palette.surfaceTint.withValues(alpha: 0.8),
       selectedColor: brightness == Brightness.light
-          ? palette.surfaceTint
+          ? palette.surface
           : palette.surfaceRaised,
       disabledColor: palette.surfaceTint,
       side: BorderSide(color: palette.border),
@@ -337,7 +341,7 @@ ThemeData _buildTheme({
       ),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
     ),
-      progressIndicatorTheme: ProgressIndicatorThemeData(
+    progressIndicatorTheme: ProgressIndicatorThemeData(
       color: palette.primary,
       linearTrackColor: palette.surfaceTint,
       circularTrackColor: palette.surfaceTint,
