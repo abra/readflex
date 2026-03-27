@@ -135,10 +135,10 @@ class _TranslateSheetView extends StatelessWidget {
                   onPressed: isWorking
                       ? null
                       : () => context.read<TranslateCubit>().saveToDictionary(
-                            word: selection.selectedText,
-                            sourceId: selection.sourceId,
-                            sourceType: selection.sourceType,
-                          ),
+                          word: selection.selectedText,
+                          sourceId: selection.sourceId,
+                          sourceType: selection.sourceType,
+                        ),
                   icon: state.status == TranslateStatus.saving
                       ? const ButtonLoadingIndicator(size: 18)
                       : const Icon(Icons.bookmark_add),

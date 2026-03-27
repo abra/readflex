@@ -21,7 +21,8 @@ class SelectionPreviewCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(Spacing.medium),
       decoration: BoxDecoration(
-        color: backgroundColor ??
+        color:
+            backgroundColor ??
             Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(AppRadius.small),
       ),

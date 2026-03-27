@@ -30,10 +30,8 @@ class PreferencesRepository {
             map['contentLibraryLayoutMode'] as String? ?? 'grid',
         readerThemeId: map['readerThemeId'] as String? ?? 'paper',
         readerFontId: map['readerFontId'] as String? ?? 'serif',
-        readerTextScale:
-            (map['readerTextScale'] as num?)?.toDouble() ?? 1.0,
-        readerLineHeight:
-            (map['readerLineHeight'] as num?)?.toDouble() ?? 1.55,
+        readerTextScale: (map['readerTextScale'] as num?)?.toDouble() ?? 1.0,
+        readerLineHeight: (map['readerLineHeight'] as num?)?.toDouble() ?? 1.55,
         onboardingCompleted: map['onboardingCompleted'] as bool? ?? false,
         hasCompletedSetup: map['hasCompletedSetup'] as bool? ?? false,
       );

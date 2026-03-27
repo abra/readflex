@@ -1,21 +1,72 @@
 import 'package:flutter/material.dart';
 
-// Reader-first typography tuned to feel closer to modern reading apps than Material defaults.
+/// Font family constants used across the theme.
+const kFontFamilySans = 'Inter';
+const kFontFamilySerif = 'SourceSerif4';
+
+// Display & headline styles use Source Serif 4 for a warm literary feel.
+// Body, title, and label styles use Inter for clean UI readability.
 const _textTheme = TextTheme(
-  displayLarge: TextStyle(fontSize: 52, height: 1.04, fontWeight: FontWeight.w600),
-  displayMedium: TextStyle(fontSize: 44, height: 1.06, fontWeight: FontWeight.w600),
-  displaySmall: TextStyle(fontSize: 36, height: 1.08, fontWeight: FontWeight.w600),
-  headlineLarge: TextStyle(fontSize: 32, height: 1.12, fontWeight: FontWeight.w600),
-  headlineMedium: TextStyle(fontSize: 28, height: 1.16, fontWeight: FontWeight.w600),
-  headlineSmall: TextStyle(fontSize: 24, height: 1.2, fontWeight: FontWeight.w600),
-  titleLarge: TextStyle(fontSize: 20, height: 1.24, fontWeight: FontWeight.w600),
-  titleMedium: TextStyle(fontSize: 17, height: 1.28, fontWeight: FontWeight.w600),
+  displayLarge: TextStyle(
+    fontFamily: kFontFamilySerif,
+    fontSize: 52,
+    height: 1.04,
+    fontWeight: FontWeight.w600,
+  ),
+  displayMedium: TextStyle(
+    fontFamily: kFontFamilySerif,
+    fontSize: 44,
+    height: 1.06,
+    fontWeight: FontWeight.w600,
+  ),
+  displaySmall: TextStyle(
+    fontFamily: kFontFamilySerif,
+    fontSize: 36,
+    height: 1.08,
+    fontWeight: FontWeight.w600,
+  ),
+  headlineLarge: TextStyle(
+    fontFamily: kFontFamilySerif,
+    fontSize: 32,
+    height: 1.12,
+    fontWeight: FontWeight.w600,
+  ),
+  headlineMedium: TextStyle(
+    fontFamily: kFontFamilySerif,
+    fontSize: 28,
+    height: 1.16,
+    fontWeight: FontWeight.w600,
+  ),
+  headlineSmall: TextStyle(
+    fontFamily: kFontFamilySerif,
+    fontSize: 24,
+    height: 1.2,
+    fontWeight: FontWeight.w600,
+  ),
+  titleLarge: TextStyle(
+    fontSize: 20,
+    height: 1.24,
+    fontWeight: FontWeight.w600,
+  ),
+  titleMedium: TextStyle(
+    fontSize: 17,
+    height: 1.28,
+    fontWeight: FontWeight.w600,
+  ),
   titleSmall: TextStyle(fontSize: 15, height: 1.3, fontWeight: FontWeight.w600),
   bodyLarge: TextStyle(fontSize: 17, height: 1.45, fontWeight: FontWeight.w400),
-  bodyMedium: TextStyle(fontSize: 15, height: 1.45, fontWeight: FontWeight.w400),
+  bodyMedium: TextStyle(
+    fontSize: 15,
+    height: 1.45,
+    fontWeight: FontWeight.w400,
+  ),
   bodySmall: TextStyle(fontSize: 13, height: 1.4, fontWeight: FontWeight.w400),
   labelLarge: TextStyle(fontSize: 15, height: 1.2, fontWeight: FontWeight.w600),
-  labelMedium: TextStyle(fontSize: 13, height: 1.2, fontWeight: FontWeight.w600),
+  labelMedium: TextStyle(
+    fontSize: 13,
+    height: 1.2,
+    fontWeight: FontWeight.w600,
+  ),
   labelSmall: TextStyle(fontSize: 12, height: 1.2, fontWeight: FontWeight.w600),
 );
 
@@ -50,33 +101,33 @@ final class _ThemePalette {
 }
 
 const _lightPalette = _ThemePalette(
-  scaffold: Color(0xFFFFFFFF),
-  surface: Color(0xFFFFFFFF),
-  surfaceRaised: Color(0xFFFFFEFC),
-  surfaceTint: Color(0xFFF5F5F2),
-  primary: Color(0xFF111315),
+  scaffold: Color(0xFFF8F4EC),
+  surface: Color(0xFFFFFCF7),
+  surfaceRaised: Color(0xFFF5EFE4),
+  surfaceTint: Color(0xFFF0E7D8),
+  primary: Color(0xFFB86A2D),
   onPrimary: Colors.white,
-  textPrimary: Color(0xFF121416),
-  textSecondary: Color(0xFF73777F),
-  border: Color(0xFFECEDE8),
-  borderStrong: Color(0xFFD8DAD5),
-  error: Color(0xFFB04343),
+  textPrimary: Color(0xFF241C16),
+  textSecondary: Color(0xFF7A6E62),
+  border: Color(0xFFE6DAC8),
+  borderStrong: Color(0xFFD7C6AE),
+  error: Color(0xFFB45145),
   onError: Colors.white,
 );
 
 const _darkPalette = _ThemePalette(
-  scaffold: Color(0xFF1C1C1E),
-  surface: Color(0xFF202124),
-  surfaceRaised: Color(0xFF27282C),
-  surfaceTint: Color(0xFF313238),
-  primary: Color(0xFFF5F5F7),
-  onPrimary: Color(0xFF1C1C1E),
-  textPrimary: Color(0xFFF5F5F7),
-  textSecondary: Color(0xFFAEAEB2),
-  border: Color(0xFF34353B),
-  borderStrong: Color(0xFF45464D),
-  error: Color(0xFFE47070),
-  onError: Color(0xFF1A0E0E),
+  scaffold: Color(0xFF1E1B18),
+  surface: Color(0xFF24201D),
+  surfaceRaised: Color(0xFF2A2521),
+  surfaceTint: Color(0xFF332D28),
+  primary: Color(0xFFD08A4A),
+  onPrimary: Color(0xFF22170D),
+  textPrimary: Color(0xFFF2E7D8),
+  textSecondary: Color(0xFFB6A898),
+  border: Color(0xFF3C342D),
+  borderStrong: Color(0xFF4A4038),
+  error: Color(0xFFE08174),
+  onError: Color(0xFF2A120E),
 );
 
 /// Abstract base class describing the app's theme.
@@ -87,26 +138,30 @@ abstract class AppThemeData {
   ThemeData get materialThemeData;
 }
 
-/// Light variant of [AppThemeData] with crisp white surfaces.
+/// Light variant of [AppThemeData] with warm paper-like surfaces.
 final class LightAppThemeData extends AppThemeData {
   const LightAppThemeData();
 
-  @override
-  ThemeData get materialThemeData => _buildTheme(
+  static final _cached = _buildTheme(
     palette: _lightPalette,
     brightness: Brightness.light,
   );
+
+  @override
+  ThemeData get materialThemeData => _cached;
 }
 
-/// Dark variant of [AppThemeData] using a space-gray inspired palette.
+/// Dark variant of [AppThemeData] using a calm charcoal reading palette.
 final class DarkAppThemeData extends AppThemeData {
   const DarkAppThemeData();
 
-  @override
-  ThemeData get materialThemeData => _buildTheme(
+  static final _cached = _buildTheme(
     palette: _darkPalette,
     brightness: Brightness.dark,
   );
+
+  @override
+  ThemeData get materialThemeData => _cached;
 }
 
 ThemeData _buildTheme({
@@ -135,23 +190,23 @@ ThemeData _buildTheme({
   );
 
   final textTheme = _textTheme.apply(
-    fontFamily: 'Geist',
+    fontFamily: kFontFamilySans,
     bodyColor: palette.textPrimary,
     displayColor: palette.textPrimary,
   );
 
   final cardShape = RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(20),
+    borderRadius: BorderRadius.circular(22),
     side: BorderSide(color: palette.border),
   );
   final controlShape = RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(18),
+    borderRadius: BorderRadius.circular(16),
   );
 
   return ThemeData(
     useMaterial3: true,
     brightness: brightness,
-    fontFamily: 'Geist',
+    fontFamily: kFontFamilySans,
     textTheme: textTheme,
     scaffoldBackgroundColor: palette.scaffold,
     colorScheme: colorScheme,
@@ -200,8 +255,8 @@ ThemeData _buildTheme({
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       indicatorColor: brightness == Brightness.light
-          ? palette.textPrimary.withValues(alpha: 0.07)
-          : Colors.white.withValues(alpha: 0.09),
+          ? palette.primary.withValues(alpha: 0.12)
+          : palette.primary.withValues(alpha: 0.18),
       height: 70,
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       labelPadding: const EdgeInsets.only(top: 4),
@@ -246,9 +301,7 @@ ThemeData _buildTheme({
         minimumSize: const Size.fromHeight(50),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
         side: BorderSide(color: palette.border),
-        backgroundColor: brightness == Brightness.light
-            ? palette.surfaceTint
-            : palette.surfaceTint.withValues(alpha: 0.8),
+        backgroundColor: palette.surfaceRaised,
         shape: controlShape,
       ),
     ),
@@ -263,13 +316,11 @@ ThemeData _buildTheme({
     iconButtonTheme: IconButtonThemeData(
       style: IconButton.styleFrom(
         foregroundColor: palette.textPrimary,
-        backgroundColor: brightness == Brightness.light
-            ? palette.surfaceTint
-            : palette.surfaceTint.withValues(alpha: 0.8),
+        backgroundColor: palette.surfaceRaised,
         minimumSize: const Size.square(40),
         padding: const EdgeInsets.all(8),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(13),
         ),
       ),
     ),
@@ -321,7 +372,7 @@ ThemeData _buildTheme({
         textStyle: WidgetStatePropertyAll(textTheme.labelMedium),
         side: WidgetStatePropertyAll(BorderSide(color: palette.border)),
         shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),
     ),
@@ -334,7 +385,7 @@ ThemeData _buildTheme({
           : palette.surfaceRaised,
       disabledColor: palette.surfaceTint,
       side: BorderSide(color: palette.border),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       labelStyle: textTheme.labelMedium!.copyWith(color: palette.textPrimary),
       secondaryLabelStyle: textTheme.labelMedium!.copyWith(
         color: palette.textPrimary,
@@ -348,10 +399,10 @@ ThemeData _buildTheme({
     ),
     sliderTheme: SliderThemeData(
       trackHeight: 3,
-      activeTrackColor: palette.textPrimary,
+      activeTrackColor: palette.primary,
       inactiveTrackColor: palette.surfaceTint,
-      thumbColor: palette.textPrimary,
-      overlayColor: palette.textPrimary.withValues(alpha: 0.08),
+      thumbColor: palette.primary,
+      overlayColor: palette.primary.withValues(alpha: 0.12),
       thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
       overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
     ),

@@ -102,7 +102,10 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Display Large', style: theme.textTheme.displaySmall),
+                      Text(
+                        'Display Large',
+                        style: theme.textTheme.displaySmall,
+                      ),
                       const SizedBox(height: Spacing.small),
                       Text('Title Medium', style: theme.textTheme.titleMedium),
                       const SizedBox(height: Spacing.small),
@@ -171,7 +174,10 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                       SegmentedButton<String>(
                         showSelectedIcon: false,
                         segments: const [
-                          ButtonSegment(value: 'Comfort', label: Text('Comfort')),
+                          ButtonSegment(
+                            value: 'Comfort',
+                            label: Text('Comfort'),
+                          ),
                           ButtonSegment(value: 'Focus', label: Text('Focus')),
                           ButtonSegment(value: 'Study', label: Text('Study')),
                         ],
@@ -184,7 +190,9 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                       Wrap(
                         spacing: Spacing.small,
                         runSpacing: Spacing.small,
-                        children: ['Paper', 'Warm', 'Mist', 'Night'].map((chip) {
+                        children: ['Paper', 'Warm', 'Mist', 'Night'].map((
+                          chip,
+                        ) {
                           return ChoiceChip(
                             label: Text(chip),
                             selected: _selectedChip == chip,
@@ -265,7 +273,9 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                         child: ListTile(
                           leading: const Icon(Icons.menu_book_outlined),
                           title: const Text('Sample Article'),
-                          subtitle: const Text('A quiet reading surface with subtle borders'),
+                          subtitle: const Text(
+                            'A quiet reading surface with subtle borders',
+                          ),
                           trailing: Text(
                             '12 min',
                             style: theme.textTheme.labelMedium,
@@ -378,7 +388,8 @@ class _ColorSwatchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = ThemeData.estimateBrightnessForColor(color) == Brightness.dark
+    final textColor =
+        ThemeData.estimateBrightnessForColor(color) == Brightness.dark
         ? Colors.white
         : Colors.black87;
     return Container(
@@ -445,7 +456,7 @@ class _ReaderPresetCard extends StatelessWidget {
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: themeData.primaryTextColor,
               height: 1.55,
-              fontFamily: 'serif',
+              fontFamily: 'SourceSerif4',
             ),
           ),
           const SizedBox(height: Spacing.medium),

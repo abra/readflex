@@ -16,6 +16,18 @@ final class ReaderAppearancePreferences {
   final double textScale;
   final double lineHeight;
 
+  ReaderAppearancePreferences copyWith({
+    String? themeId,
+    String? fontId,
+    double? textScale,
+    double? lineHeight,
+  }) => ReaderAppearancePreferences(
+    themeId: themeId ?? this.themeId,
+    fontId: fontId ?? this.fontId,
+    textScale: textScale ?? this.textScale,
+    lineHeight: lineHeight ?? this.lineHeight,
+  );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -103,16 +115,15 @@ final class Preferences {
           hasCompletedSetup == other.hasCompletedSetup;
 
   @override
-  int get hashCode =>
-      Object.hash(
-        themeMode,
-        locale,
-        contentLibraryLayoutMode,
-        readerThemeId,
-        readerFontId,
-        readerTextScale,
-        readerLineHeight,
-        onboardingCompleted,
-        hasCompletedSetup,
-      );
+  int get hashCode => Object.hash(
+    themeMode,
+    locale,
+    contentLibraryLayoutMode,
+    readerThemeId,
+    readerFontId,
+    readerTextScale,
+    readerLineHeight,
+    onboardingCompleted,
+    hasCompletedSetup,
+  );
 }

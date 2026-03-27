@@ -74,11 +74,11 @@ void main() {
       expect(theme.materialThemeData.brightness, Brightness.light);
     });
 
-    test('materialThemeData uses white scaffold color', () {
+    test('materialThemeData uses warm paper scaffold color', () {
       const theme = LightAppThemeData();
       expect(
         theme.materialThemeData.scaffoldBackgroundColor,
-        const Color(0xFFFFFFFF),
+        const Color(0xFFF8F4EC),
       );
     });
   });
@@ -89,11 +89,11 @@ void main() {
       expect(theme.materialThemeData.brightness, Brightness.dark);
     });
 
-    test('materialThemeData uses space gray scaffold color', () {
+    test('materialThemeData uses calm charcoal scaffold color', () {
       const theme = DarkAppThemeData();
       expect(
         theme.materialThemeData.scaffoldBackgroundColor,
-        const Color(0xFF1C1C1E),
+        const Color(0xFF1E1B18),
       );
     });
   });

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
+import 'app_theme_data.dart';
+
 /// User-selectable reader surface presets.
 enum ReaderThemePreset {
   paper,
   warm,
   mist,
-  night;
+  night
+  ;
 
   static ReaderThemePreset fromId(String? value) => switch (value) {
     'warm' => warm,
@@ -28,7 +31,8 @@ enum ReaderThemePreset {
 enum ReaderFontPreset {
   serif,
   sans,
-  geist;
+  geist
+  ;
 
   static ReaderFontPreset fromId(String? value) => switch (value) {
     'sans' => sans,
@@ -45,8 +49,8 @@ enum ReaderFontPreset {
   };
 
   String get fontFamily => switch (this) {
-    serif => 'serif',
-    sans => 'sans-serif',
+    serif => kFontFamilySerif,
+    sans => kFontFamilySans,
     geist => 'Geist',
   };
 }
@@ -70,45 +74,68 @@ final class ReaderThemeData {
   final Color secondaryTextColor;
   final Color dividerColor;
   final Color accentColor;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ReaderThemeData &&
+          backgroundColor == other.backgroundColor &&
+          surfaceColor == other.surfaceColor &&
+          panelColor == other.panelColor &&
+          primaryTextColor == other.primaryTextColor &&
+          secondaryTextColor == other.secondaryTextColor &&
+          dividerColor == other.dividerColor &&
+          accentColor == other.accentColor;
+
+  @override
+  int get hashCode => Object.hash(
+    backgroundColor,
+    surfaceColor,
+    panelColor,
+    primaryTextColor,
+    secondaryTextColor,
+    dividerColor,
+    accentColor,
+  );
 }
 
 extension ReaderThemePresetX on ReaderThemePreset {
   ReaderThemeData get data => switch (this) {
     ReaderThemePreset.paper => const ReaderThemeData(
-      backgroundColor: Color(0xFFF6F1E7),
-      surfaceColor: Color(0xFFFFFCF6),
-      panelColor: Color(0xFFF0E8DB),
-      primaryTextColor: Color(0xFF28231E),
-      secondaryTextColor: Color(0xFF6E675E),
-      dividerColor: Color(0xFFD9CFBE),
-      accentColor: Color(0xFF6B7C8E),
+      backgroundColor: Color(0xFFF7F1E6),
+      surfaceColor: Color(0xFFFCF7EF),
+      panelColor: Color(0xFFF0E7D8),
+      primaryTextColor: Color(0xFF2A221B),
+      secondaryTextColor: Color(0xFF76685B),
+      dividerColor: Color(0xFFD9CAB4),
+      accentColor: Color(0xFFB86A2D),
     ),
     ReaderThemePreset.warm => const ReaderThemeData(
-      backgroundColor: Color(0xFFF1E7D4),
-      surfaceColor: Color(0xFFF9F2E4),
-      panelColor: Color(0xFFE8DAC0),
-      primaryTextColor: Color(0xFF2F261C),
-      secondaryTextColor: Color(0xFF74614B),
-      dividerColor: Color(0xFFD8C4AA),
-      accentColor: Color(0xFF8B6B4A),
+      backgroundColor: Color(0xFFF3E4CF),
+      surfaceColor: Color(0xFFF8EDDC),
+      panelColor: Color(0xFFEAD7BA),
+      primaryTextColor: Color(0xFF33261B),
+      secondaryTextColor: Color(0xFF7C664F),
+      dividerColor: Color(0xFFD8C0A0),
+      accentColor: Color(0xFFC07A39),
     ),
     ReaderThemePreset.mist => const ReaderThemeData(
-      backgroundColor: Color(0xFFE9EEF2),
-      surfaceColor: Color(0xFFF7F9FB),
-      panelColor: Color(0xFFDEE6EB),
-      primaryTextColor: Color(0xFF202930),
-      secondaryTextColor: Color(0xFF5F6C74),
-      dividerColor: Color(0xFFD1DADF),
-      accentColor: Color(0xFF627C8F),
+      backgroundColor: Color(0xFFF3F1EC),
+      surfaceColor: Color(0xFFF9F7F3),
+      panelColor: Color(0xFFEAE5DD),
+      primaryTextColor: Color(0xFF292520),
+      secondaryTextColor: Color(0xFF72685D),
+      dividerColor: Color(0xFFDCD3C7),
+      accentColor: Color(0xFF9A7A56),
     ),
     ReaderThemePreset.night => const ReaderThemeData(
-      backgroundColor: Color(0xFF1B1D21),
-      surfaceColor: Color(0xFF23262B),
-      panelColor: Color(0xFF2B3035),
-      primaryTextColor: Color(0xFFF1ECE3),
-      secondaryTextColor: Color(0xFFB7B1A7),
-      dividerColor: Color(0xFF3A4148),
-      accentColor: Color(0xFF97AFC2),
+      backgroundColor: Color(0xFF1D1916),
+      surfaceColor: Color(0xFF25201C),
+      panelColor: Color(0xFF2D2722),
+      primaryTextColor: Color(0xFFF1E7D9),
+      secondaryTextColor: Color(0xFFBAAD9B),
+      dividerColor: Color(0xFF403730),
+      accentColor: Color(0xFFD08A4A),
     ),
   };
 }

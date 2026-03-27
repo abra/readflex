@@ -77,7 +77,9 @@ class ProfileView extends StatelessWidget {
                 children: [
                   _InfoActionCard(
                     leading: Icon(
-                      state.isAuthenticated ? Icons.person : Icons.person_outline,
+                      state.isAuthenticated
+                          ? Icons.person
+                          : Icons.person_outline,
                     ),
                     title: state.isAuthenticated
                         ? state.email ?? 'Signed in'
@@ -239,7 +241,10 @@ class _AppearanceSectionState extends State<_AppearanceSection> {
                 SegmentedButton<ThemeMode>(
                   showSelectedIcon: false,
                   segments: const [
-                    ButtonSegment(value: ThemeMode.system, label: Text('System')),
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      label: Text('System'),
+                    ),
                     ButtonSegment(value: ThemeMode.light, label: Text('Light')),
                     ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
                   ],

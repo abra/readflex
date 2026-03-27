@@ -159,41 +159,14 @@ class _StatsRow extends StatelessWidget {
         ),
         const SizedBox(width: Spacing.small),
         Expanded(
-          child: GestureDetector(
+          child: _StatCard(
+            icon: Icons.school,
+            label: 'Due',
+            value: '${state.dueFlashcards}',
+            color: state.dueFlashcards > 0
+                ? colorScheme.error
+                : colorScheme.outline,
             onTap: state.dueFlashcards > 0 ? onPracticePressed : null,
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: Spacing.medium,
-                  horizontal: Spacing.small,
-                ),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.school,
-                      color: state.dueFlashcards > 0
-                          ? colorScheme.error
-                          : colorScheme.outline,
-                    ),
-                    const SizedBox(height: Spacing.xSmall),
-                    Text(
-                      '${state.dueFlashcards}',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: state.dueFlashcards > 0
-                                ? colorScheme.error
-                                : colorScheme.outline,
-                          ),
-                    ),
-                    Text(
-                      'Due',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-            ),
           ),
         ),
       ],
@@ -207,37 +180,43 @@ class _StatCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.color,
+    this.onTap,
   });
 
   final IconData icon;
   final String label;
   final String value;
   final Color color;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: Spacing.medium,
-          horizontal: Spacing.small,
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color),
-            const SizedBox(height: Spacing.xSmall),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: Spacing.medium,
+            horizontal: Spacing.small,
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: color),
+              const SizedBox(height: Spacing.xSmall),
+              Text(
+                value,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
               ),
-            ),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -12,4 +12,3 @@ export 'src/models/highlight_color.dart';
 export 'src/models/rating.dart';
 export 'src/models/review_log.dart';
 export 'src/models/source_type.dart';
-

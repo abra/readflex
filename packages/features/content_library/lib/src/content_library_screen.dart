@@ -76,34 +76,35 @@ class ContentLibraryView extends StatelessWidget {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: Spacing.medium),
-            child: BlocBuilder<
-              ContentLibraryLayoutCubit,
-              ContentLibraryLayoutMode
-            >(
-              builder: (context, layoutMode) {
-                return SegmentedButton<ContentLibraryLayoutMode>(
-                  showSelectedIcon: false,
-                  segments: const [
-                    ButtonSegment(
-                      value: ContentLibraryLayoutMode.list,
-                      icon: Icon(Icons.view_list_outlined),
-                      label: Text('List'),
-                    ),
-                    ButtonSegment(
-                      value: ContentLibraryLayoutMode.grid,
-                      icon: Icon(Icons.grid_view_outlined),
-                      label: Text('Grid'),
-                    ),
-                  ],
-                  selected: {layoutMode},
-                  onSelectionChanged: (value) {
-                    context.read<ContentLibraryLayoutCubit>().setLayoutMode(
-                      value.first,
+            child:
+                BlocBuilder<
+                  ContentLibraryLayoutCubit,
+                  ContentLibraryLayoutMode
+                >(
+                  builder: (context, layoutMode) {
+                    return SegmentedButton<ContentLibraryLayoutMode>(
+                      showSelectedIcon: false,
+                      segments: const [
+                        ButtonSegment(
+                          value: ContentLibraryLayoutMode.list,
+                          icon: Icon(Icons.view_list_outlined),
+                          label: Text('List'),
+                        ),
+                        ButtonSegment(
+                          value: ContentLibraryLayoutMode.grid,
+                          icon: Icon(Icons.grid_view_outlined),
+                          label: Text('Grid'),
+                        ),
+                      ],
+                      selected: {layoutMode},
+                      onSelectionChanged: (value) {
+                        context.read<ContentLibraryLayoutCubit>().setLayoutMode(
+                          value.first,
+                        );
+                      },
                     );
                   },
-                );
-              },
-            ),
+                ),
           ),
         ],
       ),
@@ -141,35 +142,36 @@ class ContentLibraryView extends StatelessWidget {
                           const ContentLibraryRefreshRequested(),
                         );
                       },
-                      child: BlocBuilder<
-                        ContentLibraryLayoutCubit,
-                        ContentLibraryLayoutMode
-                      >(
-                        builder: (context, layoutMode) {
-                          return switch (layoutMode) {
-                            ContentLibraryLayoutMode.list =>
-                              ContentLibraryListView(
-                                items: state.items,
-                                onBookPressed: onBookPressed,
-                                onArticlePressed: onArticlePressed,
-                                onBookDeleted: (book) =>
-                                    _deleteBook(context, book),
-                                onArticleDeleted: (article) =>
-                                    _deleteArticle(context, article),
-                              ),
-                            ContentLibraryLayoutMode.grid =>
-                              ContentLibraryGridView(
-                                items: state.items,
-                                onBookPressed: onBookPressed,
-                                onArticlePressed: onArticlePressed,
-                                onBookDeleted: (book) =>
-                                    _deleteBook(context, book),
-                                onArticleDeleted: (article) =>
-                                    _deleteArticle(context, article),
-                              ),
-                          };
-                        },
-                      ),
+                      child:
+                          BlocBuilder<
+                            ContentLibraryLayoutCubit,
+                            ContentLibraryLayoutMode
+                          >(
+                            builder: (context, layoutMode) {
+                              return switch (layoutMode) {
+                                ContentLibraryLayoutMode.list =>
+                                  ContentLibraryListView(
+                                    items: state.items,
+                                    onBookPressed: onBookPressed,
+                                    onArticlePressed: onArticlePressed,
+                                    onBookDeleted: (book) =>
+                                        _deleteBook(context, book),
+                                    onArticleDeleted: (article) =>
+                                        _deleteArticle(context, article),
+                                  ),
+                                ContentLibraryLayoutMode.grid =>
+                                  ContentLibraryGridView(
+                                    items: state.items,
+                                    onBookPressed: onBookPressed,
+                                    onArticlePressed: onArticlePressed,
+                                    onBookDeleted: (book) =>
+                                        _deleteBook(context, book),
+                                    onArticleDeleted: (article) =>
+                                        _deleteArticle(context, article),
+                                  ),
+                              };
+                            },
+                          ),
                     ),
           };
         },

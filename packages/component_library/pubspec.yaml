@@ -12,6 +12,14 @@ dependencies:
 
 flutter:
   fonts:
+    - family: Inter
+      fonts:
+        - asset: fonts/Inter-Variable.ttf
+    - family: SourceSerif4
+      fonts:
+        - asset: fonts/SourceSerif4-Variable.ttf
+        - asset: fonts/SourceSerif4-Italic-Variable.ttf
+          style: italic
     - family: Geist
       fonts:
         - asset: fonts/Geist-Regular.ttf
