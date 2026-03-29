@@ -3590,13 +3590,13 @@ class FlashcardsTableCompanion extends UpdateCompanion<FlashcardsTableData> {
   }
 }
 
-class $DictionaryEntriesTableTable extends DictionaryEntriesTable
-    with TableInfo<$DictionaryEntriesTableTable, DictionaryEntriesTableData> {
+class $DictionaryTableTable extends DictionaryTable
+    with TableInfo<$DictionaryTableTable, DictionaryTableData> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
 
-  $DictionaryEntriesTableTable(this.attachedDatabase, [this._alias]);
+  $DictionaryTableTable(this.attachedDatabase, [this._alias]);
 
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
@@ -3824,11 +3824,11 @@ class $DictionaryEntriesTableTable extends DictionaryEntriesTable
 
   @override
   String get actualTableName => $name;
-  static const String $name = 'dictionary_entries_table';
+  static const String $name = 'dictionary_table';
 
   @override
   VerificationContext validateIntegrity(
-    Insertable<DictionaryEntriesTableData> instance, {
+    Insertable<DictionaryTableData> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -3974,12 +3974,9 @@ class $DictionaryEntriesTableTable extends DictionaryEntriesTable
   Set<GeneratedColumn> get $primaryKey => {id};
 
   @override
-  DictionaryEntriesTableData map(
-    Map<String, dynamic> data, {
-    String? tablePrefix,
-  }) {
+  DictionaryTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return DictionaryEntriesTableData(
+    return DictionaryTableData(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
@@ -4056,13 +4053,13 @@ class $DictionaryEntriesTableTable extends DictionaryEntriesTable
   }
 
   @override
-  $DictionaryEntriesTableTable createAlias(String alias) {
-    return $DictionaryEntriesTableTable(attachedDatabase, alias);
+  $DictionaryTableTable createAlias(String alias) {
+    return $DictionaryTableTable(attachedDatabase, alias);
   }
 }
 
-class DictionaryEntriesTableData extends DataClass
-    implements Insertable<DictionaryEntriesTableData> {
+class DictionaryTableData extends DataClass
+    implements Insertable<DictionaryTableData> {
   final String id;
   final String word;
   final String translation;
@@ -4082,7 +4079,7 @@ class DictionaryEntriesTableData extends DataClass
   final int scheduledDays;
   final int elapsedDays;
 
-  const DictionaryEntriesTableData({
+  const DictionaryTableData({
     required this.id,
     required this.word,
     required this.translation,
@@ -4139,8 +4136,8 @@ class DictionaryEntriesTableData extends DataClass
     return map;
   }
 
-  DictionaryEntriesTableCompanion toCompanion(bool nullToAbsent) {
-    return DictionaryEntriesTableCompanion(
+  DictionaryTableCompanion toCompanion(bool nullToAbsent) {
+    return DictionaryTableCompanion(
       id: Value(id),
       word: Value(word),
       translation: Value(translation),
@@ -4174,12 +4171,12 @@ class DictionaryEntriesTableData extends DataClass
     );
   }
 
-  factory DictionaryEntriesTableData.fromJson(
+  factory DictionaryTableData.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return DictionaryEntriesTableData(
+    return DictionaryTableData(
       id: serializer.fromJson<String>(json['id']),
       word: serializer.fromJson<String>(json['word']),
       translation: serializer.fromJson<String>(json['translation']),
@@ -4226,7 +4223,7 @@ class DictionaryEntriesTableData extends DataClass
     };
   }
 
-  DictionaryEntriesTableData copyWith({
+  DictionaryTableData copyWith({
     String? id,
     String? word,
     String? translation,
@@ -4245,7 +4242,7 @@ class DictionaryEntriesTableData extends DataClass
     Value<String?> nextReviewAt = const Value.absent(),
     int? scheduledDays,
     int? elapsedDays,
-  }) => DictionaryEntriesTableData(
+  }) => DictionaryTableData(
     id: id ?? this.id,
     word: word ?? this.word,
     translation: translation ?? this.translation,
@@ -4268,10 +4265,8 @@ class DictionaryEntriesTableData extends DataClass
     elapsedDays: elapsedDays ?? this.elapsedDays,
   );
 
-  DictionaryEntriesTableData copyWithCompanion(
-    DictionaryEntriesTableCompanion data,
-  ) {
-    return DictionaryEntriesTableData(
+  DictionaryTableData copyWithCompanion(DictionaryTableCompanion data) {
+    return DictionaryTableData(
       id: data.id.present ? data.id.value : this.id,
       word: data.word.present ? data.word.value : this.word,
       translation: data.translation.present
@@ -4313,7 +4308,7 @@ class DictionaryEntriesTableData extends DataClass
 
   @override
   String toString() {
-    return (StringBuffer('DictionaryEntriesTableData(')
+    return (StringBuffer('DictionaryTableData(')
           ..write('id: $id, ')
           ..write('word: $word, ')
           ..write('translation: $translation, ')
@@ -4361,7 +4356,7 @@ class DictionaryEntriesTableData extends DataClass
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is DictionaryEntriesTableData &&
+      (other is DictionaryTableData &&
           other.id == this.id &&
           other.word == this.word &&
           other.translation == this.translation &&
@@ -4382,8 +4377,7 @@ class DictionaryEntriesTableData extends DataClass
           other.elapsedDays == this.elapsedDays);
 }
 
-class DictionaryEntriesTableCompanion
-    extends UpdateCompanion<DictionaryEntriesTableData> {
+class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
   final Value<String> id;
   final Value<String> word;
   final Value<String> translation;
@@ -4404,7 +4398,7 @@ class DictionaryEntriesTableCompanion
   final Value<int> elapsedDays;
   final Value<int> rowid;
 
-  const DictionaryEntriesTableCompanion({
+  const DictionaryTableCompanion({
     this.id = const Value.absent(),
     this.word = const Value.absent(),
     this.translation = const Value.absent(),
@@ -4426,7 +4420,7 @@ class DictionaryEntriesTableCompanion
     this.rowid = const Value.absent(),
   });
 
-  DictionaryEntriesTableCompanion.insert({
+  DictionaryTableCompanion.insert({
     required String id,
     required String word,
     required String translation,
@@ -4451,7 +4445,7 @@ class DictionaryEntriesTableCompanion
        translation = Value(translation),
        addedAt = Value(addedAt);
 
-  static Insertable<DictionaryEntriesTableData> custom({
+  static Insertable<DictionaryTableData> custom({
     Expression<String>? id,
     Expression<String>? word,
     Expression<String>? translation,
@@ -4495,7 +4489,7 @@ class DictionaryEntriesTableCompanion
     });
   }
 
-  DictionaryEntriesTableCompanion copyWith({
+  DictionaryTableCompanion copyWith({
     Value<String>? id,
     Value<String>? word,
     Value<String>? translation,
@@ -4516,7 +4510,7 @@ class DictionaryEntriesTableCompanion
     Value<int>? elapsedDays,
     Value<int>? rowid,
   }) {
-    return DictionaryEntriesTableCompanion(
+    return DictionaryTableCompanion(
       id: id ?? this.id,
       word: word ?? this.word,
       translation: translation ?? this.translation,
@@ -4604,7 +4598,7 @@ class DictionaryEntriesTableCompanion
 
   @override
   String toString() {
-    return (StringBuffer('DictionaryEntriesTableCompanion(')
+    return (StringBuffer('DictionaryTableCompanion(')
           ..write('id: $id, ')
           ..write('word: $word, ')
           ..write('translation: $translation, ')
@@ -5406,8 +5400,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $FlashcardsTableTable flashcardsTable = $FlashcardsTableTable(
     this,
   );
-  late final $DictionaryEntriesTableTable dictionaryEntriesTable =
-      $DictionaryEntriesTableTable(this);
+  late final $DictionaryTableTable dictionaryTable = $DictionaryTableTable(
+    this,
+  );
   late final $ReviewLogsTableTable reviewLogsTable = $ReviewLogsTableTable(
     this,
   );
@@ -5427,7 +5422,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     articlesTable,
     highlightsTable,
     flashcardsTable,
-    dictionaryEntriesTable,
+    dictionaryTable,
     reviewLogsTable,
   ];
 }
@@ -7107,8 +7102,8 @@ typedef $$FlashcardsTableTableProcessedTableManager =
       FlashcardsTableData,
       PrefetchHooks Function()
     >;
-typedef $$DictionaryEntriesTableTableCreateCompanionBuilder =
-    DictionaryEntriesTableCompanion Function({
+typedef $$DictionaryTableTableCreateCompanionBuilder =
+    DictionaryTableCompanion Function({
       required String id,
       required String word,
       required String translation,
@@ -7129,8 +7124,8 @@ typedef $$DictionaryEntriesTableTableCreateCompanionBuilder =
       Value<int> elapsedDays,
       Value<int> rowid,
     });
-typedef $$DictionaryEntriesTableTableUpdateCompanionBuilder =
-    DictionaryEntriesTableCompanion Function({
+typedef $$DictionaryTableTableUpdateCompanionBuilder =
+    DictionaryTableCompanion Function({
       Value<String> id,
       Value<String> word,
       Value<String> translation,
@@ -7152,9 +7147,9 @@ typedef $$DictionaryEntriesTableTableUpdateCompanionBuilder =
       Value<int> rowid,
     });
 
-class $$DictionaryEntriesTableTableFilterComposer
-    extends Composer<_$AppDatabase, $DictionaryEntriesTableTable> {
-  $$DictionaryEntriesTableTableFilterComposer({
+class $$DictionaryTableTableFilterComposer
+    extends Composer<_$AppDatabase, $DictionaryTableTable> {
+  $$DictionaryTableTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -7253,9 +7248,9 @@ class $$DictionaryEntriesTableTableFilterComposer
   );
 }
 
-class $$DictionaryEntriesTableTableOrderingComposer
-    extends Composer<_$AppDatabase, $DictionaryEntriesTableTable> {
-  $$DictionaryEntriesTableTableOrderingComposer({
+class $$DictionaryTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $DictionaryTableTable> {
+  $$DictionaryTableTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -7354,9 +7349,9 @@ class $$DictionaryEntriesTableTableOrderingComposer
   );
 }
 
-class $$DictionaryEntriesTableTableAnnotationComposer
-    extends Composer<_$AppDatabase, $DictionaryEntriesTableTable> {
-  $$DictionaryEntriesTableTableAnnotationComposer({
+class $$DictionaryTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DictionaryTableTable> {
+  $$DictionaryTableTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -7437,50 +7432,41 @@ class $$DictionaryEntriesTableTableAnnotationComposer
   );
 }
 
-class $$DictionaryEntriesTableTableTableManager
+class $$DictionaryTableTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $DictionaryEntriesTableTable,
-          DictionaryEntriesTableData,
-          $$DictionaryEntriesTableTableFilterComposer,
-          $$DictionaryEntriesTableTableOrderingComposer,
-          $$DictionaryEntriesTableTableAnnotationComposer,
-          $$DictionaryEntriesTableTableCreateCompanionBuilder,
-          $$DictionaryEntriesTableTableUpdateCompanionBuilder,
+          $DictionaryTableTable,
+          DictionaryTableData,
+          $$DictionaryTableTableFilterComposer,
+          $$DictionaryTableTableOrderingComposer,
+          $$DictionaryTableTableAnnotationComposer,
+          $$DictionaryTableTableCreateCompanionBuilder,
+          $$DictionaryTableTableUpdateCompanionBuilder,
           (
-            DictionaryEntriesTableData,
+            DictionaryTableData,
             BaseReferences<
               _$AppDatabase,
-              $DictionaryEntriesTableTable,
-              DictionaryEntriesTableData
+              $DictionaryTableTable,
+              DictionaryTableData
             >,
           ),
-          DictionaryEntriesTableData,
+          DictionaryTableData,
           PrefetchHooks Function()
         > {
-  $$DictionaryEntriesTableTableTableManager(
+  $$DictionaryTableTableTableManager(
     _$AppDatabase db,
-    $DictionaryEntriesTableTable table,
+    $DictionaryTableTable table,
   ) : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$DictionaryEntriesTableTableFilterComposer(
-                $db: db,
-                $table: table,
-              ),
+              $$DictionaryTableTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$DictionaryEntriesTableTableOrderingComposer(
-                $db: db,
-                $table: table,
-              ),
+              $$DictionaryTableTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$DictionaryEntriesTableTableAnnotationComposer(
-                $db: db,
-                $table: table,
-              ),
+              $$DictionaryTableTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
@@ -7502,7 +7488,7 @@ class $$DictionaryEntriesTableTableTableManager
                 Value<int> scheduledDays = const Value.absent(),
                 Value<int> elapsedDays = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => DictionaryEntriesTableCompanion(
+              }) => DictionaryTableCompanion(
                 id: id,
                 word: word,
                 translation: translation,
@@ -7544,7 +7530,7 @@ class $$DictionaryEntriesTableTableTableManager
                 Value<int> scheduledDays = const Value.absent(),
                 Value<int> elapsedDays = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => DictionaryEntriesTableCompanion.insert(
+              }) => DictionaryTableCompanion.insert(
                 id: id,
                 word: word,
                 translation: translation,
@@ -7573,25 +7559,25 @@ class $$DictionaryEntriesTableTableTableManager
       );
 }
 
-typedef $$DictionaryEntriesTableTableProcessedTableManager =
+typedef $$DictionaryTableTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $DictionaryEntriesTableTable,
-      DictionaryEntriesTableData,
-      $$DictionaryEntriesTableTableFilterComposer,
-      $$DictionaryEntriesTableTableOrderingComposer,
-      $$DictionaryEntriesTableTableAnnotationComposer,
-      $$DictionaryEntriesTableTableCreateCompanionBuilder,
-      $$DictionaryEntriesTableTableUpdateCompanionBuilder,
+      $DictionaryTableTable,
+      DictionaryTableData,
+      $$DictionaryTableTableFilterComposer,
+      $$DictionaryTableTableOrderingComposer,
+      $$DictionaryTableTableAnnotationComposer,
+      $$DictionaryTableTableCreateCompanionBuilder,
+      $$DictionaryTableTableUpdateCompanionBuilder,
       (
-        DictionaryEntriesTableData,
+        DictionaryTableData,
         BaseReferences<
           _$AppDatabase,
-          $DictionaryEntriesTableTable,
-          DictionaryEntriesTableData
+          $DictionaryTableTable,
+          DictionaryTableData
         >,
       ),
-      DictionaryEntriesTableData,
+      DictionaryTableData,
       PrefetchHooks Function()
     >;
 typedef $$ReviewLogsTableTableCreateCompanionBuilder =
@@ -7974,11 +7960,8 @@ class $AppDatabaseManager {
   $$FlashcardsTableTableTableManager get flashcardsTable =>
       $$FlashcardsTableTableTableManager(_db, _db.flashcardsTable);
 
-  $$DictionaryEntriesTableTableTableManager get dictionaryEntriesTable =>
-      $$DictionaryEntriesTableTableTableManager(
-        _db,
-        _db.dictionaryEntriesTable,
-      );
+  $$DictionaryTableTableTableManager get dictionaryTable =>
+      $$DictionaryTableTableTableManager(_db, _db.dictionaryTable);
 
   $$ReviewLogsTableTableTableManager get reviewLogsTable =>
       $$ReviewLogsTableTableTableManager(_db, _db.reviewLogsTable);

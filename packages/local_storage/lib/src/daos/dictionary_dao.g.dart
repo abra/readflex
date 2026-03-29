@@ -4,8 +4,7 @@ part of 'dictionary_dao.dart';
 
 // ignore_for_file: type=lint
 mixin _$DictionaryDaoMixin on DatabaseAccessor<AppDatabase> {
-  $DictionaryEntriesTableTable get dictionaryEntriesTable =>
-      attachedDatabase.dictionaryEntriesTable;
+  $DictionaryTableTable get dictionaryTable => attachedDatabase.dictionaryTable;
 
   $ReviewLogsTableTable get reviewLogsTable => attachedDatabase.reviewLogsTable;
 
@@ -17,10 +16,10 @@ class DictionaryDaoManager {
 
   DictionaryDaoManager(this._db);
 
-  $$DictionaryEntriesTableTableTableManager get dictionaryEntriesTable =>
-      $$DictionaryEntriesTableTableTableManager(
+  $$DictionaryTableTableTableManager get dictionaryTable =>
+      $$DictionaryTableTableTableManager(
         _db.attachedDatabase,
-        _db.dictionaryEntriesTable,
+        _db.dictionaryTable,
       );
 
   $$ReviewLogsTableTableTableManager get reviewLogsTable =>

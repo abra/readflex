@@ -14,13 +14,13 @@ void main() {
 
   tearDown(() => db.close());
 
-  DictionaryEntriesTableCompanion _entry({
+  DictionaryTableCompanion _entry({
     String id = 'e1',
     String word = 'hello',
     String translation = 'привет',
     String addedAt = '2026-01-01T00:00:00.000Z',
     String? sourceId,
-  }) => DictionaryEntriesTableCompanion.insert(
+  }) => DictionaryTableCompanion.insert(
     id: id,
     word: word,
     translation: translation,
@@ -47,7 +47,7 @@ void main() {
   test('updateEntry modifies translation', () async {
     await dao.insertEntry(_entry());
     await dao.updateEntry(
-      const DictionaryEntriesTableCompanion(
+      const DictionaryTableCompanion(
         id: Value('e1'),
         translation: Value('updated'),
       ),

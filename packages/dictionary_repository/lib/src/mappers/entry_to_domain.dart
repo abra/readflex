@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:domain_models/domain_models.dart';
 import 'package:local_storage/local_storage.dart';
 
-extension EntryToDomain on DictionaryEntriesTableData {
+extension EntryToDomain on DictionaryTableData {
   DictionaryEntry toDomainModel() => DictionaryEntry(
     id: id,
     word: word,

@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
 
-class DictionaryEntriesTable extends Table {
+class DictionaryTable extends Table {
   TextColumn get id => text()();
 
   TextColumn get word => text()();

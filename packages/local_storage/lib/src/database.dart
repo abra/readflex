@@ -26,7 +26,7 @@ part 'database.g.dart';
     ArticlesTable,
     HighlightsTable,
     FlashcardsTable,
-    DictionaryEntriesTable,
+    DictionaryTable,
     ReviewLogsTable,
   ],
   daos: [ArticlesDao, BooksDao, HighlightsDao, FlashcardsDao, DictionaryDao],
@@ -38,7 +38,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -114,6 +114,11 @@ class AppDatabase extends _$AppDatabase {
         );
         await customStatement(
           'ALTER TABLE review_logs_table ADD COLUMN item_type TEXT NOT NULL DEFAULT \'flashcard\'',
+        );
+      }
+      if (from < 3) {
+        await customStatement(
+          'ALTER TABLE dictionary_entries_table RENAME TO dictionary_table',
         );
       }
     },
