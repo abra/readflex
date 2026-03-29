@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
@@ -17,6 +19,8 @@ class ReaderScreen extends StatelessWidget {
     required this.articleRepository,
     required this.highlightRepository,
     required this.textActions,
+    this.onCheckDueItems,
+    this.onStartMiniReview,
     super.key,
   });
 
@@ -25,6 +29,8 @@ class ReaderScreen extends StatelessWidget {
   final ArticleRepository articleRepository;
   final HighlightRepository highlightRepository;
   final List<TextAction> textActions;
+  final Future<int> Function(String sourceId)? onCheckDueItems;
+  final void Function(BuildContext context, String sourceId)? onStartMiniReview;
 
   @override
   Widget build(BuildContext context) {
@@ -34,15 +40,25 @@ class ReaderScreen extends StatelessWidget {
         articleRepository: articleRepository,
         highlightRepository: highlightRepository,
       )..add(ReaderSourceLoadRequested(sourceId: sourceId)),
-      child: _ReaderView(textActions: textActions),
+      child: _ReaderView(
+        textActions: textActions,
+        onCheckDueItems: onCheckDueItems,
+        onStartMiniReview: onStartMiniReview,
+      ),
     );
   }
 }
 
 class _ReaderView extends StatelessWidget {
-  const _ReaderView({required this.textActions});
+  const _ReaderView({
+    required this.textActions,
+    this.onCheckDueItems,
+    this.onStartMiniReview,
+  });
 
   final List<TextAction> textActions;
+  final Future<int> Function(String sourceId)? onCheckDueItems;
+  final void Function(BuildContext context, String sourceId)? onStartMiniReview;
 
   @override
   Widget build(BuildContext context) {
@@ -92,6 +108,8 @@ class _ReaderView extends StatelessWidget {
       ReaderStatus.ready => _ReadyContent(
         state: state,
         textActions: textActions,
+        onCheckDueItems: onCheckDueItems,
+        onStartMiniReview: onStartMiniReview,
       ),
     };
   }
@@ -150,17 +168,68 @@ class _ReaderAppBar extends StatelessWidget {
   }
 }
 
-class _ReadyContent extends StatelessWidget {
+class _ReadyContent extends StatefulWidget {
   const _ReadyContent({
     required this.state,
     required this.textActions,
+    this.onCheckDueItems,
+    this.onStartMiniReview,
   });
 
   final ReaderState state;
   final List<TextAction> textActions;
+  final Future<int> Function(String sourceId)? onCheckDueItems;
+  final void Function(BuildContext context, String sourceId)? onStartMiniReview;
+
+  @override
+  State<_ReadyContent> createState() => _ReadyContentState();
+}
+
+class _ReadyContentState extends State<_ReadyContent> {
+  static const _checkInterval = Duration(minutes: 5);
+  Timer? _dueCheckTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleCheckDueItems();
+  }
+
+  @override
+  void dispose() {
+    _dueCheckTimer?.cancel();
+    super.dispose();
+  }
+
+  void _scheduleCheckDueItems() {
+    final onCheck = widget.onCheckDueItems;
+    if (onCheck == null) return;
+
+    final sourceId = widget.state.sourceId;
+    if (sourceId == null) return;
+
+    // Initial check after content loads
+    _checkDueItems(onCheck, sourceId);
+
+    // Periodic check every 5 minutes
+    _dueCheckTimer = Timer.periodic(_checkInterval, (_) {
+      _checkDueItems(onCheck, sourceId);
+    });
+  }
+
+  Future<void> _checkDueItems(
+    Future<int> Function(String) onCheck,
+    String sourceId,
+  ) async {
+    final count = await onCheck(sourceId);
+    if (count > 0 && mounted) {
+      context.read<ReaderBloc>().add(const ReaderReviewReminderShown());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final state = widget.state;
     final appearance = PreferencesScope.readerAppearanceOf(context);
     final readerTheme = ReaderThemePreset.fromId(appearance.themeId).data;
     final readerFont = ReaderFontPreset.fromId(appearance.fontId);
@@ -255,7 +324,7 @@ class _ReadyContent extends StatelessWidget {
               selectionCfiRange: state.selectionCfiRange,
               selectionPageNumber: state.selectionPageNumber,
               selectionScrollOffset: state.selectionScrollOffset,
-              textActions: textActions,
+              textActions: widget.textActions,
               panelColor: readerTheme.panelColor,
               iconColor: readerTheme.primaryTextColor,
               dividerColor: readerTheme.dividerColor,
@@ -270,7 +339,13 @@ class _ReadyContent extends StatelessWidget {
             bottom: state.hasSelection ? 80 : Spacing.medium,
             child: _ReviewReminderBanner(
               onReview: () {
-                // TODO: start mini review session as overlay.
+                context.read<ReaderBloc>().add(
+                  const ReaderReviewReminderDismissed(),
+                );
+                final sourceId = state.sourceId;
+                if (sourceId != null) {
+                  widget.onStartMiniReview?.call(context, sourceId);
+                }
               },
               onDismiss: () {
                 context.read<ReaderBloc>().add(

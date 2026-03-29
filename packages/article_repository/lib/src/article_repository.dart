@@ -1,5 +1,5 @@
-import 'package:local_storage/local_storage.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:local_storage/local_storage.dart';
 import 'package:uuid/uuid.dart' show Uuid;
 
 import 'mappers/article_to_domain.dart';
@@ -12,7 +12,8 @@ const _uuid = Uuid();
 /// Wraps [ArticlesDao] from `local_storage` and maps between storage and domain
 /// models. Exceptions from the DAO propagate to callers (BLoCs).
 class ArticleRepository {
-  ArticleRepository({required ArticlesDao articlesDao}) : _dao = articlesDao;
+  ArticleRepository({required AppDatabase database})
+    : _dao = database.articlesDao;
 
   final ArticlesDao _dao;
 

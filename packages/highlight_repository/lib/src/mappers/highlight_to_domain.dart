@@ -1,5 +1,5 @@
-import 'package:local_storage/local_storage.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:local_storage/local_storage.dart';
 
 extension HighlightToDomain on HighlightsTableData {
   Highlight toDomainModel() => Highlight(
@@ -13,5 +13,17 @@ extension HighlightToDomain on HighlightsTableData {
     scrollOffset: scrollOffset,
     color: HighlightColor.from(color),
     createdAt: DateTime.parse(createdAt),
+    fsrs: FsrsCardData(
+      state: FsrsState.from(fsrsState),
+      stability: stability,
+      difficulty: difficulty,
+      retrievability: retrievability,
+      reps: reps,
+      lapses: lapses,
+      lastReviewAt: lastReviewAt != null ? DateTime.parse(lastReviewAt!) : null,
+      nextReviewAt: nextReviewAt != null ? DateTime.parse(nextReviewAt!) : null,
+      scheduledDays: scheduledDays,
+      elapsedDays: elapsedDays,
+    ),
   );
 }

@@ -6,6 +6,8 @@ sealed class PracticeItem extends Equatable {
   factory PracticeItem.flashcard(Flashcard card) = FlashcardItem;
 
   factory PracticeItem.highlight(Highlight highlight) = HighlightItem;
+
+  factory PracticeItem.dictionary(DictionaryEntry entry) = DictionaryItem;
 }
 
 final class FlashcardItem extends PracticeItem {
@@ -24,4 +26,13 @@ final class HighlightItem extends PracticeItem {
 
   @override
   List<Object?> get props => [highlight];
+}
+
+final class DictionaryItem extends PracticeItem {
+  const DictionaryItem(this.entry);
+
+  final DictionaryEntry entry;
+
+  @override
+  List<Object?> get props => [entry];
 }

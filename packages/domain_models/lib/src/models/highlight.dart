@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart' show Equatable;
 
+import 'fsrs_card_data.dart';
 import 'highlight_color.dart';
 import 'source_type.dart';
 
@@ -16,6 +17,7 @@ final class Highlight extends Equatable {
     this.pageNumber,
     this.scrollOffset,
     this.color = HighlightColor.yellow,
+    this.fsrs = const FsrsCardData(),
   });
 
   final String id;
@@ -28,6 +30,7 @@ final class Highlight extends Equatable {
   final double? scrollOffset;
   final HighlightColor color;
   final DateTime createdAt;
+  final FsrsCardData fsrs;
 
   static const _absent = Object();
 
@@ -38,6 +41,7 @@ final class Highlight extends Equatable {
     Object? pageNumber = _absent,
     Object? scrollOffset = _absent,
     HighlightColor? color,
+    FsrsCardData? fsrs,
   }) => Highlight(
     id: id,
     sourceId: sourceId,
@@ -51,6 +55,7 @@ final class Highlight extends Equatable {
         : scrollOffset as double?,
     color: color ?? this.color,
     createdAt: createdAt,
+    fsrs: fsrs ?? this.fsrs,
   );
 
   @override
@@ -65,5 +70,6 @@ final class Highlight extends Equatable {
     scrollOffset,
     color,
     createdAt,
+    fsrs,
   ];
 }

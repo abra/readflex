@@ -1,5 +1,5 @@
-import 'package:local_storage/local_storage.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:local_storage/local_storage.dart';
 
 extension BookToDomain on BooksTableData {
   Book toDomainModel() => Book(

@@ -3,8 +3,9 @@ import 'package:drift/drift.dart';
 class ReviewLogsTable extends Table {
   TextColumn get id => text()();
 
-  TextColumn get flashcardId => text()();
+  TextColumn get itemId => text()();
 
+  TextColumn get itemType => text()(); // flashcard | highlight | dictionary
   TextColumn get rating => text()(); // again, hard, good, easy
   TextColumn get stateBefore => text()();
 

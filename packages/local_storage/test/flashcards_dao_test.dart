@@ -61,7 +61,8 @@ void main() {
     await dao.insertReviewLog(
       ReviewLogsTableCompanion.insert(
         id: 'r1',
-        flashcardId: 'f1',
+        itemId: 'f1',
+        itemType: 'flashcard',
         rating: 'good',
         stateBefore: 'new',
         stabilityBefore: 0.0,
@@ -72,7 +73,7 @@ void main() {
         reviewedAt: '2026-01-01T00:00:00.000Z',
       ),
     );
-    final logs = await dao.reviewLogsByFlashcard('f1');
+    final logs = await dao.reviewLogsByItem('f1');
     expect(logs, hasLength(1));
     expect(logs.first.rating, 'good');
   });

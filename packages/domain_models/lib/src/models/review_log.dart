@@ -2,12 +2,14 @@ import 'package:equatable/equatable.dart' show Equatable;
 
 import 'fsrs_card_data.dart';
 import 'rating.dart';
+import 'reviewable_type.dart';
 
-/// A record of a single flashcard review.
+/// A record of a single FSRS review for any reviewable item.
 final class ReviewLog extends Equatable {
   const ReviewLog({
     required this.id,
-    required this.flashcardId,
+    required this.itemId,
+    required this.itemType,
     required this.rating,
     required this.stateBefore,
     required this.stabilityBefore,
@@ -20,7 +22,8 @@ final class ReviewLog extends Equatable {
   });
 
   final String id;
-  final String flashcardId;
+  final String itemId;
+  final ReviewableType itemType;
   final Rating rating;
   final FsrsState stateBefore;
   final double stabilityBefore;
@@ -34,7 +37,8 @@ final class ReviewLog extends Equatable {
   @override
   List<Object?> get props => [
     id,
-    flashcardId,
+    itemId,
+    itemType,
     rating,
     stateBefore,
     stabilityBefore,

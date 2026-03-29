@@ -48,9 +48,9 @@ run "home"                         "flutter test test/" "$SCRIPT_DIR/packages/fe
 run "profile"                      "flutter test test/" "$SCRIPT_DIR/packages/features/profile"
 run "dictionary"                   "flutter test test/" "$SCRIPT_DIR/packages/features/dictionary"
 run "practice"                     "flutter test test/" "$SCRIPT_DIR/packages/features/practice"
-run "highlight_actions"                    "flutter test test/" "$SCRIPT_DIR/packages/features/highlight_actions"
-run "flashcard_actions"                   "flutter test test/" "$SCRIPT_DIR/packages/features/flashcard_actions"
-run "translate_text"                    "flutter test test/" "$SCRIPT_DIR/packages/features/translate_text"
+run "highlight"                    "flutter test test/" "$SCRIPT_DIR/packages/features/highlight"
+run "flashcard"                    "flutter test test/" "$SCRIPT_DIR/packages/features/flashcard"
+run "translate"                    "flutter test test/" "$SCRIPT_DIR/packages/features/translate"
 run "subscription_paywall"                      "flutter test test/" "$SCRIPT_DIR/packages/features/subscription_paywall"
 run "reader"                       "flutter test test/" "$SCRIPT_DIR/packages/features/reader"
 

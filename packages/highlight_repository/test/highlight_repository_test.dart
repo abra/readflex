@@ -1,8 +1,8 @@
+import 'package:domain_models/domain_models.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:local_storage/local_storage.dart';
-import 'package:domain_models/domain_models.dart';
 
 void main() {
   late AppDatabase db;
@@ -10,7 +10,7 @@ void main() {
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    repo = HighlightRepository(highlightsDao: db.highlightsDao);
+    repo = HighlightRepository(database: db);
   });
 
   tearDown(() => db.close());

@@ -9,7 +9,7 @@ void main() {
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    repo = ArticleRepository(articlesDao: db.articlesDao);
+    repo = ArticleRepository(database: db);
   });
 
   tearDown(() => db.close());

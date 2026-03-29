@@ -31,6 +31,20 @@ class FlashcardsDao extends DatabaseAccessor<AppDatabase>
             ..orderBy([(t) => OrderingTerm.asc(t.nextReviewAt)]))
           .get();
 
+  Future<List<FlashcardsTableData>> dueFlashcardsByDeck(
+    String deckId,
+    String now,
+  ) =>
+      (select(flashcardsTable)
+            ..where(
+              (t) =>
+                  t.deckId.equals(deckId) &
+                  (t.nextReviewAt.isNull() |
+                      t.nextReviewAt.isSmallerOrEqual(Variable(now))),
+            )
+            ..orderBy([(t) => OrderingTerm.asc(t.nextReviewAt)]))
+          .get();
+
   Future<FlashcardsTableData?> flashcardById(String id) => (select(
     flashcardsTable,
   )..where((t) => t.id.equals(id))).getSingleOrNull();
@@ -50,9 +64,9 @@ class FlashcardsDao extends DatabaseAccessor<AppDatabase>
   Future<void> insertReviewLog(ReviewLogsTableCompanion log) =>
       into(reviewLogsTable).insert(log);
 
-  Future<List<ReviewLogsTableData>> reviewLogsByFlashcard(String flashcardId) =>
+  Future<List<ReviewLogsTableData>> reviewLogsByItem(String itemId) =>
       (select(reviewLogsTable)
-            ..where((t) => t.flashcardId.equals(flashcardId))
+            ..where((t) => t.itemId.equals(itemId))
             ..orderBy([(t) => OrderingTerm.desc(t.reviewedAt)]))
           .get();
 }

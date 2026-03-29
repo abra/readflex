@@ -1,4 +1,5 @@
 import 'package:component_library/component_library.dart';
+import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,16 +8,18 @@ import 'package:domain_models/domain_models.dart';
 
 import 'practice_bloc.dart';
 
-/// Practice tab: review due flashcards and highlights.
+/// Practice tab: review due flashcards, highlights, and dictionary entries.
 class PracticeScreen extends StatelessWidget {
   const PracticeScreen({
     required this.flashcardRepository,
     required this.highlightRepository,
+    required this.dictionaryRepository,
     super.key,
   });
 
   final FlashcardRepository flashcardRepository;
   final HighlightRepository highlightRepository;
+  final DictionaryRepository dictionaryRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +27,7 @@ class PracticeScreen extends StatelessWidget {
       create: (_) => PracticeBloc(
         flashcardRepository: flashcardRepository,
         highlightRepository: highlightRepository,
+        dictionaryRepository: dictionaryRepository,
       )..add(const PracticeLoadRequested()),
       child: const PracticeView(),
     );
@@ -88,6 +92,11 @@ class PracticeView extends StatelessWidget {
               ),
               HighlightItem(:final highlight) => _HighlightView(
                 highlight: highlight,
+                isRevealed: state.isRevealed,
+              ),
+              DictionaryItem(:final entry) => _DictionaryView(
+                entry: entry,
+                isRevealed: state.isRevealed,
               ),
               _ => const SizedBox.shrink(),
             },
@@ -177,9 +186,13 @@ class _CardView extends StatelessWidget {
 }
 
 class _HighlightView extends StatelessWidget {
-  const _HighlightView({required this.highlight});
+  const _HighlightView({
+    required this.highlight,
+    required this.isRevealed,
+  });
 
   final Highlight highlight;
+  final bool isRevealed;
 
   @override
   Widget build(BuildContext context) {
@@ -209,8 +222,13 @@ class _HighlightView extends StatelessWidget {
                           style: theme.textTheme.bodyLarge,
                           textAlign: TextAlign.center,
                         ),
-                        if (highlight.note != null) ...[
-                          const SizedBox(height: Spacing.medium),
+                        if (isRevealed && highlight.note != null) ...[
+                          const Padding(
+                            padding: EdgeInsets.symmetric(
+                              vertical: Spacing.medium,
+                            ),
+                            child: Divider(),
+                          ),
                           Text(
                             highlight.note!,
                             style: theme.textTheme.bodySmall?.copyWith(
@@ -227,15 +245,101 @@ class _HighlightView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: Spacing.medium),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () => context.read<PracticeBloc>().add(
-                const PracticeItemNext(),
+          if (!isRevealed)
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () => context.read<PracticeBloc>().add(
+                  const PracticeCardRevealed(),
+                ),
+                child: const Text('Recall?'),
               ),
-              child: const Text('Next'),
+            )
+          else
+            _RatingButtons(),
+        ],
+      ),
+    );
+  }
+}
+
+class _DictionaryView extends StatelessWidget {
+  const _DictionaryView({required this.entry, required this.isRevealed});
+
+  final DictionaryEntry entry;
+  final bool isRevealed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.all(Spacing.xLarge),
+      child: Column(
+        children: [
+          Expanded(
+            child: Center(
+              child: Card(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Padding(
+                    padding: const EdgeInsets.all(Spacing.xLarge),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.translate,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(height: Spacing.medium),
+                        Text(
+                          entry.word,
+                          style: theme.textTheme.headlineSmall,
+                          textAlign: TextAlign.center,
+                        ),
+                        if (isRevealed) ...[
+                          const Padding(
+                            padding: EdgeInsets.symmetric(
+                              vertical: Spacing.medium,
+                            ),
+                            child: Divider(),
+                          ),
+                          Text(
+                            entry.translation,
+                            style: theme.textTheme.titleMedium,
+                            textAlign: TextAlign.center,
+                          ),
+                          if (entry.context != null) ...[
+                            const SizedBox(height: Spacing.small),
+                            Text(
+                              entry.context!,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontStyle: FontStyle.italic,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
+          const SizedBox(height: Spacing.medium),
+          if (!isRevealed)
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () => context.read<PracticeBloc>().add(
+                  const PracticeCardRevealed(),
+                ),
+                child: const Text('Show Translation'),
+              ),
+            )
+          else
+            _RatingButtons(),
         ],
       ),
     );

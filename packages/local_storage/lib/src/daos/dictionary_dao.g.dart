@@ -7,6 +7,8 @@ mixin _$DictionaryDaoMixin on DatabaseAccessor<AppDatabase> {
   $DictionaryEntriesTableTable get dictionaryEntriesTable =>
       attachedDatabase.dictionaryEntriesTable;
 
+  $ReviewLogsTableTable get reviewLogsTable => attachedDatabase.reviewLogsTable;
+
   DictionaryDaoManager get managers => DictionaryDaoManager(this);
 }
 
@@ -19,5 +21,11 @@ class DictionaryDaoManager {
       $$DictionaryEntriesTableTableTableManager(
         _db.attachedDatabase,
         _db.dictionaryEntriesTable,
+      );
+
+  $$ReviewLogsTableTableTableManager get reviewLogsTable =>
+      $$ReviewLogsTableTableTableManager(
+        _db.attachedDatabase,
+        _db.reviewLogsTable,
       );
 }

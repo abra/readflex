@@ -1,11 +1,12 @@
+import 'package:domain_models/domain_models.dart';
 import 'package:drift/drift.dart';
 import 'package:local_storage/local_storage.dart';
-import 'package:domain_models/domain_models.dart';
 
 extension ReviewLogToStorage on ReviewLog {
   ReviewLogsTableCompanion toStorageModel() => ReviewLogsTableCompanion(
     id: Value(id),
-    flashcardId: Value(flashcardId),
+    itemId: Value(itemId),
+    itemType: Value(itemType.toStorageString()),
     rating: Value(rating.name),
     stateBefore: Value(stateBefore.toStorageString()),
     stabilityBefore: Value(stabilityBefore),

@@ -19,6 +19,8 @@ dependencies:
     path: ../../flashcard_repository
   highlight_repository:
     path: ../../highlight_repository
+  dictionary_repository:
+    path: ../../dictionary_repository
   component_library:
     path: ../../component_library
 

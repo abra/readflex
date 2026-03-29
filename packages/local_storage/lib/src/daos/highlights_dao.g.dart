@@ -6,6 +6,8 @@ part of 'highlights_dao.dart';
 mixin _$HighlightsDaoMixin on DatabaseAccessor<AppDatabase> {
   $HighlightsTableTable get highlightsTable => attachedDatabase.highlightsTable;
 
+  $ReviewLogsTableTable get reviewLogsTable => attachedDatabase.reviewLogsTable;
+
   HighlightsDaoManager get managers => HighlightsDaoManager(this);
 }
 
@@ -18,5 +20,11 @@ class HighlightsDaoManager {
       $$HighlightsTableTableTableManager(
         _db.attachedDatabase,
         _db.highlightsTable,
+      );
+
+  $$ReviewLogsTableTableTableManager get reviewLogsTable =>
+      $$ReviewLogsTableTableTableManager(
+        _db.attachedDatabase,
+        _db.reviewLogsTable,
       );
 }

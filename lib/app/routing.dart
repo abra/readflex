@@ -1,21 +1,21 @@
 import 'package:content_library/content_library.dart';
 import 'package:dictionary/dictionary.dart';
-import 'package:flashcard_actions/flashcard_actions.dart';
+import 'package:flashcard/flashcard.dart';
 import 'package:go_router/go_router.dart';
-import 'package:highlight_actions/highlight_actions.dart';
+import 'package:highlight/highlight.dart';
 import 'package:home/home.dart';
 import 'package:import_flow/import_flow.dart';
 import 'package:onboarding/onboarding.dart';
 import 'package:practice/practice.dart';
 import 'package:profile/profile.dart';
 import 'package:reader/reader.dart';
-import 'package:readflex/app/bottom_navigation_bar.dart';
 import 'package:readflex/app/dependency_container.dart';
 import 'package:readflex/app/design_system_screen.dart';
 import 'package:readflex/app/first_import_screen.dart';
+import 'package:readflex/app/tab_container_screen.dart';
 import 'package:splash/splash.dart';
 import 'package:subscription_paywall/subscription_paywall.dart';
-import 'package:translate_text/translate_text.dart';
+import 'package:translate/translate.dart';
 
 abstract final class AppRoutes {
   static const splash = '/';
@@ -68,7 +68,7 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
         ),
       ),
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) => BottomNavigationShell(
+        builder: (context, state, navigationShell) => TabContainerScreen(
           navigationShell: navigationShell,
         ),
         branches: [
@@ -142,6 +142,7 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
                 builder: (context, state) => PracticeScreen(
                   flashcardRepository: dependencies.flashcardRepository,
                   highlightRepository: dependencies.highlightRepository,
+                  dictionaryRepository: dependencies.dictionaryRepository,
                 ),
               ),
             ],
@@ -190,6 +191,24 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
                 dictionaryRepository: dependencies.dictionaryRepository,
               ),
             ],
+            onCheckDueItems: (sourceId) async {
+              final cards = await dependencies.flashcardRepository
+                  .getDueFlashcardsBySource(sourceId);
+              final highlights = await dependencies.highlightRepository
+                  .getDueHighlightsBySource(sourceId);
+              final entries = await dependencies.dictionaryRepository
+                  .getDueEntriesBySource(sourceId);
+              return cards.length + highlights.length + entries.length;
+            },
+            onStartMiniReview: (context, sourceId) {
+              showMiniReviewSheet(
+                context,
+                sourceId: sourceId,
+                flashcardRepository: dependencies.flashcardRepository,
+                highlightRepository: dependencies.highlightRepository,
+                dictionaryRepository: dependencies.dictionaryRepository,
+              );
+            },
           );
         },
       ),

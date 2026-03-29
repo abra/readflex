@@ -5,8 +5,8 @@
 
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
-import 'package:preferences_service/preferences_service.dart';
 import 'package:go_router/go_router.dart';
+import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex/app/dependency_scope.dart';
 import 'package:readflex/app/routing.dart';
 

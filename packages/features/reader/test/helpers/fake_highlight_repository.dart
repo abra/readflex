@@ -1,5 +1,5 @@
-import 'package:highlight_repository/highlight_repository.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:highlight_repository/highlight_repository.dart';
 
 class FakeHighlightRepository implements HighlightRepository {
   @override

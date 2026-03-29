@@ -102,20 +102,14 @@ Future<DependenciesContainer> createDependenciesContainer(
   final packageInfo = await PackageInfo.fromPlatform();
 
   // ─── Database ───
-  final db = AppDatabase();
+  final database = AppDatabase();
 
   // ─── Repositories ───
-  final articleRepository = ArticleRepository(articlesDao: db.articlesDao);
-  final bookRepository = BookRepository(booksDao: db.booksDao);
-  final highlightRepository = HighlightRepository(
-    highlightsDao: db.highlightsDao,
-  );
-  final flashcardRepository = FlashcardRepository(
-    flashcardsDao: db.flashcardsDao,
-  );
-  final dictionaryRepository = DictionaryRepository(
-    dictionaryDao: db.dictionaryDao,
-  );
+  final articleRepository = ArticleRepository(database: database);
+  final bookRepository = BookRepository(database: database);
+  final highlightRepository = HighlightRepository(database: database);
+  final flashcardRepository = FlashcardRepository(database: database);
+  final dictionaryRepository = DictionaryRepository(database: database);
 
   // ─── Preferences ───
   final preferencesService = await PreferencesService.create(

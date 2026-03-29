@@ -65,12 +65,12 @@ dependencies:
     path: packages/features/dictionary
   practice:
     path: packages/features/practice
-  highlight_actions:
-    path: packages/features/highlight_actions
-  flashcard_actions:
-    path: packages/features/flashcard_actions
-  translate_text:
-    path: packages/features/translate_text
+  highlight:
+    path: packages/features/highlight
+  flashcard:
+    path: packages/features/flashcard
+  translate:
+    path: packages/features/translate
   subscription_paywall:
     path: packages/features/subscription_paywall
   reader:

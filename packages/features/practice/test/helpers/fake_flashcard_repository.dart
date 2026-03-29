@@ -1,5 +1,5 @@
-import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:flashcard_repository/flashcard_repository.dart';
 
 class FakeFlashcardRepository implements FlashcardRepository {
   @override

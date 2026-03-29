@@ -1,6 +1,6 @@
+import 'package:domain_models/domain_models.dart';
 import 'package:fsrs/fsrs.dart' as fsrs;
 import 'package:local_storage/local_storage.dart';
-import 'package:domain_models/domain_models.dart';
 import 'package:uuid/uuid.dart' show Uuid;
 
 import 'mappers/flashcard_to_domain.dart';
@@ -12,9 +12,9 @@ const _uuid = Uuid();
 /// Domain repository for flashcards with FSRS v6 scheduling.
 class FlashcardRepository {
   FlashcardRepository({
-    required FlashcardsDao flashcardsDao,
+    required AppDatabase database,
     fsrs.Scheduler? scheduler,
-  }) : _dao = flashcardsDao,
+  }) : _dao = database.flashcardsDao,
        _scheduler = scheduler ?? fsrs.Scheduler();
 
   final FlashcardsDao _dao;
@@ -35,6 +35,12 @@ class FlashcardRepository {
   Future<List<Flashcard>> getDueFlashcards() async {
     final now = DateTime.now().toUtc().toIso8601String();
     final rows = await _dao.dueFlashcards(now);
+    return rows.map((r) => r.toDomainModel()).toList();
+  }
+
+  Future<List<Flashcard>> getDueFlashcardsBySource(String sourceId) async {
+    final now = DateTime.now().toUtc().toIso8601String();
+    final rows = await _dao.dueFlashcardsByDeck(sourceId, now);
     return rows.map((r) => r.toDomainModel()).toList();
   }
 
@@ -143,7 +149,8 @@ class FlashcardRepository {
     // Build review log
     final log = ReviewLog(
       id: _uuid.v4(),
-      flashcardId: flashcard.id,
+      itemId: flashcard.id,
+      itemType: ReviewableType.flashcard,
       rating: rating,
       stateBefore: oldFsrs.state,
       stabilityBefore: oldFsrs.stability,

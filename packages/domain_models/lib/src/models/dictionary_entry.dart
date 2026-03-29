@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart' show Equatable;
 
+import 'fsrs_card_data.dart';
 import 'source_type.dart';
 
 /// A saved word or phrase in the user's dictionary.
@@ -13,6 +14,7 @@ final class DictionaryEntry extends Equatable {
     this.sourceId,
     this.sourceType,
     this.usageExamples = const [],
+    this.fsrs = const FsrsCardData(),
   });
 
   final String id;
@@ -23,6 +25,7 @@ final class DictionaryEntry extends Equatable {
   final SourceType? sourceType;
   final List<String> usageExamples;
   final DateTime addedAt;
+  final FsrsCardData fsrs;
 
   static const _absent = Object();
 
@@ -33,6 +36,7 @@ final class DictionaryEntry extends Equatable {
     Object? sourceId = _absent,
     Object? sourceType = _absent,
     List<String>? usageExamples,
+    FsrsCardData? fsrs,
   }) => DictionaryEntry(
     id: id,
     word: word ?? this.word,
@@ -44,6 +48,7 @@ final class DictionaryEntry extends Equatable {
         : sourceType as SourceType?,
     usageExamples: usageExamples ?? this.usageExamples,
     addedAt: addedAt,
+    fsrs: fsrs ?? this.fsrs,
   );
 
   @override
@@ -56,5 +61,6 @@ final class DictionaryEntry extends Equatable {
     sourceType,
     usageExamples,
     addedAt,
+    fsrs,
   ];
 }

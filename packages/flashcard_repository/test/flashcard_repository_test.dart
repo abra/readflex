@@ -1,8 +1,8 @@
+import 'package:domain_models/domain_models.dart';
 import 'package:drift/native.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:local_storage/local_storage.dart';
-import 'package:domain_models/domain_models.dart';
 
 void main() {
   late AppDatabase db;
@@ -10,7 +10,7 @@ void main() {
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    repo = FlashcardRepository(flashcardsDao: db.flashcardsDao);
+    repo = FlashcardRepository(database: db);
   });
 
   tearDown(() => db.close());
@@ -129,7 +129,7 @@ void main() {
       final card = await repo.addFlashcard(deckId: 'd1', front: 'Q', back: 'A');
       await repo.recordReview(card, Rating.good, reviewDurationMs: 5000);
       // Verify review log was saved via DAO
-      final logs = await db.flashcardsDao.reviewLogsByFlashcard(card.id);
+      final logs = await db.flashcardsDao.reviewLogsByItem(card.id);
       expect(logs, hasLength(1));
       expect(logs.first.rating, 'good');
       expect(logs.first.reviewDurationMs, 5000);

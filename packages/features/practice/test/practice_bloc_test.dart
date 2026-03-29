@@ -1,8 +1,9 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:practice/src/practice_bloc.dart';
-import 'package:domain_models/domain_models.dart';
 
+import 'helpers/fake_dictionary_repository.dart';
 import 'helpers/fake_flashcard_repository.dart';
 import 'helpers/fake_highlight_repository.dart';
 
@@ -37,30 +38,35 @@ final _highlight1 = Highlight(
 PracticeBloc _buildBloc({
   required FakeFlashcardRepository flashcardRepository,
   required FakeHighlightRepository highlightRepository,
+  required FakeDictionaryRepository dictionaryRepository,
 }) => PracticeBloc(
   flashcardRepository: flashcardRepository,
   highlightRepository: highlightRepository,
+  dictionaryRepository: dictionaryRepository,
 );
 
 void main() {
   group('PracticeBloc', () {
     late FakeFlashcardRepository flashcardRepo;
     late FakeHighlightRepository highlightRepo;
+    late FakeDictionaryRepository dictionaryRepo;
 
     setUp(() {
       flashcardRepo = FakeFlashcardRepository();
       highlightRepo = FakeHighlightRepository();
+      dictionaryRepo = FakeDictionaryRepository();
     });
 
     blocTest<PracticeBloc, PracticeState>(
       'emits reviewing with due cards and highlights',
       setUp: () {
         flashcardRepo.dueCards = [_card1];
-        highlightRepo.highlights = [_highlight1];
+        highlightRepo.dueHighlights = [_highlight1];
       },
       build: () => _buildBloc(
         flashcardRepository: flashcardRepo,
         highlightRepository: highlightRepo,
+        dictionaryRepository: dictionaryRepo,
       ),
       act: (bloc) => bloc.add(const PracticeLoadRequested()),
       expect: () => [
@@ -81,6 +87,7 @@ void main() {
       build: () => _buildBloc(
         flashcardRepository: flashcardRepo,
         highlightRepository: highlightRepo,
+        dictionaryRepository: dictionaryRepo,
       ),
       act: (bloc) => bloc.add(const PracticeLoadRequested()),
       expect: () => [
@@ -95,6 +102,7 @@ void main() {
       build: () => _buildBloc(
         flashcardRepository: flashcardRepo,
         highlightRepository: highlightRepo,
+        dictionaryRepository: dictionaryRepo,
       ),
       act: (bloc) => bloc.add(const PracticeLoadRequested()),
       expect: () => [
@@ -108,6 +116,7 @@ void main() {
       build: () => _buildBloc(
         flashcardRepository: flashcardRepo,
         highlightRepository: highlightRepo,
+        dictionaryRepository: dictionaryRepo,
       ),
       seed: () => PracticeState(
         status: PracticeStatus.reviewing,
@@ -129,6 +138,7 @@ void main() {
       build: () => _buildBloc(
         flashcardRepository: flashcardRepo,
         highlightRepository: highlightRepo,
+        dictionaryRepository: dictionaryRepo,
       ),
       seed: () => PracticeState(
         status: PracticeStatus.reviewing,
@@ -155,6 +165,7 @@ void main() {
       build: () => _buildBloc(
         flashcardRepository: flashcardRepo,
         highlightRepository: highlightRepo,
+        dictionaryRepository: dictionaryRepo,
       ),
       seed: () => PracticeState(
         status: PracticeStatus.reviewing,
@@ -178,6 +189,7 @@ void main() {
       build: () => _buildBloc(
         flashcardRepository: flashcardRepo,
         highlightRepository: highlightRepo,
+        dictionaryRepository: dictionaryRepo,
       ),
       seed: () => PracticeState(
         status: PracticeStatus.reviewing,
@@ -199,6 +211,7 @@ void main() {
       build: () => _buildBloc(
         flashcardRepository: flashcardRepo,
         highlightRepository: highlightRepo,
+        dictionaryRepository: dictionaryRepo,
       ),
       seed: () => PracticeState(
         status: PracticeStatus.reviewing,
@@ -221,6 +234,7 @@ void main() {
       build: () => _buildBloc(
         flashcardRepository: flashcardRepo,
         highlightRepository: highlightRepo,
+        dictionaryRepository: dictionaryRepo,
       ),
       seed: () => PracticeState(
         status: PracticeStatus.reviewing,
