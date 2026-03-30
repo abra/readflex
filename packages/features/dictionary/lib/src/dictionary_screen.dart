@@ -31,6 +31,8 @@ class DictionaryView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bloc = context.read<DictionaryBloc>();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dictionary'),
@@ -47,7 +49,7 @@ class DictionaryView extends StatelessWidget {
                 prefixIcon: Icon(Icons.search),
                 isDense: true,
               ),
-              onChanged: (query) => context.read<DictionaryBloc>().add(
+              onChanged: (query) => bloc.add(
                 DictionarySearchChanged(query),
               ),
             ),
@@ -62,9 +64,7 @@ class DictionaryView extends StatelessWidget {
             DictionaryStatus.failure => ErrorState(
               message: 'Failed to load dictionary',
               retryLabel: 'Retry',
-              onRetry: () => context.read<DictionaryBloc>().add(
-                const DictionaryLoadRequested(),
-              ),
+              onRetry: () => bloc.add(const DictionaryLoadRequested()),
             ),
             DictionaryStatus.success =>
               state.isEmpty
@@ -87,6 +87,8 @@ class _EntryList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bloc = context.read<DictionaryBloc>();
+
     if (entries.isEmpty) {
       return const EmptyState(message: 'No matches found.');
     }
@@ -101,9 +103,7 @@ class _EntryList extends StatelessWidget {
           key: ValueKey(entry.id),
           direction: DismissDirection.endToStart,
           background: const DestructiveDismissBackground(),
-          onDismissed: (_) => context.read<DictionaryBloc>().add(
-            DictionaryEntryDeleted(entry.id),
-          ),
+          onDismissed: (_) => bloc.add(DictionaryEntryDeleted(entry.id)),
           child: ListTile(
             title: Text(
               entry.word,

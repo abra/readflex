@@ -66,15 +66,15 @@ class HomeView extends StatelessWidget {
       appBar: AppBar(title: const Text('Readflex')),
       body: BlocBuilder<HomeBloc, HomeState>(
         builder: (context, state) {
+          final bloc = context.read<HomeBloc>();
+
           return switch (state.status) {
             HomeStatus.initial ||
             HomeStatus.loading => const CenteredCircularProgressIndicator(),
             HomeStatus.failure => ErrorState(
               message: 'Failed to load dashboard',
               retryLabel: 'Retry',
-              onRetry: () => context.read<HomeBloc>().add(
-                const HomeLoadRequested(),
-              ),
+              onRetry: () => bloc.add(const HomeLoadRequested()),
             ),
             HomeStatus.success => ListView(
               padding: const EdgeInsets.all(Spacing.large),

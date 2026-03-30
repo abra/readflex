@@ -73,6 +73,8 @@ class ProfileView extends StatelessWidget {
         children: [
           BlocBuilder<ProfileCubit, ProfileState>(
             builder: (context, state) {
+              final cubit = context.read<ProfileCubit>();
+
               return Column(
                 children: [
                   _InfoActionCard(
@@ -91,7 +93,7 @@ class ProfileView extends StatelessWidget {
                         ? TextButton(
                             onPressed: state.isLoading
                                 ? null
-                                : () => context.read<ProfileCubit>().signOut(),
+                                : () => cubit.signOut(),
                             child: const Text('Sign out'),
                           )
                         : FilledButton(
@@ -206,6 +208,8 @@ class _AppearanceSection extends StatefulWidget {
 class _AppearanceSectionState extends State<_AppearanceSection> {
   @override
   Widget build(BuildContext context) {
+    final cubit = context.read<ProfileAppearanceCubit>();
+
     return BlocBuilder<ProfileAppearanceCubit, ProfileAppearanceState>(
       builder: (context, state) {
         final readerTheme = ReaderThemePreset.fromId(
@@ -250,9 +254,7 @@ class _AppearanceSectionState extends State<_AppearanceSection> {
                   ],
                   selected: {state.themeMode},
                   onSelectionChanged: (value) {
-                    context.read<ProfileAppearanceCubit>().setThemeMode(
-                      value.first,
-                    );
+                    cubit.setThemeMode(value.first);
                   },
                 ),
                 const SizedBox(height: Spacing.mediumLarge),
@@ -269,9 +271,7 @@ class _AppearanceSectionState extends State<_AppearanceSection> {
                       label: Text(preset.label),
                       selected: preset == readerTheme,
                       onSelected: (_) {
-                        context.read<ProfileAppearanceCubit>().setReaderTheme(
-                          preset.id,
-                        );
+                        cubit.setReaderTheme(preset.id);
                       },
                     );
                   }).toList(),
@@ -290,9 +290,7 @@ class _AppearanceSectionState extends State<_AppearanceSection> {
                       label: Text(preset.label),
                       selected: preset == readerFont,
                       onSelected: (_) {
-                        context.read<ProfileAppearanceCubit>().setReaderFont(
-                          preset.id,
-                        );
+                        cubit.setReaderFont(preset.id);
                       },
                     );
                   }).toList(),
@@ -306,14 +304,10 @@ class _AppearanceSectionState extends State<_AppearanceSection> {
                   min: 0.85,
                   max: 1.45,
                   onChanged: (value) {
-                    context.read<ProfileAppearanceCubit>().previewTextScale(
-                      value,
-                    );
+                    cubit.previewTextScale(value);
                   },
                   onChangeEnd: (value) {
-                    context.read<ProfileAppearanceCubit>().commitTextScale(
-                      value,
-                    );
+                    cubit.commitTextScale(value);
                   },
                 ),
                 const SizedBox(height: Spacing.medium),
@@ -326,14 +320,10 @@ class _AppearanceSectionState extends State<_AppearanceSection> {
                   min: 1.2,
                   max: 2.0,
                   onChanged: (value) {
-                    context.read<ProfileAppearanceCubit>().previewLineHeight(
-                      value,
-                    );
+                    cubit.previewLineHeight(value);
                   },
                   onChangeEnd: (value) {
-                    context.read<ProfileAppearanceCubit>().commitLineHeight(
-                      value,
-                    );
+                    cubit.commitLineHeight(value);
                   },
                 ),
               ],
@@ -361,6 +351,7 @@ class _ReaderPreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final base = Theme.of(context).textTheme.bodyMedium!;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(Spacing.mediumLarge),

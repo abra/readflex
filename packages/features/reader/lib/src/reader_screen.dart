@@ -231,6 +231,7 @@ class _ReadyContentState extends State<_ReadyContent> {
 
   @override
   Widget build(BuildContext context) {
+    final bloc = context.read<ReaderBloc>();
     final state = widget.state;
     final appearance = PreferencesScope.readerAppearanceOf(context);
     final readerTheme = ReaderThemePreset.fromId(appearance.themeId).data;
@@ -341,18 +342,14 @@ class _ReadyContentState extends State<_ReadyContent> {
             bottom: state.hasSelection ? 80 : Spacing.medium,
             child: _ReviewReminderBanner(
               onReview: () {
-                context.read<ReaderBloc>().add(
-                  const ReaderReviewReminderDismissed(),
-                );
+                bloc.add(const ReaderReviewReminderDismissed());
                 final sourceId = state.sourceId;
                 if (sourceId != null) {
                   widget.onStartMiniReview?.call(context, sourceId);
                 }
               },
               onDismiss: () {
-                context.read<ReaderBloc>().add(
-                  const ReaderReviewReminderDismissed(),
-                );
+                bloc.add(const ReaderReviewReminderDismissed());
               },
             ),
           ),

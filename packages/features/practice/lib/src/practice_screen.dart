@@ -66,24 +66,22 @@ class PracticeView extends StatelessWidget {
       ),
       body: BlocBuilder<PracticeBloc, PracticeState>(
         builder: (context, state) {
+          final bloc = context.read<PracticeBloc>();
+
           return switch (state.status) {
             PracticeStatus.initial ||
             PracticeStatus.loading => const CenteredCircularProgressIndicator(),
             PracticeStatus.failure => ErrorState(
               message: 'Something went wrong',
               retryLabel: 'Retry',
-              onRetry: () => context.read<PracticeBloc>().add(
-                const PracticeLoadRequested(),
-              ),
+              onRetry: () => bloc.add(const PracticeLoadRequested()),
             ),
             PracticeStatus.empty => const EmptyState(
               message: 'No items due for review.\nGreat job!',
             ),
             PracticeStatus.completed => _CompletedView(
               reviewed: state.items.length,
-              onRestart: () => context.read<PracticeBloc>().add(
-                const PracticeLoadRequested(),
-              ),
+              onRestart: () => bloc.add(const PracticeLoadRequested()),
             ),
             PracticeStatus.reviewing => _ReviewingView(state: state),
           };
@@ -100,6 +98,8 @@ class _ReviewingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bloc = context.read<PracticeBloc>();
+
     return Padding(
       padding: const EdgeInsets.all(Spacing.xLarge),
       child: Column(
@@ -136,17 +136,13 @@ class _ReviewingView extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: () => context.read<PracticeBloc>().add(
-                  const PracticeCardRevealed(),
-                ),
+                onPressed: () => bloc.add(const PracticeCardRevealed()),
                 child: Text(revealLabel(state.currentItem)),
               ),
             )
           else
             RatingButtons(
-              onRate: (rating) => context.read<PracticeBloc>().add(
-                PracticeCardRated(rating),
-              ),
+              onRate: (rating) => bloc.add(PracticeCardRated(rating)),
             ),
         ],
       ),
