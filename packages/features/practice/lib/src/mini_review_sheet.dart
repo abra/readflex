@@ -1,6 +1,5 @@
 import 'package:component_library/component_library.dart';
 import 'package:dictionary_repository/dictionary_repository.dart';
-import 'package:domain_models/domain_models.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,6 +7,7 @@ import 'package:highlight_repository/highlight_repository.dart';
 
 import 'mini_review_cubit.dart';
 import 'practice_bloc.dart';
+import 'review_card_views.dart';
 
 void showMiniReviewSheet(
   BuildContext context, {
@@ -123,7 +123,6 @@ class _ReviewContent extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Progress indicator
         Padding(
           padding: const EdgeInsets.only(bottom: Spacing.medium),
           child: Text(
@@ -132,20 +131,19 @@ class _ReviewContent extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
         ),
-        // Card content
         Card(
           child: Padding(
             padding: const EdgeInsets.all(Spacing.xLarge),
             child: switch (state.currentItem) {
-              FlashcardItem(:final flashcard) => _MiniFlashcardView(
+              FlashcardItem(:final flashcard) => FlashcardCardContent(
                 card: flashcard,
                 isRevealed: state.isRevealed,
               ),
-              HighlightItem(:final highlight) => _MiniHighlightView(
+              HighlightItem(:final highlight) => HighlightCardContent(
                 highlight: highlight,
                 isRevealed: state.isRevealed,
               ),
-              DictionaryItem(:final entry) => _MiniDictionaryView(
+              DictionaryItem(:final entry) => DictionaryCardContent(
                 entry: entry,
                 isRevealed: state.isRevealed,
               ),
@@ -154,188 +152,19 @@ class _ReviewContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: Spacing.medium),
-        // Action buttons
         if (!state.isRevealed)
           SizedBox(
             width: double.infinity,
             child: FilledButton(
               onPressed: () => context.read<MiniReviewCubit>().reveal(),
-              child: Text(_revealLabel(state.currentItem)),
+              child: Text(revealLabel(state.currentItem)),
             ),
           )
         else
-          _MiniRatingButtons(),
+          RatingButtons(
+            onRate: (rating) => context.read<MiniReviewCubit>().rate(rating),
+          ),
       ],
-    );
-  }
-
-  String _revealLabel(PracticeItem? item) => switch (item) {
-    FlashcardItem() => 'Show Answer',
-    HighlightItem() => 'Recall?',
-    DictionaryItem() => 'Show Translation',
-    _ => 'Reveal',
-  };
-}
-
-class _MiniFlashcardView extends StatelessWidget {
-  const _MiniFlashcardView({required this.card, required this.isRevealed});
-
-  final Flashcard card;
-  final bool isRevealed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          card.front,
-          style: theme.textTheme.headlineSmall,
-          textAlign: TextAlign.center,
-        ),
-        if (isRevealed) ...[
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: Spacing.medium),
-            child: Divider(),
-          ),
-          Text(
-            card.back,
-            style: theme.textTheme.titleMedium,
-            textAlign: TextAlign.center,
-          ),
-          if (card.hint != null) ...[
-            const SizedBox(height: Spacing.small),
-            Text(
-              card.hint!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontStyle: FontStyle.italic,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ],
-      ],
-    );
-  }
-}
-
-class _MiniHighlightView extends StatelessWidget {
-  const _MiniHighlightView({
-    required this.highlight,
-    required this.isRevealed,
-  });
-
-  final Highlight highlight;
-  final bool isRevealed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.format_quote, color: theme.colorScheme.primary),
-        const SizedBox(height: Spacing.medium),
-        Text(
-          highlight.text,
-          style: theme.textTheme.bodyLarge,
-          textAlign: TextAlign.center,
-        ),
-        if (isRevealed && highlight.note != null) ...[
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: Spacing.medium),
-            child: Divider(),
-          ),
-          Text(
-            highlight.note!,
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontStyle: FontStyle.italic,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _MiniDictionaryView extends StatelessWidget {
-  const _MiniDictionaryView({required this.entry, required this.isRevealed});
-
-  final DictionaryEntry entry;
-  final bool isRevealed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.translate, color: theme.colorScheme.primary),
-        const SizedBox(height: Spacing.medium),
-        Text(
-          entry.word,
-          style: theme.textTheme.headlineSmall,
-          textAlign: TextAlign.center,
-        ),
-        if (isRevealed) ...[
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: Spacing.medium),
-            child: Divider(),
-          ),
-          Text(
-            entry.translation,
-            style: theme.textTheme.titleMedium,
-            textAlign: TextAlign.center,
-          ),
-          if (entry.context != null) ...[
-            const SizedBox(height: Spacing.small),
-            Text(
-              entry.context!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontStyle: FontStyle.italic,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ],
-      ],
-    );
-  }
-}
-
-class _MiniRatingButtons extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _ratingButton(context, Rating.again, 'Again', Colors.red),
-        const SizedBox(width: Spacing.small),
-        _ratingButton(context, Rating.hard, 'Hard', Colors.orange),
-        const SizedBox(width: Spacing.small),
-        _ratingButton(context, Rating.good, 'Good', Colors.green),
-        const SizedBox(width: Spacing.small),
-        _ratingButton(context, Rating.easy, 'Easy', Colors.blue),
-      ],
-    );
-  }
-
-  Widget _ratingButton(
-    BuildContext context,
-    Rating rating,
-    String label,
-    Color color,
-  ) {
-    return Expanded(
-      child: FilledButton(
-        style: FilledButton.styleFrom(backgroundColor: color),
-        onPressed: () => context.read<MiniReviewCubit>().rate(rating),
-        child: Text(label),
-      ),
     );
   }
 }

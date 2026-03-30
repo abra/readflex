@@ -21,6 +21,8 @@ class FlashcardsDao extends DatabaseAccessor<AppDatabase>
             ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
           .get();
 
+  // nextReviewAt IS NULL means the item has never been reviewed — treat as
+  // immediately due so newly created cards appear in the first session.
   Future<List<FlashcardsTableData>> dueFlashcards(String now) =>
       (select(flashcardsTable)
             ..where(

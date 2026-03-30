@@ -82,6 +82,7 @@ class ContentLibraryView extends StatelessWidget {
                   ContentLibraryLayoutMode
                 >(
                   builder: (context, layoutMode) {
+                    final cubit = context.read<ContentLibraryLayoutCubit>();
                     return SegmentedButton<ContentLibraryLayoutMode>(
                       showSelectedIcon: false,
                       segments: const [
@@ -98,7 +99,7 @@ class ContentLibraryView extends StatelessWidget {
                       ],
                       selected: {layoutMode},
                       onSelectionChanged: (value) {
-                        context.read<ContentLibraryLayoutCubit>().setLayoutMode(
+                        cubit.setLayoutMode(
                           value.first,
                         );
                       },
@@ -120,15 +121,15 @@ class ContentLibraryView extends StatelessWidget {
       ),
       body: BlocBuilder<ContentLibraryBloc, ContentLibraryState>(
         builder: (context, state) {
+          final bloc = context.read<ContentLibraryBloc>();
+
           return switch (state.status) {
             ContentLibraryStatus.initial || ContentLibraryStatus.loading =>
               const CenteredCircularProgressIndicator(),
             ContentLibraryStatus.failure => ErrorState(
               message: 'Failed to load library',
               retryLabel: 'Retry',
-              onRetry: () => context.read<ContentLibraryBloc>().add(
-                const ContentLibraryLoadRequested(),
-              ),
+              onRetry: () => bloc.add(const ContentLibraryLoadRequested()),
             ),
             ContentLibraryStatus.success =>
               state.isEmpty
@@ -138,9 +139,7 @@ class ContentLibraryView extends StatelessWidget {
                     )
                   : RefreshIndicator(
                       onRefresh: () async {
-                        context.read<ContentLibraryBloc>().add(
-                          const ContentLibraryRefreshRequested(),
-                        );
+                        bloc.add(const ContentLibraryRefreshRequested());
                       },
                       child:
                           BlocBuilder<
@@ -180,12 +179,12 @@ class ContentLibraryView extends StatelessWidget {
   }
 
   void _deleteBook(BuildContext context, Book book) {
-    context.read<ContentLibraryBloc>().add(ContentLibraryBookDeleted(book.id));
+    final bloc = context.read<ContentLibraryBloc>();
+    bloc.add(ContentLibraryBookDeleted(book.id));
   }
 
   void _deleteArticle(BuildContext context, Article article) {
-    context.read<ContentLibraryBloc>().add(
-      ContentLibraryArticleDeleted(article.id),
-    );
+    final bloc = context.read<ContentLibraryBloc>();
+    bloc.add(ContentLibraryArticleDeleted(article.id));
   }
 }

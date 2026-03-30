@@ -186,6 +186,8 @@ class _ReadyContent extends StatefulWidget {
 }
 
 class _ReadyContentState extends State<_ReadyContent> {
+  // 5-minute interval balances responsiveness with avoiding excessive DB
+  // queries while reading. An initial check runs on load for items already due.
   static const _checkInterval = Duration(minutes: 5);
   Timer? _dueCheckTimer;
 

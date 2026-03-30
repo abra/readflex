@@ -56,6 +56,21 @@ void main() {
     expect(due, hasLength(2));
   });
 
+  test('dueFlashcardsByDeck filters by deck and due date', () async {
+    await dao.insertFlashcard(
+      _card(id: 'f1', deckId: 'd1'),
+    ); // null → due, deck d1
+    await dao.insertFlashcard(
+      _card(id: 'f2', deckId: 'd1', nextReviewAt: '2099-01-01T00:00:00.000Z'),
+    ); // future → not due
+    await dao.insertFlashcard(
+      _card(id: 'f3', deckId: 'd2'),
+    ); // null → due, wrong deck
+    final due = await dao.dueFlashcardsByDeck('d1', '2026-06-01T00:00:00.000Z');
+    expect(due, hasLength(1));
+    expect(due.first.id, 'f1');
+  });
+
   test('insertReviewLog and retrieve by flashcard', () async {
     await dao.insertFlashcard(_card());
     await dao.insertReviewLog(

@@ -13,7 +13,7 @@ import 'daos/flashcards_dao.dart';
 import 'daos/highlights_dao.dart';
 import 'tables/articles_table.dart';
 import 'tables/books_table.dart';
-import 'tables/dictionary_entries_table.dart';
+import 'tables/dictionary_table.dart';
 import 'tables/flashcards_table.dart';
 import 'tables/highlights_table.dart';
 import 'tables/review_logs_table.dart';

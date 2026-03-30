@@ -21,6 +21,8 @@ class HighlightsDao extends DatabaseAccessor<AppDatabase>
             ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
           .get();
 
+  // nextReviewAt IS NULL means the item has never been reviewed — treat as
+  // immediately due so newly created highlights appear in the first session.
   Future<List<HighlightsTableData>> dueHighlights(String now) =>
       (select(highlightsTable)
             ..where(

@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../database.dart';
-import '../tables/dictionary_entries_table.dart';
+import '../tables/dictionary_table.dart';
 import '../tables/review_logs_table.dart';
 
 part 'dictionary_dao.g.dart';
@@ -21,6 +21,8 @@ class DictionaryDao extends DatabaseAccessor<AppDatabase>
             ..orderBy([(t) => OrderingTerm.desc(t.addedAt)]))
           .get();
 
+  // nextReviewAt IS NULL means the entry has never been reviewed — treat as
+  // immediately due so newly saved words appear in the first session.
   Future<List<DictionaryTableData>> dueEntries(String now) =>
       (select(dictionaryTable)
             ..where(

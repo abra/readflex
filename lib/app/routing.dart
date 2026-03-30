@@ -32,28 +32,28 @@ abstract final class AppRoutes {
   static String reader(String sourceId) => '/reader/$sourceId';
 }
 
-GoRouter buildRouter({required DependenciesContainer dependencies}) {
-  dependencies.logger.debug('buildRouter: GoRouter created');
+GoRouter buildRouter({required DependenciesContainer deps}) {
+  deps.logger.debug('buildRouter: GoRouter created');
 
   return GoRouter(
-    debugLogDiagnostics: dependencies.config.isDev,
+    debugLogDiagnostics: deps.config.isDev,
     initialLocation: AppRoutes.splash,
     redirect: (context, state) async {
       final location = state.uri.path;
-      final prefs = dependencies.preferencesService.current;
+      final prefs = deps.preferencesService.current;
 
       if (location == AppRoutes.home && !prefs.onboardingCompleted) {
         return AppRoutes.onboarding;
       }
 
       if (location == AppRoutes.home && !prefs.hasCompletedSetup) {
-        final books = await dependencies.bookRepository.getBooks();
-        final articles = await dependencies.articleRepository.getArticles();
+        final books = await deps.bookRepository.getBooks();
+        final articles = await deps.articleRepository.getArticles();
         if (books.isEmpty && articles.isEmpty) {
           return AppRoutes.firstImport;
         }
         // User somehow has books — mark setup as complete.
-        await dependencies.preferencesService.update(
+        await deps.preferencesService.update(
           (p) => p.copyWith(hasCompletedSetup: true),
         );
       }
@@ -77,10 +77,10 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
               GoRoute(
                 path: AppRoutes.home,
                 builder: (context, state) => HomeScreen(
-                  bookRepository: dependencies.bookRepository,
-                  articleRepository: dependencies.articleRepository,
-                  highlightRepository: dependencies.highlightRepository,
-                  flashcardRepository: dependencies.flashcardRepository,
+                  bookRepository: deps.bookRepository,
+                  articleRepository: deps.articleRepository,
+                  highlightRepository: deps.highlightRepository,
+                  flashcardRepository: deps.flashcardRepository,
                   onBookPressed: (book) => context.push(
                     AppRoutes.reader(book.id),
                   ),
@@ -99,9 +99,9 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
               GoRoute(
                 path: AppRoutes.library,
                 builder: (context, state) => ContentLibraryScreen(
-                  bookRepository: dependencies.bookRepository,
-                  articleRepository: dependencies.articleRepository,
-                  preferencesService: dependencies.preferencesService,
+                  bookRepository: deps.bookRepository,
+                  articleRepository: deps.articleRepository,
+                  preferencesService: deps.preferencesService,
                   onBookPressed: (book) => context.push(
                     AppRoutes.reader(book.id),
                   ),
@@ -117,8 +117,7 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
                         // actually added, not just that the picker was opened.
                         return false;
                       },
-                      onImportArticle: (url) =>
-                          _importArticle(dependencies, url),
+                      onImportArticle: (url) => _importArticle(deps, url),
                     );
                   },
                 ),
@@ -130,7 +129,7 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
               GoRoute(
                 path: AppRoutes.dictionary,
                 builder: (context, state) => DictionaryScreen(
-                  dictionaryRepository: dependencies.dictionaryRepository,
+                  dictionaryRepository: deps.dictionaryRepository,
                 ),
               ),
             ],
@@ -140,9 +139,9 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
               GoRoute(
                 path: AppRoutes.practice,
                 builder: (context, state) => PracticeScreen(
-                  flashcardRepository: dependencies.flashcardRepository,
-                  highlightRepository: dependencies.highlightRepository,
-                  dictionaryRepository: dependencies.dictionaryRepository,
+                  flashcardRepository: deps.flashcardRepository,
+                  highlightRepository: deps.highlightRepository,
+                  dictionaryRepository: deps.dictionaryRepository,
                 ),
               ),
             ],
@@ -152,9 +151,9 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
               GoRoute(
                 path: AppRoutes.profile,
                 builder: (context, state) => ProfileScreen(
-                  authService: dependencies.authService,
-                  subscriptionService: dependencies.subscriptionService,
-                  preferencesService: dependencies.preferencesService,
+                  authService: deps.authService,
+                  subscriptionService: deps.subscriptionService,
+                  preferencesService: deps.preferencesService,
                   // TODO: navigate to sign in flow.
                   onSignInPressed: () {},
                   onDesignSystemPressed: () => context.push(
@@ -162,7 +161,7 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
                   ),
                   onPremiumPressed: () => showSubscriptionPaywallSheet(
                     context,
-                    subscriptionService: dependencies.subscriptionService,
+                    subscriptionService: deps.subscriptionService,
                   ),
                 ),
               ),
@@ -176,27 +175,27 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
           final sourceId = state.pathParameters['sourceId']!;
           return ReaderScreen(
             sourceId: sourceId,
-            bookRepository: dependencies.bookRepository,
-            articleRepository: dependencies.articleRepository,
-            highlightRepository: dependencies.highlightRepository,
+            bookRepository: deps.bookRepository,
+            articleRepository: deps.articleRepository,
+            highlightRepository: deps.highlightRepository,
             textActions: [
               HighlightAction(
-                highlightRepository: dependencies.highlightRepository,
+                highlightRepository: deps.highlightRepository,
               ),
               FlashcardAction(
-                flashcardRepository: dependencies.flashcardRepository,
+                flashcardRepository: deps.flashcardRepository,
               ),
               TranslateAction(
-                translationService: dependencies.translationService,
-                dictionaryRepository: dependencies.dictionaryRepository,
+                translationService: deps.translationService,
+                dictionaryRepository: deps.dictionaryRepository,
               ),
             ],
             onCheckDueItems: (sourceId) async {
-              final cards = await dependencies.flashcardRepository
+              final cards = await deps.flashcardRepository
                   .getDueFlashcardsBySource(sourceId);
-              final highlights = await dependencies.highlightRepository
+              final highlights = await deps.highlightRepository
                   .getDueHighlightsBySource(sourceId);
-              final entries = await dependencies.dictionaryRepository
+              final entries = await deps.dictionaryRepository
                   .getDueEntriesBySource(sourceId);
               return cards.length + highlights.length + entries.length;
             },
@@ -204,9 +203,9 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
               showMiniReviewSheet(
                 context,
                 sourceId: sourceId,
-                flashcardRepository: dependencies.flashcardRepository,
-                highlightRepository: dependencies.highlightRepository,
-                dictionaryRepository: dependencies.dictionaryRepository,
+                flashcardRepository: deps.flashcardRepository,
+                highlightRepository: deps.highlightRepository,
+                dictionaryRepository: deps.dictionaryRepository,
               );
             },
           );
@@ -216,7 +215,7 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
         path: AppRoutes.onboarding,
         builder: (context, state) => OnboardingScreen(
           onComplete: () {
-            dependencies.preferencesService.update(
+            deps.preferencesService.update(
               (p) => p.copyWith(onboardingCompleted: true),
             );
             context.go(AppRoutes.firstImport);
@@ -235,16 +234,16 @@ GoRouter buildRouter({required DependenciesContainer dependencies}) {
                 // added to the repository.
                 return false;
               },
-              onImportArticle: (url) => _importArticle(dependencies, url),
+              onImportArticle: (url) => _importArticle(deps, url),
             );
 
-            final books = await dependencies.bookRepository.getBooks();
-            final articles = await dependencies.articleRepository.getArticles();
+            final books = await deps.bookRepository.getBooks();
+            final articles = await deps.articleRepository.getArticles();
 
             return books.isNotEmpty || articles.isNotEmpty;
           },
           onContentAdded: () {
-            dependencies.preferencesService.update(
+            deps.preferencesService.update(
               (p) => p.copyWith(hasCompletedSetup: true),
             );
             context.go(AppRoutes.home);

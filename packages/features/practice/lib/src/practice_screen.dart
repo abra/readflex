@@ -1,12 +1,12 @@
 import 'package:component_library/component_library.dart';
 import 'package:dictionary_repository/dictionary_repository.dart';
-import 'package:domain_models/domain_models.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 
 import 'practice_bloc.dart';
+import 'review_card_views.dart';
 
 /// Practice tab: review due flashcards, highlights, and dictionary entries.
 class PracticeScreen extends StatelessWidget {
@@ -85,21 +85,7 @@ class PracticeView extends StatelessWidget {
                 const PracticeLoadRequested(),
               ),
             ),
-            PracticeStatus.reviewing => switch (state.currentItem) {
-              FlashcardItem(:final flashcard) => _CardView(
-                card: flashcard,
-                isRevealed: state.isRevealed,
-              ),
-              HighlightItem(:final highlight) => _HighlightView(
-                highlight: highlight,
-                isRevealed: state.isRevealed,
-              ),
-              DictionaryItem(:final entry) => _DictionaryView(
-                entry: entry,
-                isRevealed: state.isRevealed,
-              ),
-              _ => const SizedBox.shrink(),
-            },
+            PracticeStatus.reviewing => _ReviewingView(state: state),
           };
         },
       ),
@@ -107,16 +93,13 @@ class PracticeView extends StatelessWidget {
   }
 }
 
-class _CardView extends StatelessWidget {
-  const _CardView({required this.card, required this.isRevealed});
+class _ReviewingView extends StatelessWidget {
+  const _ReviewingView({required this.state});
 
-  final Flashcard card;
-  final bool isRevealed;
+  final PracticeState state;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Padding(
       padding: const EdgeInsets.all(Spacing.xLarge),
       child: Column(
@@ -128,253 +111,44 @@ class _CardView extends StatelessWidget {
                   width: double.infinity,
                   child: Padding(
                     padding: const EdgeInsets.all(Spacing.xLarge),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          card.front,
-                          style: theme.textTheme.headlineSmall,
-                          textAlign: TextAlign.center,
-                        ),
-                        if (isRevealed) ...[
-                          const Padding(
-                            padding: EdgeInsets.symmetric(
-                              vertical: Spacing.medium,
-                            ),
-                            child: Divider(),
-                          ),
-                          Text(
-                            card.back,
-                            style: theme.textTheme.titleMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                          if (card.hint != null) ...[
-                            const SizedBox(height: Spacing.small),
-                            Text(
-                              card.hint!,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                fontStyle: FontStyle.italic,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ],
-                      ],
-                    ),
+                    child: switch (state.currentItem) {
+                      FlashcardItem(:final flashcard) => FlashcardCardContent(
+                        card: flashcard,
+                        isRevealed: state.isRevealed,
+                      ),
+                      HighlightItem(:final highlight) => HighlightCardContent(
+                        highlight: highlight,
+                        isRevealed: state.isRevealed,
+                      ),
+                      DictionaryItem(:final entry) => DictionaryCardContent(
+                        entry: entry,
+                        isRevealed: state.isRevealed,
+                      ),
+                      _ => const SizedBox.shrink(),
+                    },
                   ),
                 ),
               ),
             ),
           ),
           const SizedBox(height: Spacing.medium),
-          if (!isRevealed)
+          if (!state.isRevealed)
             SizedBox(
               width: double.infinity,
               child: FilledButton(
                 onPressed: () => context.read<PracticeBloc>().add(
                   const PracticeCardRevealed(),
                 ),
-                child: const Text('Show Answer'),
+                child: Text(revealLabel(state.currentItem)),
               ),
             )
           else
-            _RatingButtons(),
-        ],
-      ),
-    );
-  }
-}
-
-class _HighlightView extends StatelessWidget {
-  const _HighlightView({
-    required this.highlight,
-    required this.isRevealed,
-  });
-
-  final Highlight highlight;
-  final bool isRevealed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.all(Spacing.xLarge),
-      child: Column(
-        children: [
-          Expanded(
-            child: Center(
-              child: Card(
-                child: SizedBox(
-                  width: double.infinity,
-                  child: Padding(
-                    padding: const EdgeInsets.all(Spacing.xLarge),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.format_quote,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(height: Spacing.medium),
-                        Text(
-                          highlight.text,
-                          style: theme.textTheme.bodyLarge,
-                          textAlign: TextAlign.center,
-                        ),
-                        if (isRevealed && highlight.note != null) ...[
-                          const Padding(
-                            padding: EdgeInsets.symmetric(
-                              vertical: Spacing.medium,
-                            ),
-                            child: Divider(),
-                          ),
-                          Text(
-                            highlight.note!,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              fontStyle: FontStyle.italic,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
+            RatingButtons(
+              onRate: (rating) => context.read<PracticeBloc>().add(
+                PracticeCardRated(rating),
               ),
             ),
-          ),
-          const SizedBox(height: Spacing.medium),
-          if (!isRevealed)
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () => context.read<PracticeBloc>().add(
-                  const PracticeCardRevealed(),
-                ),
-                child: const Text('Recall?'),
-              ),
-            )
-          else
-            _RatingButtons(),
         ],
-      ),
-    );
-  }
-}
-
-class _DictionaryView extends StatelessWidget {
-  const _DictionaryView({required this.entry, required this.isRevealed});
-
-  final DictionaryEntry entry;
-  final bool isRevealed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.all(Spacing.xLarge),
-      child: Column(
-        children: [
-          Expanded(
-            child: Center(
-              child: Card(
-                child: SizedBox(
-                  width: double.infinity,
-                  child: Padding(
-                    padding: const EdgeInsets.all(Spacing.xLarge),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.translate,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(height: Spacing.medium),
-                        Text(
-                          entry.word,
-                          style: theme.textTheme.headlineSmall,
-                          textAlign: TextAlign.center,
-                        ),
-                        if (isRevealed) ...[
-                          const Padding(
-                            padding: EdgeInsets.symmetric(
-                              vertical: Spacing.medium,
-                            ),
-                            child: Divider(),
-                          ),
-                          Text(
-                            entry.translation,
-                            style: theme.textTheme.titleMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                          if (entry.context != null) ...[
-                            const SizedBox(height: Spacing.small),
-                            Text(
-                              entry.context!,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                fontStyle: FontStyle.italic,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: Spacing.medium),
-          if (!isRevealed)
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () => context.read<PracticeBloc>().add(
-                  const PracticeCardRevealed(),
-                ),
-                child: const Text('Show Translation'),
-              ),
-            )
-          else
-            _RatingButtons(),
-        ],
-      ),
-    );
-  }
-}
-
-class _RatingButtons extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _ratingButton(context, Rating.again, 'Again', Colors.red),
-        const SizedBox(width: Spacing.small),
-        _ratingButton(context, Rating.hard, 'Hard', Colors.orange),
-        const SizedBox(width: Spacing.small),
-        _ratingButton(context, Rating.good, 'Good', Colors.green),
-        const SizedBox(width: Spacing.small),
-        _ratingButton(context, Rating.easy, 'Easy', Colors.blue),
-      ],
-    );
-  }
-
-  Widget _ratingButton(
-    BuildContext context,
-    Rating rating,
-    String label,
-    Color color,
-  ) {
-    return Expanded(
-      child: FilledButton(
-        style: FilledButton.styleFrom(backgroundColor: color),
-        onPressed: () => context.read<PracticeBloc>().add(
-          PracticeCardRated(rating),
-        ),
-        child: Text(label),
       ),
     );
   }

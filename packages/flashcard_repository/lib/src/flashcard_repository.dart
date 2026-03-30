@@ -1,6 +1,6 @@
 import 'package:domain_models/domain_models.dart';
-import 'package:fsrs/fsrs.dart' as fsrs;
 import 'package:local_storage/local_storage.dart';
+import 'package:review_scheduler/review_scheduler.dart';
 import 'package:uuid/uuid.dart' show Uuid;
 
 import 'mappers/flashcard_to_domain.dart';
@@ -13,12 +13,12 @@ const _uuid = Uuid();
 class FlashcardRepository {
   FlashcardRepository({
     required AppDatabase database,
-    fsrs.Scheduler? scheduler,
+    ReviewScheduler? reviewScheduler,
   }) : _dao = database.flashcardsDao,
-       _scheduler = scheduler ?? fsrs.Scheduler();
+       _reviewScheduler = reviewScheduler ?? ReviewScheduler();
 
   final FlashcardsDao _dao;
-  final fsrs.Scheduler _scheduler;
+  final ReviewScheduler _reviewScheduler;
 
   // ─── CRUD ───
 
@@ -82,111 +82,23 @@ class FlashcardRepository {
 
   // ─── Review (FSRS) ───
 
-  /// Records a review using FSRS v6 scheduling.
-  ///
-  /// Updates the flashcard's FSRS data and saves a review log.
-  /// Returns the updated flashcard.
   Future<Flashcard> recordReview(
     Flashcard flashcard,
     Rating rating, {
     int? reviewDurationMs,
   }) async {
-    final now = DateTime.now().toUtc();
-    final oldFsrs = flashcard.fsrs;
-
-    // Map domain → fsrs package types
-    final fsrsCard = fsrs.Card(cardId: flashcard.id.hashCode)
-      ..state = _toFsrsState(oldFsrs.state)
-      ..stability = oldFsrs.stability == 0.0 ? null : oldFsrs.stability
-      ..difficulty = oldFsrs.difficulty == 0.0 ? null : oldFsrs.difficulty
-      ..due = oldFsrs.nextReviewAt?.toUtc() ?? now
-      ..lastReview = oldFsrs.lastReviewAt?.toUtc();
-
-    final fsrsRating = _toFsrsRating(rating);
-
-    // Run FSRS scheduling
-    final result = _scheduler.reviewCard(
-      fsrsCard,
-      fsrsRating,
-      reviewDateTime: now,
-      reviewDuration: reviewDurationMs,
-    );
-    final updatedFsrsCard = result.card;
-
-    // Compute elapsed/scheduled days
-    final elapsedDays = oldFsrs.lastReviewAt != null
-        ? now.difference(oldFsrs.lastReviewAt!).inDays
-        : 0;
-    final scheduledDays = updatedFsrsCard.due.difference(now).inDays;
-
-    // Compute retrievability
-    final retrievability = oldFsrs.state == FsrsState.review
-        ? _scheduler.getCardRetrievability(fsrsCard)
-        : 0.0;
-
-    // Build updated domain flashcard
-    final newReps = oldFsrs.reps + 1;
-    final newLapses =
-        (rating == Rating.again && oldFsrs.state == FsrsState.review)
-        ? oldFsrs.lapses + 1
-        : oldFsrs.lapses;
-
-    final updatedFlashcard = flashcard.copyWith(
-      fsrs: FsrsCardData(
-        state: _fromFsrsState(updatedFsrsCard.state),
-        stability: updatedFsrsCard.stability ?? 0.0,
-        difficulty: updatedFsrsCard.difficulty ?? 0.0,
-        retrievability: retrievability,
-        reps: newReps,
-        lapses: newLapses,
-        lastReviewAt: now,
-        nextReviewAt: updatedFsrsCard.due,
-        scheduledDays: scheduledDays,
-        elapsedDays: elapsedDays,
-      ),
-    );
-
-    // Build review log
-    final log = ReviewLog(
-      id: _uuid.v4(),
+    final result = _reviewScheduler.computeReview(
       itemId: flashcard.id,
       itemType: ReviewableType.flashcard,
+      currentFsrs: flashcard.fsrs,
       rating: rating,
-      stateBefore: oldFsrs.state,
-      stabilityBefore: oldFsrs.stability,
-      difficultyBefore: oldFsrs.difficulty,
-      retrievabilityAtReview: retrievability,
-      scheduledDays: scheduledDays,
-      elapsedDays: elapsedDays,
       reviewDurationMs: reviewDurationMs,
-      reviewedAt: now,
     );
 
-    await _dao.updateFlashcard(updatedFlashcard.toStorageModel());
-    await _dao.insertReviewLog(log.toStorageModel());
+    final updated = flashcard.copyWith(fsrs: result.fsrs);
+    await _dao.updateFlashcard(updated.toStorageModel());
+    await _dao.insertReviewLog(result.log.toStorageModel());
 
-    return updatedFlashcard;
+    return updated;
   }
-
-  // ─── Mapping helpers ───
-
-  static fsrs.State _toFsrsState(FsrsState state) => switch (state) {
-    FsrsState.newCard => fsrs.State.learning,
-    FsrsState.learning => fsrs.State.learning,
-    FsrsState.review => fsrs.State.review,
-    FsrsState.relearning => fsrs.State.relearning,
-  };
-
-  static FsrsState _fromFsrsState(fsrs.State state) => switch (state) {
-    fsrs.State.learning => FsrsState.learning,
-    fsrs.State.review => FsrsState.review,
-    fsrs.State.relearning => FsrsState.relearning,
-  };
-
-  static fsrs.Rating _toFsrsRating(Rating rating) => switch (rating) {
-    Rating.again => fsrs.Rating.again,
-    Rating.hard => fsrs.Rating.hard,
-    Rating.good => fsrs.Rating.good,
-    Rating.easy => fsrs.Rating.easy,
-  };
 }
