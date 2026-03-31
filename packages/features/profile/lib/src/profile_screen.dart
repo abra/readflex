@@ -66,83 +66,84 @@ class ProfileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: ListView(
-        padding: const EdgeInsets.all(Spacing.large),
-        children: [
-          BlocBuilder<ProfileCubit, ProfileState>(
-            builder: (context, state) {
-              final cubit = context.read<ProfileCubit>();
-
-              return Column(
-                children: [
-                  _InfoActionCard(
-                    leading: Icon(
-                      state.isAuthenticated
-                          ? Icons.person
-                          : Icons.person_outline,
-                    ),
-                    title: state.isAuthenticated
-                        ? state.email ?? 'Signed in'
-                        : 'Not signed in',
-                    subtitle: state.isAuthenticated
-                        ? null
-                        : 'Sign in to sync your data',
-                    action: state.isAuthenticated
-                        ? TextButton(
-                            onPressed: state.isLoading
-                                ? null
-                                : () => cubit.signOut(),
-                            child: const Text('Sign out'),
-                          )
-                        : FilledButton(
-                            onPressed: onSignInPressed,
-                            child: const Text('Sign in'),
-                          ),
-                  ),
-                  const SizedBox(height: Spacing.medium),
-                  _InfoActionCard(
-                    leading: Icon(
-                      state.isPremium ? Icons.star : Icons.star_border,
-                    ),
-                    title: state.isPremium ? 'Premium' : 'Free plan',
-                    subtitle: state.isPremium
-                        ? null
-                        : 'Unlock AI features and more',
-                    action: state.isPremium
-                        ? null
-                        : FilledButton.tonal(
-                            onPressed: onPremiumPressed,
-                            child: const Text('Upgrade'),
-                          ),
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: Spacing.large),
-          const _AppearanceSection(),
-          const SizedBox(height: Spacing.large),
-          _InfoActionCard(
-            leading: const Icon(Icons.design_services_outlined),
-            title: 'Design System Preview',
-            subtitle: 'Open the live component showcase screen',
-            action: OutlinedButton(
-              onPressed: onDesignSystemPressed,
-              child: const Text('Open'),
-            ),
-          ),
-          const SizedBox(height: Spacing.large),
-          const Divider(),
-          const ListTile(
-            leading: Icon(Icons.info_outline),
-            title: Text('About Readflex'),
-            subtitle: Text('Version 1.0.0'),
-          ),
-        ],
-      ),
-    );
+    return Placeholder();
+    // return Scaffold(
+    //   appBar: AppBar(title: const Text('Profile')),
+    //   body: ListView(
+    //     padding: const EdgeInsets.all(Spacing.large),
+    //     children: [
+    //       BlocBuilder<ProfileCubit, ProfileState>(
+    //         builder: (context, state) {
+    //           final cubit = context.read<ProfileCubit>();
+    //
+    //           return Column(
+    //             children: [
+    //               _InfoActionCard(
+    //                 leading: Icon(
+    //                   state.isAuthenticated
+    //                       ? Icons.person
+    //                       : Icons.person_outline,
+    //                 ),
+    //                 title: state.isAuthenticated
+    //                     ? state.email ?? 'Signed in'
+    //                     : 'Not signed in',
+    //                 subtitle: state.isAuthenticated
+    //                     ? null
+    //                     : 'Sign in to sync your data',
+    //                 action: state.isAuthenticated
+    //                     ? TextButton(
+    //                         onPressed: state.isLoading
+    //                             ? null
+    //                             : () => cubit.signOut(),
+    //                         child: const Text('Sign out'),
+    //                       )
+    //                     : FilledButton(
+    //                         onPressed: onSignInPressed,
+    //                         child: const Text('Sign in'),
+    //                       ),
+    //               ),
+    //               const SizedBox(height: Spacing.medium),
+    //               _InfoActionCard(
+    //                 leading: Icon(
+    //                   state.isPremium ? Icons.star : Icons.star_border,
+    //                 ),
+    //                 title: state.isPremium ? 'Premium' : 'Free plan',
+    //                 subtitle: state.isPremium
+    //                     ? null
+    //                     : 'Unlock AI features and more',
+    //                 action: state.isPremium
+    //                     ? null
+    //                     : FilledButton.tonal(
+    //                         onPressed: onPremiumPressed,
+    //                         child: const Text('Upgrade'),
+    //                       ),
+    //               ),
+    //             ],
+    //           );
+    //         },
+    //       ),
+    //       const SizedBox(height: Spacing.large),
+    //       const _AppearanceSection(),
+    //       const SizedBox(height: Spacing.large),
+    //       _InfoActionCard(
+    //         leading: const Icon(Icons.design_services_outlined),
+    //         title: 'Design System Preview',
+    //         subtitle: 'Open the live component showcase screen',
+    //         action: OutlinedButton(
+    //           onPressed: onDesignSystemPressed,
+    //           child: const Text('Open'),
+    //         ),
+    //       ),
+    //       const SizedBox(height: Spacing.large),
+    //       const Divider(),
+    //       const ListTile(
+    //         leading: Icon(Icons.info_outline),
+    //         title: Text('About Readflex'),
+    //         subtitle: Text('Version 1.0.0'),
+    //       ),
+    //     ],
+    //   ),
+    // );
   }
 }
 

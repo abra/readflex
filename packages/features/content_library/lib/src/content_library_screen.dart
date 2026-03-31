@@ -70,112 +70,113 @@ class ContentLibraryView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Library'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: Spacing.medium),
-            child:
-                BlocBuilder<
-                  ContentLibraryLayoutCubit,
-                  ContentLibraryLayoutMode
-                >(
-                  builder: (context, layoutMode) {
-                    final cubit = context.read<ContentLibraryLayoutCubit>();
-                    return SegmentedButton<ContentLibraryLayoutMode>(
-                      showSelectedIcon: false,
-                      segments: const [
-                        ButtonSegment(
-                          value: ContentLibraryLayoutMode.list,
-                          icon: Icon(Icons.view_list_outlined),
-                          label: Text('List'),
-                        ),
-                        ButtonSegment(
-                          value: ContentLibraryLayoutMode.grid,
-                          icon: Icon(Icons.grid_view_outlined),
-                          label: Text('Grid'),
-                        ),
-                      ],
-                      selected: {layoutMode},
-                      onSelectionChanged: (value) {
-                        cubit.setLayoutMode(
-                          value.first,
-                        );
-                      },
-                    );
-                  },
-                ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await onAddPressed();
-          if (!context.mounted) return;
-          context.read<ContentLibraryBloc>().add(
-            const ContentLibraryRefreshRequested(),
-          );
-        },
-        child: const Icon(Icons.add),
-      ),
-      body: BlocBuilder<ContentLibraryBloc, ContentLibraryState>(
-        builder: (context, state) {
-          final bloc = context.read<ContentLibraryBloc>();
-
-          return switch (state.status) {
-            ContentLibraryStatus.initial || ContentLibraryStatus.loading =>
-              const CenteredCircularProgressIndicator(),
-            ContentLibraryStatus.failure => ErrorState(
-              message: 'Failed to load library',
-              retryLabel: 'Retry',
-              onRetry: () => bloc.add(const ContentLibraryLoadRequested()),
-            ),
-            ContentLibraryStatus.success =>
-              state.isEmpty
-                  ? const EmptyState(
-                      message:
-                          'Your library is empty.\nTap + to add a book or article.',
-                    )
-                  : RefreshIndicator(
-                      onRefresh: () async {
-                        bloc.add(const ContentLibraryRefreshRequested());
-                      },
-                      child:
-                          BlocBuilder<
-                            ContentLibraryLayoutCubit,
-                            ContentLibraryLayoutMode
-                          >(
-                            builder: (context, layoutMode) {
-                              return switch (layoutMode) {
-                                ContentLibraryLayoutMode.list =>
-                                  ContentLibraryListView(
-                                    items: state.items,
-                                    onBookPressed: onBookPressed,
-                                    onArticlePressed: onArticlePressed,
-                                    onBookDeleted: (book) =>
-                                        _deleteBook(context, book),
-                                    onArticleDeleted: (article) =>
-                                        _deleteArticle(context, article),
-                                  ),
-                                ContentLibraryLayoutMode.grid =>
-                                  ContentLibraryGridView(
-                                    items: state.items,
-                                    onBookPressed: onBookPressed,
-                                    onArticlePressed: onArticlePressed,
-                                    onBookDeleted: (book) =>
-                                        _deleteBook(context, book),
-                                    onArticleDeleted: (article) =>
-                                        _deleteArticle(context, article),
-                                  ),
-                              };
-                            },
-                          ),
-                    ),
-          };
-        },
-      ),
-    );
+    return Placeholder();
+    // return Scaffold(
+    //   appBar: AppBar(
+    //     title: const Text('Library'),
+    //     actions: [
+    //       Padding(
+    //         padding: const EdgeInsets.only(right: Spacing.medium),
+    //         child:
+    //             BlocBuilder<
+    //               ContentLibraryLayoutCubit,
+    //               ContentLibraryLayoutMode
+    //             >(
+    //               builder: (context, layoutMode) {
+    //                 final cubit = context.read<ContentLibraryLayoutCubit>();
+    //                 return SegmentedButton<ContentLibraryLayoutMode>(
+    //                   showSelectedIcon: false,
+    //                   segments: const [
+    //                     ButtonSegment(
+    //                       value: ContentLibraryLayoutMode.list,
+    //                       icon: Icon(Icons.view_list_outlined),
+    //                       label: Text('List'),
+    //                     ),
+    //                     ButtonSegment(
+    //                       value: ContentLibraryLayoutMode.grid,
+    //                       icon: Icon(Icons.grid_view_outlined),
+    //                       label: Text('Grid'),
+    //                     ),
+    //                   ],
+    //                   selected: {layoutMode},
+    //                   onSelectionChanged: (value) {
+    //                     cubit.setLayoutMode(
+    //                       value.first,
+    //                     );
+    //                   },
+    //                 );
+    //               },
+    //             ),
+    //       ),
+    //     ],
+    //   ),
+    //   floatingActionButton: FloatingActionButton(
+    //     onPressed: () async {
+    //       await onAddPressed();
+    //       if (!context.mounted) return;
+    //       context.read<ContentLibraryBloc>().add(
+    //         const ContentLibraryRefreshRequested(),
+    //       );
+    //     },
+    //     child: const Icon(Icons.add),
+    //   ),
+    //   body: BlocBuilder<ContentLibraryBloc, ContentLibraryState>(
+    //     builder: (context, state) {
+    //       final bloc = context.read<ContentLibraryBloc>();
+    //
+    //       return switch (state.status) {
+    //         ContentLibraryStatus.initial || ContentLibraryStatus.loading =>
+    //           const CenteredCircularProgressIndicator(),
+    //         ContentLibraryStatus.failure => ErrorState(
+    //           message: 'Failed to load library',
+    //           retryLabel: 'Retry',
+    //           onRetry: () => bloc.add(const ContentLibraryLoadRequested()),
+    //         ),
+    //         ContentLibraryStatus.success =>
+    //           state.isEmpty
+    //               ? const EmptyState(
+    //                   message:
+    //                       'Your library is empty.\nTap + to add a book or article.',
+    //                 )
+    //               : RefreshIndicator(
+    //                   onRefresh: () async {
+    //                     bloc.add(const ContentLibraryRefreshRequested());
+    //                   },
+    //                   child:
+    //                       BlocBuilder<
+    //                         ContentLibraryLayoutCubit,
+    //                         ContentLibraryLayoutMode
+    //                       >(
+    //                         builder: (context, layoutMode) {
+    //                           return switch (layoutMode) {
+    //                             ContentLibraryLayoutMode.list =>
+    //                               ContentLibraryListView(
+    //                                 items: state.items,
+    //                                 onBookPressed: onBookPressed,
+    //                                 onArticlePressed: onArticlePressed,
+    //                                 onBookDeleted: (book) =>
+    //                                     _deleteBook(context, book),
+    //                                 onArticleDeleted: (article) =>
+    //                                     _deleteArticle(context, article),
+    //                               ),
+    //                             ContentLibraryLayoutMode.grid =>
+    //                               ContentLibraryGridView(
+    //                                 items: state.items,
+    //                                 onBookPressed: onBookPressed,
+    //                                 onArticlePressed: onArticlePressed,
+    //                                 onBookDeleted: (book) =>
+    //                                     _deleteBook(context, book),
+    //                                 onArticleDeleted: (article) =>
+    //                                     _deleteArticle(context, article),
+    //                               ),
+    //                           };
+    //                         },
+    //                       ),
+    //                 ),
+    //       };
+    //     },
+    //   ),
+    // );
   }
 
   void _deleteBook(BuildContext context, Book book) {

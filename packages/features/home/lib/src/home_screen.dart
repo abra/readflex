@@ -62,69 +62,70 @@ class HomeView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Readflex')),
-      body: BlocBuilder<HomeBloc, HomeState>(
-        builder: (context, state) {
-          final bloc = context.read<HomeBloc>();
-
-          return switch (state.status) {
-            HomeStatus.initial ||
-            HomeStatus.loading => const CenteredCircularProgressIndicator(),
-            HomeStatus.failure => ErrorState(
-              message: 'Failed to load dashboard',
-              retryLabel: 'Retry',
-              onRetry: () => bloc.add(const HomeLoadRequested()),
-            ),
-            HomeStatus.success => ListView(
-              padding: const EdgeInsets.all(Spacing.large),
-              children: [
-                _StatsRow(state: state, onPracticePressed: onPracticePressed),
-                const SizedBox(height: Spacing.xLarge),
-                if (state.recentItems.isNotEmpty) ...[
-                  Text(
-                    'Continue Reading',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: Spacing.small),
-                  ...state.recentItems.map(
-                    (item) => switch (item) {
-                      Book book => ListTile(
-                        leading: const Icon(Icons.book),
-                        title: Text(
-                          book.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text(
-                          '${(book.readingProgress * 100).round()}%',
-                        ),
-                        onTap: () => onBookPressed(book),
-                      ),
-                      Article article => ListTile(
-                        leading: const Icon(Icons.article),
-                        title: Text(
-                          article.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text(article.siteName ?? ''),
-                        onTap: () => onArticlePressed(article),
-                      ),
-                      _ => const SizedBox.shrink(),
-                    },
-                  ),
-                ] else
-                  const EmptyState(
-                    message:
-                        'No items yet.\nAdd books or articles from the Library tab.',
-                  ),
-              ],
-            ),
-          };
-        },
-      ),
-    );
+    return Placeholder();
+    // return Scaffold(
+    //   appBar: AppBar(title: const Text('Readflex')),
+    //   body: BlocBuilder<HomeBloc, HomeState>(
+    //     builder: (context, state) {
+    //       final bloc = context.read<HomeBloc>();
+    //
+    //       return switch (state.status) {
+    //         HomeStatus.initial ||
+    //         HomeStatus.loading => const CenteredCircularProgressIndicator(),
+    //         HomeStatus.failure => ErrorState(
+    //           message: 'Failed to load dashboard',
+    //           retryLabel: 'Retry',
+    //           onRetry: () => bloc.add(const HomeLoadRequested()),
+    //         ),
+    //         HomeStatus.success => ListView(
+    //           padding: const EdgeInsets.all(Spacing.large),
+    //           children: [
+    //             _StatsRow(state: state, onPracticePressed: onPracticePressed),
+    //             const SizedBox(height: Spacing.xLarge),
+    //             if (state.recentItems.isNotEmpty) ...[
+    //               Text(
+    //                 'Continue Reading',
+    //                 style: Theme.of(context).textTheme.titleMedium,
+    //               ),
+    //               const SizedBox(height: Spacing.small),
+    //               ...state.recentItems.map(
+    //                 (item) => switch (item) {
+    //                   Book book => ListTile(
+    //                     leading: const Icon(Icons.book),
+    //                     title: Text(
+    //                       book.title,
+    //                       maxLines: 1,
+    //                       overflow: TextOverflow.ellipsis,
+    //                     ),
+    //                     subtitle: Text(
+    //                       '${(book.readingProgress * 100).round()}%',
+    //                     ),
+    //                     onTap: () => onBookPressed(book),
+    //                   ),
+    //                   Article article => ListTile(
+    //                     leading: const Icon(Icons.article),
+    //                     title: Text(
+    //                       article.title,
+    //                       maxLines: 1,
+    //                       overflow: TextOverflow.ellipsis,
+    //                     ),
+    //                     subtitle: Text(article.siteName ?? ''),
+    //                     onTap: () => onArticlePressed(article),
+    //                   ),
+    //                   _ => const SizedBox.shrink(),
+    //                 },
+    //               ),
+    //             ] else
+    //               const EmptyState(
+    //                 message:
+    //                     'No items yet.\nAdd books or articles from the Library tab.',
+    //               ),
+    //           ],
+    //         ),
+    //       };
+    //     },
+    //   ),
+    // );
   }
 }
 

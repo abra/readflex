@@ -39,55 +39,56 @@ class PracticeView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Practice'),
-        actions: [
-          BlocBuilder<PracticeBloc, PracticeState>(
-            buildWhen: (prev, curr) =>
-                prev.reviewed != curr.reviewed ||
-                prev.items.length != curr.items.length,
-            builder: (context, state) {
-              if (state.status != PracticeStatus.reviewing) {
-                return const SizedBox.shrink();
-              }
-              return Padding(
-                padding: const EdgeInsets.only(right: Spacing.medium),
-                child: Center(
-                  child: Text(
-                    '${state.reviewed}/${state.items.length}',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-      body: BlocBuilder<PracticeBloc, PracticeState>(
-        builder: (context, state) {
-          final bloc = context.read<PracticeBloc>();
-
-          return switch (state.status) {
-            PracticeStatus.initial ||
-            PracticeStatus.loading => const CenteredCircularProgressIndicator(),
-            PracticeStatus.failure => ErrorState(
-              message: 'Something went wrong',
-              retryLabel: 'Retry',
-              onRetry: () => bloc.add(const PracticeLoadRequested()),
-            ),
-            PracticeStatus.empty => const EmptyState(
-              message: 'No items due for review.\nGreat job!',
-            ),
-            PracticeStatus.completed => _CompletedView(
-              reviewed: state.items.length,
-              onRestart: () => bloc.add(const PracticeLoadRequested()),
-            ),
-            PracticeStatus.reviewing => _ReviewingView(state: state),
-          };
-        },
-      ),
-    );
+    return Placeholder();
+    // return Scaffold(
+    //   appBar: AppBar(
+    //     title: const Text('Practice'),
+    //     actions: [
+    //       BlocBuilder<PracticeBloc, PracticeState>(
+    //         buildWhen: (prev, curr) =>
+    //             prev.reviewed != curr.reviewed ||
+    //             prev.items.length != curr.items.length,
+    //         builder: (context, state) {
+    //           if (state.status != PracticeStatus.reviewing) {
+    //             return const SizedBox.shrink();
+    //           }
+    //           return Padding(
+    //             padding: const EdgeInsets.only(right: Spacing.medium),
+    //             child: Center(
+    //               child: Text(
+    //                 '${state.reviewed}/${state.items.length}',
+    //                 style: Theme.of(context).textTheme.bodyMedium,
+    //               ),
+    //             ),
+    //           );
+    //         },
+    //       ),
+    //     ],
+    //   ),
+    //   body: BlocBuilder<PracticeBloc, PracticeState>(
+    //     builder: (context, state) {
+    //       final bloc = context.read<PracticeBloc>();
+    //
+    //       return switch (state.status) {
+    //         PracticeStatus.initial ||
+    //         PracticeStatus.loading => const CenteredCircularProgressIndicator(),
+    //         PracticeStatus.failure => ErrorState(
+    //           message: 'Something went wrong',
+    //           retryLabel: 'Retry',
+    //           onRetry: () => bloc.add(const PracticeLoadRequested()),
+    //         ),
+    //         PracticeStatus.empty => const EmptyState(
+    //           message: 'No items due for review.\nGreat job!',
+    //         ),
+    //         PracticeStatus.completed => _CompletedView(
+    //           reviewed: state.items.length,
+    //           onRestart: () => bloc.add(const PracticeLoadRequested()),
+    //         ),
+    //         PracticeStatus.reviewing => _ReviewingView(state: state),
+    //       };
+    //     },
+    //   ),
+    // );
   }
 }
 

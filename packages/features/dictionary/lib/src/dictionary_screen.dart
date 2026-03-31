@@ -33,50 +33,51 @@ class DictionaryView extends StatelessWidget {
   Widget build(BuildContext context) {
     final bloc = context.read<DictionaryBloc>();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dictionary'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(56),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: Spacing.large,
-              vertical: Spacing.small,
-            ),
-            child: TextField(
-              decoration: const InputDecoration(
-                hintText: 'Search words...',
-                prefixIcon: Icon(Icons.search),
-                isDense: true,
-              ),
-              onChanged: (query) => bloc.add(
-                DictionarySearchChanged(query),
-              ),
-            ),
-          ),
-        ),
-      ),
-      body: BlocBuilder<DictionaryBloc, DictionaryState>(
-        builder: (context, state) {
-          return switch (state.status) {
-            DictionaryStatus.initial || DictionaryStatus.loading =>
-              const CenteredCircularProgressIndicator(),
-            DictionaryStatus.failure => ErrorState(
-              message: 'Failed to load dictionary',
-              retryLabel: 'Retry',
-              onRetry: () => bloc.add(const DictionaryLoadRequested()),
-            ),
-            DictionaryStatus.success =>
-              state.isEmpty
-                  ? const EmptyState(
-                      message:
-                          'No saved words yet.\nTranslate text while reading to add words.',
-                    )
-                  : _EntryList(entries: state.filteredEntries),
-          };
-        },
-      ),
-    );
+    return Placeholder();
+    // return Scaffold(
+    //   appBar: AppBar(
+    //     title: const Text('Dictionary'),
+    //     bottom: PreferredSize(
+    //       preferredSize: const Size.fromHeight(56),
+    //       child: Padding(
+    //         padding: const EdgeInsets.symmetric(
+    //           horizontal: Spacing.large,
+    //           vertical: Spacing.small,
+    //         ),
+    //         child: TextField(
+    //           decoration: const InputDecoration(
+    //             hintText: 'Search words...',
+    //             prefixIcon: Icon(Icons.search),
+    //             isDense: true,
+    //           ),
+    //           onChanged: (query) => bloc.add(
+    //             DictionarySearchChanged(query),
+    //           ),
+    //         ),
+    //       ),
+    //     ),
+    //   ),
+    //   body: BlocBuilder<DictionaryBloc, DictionaryState>(
+    //     builder: (context, state) {
+    //       return switch (state.status) {
+    //         DictionaryStatus.initial || DictionaryStatus.loading =>
+    //           const CenteredCircularProgressIndicator(),
+    //         DictionaryStatus.failure => ErrorState(
+    //           message: 'Failed to load dictionary',
+    //           retryLabel: 'Retry',
+    //           onRetry: () => bloc.add(const DictionaryLoadRequested()),
+    //         ),
+    //         DictionaryStatus.success =>
+    //           state.isEmpty
+    //               ? const EmptyState(
+    //                   message:
+    //                       'No saved words yet.\nTranslate text while reading to add words.',
+    //                 )
+    //               : _EntryList(entries: state.filteredEntries),
+    //       };
+    //     },
+    //   ),
+    // );
   }
 }
 
