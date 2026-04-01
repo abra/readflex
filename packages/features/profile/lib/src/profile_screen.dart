@@ -29,6 +29,11 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    assert(() {
+      debugPrint('[SCREEN] build ProfileScreen');
+      return true;
+    }());
+
     return MultiBlocProvider(
       providers: [
         BlocProvider(

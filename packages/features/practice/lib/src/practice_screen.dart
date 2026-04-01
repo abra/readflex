@@ -23,6 +23,11 @@ class PracticeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    assert(() {
+      debugPrint('[SCREEN] build PracticeScreen');
+      return true;
+    }());
+
     return BlocProvider(
       create: (_) => PracticeBloc(
         flashcardRepository: flashcardRepository,

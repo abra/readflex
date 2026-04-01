@@ -34,6 +34,11 @@ class ReaderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    assert(() {
+      debugPrint('[SCREEN] build ReaderScreen(sourceId: $sourceId)');
+      return true;
+    }());
+
     return BlocProvider(
       create: (_) => ReaderBloc(
         bookRepository: bookRepository,
@@ -62,27 +67,28 @@ class _ReaderView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight),
-        child: BlocSelector<ReaderBloc, ReaderState, _ReaderAppBarState>(
-          selector: (state) => _ReaderAppBarState(
-            title: state.title,
-            highlightCount: state.highlights.length,
-          ),
-          builder: (context, appBarState) {
-            return _ReaderAppBar(
-              title: appBarState.title,
-              highlightCount: appBarState.highlightCount,
-            );
-          },
-        ),
-      ),
-      body: BlocBuilder<ReaderBloc, ReaderState>(
-        buildWhen: (previous, current) => previous != current,
-        builder: (context, state) => _buildBody(context, state),
-      ),
-    );
+    return Placeholder();
+    // return Scaffold(
+    //   appBar: PreferredSize(
+    //     preferredSize: const Size.fromHeight(kToolbarHeight),
+    //     child: BlocSelector<ReaderBloc, ReaderState, _ReaderAppBarState>(
+    //       selector: (state) => _ReaderAppBarState(
+    //         title: state.title,
+    //         highlightCount: state.highlights.length,
+    //       ),
+    //       builder: (context, appBarState) {
+    //         return _ReaderAppBar(
+    //           title: appBarState.title,
+    //           highlightCount: appBarState.highlightCount,
+    //         );
+    //       },
+    //     ),
+    //   ),
+    //   body: BlocBuilder<ReaderBloc, ReaderState>(
+    //     buildWhen: (previous, current) => previous != current,
+    //     builder: (context, state) => _buildBody(context, state),
+    //   ),
+    // );
   }
 
   Widget _buildBody(BuildContext context, ReaderState state) {

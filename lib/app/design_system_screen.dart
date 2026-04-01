@@ -19,6 +19,11 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
 
   @override
   Widget build(BuildContext context) {
+    assert(() {
+      debugPrint('[SCREEN] build DesignSystemScreen');
+      return true;
+    }());
+
     return Theme(
       data: _themeMode == ThemeMode.dark
           ? const DarkAppThemeData().materialThemeData

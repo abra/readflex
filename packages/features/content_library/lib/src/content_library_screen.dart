@@ -1,6 +1,5 @@
 import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
-import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -8,9 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:preferences_service/preferences_service.dart';
 
 import 'content_library_bloc.dart';
-import 'content_library_grid_view.dart';
 import 'content_library_layout_cubit.dart';
-import 'content_library_list_view.dart';
 
 /// Content library tab: shows all books and articles.
 class ContentLibraryScreen extends StatelessWidget {
@@ -33,6 +30,11 @@ class ContentLibraryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    assert(() {
+      debugPrint('[SCREEN] build ContentLibraryScreen');
+      return true;
+    }());
+
     return MultiBlocProvider(
       providers: [
         BlocProvider(

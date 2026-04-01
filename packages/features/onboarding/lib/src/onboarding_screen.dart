@@ -41,6 +41,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    assert(() {
+      debugPrint('[SCREEN] build OnboardingScreen');
+      return true;
+    }());
+
     final theme = AppTheme.of(context);
     final colorScheme = theme.materialThemeData.colorScheme;
 

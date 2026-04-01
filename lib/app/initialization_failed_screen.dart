@@ -43,6 +43,11 @@ class _InitializationFailedScreenState
 
   @override
   Widget build(BuildContext context) {
+    assert(() {
+      debugPrint('[SCREEN] build InitializationFailedScreen');
+      return true;
+    }());
+
     final theme = Theme.of(context);
     final typography = theme.textTheme;
     final colorScheme = theme.colorScheme;

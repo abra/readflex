@@ -44,6 +44,11 @@ class _FirstImportScreenState extends State<FirstImportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    assert(() {
+      debugPrint('[SCREEN] build FirstImportScreen');
+      return true;
+    }());
+
     return Scaffold(
       body: Center(
         child: Padding(

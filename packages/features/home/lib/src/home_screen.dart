@@ -32,6 +32,11 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    assert(() {
+      debugPrint('[SCREEN] build HomeScreen');
+      return true;
+    }());
+
     return BlocProvider(
       create: (_) => HomeBloc(
         bookRepository: bookRepository,

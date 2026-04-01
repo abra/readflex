@@ -9,6 +9,13 @@ class TabContainerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    assert(() {
+      debugPrint(
+        '[SCREEN] build TabContainerScreen(index: ${navigationShell.currentIndex})',
+      );
+      return true;
+    }());
+
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: NavigationBar(

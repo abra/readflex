@@ -32,6 +32,11 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    assert(() {
+      debugPrint('[SCREEN] build SplashScreen');
+      return true;
+    }());
+
     final theme = AppTheme.of(context);
 
     return Scaffold(

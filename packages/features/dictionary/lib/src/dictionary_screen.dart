@@ -17,10 +17,15 @@ class DictionaryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    assert(() {
+      debugPrint('[SCREEN] build DictionaryScreen');
+      return true;
+    }());
+
     return BlocProvider(
-      create: (_) =>
-          DictionaryBloc(dictionaryRepository: dictionaryRepository)
-            ..add(const DictionaryLoadRequested()),
+      create: (_) => DictionaryBloc(
+        dictionaryRepository: dictionaryRepository,
+      )..add(const DictionaryLoadRequested()),
       child: const DictionaryView(),
     );
   }
