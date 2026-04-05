@@ -1,6 +1,7 @@
 import 'package:content_library/content_library.dart';
 import 'package:dictionary/dictionary.dart';
 import 'package:flashcard/flashcard.dart';
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:highlight/highlight.dart';
 import 'package:home/home.dart';
@@ -18,7 +19,8 @@ import 'package:subscription_paywall/subscription_paywall.dart';
 import 'package:translate/translate.dart';
 
 abstract final class AppRoutes {
-  static const splash = '/';
+  static const root = '/';
+  static const splash = '/splash';
   static const home = '/home';
   static const library = '/library';
   static const dictionary = '/dictionary';
@@ -37,34 +39,32 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
 
   return GoRouter(
     debugLogDiagnostics: deps.config.isDev,
-    initialLocation: AppRoutes.splash,
+    initialLocation: AppRoutes.root,
     redirect: (context, state) async {
       final location = state.uri.path;
-      final prefs = deps.preferencesService.current;
 
-      if (location == AppRoutes.home && !prefs.onboardingCompleted) {
-        return AppRoutes.onboarding;
+      if (location == AppRoutes.root) {
+        return _resolveEntryRoute(deps);
       }
 
-      if (location == AppRoutes.home && !prefs.hasCompletedSetup) {
-        final books = await deps.bookRepository.getBooks();
-        final articles = await deps.articleRepository.getArticles();
-        if (books.isEmpty && articles.isEmpty) {
-          return AppRoutes.firstImport;
+      if (location == AppRoutes.home) {
+        final redirect = await _redirectHomeIfNeeded(deps);
+        if (redirect != null) {
+          return redirect;
         }
-        // User somehow has books — mark setup as complete.
-        await deps.preferencesService.update(
-          (p) => p.copyWith(hasCompletedSetup: true),
-        );
       }
 
       return null;
     },
     routes: [
       GoRoute(
+        path: AppRoutes.root,
+        builder: (context, state) => const SizedBox.shrink(),
+      ),
+      GoRoute(
         path: AppRoutes.splash,
         builder: (context, state) => SplashScreen(
-          onReady: () => context.go(AppRoutes.home),
+          onReady: () => context.go(AppRoutes.root),
         ),
       ),
       StatefulShellRoute.indexedStack(
@@ -256,6 +256,34 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
       ),
     ],
   );
+}
+
+Future<String> _resolveEntryRoute(DependenciesContainer deps) async {
+  final redirect = await _redirectHomeIfNeeded(deps);
+  return redirect ?? AppRoutes.home;
+}
+
+Future<String?> _redirectHomeIfNeeded(DependenciesContainer deps) async {
+  final prefs = deps.preferencesService.current;
+
+  if (!prefs.onboardingCompleted) {
+    return AppRoutes.onboarding;
+  }
+
+  if (!prefs.hasCompletedSetup) {
+    final books = await deps.bookRepository.getBooks();
+    final articles = await deps.articleRepository.getArticles();
+    if (books.isEmpty && articles.isEmpty) {
+      return AppRoutes.firstImport;
+    }
+
+    // User somehow has content already — mark setup as complete.
+    await deps.preferencesService.update(
+      (p) => p.copyWith(hasCompletedSetup: true),
+    );
+  }
+
+  return null;
 }
 
 Future<bool> _importArticle(
