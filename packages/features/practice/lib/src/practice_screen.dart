@@ -44,6 +44,7 @@ class PracticeView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // TODO: implement practice/review UI.
     return Placeholder();
     // return Scaffold(
     //   appBar: AppBar(
@@ -58,7 +59,7 @@ class PracticeView extends StatelessWidget {
     //             return const SizedBox.shrink();
     //           }
     //           return Padding(
-    //             padding: const EdgeInsets.only(right: Spacing.medium),
+    //             padding: const EdgeInsets.only(right: AppSpacing.md),
     //             child: Center(
     //               child: Text(
     //                 '${state.reviewed}/${state.items.length}',
@@ -107,7 +108,7 @@ class _ReviewingView extends StatelessWidget {
     final bloc = context.read<PracticeBloc>();
 
     return Padding(
-      padding: const EdgeInsets.all(Spacing.xLarge),
+      padding: const EdgeInsets.all(AppSpacing.xxl),
       child: Column(
         children: [
           Expanded(
@@ -116,7 +117,7 @@ class _ReviewingView extends StatelessWidget {
                 child: SizedBox(
                   width: double.infinity,
                   child: Padding(
-                    padding: const EdgeInsets.all(Spacing.xLarge),
+                    padding: const EdgeInsets.all(AppSpacing.xxl),
                     child: switch (state.currentItem) {
                       FlashcardItem(:final flashcard) => FlashcardCardContent(
                         card: flashcard,
@@ -137,7 +138,7 @@ class _ReviewingView extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: Spacing.medium),
+          const SizedBox(height: AppSpacing.md),
           if (!state.isRevealed)
             SizedBox(
               width: double.infinity,
@@ -169,14 +170,14 @@ class _CompletedView extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.celebration, size: 64),
-          const SizedBox(height: Spacing.medium),
+          const SizedBox(height: AppSpacing.md),
           Text(
             'Session complete!',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
-          const SizedBox(height: Spacing.small),
+          const SizedBox(height: AppSpacing.sm),
           Text('$reviewed items reviewed'),
-          const SizedBox(height: Spacing.large),
+          const SizedBox(height: AppSpacing.xl),
           FilledButton(
             onPressed: onRestart,
             child: const Text('Review again'),

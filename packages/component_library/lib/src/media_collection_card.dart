@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'theme/app_radius.dart';
-import 'theme/spacing.dart';
+import 'theme/extensions/build_context_ext.dart';
+import 'theme/tokens/app_radius.dart';
+import 'theme/tokens/app_spacing.dart';
 
 /// A reusable collection card with a visual media area and compact metadata.
 class MediaCollectionCard extends StatelessWidget {
@@ -26,7 +27,8 @@ class MediaCollectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final textTheme = context.text;
+    final colorScheme = context.colors;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -43,8 +45,8 @@ class MediaCollectionCard extends StatelessWidget {
                   media,
                   if (topRight != null)
                     Positioned(
-                      top: Spacing.small,
-                      right: Spacing.small,
+                      top: AppSpacing.sm,
+                      right: AppSpacing.sm,
                       child: topRight!,
                     ),
                 ],
@@ -52,10 +54,10 @@ class MediaCollectionCard extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(
-                Spacing.medium,
-                Spacing.medium,
-                Spacing.medium,
-                Spacing.mediumLarge,
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.lg,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,37 +66,37 @@ class MediaCollectionCard extends StatelessWidget {
                     title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall,
+                    style: textTheme.titleSmall,
                   ),
                   if (subtitle != null) ...[
-                    const SizedBox(height: Spacing.xSmall),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       subtitle!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
                   if (meta != null) ...[
-                    const SizedBox(height: Spacing.small),
+                    const SizedBox(height: AppSpacing.sm),
                     DecoratedBox(
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(AppRadius.small),
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: Spacing.small,
-                          vertical: 6,
+                          horizontal: AppSpacing.sm,
+                          vertical: AppSpacing.xs,
                         ),
                         child: Text(
                           meta!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+                          style: textTheme.labelSmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),

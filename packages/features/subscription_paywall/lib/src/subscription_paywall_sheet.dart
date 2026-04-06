@@ -55,7 +55,7 @@ class _SubscriptionPaywallSheetView extends StatelessWidget {
 
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(Spacing.large),
+            padding: const EdgeInsets.all(AppSpacing.xl),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -64,15 +64,15 @@ class _SubscriptionPaywallSheetView extends StatelessWidget {
                   title: 'Readflex Premium',
                   onClose: () => Navigator.of(context).pop(),
                 ),
-                const SizedBox(height: Spacing.large),
+                const SizedBox(height: AppSpacing.xl),
                 const Icon(Icons.workspace_premium, size: 64),
-                const SizedBox(height: Spacing.medium),
+                const SizedBox(height: AppSpacing.md),
                 Text(
                   'Unlock Premium Features',
                   style: Theme.of(context).textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: Spacing.medium),
+                const SizedBox(height: AppSpacing.md),
                 const _FeatureItem(
                   icon: Icons.translate,
                   text: 'AI-powered translations with context',
@@ -85,10 +85,10 @@ class _SubscriptionPaywallSheetView extends StatelessWidget {
                   icon: Icons.cloud_sync,
                   text: 'Cloud sync across devices',
                 ),
-                const SizedBox(height: Spacing.large),
+                const SizedBox(height: AppSpacing.xl),
                 if (state.status == SubscriptionPaywallStatus.failure)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: Spacing.small),
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                     child: Text(
                       'Purchase failed. Please try again.',
                       style: TextStyle(
@@ -106,7 +106,7 @@ class _SubscriptionPaywallSheetView extends StatelessWidget {
                       ? const ButtonLoadingIndicator()
                       : const Text('Subscribe'),
                 ),
-                const SizedBox(height: Spacing.small),
+                const SizedBox(height: AppSpacing.sm),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
                   child: const Text('Maybe later'),
@@ -132,11 +132,11 @@ class _FeatureItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: Spacing.xSmall),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
         children: [
           Icon(icon, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: Spacing.small),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(child: Text(text)),
         ],
       ),

@@ -25,9 +25,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
     }());
 
     return Theme(
-      data: _themeMode == ThemeMode.dark
-          ? const DarkAppThemeData().materialThemeData
-          : const LightAppThemeData().materialThemeData,
+      data: _themeMode == ThemeMode.dark ? AppTheme.dark() : AppTheme.light(),
       child: Builder(
         builder: (context) {
           final theme = Theme.of(context);
@@ -37,7 +35,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
               title: const Text('Design System'),
               actions: [
                 Padding(
-                  padding: const EdgeInsets.only(right: Spacing.medium),
+                  padding: const EdgeInsets.only(right: AppSpacing.md),
                   child: SegmentedButton<ThemeMode>(
                     showSelectedIcon: false,
                     segments: const [
@@ -61,18 +59,18 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
               ],
             ),
             body: ListView(
-              padding: const EdgeInsets.all(Spacing.large),
+              padding: const EdgeInsets.all(AppSpacing.xl),
               children: [
                 Text(
                   'A compact preview of the app shell and reader surfaces.',
                   style: theme.textTheme.bodyMedium,
                 ),
-                const SizedBox(height: Spacing.large),
+                const SizedBox(height: AppSpacing.xl),
                 _SectionCard(
                   title: 'Color Palette',
                   child: Wrap(
-                    spacing: Spacing.small,
-                    runSpacing: Spacing.small,
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
                     children: [
                       _ColorSwatchCard(
                         label: 'Scaffold',
@@ -101,7 +99,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: Spacing.large),
+                const SizedBox(height: AppSpacing.xl),
                 _SectionCard(
                   title: 'Typography',
                   child: Column(
@@ -111,14 +109,14 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                         'Display Large',
                         style: theme.textTheme.displaySmall,
                       ),
-                      const SizedBox(height: Spacing.small),
+                      const SizedBox(height: AppSpacing.sm),
                       Text('Title Medium', style: theme.textTheme.titleMedium),
-                      const SizedBox(height: Spacing.small),
+                      const SizedBox(height: AppSpacing.sm),
                       Text(
                         'Body text is tuned for a calmer, reading-first hierarchy instead of stock Material.',
                         style: theme.textTheme.bodyLarge,
                       ),
-                      const SizedBox(height: Spacing.small),
+                      const SizedBox(height: AppSpacing.sm),
                       Text(
                         'Label text / utility controls',
                         style: theme.textTheme.labelLarge,
@@ -126,7 +124,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: Spacing.large),
+                const SizedBox(height: AppSpacing.xl),
                 _SectionCard(
                   title: 'Buttons',
                   child: Column(
@@ -136,24 +134,24 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                         onPressed: () {},
                         child: const Text('Primary Action'),
                       ),
-                      const SizedBox(height: Spacing.small),
+                      const SizedBox(height: AppSpacing.sm),
                       OutlinedButton(
                         onPressed: () {},
                         child: const Text('Secondary Action'),
                       ),
-                      const SizedBox(height: Spacing.small),
+                      const SizedBox(height: AppSpacing.sm),
                       Row(
                         children: [
                           TextButton(
                             onPressed: () {},
                             child: const Text('Text Button'),
                           ),
-                          const SizedBox(width: Spacing.small),
+                          const SizedBox(width: AppSpacing.sm),
                           IconButton(
                             onPressed: () {},
                             icon: const Icon(Icons.bookmark_border),
                           ),
-                          const SizedBox(width: Spacing.small),
+                          const SizedBox(width: AppSpacing.sm),
                           IconButton(
                             onPressed: () {},
                             icon: const Icon(Icons.tune),
@@ -163,7 +161,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: Spacing.large),
+                const SizedBox(height: AppSpacing.xl),
                 _SectionCard(
                   title: 'Inputs And Selection',
                   child: Column(
@@ -175,7 +173,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                           hintText: 'https://example.com/story',
                         ),
                       ),
-                      const SizedBox(height: Spacing.medium),
+                      const SizedBox(height: AppSpacing.md),
                       SegmentedButton<String>(
                         showSelectedIcon: false,
                         segments: const [
@@ -191,10 +189,10 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                           setState(() => _selectedSegment = value);
                         },
                       ),
-                      const SizedBox(height: Spacing.medium),
+                      const SizedBox(height: AppSpacing.md),
                       Wrap(
-                        spacing: Spacing.small,
-                        runSpacing: Spacing.small,
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.sm,
                         children: ['Paper', 'Warm', 'Mist', 'Night'].map((
                           chip,
                         ) {
@@ -207,7 +205,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                           );
                         }).toList(),
                       ),
-                      const SizedBox(height: Spacing.medium),
+                      const SizedBox(height: AppSpacing.md),
                       SwitchListTile.adaptive(
                         value: _switchValue,
                         contentPadding: EdgeInsets.zero,
@@ -217,7 +215,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                           setState(() => _switchValue = value);
                         },
                       ),
-                      const SizedBox(height: Spacing.small),
+                      const SizedBox(height: AppSpacing.sm),
                       Text(
                         'Text size',
                         style: theme.textTheme.labelLarge,
@@ -231,13 +229,13 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: Spacing.large),
+                const SizedBox(height: AppSpacing.xl),
                 _SectionCard(
                   title: 'Library Grid',
                   child: GridView.count(
                     crossAxisCount: 2,
-                    crossAxisSpacing: Spacing.medium,
-                    mainAxisSpacing: Spacing.medium,
+                    crossAxisSpacing: AppSpacing.md,
+                    mainAxisSpacing: AppSpacing.md,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     childAspectRatio: 0.58,
@@ -269,7 +267,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: Spacing.large),
+                const SizedBox(height: AppSpacing.xl),
                 _SectionCard(
                   title: 'Cards And Rows',
                   child: Column(
@@ -287,7 +285,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: Spacing.small),
+                      const SizedBox(height: AppSpacing.sm),
                       _ActionRowCard(
                         leading: const Icon(Icons.auto_awesome_outlined),
                         title: 'Premium',
@@ -301,12 +299,12 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: Spacing.large),
+                const SizedBox(height: AppSpacing.xl),
                 _SectionCard(
                   title: 'Reader Presets',
                   child: Wrap(
-                    spacing: Spacing.medium,
-                    runSpacing: Spacing.medium,
+                    spacing: AppSpacing.md,
+                    runSpacing: AppSpacing.md,
                     children: ReaderThemePreset.values.map((preset) {
                       return _ReaderPresetCard(
                         label: preset.label,
@@ -315,11 +313,11 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                     }).toList(),
                   ),
                 ),
-                const SizedBox(height: Spacing.large),
+                const SizedBox(height: AppSpacing.xl),
                 _SectionCard(
                   title: 'Navigation',
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(AppRadius.large),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                     child: NavigationBar(
                       selectedIndex: _selectedNavIndex,
                       onDestinationSelected: (index) {
@@ -345,7 +343,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: Spacing.xxLarge),
+                const SizedBox(height: AppSpacing.xxxl),
               ],
             ),
           );
@@ -368,12 +366,12 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(Spacing.mediumLarge),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: Spacing.medium),
+            const SizedBox(height: AppSpacing.md),
             child,
           ],
         ),
@@ -399,10 +397,10 @@ class _ColorSwatchCard extends StatelessWidget {
         : Colors.black87;
     return Container(
       width: 112,
-      padding: const EdgeInsets.all(Spacing.small),
+      padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(AppRadius.medium),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: Theme.of(context).colorScheme.outline),
       ),
       child: Column(
@@ -414,7 +412,7 @@ class _ColorSwatchCard extends StatelessWidget {
               color: textColor,
             ),
           ),
-          const SizedBox(height: Spacing.large),
+          const SizedBox(height: AppSpacing.xl),
           Text(
             '#${color.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -440,10 +438,10 @@ class _ReaderPresetCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 168,
-      padding: const EdgeInsets.all(Spacing.medium),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: themeData.surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.medium),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: themeData.dividerColor),
       ),
       child: Column(
@@ -455,22 +453,22 @@ class _ReaderPresetCard extends StatelessWidget {
               color: themeData.secondaryTextColor,
             ),
           ),
-          const SizedBox(height: Spacing.small),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             'A quiet page for long-form reading.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: themeData.primaryTextColor,
               height: 1.55,
-              fontFamily: 'SourceSerif4',
+              fontFamily: AppTypography.fontFamilySerif,
             ),
           ),
-          const SizedBox(height: Spacing.medium),
+          const SizedBox(height: AppSpacing.md),
           Container(
             height: 10,
             width: 60,
             decoration: BoxDecoration(
               color: themeData.panelColor,
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(AppRadius.pill),
             ),
           ),
         ],
@@ -502,10 +500,10 @@ class _DemoLibraryCard extends StatelessWidget {
       topRight: DecoratedBox(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.86),
-          borderRadius: BorderRadius.circular(AppRadius.small),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
         child: const Padding(
-          padding: EdgeInsets.all(Spacing.xSmall),
+          padding: EdgeInsets.all(AppSpacing.xs),
           child: Icon(Icons.more_horiz, size: 18),
         ),
       ),
@@ -533,19 +531,19 @@ class _DemoBookMedia extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(Spacing.mediumLarge),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DecoratedBox(
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(AppRadius.small),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: Spacing.small,
-                  vertical: 6,
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
                 ),
                 child: Text('BOOK', style: theme.textTheme.labelSmall),
               ),
@@ -578,7 +576,7 @@ class _DemoArticleMedia extends StatelessWidget {
         color: theme.colorScheme.surfaceContainerHighest,
       ),
       child: Padding(
-        padding: const EdgeInsets.all(Spacing.mediumLarge),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -591,7 +589,7 @@ class _DemoArticleMedia extends StatelessWidget {
             ),
             const Spacer(),
             Text(domain, style: theme.textTheme.titleMedium),
-            const SizedBox(height: Spacing.small),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               'ARTICLE',
               style: theme.textTheme.labelMedium?.copyWith(
@@ -622,29 +620,26 @@ class _ActionRowCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(Spacing.mediumLarge),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 2),
+              padding: const EdgeInsets.only(top: AppSpacing.xxs),
               child: leading,
             ),
-            const SizedBox(width: Spacing.medium),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: Theme.of(context).textTheme.titleSmall),
-                  const SizedBox(height: Spacing.xSmall),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
+                  Text(title, style: context.text.titleSmall),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(subtitle, style: context.text.bodySmall),
                 ],
               ),
             ),
-            const SizedBox(width: Spacing.medium),
+            const SizedBox(width: AppSpacing.md),
             Flexible(child: action),
           ],
         ),

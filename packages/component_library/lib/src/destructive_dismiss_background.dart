@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'theme/spacing.dart';
+import 'theme/tokens/app_spacing.dart';
 
 /// Standard end-to-start dismiss background for destructive actions.
 class DestructiveDismissBackground extends StatelessWidget {
@@ -16,7 +16,7 @@ class DestructiveDismissBackground extends StatelessWidget {
     return Container(
       color: Theme.of(context).colorScheme.error,
       alignment: Alignment.centerRight,
-      padding: const EdgeInsets.only(right: Spacing.large),
+      padding: const EdgeInsets.only(right: AppSpacing.xl),
       child: Icon(
         icon,
         color: Theme.of(context).colorScheme.onError,

@@ -14,7 +14,6 @@ void main() {
         ),
       );
 
-      // Wait for splash duration + async work.
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
       expect(readyCalled, isTrue);
@@ -27,19 +26,15 @@ void main() {
 
       expect(find.text('Readflex'), findsOneWidget);
 
-      // Let splash timer complete to avoid pending timer assertion.
       await tester.pumpAndSettle(const Duration(seconds: 2));
     });
   });
 }
 
 Widget _wrapWithTheme(Widget child) {
-  const light = LightAppThemeData();
-  const dark = DarkAppThemeData();
-
   return MaterialApp(
-    theme: light.materialThemeData,
-    darkTheme: dark.materialThemeData,
-    home: AppTheme(lightTheme: light, darkTheme: dark, child: child),
+    theme: AppTheme.light(),
+    darkTheme: AppTheme.dark(),
+    home: child,
   );
 }

@@ -60,8 +60,8 @@ class _HighlightSheetView extends StatelessWidget {
         return ActionBottomSheetLayout(
           title: 'Highlight',
           onClose: () => Navigator.of(context).pop(),
-          headerSpacing: Spacing.small,
-          bodyPadding: const EdgeInsets.all(Spacing.large),
+          headerSpacing: AppSpacing.sm,
+          bodyPadding: const EdgeInsets.all(AppSpacing.xl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -70,10 +70,11 @@ class _HighlightSheetView extends StatelessWidget {
               SelectionPreviewCard(
                 text: selection.selectedText,
                 backgroundColor: _colorForHighlight(
+                  context,
                   state.selectedColor,
                 ).withValues(alpha: 0.3),
               ),
-              const SizedBox(height: Spacing.medium),
+              const SizedBox(height: AppSpacing.md),
               // Color picker
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -85,7 +86,7 @@ class _HighlightSheetView extends StatelessWidget {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: _colorForHighlight(color),
+                        color: _colorForHighlight(context, color),
                         shape: BoxShape.circle,
                         border: isSelected ? Border.all(width: 3) : null,
                       ),
@@ -93,7 +94,7 @@ class _HighlightSheetView extends StatelessWidget {
                   );
                 }).toList(),
               ),
-              const SizedBox(height: Spacing.medium),
+              const SizedBox(height: AppSpacing.md),
               // Note field
               TextField(
                 decoration: const InputDecoration(
@@ -104,10 +105,10 @@ class _HighlightSheetView extends StatelessWidget {
                 enabled: !isSaving,
                 onChanged: (v) => context.read<HighlightCubit>().setNote(v),
               ),
-              const SizedBox(height: Spacing.medium),
+              const SizedBox(height: AppSpacing.md),
               if (state.status == HighlightSheetStatus.failure)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: Spacing.small),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: Text(
                     'Failed to save highlight',
                     style: TextStyle(
@@ -137,11 +138,14 @@ class _HighlightSheetView extends StatelessWidget {
     );
   }
 
-  Color _colorForHighlight(HighlightColor color) => switch (color) {
-    HighlightColor.yellow => Colors.yellow,
-    HighlightColor.green => Colors.green.shade300,
-    HighlightColor.blue => Colors.blue.shade200,
-    HighlightColor.pink => Colors.pink.shade200,
-    HighlightColor.purple => Colors.purple.shade200,
-  };
+  Color _colorForHighlight(BuildContext context, HighlightColor color) {
+    final ext = Theme.of(context).ext;
+    return switch (color) {
+      HighlightColor.yellow => ext.highlightYellow,
+      HighlightColor.green => ext.highlightGreen,
+      HighlightColor.blue => ext.highlightBlue,
+      HighlightColor.pink => ext.highlightPink,
+      HighlightColor.purple => ext.highlightPurple,
+    };
+  }
 }

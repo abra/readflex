@@ -147,7 +147,7 @@ class _CompactMediaThumb extends StatelessWidget {
       width: 40,
       height: 56,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadius.small),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         child: child,
       ),
     );
@@ -193,19 +193,19 @@ class _FallbackBookCover extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(Spacing.mediumLarge),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DecoratedBox(
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface.withValues(alpha: 0.8),
-                borderRadius: BorderRadius.circular(AppRadius.small),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: Spacing.small,
-                  vertical: 6,
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
                 ),
                 child: Text(
                   book.format.name.toUpperCase(),
@@ -221,7 +221,7 @@ class _FallbackBookCover extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: Spacing.small),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               book.title,
               maxLines: 3,
@@ -268,7 +268,7 @@ class _ArticlePlaceholder extends StatelessWidget {
         color: theme.colorScheme.surfaceContainerHighest,
       ),
       child: Padding(
-        padding: const EdgeInsets.all(Spacing.mediumLarge),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -286,7 +286,7 @@ class _ArticlePlaceholder extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.titleMedium,
             ),
-            const SizedBox(height: Spacing.small),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               'ARTICLE',
               style: theme.textTheme.labelMedium?.copyWith(
@@ -323,10 +323,10 @@ class _DeleteMenuButton extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.86),
-          borderRadius: BorderRadius.circular(AppRadius.small),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
         child: const Padding(
-          padding: EdgeInsets.all(Spacing.xSmall),
+          padding: EdgeInsets.all(AppSpacing.xs),
           child: Icon(Icons.more_horiz, size: 18),
         ),
       ),

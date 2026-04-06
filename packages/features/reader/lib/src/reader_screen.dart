@@ -12,6 +12,9 @@ import 'package:shared/shared.dart';
 
 import 'reader_bloc.dart';
 
+/// Approximate height of the context panel, used to offset the review banner.
+const _kContextPanelHeight = 80.0;
+
 class ReaderScreen extends StatelessWidget {
   const ReaderScreen({
     required this.sourceId,
@@ -67,6 +70,7 @@ class _ReaderView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // TODO: implement reader UI with WebView (foliate-js / flutter_inappwebview).
     return Placeholder();
     // return Scaffold(
     //   appBar: PreferredSize(
@@ -101,9 +105,9 @@ class _ReaderView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.error_outline, size: 48),
-            const SizedBox(height: Spacing.medium),
+            const SizedBox(height: AppSpacing.md),
             const Text('Failed to load content'),
-            const SizedBox(height: Spacing.medium),
+            const SizedBox(height: AppSpacing.md),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('Go Back'),
@@ -259,17 +263,17 @@ class _ReadyContentState extends State<_ReadyContent> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 720),
               child: Padding(
-                padding: const EdgeInsets.all(Spacing.xLarge),
+                padding: const EdgeInsets.all(AppSpacing.xxl),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: readerTheme.surfaceColor,
-                    borderRadius: BorderRadius.circular(AppRadius.large),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                     border: Border.all(color: readerTheme.dividerColor),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: Spacing.xLarge,
-                      vertical: Spacing.xxLarge,
+                      horizontal: AppSpacing.xxl,
+                      vertical: AppSpacing.xxxl,
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -279,14 +283,14 @@ class _ReadyContentState extends State<_ReadyContent> {
                           size: 48,
                           color: readerTheme.accentColor,
                         ),
-                        const SizedBox(height: Spacing.mediumLarge),
+                        const SizedBox(height: AppSpacing.lg),
                         Text(
                           state.title,
                           style: Theme.of(context).textTheme.headlineSmall
                               ?.copyWith(color: readerTheme.primaryTextColor),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: Spacing.mediumLarge),
+                        const SizedBox(height: AppSpacing.lg),
                         Text(
                           state.isBook
                               ? 'This is where the book content will be rendered. The final reader should inherit the selected reading theme, font and typography settings.'
@@ -295,12 +299,12 @@ class _ReadyContentState extends State<_ReadyContent> {
                           textAlign: TextAlign.start,
                         ),
                         if (state.isBook && state.book != null) ...[
-                          const SizedBox(height: Spacing.large),
+                          const SizedBox(height: AppSpacing.xl),
                           LinearProgressIndicator(
                             value: state.book!.readingProgress,
                             minHeight: 4,
                           ),
-                          const SizedBox(height: Spacing.small),
+                          const SizedBox(height: AppSpacing.sm),
                           Text(
                             '${(state.book!.readingProgress * 100).toInt()}% read',
                             style: Theme.of(context).textTheme.labelSmall
@@ -343,9 +347,9 @@ class _ReadyContentState extends State<_ReadyContent> {
         // Review reminder banner
         if (state.showReviewReminder)
           Positioned(
-            left: Spacing.medium,
-            right: Spacing.medium,
-            bottom: state.hasSelection ? 80 : Spacing.medium,
+            left: AppSpacing.md,
+            right: AppSpacing.md,
+            bottom: state.hasSelection ? _kContextPanelHeight : AppSpacing.md,
             child: _ReviewReminderBanner(
               onReview: () {
                 bloc.add(const ReaderReviewReminderDismissed());
@@ -402,8 +406,8 @@ class _ContextPanel extends StatelessWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: Spacing.medium,
-              vertical: Spacing.small,
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -448,13 +452,13 @@ class _ReviewReminderBanner extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(
-          horizontal: Spacing.medium,
-          vertical: Spacing.small,
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
         ),
         child: Row(
           children: [
             const Icon(Icons.school, size: 20),
-            const SizedBox(width: Spacing.small),
+            const SizedBox(width: AppSpacing.sm),
             const Expanded(
               child: Text('You have items to review'),
             ),

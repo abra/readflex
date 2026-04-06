@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'bottom_sheet_header.dart';
-import 'theme/spacing.dart';
+import 'theme/tokens/app_spacing.dart';
 
 /// Shared shell for action-oriented bottom sheets.
 ///
@@ -13,9 +13,9 @@ class ActionBottomSheetLayout extends StatelessWidget {
     required this.onClose,
     required this.child,
     this.headerPadding = const EdgeInsets.fromLTRB(
-      Spacing.large,
-      Spacing.large,
-      Spacing.large,
+      AppSpacing.xl,
+      AppSpacing.xl,
+      AppSpacing.xl,
       0,
     ),
     this.bodyPadding = EdgeInsets.zero,

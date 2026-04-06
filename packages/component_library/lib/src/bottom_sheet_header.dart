@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'theme/spacing.dart';
+import 'theme/extensions/build_context_ext.dart';
+import 'theme/tokens/app_spacing.dart';
 
 class BottomSheetHeader extends StatelessWidget {
   const BottomSheetHeader({
@@ -17,9 +18,9 @@ class BottomSheetHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(title, style: Theme.of(context).textTheme.titleLarge),
+        Text(title, style: context.text.titleLarge),
         Transform.translate(
-          offset: const Offset(Spacing.small, 0),
+          offset: const Offset(AppSpacing.sm, 0),
           child: IconButton(icon: const Icon(Icons.close), onPressed: onClose),
         ),
       ],

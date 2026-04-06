@@ -69,8 +69,8 @@ class _MiniReviewSheetView extends StatelessWidget {
         return ActionBottomSheetLayout(
           title: 'Mini Review',
           onClose: () => Navigator.of(context).pop(),
-          headerSpacing: Spacing.small,
-          bodyPadding: const EdgeInsets.all(Spacing.large),
+          headerSpacing: AppSpacing.sm,
+          bodyPadding: const EdgeInsets.all(AppSpacing.xl),
           child: _buildBody(context, state),
         );
       },
@@ -80,23 +80,25 @@ class _MiniReviewSheetView extends StatelessWidget {
   Widget _buildBody(BuildContext context, MiniReviewState state) {
     return switch (state.status) {
       MiniReviewStatus.loading => const Padding(
-        padding: EdgeInsets.symmetric(vertical: Spacing.xxLarge),
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.xxxl),
         child: CenteredCircularProgressIndicator(),
       ),
       MiniReviewStatus.empty => const Padding(
-        padding: EdgeInsets.symmetric(vertical: Spacing.xxLarge),
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.xxxl),
         child: EmptyState(message: 'No items due for review.'),
       ),
       MiniReviewStatus.failure => Padding(
-        padding: const EdgeInsets.symmetric(vertical: Spacing.xxLarge),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Something went wrong',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+              style: context.text.bodyMedium?.copyWith(
+                color: context.colors.error,
+              ),
             ),
-            const SizedBox(height: Spacing.medium),
+            const SizedBox(height: AppSpacing.md),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('Close'),
@@ -117,23 +119,21 @@ class _ReviewContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: Spacing.medium),
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
           child: Text(
             '${state.reviewed}/${state.items.length}',
-            style: theme.textTheme.bodySmall,
+            style: context.text.bodySmall,
             textAlign: TextAlign.center,
           ),
         ),
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(Spacing.xLarge),
+            padding: const EdgeInsets.all(AppSpacing.xxl),
             child: switch (state.currentItem) {
               FlashcardItem(:final flashcard) => FlashcardCardContent(
                 card: flashcard,
@@ -151,7 +151,7 @@ class _ReviewContent extends StatelessWidget {
             },
           ),
         ),
-        const SizedBox(height: Spacing.medium),
+        const SizedBox(height: AppSpacing.md),
         if (!state.isRevealed)
           SizedBox(
             width: double.infinity,

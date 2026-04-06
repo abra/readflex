@@ -38,6 +38,7 @@ class DictionaryView extends StatelessWidget {
   Widget build(BuildContext context) {
     final bloc = context.read<DictionaryBloc>();
 
+    // TODO: implement dictionary browser UI.
     return Placeholder();
     // return Scaffold(
     //   appBar: AppBar(
@@ -46,8 +47,8 @@ class DictionaryView extends StatelessWidget {
     //       preferredSize: const Size.fromHeight(56),
     //       child: Padding(
     //         padding: const EdgeInsets.symmetric(
-    //           horizontal: Spacing.large,
-    //           vertical: Spacing.small,
+    //           horizontal: AppSpacing.xl,
+    //           vertical: AppSpacing.sm,
     //         ),
     //         child: TextField(
     //           decoration: const InputDecoration(
@@ -100,7 +101,7 @@ class _EntryList extends StatelessWidget {
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.only(bottom: Spacing.xxxLarge),
+      padding: const EdgeInsets.only(bottom: AppSpacing.xxxxl),
       itemCount: entries.length,
       separatorBuilder: (_, _) => const Divider(height: 1),
       itemBuilder: (context, index) {
@@ -113,7 +114,7 @@ class _EntryList extends StatelessWidget {
           child: ListTile(
             title: Text(
               entry.word,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: context.text.titleSmall,
             ),
             subtitle: Text(entry.translation),
             trailing: entry.usageExamples.isNotEmpty

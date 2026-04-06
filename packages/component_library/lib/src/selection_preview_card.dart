@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'theme/app_radius.dart';
-import 'theme/spacing.dart';
+import 'theme/tokens/app_radius.dart';
+import 'theme/tokens/app_spacing.dart';
 
 /// Compact preview of currently selected text.
 class SelectionPreviewCard extends StatelessWidget {
@@ -19,12 +19,12 @@ class SelectionPreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(Spacing.medium),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color:
             backgroundColor ??
             Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppRadius.small),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Text(
         text,

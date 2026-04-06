@@ -38,25 +38,19 @@ class _MaterialContextState extends State<MaterialContext> {
   @override
   Widget build(BuildContext context) {
     final themeMode = PreferencesScope.themeModeOf(context);
-    const lightTheme = LightAppThemeData();
-    const darkTheme = DarkAppThemeData();
 
-    return AppTheme(
-      lightTheme: lightTheme,
-      darkTheme: darkTheme,
-      child: MaterialApp.router(
-        debugShowCheckedModeBanner: false,
-        themeMode: themeMode,
-        theme: lightTheme.materialThemeData,
-        darkTheme: darkTheme.materialThemeData,
-        routerConfig: _router,
-        builder: (context, child) {
-          return KeyedSubtree(
-            key: _globalKey,
-            child: _MediaQueryRootOverride(child: child!),
-          );
-        },
-      ),
+    return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
+      themeMode: themeMode,
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      routerConfig: _router,
+      builder: (context, child) {
+        return KeyedSubtree(
+          key: _globalKey,
+          child: _MediaQueryRootOverride(child: child!),
+        );
+      },
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'app_theme_data.dart';
+import 'app_typography.dart';
 
 /// User-selectable reader surface presets.
 enum ReaderThemePreset {
@@ -49,8 +49,8 @@ enum ReaderFontPreset {
   };
 
   String get fontFamily => switch (this) {
-    serif => kFontFamilySerif,
-    sans => kFontFamilySans,
+    serif => AppTypography.fontFamilySerif,
+    sans => AppTypography.fontFamilySans,
     geist => 'Geist',
   };
 }

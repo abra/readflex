@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'theme/spacing.dart';
+import 'theme/tokens/app_spacing.dart';
 
 class ErrorState extends StatelessWidget {
   const ErrorState({
@@ -21,7 +21,7 @@ class ErrorState extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(message),
-          const SizedBox(height: Spacing.medium),
+          const SizedBox(height: AppSpacing.md),
           FilledButton(onPressed: onRetry, child: Text(retryLabel)),
         ],
       ),

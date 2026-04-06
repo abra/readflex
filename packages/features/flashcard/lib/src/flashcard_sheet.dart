@@ -61,15 +61,15 @@ class _FlashcardSheetView extends StatelessWidget {
         return ActionBottomSheetLayout(
           title: 'Create Flashcard',
           onClose: () => Navigator.of(context).pop(),
-          headerSpacing: Spacing.small,
-          bodyPadding: const EdgeInsets.all(Spacing.large),
+          headerSpacing: AppSpacing.sm,
+          bodyPadding: const EdgeInsets.all(AppSpacing.xl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Selected text preview
               SelectionPreviewCard(text: selection.selectedText),
-              const SizedBox(height: Spacing.medium),
+              const SizedBox(height: AppSpacing.md),
               // Front field
               TextField(
                 decoration: const InputDecoration(
@@ -81,7 +81,7 @@ class _FlashcardSheetView extends StatelessWidget {
                 enabled: !isSaving,
                 onChanged: (v) => context.read<FlashcardCubit>().setFront(v),
               ),
-              const SizedBox(height: Spacing.small),
+              const SizedBox(height: AppSpacing.sm),
               // Back field
               TextField(
                 decoration: const InputDecoration(
@@ -93,7 +93,7 @@ class _FlashcardSheetView extends StatelessWidget {
                 enabled: !isSaving,
                 onChanged: (v) => context.read<FlashcardCubit>().setBack(v),
               ),
-              const SizedBox(height: Spacing.small),
+              const SizedBox(height: AppSpacing.sm),
               // Hint field
               TextField(
                 decoration: const InputDecoration(
@@ -103,10 +103,10 @@ class _FlashcardSheetView extends StatelessWidget {
                 enabled: !isSaving,
                 onChanged: (v) => context.read<FlashcardCubit>().setHint(v),
               ),
-              const SizedBox(height: Spacing.medium),
+              const SizedBox(height: AppSpacing.md),
               if (state.status == FlashcardStatus.failure)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: Spacing.small),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: Text(
                     'Failed to save flashcard',
                     style: TextStyle(

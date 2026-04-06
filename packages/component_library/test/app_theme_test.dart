@@ -4,97 +4,52 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('AppTheme', () {
-    testWidgets('of() returns light theme in light mode', (tester) async {
-      const light = LightAppThemeData();
-      const dark = DarkAppThemeData();
-
-      late AppThemeData result;
-
-      await tester.pumpWidget(
-        AppTheme(
-          lightTheme: light,
-          darkTheme: dark,
-          child: MaterialApp(
-            theme: light.materialThemeData,
-            home: Builder(
-              builder: (context) {
-                result = AppTheme.of(context);
-                return const SizedBox();
-              },
-            ),
-          ),
-        ),
-      );
-
-      expect(result, isA<LightAppThemeData>());
+    test('light() returns ThemeData with light brightness', () {
+      final theme = AppTheme.light();
+      expect(theme.brightness, Brightness.light);
     });
 
-    testWidgets('of() returns dark theme in dark mode', (tester) async {
-      const light = LightAppThemeData();
-      const dark = DarkAppThemeData();
-
-      late AppThemeData result;
-
-      await tester.pumpWidget(
-        AppTheme(
-          lightTheme: light,
-          darkTheme: dark,
-          child: MaterialApp(
-            theme: dark.materialThemeData,
-            home: Builder(
-              builder: (context) {
-                result = AppTheme.of(context);
-                return const SizedBox();
-              },
-            ),
-          ),
-        ),
-      );
-
-      expect(result, isA<DarkAppThemeData>());
+    test('dark() returns ThemeData with dark brightness', () {
+      final theme = AppTheme.dark();
+      expect(theme.brightness, Brightness.dark);
     });
 
-    testWidgets('of() throws when no AppTheme ancestor', (tester) async {
+    test('light() uses correct scaffold color', () {
+      final theme = AppTheme.light();
+      expect(theme.scaffoldBackgroundColor, PrimitiveColors.gray50);
+    });
+
+    test('dark() uses correct scaffold color', () {
+      final theme = AppTheme.dark();
+      expect(theme.scaffoldBackgroundColor, PrimitiveColors.darkGray900);
+    });
+
+    test('light() includes AppColorsExt extension', () {
+      final theme = AppTheme.light();
+      expect(theme.extension<AppColorsExt>(), isNotNull);
+    });
+
+    test('dark() includes AppColorsExt extension', () {
+      final theme = AppTheme.dark();
+      expect(theme.extension<AppColorsExt>(), isNotNull);
+    });
+
+    testWidgets('Theme.of(context).ext returns AppColorsExt', (tester) async {
+      late AppColorsExt result;
+
       await tester.pumpWidget(
         MaterialApp(
+          theme: AppTheme.light(),
           home: Builder(
             builder: (context) {
-              expect(() => AppTheme.of(context), throwsA(isA<FlutterError>()));
+              result = Theme.of(context).ext;
               return const SizedBox();
             },
           ),
         ),
       );
-    });
-  });
 
-  group('LightAppThemeData', () {
-    test('materialThemeData has light brightness', () {
-      const theme = LightAppThemeData();
-      expect(theme.materialThemeData.brightness, Brightness.light);
-    });
-
-    test('materialThemeData uses warm paper scaffold color', () {
-      const theme = LightAppThemeData();
-      expect(
-        theme.materialThemeData.scaffoldBackgroundColor,
-        const Color(0xFFF8F4EC),
-      );
-    });
-  });
-
-  group('DarkAppThemeData', () {
-    test('materialThemeData has dark brightness', () {
-      const theme = DarkAppThemeData();
-      expect(theme.materialThemeData.brightness, Brightness.dark);
-    });
-
-    test('materialThemeData uses calm charcoal scaffold color', () {
-      const theme = DarkAppThemeData();
-      expect(
-        theme.materialThemeData.scaffoldBackgroundColor,
-        const Color(0xFF1E1B18),
-      );
+      expect(result, isA<AppColorsExt>());
     });
   });
 }

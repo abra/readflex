@@ -71,11 +71,12 @@ class ProfileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // TODO: implement profile/settings UI.
     return Placeholder();
     // return Scaffold(
     //   appBar: AppBar(title: const Text('Profile')),
     //   body: ListView(
-    //     padding: const EdgeInsets.all(Spacing.large),
+    //     padding: const EdgeInsets.all(AppSpacing.xl),
     //     children: [
     //       BlocBuilder<ProfileCubit, ProfileState>(
     //         builder: (context, state) {
@@ -107,7 +108,7 @@ class ProfileView extends StatelessWidget {
     //                         child: const Text('Sign in'),
     //                       ),
     //               ),
-    //               const SizedBox(height: Spacing.medium),
+    //               const SizedBox(height: AppSpacing.md),
     //               _InfoActionCard(
     //                 leading: Icon(
     //                   state.isPremium ? Icons.star : Icons.star_border,
@@ -127,9 +128,9 @@ class ProfileView extends StatelessWidget {
     //           );
     //         },
     //       ),
-    //       const SizedBox(height: Spacing.large),
+    //       const SizedBox(height: AppSpacing.xl),
     //       const _AppearanceSection(),
-    //       const SizedBox(height: Spacing.large),
+    //       const SizedBox(height: AppSpacing.xl),
     //       _InfoActionCard(
     //         leading: const Icon(Icons.design_services_outlined),
     //         title: 'Design System Preview',
@@ -139,7 +140,7 @@ class ProfileView extends StatelessWidget {
     //           child: const Text('Open'),
     //         ),
     //       ),
-    //       const SizedBox(height: Spacing.large),
+    //       const SizedBox(height: AppSpacing.xl),
     //       const Divider(),
     //       const ListTile(
     //         leading: Icon(Icons.info_outline),
@@ -169,32 +170,32 @@ class _InfoActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(Spacing.mediumLarge),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 2),
+              padding: const EdgeInsets.only(top: AppSpacing.xxs),
               child: leading,
             ),
-            const SizedBox(width: Spacing.medium),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: Theme.of(context).textTheme.titleSmall),
+                  Text(title, style: context.text.titleSmall),
                   if (subtitle != null) ...[
-                    const SizedBox(height: Spacing.xSmall),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       subtitle!,
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: context.text.bodySmall,
                     ),
                   ],
                 ],
               ),
             ),
             if (action != null) ...[
-              const SizedBox(width: Spacing.medium),
+              const SizedBox(width: AppSpacing.md),
               Flexible(child: action!),
             ],
           ],
@@ -227,27 +228,27 @@ class _AppearanceSectionState extends State<_AppearanceSection> {
 
         return Card(
           child: Padding(
-            padding: const EdgeInsets.all(Spacing.mediumLarge),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Appearance',
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: context.text.titleMedium,
                 ),
-                const SizedBox(height: Spacing.medium),
+                const SizedBox(height: AppSpacing.md),
                 _ReaderPreviewCard(
                   theme: readerTheme.data,
                   font: readerFont,
                   textScale: state.readerAppearance.textScale,
                   lineHeight: state.readerAppearance.lineHeight,
                 ),
-                const SizedBox(height: Spacing.mediumLarge),
+                const SizedBox(height: AppSpacing.lg),
                 Text(
                   'App theme',
-                  style: Theme.of(context).textTheme.labelLarge,
+                  style: context.text.labelLarge,
                 ),
-                const SizedBox(height: Spacing.small),
+                const SizedBox(height: AppSpacing.sm),
                 SegmentedButton<ThemeMode>(
                   showSelectedIcon: false,
                   segments: const [
@@ -263,15 +264,15 @@ class _AppearanceSectionState extends State<_AppearanceSection> {
                     cubit.setThemeMode(value.first);
                   },
                 ),
-                const SizedBox(height: Spacing.mediumLarge),
+                const SizedBox(height: AppSpacing.lg),
                 Text(
                   'Reader theme',
-                  style: Theme.of(context).textTheme.labelLarge,
+                  style: context.text.labelLarge,
                 ),
-                const SizedBox(height: Spacing.small),
+                const SizedBox(height: AppSpacing.sm),
                 Wrap(
-                  spacing: Spacing.small,
-                  runSpacing: Spacing.small,
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
                   children: ReaderThemePreset.values.map((preset) {
                     return ChoiceChip(
                       label: Text(preset.label),
@@ -282,15 +283,15 @@ class _AppearanceSectionState extends State<_AppearanceSection> {
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: Spacing.mediumLarge),
+                const SizedBox(height: AppSpacing.lg),
                 Text(
                   'Reader font',
-                  style: Theme.of(context).textTheme.labelLarge,
+                  style: context.text.labelLarge,
                 ),
-                const SizedBox(height: Spacing.small),
+                const SizedBox(height: AppSpacing.sm),
                 Wrap(
-                  spacing: Spacing.small,
-                  runSpacing: Spacing.small,
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
                   children: ReaderFontPreset.values.map((preset) {
                     return ChoiceChip(
                       label: Text(preset.label),
@@ -301,7 +302,7 @@ class _AppearanceSectionState extends State<_AppearanceSection> {
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: Spacing.mediumLarge),
+                const SizedBox(height: AppSpacing.lg),
                 _SliderRow(
                   label: 'Text size',
                   valueLabel:
@@ -316,7 +317,7 @@ class _AppearanceSectionState extends State<_AppearanceSection> {
                     cubit.commitTextScale(value);
                   },
                 ),
-                const SizedBox(height: Spacing.medium),
+                const SizedBox(height: AppSpacing.md),
                 _SliderRow(
                   label: 'Line height',
                   valueLabel: state.readerAppearance.lineHeight.toStringAsFixed(
@@ -356,14 +357,14 @@ class _ReaderPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final base = Theme.of(context).textTheme.bodyMedium!;
+    final base = context.text.bodyMedium!;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(Spacing.mediumLarge),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: theme.surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.medium),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: theme.dividerColor),
       ),
       child: Column(
@@ -371,11 +372,11 @@ class _ReaderPreviewCard extends StatelessWidget {
         children: [
           Text(
             'Reader preview',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            style: context.text.labelLarge?.copyWith(
               color: theme.secondaryTextColor,
             ),
           ),
-          const SizedBox(height: Spacing.small),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             'The quiet page makes long-form reading feel steady and focused.',
             style: base.copyWith(
@@ -420,12 +421,12 @@ class _SliderRow extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: Theme.of(context).textTheme.labelLarge,
+                style: context.text.labelLarge,
               ),
             ),
             Text(
               valueLabel,
-              style: Theme.of(context).textTheme.bodySmall,
+              style: context.text.bodySmall,
             ),
           ],
         ),

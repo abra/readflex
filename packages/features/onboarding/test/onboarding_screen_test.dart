@@ -35,7 +35,6 @@ void main() {
         ),
       );
 
-      // Navigate to last page (tap Next 4 times).
       for (var i = 0; i < 4; i++) {
         await tester.tap(find.text('Next'));
         await tester.pumpAndSettle();
@@ -54,7 +53,6 @@ void main() {
         ),
       );
 
-      // Navigate to last page.
       for (var i = 0; i < 4; i++) {
         await tester.tap(find.text('Next'));
         await tester.pumpAndSettle();
@@ -88,19 +86,15 @@ void main() {
         ),
       );
 
-      // 5 AnimatedContainer indicators.
       expect(find.byType(AnimatedContainer), findsNWidgets(5));
     });
   });
 }
 
 Widget _wrapWithTheme(Widget child) {
-  const light = LightAppThemeData();
-  const dark = DarkAppThemeData();
-
   return MaterialApp(
-    theme: light.materialThemeData,
-    darkTheme: dark.materialThemeData,
-    home: AppTheme(lightTheme: light, darkTheme: dark, child: child),
+    theme: AppTheme.light(),
+    darkTheme: AppTheme.dark(),
+    home: child,
   );
 }

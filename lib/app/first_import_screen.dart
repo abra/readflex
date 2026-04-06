@@ -52,28 +52,28 @@ class _FirstImportScreenState extends State<FirstImportScreen> {
     return Scaffold(
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxxl),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 Icons.menu_book_outlined,
                 size: 80,
-                color: Theme.of(context).colorScheme.primary,
+                color: context.colors.primary,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.xxl),
               Text(
                 'Add your first book or article',
-                style: Theme.of(context).textTheme.headlineSmall,
+                style: context.text.headlineSmall,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 'Import a book file or paste an article link to get started.',
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: context.text.bodyMedium,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.xxxl),
               FilledButton.icon(
                 onPressed: _isLoading ? null : _handleAddPressed,
                 icon: _isLoading

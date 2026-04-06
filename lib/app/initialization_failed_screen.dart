@@ -48,45 +48,53 @@ class _InitializationFailedScreenState
       return true;
     }());
 
-    final theme = Theme.of(context);
-    final typography = theme.textTheme;
-    final colorScheme = theme.colorScheme;
-
     return MaterialApp(
       home: Scaffold(
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text('Initialization failed', style: typography.headlineMedium),
-              const SizedBox(height: 16),
-              Text(
-                '${widget.error}',
-                style: typography.bodyLarge?.copyWith(color: colorScheme.error),
-              ),
-              const SizedBox(height: 24),
-              if (widget.onRetryInitialization != null)
-                ValueListenableBuilder<bool>(
-                  valueListenable: _inProgress,
-                  builder: (context, inProgress, _) => FilledButton.icon(
-                    onPressed: inProgress ? null : _retryInitialization,
-                    icon: inProgress
-                        ? const ButtonLoadingIndicator(size: 16)
-                        : const Icon(Icons.refresh),
-                    label: Text(inProgress ? 'Retrying...' : 'Retry'),
+        body: Builder(
+          builder: (context) {
+            final typography = Theme.of(context).textTheme;
+            final colorScheme = Theme.of(context).colorScheme;
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.xxl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    'Initialization failed',
+                    style: typography.headlineMedium,
                   ),
-                ),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: Text(
-                  '${widget.stackTrace}',
-                  style: typography.bodySmall,
-                ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text(
+                    '${widget.error}',
+                    style: typography.bodyLarge?.copyWith(
+                      color: colorScheme.error,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxl),
+                  if (widget.onRetryInitialization != null)
+                    ValueListenableBuilder<bool>(
+                      valueListenable: _inProgress,
+                      builder: (context, inProgress, _) => FilledButton.icon(
+                        onPressed: inProgress ? null : _retryInitialization,
+                        icon: inProgress
+                            ? const ButtonLoadingIndicator(size: 16)
+                            : const Icon(Icons.refresh),
+                        label: Text(inProgress ? 'Retrying...' : 'Retry'),
+                      ),
+                    ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Padding(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    child: Text(
+                      '${widget.stackTrace}',
+                      style: typography.bodySmall,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

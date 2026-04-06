@@ -67,6 +67,7 @@ class HomeView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // TODO: implement home dashboard UI.
     return Placeholder();
     // return Scaffold(
     //   appBar: AppBar(title: const Text('Readflex')),
@@ -83,16 +84,16 @@ class HomeView extends StatelessWidget {
     //           onRetry: () => bloc.add(const HomeLoadRequested()),
     //         ),
     //         HomeStatus.success => ListView(
-    //           padding: const EdgeInsets.all(Spacing.large),
+    //           padding: const EdgeInsets.all(AppSpacing.xl),
     //           children: [
     //             _StatsRow(state: state, onPracticePressed: onPracticePressed),
-    //             const SizedBox(height: Spacing.xLarge),
+    //             const SizedBox(height: AppSpacing.xxl),
     //             if (state.recentItems.isNotEmpty) ...[
     //               Text(
     //                 'Continue Reading',
-    //                 style: Theme.of(context).textTheme.titleMedium,
+    //                 style: context.text.titleMedium,
     //               ),
-    //               const SizedBox(height: Spacing.small),
+    //               const SizedBox(height: AppSpacing.sm),
     //               ...state.recentItems.map(
     //                 (item) => switch (item) {
     //                   Book book => ListTile(
@@ -142,7 +143,7 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final colorScheme = context.colors;
 
     return Row(
       children: [
@@ -154,7 +155,7 @@ class _StatsRow extends StatelessWidget {
             color: colorScheme.primary,
           ),
         ),
-        const SizedBox(width: Spacing.small),
+        const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _StatCard(
             icon: Icons.highlight,
@@ -163,7 +164,7 @@ class _StatsRow extends StatelessWidget {
             color: colorScheme.secondary,
           ),
         ),
-        const SizedBox(width: Spacing.small),
+        const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _StatCard(
             icon: Icons.school,
@@ -200,26 +201,23 @@ class _StatCard extends StatelessWidget {
     return Card(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            vertical: Spacing.medium,
-            horizontal: Spacing.small,
+            vertical: AppSpacing.md,
+            horizontal: AppSpacing.sm,
           ),
           child: Column(
             children: [
               Icon(icon, color: color),
-              const SizedBox(height: Spacing.xSmall),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 value,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
+                style: context.text.headlineSmall?.copyWith(color: color),
               ),
               Text(
                 label,
-                style: Theme.of(context).textTheme.bodySmall,
+                style: context.text.bodySmall,
               ),
             ],
           ),

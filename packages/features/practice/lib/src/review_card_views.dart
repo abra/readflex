@@ -37,7 +37,7 @@ class FlashcardCardContent extends StatelessWidget {
         ),
         if (isRevealed) ...[
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: Spacing.medium),
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
             child: Divider(),
           ),
           Text(
@@ -46,7 +46,7 @@ class FlashcardCardContent extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           if (card.hint != null) ...[
-            const SizedBox(height: Spacing.small),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               card.hint!,
               style: theme.textTheme.bodySmall?.copyWith(
@@ -80,7 +80,7 @@ class HighlightCardContent extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(Icons.format_quote, color: theme.colorScheme.primary),
-        const SizedBox(height: Spacing.medium),
+        const SizedBox(height: AppSpacing.md),
         Text(
           highlight.text,
           style: theme.textTheme.bodyLarge,
@@ -88,7 +88,7 @@ class HighlightCardContent extends StatelessWidget {
         ),
         if (isRevealed && highlight.note != null) ...[
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: Spacing.medium),
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
             child: Divider(),
           ),
           Text(
@@ -123,7 +123,7 @@ class DictionaryCardContent extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(Icons.translate, color: theme.colorScheme.primary),
-        const SizedBox(height: Spacing.medium),
+        const SizedBox(height: AppSpacing.md),
         Text(
           entry.word,
           style: theme.textTheme.headlineSmall,
@@ -131,7 +131,7 @@ class DictionaryCardContent extends StatelessWidget {
         ),
         if (isRevealed) ...[
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: Spacing.medium),
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
             child: Divider(),
           ),
           Text(
@@ -140,7 +140,7 @@ class DictionaryCardContent extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           if (entry.context != null) ...[
-            const SizedBox(height: Spacing.small),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               entry.context!,
               style: theme.textTheme.bodySmall?.copyWith(
@@ -163,15 +163,16 @@ class RatingButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ext = Theme.of(context).ext;
     return Row(
       children: [
-        _button(Rating.again, 'Again', Colors.red),
-        const SizedBox(width: Spacing.small),
-        _button(Rating.hard, 'Hard', Colors.orange),
-        const SizedBox(width: Spacing.small),
-        _button(Rating.good, 'Good', Colors.green),
-        const SizedBox(width: Spacing.small),
-        _button(Rating.easy, 'Easy', Colors.blue),
+        _button(Rating.again, 'Again', ext.ratingAgain),
+        const SizedBox(width: AppSpacing.sm),
+        _button(Rating.hard, 'Hard', ext.ratingHard),
+        const SizedBox(width: AppSpacing.sm),
+        _button(Rating.good, 'Good', ext.ratingGood),
+        const SizedBox(width: AppSpacing.sm),
+        _button(Rating.easy, 'Easy', ext.ratingEasy),
       ],
     );
   }

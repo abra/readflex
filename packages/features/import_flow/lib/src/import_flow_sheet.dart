@@ -64,7 +64,7 @@ class _ImportFlowSheetState extends State<_ImportFlowSheet> {
                   subtitle: const Text('Paste a web article link'),
                   onTap: () => setState(() => _showUrlInput = true),
                 ),
-                const SizedBox(height: Spacing.medium),
+                const SizedBox(height: AppSpacing.md),
               ],
             )
           : _ArticleUrlInput(
@@ -117,7 +117,7 @@ class _ArticleUrlInputState extends State<_ArticleUrlInput> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Spacing.large),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -139,14 +139,14 @@ class _ArticleUrlInputState extends State<_ArticleUrlInput> {
             },
             onSubmitted: (_) => _submit(),
           ),
-          const SizedBox(height: Spacing.medium),
+          const SizedBox(height: AppSpacing.md),
           FilledButton(
             onPressed: _isLoading ? null : _submit,
             child: _isLoading
                 ? const ButtonLoadingIndicator()
                 : const Text('Import'),
           ),
-          const SizedBox(height: Spacing.large),
+          const SizedBox(height: AppSpacing.xl),
         ],
       ),
     );

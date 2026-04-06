@@ -74,29 +74,29 @@ class _TranslateSheetView extends StatelessWidget {
         return ActionBottomSheetLayout(
           title: 'Translate',
           onClose: () => Navigator.of(context).pop(),
-          headerSpacing: Spacing.small,
-          bodyPadding: const EdgeInsets.all(Spacing.large),
+          headerSpacing: AppSpacing.sm,
+          bodyPadding: const EdgeInsets.all(AppSpacing.xl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Original text
               SelectionPreviewCard(text: selection.selectedText),
-              const SizedBox(height: Spacing.medium),
+              const SizedBox(height: AppSpacing.md),
               // Translation result
               if (state.status == TranslateStatus.translating)
                 const Center(
                   child: Padding(
-                    padding: EdgeInsets.all(Spacing.medium),
+                    padding: EdgeInsets.all(AppSpacing.md),
                     child: CircularProgressIndicator(),
                   ),
                 )
               else if (state.translatedText.isNotEmpty) ...[
                 Container(
-                  padding: const EdgeInsets.all(Spacing.medium),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(AppRadius.small),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: Text(
                     state.translatedText,
@@ -104,11 +104,11 @@ class _TranslateSheetView extends StatelessWidget {
                   ),
                 ),
                 if (state.usageExamples.isNotEmpty) ...[
-                  const SizedBox(height: Spacing.small),
+                  const SizedBox(height: AppSpacing.sm),
                   ...state.usageExamples.map(
                     (example) => Padding(
                       padding: const EdgeInsets.only(
-                        bottom: Spacing.xSmall,
+                        bottom: AppSpacing.xs,
                       ),
                       child: Text(
                         example,
@@ -120,7 +120,7 @@ class _TranslateSheetView extends StatelessWidget {
               ],
               if (state.status == TranslateStatus.failure)
                 Padding(
-                  padding: const EdgeInsets.only(top: Spacing.small),
+                  padding: const EdgeInsets.only(top: AppSpacing.sm),
                   child: Text(
                     state.errorMessage ?? 'An error occurred',
                     style: TextStyle(
@@ -128,7 +128,7 @@ class _TranslateSheetView extends StatelessWidget {
                     ),
                   ),
                 ),
-              const SizedBox(height: Spacing.medium),
+              const SizedBox(height: AppSpacing.md),
               if (state.status == TranslateStatus.translated ||
                   state.status == TranslateStatus.failure)
                 FilledButton.icon(

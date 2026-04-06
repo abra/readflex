@@ -46,14 +46,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       return true;
     }());
 
-    final theme = AppTheme.of(context);
-    final colorScheme = theme.materialThemeData.colorScheme;
+    final colorScheme = context.colors;
 
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            // Skip button
             Align(
               alignment: Alignment.topRight,
               child: TextButton(
@@ -61,7 +59,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 child: const Text('Skip'),
               ),
             ),
-            // Pages
             Expanded(
               child: PageView.builder(
                 controller: _controller,
@@ -75,20 +72,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 },
               ),
             ),
-            // Page indicators
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: Spacing.medium),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(
                   onboardingPages.length,
                   (index) => AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xs,
+                    ),
                     width: _currentPage == index ? 24 : 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(AppRadius.xs),
                       color: _currentPage == index
                           ? colorScheme.primary
                           : colorScheme.outline,
@@ -97,13 +95,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
               ),
             ),
-            // Next / Get Started button
             Padding(
               padding: const EdgeInsets.fromLTRB(
-                Spacing.large,
+                AppSpacing.xl,
                 0,
-                Spacing.large,
-                Spacing.large,
+                AppSpacing.xl,
+                AppSpacing.xl,
               ),
               child: SizedBox(
                 width: double.infinity,
@@ -127,25 +124,22 @@ class _OnboardingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = AppTheme.of(context);
-    final textTheme = theme.materialThemeData.textTheme;
-    final colorScheme = theme.materialThemeData.colorScheme;
+    final textTheme = context.text;
+    final colorScheme = context.colors;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Spacing.xLarge),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(data.icon, size: 80, color: colorScheme.primary),
-          const SizedBox(height: Spacing.large),
+          const SizedBox(height: AppSpacing.xl),
           Text(
             data.title,
-            style: textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: textTheme.headlineSmall,
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: Spacing.medium),
+          const SizedBox(height: AppSpacing.md),
           Text(
             data.description,
             style: textTheme.bodyLarge?.copyWith(

@@ -37,10 +37,8 @@ class _SplashScreenState extends State<SplashScreen> {
       return true;
     }());
 
-    final theme = AppTheme.of(context);
-
     return Scaffold(
-      backgroundColor: theme.materialThemeData.colorScheme.surface,
+      backgroundColor: context.colors.surface,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -48,14 +46,13 @@ class _SplashScreenState extends State<SplashScreen> {
             Icon(
               Icons.auto_stories,
               size: 72,
-              color: theme.materialThemeData.colorScheme.primary,
+              color: context.colors.primary,
             ),
-            const SizedBox(height: Spacing.medium),
+            const SizedBox(height: AppSpacing.md),
             Text(
               'Readflex',
-              style: theme.materialThemeData.textTheme.headlineLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: theme.materialThemeData.colorScheme.primary,
+              style: context.text.headlineLarge?.copyWith(
+                color: context.colors.primary,
               ),
             ),
           ],
