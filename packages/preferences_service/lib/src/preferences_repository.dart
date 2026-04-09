@@ -1,4 +1,5 @@
 import 'dart:convert' show jsonDecode, jsonEncode;
+import 'dart:developer' as developer;
 import 'dart:ui' show Locale, PlatformDispatcher;
 
 import 'package:flutter/material.dart' show ThemeMode;
@@ -35,7 +36,15 @@ class PreferencesRepository {
         onboardingCompleted: map['onboardingCompleted'] as bool? ?? false,
         hasCompletedSetup: map['hasCompletedSetup'] as bool? ?? false,
       );
-    } catch (_) {
+    } catch (e, st) {
+      // Corrupt JSON on disk: log and fall back to defaults so the app can
+      // still launch. The next successful save() will overwrite the bad blob.
+      developer.log(
+        'Failed to decode preferences — falling back to defaults',
+        error: e,
+        stackTrace: st,
+        name: 'PreferencesRepository',
+      );
       return const Preferences();
     }
   }

@@ -38,6 +38,8 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
   deps.logger.debug('buildRouter: GoRouter created');
 
   return GoRouter(
+    // Route transition / redirect logs are noisy — keep them on only in dev
+    // builds so production logs stay focused on actual errors.
     debugLogDiagnostics: deps.config.isDev,
     initialLocation: AppRoutes.root,
     redirect: (context, state) async {
@@ -80,7 +82,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                   bookRepository: deps.bookRepository,
                   articleRepository: deps.articleRepository,
                   highlightRepository: deps.highlightRepository,
-                  flashcardRepository: deps.flashcardRepository,
+                  fsrsRepository: deps.fsrsRepository,
                   onBookPressed: (book) => context.push(
                     AppRoutes.reader(book.id),
                   ),
@@ -130,6 +132,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                 path: AppRoutes.dictionary,
                 builder: (context, state) => DictionaryScreen(
                   dictionaryRepository: deps.dictionaryRepository,
+                  fsrsRepository: deps.fsrsRepository,
                 ),
               ),
             ],
@@ -139,6 +142,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
               GoRoute(
                 path: AppRoutes.practice,
                 builder: (context, state) => PracticeScreen(
+                  fsrsRepository: deps.fsrsRepository,
                   flashcardRepository: deps.flashcardRepository,
                   highlightRepository: deps.highlightRepository,
                   dictionaryRepository: deps.dictionaryRepository,
@@ -179,30 +183,24 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
             articleRepository: deps.articleRepository,
             highlightRepository: deps.highlightRepository,
             textActions: [
-              HighlightAction(
-                highlightRepository: deps.highlightRepository,
-              ),
-              FlashcardAction(
-                flashcardRepository: deps.flashcardRepository,
-              ),
+              HighlightAction(highlightRepository: deps.highlightRepository),
+              FlashcardAction(flashcardRepository: deps.flashcardRepository),
               TranslateAction(
                 translationService: deps.translationService,
                 dictionaryRepository: deps.dictionaryRepository,
               ),
             ],
             onCheckDueItems: (sourceId) async {
-              final cards = await deps.flashcardRepository
-                  .getDueFlashcardsBySource(sourceId);
-              final highlights = await deps.highlightRepository
-                  .getDueHighlightsBySource(sourceId);
-              final entries = await deps.dictionaryRepository
-                  .getDueEntriesBySource(sourceId);
-              return cards.length + highlights.length + entries.length;
+              final items = await deps.fsrsRepository.getDueItemsBySource(
+                sourceId,
+              );
+              return items.length;
             },
             onStartMiniReview: (context, sourceId) {
               showMiniReviewSheet(
                 context,
                 sourceId: sourceId,
+                fsrsRepository: deps.fsrsRepository,
                 flashcardRepository: deps.flashcardRepository,
                 highlightRepository: deps.highlightRepository,
                 dictionaryRepository: deps.dictionaryRepository,
@@ -248,8 +246,15 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
             );
             context.go(AppRoutes.home);
           },
+          onSkipPressed: () {
+            deps.preferencesService.update(
+              (p) => p.copyWith(hasCompletedSetup: true),
+            );
+            context.go(AppRoutes.home);
+          },
         ),
       ),
+      // TODO: remove or gate behind isDev before production release.
       GoRoute(
         path: AppRoutes.designSystem,
         builder: (context, state) => const DesignSystemScreen(),
@@ -311,7 +316,15 @@ Future<bool> _importArticle(
     );
 
     return true;
-  } catch (_) {
+  } catch (e, st) {
+    // Log and swallow — the import flow sheet reports failure to the user
+    // via its own UI state; we only need a trail in the logs to diagnose
+    // which stage (parser / DB insert) failed in production.
+    dependencies.logger.warn(
+      'Article import failed for $url',
+      error: e,
+      stackTrace: st,
+    );
     return false;
   }
 }

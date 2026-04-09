@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:component_library/component_library.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -15,9 +17,8 @@ Future<ImportFlowResult?> showImportFlowSheet(
   required AsyncValueGetter<bool> onImportBook,
   required Future<bool> Function(String url) onImportArticle,
 }) {
-  return showModalBottomSheet<ImportFlowResult>(
-    context: context,
-    isScrollControlled: true,
+  return showAppBottomSheet<ImportFlowResult>(
+    context,
     builder: (_) => _ImportFlowSheet(
       onImportBook: onImportBook,
       onImportArticle: onImportArticle,
@@ -117,7 +118,7 @@ class _ArticleUrlInputState extends State<_ArticleUrlInput> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -146,7 +147,7 @@ class _ArticleUrlInputState extends State<_ArticleUrlInput> {
                 ? const ButtonLoadingIndicator()
                 : const Text('Import'),
           ),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.lg),
         ],
       ),
     );
@@ -166,25 +167,28 @@ class _ArticleUrlInputState extends State<_ArticleUrlInput> {
       _errorMessage = null;
     });
 
+    var imported = false;
     try {
-      final imported = await widget.onImportArticle(url);
-      if (!mounted) return;
-
-      if (imported) {
-        widget.onImported();
-        return;
-      }
-
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Failed to import article';
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Failed to import article';
-      });
+      imported = await widget.onImportArticle(url);
+    } catch (e, st) {
+      developer.log(
+        'Article import threw',
+        error: e,
+        stackTrace: st,
+        name: 'ImportFlowSheet',
+      );
     }
+
+    if (!mounted) return;
+
+    if (imported) {
+      widget.onImported();
+      return;
+    }
+
+    setState(() {
+      _isLoading = false;
+      _errorMessage = 'Failed to import article';
+    });
   }
 }

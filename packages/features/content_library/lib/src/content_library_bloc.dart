@@ -46,7 +46,8 @@ class ContentLibraryBloc
     try {
       await _bookRepository.deleteBook(event.bookId);
       await _loadItems(emit);
-    } catch (e) {
+    } catch (e, st) {
+      addError(e, st);
       emit(state.copyWith(status: ContentLibraryStatus.failure));
     }
   }
@@ -58,7 +59,8 @@ class ContentLibraryBloc
     try {
       await _articleRepository.deleteArticle(event.articleId);
       await _loadItems(emit);
-    } catch (e) {
+    } catch (e, st) {
+      addError(e, st);
       emit(state.copyWith(status: ContentLibraryStatus.failure));
     }
   }
@@ -75,7 +77,8 @@ class ContentLibraryBloc
           items: _sortedItems(books, articles),
         ),
       );
-    } catch (e) {
+    } catch (e, st) {
+      addError(e, st);
       emit(state.copyWith(status: ContentLibraryStatus.failure));
     }
   }

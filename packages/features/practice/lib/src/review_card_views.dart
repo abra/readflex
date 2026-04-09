@@ -25,14 +25,14 @@ class FlashcardCardContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final text = context.text;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           card.front,
-          style: theme.textTheme.headlineSmall,
+          style: text.headlineSmall,
           textAlign: TextAlign.center,
         ),
         if (isRevealed) ...[
@@ -42,14 +42,14 @@ class FlashcardCardContent extends StatelessWidget {
           ),
           Text(
             card.back,
-            style: theme.textTheme.titleMedium,
+            style: text.titleMedium,
             textAlign: TextAlign.center,
           ),
           if (card.hint != null) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
               card.hint!,
-              style: theme.textTheme.bodySmall?.copyWith(
+              style: text.bodySmall.copyWith(
                 fontStyle: FontStyle.italic,
               ),
               textAlign: TextAlign.center,
@@ -74,16 +74,16 @@ class HighlightCardContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final text = context.text;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.format_quote, color: theme.colorScheme.primary),
+        Icon(Icons.format_quote, color: context.colors.primary),
         const SizedBox(height: AppSpacing.md),
         Text(
           highlight.text,
-          style: theme.textTheme.bodyLarge,
+          style: text.bodyLarge,
           textAlign: TextAlign.center,
         ),
         if (isRevealed && highlight.note != null) ...[
@@ -93,7 +93,7 @@ class HighlightCardContent extends StatelessWidget {
           ),
           Text(
             highlight.note!,
-            style: theme.textTheme.bodySmall?.copyWith(
+            style: text.bodySmall.copyWith(
               fontStyle: FontStyle.italic,
             ),
             textAlign: TextAlign.center,
@@ -117,16 +117,16 @@ class DictionaryCardContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final text = context.text;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.translate, color: theme.colorScheme.primary),
+        Icon(Icons.translate, color: context.colors.primary),
         const SizedBox(height: AppSpacing.md),
         Text(
           entry.word,
-          style: theme.textTheme.headlineSmall,
+          style: text.headlineSmall,
           textAlign: TextAlign.center,
         ),
         if (isRevealed) ...[
@@ -136,14 +136,14 @@ class DictionaryCardContent extends StatelessWidget {
           ),
           Text(
             entry.translation,
-            style: theme.textTheme.titleMedium,
+            style: text.titleMedium,
             textAlign: TextAlign.center,
           ),
           if (entry.context != null) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
               entry.context!,
-              style: theme.textTheme.bodySmall?.copyWith(
+              style: text.bodySmall.copyWith(
                 fontStyle: FontStyle.italic,
               ),
               textAlign: TextAlign.center,
@@ -163,7 +163,7 @@ class RatingButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ext = Theme.of(context).ext;
+    final ext = context.appColors;
     return Row(
       children: [
         _button(Rating.again, 'Again', ext.ratingAgain),

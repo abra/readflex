@@ -180,15 +180,16 @@ class _FallbackBookCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final colors = context.colors;
+    final text = context.text;
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            theme.colorScheme.surfaceContainerHighest,
-            theme.colorScheme.surfaceContainer,
+            colors.surfaceContainerHighest,
+            colors.surfaceContainer,
           ],
         ),
       ),
@@ -199,7 +200,7 @@ class _FallbackBookCover extends StatelessWidget {
           children: [
             DecoratedBox(
               decoration: BoxDecoration(
-                color: theme.colorScheme.surface.withValues(alpha: 0.8),
+                color: colors.surface.withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Padding(
@@ -209,15 +210,15 @@ class _FallbackBookCover extends StatelessWidget {
                 ),
                 child: Text(
                   book.format.name.toUpperCase(),
-                  style: theme.textTheme.labelSmall,
+                  style: text.labelSmall,
                 ),
               ),
             ),
             const Spacer(),
             Text(
               initials(book.title),
-              style: theme.textTheme.displaySmall?.copyWith(
-                color: theme.colorScheme.primary,
+              style: text.displaySmall.copyWith(
+                color: colors.primary,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -226,7 +227,7 @@ class _FallbackBookCover extends StatelessWidget {
               book.title,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleMedium,
+              style: text.titleMedium,
             ),
           ],
         ),
@@ -261,11 +262,12 @@ class _ArticlePlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final colors = context.colors;
+    final text = context.text;
     final domain = domainOf(article.url);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
+        color: colors.surfaceContainerHighest,
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -274,8 +276,8 @@ class _ArticlePlaceholder extends StatelessWidget {
           children: [
             Text(
               'WWW',
-              style: theme.textTheme.displaySmall?.copyWith(
-                color: theme.colorScheme.primary,
+              style: text.displaySmall.copyWith(
+                color: colors.primary,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -284,13 +286,13 @@ class _ArticlePlaceholder extends StatelessWidget {
               domain,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleMedium,
+              style: text.titleMedium,
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
               'ARTICLE',
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+              style: text.labelMedium.copyWith(
+                color: colors.onSurfaceVariant,
               ),
             ),
           ],
@@ -322,12 +324,12 @@ class _DeleteMenuButton extends StatelessWidget {
       ],
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.86),
+          color: context.colors.surface.withValues(alpha: 0.86),
           borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
         child: const Padding(
           padding: EdgeInsets.all(AppSpacing.xs),
-          child: Icon(Icons.more_horiz, size: 18),
+          child: Icon(Icons.more_horiz, size: AppIconSize.sm),
         ),
       ),
     );

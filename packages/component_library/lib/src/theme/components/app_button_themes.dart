@@ -26,7 +26,7 @@ class AppButtonThemes {
         shadowColor: Colors.transparent,
         minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xl,
+          horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
         ),
         shape: _controlShape,
@@ -44,7 +44,7 @@ class AppButtonThemes {
         textStyle: textTheme.labelLarge,
         minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xl,
+          horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
         ),
         side: BorderSide(color: palette.border),

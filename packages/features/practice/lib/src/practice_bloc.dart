@@ -3,6 +3,7 @@ import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 
 part 'practice_event.dart';
@@ -11,10 +12,12 @@ part 'practice_state.dart';
 
 class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
   PracticeBloc({
+    required FsrsRepository fsrsRepository,
     required FlashcardRepository flashcardRepository,
     required HighlightRepository highlightRepository,
     required DictionaryRepository dictionaryRepository,
-  }) : _flashcardRepository = flashcardRepository,
+  }) : _fsrsRepository = fsrsRepository,
+       _flashcardRepository = flashcardRepository,
        _highlightRepository = highlightRepository,
        _dictionaryRepository = dictionaryRepository,
        super(const PracticeState()) {
@@ -24,6 +27,7 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
     on<PracticeItemNext>(_onItemNext);
   }
 
+  final FsrsRepository _fsrsRepository;
   final FlashcardRepository _flashcardRepository;
   final HighlightRepository _highlightRepository;
   final DictionaryRepository _dictionaryRepository;
@@ -35,15 +39,8 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
     emit(state.copyWith(status: PracticeStatus.loading));
 
     try {
-      final dueCards = await _flashcardRepository.getDueFlashcards();
-      final dueHighlights = await _highlightRepository.getDueHighlights();
-      final dueEntries = await _dictionaryRepository.getDueEntries();
-
-      final items = <PracticeItem>[
-        ...dueCards.map(PracticeItem.flashcard),
-        ...dueHighlights.map(PracticeItem.highlight),
-        ...dueEntries.map(PracticeItem.dictionary),
-      ];
+      final dueItems = await _fsrsRepository.getDueItems();
+      final items = await _resolveItems(dueItems);
 
       if (items.isEmpty) {
         emit(state.copyWith(status: PracticeStatus.empty, items: []));
@@ -57,7 +54,8 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
           ),
         );
       }
-    } catch (e) {
+    } catch (e, st) {
+      addError(e, st);
       emit(state.copyWith(status: PracticeStatus.failure));
     }
   }
@@ -77,16 +75,14 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
     if (item == null) return;
 
     try {
-      switch (item) {
-        case FlashcardItem(:final flashcard):
-          await _flashcardRepository.recordReview(flashcard, event.rating);
-        case HighlightItem(:final highlight):
-          await _highlightRepository.recordReview(highlight, event.rating);
-        case DictionaryItem(:final entry):
-          await _dictionaryRepository.recordReview(entry, event.rating);
-      }
+      await _fsrsRepository.recordReview(
+        itemId: item.itemId,
+        itemType: item.itemType,
+        rating: event.rating,
+      );
       _advance(emit);
-    } catch (e) {
+    } catch (e, st) {
+      addError(e, st);
       emit(state.copyWith(status: PracticeStatus.failure));
     }
   }
@@ -105,5 +101,26 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
     } else {
       emit(state.copyWith(currentIndex: nextIndex, isRevealed: false));
     }
+  }
+
+  /// Resolves ReviewItems into PracticeItems by fetching the actual entities.
+  Future<List<PracticeItem>> _resolveItems(List<ReviewItem> dueItems) async {
+    final items = <PracticeItem>[];
+
+    for (final due in dueItems) {
+      switch (due.itemType) {
+        case ReviewableType.flashcard:
+          final card = await _flashcardRepository.getFlashcardById(due.itemId);
+          if (card != null) items.add(FlashcardItem(card));
+        case ReviewableType.highlight:
+          final hl = await _highlightRepository.getHighlightById(due.itemId);
+          if (hl != null) items.add(HighlightItem(hl));
+        case ReviewableType.dictionary:
+          final entry = await _dictionaryRepository.getEntryById(due.itemId);
+          if (entry != null) items.add(DictionaryItem(entry));
+      }
+    }
+
+    return items;
   }
 }

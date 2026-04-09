@@ -1,8 +1,9 @@
+import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:preferences_service/preferences_service.dart';
 
-final class ProfileAppearanceState {
+class ProfileAppearanceState extends Equatable {
   const ProfileAppearanceState({
     required this.themeMode,
     required this.readerAppearance,
@@ -20,14 +21,7 @@ final class ProfileAppearanceState {
   );
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ProfileAppearanceState &&
-          themeMode == other.themeMode &&
-          readerAppearance == other.readerAppearance;
-
-  @override
-  int get hashCode => Object.hash(themeMode, readerAppearance);
+  List<Object?> get props => [themeMode, readerAppearance];
 }
 
 class ProfileAppearanceCubit extends Cubit<ProfileAppearanceState> {

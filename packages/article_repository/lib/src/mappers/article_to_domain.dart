@@ -1,6 +1,8 @@
 import 'package:domain_models/domain_models.dart';
 import 'package:local_storage/local_storage.dart';
 
+final _epoch = DateTime.fromMillisecondsSinceEpoch(0);
+
 extension ArticleToDomain on ArticlesTableData {
   Article toDomainModel() => Article(
     id: id,
@@ -11,8 +13,10 @@ extension ArticleToDomain on ArticlesTableData {
     coverImageUrl: coverImageUrl,
     estimatedWordCount: estimatedWordCount,
     currentScrollOffset: currentScrollOffset,
-    addedAt: DateTime.parse(addedAt),
-    lastOpenedAt: lastOpenedAt != null ? DateTime.parse(lastOpenedAt!) : null,
+    addedAt: DateTime.tryParse(addedAt) ?? _epoch,
+    lastOpenedAt: lastOpenedAt != null
+        ? DateTime.tryParse(lastOpenedAt!)
+        : null,
     isFinished: isFinished,
   );
 }

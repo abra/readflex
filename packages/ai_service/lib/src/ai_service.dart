@@ -24,6 +24,8 @@ abstract class AiService {
 }
 
 /// Stub that returns empty results. Used during development.
+///
+/// TODO: replace with real HTTP client to own backend → DeepSeek API.
 class NoopAiService implements AiService {
   const NoopAiService();
 

@@ -8,6 +8,9 @@ import 'package:subscription_service/subscription_service.dart';
 import 'profile_appearance_cubit.dart';
 import 'profile_cubit.dart';
 
+part 'widgets/font_sheet.dart';
+part 'widgets/settings_widgets.dart';
+
 /// Profile tab: settings, auth status, premium.
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({
@@ -17,6 +20,7 @@ class ProfileScreen extends StatelessWidget {
     required this.onSignInPressed,
     required this.onDesignSystemPressed,
     required this.onPremiumPressed,
+    this.appVersion = '1.0.0',
     super.key,
   });
 
@@ -26,13 +30,11 @@ class ProfileScreen extends StatelessWidget {
   final VoidCallback onSignInPressed;
   final VoidCallback onDesignSystemPressed;
   final VoidCallback onPremiumPressed;
+  final String appVersion;
 
   @override
   Widget build(BuildContext context) {
-    assert(() {
-      debugPrint('[SCREEN] build ProfileScreen');
-      return true;
-    }());
+    debugLogScreenBuild('ProfileScreen');
 
     return MultiBlocProvider(
       providers: [
@@ -48,396 +50,419 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
       ],
-      child: ProfileView(
+      child: _ProfileView(
         onSignInPressed: onSignInPressed,
         onDesignSystemPressed: onDesignSystemPressed,
         onPremiumPressed: onPremiumPressed,
+        appVersion: appVersion,
       ),
     );
   }
 }
 
-class ProfileView extends StatelessWidget {
-  const ProfileView({
+class _ProfileView extends StatefulWidget {
+  const _ProfileView({
     required this.onSignInPressed,
     required this.onDesignSystemPressed,
     required this.onPremiumPressed,
-    super.key,
+    required this.appVersion,
   });
 
   final VoidCallback onSignInPressed;
   final VoidCallback onDesignSystemPressed;
   final VoidCallback onPremiumPressed;
+  final String appVersion;
 
   @override
-  Widget build(BuildContext context) {
-    // TODO: implement profile/settings UI.
-    return Placeholder();
-    // return Scaffold(
-    //   appBar: AppBar(title: const Text('Profile')),
-    //   body: ListView(
-    //     padding: const EdgeInsets.all(AppSpacing.xl),
-    //     children: [
-    //       BlocBuilder<ProfileCubit, ProfileState>(
-    //         builder: (context, state) {
-    //           final cubit = context.read<ProfileCubit>();
-    //
-    //           return Column(
-    //             children: [
-    //               _InfoActionCard(
-    //                 leading: Icon(
-    //                   state.isAuthenticated
-    //                       ? Icons.person
-    //                       : Icons.person_outline,
-    //                 ),
-    //                 title: state.isAuthenticated
-    //                     ? state.email ?? 'Signed in'
-    //                     : 'Not signed in',
-    //                 subtitle: state.isAuthenticated
-    //                     ? null
-    //                     : 'Sign in to sync your data',
-    //                 action: state.isAuthenticated
-    //                     ? TextButton(
-    //                         onPressed: state.isLoading
-    //                             ? null
-    //                             : () => cubit.signOut(),
-    //                         child: const Text('Sign out'),
-    //                       )
-    //                     : FilledButton(
-    //                         onPressed: onSignInPressed,
-    //                         child: const Text('Sign in'),
-    //                       ),
-    //               ),
-    //               const SizedBox(height: AppSpacing.md),
-    //               _InfoActionCard(
-    //                 leading: Icon(
-    //                   state.isPremium ? Icons.star : Icons.star_border,
-    //                 ),
-    //                 title: state.isPremium ? 'Premium' : 'Free plan',
-    //                 subtitle: state.isPremium
-    //                     ? null
-    //                     : 'Unlock AI features and more',
-    //                 action: state.isPremium
-    //                     ? null
-    //                     : FilledButton.tonal(
-    //                         onPressed: onPremiumPressed,
-    //                         child: const Text('Upgrade'),
-    //                       ),
-    //               ),
-    //             ],
-    //           );
-    //         },
-    //       ),
-    //       const SizedBox(height: AppSpacing.xl),
-    //       const _AppearanceSection(),
-    //       const SizedBox(height: AppSpacing.xl),
-    //       _InfoActionCard(
-    //         leading: const Icon(Icons.design_services_outlined),
-    //         title: 'Design System Preview',
-    //         subtitle: 'Open the live component showcase screen',
-    //         action: OutlinedButton(
-    //           onPressed: onDesignSystemPressed,
-    //           child: const Text('Open'),
-    //         ),
-    //       ),
-    //       const SizedBox(height: AppSpacing.xl),
-    //       const Divider(),
-    //       const ListTile(
-    //         leading: Icon(Icons.info_outline),
-    //         title: Text('About Readflex'),
-    //         subtitle: Text('Version 1.0.0'),
-    //       ),
-    //     ],
-    //   ),
-    // );
-  }
+  State<_ProfileView> createState() => _ProfileViewState();
 }
 
-class _InfoActionCard extends StatelessWidget {
-  const _InfoActionCard({
-    required this.leading,
-    required this.title,
-    required this.subtitle,
-    this.action,
-  });
-
-  final Widget leading;
-  final String title;
-  final String? subtitle;
-  final Widget? action;
+class _ProfileViewState extends State<_ProfileView> {
+  bool _showHeaderShadow = false;
+  bool _showFooterShadow = true;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: AppSpacing.xxs),
-              child: leading,
+    final cs = context.colors;
+    final appColors = context.appColors;
+
+    return SafeArea(
+      bottom: false,
+      child: Column(
+        children: [
+          // ─── Fixed Header ───
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.lg,
             ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: context.text.titleSmall),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      subtitle!,
-                      style: context.text.bodySmall,
-                    ),
-                  ],
-                ],
+            child: BlocBuilder<ProfileCubit, ProfileState>(
+              builder: (context, state) => _ProfileHeader(
+                state: state,
+                appColors: appColors,
+                onSignInPressed: widget.onSignInPressed,
               ),
             ),
-            if (action != null) ...[
-              const SizedBox(width: AppSpacing.md),
-              Flexible(child: action!),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AppearanceSection extends StatefulWidget {
-  const _AppearanceSection();
-
-  @override
-  State<_AppearanceSection> createState() => _AppearanceSectionState();
-}
-
-class _AppearanceSectionState extends State<_AppearanceSection> {
-  @override
-  Widget build(BuildContext context) {
-    final cubit = context.read<ProfileAppearanceCubit>();
-
-    return BlocBuilder<ProfileAppearanceCubit, ProfileAppearanceState>(
-      builder: (context, state) {
-        final readerTheme = ReaderThemePreset.fromId(
-          state.readerAppearance.themeId,
-        );
-        final readerFont = ReaderFontPreset.fromId(
-          state.readerAppearance.fontId,
-        );
-
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          // ─── Scrollable Content ───
+          Expanded(
+            child: Stack(
               children: [
-                Text(
-                  'Appearance',
-                  style: context.text.titleMedium,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                _ReaderPreviewCard(
-                  theme: readerTheme.data,
-                  font: readerFont,
-                  textScale: state.readerAppearance.textScale,
-                  lineHeight: state.readerAppearance.lineHeight,
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Text(
-                  'App theme',
-                  style: context.text.labelLarge,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                SegmentedButton<ThemeMode>(
-                  showSelectedIcon: false,
-                  segments: const [
-                    ButtonSegment(
-                      value: ThemeMode.system,
-                      label: Text('System'),
+                NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification.metrics.axis != Axis.vertical) {
+                      return false;
+                    }
+                    final showTop = notification.metrics.extentBefore > 0;
+                    final showBottom = notification.metrics.extentAfter > 0;
+                    if ((showTop != _showHeaderShadow ||
+                            showBottom != _showFooterShadow) &&
+                        mounted) {
+                      setState(() {
+                        _showHeaderShadow = showTop;
+                        _showFooterShadow = showBottom;
+                      });
+                    }
+                    return false;
+                  },
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      0,
+                      AppSpacing.lg,
+                      AppSpacing.lg,
                     ),
-                    ButtonSegment(value: ThemeMode.light, label: Text('Light')),
-                    ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
-                  ],
-                  selected: {state.themeMode},
-                  onSelectionChanged: (value) {
-                    cubit.setThemeMode(value.first);
-                  },
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Text(
-                  'Reader theme',
-                  style: context.text.labelLarge,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: ReaderThemePreset.values.map((preset) {
-                    return ChoiceChip(
-                      label: Text(preset.label),
-                      selected: preset == readerTheme,
-                      onSelected: (_) {
-                        cubit.setReaderTheme(preset.id);
-                      },
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Text(
-                  'Reader font',
-                  style: context.text.labelLarge,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: ReaderFontPreset.values.map((preset) {
-                    return ChoiceChip(
-                      label: Text(preset.label),
-                      selected: preset == readerFont,
-                      onSelected: (_) {
-                        cubit.setReaderFont(preset.id);
-                      },
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                _SliderRow(
-                  label: 'Text size',
-                  valueLabel:
-                      '${(state.readerAppearance.textScale * 100).round()}%',
-                  value: state.readerAppearance.textScale,
-                  min: 0.85,
-                  max: 1.45,
-                  onChanged: (value) {
-                    cubit.previewTextScale(value);
-                  },
-                  onChangeEnd: (value) {
-                    cubit.commitTextScale(value);
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                _SliderRow(
-                  label: 'Line height',
-                  valueLabel: state.readerAppearance.lineHeight.toStringAsFixed(
-                    2,
+                    children: [
+                      // ─── Stats ───
+                      const _StatsRow(),
+                      const SizedBox(height: AppSpacing.lg),
+
+                      // ─── Appearance ───
+                      _SectionLabel(label: 'APPEARANCE'),
+                      const SizedBox(height: AppSpacing.md),
+                      BlocBuilder<
+                        ProfileAppearanceCubit,
+                        ProfileAppearanceState
+                      >(
+                        builder: (context, state) => _ThemeRow(
+                          themeMode: state.themeMode,
+                          onChanged: (mode) {
+                            context.read<ProfileAppearanceCubit>().setThemeMode(
+                              mode,
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+
+                      // ─── Reading ───
+                      _SectionLabel(label: 'READING'),
+                      const SizedBox(height: AppSpacing.md),
+                      _SettingsGroup(
+                        children: [
+                          _SettingsRow(
+                            icon: Icons.text_fields,
+                            label: 'Font & Text Size',
+                            detail: _currentFontLabel(context),
+                            onTap: () => _showFontSheet(context),
+                          ),
+                          _SettingsRow(
+                            icon: Icons.language,
+                            label: 'Translation Language',
+                            detail: 'English',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+
+                      // ─── General ───
+                      _SectionLabel(label: 'GENERAL'),
+                      const SizedBox(height: AppSpacing.md),
+                      _SettingsGroup(
+                        children: [
+                          _SettingsRow(
+                            icon: Icons.cloud_outlined,
+                            label: 'Sync & Backup',
+                            detail: 'Off',
+                          ),
+                          _SettingsRow(
+                            icon: Icons.download_outlined,
+                            label: 'Offline Downloads',
+                          ),
+                          _SettingsRow(
+                            icon: Icons.notifications_outlined,
+                            label: 'Notifications',
+                            detail: 'On',
+                          ),
+                          _SettingsRow(
+                            icon: Icons.shield_outlined,
+                            label: 'Privacy',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+
+                      // ─── About ───
+                      _SectionLabel(label: 'ABOUT'),
+                      const SizedBox(height: AppSpacing.md),
+                      _SettingsGroup(
+                        children: [
+                          _SettingsRow(
+                            icon: Icons.info_outline,
+                            label: 'Version',
+                            detail: widget.appVersion,
+                          ),
+                          _SettingsRow(
+                            icon: Icons.menu_book_outlined,
+                            label: 'Terms & Licenses',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+
+                      // ─── Dev ───
+                      _SectionLabel(label: 'DEVELOPER'),
+                      const SizedBox(height: AppSpacing.md),
+                      _SettingsGroup(
+                        children: [
+                          _SettingsRow(
+                            icon: Icons.design_services_outlined,
+                            label: 'Design System',
+                            onTap: widget.onDesignSystemPressed,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+
+                      // ─── Sign out ───
+                      BlocBuilder<ProfileCubit, ProfileState>(
+                        builder: (context, state) {
+                          if (!state.isAuthenticated) {
+                            return const SizedBox.shrink();
+                          }
+                          return Center(
+                            child: TextButton.icon(
+                              onPressed: state.isLoading
+                                  ? null
+                                  : () =>
+                                        context.read<ProfileCubit>().signOut(),
+                              icon: Icon(
+                                Icons.logout,
+                                size: AppIconSize.sm,
+                                color: cs.error,
+                              ),
+                              label: Text(
+                                'Sign Out',
+                                style: context.text.bodyMedium.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                  color: cs.error,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                    ],
                   ),
-                  value: state.readerAppearance.lineHeight,
-                  min: 1.2,
-                  max: 2.0,
-                  onChanged: (value) {
-                    cubit.previewLineHeight(value);
-                  },
-                  onChangeEnd: (value) {
-                    cubit.commitLineHeight(value);
-                  },
+                ),
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: ScrollEdgeFade(visible: _showHeaderShadow),
+                ),
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: ScrollEdgeFade(
+                    visible: _showFooterShadow,
+                    edge: ScrollFadeEdge.bottom,
+                  ),
                 ),
               ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _ReaderPreviewCard extends StatelessWidget {
-  const _ReaderPreviewCard({
-    required this.theme,
-    required this.font,
-    required this.textScale,
-    required this.lineHeight,
-  });
-
-  final ReaderThemeData theme;
-  final ReaderFontPreset font;
-  final double textScale;
-  final double lineHeight;
-
-  @override
-  Widget build(BuildContext context) {
-    final base = context.text.bodyMedium!;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: theme.surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: theme.dividerColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Reader preview',
-            style: context.text.labelLarge?.copyWith(
-              color: theme.secondaryTextColor,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'The quiet page makes long-form reading feel steady and focused.',
-            style: base.copyWith(
-              fontFamily: font.fontFamily,
-              fontSize: base.fontSize! * textScale,
-              height: lineHeight,
-              color: theme.primaryTextColor,
             ),
           ),
         ],
       ),
     );
   }
+
+  String _currentFontLabel(BuildContext context) {
+    final state = context.read<ProfileAppearanceCubit>().state;
+    final font = ReaderFontPreset.fromId(state.readerAppearance.fontId);
+    return font.label;
+  }
+
+  void _showFontSheet(BuildContext context) {
+    final cubit = context.read<ProfileAppearanceCubit>();
+
+    showAppBottomSheet<void>(
+      context,
+      builder: (_) => BlocProvider.value(
+        value: cubit,
+        child: const _FontSheet(),
+      ),
+    );
+  }
 }
 
-class _SliderRow extends StatelessWidget {
-  const _SliderRow({
-    required this.label,
-    required this.valueLabel,
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.onChanged,
-    this.onChangeEnd,
+// ─── Header ────────────────────────────────────────────────
+
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({
+    required this.state,
+    required this.appColors,
+    required this.onSignInPressed,
   });
 
-  final String label;
-  final String valueLabel;
-  final double value;
-  final double min;
-  final double max;
-  final ValueChanged<double> onChanged;
-  final ValueChanged<double>? onChangeEnd;
+  final ProfileState state;
+  final AppColorsExt appColors;
+  final VoidCallback onSignInPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final cs = context.colors;
+
+    return Row(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: context.text.labelLarge,
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: cs.secondary,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              state.isAuthenticated
+                  ? (state.email?[0].toUpperCase() ?? 'U')
+                  : 'G',
+              style: context.text.titleMedium.copyWith(
+                fontFamily: AppTypography.fontFamilySerif,
+                color: cs.onSurface,
               ),
             ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.lg),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      state.isAuthenticated ? (state.email ?? 'User') : 'Guest',
+                      style: context.text.titleMedium.copyWith(
+                        fontFamily: AppTypography.fontFamilySerif,
+                        color: cs.onSurface,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (state.isPremium) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.xxs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: appColors.proBadge.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      child: Text(
+                        'PRO',
+                        style: context.text.labelSmall.copyWith(
+                          color: appColors.proBadgeForeground,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xxs),
+              Text(
+                state.isAuthenticated
+                    ? 'Tap to manage account'
+                    : 'Sign in to sync your data',
+                style: context.text.labelSmall.copyWith(
+                  fontWeight: FontWeight.w400,
+                  color: cs.onSurface.withValues(alpha: 0.55),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Icon(
+          Icons.chevron_right,
+          size: AppIconSize.sm,
+          color: cs.onSurface.withValues(alpha: 0.3),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Stats ─────────────────────────────────────────────────
+
+class _StatsRow extends StatelessWidget {
+  const _StatsRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        _StatTile(value: '0', label: 'Books'),
+        SizedBox(width: AppSpacing.sm),
+        _StatTile(value: '0h', label: 'Read time'),
+        SizedBox(width: AppSpacing.sm),
+        _StatTile(value: '0', label: 'Streak'),
+      ],
+    );
+  }
+}
+
+class _StatTile extends StatelessWidget {
+  const _StatTile({required this.value, required this.label});
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colors;
+    final cardColor = Theme.of(context).cardTheme.color ?? cs.surface;
+
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: cs.outline.withValues(alpha: 0.45)),
+        ),
+        child: Column(
+          children: [
             Text(
-              valueLabel,
-              style: context.text.bodySmall,
+              value,
+              style: context.text.titleMedium.copyWith(color: cs.onSurface),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              label,
+              style: context.text.labelSmall.copyWith(
+                fontWeight: FontWeight.w400,
+                color: cs.onSurface.withValues(alpha: 0.55),
+              ),
             ),
           ],
         ),
-        Slider(
-          value: value,
-          min: min,
-          max: max,
-          onChanged: onChanged,
-          onChangeEnd: onChangeEnd,
-        ),
-      ],
+      ),
     );
   }
 }

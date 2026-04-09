@@ -5,6 +5,7 @@ import 'package:practice/src/practice_bloc.dart';
 
 import 'helpers/fake_dictionary_repository.dart';
 import 'helpers/fake_flashcard_repository.dart';
+import 'helpers/fake_fsrs_repository.dart';
 import 'helpers/fake_highlight_repository.dart';
 
 final _card1 = Flashcard(
@@ -14,7 +15,6 @@ final _card1 = Flashcard(
   back: 'Answer 1',
   creationSource: CreationSource.manual,
   createdAt: DateTime(2026, 1, 1),
-  fsrs: const FsrsCardData(),
 );
 
 final _card2 = Flashcard(
@@ -24,7 +24,6 @@ final _card2 = Flashcard(
   back: 'Answer 2',
   creationSource: CreationSource.manual,
   createdAt: DateTime(2026, 1, 2),
-  fsrs: const FsrsCardData(),
 );
 
 final _highlight1 = Highlight(
@@ -35,11 +34,25 @@ final _highlight1 = Highlight(
   createdAt: DateTime(2026, 1, 1),
 );
 
+final _dueCard1 = ReviewItem(
+  itemId: 'f1',
+  itemType: ReviewableType.flashcard,
+  fsrs: const FsrsCardData(),
+);
+
+final _dueHighlight1 = ReviewItem(
+  itemId: 'h1',
+  itemType: ReviewableType.highlight,
+  fsrs: const FsrsCardData(),
+);
+
 PracticeBloc _buildBloc({
+  required FakeFsrsRepository fsrsRepository,
   required FakeFlashcardRepository flashcardRepository,
   required FakeHighlightRepository highlightRepository,
   required FakeDictionaryRepository dictionaryRepository,
 }) => PracticeBloc(
+  fsrsRepository: fsrsRepository,
   flashcardRepository: flashcardRepository,
   highlightRepository: highlightRepository,
   dictionaryRepository: dictionaryRepository,
@@ -47,11 +60,13 @@ PracticeBloc _buildBloc({
 
 void main() {
   group('PracticeBloc', () {
+    late FakeFsrsRepository fsrsRepo;
     late FakeFlashcardRepository flashcardRepo;
     late FakeHighlightRepository highlightRepo;
     late FakeDictionaryRepository dictionaryRepo;
 
     setUp(() {
+      fsrsRepo = FakeFsrsRepository();
       flashcardRepo = FakeFlashcardRepository();
       highlightRepo = FakeHighlightRepository();
       dictionaryRepo = FakeDictionaryRepository();
@@ -60,10 +75,12 @@ void main() {
     blocTest<PracticeBloc, PracticeState>(
       'emits reviewing with due cards and highlights',
       setUp: () {
-        flashcardRepo.dueCards = [_card1];
-        highlightRepo.dueHighlights = [_highlight1];
+        fsrsRepo.dueItems = [_dueCard1, _dueHighlight1];
+        flashcardRepo.seed([_card1]);
+        highlightRepo.seed([_highlight1]);
       },
       build: () => _buildBloc(
+        fsrsRepository: fsrsRepo,
         flashcardRepository: flashcardRepo,
         highlightRepository: highlightRepo,
         dictionaryRepository: dictionaryRepo,
@@ -85,6 +102,7 @@ void main() {
     blocTest<PracticeBloc, PracticeState>(
       'emits empty when no items',
       build: () => _buildBloc(
+        fsrsRepository: fsrsRepo,
         flashcardRepository: flashcardRepo,
         highlightRepository: highlightRepo,
         dictionaryRepository: dictionaryRepo,
@@ -98,8 +116,9 @@ void main() {
 
     blocTest<PracticeBloc, PracticeState>(
       'emits failure when load throws',
-      setUp: () => flashcardRepo.shouldThrow = true,
+      setUp: () => fsrsRepo.shouldThrow = true,
       build: () => _buildBloc(
+        fsrsRepository: fsrsRepo,
         flashcardRepository: flashcardRepo,
         highlightRepository: highlightRepo,
         dictionaryRepository: dictionaryRepo,
@@ -114,6 +133,7 @@ void main() {
     blocTest<PracticeBloc, PracticeState>(
       'reveal sets isRevealed to true',
       build: () => _buildBloc(
+        fsrsRepository: fsrsRepo,
         flashcardRepository: flashcardRepo,
         highlightRepository: highlightRepo,
         dictionaryRepository: dictionaryRepo,
@@ -134,8 +154,8 @@ void main() {
 
     blocTest<PracticeBloc, PracticeState>(
       'rating advances to next item',
-      setUp: () => flashcardRepo.dueCards = [_card1, _card2],
       build: () => _buildBloc(
+        fsrsRepository: fsrsRepo,
         flashcardRepository: flashcardRepo,
         highlightRepository: highlightRepo,
         dictionaryRepository: dictionaryRepo,
@@ -155,14 +175,15 @@ void main() {
         ),
       ],
       verify: (_) {
-        expect(flashcardRepo.reviews, hasLength(1));
-        expect(flashcardRepo.reviews.first.rating, Rating.good);
+        expect(fsrsRepo.reviews, hasLength(1));
+        expect(fsrsRepo.reviews.first.rating, Rating.good);
       },
     );
 
     blocTest<PracticeBloc, PracticeState>(
       'rating last card emits completed',
       build: () => _buildBloc(
+        fsrsRepository: fsrsRepo,
         flashcardRepository: flashcardRepo,
         highlightRepository: highlightRepo,
         dictionaryRepository: dictionaryRepo,
@@ -187,6 +208,7 @@ void main() {
     blocTest<PracticeBloc, PracticeState>(
       'PracticeItemNext advances past highlight',
       build: () => _buildBloc(
+        fsrsRepository: fsrsRepo,
         flashcardRepository: flashcardRepo,
         highlightRepository: highlightRepo,
         dictionaryRepository: dictionaryRepo,
@@ -209,6 +231,7 @@ void main() {
     blocTest<PracticeBloc, PracticeState>(
       'PracticeItemNext on last item emits completed',
       build: () => _buildBloc(
+        fsrsRepository: fsrsRepo,
         flashcardRepository: flashcardRepo,
         highlightRepository: highlightRepo,
         dictionaryRepository: dictionaryRepo,
@@ -230,8 +253,9 @@ void main() {
 
     blocTest<PracticeBloc, PracticeState>(
       'rating emits failure when repository throws',
-      setUp: () => flashcardRepo.shouldThrow = true,
+      setUp: () => fsrsRepo.shouldThrow = true,
       build: () => _buildBloc(
+        fsrsRepository: fsrsRepo,
         flashcardRepository: flashcardRepo,
         highlightRepository: highlightRepo,
         dictionaryRepository: dictionaryRepo,

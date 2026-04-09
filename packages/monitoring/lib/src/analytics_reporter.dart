@@ -52,8 +52,10 @@ abstract interface class AnalyticsReporter {
 /// No-op implementation of [AnalyticsReporter].
 ///
 /// Does nothing — safe to use in development or when analytics
-/// is not configured. Replace with a real implementation for production.
-final class NoopAnalyticsReporter implements AnalyticsReporter {
+/// is not configured.
+///
+/// TODO: replace with real analytics (e.g. Firebase Analytics, Amplitude).
+class NoopAnalyticsReporter implements AnalyticsReporter {
   const NoopAnalyticsReporter();
 
   @override

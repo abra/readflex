@@ -1,4 +1,4 @@
-/// Standard control heights for consistent sizing across the app.
+/// Standard component sizes for consistent sizing across the app.
 abstract final class AppSizes {
   static const double buttonHeight = 50;
   static const double inputHeight = 52;

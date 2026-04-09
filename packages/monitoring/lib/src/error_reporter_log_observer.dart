@@ -7,7 +7,7 @@ import 'package:monitoring/src/error_reporting_service.dart';
 import 'package:monitoring/src/logger.dart';
 
 /// Forwards [LogLevel.error] and above to [ErrorReportingService].
-final class ErrorReporterLogObserver with LogObserver {
+class ErrorReporterLogObserver with LogObserver {
   const ErrorReporterLogObserver(this._errorReporter);
 
   final ErrorReportingService _errorReporter;

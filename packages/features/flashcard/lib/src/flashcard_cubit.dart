@@ -5,7 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 enum FlashcardStatus { idle, saving, success, failure }
 
-final class FlashcardState extends Equatable {
+class FlashcardState extends Equatable {
   const FlashcardState({
     this.status = FlashcardStatus.idle,
     this.front = '',
@@ -73,7 +73,8 @@ class FlashcardCubit extends Cubit<FlashcardState> {
         sourceHighlightId: sourceHighlightId,
       );
       emit(state.copyWith(status: FlashcardStatus.success));
-    } catch (e) {
+    } catch (e, st) {
+      addError(e, st);
       emit(state.copyWith(status: FlashcardStatus.failure));
     }
   }

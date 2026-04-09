@@ -1,6 +1,8 @@
 import 'package:domain_models/domain_models.dart';
 import 'package:local_storage/local_storage.dart';
 
+final _epoch = DateTime.fromMillisecondsSinceEpoch(0);
+
 extension FlashcardToDomain on FlashcardsTableData {
   Flashcard toDomainModel() => Flashcard(
     id: id,
@@ -10,18 +12,6 @@ extension FlashcardToDomain on FlashcardsTableData {
     hint: hint,
     sourceHighlightId: sourceHighlightId,
     creationSource: CreationSource.from(creationSource),
-    createdAt: DateTime.parse(createdAt),
-    fsrs: FsrsCardData(
-      state: FsrsState.from(fsrsState),
-      stability: stability,
-      difficulty: difficulty,
-      retrievability: retrievability,
-      reps: reps,
-      lapses: lapses,
-      lastReviewAt: lastReviewAt != null ? DateTime.parse(lastReviewAt!) : null,
-      nextReviewAt: nextReviewAt != null ? DateTime.parse(nextReviewAt!) : null,
-      scheduledDays: scheduledDays,
-      elapsedDays: elapsedDays,
-    ),
+    createdAt: DateTime.tryParse(createdAt) ?? _epoch,
   );
 }

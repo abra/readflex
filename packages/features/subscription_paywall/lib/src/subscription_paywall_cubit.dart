@@ -4,7 +4,7 @@ import 'package:subscription_service/subscription_service.dart';
 
 enum SubscriptionPaywallStatus { idle, purchasing, success, failure }
 
-final class SubscriptionPaywallState extends Equatable {
+class SubscriptionPaywallState extends Equatable {
   const SubscriptionPaywallState({
     this.status = SubscriptionPaywallStatus.idle,
     this.isPremium = false,
@@ -52,7 +52,8 @@ class SubscriptionPaywallCubit extends Cubit<SubscriptionPaywallState> {
           isPremium: isPremium,
         ),
       );
-    } catch (e) {
+    } catch (e, st) {
+      addError(e, st);
       emit(state.copyWith(status: SubscriptionPaywallStatus.failure));
     }
   }

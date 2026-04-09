@@ -7,7 +7,7 @@ import 'primitive_colors.dart';
 /// Used only inside theme assembly to build [ColorScheme].
 /// Widgets read colors from `Theme.of(context).colorScheme`
 /// or `Theme.of(context).extension<AppColorsExt>()`.
-final class AppColorPalette {
+class AppColorPalette {
   const AppColorPalette({
     required this.background,
     required this.foreground,

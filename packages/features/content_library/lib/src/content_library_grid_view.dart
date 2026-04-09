@@ -24,10 +24,10 @@ class ContentLibraryGridView extends StatelessWidget {
   Widget build(BuildContext context) {
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl,
+        AppSpacing.lg,
         AppSpacing.sm,
-        AppSpacing.xl,
-        AppSpacing.xxxxl,
+        AppSpacing.lg,
+        AppSpacing.xxl,
       ),
       physics: const AlwaysScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(

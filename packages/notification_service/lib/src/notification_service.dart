@@ -19,6 +19,8 @@ abstract class NotificationService {
 }
 
 /// Stub — does nothing.
+///
+/// TODO: replace with real implementation wrapping flutter_local_notifications.
 class NoopNotificationService implements NotificationService {
   const NoopNotificationService();
 

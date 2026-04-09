@@ -2,11 +2,10 @@ import 'package:drift/drift.dart';
 
 import '../database.dart';
 import '../tables/dictionary_table.dart';
-import '../tables/review_logs_table.dart';
 
 part 'dictionary_dao.g.dart';
 
-@DriftAccessor(tables: [DictionaryTable, ReviewLogsTable])
+@DriftAccessor(tables: [DictionaryTable])
 class DictionaryDao extends DatabaseAccessor<AppDatabase>
     with _$DictionaryDaoMixin {
   DictionaryDao(super.db);
@@ -19,32 +18,6 @@ class DictionaryDao extends DatabaseAccessor<AppDatabase>
       (select(dictionaryTable)
             ..where((t) => t.sourceId.equals(sourceId))
             ..orderBy([(t) => OrderingTerm.desc(t.addedAt)]))
-          .get();
-
-  // nextReviewAt IS NULL means the entry has never been reviewed — treat as
-  // immediately due so newly saved words appear in the first session.
-  Future<List<DictionaryTableData>> dueEntries(String now) =>
-      (select(dictionaryTable)
-            ..where(
-              (t) =>
-                  t.nextReviewAt.isNull() |
-                  t.nextReviewAt.isSmallerOrEqual(Variable(now)),
-            )
-            ..orderBy([(t) => OrderingTerm.asc(t.nextReviewAt)]))
-          .get();
-
-  Future<List<DictionaryTableData>> dueEntriesBySource(
-    String sourceId,
-    String now,
-  ) =>
-      (select(dictionaryTable)
-            ..where(
-              (t) =>
-                  t.sourceId.equals(sourceId) &
-                  (t.nextReviewAt.isNull() |
-                      t.nextReviewAt.isSmallerOrEqual(Variable(now))),
-            )
-            ..orderBy([(t) => OrderingTerm.asc(t.nextReviewAt)]))
           .get();
 
   Future<DictionaryTableData?> entryById(String id) => (select(
@@ -60,7 +33,4 @@ class DictionaryDao extends DatabaseAccessor<AppDatabase>
 
   Future<void> deleteEntry(String id) =>
       (delete(dictionaryTable)..where((t) => t.id.equals(id))).go();
-
-  Future<void> insertReviewLog(ReviewLogsTableCompanion log) =>
-      into(reviewLogsTable).insert(log);
 }

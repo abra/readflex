@@ -5,7 +5,7 @@ import 'package:uuid/uuid.dart' show Uuid;
 const _uuid = Uuid();
 
 /// Result of running FSRS scheduling on a reviewable item.
-final class ReviewResult {
+class ReviewResult {
   const ReviewResult({required this.fsrs, required this.log});
 
   /// Updated FSRS data to persist on the item.

@@ -1,5 +1,6 @@
 import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
+import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -30,10 +31,7 @@ class ContentLibraryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    assert(() {
-      debugPrint('[SCREEN] build ContentLibraryScreen');
-      return true;
-    }());
+    debugLogScreenBuild('ContentLibraryScreen');
 
     return MultiBlocProvider(
       providers: [
@@ -182,11 +180,13 @@ class ContentLibraryView extends StatelessWidget {
     // );
   }
 
+  // ignore: unused_element
   void _deleteBook(BuildContext context, Book book) {
     final bloc = context.read<ContentLibraryBloc>();
     bloc.add(ContentLibraryBookDeleted(book.id));
   }
 
+  // ignore: unused_element
   void _deleteArticle(BuildContext context, Article article) {
     final bloc = context.read<ContentLibraryBloc>();
     bloc.add(ContentLibraryArticleDeleted(article.id));

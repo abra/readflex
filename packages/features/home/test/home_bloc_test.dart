@@ -33,13 +33,9 @@ final _highlight = Highlight(
   createdAt: DateTime(2026, 1, 5),
 );
 
-final _flashcard = Flashcard(
-  id: 'f1',
-  deckId: '1',
-  front: 'Q',
-  back: 'A',
-  creationSource: CreationSource.manual,
-  createdAt: DateTime(2026, 1, 5),
+final _dueItem = ReviewItem(
+  itemId: 'f1',
+  itemType: ReviewableType.flashcard,
   fsrs: const FsrsCardData(),
 );
 
@@ -48,13 +44,13 @@ void main() {
     late FakeBookRepository bookRepo;
     late FakeArticleRepository articleRepo;
     late FakeHighlightRepository highlightRepo;
-    late FakeFlashcardRepository flashcardRepo;
+    late FakeFsrsRepository fsrsRepo;
 
     setUp(() {
       bookRepo = FakeBookRepository();
       articleRepo = FakeArticleRepository();
       highlightRepo = FakeHighlightRepository();
-      flashcardRepo = FakeFlashcardRepository();
+      fsrsRepo = FakeFsrsRepository();
     });
 
     blocTest<HomeBloc, HomeState>(
@@ -63,13 +59,13 @@ void main() {
         bookRepo.books = [_book];
         articleRepo.articles = [_article];
         highlightRepo.highlights = [_highlight];
-        flashcardRepo.dueCards = [_flashcard];
+        fsrsRepo.dueItems = [_dueItem];
       },
       build: () => HomeBloc(
         bookRepository: bookRepo,
         articleRepository: articleRepo,
         highlightRepository: highlightRepo,
-        flashcardRepository: flashcardRepo,
+        fsrsRepository: fsrsRepo,
       ),
       act: (bloc) => bloc.add(const HomeLoadRequested()),
       expect: () => [
@@ -91,7 +87,7 @@ void main() {
         bookRepository: bookRepo,
         articleRepository: articleRepo,
         highlightRepository: highlightRepo,
-        flashcardRepository: flashcardRepo,
+        fsrsRepository: fsrsRepo,
       ),
       act: (bloc) => bloc.add(const HomeLoadRequested()),
       expect: () => [
@@ -107,7 +103,7 @@ void main() {
         bookRepository: bookRepo,
         articleRepository: articleRepo,
         highlightRepository: highlightRepo,
-        flashcardRepository: flashcardRepo,
+        fsrsRepository: fsrsRepo,
       ),
       act: (bloc) => bloc.add(const HomeLoadRequested()),
       expect: () => [

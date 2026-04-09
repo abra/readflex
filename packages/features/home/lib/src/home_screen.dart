@@ -2,9 +2,9 @@ import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 
 import 'home_bloc.dart';
@@ -15,7 +15,7 @@ class HomeScreen extends StatelessWidget {
     required this.bookRepository,
     required this.articleRepository,
     required this.highlightRepository,
-    required this.flashcardRepository,
+    required this.fsrsRepository,
     required this.onBookPressed,
     required this.onArticlePressed,
     required this.onPracticePressed,
@@ -25,24 +25,21 @@ class HomeScreen extends StatelessWidget {
   final BookRepository bookRepository;
   final ArticleRepository articleRepository;
   final HighlightRepository highlightRepository;
-  final FlashcardRepository flashcardRepository;
+  final FsrsRepository fsrsRepository;
   final void Function(Book book) onBookPressed;
   final void Function(Article article) onArticlePressed;
   final VoidCallback onPracticePressed;
 
   @override
   Widget build(BuildContext context) {
-    assert(() {
-      debugPrint('[SCREEN] build HomeScreen');
-      return true;
-    }());
+    debugLogScreenBuild('HomeScreen');
 
     return BlocProvider(
       create: (_) => HomeBloc(
         bookRepository: bookRepository,
         articleRepository: articleRepository,
         highlightRepository: highlightRepository,
-        flashcardRepository: flashcardRepository,
+        fsrsRepository: fsrsRepository,
       )..add(const HomeLoadRequested()),
       child: HomeView(
         onBookPressed: onBookPressed,
@@ -84,10 +81,10 @@ class HomeView extends StatelessWidget {
     //           onRetry: () => bloc.add(const HomeLoadRequested()),
     //         ),
     //         HomeStatus.success => ListView(
-    //           padding: const EdgeInsets.all(AppSpacing.xl),
+    //           padding: const EdgeInsets.all(AppSpacing.lg),
     //           children: [
     //             _StatsRow(state: state, onPracticePressed: onPracticePressed),
-    //             const SizedBox(height: AppSpacing.xxl),
+    //             const SizedBox(height: AppSpacing.xl),
     //             if (state.recentItems.isNotEmpty) ...[
     //               Text(
     //                 'Continue Reading',
@@ -135,6 +132,7 @@ class HomeView extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _StatsRow extends StatelessWidget {
   const _StatsRow({required this.state, required this.onPracticePressed});
 
@@ -213,7 +211,7 @@ class _StatCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.xs),
               Text(
                 value,
-                style: context.text.headlineSmall?.copyWith(color: color),
+                style: context.text.headlineSmall.copyWith(color: color),
               ),
               Text(
                 label,

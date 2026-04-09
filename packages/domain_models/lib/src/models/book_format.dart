@@ -6,22 +6,14 @@ enum BookFormat {
   pdf
   ;
 
-  /// Parses a [BookFormat] from a stored string value.
-  static BookFormat from(String? value) => switch (value) {
-    'epub' => BookFormat.epub,
-    'fb2' => BookFormat.fb2,
-    'mobi' => BookFormat.mobi,
-    'pdf' => BookFormat.pdf,
-    _ => BookFormat.epub,
-  };
+  /// Parses a [BookFormat] from its stored [name]. Falls back to [epub] on
+  /// unknown or null values.
+  static BookFormat from(String? value) =>
+      value == null ? epub : values.asNameMap()[value] ?? epub;
 
   /// Parses a [BookFormat] from a file extension (e.g. '.epub').
-  static BookFormat? fromExtension(String extension) =>
-      switch (extension.toLowerCase()) {
-        '.epub' => BookFormat.epub,
-        '.fb2' => BookFormat.fb2,
-        '.mobi' => BookFormat.mobi,
-        '.pdf' => BookFormat.pdf,
-        _ => null,
-      };
+  static BookFormat? fromExtension(String extension) {
+    final key = extension.toLowerCase().replaceFirst('.', '');
+    return values.asNameMap()[key];
+  }
 }

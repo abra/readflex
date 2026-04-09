@@ -2,7 +2,7 @@ part of 'practice_bloc.dart';
 
 enum PracticeStatus { initial, loading, reviewing, empty, completed, failure }
 
-final class PracticeState extends Equatable {
+class PracticeState extends Equatable {
   const PracticeState({
     this.status = PracticeStatus.initial,
     this.items = const [],

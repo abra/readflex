@@ -11,11 +11,13 @@ import 'daos/books_dao.dart';
 import 'daos/dictionary_dao.dart';
 import 'daos/flashcards_dao.dart';
 import 'daos/highlights_dao.dart';
+import 'daos/review_items_dao.dart';
 import 'tables/articles_table.dart';
 import 'tables/books_table.dart';
 import 'tables/dictionary_table.dart';
 import 'tables/flashcards_table.dart';
 import 'tables/highlights_table.dart';
+import 'tables/review_items_table.dart';
 import 'tables/review_logs_table.dart';
 
 part 'database.g.dart';
@@ -27,9 +29,17 @@ part 'database.g.dart';
     HighlightsTable,
     FlashcardsTable,
     DictionaryTable,
+    ReviewItemsTable,
     ReviewLogsTable,
   ],
-  daos: [ArticlesDao, BooksDao, HighlightsDao, FlashcardsDao, DictionaryDao],
+  daos: [
+    ArticlesDao,
+    BooksDao,
+    HighlightsDao,
+    FlashcardsDao,
+    DictionaryDao,
+    ReviewItemsDao,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -38,7 +48,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -120,6 +130,91 @@ class AppDatabase extends _$AppDatabase {
         await customStatement(
           'ALTER TABLE dictionary_entries_table RENAME TO dictionary_table',
         );
+      }
+      if (from < 4) {
+        // Normalize FSRS state out of per-entity tables into a single
+        // review_items_table. Motivation: FSRS fields were duplicated across
+        // flashcards / highlights / dictionary, each with its own schema and
+        // its own mapper. A single table lets FsrsRepository operate
+        // generically over any ReviewableType, enables cross-type queries
+        // (due items, mastered items, logs) with a single join, and makes
+        // adding new reviewable types a one-line change instead of a
+        // migration per table.
+        await customStatement('''
+          CREATE TABLE IF NOT EXISTS review_items_table (
+            item_id TEXT NOT NULL PRIMARY KEY,
+            item_type TEXT NOT NULL,
+            source_id TEXT,
+            fsrs_state TEXT NOT NULL DEFAULT 'new',
+            stability REAL NOT NULL DEFAULT 0.0,
+            difficulty REAL NOT NULL DEFAULT 0.0,
+            retrievability REAL NOT NULL DEFAULT 0.0,
+            reps INTEGER NOT NULL DEFAULT 0,
+            lapses INTEGER NOT NULL DEFAULT 0,
+            last_review_at TEXT,
+            next_review_at TEXT,
+            scheduled_days INTEGER NOT NULL DEFAULT 0,
+            elapsed_days INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+
+        // Migrate existing FSRS data from flashcards.
+        await customStatement('''
+          INSERT OR IGNORE INTO review_items_table
+            (item_id, item_type, source_id, fsrs_state, stability, difficulty,
+             retrievability, reps, lapses, last_review_at, next_review_at,
+             scheduled_days, elapsed_days)
+          SELECT id, 'flashcard', deck_id, fsrs_state, stability, difficulty,
+                 retrievability, reps, lapses, last_review_at, next_review_at,
+                 scheduled_days, elapsed_days
+          FROM flashcards_table
+        ''');
+
+        // Migrate from highlights.
+        await customStatement('''
+          INSERT OR IGNORE INTO review_items_table
+            (item_id, item_type, source_id, fsrs_state, stability, difficulty,
+             retrievability, reps, lapses, last_review_at, next_review_at,
+             scheduled_days, elapsed_days)
+          SELECT id, 'highlight', source_id, fsrs_state, stability, difficulty,
+                 retrievability, reps, lapses, last_review_at, next_review_at,
+                 scheduled_days, elapsed_days
+          FROM highlights_table
+        ''');
+
+        // Migrate from dictionary.
+        await customStatement('''
+          INSERT OR IGNORE INTO review_items_table
+            (item_id, item_type, source_id, fsrs_state, stability, difficulty,
+             retrievability, reps, lapses, last_review_at, next_review_at,
+             scheduled_days, elapsed_days)
+          SELECT id, 'dictionary', source_id, fsrs_state, stability, difficulty,
+                 retrievability, reps, lapses, last_review_at, next_review_at,
+                 scheduled_days, elapsed_days
+          FROM dictionary_table
+        ''');
+
+        // Drop FSRS columns from entity tables (SQLite 3.35+).
+        for (final table in [
+          'flashcards_table',
+          'highlights_table',
+          'dictionary_table',
+        ]) {
+          for (final col in [
+            'fsrs_state',
+            'stability',
+            'difficulty',
+            'retrievability',
+            'reps',
+            'lapses',
+            'last_review_at',
+            'next_review_at',
+            'scheduled_days',
+            'elapsed_days',
+          ]) {
+            await customStatement('ALTER TABLE $table DROP COLUMN $col');
+          }
+        }
       }
     },
   );

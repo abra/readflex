@@ -7,12 +7,8 @@ enum HighlightColor {
   purple
   ;
 
-  static HighlightColor from(String value) => switch (value) {
-    'yellow' => yellow,
-    'green' => green,
-    'blue' => blue,
-    'pink' => pink,
-    'purple' => purple,
-    _ => yellow,
-  };
+  /// Parses a [HighlightColor] from its stored [name]. Falls back to [yellow]
+  /// on unknown values.
+  static HighlightColor from(String value) =>
+      values.asNameMap()[value] ?? yellow;
 }

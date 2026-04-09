@@ -5,12 +5,19 @@ class FakeHighlightRepository implements HighlightRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 
-  List<Highlight> dueHighlights = [];
+  final Map<String, Highlight> _highlights = {};
   bool shouldThrow = false;
 
+  void seed(List<Highlight> highlights) {
+    _highlights.clear();
+    for (final h in highlights) {
+      _highlights[h.id] = h;
+    }
+  }
+
   @override
-  Future<List<Highlight>> getDueHighlights() async {
+  Future<Highlight?> getHighlightById(String id) async {
     if (shouldThrow) throw StorageException(cause: 'fake');
-    return List.unmodifiable(dueHighlights);
+    return _highlights[id];
   }
 }

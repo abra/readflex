@@ -2,20 +2,25 @@ import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fsrs_repository/fsrs_repository.dart';
 
 part 'dictionary_event.dart';
 part 'dictionary_state.dart';
 
 class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
-  DictionaryBloc({required DictionaryRepository dictionaryRepository})
-    : _repository = dictionaryRepository,
-      super(const DictionaryState()) {
+  DictionaryBloc({
+    required DictionaryRepository dictionaryRepository,
+    required FsrsRepository fsrsRepository,
+  }) : _repository = dictionaryRepository,
+       _fsrsRepository = fsrsRepository,
+       super(const DictionaryState()) {
     on<DictionaryLoadRequested>(_onLoadRequested);
     on<DictionarySearchChanged>(_onSearchChanged);
     on<DictionaryEntryDeleted>(_onEntryDeleted);
   }
 
   final DictionaryRepository _repository;
+  final FsrsRepository _fsrsRepository;
 
   Future<void> _onLoadRequested(
     DictionaryLoadRequested event,
@@ -43,8 +48,10 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
   ) async {
     try {
       await _repository.deleteEntry(event.entryId);
+      await _fsrsRepository.deleteReviewItem(event.entryId);
       await _loadEntries(emit);
-    } catch (e) {
+    } catch (e, st) {
+      addError(e, st);
       emit(state.copyWith(status: DictionaryStatus.failure));
     }
   }
@@ -52,14 +59,19 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
   Future<void> _loadEntries(Emitter<DictionaryState> emit) async {
     try {
       final entries = await _repository.getEntries();
+      final masteredIds = await _fsrsRepository.getMasteredItemIds(
+        type: ReviewableType.dictionary,
+      );
       emit(
         state.copyWith(
           status: DictionaryStatus.success,
           entries: entries,
           filteredEntries: _filter(entries, state.searchQuery),
+          masteredIds: masteredIds,
         ),
       );
-    } catch (e) {
+    } catch (e, st) {
+      addError(e, st);
       emit(state.copyWith(status: DictionaryStatus.failure));
     }
   }

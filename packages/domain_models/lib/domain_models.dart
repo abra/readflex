@@ -10,6 +10,7 @@ export 'src/models/fsrs_card_data.dart';
 export 'src/models/highlight.dart';
 export 'src/models/highlight_color.dart';
 export 'src/models/rating.dart';
+export 'src/models/review_item.dart';
 export 'src/models/review_log.dart';
 export 'src/models/reviewable_type.dart';
 export 'src/models/source_type.dart';

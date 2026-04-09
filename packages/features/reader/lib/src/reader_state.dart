@@ -2,7 +2,7 @@ part of 'reader_bloc.dart';
 
 enum ReaderStatus { initial, loading, ready, failure }
 
-final class ReaderState extends Equatable {
+class ReaderState extends Equatable {
   const ReaderState({
     this.status = ReaderStatus.initial,
     this.sourceType,

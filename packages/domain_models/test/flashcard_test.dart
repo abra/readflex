@@ -37,16 +37,9 @@ void main() {
       expect(c.hint, isNull);
     });
 
-    test('updates fsrs data', () {
-      final c = card().copyWith(
-        fsrs: const FsrsCardData(
-          state: FsrsState.review,
-          stability: 5.0,
-          difficulty: 3.0,
-        ),
-      );
-      expect(c.fsrs.state, FsrsState.review);
-      expect(c.fsrs.stability, 5.0);
+    test('updates creationSource', () {
+      final c = card().copyWith(creationSource: CreationSource.aiHighlight);
+      expect(c.creationSource, CreationSource.aiHighlight);
     });
   });
 
@@ -68,8 +61,8 @@ void main() {
       expect(FsrsState.from('relearning'), FsrsState.relearning);
     });
 
-    test('from() returns newCard for unknown', () {
-      expect(FsrsState.from('unknown'), FsrsState.newCard);
+    test('from() throws FormatException for unknown', () {
+      expect(() => FsrsState.from('unknown'), throwsFormatException);
     });
 
     test('toStorageString() round-trips', () {

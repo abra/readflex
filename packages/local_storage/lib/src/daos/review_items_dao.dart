@@ -1,0 +1,102 @@
+import 'package:drift/drift.dart';
+
+import '../database.dart';
+import '../tables/review_items_table.dart';
+import '../tables/review_logs_table.dart';
+
+part 'review_items_dao.g.dart';
+
+@DriftAccessor(tables: [ReviewItemsTable, ReviewLogsTable])
+class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
+    with _$ReviewItemsDaoMixin {
+  ReviewItemsDao(super.db);
+
+  // ─── Review items ───
+
+  Future<ReviewItemsTableData?> byItemId(String itemId) => (select(
+    reviewItemsTable,
+  )..where((t) => t.itemId.equals(itemId))).getSingleOrNull();
+
+  Future<List<ReviewItemsTableData>> byItemIds(List<String> itemIds) =>
+      (select(reviewItemsTable)..where((t) => t.itemId.isIn(itemIds))).get();
+
+  Future<List<ReviewItemsTableData>> byType(String itemType) => (select(
+    reviewItemsTable,
+  )..where((t) => t.itemType.equals(itemType))).get();
+
+  /// Items that are due for review: never reviewed (nextReviewAt IS NULL)
+  /// or nextReviewAt <= now.
+  Future<List<ReviewItemsTableData>> dueItems(String now, {String? type}) =>
+      (select(reviewItemsTable)
+            ..where(
+              (t) {
+                final dueCondition =
+                    t.nextReviewAt.isNull() |
+                    t.nextReviewAt.isSmallerOrEqual(Variable(now));
+                if (type != null) {
+                  return t.itemType.equals(type) & dueCondition;
+                }
+                return dueCondition;
+              },
+            )
+            ..orderBy([(t) => OrderingTerm.asc(t.nextReviewAt)]))
+          .get();
+
+  Future<List<ReviewItemsTableData>> dueItemsBySource(
+    String sourceId,
+    String now, {
+    String? type,
+  }) =>
+      (select(reviewItemsTable)
+            ..where(
+              (t) {
+                final dueCondition =
+                    t.sourceId.equals(sourceId) &
+                    (t.nextReviewAt.isNull() |
+                        t.nextReviewAt.isSmallerOrEqual(Variable(now)));
+                if (type != null) {
+                  return t.itemType.equals(type) & dueCondition;
+                }
+                return dueCondition;
+              },
+            )
+            ..orderBy([(t) => OrderingTerm.asc(t.nextReviewAt)]))
+          .get();
+
+  /// Items in 'review' state (mastered).
+  Future<List<ReviewItemsTableData>> masteredItems({String? type}) =>
+      (select(reviewItemsTable)..where(
+            (t) {
+              final mastered = t.fsrsState.equals('review');
+              if (type != null) {
+                return t.itemType.equals(type) & mastered;
+              }
+              return mastered;
+            },
+          ))
+          .get();
+
+  Future<void> insertItem(ReviewItemsTableCompanion item) =>
+      into(reviewItemsTable).insert(item);
+
+  Future<void> upsertItem(ReviewItemsTableCompanion item) =>
+      into(reviewItemsTable).insertOnConflictUpdate(item);
+
+  Future<void> updateItem(ReviewItemsTableCompanion item) => (update(
+    reviewItemsTable,
+  )..where((t) => t.itemId.equals(item.itemId.value))).write(item);
+
+  Future<void> deleteItem(String itemId) =>
+      (delete(reviewItemsTable)..where((t) => t.itemId.equals(itemId))).go();
+
+  // ─── Review logs ───
+
+  Future<void> insertReviewLog(ReviewLogsTableCompanion log) =>
+      into(reviewLogsTable).insert(log);
+
+  Future<List<ReviewLogsTableData>> reviewLogsByItem(String itemId) =>
+      (select(reviewLogsTable)
+            ..where((t) => t.itemId.equals(itemId))
+            ..orderBy([(t) => OrderingTerm.desc(t.reviewedAt)]))
+          .get();
+}

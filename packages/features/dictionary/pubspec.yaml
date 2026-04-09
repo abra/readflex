@@ -17,6 +17,8 @@ dependencies:
     path: ../../domain_models
   dictionary_repository:
     path: ../../dictionary_repository
+  fsrs_repository:
+    path: ../../fsrs_repository
   component_library:
     path: ../../component_library
 

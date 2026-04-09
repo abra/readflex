@@ -27,8 +27,10 @@ abstract interface class ErrorReportingService {
 /// No-op implementation of [ErrorReportingService].
 ///
 /// Does nothing — safe to use in development or when error reporting
-/// is not configured. Replace with a real implementation for production.
-final class NoopErrorReporter implements ErrorReportingService {
+/// is not configured.
+///
+/// TODO: replace with real error reporting (e.g. Sentry).
+class NoopErrorReporter implements ErrorReportingService {
   const NoopErrorReporter();
 
   @override

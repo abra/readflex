@@ -11,11 +11,13 @@ class FirstImportScreen extends StatefulWidget {
   const FirstImportScreen({
     required this.onAddPressed,
     required this.onContentAdded,
+    required this.onSkipPressed,
     super.key,
   });
 
   final AsyncValueGetter<bool> onAddPressed;
   final VoidCallback onContentAdded;
+  final VoidCallback onSkipPressed;
 
   @override
   State<FirstImportScreen> createState() => _FirstImportScreenState();
@@ -44,15 +46,12 @@ class _FirstImportScreenState extends State<FirstImportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    assert(() {
-      debugPrint('[SCREEN] build FirstImportScreen');
-      return true;
-    }());
+    debugLogScreenBuild('FirstImportScreen');
 
     return Scaffold(
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxxl),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -61,7 +60,7 @@ class _FirstImportScreenState extends State<FirstImportScreen> {
                 size: 80,
                 color: context.colors.primary,
               ),
-              const SizedBox(height: AppSpacing.xxl),
+              const SizedBox(height: AppSpacing.xl),
               Text(
                 'Add your first book or article',
                 style: context.text.headlineSmall,
@@ -73,13 +72,18 @@ class _FirstImportScreenState extends State<FirstImportScreen> {
                 style: context.text.bodyMedium,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: AppSpacing.xxxl),
+              const SizedBox(height: AppSpacing.xl),
               FilledButton.icon(
                 onPressed: _isLoading ? null : _handleAddPressed,
                 icon: _isLoading
-                    ? const ButtonLoadingIndicator(size: 18)
+                    ? const ButtonLoadingIndicator(size: AppIconSize.sm)
                     : const Icon(Icons.add),
                 label: Text(_isLoading ? 'Opening...' : 'Add'),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextButton(
+                onPressed: _isLoading ? null : widget.onSkipPressed,
+                child: const Text('Skip for now'),
               ),
             ],
           ),

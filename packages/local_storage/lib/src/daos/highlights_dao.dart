@@ -2,11 +2,10 @@ import 'package:drift/drift.dart';
 
 import '../database.dart';
 import '../tables/highlights_table.dart';
-import '../tables/review_logs_table.dart';
 
 part 'highlights_dao.g.dart';
 
-@DriftAccessor(tables: [HighlightsTable, ReviewLogsTable])
+@DriftAccessor(tables: [HighlightsTable])
 class HighlightsDao extends DatabaseAccessor<AppDatabase>
     with _$HighlightsDaoMixin {
   HighlightsDao(super.db);
@@ -19,32 +18,6 @@ class HighlightsDao extends DatabaseAccessor<AppDatabase>
       (select(highlightsTable)
             ..where((t) => t.sourceId.equals(sourceId))
             ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
-          .get();
-
-  // nextReviewAt IS NULL means the item has never been reviewed — treat as
-  // immediately due so newly created highlights appear in the first session.
-  Future<List<HighlightsTableData>> dueHighlights(String now) =>
-      (select(highlightsTable)
-            ..where(
-              (t) =>
-                  t.nextReviewAt.isNull() |
-                  t.nextReviewAt.isSmallerOrEqual(Variable(now)),
-            )
-            ..orderBy([(t) => OrderingTerm.asc(t.nextReviewAt)]))
-          .get();
-
-  Future<List<HighlightsTableData>> dueHighlightsBySource(
-    String sourceId,
-    String now,
-  ) =>
-      (select(highlightsTable)
-            ..where(
-              (t) =>
-                  t.sourceId.equals(sourceId) &
-                  (t.nextReviewAt.isNull() |
-                      t.nextReviewAt.isSmallerOrEqual(Variable(now))),
-            )
-            ..orderBy([(t) => OrderingTerm.asc(t.nextReviewAt)]))
           .get();
 
   Future<HighlightsTableData?> highlightById(String id) => (select(
@@ -63,7 +36,4 @@ class HighlightsDao extends DatabaseAccessor<AppDatabase>
 
   Future<void> deleteHighlightsBySource(String sourceId) =>
       (delete(highlightsTable)..where((t) => t.sourceId.equals(sourceId))).go();
-
-  Future<void> insertReviewLog(ReviewLogsTableCompanion log) =>
-      into(reviewLogsTable).insert(log);
 }

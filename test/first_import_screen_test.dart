@@ -8,11 +8,13 @@ void main() {
   Widget buildSubject({
     required Future<bool> Function() onAddPressed,
     required VoidCallback onContentAdded,
+    VoidCallback? onSkipPressed,
   }) {
     return MaterialApp(
       home: FirstImportScreen(
         onAddPressed: onAddPressed,
         onContentAdded: onContentAdded,
+        onSkipPressed: onSkipPressed ?? () {},
       ),
     );
   }
@@ -74,6 +76,25 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(contentAddedCount, 0);
+  });
+
+  testWidgets('calls onSkipPressed when Skip is tapped', (tester) async {
+    var skipPressedCount = 0;
+
+    await tester.pumpWidget(
+      buildSubject(
+        onAddPressed: () async => false,
+        onContentAdded: () {},
+        onSkipPressed: () {
+          skipPressedCount += 1;
+        },
+      ),
+    );
+
+    await tester.tap(find.text('Skip for now'));
+    await tester.pumpAndSettle();
+
+    expect(skipPressedCount, 1);
   });
 
   testWidgets('disables repeated taps while add flow is in progress', (

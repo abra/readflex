@@ -13,9 +13,8 @@ void showTranslateSheet(
   required DictionaryRepository dictionaryRepository,
   required TextSelectionContext selection,
 }) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
+  showAppBottomSheet<void>(
+    context,
     builder: (_) => TranslateSheet(
       translationService: translationService,
       dictionaryRepository: dictionaryRepository,
@@ -75,7 +74,7 @@ class _TranslateSheetView extends StatelessWidget {
           title: 'Translate',
           onClose: () => Navigator.of(context).pop(),
           headerSpacing: AppSpacing.sm,
-          bodyPadding: const EdgeInsets.all(AppSpacing.xl),
+          bodyPadding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -95,12 +94,12 @@ class _TranslateSheetView extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
+                    color: context.colors.primaryContainer,
                     borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: Text(
                     state.translatedText,
-                    style: Theme.of(context).textTheme.bodyLarge,
+                    style: context.text.bodyLarge,
                   ),
                 ),
                 if (state.usageExamples.isNotEmpty) ...[
@@ -112,7 +111,7 @@ class _TranslateSheetView extends StatelessWidget {
                       ),
                       child: Text(
                         example,
-                        style: Theme.of(context).textTheme.bodySmall,
+                        style: context.text.bodySmall,
                       ),
                     ),
                   ),
@@ -124,7 +123,7 @@ class _TranslateSheetView extends StatelessWidget {
                   child: Text(
                     state.errorMessage ?? 'An error occurred',
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
+                      color: context.colors.error,
                     ),
                   ),
                 ),
@@ -140,7 +139,7 @@ class _TranslateSheetView extends StatelessWidget {
                           sourceType: selection.sourceType,
                         ),
                   icon: state.status == TranslateStatus.saving
-                      ? const ButtonLoadingIndicator(size: 18)
+                      ? const ButtonLoadingIndicator(size: AppIconSize.sm)
                       : const Icon(Icons.bookmark_add),
                   label: const Text('Save to Dictionary'),
                 ),

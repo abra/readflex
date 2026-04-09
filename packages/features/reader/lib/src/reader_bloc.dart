@@ -108,8 +108,11 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         await _articleRepository.updateArticle(updated);
         emit(state.copyWith(article: updated));
       }
-    } catch (_) {
-      // Non-fatal: position save failed, don't disrupt reading
+    } catch (e, st) {
+      // Non-fatal: position save failed, don't disrupt reading. Log via
+      // addError so AppBlocObserver routes it through the logger for
+      // production debugging without surfacing the error to the UI.
+      addError(e, st);
     }
   }
 

@@ -31,6 +31,10 @@ dependencies:
     path: packages/dictionary_repository
   flashcard_repository:
     path: packages/flashcard_repository
+  fsrs_repository:
+    path: packages/fsrs_repository
+  dev_data:
+    path: packages/dev_data
   article_parser:
     path: packages/article_parser
   translation_service:

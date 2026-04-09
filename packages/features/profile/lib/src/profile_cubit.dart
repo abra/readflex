@@ -3,7 +3,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:subscription_service/subscription_service.dart';
 
-final class ProfileState extends Equatable {
+class ProfileState extends Equatable {
   const ProfileState({
     this.authStatus = AuthStatus.unauthenticated,
     this.email,
@@ -20,14 +20,16 @@ final class ProfileState extends Equatable {
 
   bool get isPremium => subscriptionStatus == SubscriptionStatus.premium;
 
+  static const _absent = Object();
+
   ProfileState copyWith({
     AuthStatus? authStatus,
-    String? email,
+    Object? email = _absent,
     SubscriptionStatus? subscriptionStatus,
     bool? isLoading,
   }) => ProfileState(
     authStatus: authStatus ?? this.authStatus,
-    email: email ?? this.email,
+    email: email == _absent ? this.email : email as String?,
     subscriptionStatus: subscriptionStatus ?? this.subscriptionStatus,
     isLoading: isLoading ?? this.isLoading,
   );
@@ -49,7 +51,7 @@ class ProfileCubit extends Cubit<ProfileState> {
 
   void load() {
     emit(
-      ProfileState(
+      state.copyWith(
         authStatus: _authService.status,
         email: _authService.currentUser?.email,
         subscriptionStatus: _subscriptionService.status,
@@ -61,8 +63,19 @@ class ProfileCubit extends Cubit<ProfileState> {
     emit(state.copyWith(isLoading: true));
     try {
       await _authService.signOut();
-      emit(const ProfileState());
-    } catch (_) {
+      emit(
+        state.copyWith(
+          authStatus: AuthStatus.unauthenticated,
+          email: null,
+          subscriptionStatus: SubscriptionStatus.free,
+          isLoading: false,
+        ),
+      );
+    } catch (e, st) {
+      // Route through BlocBase.addError → AppBlocObserver.onError → logger.
+      // Sign-out failure is non-fatal for app state (user stays authenticated),
+      // but must be visible in logs to debug production auth issues.
+      addError(e, st);
       emit(state.copyWith(isLoading: false));
     }
   }

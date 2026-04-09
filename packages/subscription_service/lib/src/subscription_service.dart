@@ -14,6 +14,8 @@ abstract class SubscriptionService {
 }
 
 /// Stub — always free tier.
+///
+/// TODO: replace with real subscription service (RevenueCat / in-app purchases).
 class NoopSubscriptionService implements SubscriptionService {
   const NoopSubscriptionService();
 

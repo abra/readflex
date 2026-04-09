@@ -3,6 +3,7 @@ import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 
 import 'mini_review_cubit.dart';
@@ -12,15 +13,16 @@ import 'review_card_views.dart';
 void showMiniReviewSheet(
   BuildContext context, {
   required String sourceId,
+  required FsrsRepository fsrsRepository,
   required FlashcardRepository flashcardRepository,
   required HighlightRepository highlightRepository,
   required DictionaryRepository dictionaryRepository,
 }) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
+  showAppBottomSheet<void>(
+    context,
     builder: (_) => _MiniReviewSheet(
       sourceId: sourceId,
+      fsrsRepository: fsrsRepository,
       flashcardRepository: flashcardRepository,
       highlightRepository: highlightRepository,
       dictionaryRepository: dictionaryRepository,
@@ -31,12 +33,14 @@ void showMiniReviewSheet(
 class _MiniReviewSheet extends StatelessWidget {
   const _MiniReviewSheet({
     required this.sourceId,
+    required this.fsrsRepository,
     required this.flashcardRepository,
     required this.highlightRepository,
     required this.dictionaryRepository,
   });
 
   final String sourceId;
+  final FsrsRepository fsrsRepository;
   final FlashcardRepository flashcardRepository;
   final HighlightRepository highlightRepository;
   final DictionaryRepository dictionaryRepository;
@@ -45,6 +49,7 @@ class _MiniReviewSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => MiniReviewCubit(
+        fsrsRepository: fsrsRepository,
         flashcardRepository: flashcardRepository,
         highlightRepository: highlightRepository,
         dictionaryRepository: dictionaryRepository,
@@ -70,7 +75,7 @@ class _MiniReviewSheetView extends StatelessWidget {
           title: 'Mini Review',
           onClose: () => Navigator.of(context).pop(),
           headerSpacing: AppSpacing.sm,
-          bodyPadding: const EdgeInsets.all(AppSpacing.xl),
+          bodyPadding: const EdgeInsets.all(AppSpacing.lg),
           child: _buildBody(context, state),
         );
       },
@@ -80,21 +85,21 @@ class _MiniReviewSheetView extends StatelessWidget {
   Widget _buildBody(BuildContext context, MiniReviewState state) {
     return switch (state.status) {
       MiniReviewStatus.loading => const Padding(
-        padding: EdgeInsets.symmetric(vertical: AppSpacing.xxxl),
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
         child: CenteredCircularProgressIndicator(),
       ),
       MiniReviewStatus.empty => const Padding(
-        padding: EdgeInsets.symmetric(vertical: AppSpacing.xxxl),
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
         child: EmptyState(message: 'No items due for review.'),
       ),
       MiniReviewStatus.failure => Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxxl),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Something went wrong',
-              style: context.text.bodyMedium?.copyWith(
+              style: context.text.bodyMedium.copyWith(
                 color: context.colors.error,
               ),
             ),
@@ -133,7 +138,7 @@ class _ReviewContent extends StatelessWidget {
         ),
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.xxl),
+            padding: const EdgeInsets.all(AppSpacing.xl),
             child: switch (state.currentItem) {
               FlashcardItem(:final flashcard) => FlashcardCardContent(
                 card: flashcard,

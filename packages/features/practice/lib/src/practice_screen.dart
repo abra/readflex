@@ -3,6 +3,7 @@ import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 
 import 'practice_bloc.dart';
@@ -11,25 +12,25 @@ import 'review_card_views.dart';
 /// Practice tab: review due flashcards, highlights, and dictionary entries.
 class PracticeScreen extends StatelessWidget {
   const PracticeScreen({
+    required this.fsrsRepository,
     required this.flashcardRepository,
     required this.highlightRepository,
     required this.dictionaryRepository,
     super.key,
   });
 
+  final FsrsRepository fsrsRepository;
   final FlashcardRepository flashcardRepository;
   final HighlightRepository highlightRepository;
   final DictionaryRepository dictionaryRepository;
 
   @override
   Widget build(BuildContext context) {
-    assert(() {
-      debugPrint('[SCREEN] build PracticeScreen');
-      return true;
-    }());
+    debugLogScreenBuild('PracticeScreen');
 
     return BlocProvider(
       create: (_) => PracticeBloc(
+        fsrsRepository: fsrsRepository,
         flashcardRepository: flashcardRepository,
         highlightRepository: highlightRepository,
         dictionaryRepository: dictionaryRepository,
@@ -98,6 +99,7 @@ class PracticeView extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _ReviewingView extends StatelessWidget {
   const _ReviewingView({required this.state});
 
@@ -108,7 +110,7 @@ class _ReviewingView extends StatelessWidget {
     final bloc = context.read<PracticeBloc>();
 
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.xxl),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
         children: [
           Expanded(
@@ -117,7 +119,7 @@ class _ReviewingView extends StatelessWidget {
                 child: SizedBox(
                   width: double.infinity,
                   child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.xxl),
+                    padding: const EdgeInsets.all(AppSpacing.xl),
                     child: switch (state.currentItem) {
                       FlashcardItem(:final flashcard) => FlashcardCardContent(
                         card: flashcard,
@@ -157,6 +159,7 @@ class _ReviewingView extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _CompletedView extends StatelessWidget {
   const _CompletedView({required this.reviewed, required this.onRestart});
 
@@ -173,11 +176,11 @@ class _CompletedView extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Text(
             'Session complete!',
-            style: Theme.of(context).textTheme.headlineSmall,
+            style: context.text.headlineSmall,
           ),
           const SizedBox(height: AppSpacing.sm),
           Text('$reviewed items reviewed'),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.lg),
           FilledButton(
             onPressed: onRestart,
             child: const Text('Review again'),

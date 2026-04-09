@@ -17,6 +17,8 @@ abstract class ConnectivityService {
 }
 
 /// Stub — always online.
+///
+/// TODO: replace with real implementation wrapping connectivity_plus.
 class NoopConnectivityService implements ConnectivityService {
   const NoopConnectivityService();
 

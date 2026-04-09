@@ -2,8 +2,8 @@ import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
-import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 
 part 'home_event.dart';
@@ -14,11 +14,11 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     required BookRepository bookRepository,
     required ArticleRepository articleRepository,
     required HighlightRepository highlightRepository,
-    required FlashcardRepository flashcardRepository,
+    required FsrsRepository fsrsRepository,
   }) : _bookRepository = bookRepository,
        _articleRepository = articleRepository,
        _highlightRepository = highlightRepository,
-       _flashcardRepository = flashcardRepository,
+       _fsrsRepository = fsrsRepository,
        super(const HomeState()) {
     on<HomeLoadRequested>(_onLoadRequested);
   }
@@ -26,7 +26,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   final BookRepository _bookRepository;
   final ArticleRepository _articleRepository;
   final HighlightRepository _highlightRepository;
-  final FlashcardRepository _flashcardRepository;
+  final FsrsRepository _fsrsRepository;
 
   Future<void> _onLoadRequested(
     HomeLoadRequested event,
@@ -38,7 +38,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       final books = await _bookRepository.getBooks();
       final articles = await _articleRepository.getArticles();
       final highlights = await _highlightRepository.getHighlights();
-      final dueCards = await _flashcardRepository.getDueFlashcards();
+      final dueCards = await _fsrsRepository.getDueItems();
 
       emit(
         state.copyWith(
@@ -50,7 +50,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           dueFlashcards: dueCards.length,
         ),
       );
-    } catch (e) {
+    } catch (e, st) {
+      addError(e, st);
       emit(state.copyWith(status: HomeStatus.failure));
     }
   }

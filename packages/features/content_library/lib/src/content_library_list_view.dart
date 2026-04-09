@@ -24,10 +24,10 @@ class ContentLibraryListView extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl,
+        AppSpacing.lg,
         AppSpacing.sm,
-        AppSpacing.xl,
-        AppSpacing.xxxxl,
+        AppSpacing.lg,
+        AppSpacing.xxl,
       ),
       physics: const AlwaysScrollableScrollPhysics(),
       itemCount: items.length,

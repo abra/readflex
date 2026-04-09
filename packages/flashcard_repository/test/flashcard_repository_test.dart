@@ -1,4 +1,3 @@
-import 'package:domain_models/domain_models.dart';
 import 'package:drift/native.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,7 +24,6 @@ void main() {
       expect(card.front, 'What is Dart?');
       expect(card.deckId, 'd1');
       expect(card.id, isNotEmpty);
-      expect(card.fsrs.state, FsrsState.newCard);
     });
 
     test('getFlashcards returns all flashcards', () async {
@@ -80,59 +78,6 @@ void main() {
       await repo.deleteFlashcard(created.id);
       final cards = await repo.getFlashcards();
       expect(cards, isEmpty);
-    });
-  });
-
-  group('FlashcardRepository — review (FSRS)', () {
-    test('recordReview updates FSRS state from new to learning', () async {
-      final card = await repo.addFlashcard(deckId: 'd1', front: 'Q', back: 'A');
-      final reviewed = await repo.recordReview(card, Rating.good);
-      expect(reviewed.fsrs.reps, 1);
-      expect(reviewed.fsrs.lastReviewAt, isNotNull);
-      expect(reviewed.fsrs.nextReviewAt, isNotNull);
-    });
-
-    test('recordReview with Again keeps card in learning', () async {
-      final card = await repo.addFlashcard(deckId: 'd1', front: 'Q', back: 'A');
-      final reviewed = await repo.recordReview(card, Rating.again);
-      expect(reviewed.fsrs.state, FsrsState.learning);
-      expect(reviewed.fsrs.reps, 1);
-    });
-
-    test('recordReview with Easy advances card faster', () async {
-      final card = await repo.addFlashcard(deckId: 'd1', front: 'Q', back: 'A');
-      final reviewed = await repo.recordReview(card, Rating.easy);
-      // Easy should result in review state or longer interval
-      expect(reviewed.fsrs.reps, 1);
-      expect(reviewed.fsrs.nextReviewAt, isNotNull);
-    });
-
-    test('consecutive reviews increment reps', () async {
-      var card = await repo.addFlashcard(deckId: 'd1', front: 'Q', back: 'A');
-      card = await repo.recordReview(card, Rating.good);
-      expect(card.fsrs.reps, 1);
-      card = await repo.recordReview(card, Rating.good);
-      expect(card.fsrs.reps, 2);
-      card = await repo.recordReview(card, Rating.good);
-      expect(card.fsrs.reps, 3);
-    });
-
-    test('recordReview persists to storage', () async {
-      final card = await repo.addFlashcard(deckId: 'd1', front: 'Q', back: 'A');
-      await repo.recordReview(card, Rating.good);
-      final fetched = await repo.getFlashcardById(card.id);
-      expect(fetched!.fsrs.reps, 1);
-      expect(fetched.fsrs.lastReviewAt, isNotNull);
-    });
-
-    test('recordReview with duration saves to review log', () async {
-      final card = await repo.addFlashcard(deckId: 'd1', front: 'Q', back: 'A');
-      await repo.recordReview(card, Rating.good, reviewDurationMs: 5000);
-      // Verify review log was saved via DAO
-      final logs = await db.flashcardsDao.reviewLogsByItem(card.id);
-      expect(logs, hasLength(1));
-      expect(logs.first.rating, 'good');
-      expect(logs.first.reviewDurationMs, 5000);
     });
   });
 }

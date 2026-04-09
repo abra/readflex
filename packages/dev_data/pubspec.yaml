@@ -1,0 +1,22 @@
+name: dev_data
+description: "Fake seed data for development and UI testing."
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  domain_models:
+    path: ../domain_models
+  dictionary_repository:
+    path: ../dictionary_repository
+  fsrs_repository:
+    path: ../fsrs_repository
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

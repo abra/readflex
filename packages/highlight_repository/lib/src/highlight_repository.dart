@@ -1,24 +1,18 @@
 import 'package:domain_models/domain_models.dart';
 import 'package:local_storage/local_storage.dart';
-import 'package:review_scheduler/review_scheduler.dart';
 import 'package:uuid/uuid.dart' show Uuid;
 
 import 'mappers/highlight_to_domain.dart';
 import 'mappers/highlight_to_storage.dart';
-import 'mappers/review_log_to_storage.dart';
 
 const _uuid = Uuid();
 
-/// Domain repository for text highlights with FSRS v6 scheduling.
+/// Domain repository for text highlights.
 class HighlightRepository {
-  HighlightRepository({
-    required AppDatabase database,
-    ReviewScheduler? reviewScheduler,
-  }) : _dao = database.highlightsDao,
-       _reviewScheduler = reviewScheduler ?? ReviewScheduler();
+  HighlightRepository({required AppDatabase database})
+    : _dao = database.highlightsDao;
 
   final HighlightsDao _dao;
-  final ReviewScheduler _reviewScheduler;
 
   // ─── CRUD ───
 
@@ -29,18 +23,6 @@ class HighlightRepository {
 
   Future<List<Highlight>> getHighlightsBySource(String sourceId) async {
     final rows = await _dao.highlightsBySource(sourceId);
-    return rows.map((r) => r.toDomainModel()).toList();
-  }
-
-  Future<List<Highlight>> getDueHighlights() async {
-    final now = DateTime.now().toUtc().toIso8601String();
-    final rows = await _dao.dueHighlights(now);
-    return rows.map((r) => r.toDomainModel()).toList();
-  }
-
-  Future<List<Highlight>> getDueHighlightsBySource(String sourceId) async {
-    final now = DateTime.now().toUtc().toIso8601String();
-    final rows = await _dao.dueHighlightsBySource(sourceId, now);
     return rows.map((r) => r.toDomainModel()).toList();
   }
 
@@ -86,27 +68,5 @@ class HighlightRepository {
 
   Future<void> deleteHighlightsBySource(String sourceId) async {
     await _dao.deleteHighlightsBySource(sourceId);
-  }
-
-  // ─── Review (FSRS) ───
-
-  Future<Highlight> recordReview(
-    Highlight highlight,
-    Rating rating, {
-    int? reviewDurationMs,
-  }) async {
-    final result = _reviewScheduler.computeReview(
-      itemId: highlight.id,
-      itemType: ReviewableType.highlight,
-      currentFsrs: highlight.fsrs,
-      rating: rating,
-      reviewDurationMs: reviewDurationMs,
-    );
-
-    final updated = highlight.copyWith(fsrs: result.fsrs);
-    await _dao.updateHighlight(updated.toStorageModel());
-    await _dao.insertReviewLog(result.log.toStorageModel());
-
-    return updated;
   }
 }

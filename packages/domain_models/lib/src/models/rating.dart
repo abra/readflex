@@ -6,11 +6,7 @@ enum Rating {
   easy
   ;
 
-  static Rating from(String value) => switch (value) {
-    'again' => again,
-    'hard' => hard,
-    'good' => good,
-    'easy' => easy,
-    _ => again,
-  };
+  /// Parses a [Rating] from its stored [name]. Falls back to [again] on
+  /// unknown values.
+  static Rating from(String value) => values.asNameMap()[value] ?? again;
 }

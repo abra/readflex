@@ -1,11 +1,12 @@
-/// Border radius constants for consistent rounding across the app.
+/// Border radius constants aligned with Material Design 3 shape scale.
 ///
-/// Values from ReadWell design system.
+/// Extra Small (4), Small (8), Medium (12), Large (16),
+/// Extra Large (28), Full (999).
 abstract final class AppRadius {
   static const double xs = 4;
   static const double sm = 8;
   static const double md = 12;
   static const double lg = 16;
-  static const double xl = 20;
-  static const double pill = 999;
+  static const double xl = 28;
+  static const double full = 999;
 }

@@ -6,7 +6,7 @@ import 'package:translation_service/translation_service.dart';
 
 enum TranslateStatus { idle, translating, translated, saving, saved, failure }
 
-final class TranslateState extends Equatable {
+class TranslateState extends Equatable {
   const TranslateState({
     this.status = TranslateStatus.idle,
     this.translatedText = '',

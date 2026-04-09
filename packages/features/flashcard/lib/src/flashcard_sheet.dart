@@ -11,9 +11,8 @@ void showFlashcardSheet(
   required FlashcardRepository flashcardRepository,
   required TextSelectionContext selection,
 }) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
+  showAppBottomSheet<void>(
+    context,
     builder: (_) => FlashcardSheet(
       flashcardRepository: flashcardRepository,
       selection: selection,
@@ -62,7 +61,7 @@ class _FlashcardSheetView extends StatelessWidget {
           title: 'Create Flashcard',
           onClose: () => Navigator.of(context).pop(),
           headerSpacing: AppSpacing.sm,
-          bodyPadding: const EdgeInsets.all(AppSpacing.xl),
+          bodyPadding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -110,7 +109,7 @@ class _FlashcardSheetView extends StatelessWidget {
                   child: Text(
                     'Failed to save flashcard',
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
+                      color: context.colors.error,
                     ),
                   ),
                 ),

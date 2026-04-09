@@ -3,7 +3,7 @@ import 'dart:ui' show Locale;
 import 'package:flutter/material.dart' show ThemeMode;
 
 /// Reading-specific appearance settings selected by the user.
-final class ReaderAppearancePreferences {
+class ReaderAppearancePreferences {
   const ReaderAppearancePreferences({
     required this.themeId,
     required this.fontId,
@@ -42,7 +42,7 @@ final class ReaderAppearancePreferences {
 }
 
 /// Stores user preferences: theme mode, locale, onboarding and setup flags.
-final class Preferences {
+class Preferences {
   const Preferences({
     this.themeMode = ThemeMode.system,
     this.locale = const Locale('en'),

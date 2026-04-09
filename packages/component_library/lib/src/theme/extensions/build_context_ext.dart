@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../app_text_theme.dart';
 import 'app_colors_ext.dart';
-import 'app_dimens_ext.dart';
 
 /// Convenience accessors on [BuildContext] for cleaner UI code.
 ///
@@ -9,12 +9,14 @@ import 'app_dimens_ext.dart';
 /// Text('Hello', style: context.text.bodyLarge);
 /// Icon(Icons.star, color: context.colors.primary);
 /// Container(color: context.appColors.warning);
-/// Padding(padding: EdgeInsets.all(context.dimens.spacingLg));
 /// ```
+///
+/// [text] returns an [AppTextTheme] wrapper whose fields are non-null —
+/// `AppTypography.textTheme` always defines every role, so call sites don't
+/// need the `!` operator.
 extension BuildContextThemeX on BuildContext {
   ThemeData get theme => Theme.of(this);
   ColorScheme get colors => theme.colorScheme;
-  TextTheme get text => theme.textTheme;
+  AppTextTheme get text => AppTextTheme(theme.textTheme);
   AppColorsExt get appColors => theme.ext;
-  AppDimensExt get dimens => theme.extension<AppDimensExt>()!;
 }

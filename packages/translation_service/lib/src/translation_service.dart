@@ -46,6 +46,8 @@ abstract class TranslationService {
 }
 
 /// Stub implementation that echoes the input as "translated".
+///
+/// TODO: replace with real translation service (remote → platform fallback).
 class NoopTranslationService implements TranslationService {
   const NoopTranslationService();
 

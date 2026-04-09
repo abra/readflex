@@ -1,16 +1,16 @@
 import 'package:domain_models/domain_models.dart';
-import 'package:flashcard_repository/flashcard_repository.dart';
+import 'package:fsrs_repository/fsrs_repository.dart';
 
-class FakeFlashcardRepository implements FlashcardRepository {
+class FakeFsrsRepository implements FsrsRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 
-  List<Flashcard> dueCards = [];
+  List<ReviewItem> dueItems = [];
   bool shouldThrow = false;
 
   @override
-  Future<List<Flashcard>> getDueFlashcards() async {
+  Future<List<ReviewItem>> getDueItems({ReviewableType? type}) async {
     if (shouldThrow) throw StorageException(cause: 'fake');
-    return dueCards;
+    return List.unmodifiable(dueItems);
   }
 }

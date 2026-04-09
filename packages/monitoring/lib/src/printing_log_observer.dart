@@ -9,7 +9,7 @@ import 'package:monitoring/src/logger.dart';
 /// Prints log messages to the console via [debugPrint].
 ///
 /// Only messages at or above [logLevel] are printed.
-final class PrintingLogObserver with LogObserver {
+class PrintingLogObserver with LogObserver {
   const PrintingLogObserver({required this.logLevel});
 
   final LogLevel logLevel;

@@ -56,7 +56,7 @@ enum ReaderFontPreset {
 }
 
 /// Reader-specific colors detached from the app shell.
-final class ReaderThemeData {
+class ReaderThemeData {
   const ReaderThemeData({
     required this.backgroundColor,
     required this.surfaceColor,

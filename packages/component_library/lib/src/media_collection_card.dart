@@ -74,7 +74,7 @@ class MediaCollectionCard extends StatelessWidget {
                       subtitle!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: textTheme.bodySmall?.copyWith(
+                      style: textTheme.bodySmall.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -95,7 +95,7 @@ class MediaCollectionCard extends StatelessWidget {
                           meta!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: textTheme.labelSmall?.copyWith(
+                          style: textTheme.labelSmall.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),
                         ),

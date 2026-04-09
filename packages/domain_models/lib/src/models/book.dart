@@ -3,7 +3,7 @@ import 'package:equatable/equatable.dart' show Equatable;
 import 'book_format.dart';
 
 /// A book entity stored in the user's library.
-final class Book extends Equatable {
+class Book extends Equatable {
   const Book({
     required this.id,
     required this.title,

@@ -1,10 +1,9 @@
 import 'package:equatable/equatable.dart' show Equatable;
 
 import 'creation_source.dart';
-import 'fsrs_card_data.dart';
 
 /// A flashcard for spaced repetition review.
-final class Flashcard extends Equatable {
+class Flashcard extends Equatable {
   const Flashcard({
     required this.id,
     required this.deckId,
@@ -14,7 +13,6 @@ final class Flashcard extends Equatable {
     this.hint,
     this.sourceHighlightId,
     this.creationSource = CreationSource.manual,
-    this.fsrs = const FsrsCardData(),
   });
 
   final String id;
@@ -25,7 +23,6 @@ final class Flashcard extends Equatable {
   final String? sourceHighlightId;
   final CreationSource creationSource;
   final DateTime createdAt;
-  final FsrsCardData fsrs;
 
   static const _absent = Object();
 
@@ -35,7 +32,6 @@ final class Flashcard extends Equatable {
     Object? hint = _absent,
     Object? sourceHighlightId = _absent,
     CreationSource? creationSource,
-    FsrsCardData? fsrs,
   }) => Flashcard(
     id: id,
     deckId: deckId,
@@ -47,7 +43,6 @@ final class Flashcard extends Equatable {
         : sourceHighlightId as String?,
     creationSource: creationSource ?? this.creationSource,
     createdAt: createdAt,
-    fsrs: fsrs ?? this.fsrs,
   );
 
   @override
@@ -60,6 +55,5 @@ final class Flashcard extends Equatable {
     sourceHighlightId,
     creationSource,
     createdAt,
-    fsrs,
   ];
 }

@@ -7,7 +7,6 @@ import 'components/app_input_theme.dart';
 import 'components/app_navigation_theme.dart';
 import 'components/app_selection_themes.dart';
 import 'extensions/app_colors_ext.dart';
-import 'extensions/app_dimens_ext.dart';
 import 'tokens/app_colors.dart';
 import 'tokens/app_elevation.dart';
 import 'tokens/app_radius.dart';
@@ -30,11 +29,16 @@ import 'tokens/primitive_colors.dart';
 /// context.colors.primary
 /// context.text.bodyLarge
 /// context.appColors.warning
-/// context.dimens.spacingLg
 /// ```
 class AppTheme {
   AppTheme._();
 
+  // Themes are built once and cached for the lifetime of the app. All inputs
+  // to _buildLight/_buildDark are compile-time constants (token palettes,
+  // typography, component themes), so the result is deterministic — there's
+  // no need to rebuild on every MaterialApp rebuild. Caching here also keeps
+  // ThemeData identity stable, which lets Flutter skip descendant rebuilds
+  // on theme-unrelated widget tree changes.
   static final ThemeData _lightCached = _buildLight();
   static final ThemeData _darkCached = _buildDark();
 
@@ -164,27 +168,6 @@ ThemeData _buildDark() {
 
 // ─── Shared assembly ──────────────────────────────────────────
 
-const _dimens = AppDimensExt(
-  spacingXxs: AppSpacing.xxs,
-  spacingXs: AppSpacing.xs,
-  spacingSm: AppSpacing.sm,
-  spacingMd: AppSpacing.md,
-  spacingLg: AppSpacing.lg,
-  spacingXl: AppSpacing.xl,
-  spacingXxl: AppSpacing.xxl,
-  spacingXxxl: AppSpacing.xxxl,
-  spacingXxxxl: AppSpacing.xxxxl,
-  radiusXs: AppRadius.xs,
-  radiusSm: AppRadius.sm,
-  radiusMd: AppRadius.md,
-  radiusLg: AppRadius.lg,
-  radiusXl: AppRadius.xl,
-  radiusXxl: AppRadius.pill,
-  buttonHeight: AppSizes.buttonHeight,
-  inputHeight: AppSizes.inputHeight,
-  iconButtonSize: AppSizes.iconButtonSize,
-);
-
 ThemeData _assembleTheme({
   required AppColorPalette palette,
   required ColorScheme colorScheme,
@@ -280,6 +263,6 @@ ThemeData _assembleTheme({
     ),
 
     // --- Extensions ---
-    extensions: [colorsExt, _dimens],
+    extensions: [colorsExt],
   );
 }

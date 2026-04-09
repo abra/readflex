@@ -41,10 +41,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    assert(() {
-      debugPrint('[SCREEN] build OnboardingScreen');
-      return true;
-    }());
+    debugLogScreenBuild('OnboardingScreen');
 
     final colorScheme = context.colors;
 
@@ -83,8 +80,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     margin: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.xs,
                     ),
-                    width: _currentPage == index ? 24 : 8,
-                    height: 8,
+                    width: _currentPage == index
+                        ? AppSpacing.xl
+                        : AppSpacing.sm,
+                    height: AppSpacing.sm,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(AppRadius.xs),
                       color: _currentPage == index
@@ -97,10 +96,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xl,
+                AppSpacing.lg,
                 0,
-                AppSpacing.xl,
-                AppSpacing.xl,
+                AppSpacing.lg,
+                AppSpacing.lg,
               ),
               child: SizedBox(
                 width: double.infinity,
@@ -128,12 +127,12 @@ class _OnboardingPage extends StatelessWidget {
     final colorScheme = context.colors;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(data.icon, size: 80, color: colorScheme.primary),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.lg),
           Text(
             data.title,
             style: textTheme.headlineSmall,
@@ -142,7 +141,7 @@ class _OnboardingPage extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Text(
             data.description,
-            style: textTheme.bodyLarge?.copyWith(
+            style: textTheme.bodyLarge.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
             textAlign: TextAlign.center,

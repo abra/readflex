@@ -43,42 +43,39 @@ class _InitializationFailedScreenState
 
   @override
   Widget build(BuildContext context) {
-    assert(() {
-      debugPrint('[SCREEN] build InitializationFailedScreen');
-      return true;
-    }());
+    debugLogScreenBuild('InitializationFailedScreen');
 
     return MaterialApp(
       home: Scaffold(
         body: Builder(
           builder: (context) {
-            final typography = Theme.of(context).textTheme;
-            final colorScheme = Theme.of(context).colorScheme;
+            final text = context.text;
+            final colors = context.colors;
 
             return SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpacing.xxl),
+              padding: const EdgeInsets.all(AppSpacing.xl),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
                     'Initialization failed',
-                    style: typography.headlineMedium,
+                    style: text.headlineMedium,
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   Text(
                     '${widget.error}',
-                    style: typography.bodyLarge?.copyWith(
-                      color: colorScheme.error,
+                    style: text.bodyLarge.copyWith(
+                      color: colors.error,
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.xxl),
+                  const SizedBox(height: AppSpacing.xl),
                   if (widget.onRetryInitialization != null)
                     ValueListenableBuilder<bool>(
                       valueListenable: _inProgress,
                       builder: (context, inProgress, _) => FilledButton.icon(
                         onPressed: inProgress ? null : _retryInitialization,
                         icon: inProgress
-                            ? const ButtonLoadingIndicator(size: 16)
+                            ? const ButtonLoadingIndicator(size: AppIconSize.sm)
                             : const Icon(Icons.refresh),
                         label: Text(inProgress ? 'Retrying...' : 'Retry'),
                       ),
@@ -88,7 +85,7 @@ class _InitializationFailedScreenState
                     padding: const EdgeInsets.all(AppSpacing.sm),
                     child: Text(
                       '${widget.stackTrace}',
-                      style: typography.bodySmall,
+                      style: text.bodySmall,
                     ),
                   ),
                 ],

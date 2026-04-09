@@ -10,8 +10,10 @@ import 'package:article_repository/article_repository.dart';
 import 'package:auth_service/auth_service.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
+import 'package:dev_data/dev_data.dart';
 import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
+import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:local_storage/local_storage.dart';
 import 'package:monitoring/monitoring.dart';
@@ -76,7 +78,7 @@ Future<CompositionResult> composeDependencies({
   );
 }
 
-final class CompositionResult {
+class CompositionResult {
   const CompositionResult({
     required this.dependencies,
     required this.millisecondsSpent,
@@ -110,6 +112,7 @@ Future<DependenciesContainer> createDependenciesContainer(
   final highlightRepository = HighlightRepository(database: database);
   final flashcardRepository = FlashcardRepository(database: database);
   final dictionaryRepository = DictionaryRepository(database: database);
+  final fsrsRepository = FsrsRepository(database: database);
 
   // ─── Preferences ───
   final preferencesService = await PreferencesService.create(
@@ -125,6 +128,14 @@ Future<DependenciesContainer> createDependenciesContainer(
   final connectivityService = NoopConnectivityService();
   const notificationService = NoopNotificationService();
 
+  // TODO: remove dev seed data once real content import flow is complete.
+  if (config.isDev) {
+    await seedDictionary(
+      dictionaryRepository: dictionaryRepository,
+      fsrsRepository: fsrsRepository,
+    );
+  }
+
   return DependenciesContainer(
     logger: logger,
     config: config,
@@ -137,6 +148,7 @@ Future<DependenciesContainer> createDependenciesContainer(
     highlightRepository: highlightRepository,
     flashcardRepository: flashcardRepository,
     dictionaryRepository: dictionaryRepository,
+    fsrsRepository: fsrsRepository,
     articleParser: articleParser,
     translationService: translationService,
     aiService: aiService,

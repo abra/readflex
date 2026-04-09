@@ -2,11 +2,10 @@ import 'package:drift/drift.dart';
 
 import '../database.dart';
 import '../tables/flashcards_table.dart';
-import '../tables/review_logs_table.dart';
 
 part 'flashcards_dao.g.dart';
 
-@DriftAccessor(tables: [FlashcardsTable, ReviewLogsTable])
+@DriftAccessor(tables: [FlashcardsTable])
 class FlashcardsDao extends DatabaseAccessor<AppDatabase>
     with _$FlashcardsDaoMixin {
   FlashcardsDao(super.db);
@@ -19,32 +18,6 @@ class FlashcardsDao extends DatabaseAccessor<AppDatabase>
       (select(flashcardsTable)
             ..where((t) => t.deckId.equals(deckId))
             ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
-          .get();
-
-  // nextReviewAt IS NULL means the item has never been reviewed — treat as
-  // immediately due so newly created cards appear in the first session.
-  Future<List<FlashcardsTableData>> dueFlashcards(String now) =>
-      (select(flashcardsTable)
-            ..where(
-              (t) =>
-                  t.nextReviewAt.isNull() |
-                  t.nextReviewAt.isSmallerOrEqual(Variable(now)),
-            )
-            ..orderBy([(t) => OrderingTerm.asc(t.nextReviewAt)]))
-          .get();
-
-  Future<List<FlashcardsTableData>> dueFlashcardsByDeck(
-    String deckId,
-    String now,
-  ) =>
-      (select(flashcardsTable)
-            ..where(
-              (t) =>
-                  t.deckId.equals(deckId) &
-                  (t.nextReviewAt.isNull() |
-                      t.nextReviewAt.isSmallerOrEqual(Variable(now))),
-            )
-            ..orderBy([(t) => OrderingTerm.asc(t.nextReviewAt)]))
           .get();
 
   Future<FlashcardsTableData?> flashcardById(String id) => (select(
@@ -60,15 +33,4 @@ class FlashcardsDao extends DatabaseAccessor<AppDatabase>
 
   Future<void> deleteFlashcard(String id) =>
       (delete(flashcardsTable)..where((t) => t.id.equals(id))).go();
-
-  // Review logs
-
-  Future<void> insertReviewLog(ReviewLogsTableCompanion log) =>
-      into(reviewLogsTable).insert(log);
-
-  Future<List<ReviewLogsTableData>> reviewLogsByItem(String itemId) =>
-      (select(reviewLogsTable)
-            ..where((t) => t.itemId.equals(itemId))
-            ..orderBy([(t) => OrderingTerm.desc(t.reviewedAt)]))
-          .get();
 }

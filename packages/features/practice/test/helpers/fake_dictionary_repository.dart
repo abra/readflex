@@ -1,16 +1,23 @@
-import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:dictionary_repository/dictionary_repository.dart';
 
 class FakeDictionaryRepository implements DictionaryRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 
-  List<DictionaryEntry> dueEntries = [];
+  final Map<String, DictionaryEntry> _entries = {};
   bool shouldThrow = false;
 
+  void seed(List<DictionaryEntry> entries) {
+    _entries.clear();
+    for (final e in entries) {
+      _entries[e.id] = e;
+    }
+  }
+
   @override
-  Future<List<DictionaryEntry>> getDueEntries() async {
+  Future<DictionaryEntry?> getEntryById(String id) async {
     if (shouldThrow) throw StorageException(cause: 'fake');
-    return List.unmodifiable(dueEntries);
+    return _entries[id];
   }
 }

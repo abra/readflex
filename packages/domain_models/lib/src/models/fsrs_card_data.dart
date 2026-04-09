@@ -2,30 +2,28 @@ import 'package:equatable/equatable.dart' show Equatable;
 
 /// FSRS card state.
 enum FsrsState {
-  newCard,
-  learning,
-  review,
-  relearning
+  newCard('new'),
+  learning('learning'),
+  review('review'),
+  relearning('relearning')
   ;
 
-  static FsrsState from(String value) => switch (value) {
-    'new' => FsrsState.newCard,
-    'learning' => FsrsState.learning,
-    'review' => FsrsState.review,
-    'relearning' => FsrsState.relearning,
-    _ => FsrsState.newCard,
-  };
+  const FsrsState(this.storageKey);
 
-  String toStorageString() => switch (this) {
-    FsrsState.newCard => 'new',
-    FsrsState.learning => 'learning',
-    FsrsState.review => 'review',
-    FsrsState.relearning => 'relearning',
-  };
+  /// The string used to persist this state in the database. Differs from
+  /// [name] only for [newCard] (stored as `'new'`, not `'newCard'`).
+  final String storageKey;
+
+  static FsrsState from(String value) => values.firstWhere(
+    (e) => e.storageKey == value,
+    orElse: () => throw FormatException('Unknown FsrsState: $value'),
+  );
+
+  String toStorageString() => storageKey;
 }
 
 /// FSRS v6 scheduling data embedded in a flashcard.
-final class FsrsCardData extends Equatable {
+class FsrsCardData extends Equatable {
   const FsrsCardData({
     this.state = FsrsState.newCard,
     this.stability = 0.0,

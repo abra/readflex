@@ -2,6 +2,8 @@ import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 
 /// Visual sandbox for quickly evaluating the current design system in one place.
+///
+/// TODO: remove or gate behind a dev flag before production release.
 class DesignSystemScreen extends StatefulWidget {
   const DesignSystemScreen({super.key});
 
@@ -19,17 +21,16 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
 
   @override
   Widget build(BuildContext context) {
-    assert(() {
-      debugPrint('[SCREEN] build DesignSystemScreen');
-      return true;
-    }());
+    debugLogScreenBuild('DesignSystemScreen');
 
     return Theme(
       data: _themeMode == ThemeMode.dark ? AppTheme.dark() : AppTheme.light(),
       child: Builder(
         builder: (context) {
           final theme = Theme.of(context);
-          final colorScheme = theme.colorScheme;
+          final colorScheme = context.colors;
+          final text = context.text;
+
           return Scaffold(
             appBar: AppBar(
               title: const Text('Design System'),
@@ -59,13 +60,13 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
               ],
             ),
             body: ListView(
-              padding: const EdgeInsets.all(AppSpacing.xl),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               children: [
                 Text(
                   'A compact preview of the app shell and reader surfaces.',
-                  style: theme.textTheme.bodyMedium,
+                  style: text.bodyMedium,
                 ),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.lg),
                 _SectionCard(
                   title: 'Color Palette',
                   child: Wrap(
@@ -99,7 +100,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.lg),
                 _SectionCard(
                   title: 'Typography',
                   child: Column(
@@ -107,24 +108,24 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                     children: [
                       Text(
                         'Display Large',
-                        style: theme.textTheme.displaySmall,
+                        style: text.displaySmall,
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      Text('Title Medium', style: theme.textTheme.titleMedium),
+                      Text('Title Medium', style: text.titleMedium),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
                         'Body text is tuned for a calmer, reading-first hierarchy instead of stock Material.',
-                        style: theme.textTheme.bodyLarge,
+                        style: text.bodyLarge,
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
                         'Label text / utility controls',
-                        style: theme.textTheme.labelLarge,
+                        style: text.labelLarge,
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.lg),
                 _SectionCard(
                   title: 'Buttons',
                   child: Column(
@@ -161,7 +162,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.lg),
                 _SectionCard(
                   title: 'Inputs And Selection',
                   child: Column(
@@ -218,7 +219,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                       const SizedBox(height: AppSpacing.sm),
                       Text(
                         'Text size',
-                        style: theme.textTheme.labelLarge,
+                        style: text.labelLarge,
                       ),
                       Slider(
                         value: _sliderValue,
@@ -229,7 +230,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.lg),
                 _SectionCard(
                   title: 'Library Grid',
                   child: GridView.count(
@@ -238,7 +239,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                     mainAxisSpacing: AppSpacing.md,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    childAspectRatio: 0.58,
+                    childAspectRatio: 0.48,
                     children: const [
                       _DemoLibraryCard(
                         title: 'Atomic Habits',
@@ -267,7 +268,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.lg),
                 _SectionCard(
                   title: 'Cards And Rows',
                   child: Column(
@@ -281,7 +282,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                           ),
                           trailing: Text(
                             '12 min',
-                            style: theme.textTheme.labelMedium,
+                            style: text.labelMedium,
                           ),
                         ),
                       ),
@@ -299,7 +300,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.lg),
                 _SectionCard(
                   title: 'Reader Presets',
                   child: Wrap(
@@ -313,7 +314,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                     }).toList(),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.lg),
                 _SectionCard(
                   title: 'Navigation',
                   child: ClipRRect(
@@ -343,7 +344,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xxxl),
+                const SizedBox(height: AppSpacing.xxl),
               ],
             ),
           );
@@ -370,7 +371,7 @@ class _SectionCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
+            Text(title, style: context.text.titleMedium),
             const SizedBox(height: AppSpacing.md),
             child,
           ],
@@ -401,21 +402,21 @@ class _ColorSwatchCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: Theme.of(context).colorScheme.outline),
+        border: Border.all(color: context.colors.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            style: context.text.labelMedium.copyWith(
               color: textColor,
             ),
           ),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.lg),
           Text(
             '#${color.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            style: context.text.bodySmall.copyWith(
               color: textColor,
             ),
           ),
@@ -449,14 +450,14 @@ class _ReaderPresetCard extends StatelessWidget {
         children: [
           Text(
             label,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            style: context.text.labelLarge.copyWith(
               color: themeData.secondaryTextColor,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             'A quiet page for long-form reading.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            style: context.text.bodyMedium.copyWith(
               color: themeData.primaryTextColor,
               height: 1.55,
               fontFamily: AppTypography.fontFamilySerif,
@@ -468,7 +469,7 @@ class _ReaderPresetCard extends StatelessWidget {
             width: 60,
             decoration: BoxDecoration(
               color: themeData.panelColor,
-              borderRadius: BorderRadius.circular(AppRadius.pill),
+              borderRadius: BorderRadius.circular(AppRadius.full),
             ),
           ),
         ],
@@ -499,12 +500,12 @@ class _DemoLibraryCard extends StatelessWidget {
       meta: meta,
       topRight: DecoratedBox(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.86),
+          color: context.colors.surface.withValues(alpha: 0.86),
           borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
         child: const Padding(
           padding: EdgeInsets.all(AppSpacing.xs),
-          child: Icon(Icons.more_horiz, size: 18),
+          child: Icon(Icons.more_horiz, size: AppIconSize.sm),
         ),
       ),
     );
@@ -518,15 +519,16 @@ class _DemoBookMedia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final colors = context.colors;
+    final text = context.text;
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            theme.colorScheme.surfaceContainerHighest,
-            theme.colorScheme.surfaceContainer,
+            colors.surfaceContainerHighest,
+            colors.surfaceContainer,
           ],
         ),
       ),
@@ -537,7 +539,7 @@ class _DemoBookMedia extends StatelessWidget {
           children: [
             DecoratedBox(
               decoration: BoxDecoration(
-                color: theme.colorScheme.surface.withValues(alpha: 0.85),
+                color: colors.surface.withValues(alpha: 0.85),
                 borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Padding(
@@ -545,14 +547,14 @@ class _DemoBookMedia extends StatelessWidget {
                   horizontal: AppSpacing.sm,
                   vertical: AppSpacing.xs,
                 ),
-                child: Text('BOOK', style: theme.textTheme.labelSmall),
+                child: Text('BOOK', style: text.labelSmall),
               ),
             ),
             const Spacer(),
             Text(
               label,
-              style: theme.textTheme.displaySmall?.copyWith(
-                color: theme.colorScheme.primary,
+              style: text.displaySmall.copyWith(
+                color: colors.primary,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -570,10 +572,11 @@ class _DemoArticleMedia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final colors = context.colors;
+    final text = context.text;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
+        color: colors.surfaceContainerHighest,
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -582,18 +585,18 @@ class _DemoArticleMedia extends StatelessWidget {
           children: [
             Text(
               'WWW',
-              style: theme.textTheme.displaySmall?.copyWith(
-                color: theme.colorScheme.primary,
+              style: text.displaySmall.copyWith(
+                color: colors.primary,
                 fontWeight: FontWeight.w700,
               ),
             ),
             const Spacer(),
-            Text(domain, style: theme.textTheme.titleMedium),
+            Text(domain, style: text.titleMedium),
             const SizedBox(height: AppSpacing.sm),
             Text(
               'ARTICLE',
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+              style: text.labelMedium.copyWith(
+                color: colors.onSurfaceVariant,
               ),
             ),
           ],

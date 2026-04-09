@@ -35,6 +35,8 @@ abstract class ArticleParser {
 }
 
 /// Stub implementation that returns a placeholder article.
+///
+/// TODO: replace with real HTTP client to backend article cleaning service.
 class NoopArticleParser implements ArticleParser {
   const NoopArticleParser();
 

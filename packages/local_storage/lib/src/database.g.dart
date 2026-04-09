@@ -8,9 +8,7 @@ class $BooksTableTable extends BooksTable
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-
   $BooksTableTable(this.attachedDatabase, [this._alias]);
-
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -142,7 +140,6 @@ class $BooksTableTable extends BooksTable
     ),
     defaultValue: const Constant(false),
   );
-
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -158,14 +155,11 @@ class $BooksTableTable extends BooksTable
     lastOpenedAt,
     isFinished,
   ];
-
   @override
   String get aliasedName => _alias ?? actualTableName;
-
   @override
   String get actualTableName => $name;
   static const String $name = 'books_table';
-
   @override
   VerificationContext validateIntegrity(
     Insertable<BooksTableData> instance, {
@@ -272,7 +266,6 @@ class $BooksTableTable extends BooksTable
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
-
   @override
   BooksTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -347,7 +340,6 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
   final String addedAt;
   final String? lastOpenedAt;
   final bool isFinished;
-
   const BooksTableData({
     required this.id,
     required this.title,
@@ -362,7 +354,6 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
     this.lastOpenedAt,
     required this.isFinished,
   });
-
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -430,7 +421,6 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
       isFinished: serializer.fromJson<bool>(json['isFinished']),
     );
   }
-
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -479,7 +469,6 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
     lastOpenedAt: lastOpenedAt.present ? lastOpenedAt.value : this.lastOpenedAt,
     isFinished: isFinished ?? this.isFinished,
   );
-
   BooksTableData copyWithCompanion(BooksTableCompanion data) {
     return BooksTableData(
       id: data.id.present ? data.id.value : this.id,
@@ -543,7 +532,6 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
     lastOpenedAt,
     isFinished,
   );
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -576,7 +564,6 @@ class BooksTableCompanion extends UpdateCompanion<BooksTableData> {
   final Value<String?> lastOpenedAt;
   final Value<bool> isFinished;
   final Value<int> rowid;
-
   const BooksTableCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -592,7 +579,6 @@ class BooksTableCompanion extends UpdateCompanion<BooksTableData> {
     this.isFinished = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-
   BooksTableCompanion.insert({
     required String id,
     required String title,
@@ -612,7 +598,6 @@ class BooksTableCompanion extends UpdateCompanion<BooksTableData> {
        format = Value(format),
        filePath = Value(filePath),
        addedAt = Value(addedAt);
-
   static Insertable<BooksTableData> custom({
     Expression<String>? id,
     Expression<String>? title,
@@ -748,9 +733,7 @@ class $ArticlesTableTable extends ArticlesTable
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-
   $ArticlesTableTable(this.attachedDatabase, [this._alias]);
-
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -871,7 +854,6 @@ class $ArticlesTableTable extends ArticlesTable
     ),
     defaultValue: const Constant(false),
   );
-
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -886,14 +868,11 @@ class $ArticlesTableTable extends ArticlesTable
     lastOpenedAt,
     isFinished,
   ];
-
   @override
   String get aliasedName => _alias ?? actualTableName;
-
   @override
   String get actualTableName => $name;
   static const String $name = 'articles_table';
-
   @override
   VerificationContext validateIntegrity(
     Insertable<ArticlesTableData> instance, {
@@ -994,7 +973,6 @@ class $ArticlesTableTable extends ArticlesTable
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
-
   @override
   ArticlesTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -1065,7 +1043,6 @@ class ArticlesTableData extends DataClass
   final String addedAt;
   final String? lastOpenedAt;
   final bool isFinished;
-
   const ArticlesTableData({
     required this.id,
     required this.title,
@@ -1079,7 +1056,6 @@ class ArticlesTableData extends DataClass
     this.lastOpenedAt,
     required this.isFinished,
   });
-
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1146,7 +1122,6 @@ class ArticlesTableData extends DataClass
       isFinished: serializer.fromJson<bool>(json['isFinished']),
     );
   }
-
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -1192,7 +1167,6 @@ class ArticlesTableData extends DataClass
     lastOpenedAt: lastOpenedAt.present ? lastOpenedAt.value : this.lastOpenedAt,
     isFinished: isFinished ?? this.isFinished,
   );
-
   ArticlesTableData copyWithCompanion(ArticlesTableCompanion data) {
     return ArticlesTableData(
       id: data.id.present ? data.id.value : this.id,
@@ -1253,7 +1227,6 @@ class ArticlesTableData extends DataClass
     lastOpenedAt,
     isFinished,
   );
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1284,7 +1257,6 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
   final Value<String?> lastOpenedAt;
   final Value<bool> isFinished;
   final Value<int> rowid;
-
   const ArticlesTableCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -1299,7 +1271,6 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     this.isFinished = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-
   ArticlesTableCompanion.insert({
     required String id,
     required String title,
@@ -1318,7 +1289,6 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
        url = Value(url),
        cleanedHtml = Value(cleanedHtml),
        addedAt = Value(addedAt);
-
   static Insertable<ArticlesTableData> custom({
     Expression<String>? id,
     Expression<String>? title,
@@ -1450,9 +1420,7 @@ class $HighlightsTableTable extends HighlightsTable
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-
   $HighlightsTableTable(this.attachedDatabase, [this._alias]);
-
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -1558,121 +1526,6 @@ class $HighlightsTableTable extends HighlightsTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _fsrsStateMeta = const VerificationMeta(
-    'fsrsState',
-  );
-  @override
-  late final GeneratedColumn<String> fsrsState = GeneratedColumn<String>(
-    'fsrs_state',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultValue: const Constant('new'),
-  );
-  static const VerificationMeta _stabilityMeta = const VerificationMeta(
-    'stability',
-  );
-  @override
-  late final GeneratedColumn<double> stability = GeneratedColumn<double>(
-    'stability',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0.0),
-  );
-  static const VerificationMeta _difficultyMeta = const VerificationMeta(
-    'difficulty',
-  );
-  @override
-  late final GeneratedColumn<double> difficulty = GeneratedColumn<double>(
-    'difficulty',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0.0),
-  );
-  static const VerificationMeta _retrievabilityMeta = const VerificationMeta(
-    'retrievability',
-  );
-  @override
-  late final GeneratedColumn<double> retrievability = GeneratedColumn<double>(
-    'retrievability',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0.0),
-  );
-  static const VerificationMeta _repsMeta = const VerificationMeta('reps');
-  @override
-  late final GeneratedColumn<int> reps = GeneratedColumn<int>(
-    'reps',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0),
-  );
-  static const VerificationMeta _lapsesMeta = const VerificationMeta('lapses');
-  @override
-  late final GeneratedColumn<int> lapses = GeneratedColumn<int>(
-    'lapses',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0),
-  );
-  static const VerificationMeta _lastReviewAtMeta = const VerificationMeta(
-    'lastReviewAt',
-  );
-  @override
-  late final GeneratedColumn<String> lastReviewAt = GeneratedColumn<String>(
-    'last_review_at',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _nextReviewAtMeta = const VerificationMeta(
-    'nextReviewAt',
-  );
-  @override
-  late final GeneratedColumn<String> nextReviewAt = GeneratedColumn<String>(
-    'next_review_at',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _scheduledDaysMeta = const VerificationMeta(
-    'scheduledDays',
-  );
-  @override
-  late final GeneratedColumn<int> scheduledDays = GeneratedColumn<int>(
-    'scheduled_days',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0),
-  );
-  static const VerificationMeta _elapsedDaysMeta = const VerificationMeta(
-    'elapsedDays',
-  );
-  @override
-  late final GeneratedColumn<int> elapsedDays = GeneratedColumn<int>(
-    'elapsed_days',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0),
-  );
-
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1685,25 +1538,12 @@ class $HighlightsTableTable extends HighlightsTable
     scrollOffset,
     color,
     createdAt,
-    fsrsState,
-    stability,
-    difficulty,
-    retrievability,
-    reps,
-    lapses,
-    lastReviewAt,
-    nextReviewAt,
-    scheduledDays,
-    elapsedDays,
   ];
-
   @override
   String get aliasedName => _alias ?? actualTableName;
-
   @override
   String get actualTableName => $name;
   static const String $name = 'highlights_table';
-
   @override
   VerificationContext validateIntegrity(
     Insertable<HighlightsTableData> instance, {
@@ -1784,87 +1624,11 @@ class $HighlightsTableTable extends HighlightsTable
     } else if (isInserting) {
       context.missing(_createdAtMeta);
     }
-    if (data.containsKey('fsrs_state')) {
-      context.handle(
-        _fsrsStateMeta,
-        fsrsState.isAcceptableOrUnknown(data['fsrs_state']!, _fsrsStateMeta),
-      );
-    }
-    if (data.containsKey('stability')) {
-      context.handle(
-        _stabilityMeta,
-        stability.isAcceptableOrUnknown(data['stability']!, _stabilityMeta),
-      );
-    }
-    if (data.containsKey('difficulty')) {
-      context.handle(
-        _difficultyMeta,
-        difficulty.isAcceptableOrUnknown(data['difficulty']!, _difficultyMeta),
-      );
-    }
-    if (data.containsKey('retrievability')) {
-      context.handle(
-        _retrievabilityMeta,
-        retrievability.isAcceptableOrUnknown(
-          data['retrievability']!,
-          _retrievabilityMeta,
-        ),
-      );
-    }
-    if (data.containsKey('reps')) {
-      context.handle(
-        _repsMeta,
-        reps.isAcceptableOrUnknown(data['reps']!, _repsMeta),
-      );
-    }
-    if (data.containsKey('lapses')) {
-      context.handle(
-        _lapsesMeta,
-        lapses.isAcceptableOrUnknown(data['lapses']!, _lapsesMeta),
-      );
-    }
-    if (data.containsKey('last_review_at')) {
-      context.handle(
-        _lastReviewAtMeta,
-        lastReviewAt.isAcceptableOrUnknown(
-          data['last_review_at']!,
-          _lastReviewAtMeta,
-        ),
-      );
-    }
-    if (data.containsKey('next_review_at')) {
-      context.handle(
-        _nextReviewAtMeta,
-        nextReviewAt.isAcceptableOrUnknown(
-          data['next_review_at']!,
-          _nextReviewAtMeta,
-        ),
-      );
-    }
-    if (data.containsKey('scheduled_days')) {
-      context.handle(
-        _scheduledDaysMeta,
-        scheduledDays.isAcceptableOrUnknown(
-          data['scheduled_days']!,
-          _scheduledDaysMeta,
-        ),
-      );
-    }
-    if (data.containsKey('elapsed_days')) {
-      context.handle(
-        _elapsedDaysMeta,
-        elapsedDays.isAcceptableOrUnknown(
-          data['elapsed_days']!,
-          _elapsedDaysMeta,
-        ),
-      );
-    }
     return context;
   }
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
-
   @override
   HighlightsTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -1909,46 +1673,6 @@ class $HighlightsTableTable extends HighlightsTable
         DriftSqlType.string,
         data['${effectivePrefix}created_at'],
       )!,
-      fsrsState: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}fsrs_state'],
-      )!,
-      stability: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}stability'],
-      )!,
-      difficulty: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}difficulty'],
-      )!,
-      retrievability: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}retrievability'],
-      )!,
-      reps: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}reps'],
-      )!,
-      lapses: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}lapses'],
-      )!,
-      lastReviewAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}last_review_at'],
-      ),
-      nextReviewAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}next_review_at'],
-      ),
-      scheduledDays: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}scheduled_days'],
-      )!,
-      elapsedDays: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}elapsed_days'],
-      )!,
     );
   }
 
@@ -1970,17 +1694,6 @@ class HighlightsTableData extends DataClass
   final double? scrollOffset;
   final String color;
   final String createdAt;
-  final String fsrsState;
-  final double stability;
-  final double difficulty;
-  final double retrievability;
-  final int reps;
-  final int lapses;
-  final String? lastReviewAt;
-  final String? nextReviewAt;
-  final int scheduledDays;
-  final int elapsedDays;
-
   const HighlightsTableData({
     required this.id,
     required this.sourceId,
@@ -1992,18 +1705,7 @@ class HighlightsTableData extends DataClass
     this.scrollOffset,
     required this.color,
     required this.createdAt,
-    required this.fsrsState,
-    required this.stability,
-    required this.difficulty,
-    required this.retrievability,
-    required this.reps,
-    required this.lapses,
-    this.lastReviewAt,
-    this.nextReviewAt,
-    required this.scheduledDays,
-    required this.elapsedDays,
   });
-
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -2025,20 +1727,6 @@ class HighlightsTableData extends DataClass
     }
     map['color'] = Variable<String>(color);
     map['created_at'] = Variable<String>(createdAt);
-    map['fsrs_state'] = Variable<String>(fsrsState);
-    map['stability'] = Variable<double>(stability);
-    map['difficulty'] = Variable<double>(difficulty);
-    map['retrievability'] = Variable<double>(retrievability);
-    map['reps'] = Variable<int>(reps);
-    map['lapses'] = Variable<int>(lapses);
-    if (!nullToAbsent || lastReviewAt != null) {
-      map['last_review_at'] = Variable<String>(lastReviewAt);
-    }
-    if (!nullToAbsent || nextReviewAt != null) {
-      map['next_review_at'] = Variable<String>(nextReviewAt);
-    }
-    map['scheduled_days'] = Variable<int>(scheduledDays);
-    map['elapsed_days'] = Variable<int>(elapsedDays);
     return map;
   }
 
@@ -2060,20 +1748,6 @@ class HighlightsTableData extends DataClass
           : Value(scrollOffset),
       color: Value(color),
       createdAt: Value(createdAt),
-      fsrsState: Value(fsrsState),
-      stability: Value(stability),
-      difficulty: Value(difficulty),
-      retrievability: Value(retrievability),
-      reps: Value(reps),
-      lapses: Value(lapses),
-      lastReviewAt: lastReviewAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(lastReviewAt),
-      nextReviewAt: nextReviewAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(nextReviewAt),
-      scheduledDays: Value(scheduledDays),
-      elapsedDays: Value(elapsedDays),
     );
   }
 
@@ -2093,19 +1767,8 @@ class HighlightsTableData extends DataClass
       scrollOffset: serializer.fromJson<double?>(json['scrollOffset']),
       color: serializer.fromJson<String>(json['color']),
       createdAt: serializer.fromJson<String>(json['createdAt']),
-      fsrsState: serializer.fromJson<String>(json['fsrsState']),
-      stability: serializer.fromJson<double>(json['stability']),
-      difficulty: serializer.fromJson<double>(json['difficulty']),
-      retrievability: serializer.fromJson<double>(json['retrievability']),
-      reps: serializer.fromJson<int>(json['reps']),
-      lapses: serializer.fromJson<int>(json['lapses']),
-      lastReviewAt: serializer.fromJson<String?>(json['lastReviewAt']),
-      nextReviewAt: serializer.fromJson<String?>(json['nextReviewAt']),
-      scheduledDays: serializer.fromJson<int>(json['scheduledDays']),
-      elapsedDays: serializer.fromJson<int>(json['elapsedDays']),
     );
   }
-
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -2120,16 +1783,6 @@ class HighlightsTableData extends DataClass
       'scrollOffset': serializer.toJson<double?>(scrollOffset),
       'color': serializer.toJson<String>(color),
       'createdAt': serializer.toJson<String>(createdAt),
-      'fsrsState': serializer.toJson<String>(fsrsState),
-      'stability': serializer.toJson<double>(stability),
-      'difficulty': serializer.toJson<double>(difficulty),
-      'retrievability': serializer.toJson<double>(retrievability),
-      'reps': serializer.toJson<int>(reps),
-      'lapses': serializer.toJson<int>(lapses),
-      'lastReviewAt': serializer.toJson<String?>(lastReviewAt),
-      'nextReviewAt': serializer.toJson<String?>(nextReviewAt),
-      'scheduledDays': serializer.toJson<int>(scheduledDays),
-      'elapsedDays': serializer.toJson<int>(elapsedDays),
     };
   }
 
@@ -2144,16 +1797,6 @@ class HighlightsTableData extends DataClass
     Value<double?> scrollOffset = const Value.absent(),
     String? color,
     String? createdAt,
-    String? fsrsState,
-    double? stability,
-    double? difficulty,
-    double? retrievability,
-    int? reps,
-    int? lapses,
-    Value<String?> lastReviewAt = const Value.absent(),
-    Value<String?> nextReviewAt = const Value.absent(),
-    int? scheduledDays,
-    int? elapsedDays,
   }) => HighlightsTableData(
     id: id ?? this.id,
     sourceId: sourceId ?? this.sourceId,
@@ -2165,18 +1808,7 @@ class HighlightsTableData extends DataClass
     scrollOffset: scrollOffset.present ? scrollOffset.value : this.scrollOffset,
     color: color ?? this.color,
     createdAt: createdAt ?? this.createdAt,
-    fsrsState: fsrsState ?? this.fsrsState,
-    stability: stability ?? this.stability,
-    difficulty: difficulty ?? this.difficulty,
-    retrievability: retrievability ?? this.retrievability,
-    reps: reps ?? this.reps,
-    lapses: lapses ?? this.lapses,
-    lastReviewAt: lastReviewAt.present ? lastReviewAt.value : this.lastReviewAt,
-    nextReviewAt: nextReviewAt.present ? nextReviewAt.value : this.nextReviewAt,
-    scheduledDays: scheduledDays ?? this.scheduledDays,
-    elapsedDays: elapsedDays ?? this.elapsedDays,
   );
-
   HighlightsTableData copyWithCompanion(HighlightsTableCompanion data) {
     return HighlightsTableData(
       id: data.id.present ? data.id.value : this.id,
@@ -2197,28 +1829,6 @@ class HighlightsTableData extends DataClass
           : this.scrollOffset,
       color: data.color.present ? data.color.value : this.color,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      fsrsState: data.fsrsState.present ? data.fsrsState.value : this.fsrsState,
-      stability: data.stability.present ? data.stability.value : this.stability,
-      difficulty: data.difficulty.present
-          ? data.difficulty.value
-          : this.difficulty,
-      retrievability: data.retrievability.present
-          ? data.retrievability.value
-          : this.retrievability,
-      reps: data.reps.present ? data.reps.value : this.reps,
-      lapses: data.lapses.present ? data.lapses.value : this.lapses,
-      lastReviewAt: data.lastReviewAt.present
-          ? data.lastReviewAt.value
-          : this.lastReviewAt,
-      nextReviewAt: data.nextReviewAt.present
-          ? data.nextReviewAt.value
-          : this.nextReviewAt,
-      scheduledDays: data.scheduledDays.present
-          ? data.scheduledDays.value
-          : this.scheduledDays,
-      elapsedDays: data.elapsedDays.present
-          ? data.elapsedDays.value
-          : this.elapsedDays,
     );
   }
 
@@ -2234,17 +1844,7 @@ class HighlightsTableData extends DataClass
           ..write('pageNumber: $pageNumber, ')
           ..write('scrollOffset: $scrollOffset, ')
           ..write('color: $color, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('fsrsState: $fsrsState, ')
-          ..write('stability: $stability, ')
-          ..write('difficulty: $difficulty, ')
-          ..write('retrievability: $retrievability, ')
-          ..write('reps: $reps, ')
-          ..write('lapses: $lapses, ')
-          ..write('lastReviewAt: $lastReviewAt, ')
-          ..write('nextReviewAt: $nextReviewAt, ')
-          ..write('scheduledDays: $scheduledDays, ')
-          ..write('elapsedDays: $elapsedDays')
+          ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
@@ -2261,18 +1861,7 @@ class HighlightsTableData extends DataClass
     scrollOffset,
     color,
     createdAt,
-    fsrsState,
-    stability,
-    difficulty,
-    retrievability,
-    reps,
-    lapses,
-    lastReviewAt,
-    nextReviewAt,
-    scheduledDays,
-    elapsedDays,
   );
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2286,17 +1875,7 @@ class HighlightsTableData extends DataClass
           other.pageNumber == this.pageNumber &&
           other.scrollOffset == this.scrollOffset &&
           other.color == this.color &&
-          other.createdAt == this.createdAt &&
-          other.fsrsState == this.fsrsState &&
-          other.stability == this.stability &&
-          other.difficulty == this.difficulty &&
-          other.retrievability == this.retrievability &&
-          other.reps == this.reps &&
-          other.lapses == this.lapses &&
-          other.lastReviewAt == this.lastReviewAt &&
-          other.nextReviewAt == this.nextReviewAt &&
-          other.scheduledDays == this.scheduledDays &&
-          other.elapsedDays == this.elapsedDays);
+          other.createdAt == this.createdAt);
 }
 
 class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
@@ -2310,18 +1889,7 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
   final Value<double?> scrollOffset;
   final Value<String> color;
   final Value<String> createdAt;
-  final Value<String> fsrsState;
-  final Value<double> stability;
-  final Value<double> difficulty;
-  final Value<double> retrievability;
-  final Value<int> reps;
-  final Value<int> lapses;
-  final Value<String?> lastReviewAt;
-  final Value<String?> nextReviewAt;
-  final Value<int> scheduledDays;
-  final Value<int> elapsedDays;
   final Value<int> rowid;
-
   const HighlightsTableCompanion({
     this.id = const Value.absent(),
     this.sourceId = const Value.absent(),
@@ -2333,19 +1901,8 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
     this.scrollOffset = const Value.absent(),
     this.color = const Value.absent(),
     this.createdAt = const Value.absent(),
-    this.fsrsState = const Value.absent(),
-    this.stability = const Value.absent(),
-    this.difficulty = const Value.absent(),
-    this.retrievability = const Value.absent(),
-    this.reps = const Value.absent(),
-    this.lapses = const Value.absent(),
-    this.lastReviewAt = const Value.absent(),
-    this.nextReviewAt = const Value.absent(),
-    this.scheduledDays = const Value.absent(),
-    this.elapsedDays = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-
   HighlightsTableCompanion.insert({
     required String id,
     required String sourceId,
@@ -2357,23 +1914,12 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
     this.scrollOffset = const Value.absent(),
     this.color = const Value.absent(),
     required String createdAt,
-    this.fsrsState = const Value.absent(),
-    this.stability = const Value.absent(),
-    this.difficulty = const Value.absent(),
-    this.retrievability = const Value.absent(),
-    this.reps = const Value.absent(),
-    this.lapses = const Value.absent(),
-    this.lastReviewAt = const Value.absent(),
-    this.nextReviewAt = const Value.absent(),
-    this.scheduledDays = const Value.absent(),
-    this.elapsedDays = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        sourceId = Value(sourceId),
        sourceType = Value(sourceType),
        highlightText = Value(highlightText),
        createdAt = Value(createdAt);
-
   static Insertable<HighlightsTableData> custom({
     Expression<String>? id,
     Expression<String>? sourceId,
@@ -2385,16 +1931,6 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
     Expression<double>? scrollOffset,
     Expression<String>? color,
     Expression<String>? createdAt,
-    Expression<String>? fsrsState,
-    Expression<double>? stability,
-    Expression<double>? difficulty,
-    Expression<double>? retrievability,
-    Expression<int>? reps,
-    Expression<int>? lapses,
-    Expression<String>? lastReviewAt,
-    Expression<String>? nextReviewAt,
-    Expression<int>? scheduledDays,
-    Expression<int>? elapsedDays,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2408,16 +1944,6 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
       if (scrollOffset != null) 'scroll_offset': scrollOffset,
       if (color != null) 'color': color,
       if (createdAt != null) 'created_at': createdAt,
-      if (fsrsState != null) 'fsrs_state': fsrsState,
-      if (stability != null) 'stability': stability,
-      if (difficulty != null) 'difficulty': difficulty,
-      if (retrievability != null) 'retrievability': retrievability,
-      if (reps != null) 'reps': reps,
-      if (lapses != null) 'lapses': lapses,
-      if (lastReviewAt != null) 'last_review_at': lastReviewAt,
-      if (nextReviewAt != null) 'next_review_at': nextReviewAt,
-      if (scheduledDays != null) 'scheduled_days': scheduledDays,
-      if (elapsedDays != null) 'elapsed_days': elapsedDays,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2433,16 +1959,6 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
     Value<double?>? scrollOffset,
     Value<String>? color,
     Value<String>? createdAt,
-    Value<String>? fsrsState,
-    Value<double>? stability,
-    Value<double>? difficulty,
-    Value<double>? retrievability,
-    Value<int>? reps,
-    Value<int>? lapses,
-    Value<String?>? lastReviewAt,
-    Value<String?>? nextReviewAt,
-    Value<int>? scheduledDays,
-    Value<int>? elapsedDays,
     Value<int>? rowid,
   }) {
     return HighlightsTableCompanion(
@@ -2456,16 +1972,6 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
       scrollOffset: scrollOffset ?? this.scrollOffset,
       color: color ?? this.color,
       createdAt: createdAt ?? this.createdAt,
-      fsrsState: fsrsState ?? this.fsrsState,
-      stability: stability ?? this.stability,
-      difficulty: difficulty ?? this.difficulty,
-      retrievability: retrievability ?? this.retrievability,
-      reps: reps ?? this.reps,
-      lapses: lapses ?? this.lapses,
-      lastReviewAt: lastReviewAt ?? this.lastReviewAt,
-      nextReviewAt: nextReviewAt ?? this.nextReviewAt,
-      scheduledDays: scheduledDays ?? this.scheduledDays,
-      elapsedDays: elapsedDays ?? this.elapsedDays,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2503,36 +2009,6 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
     if (createdAt.present) {
       map['created_at'] = Variable<String>(createdAt.value);
     }
-    if (fsrsState.present) {
-      map['fsrs_state'] = Variable<String>(fsrsState.value);
-    }
-    if (stability.present) {
-      map['stability'] = Variable<double>(stability.value);
-    }
-    if (difficulty.present) {
-      map['difficulty'] = Variable<double>(difficulty.value);
-    }
-    if (retrievability.present) {
-      map['retrievability'] = Variable<double>(retrievability.value);
-    }
-    if (reps.present) {
-      map['reps'] = Variable<int>(reps.value);
-    }
-    if (lapses.present) {
-      map['lapses'] = Variable<int>(lapses.value);
-    }
-    if (lastReviewAt.present) {
-      map['last_review_at'] = Variable<String>(lastReviewAt.value);
-    }
-    if (nextReviewAt.present) {
-      map['next_review_at'] = Variable<String>(nextReviewAt.value);
-    }
-    if (scheduledDays.present) {
-      map['scheduled_days'] = Variable<int>(scheduledDays.value);
-    }
-    if (elapsedDays.present) {
-      map['elapsed_days'] = Variable<int>(elapsedDays.value);
-    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2552,16 +2028,6 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
           ..write('scrollOffset: $scrollOffset, ')
           ..write('color: $color, ')
           ..write('createdAt: $createdAt, ')
-          ..write('fsrsState: $fsrsState, ')
-          ..write('stability: $stability, ')
-          ..write('difficulty: $difficulty, ')
-          ..write('retrievability: $retrievability, ')
-          ..write('reps: $reps, ')
-          ..write('lapses: $lapses, ')
-          ..write('lastReviewAt: $lastReviewAt, ')
-          ..write('nextReviewAt: $nextReviewAt, ')
-          ..write('scheduledDays: $scheduledDays, ')
-          ..write('elapsedDays: $elapsedDays, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2573,9 +2039,7 @@ class $FlashcardsTableTable extends FlashcardsTable
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-
   $FlashcardsTableTable(this.attachedDatabase, [this._alias]);
-
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -2656,121 +2120,6 @@ class $FlashcardsTableTable extends FlashcardsTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _fsrsStateMeta = const VerificationMeta(
-    'fsrsState',
-  );
-  @override
-  late final GeneratedColumn<String> fsrsState = GeneratedColumn<String>(
-    'fsrs_state',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultValue: const Constant('new'),
-  );
-  static const VerificationMeta _stabilityMeta = const VerificationMeta(
-    'stability',
-  );
-  @override
-  late final GeneratedColumn<double> stability = GeneratedColumn<double>(
-    'stability',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0.0),
-  );
-  static const VerificationMeta _difficultyMeta = const VerificationMeta(
-    'difficulty',
-  );
-  @override
-  late final GeneratedColumn<double> difficulty = GeneratedColumn<double>(
-    'difficulty',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0.0),
-  );
-  static const VerificationMeta _retrievabilityMeta = const VerificationMeta(
-    'retrievability',
-  );
-  @override
-  late final GeneratedColumn<double> retrievability = GeneratedColumn<double>(
-    'retrievability',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0.0),
-  );
-  static const VerificationMeta _repsMeta = const VerificationMeta('reps');
-  @override
-  late final GeneratedColumn<int> reps = GeneratedColumn<int>(
-    'reps',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0),
-  );
-  static const VerificationMeta _lapsesMeta = const VerificationMeta('lapses');
-  @override
-  late final GeneratedColumn<int> lapses = GeneratedColumn<int>(
-    'lapses',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0),
-  );
-  static const VerificationMeta _lastReviewAtMeta = const VerificationMeta(
-    'lastReviewAt',
-  );
-  @override
-  late final GeneratedColumn<String> lastReviewAt = GeneratedColumn<String>(
-    'last_review_at',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _nextReviewAtMeta = const VerificationMeta(
-    'nextReviewAt',
-  );
-  @override
-  late final GeneratedColumn<String> nextReviewAt = GeneratedColumn<String>(
-    'next_review_at',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _scheduledDaysMeta = const VerificationMeta(
-    'scheduledDays',
-  );
-  @override
-  late final GeneratedColumn<int> scheduledDays = GeneratedColumn<int>(
-    'scheduled_days',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0),
-  );
-  static const VerificationMeta _elapsedDaysMeta = const VerificationMeta(
-    'elapsedDays',
-  );
-  @override
-  late final GeneratedColumn<int> elapsedDays = GeneratedColumn<int>(
-    'elapsed_days',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0),
-  );
-
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2781,25 +2130,12 @@ class $FlashcardsTableTable extends FlashcardsTable
     sourceHighlightId,
     creationSource,
     createdAt,
-    fsrsState,
-    stability,
-    difficulty,
-    retrievability,
-    reps,
-    lapses,
-    lastReviewAt,
-    nextReviewAt,
-    scheduledDays,
-    elapsedDays,
   ];
-
   @override
   String get aliasedName => _alias ?? actualTableName;
-
   @override
   String get actualTableName => $name;
   static const String $name = 'flashcards_table';
-
   @override
   VerificationContext validateIntegrity(
     Insertable<FlashcardsTableData> instance, {
@@ -2868,87 +2204,11 @@ class $FlashcardsTableTable extends FlashcardsTable
     } else if (isInserting) {
       context.missing(_createdAtMeta);
     }
-    if (data.containsKey('fsrs_state')) {
-      context.handle(
-        _fsrsStateMeta,
-        fsrsState.isAcceptableOrUnknown(data['fsrs_state']!, _fsrsStateMeta),
-      );
-    }
-    if (data.containsKey('stability')) {
-      context.handle(
-        _stabilityMeta,
-        stability.isAcceptableOrUnknown(data['stability']!, _stabilityMeta),
-      );
-    }
-    if (data.containsKey('difficulty')) {
-      context.handle(
-        _difficultyMeta,
-        difficulty.isAcceptableOrUnknown(data['difficulty']!, _difficultyMeta),
-      );
-    }
-    if (data.containsKey('retrievability')) {
-      context.handle(
-        _retrievabilityMeta,
-        retrievability.isAcceptableOrUnknown(
-          data['retrievability']!,
-          _retrievabilityMeta,
-        ),
-      );
-    }
-    if (data.containsKey('reps')) {
-      context.handle(
-        _repsMeta,
-        reps.isAcceptableOrUnknown(data['reps']!, _repsMeta),
-      );
-    }
-    if (data.containsKey('lapses')) {
-      context.handle(
-        _lapsesMeta,
-        lapses.isAcceptableOrUnknown(data['lapses']!, _lapsesMeta),
-      );
-    }
-    if (data.containsKey('last_review_at')) {
-      context.handle(
-        _lastReviewAtMeta,
-        lastReviewAt.isAcceptableOrUnknown(
-          data['last_review_at']!,
-          _lastReviewAtMeta,
-        ),
-      );
-    }
-    if (data.containsKey('next_review_at')) {
-      context.handle(
-        _nextReviewAtMeta,
-        nextReviewAt.isAcceptableOrUnknown(
-          data['next_review_at']!,
-          _nextReviewAtMeta,
-        ),
-      );
-    }
-    if (data.containsKey('scheduled_days')) {
-      context.handle(
-        _scheduledDaysMeta,
-        scheduledDays.isAcceptableOrUnknown(
-          data['scheduled_days']!,
-          _scheduledDaysMeta,
-        ),
-      );
-    }
-    if (data.containsKey('elapsed_days')) {
-      context.handle(
-        _elapsedDaysMeta,
-        elapsedDays.isAcceptableOrUnknown(
-          data['elapsed_days']!,
-          _elapsedDaysMeta,
-        ),
-      );
-    }
     return context;
   }
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
-
   @override
   FlashcardsTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -2985,46 +2245,6 @@ class $FlashcardsTableTable extends FlashcardsTable
         DriftSqlType.string,
         data['${effectivePrefix}created_at'],
       )!,
-      fsrsState: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}fsrs_state'],
-      )!,
-      stability: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}stability'],
-      )!,
-      difficulty: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}difficulty'],
-      )!,
-      retrievability: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}retrievability'],
-      )!,
-      reps: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}reps'],
-      )!,
-      lapses: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}lapses'],
-      )!,
-      lastReviewAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}last_review_at'],
-      ),
-      nextReviewAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}next_review_at'],
-      ),
-      scheduledDays: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}scheduled_days'],
-      )!,
-      elapsedDays: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}elapsed_days'],
-      )!,
     );
   }
 
@@ -3044,17 +2264,6 @@ class FlashcardsTableData extends DataClass
   final String? sourceHighlightId;
   final String creationSource;
   final String createdAt;
-  final String fsrsState;
-  final double stability;
-  final double difficulty;
-  final double retrievability;
-  final int reps;
-  final int lapses;
-  final String? lastReviewAt;
-  final String? nextReviewAt;
-  final int scheduledDays;
-  final int elapsedDays;
-
   const FlashcardsTableData({
     required this.id,
     required this.deckId,
@@ -3064,18 +2273,7 @@ class FlashcardsTableData extends DataClass
     this.sourceHighlightId,
     required this.creationSource,
     required this.createdAt,
-    required this.fsrsState,
-    required this.stability,
-    required this.difficulty,
-    required this.retrievability,
-    required this.reps,
-    required this.lapses,
-    this.lastReviewAt,
-    this.nextReviewAt,
-    required this.scheduledDays,
-    required this.elapsedDays,
   });
-
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -3091,20 +2289,6 @@ class FlashcardsTableData extends DataClass
     }
     map['creation_source'] = Variable<String>(creationSource);
     map['created_at'] = Variable<String>(createdAt);
-    map['fsrs_state'] = Variable<String>(fsrsState);
-    map['stability'] = Variable<double>(stability);
-    map['difficulty'] = Variable<double>(difficulty);
-    map['retrievability'] = Variable<double>(retrievability);
-    map['reps'] = Variable<int>(reps);
-    map['lapses'] = Variable<int>(lapses);
-    if (!nullToAbsent || lastReviewAt != null) {
-      map['last_review_at'] = Variable<String>(lastReviewAt);
-    }
-    if (!nullToAbsent || nextReviewAt != null) {
-      map['next_review_at'] = Variable<String>(nextReviewAt);
-    }
-    map['scheduled_days'] = Variable<int>(scheduledDays);
-    map['elapsed_days'] = Variable<int>(elapsedDays);
     return map;
   }
 
@@ -3120,20 +2304,6 @@ class FlashcardsTableData extends DataClass
           : Value(sourceHighlightId),
       creationSource: Value(creationSource),
       createdAt: Value(createdAt),
-      fsrsState: Value(fsrsState),
-      stability: Value(stability),
-      difficulty: Value(difficulty),
-      retrievability: Value(retrievability),
-      reps: Value(reps),
-      lapses: Value(lapses),
-      lastReviewAt: lastReviewAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(lastReviewAt),
-      nextReviewAt: nextReviewAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(nextReviewAt),
-      scheduledDays: Value(scheduledDays),
-      elapsedDays: Value(elapsedDays),
     );
   }
 
@@ -3153,19 +2323,8 @@ class FlashcardsTableData extends DataClass
       ),
       creationSource: serializer.fromJson<String>(json['creationSource']),
       createdAt: serializer.fromJson<String>(json['createdAt']),
-      fsrsState: serializer.fromJson<String>(json['fsrsState']),
-      stability: serializer.fromJson<double>(json['stability']),
-      difficulty: serializer.fromJson<double>(json['difficulty']),
-      retrievability: serializer.fromJson<double>(json['retrievability']),
-      reps: serializer.fromJson<int>(json['reps']),
-      lapses: serializer.fromJson<int>(json['lapses']),
-      lastReviewAt: serializer.fromJson<String?>(json['lastReviewAt']),
-      nextReviewAt: serializer.fromJson<String?>(json['nextReviewAt']),
-      scheduledDays: serializer.fromJson<int>(json['scheduledDays']),
-      elapsedDays: serializer.fromJson<int>(json['elapsedDays']),
     );
   }
-
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -3178,16 +2337,6 @@ class FlashcardsTableData extends DataClass
       'sourceHighlightId': serializer.toJson<String?>(sourceHighlightId),
       'creationSource': serializer.toJson<String>(creationSource),
       'createdAt': serializer.toJson<String>(createdAt),
-      'fsrsState': serializer.toJson<String>(fsrsState),
-      'stability': serializer.toJson<double>(stability),
-      'difficulty': serializer.toJson<double>(difficulty),
-      'retrievability': serializer.toJson<double>(retrievability),
-      'reps': serializer.toJson<int>(reps),
-      'lapses': serializer.toJson<int>(lapses),
-      'lastReviewAt': serializer.toJson<String?>(lastReviewAt),
-      'nextReviewAt': serializer.toJson<String?>(nextReviewAt),
-      'scheduledDays': serializer.toJson<int>(scheduledDays),
-      'elapsedDays': serializer.toJson<int>(elapsedDays),
     };
   }
 
@@ -3200,16 +2349,6 @@ class FlashcardsTableData extends DataClass
     Value<String?> sourceHighlightId = const Value.absent(),
     String? creationSource,
     String? createdAt,
-    String? fsrsState,
-    double? stability,
-    double? difficulty,
-    double? retrievability,
-    int? reps,
-    int? lapses,
-    Value<String?> lastReviewAt = const Value.absent(),
-    Value<String?> nextReviewAt = const Value.absent(),
-    int? scheduledDays,
-    int? elapsedDays,
   }) => FlashcardsTableData(
     id: id ?? this.id,
     deckId: deckId ?? this.deckId,
@@ -3221,18 +2360,7 @@ class FlashcardsTableData extends DataClass
         : this.sourceHighlightId,
     creationSource: creationSource ?? this.creationSource,
     createdAt: createdAt ?? this.createdAt,
-    fsrsState: fsrsState ?? this.fsrsState,
-    stability: stability ?? this.stability,
-    difficulty: difficulty ?? this.difficulty,
-    retrievability: retrievability ?? this.retrievability,
-    reps: reps ?? this.reps,
-    lapses: lapses ?? this.lapses,
-    lastReviewAt: lastReviewAt.present ? lastReviewAt.value : this.lastReviewAt,
-    nextReviewAt: nextReviewAt.present ? nextReviewAt.value : this.nextReviewAt,
-    scheduledDays: scheduledDays ?? this.scheduledDays,
-    elapsedDays: elapsedDays ?? this.elapsedDays,
   );
-
   FlashcardsTableData copyWithCompanion(FlashcardsTableCompanion data) {
     return FlashcardsTableData(
       id: data.id.present ? data.id.value : this.id,
@@ -3247,28 +2375,6 @@ class FlashcardsTableData extends DataClass
           ? data.creationSource.value
           : this.creationSource,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      fsrsState: data.fsrsState.present ? data.fsrsState.value : this.fsrsState,
-      stability: data.stability.present ? data.stability.value : this.stability,
-      difficulty: data.difficulty.present
-          ? data.difficulty.value
-          : this.difficulty,
-      retrievability: data.retrievability.present
-          ? data.retrievability.value
-          : this.retrievability,
-      reps: data.reps.present ? data.reps.value : this.reps,
-      lapses: data.lapses.present ? data.lapses.value : this.lapses,
-      lastReviewAt: data.lastReviewAt.present
-          ? data.lastReviewAt.value
-          : this.lastReviewAt,
-      nextReviewAt: data.nextReviewAt.present
-          ? data.nextReviewAt.value
-          : this.nextReviewAt,
-      scheduledDays: data.scheduledDays.present
-          ? data.scheduledDays.value
-          : this.scheduledDays,
-      elapsedDays: data.elapsedDays.present
-          ? data.elapsedDays.value
-          : this.elapsedDays,
     );
   }
 
@@ -3282,17 +2388,7 @@ class FlashcardsTableData extends DataClass
           ..write('hint: $hint, ')
           ..write('sourceHighlightId: $sourceHighlightId, ')
           ..write('creationSource: $creationSource, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('fsrsState: $fsrsState, ')
-          ..write('stability: $stability, ')
-          ..write('difficulty: $difficulty, ')
-          ..write('retrievability: $retrievability, ')
-          ..write('reps: $reps, ')
-          ..write('lapses: $lapses, ')
-          ..write('lastReviewAt: $lastReviewAt, ')
-          ..write('nextReviewAt: $nextReviewAt, ')
-          ..write('scheduledDays: $scheduledDays, ')
-          ..write('elapsedDays: $elapsedDays')
+          ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
@@ -3307,18 +2403,7 @@ class FlashcardsTableData extends DataClass
     sourceHighlightId,
     creationSource,
     createdAt,
-    fsrsState,
-    stability,
-    difficulty,
-    retrievability,
-    reps,
-    lapses,
-    lastReviewAt,
-    nextReviewAt,
-    scheduledDays,
-    elapsedDays,
   );
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3330,17 +2415,7 @@ class FlashcardsTableData extends DataClass
           other.hint == this.hint &&
           other.sourceHighlightId == this.sourceHighlightId &&
           other.creationSource == this.creationSource &&
-          other.createdAt == this.createdAt &&
-          other.fsrsState == this.fsrsState &&
-          other.stability == this.stability &&
-          other.difficulty == this.difficulty &&
-          other.retrievability == this.retrievability &&
-          other.reps == this.reps &&
-          other.lapses == this.lapses &&
-          other.lastReviewAt == this.lastReviewAt &&
-          other.nextReviewAt == this.nextReviewAt &&
-          other.scheduledDays == this.scheduledDays &&
-          other.elapsedDays == this.elapsedDays);
+          other.createdAt == this.createdAt);
 }
 
 class FlashcardsTableCompanion extends UpdateCompanion<FlashcardsTableData> {
@@ -3352,18 +2427,7 @@ class FlashcardsTableCompanion extends UpdateCompanion<FlashcardsTableData> {
   final Value<String?> sourceHighlightId;
   final Value<String> creationSource;
   final Value<String> createdAt;
-  final Value<String> fsrsState;
-  final Value<double> stability;
-  final Value<double> difficulty;
-  final Value<double> retrievability;
-  final Value<int> reps;
-  final Value<int> lapses;
-  final Value<String?> lastReviewAt;
-  final Value<String?> nextReviewAt;
-  final Value<int> scheduledDays;
-  final Value<int> elapsedDays;
   final Value<int> rowid;
-
   const FlashcardsTableCompanion({
     this.id = const Value.absent(),
     this.deckId = const Value.absent(),
@@ -3373,19 +2437,8 @@ class FlashcardsTableCompanion extends UpdateCompanion<FlashcardsTableData> {
     this.sourceHighlightId = const Value.absent(),
     this.creationSource = const Value.absent(),
     this.createdAt = const Value.absent(),
-    this.fsrsState = const Value.absent(),
-    this.stability = const Value.absent(),
-    this.difficulty = const Value.absent(),
-    this.retrievability = const Value.absent(),
-    this.reps = const Value.absent(),
-    this.lapses = const Value.absent(),
-    this.lastReviewAt = const Value.absent(),
-    this.nextReviewAt = const Value.absent(),
-    this.scheduledDays = const Value.absent(),
-    this.elapsedDays = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-
   FlashcardsTableCompanion.insert({
     required String id,
     required String deckId,
@@ -3395,23 +2448,12 @@ class FlashcardsTableCompanion extends UpdateCompanion<FlashcardsTableData> {
     this.sourceHighlightId = const Value.absent(),
     this.creationSource = const Value.absent(),
     required String createdAt,
-    this.fsrsState = const Value.absent(),
-    this.stability = const Value.absent(),
-    this.difficulty = const Value.absent(),
-    this.retrievability = const Value.absent(),
-    this.reps = const Value.absent(),
-    this.lapses = const Value.absent(),
-    this.lastReviewAt = const Value.absent(),
-    this.nextReviewAt = const Value.absent(),
-    this.scheduledDays = const Value.absent(),
-    this.elapsedDays = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        deckId = Value(deckId),
        front = Value(front),
        back = Value(back),
        createdAt = Value(createdAt);
-
   static Insertable<FlashcardsTableData> custom({
     Expression<String>? id,
     Expression<String>? deckId,
@@ -3421,16 +2463,6 @@ class FlashcardsTableCompanion extends UpdateCompanion<FlashcardsTableData> {
     Expression<String>? sourceHighlightId,
     Expression<String>? creationSource,
     Expression<String>? createdAt,
-    Expression<String>? fsrsState,
-    Expression<double>? stability,
-    Expression<double>? difficulty,
-    Expression<double>? retrievability,
-    Expression<int>? reps,
-    Expression<int>? lapses,
-    Expression<String>? lastReviewAt,
-    Expression<String>? nextReviewAt,
-    Expression<int>? scheduledDays,
-    Expression<int>? elapsedDays,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3442,16 +2474,6 @@ class FlashcardsTableCompanion extends UpdateCompanion<FlashcardsTableData> {
       if (sourceHighlightId != null) 'source_highlight_id': sourceHighlightId,
       if (creationSource != null) 'creation_source': creationSource,
       if (createdAt != null) 'created_at': createdAt,
-      if (fsrsState != null) 'fsrs_state': fsrsState,
-      if (stability != null) 'stability': stability,
-      if (difficulty != null) 'difficulty': difficulty,
-      if (retrievability != null) 'retrievability': retrievability,
-      if (reps != null) 'reps': reps,
-      if (lapses != null) 'lapses': lapses,
-      if (lastReviewAt != null) 'last_review_at': lastReviewAt,
-      if (nextReviewAt != null) 'next_review_at': nextReviewAt,
-      if (scheduledDays != null) 'scheduled_days': scheduledDays,
-      if (elapsedDays != null) 'elapsed_days': elapsedDays,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3465,16 +2487,6 @@ class FlashcardsTableCompanion extends UpdateCompanion<FlashcardsTableData> {
     Value<String?>? sourceHighlightId,
     Value<String>? creationSource,
     Value<String>? createdAt,
-    Value<String>? fsrsState,
-    Value<double>? stability,
-    Value<double>? difficulty,
-    Value<double>? retrievability,
-    Value<int>? reps,
-    Value<int>? lapses,
-    Value<String?>? lastReviewAt,
-    Value<String?>? nextReviewAt,
-    Value<int>? scheduledDays,
-    Value<int>? elapsedDays,
     Value<int>? rowid,
   }) {
     return FlashcardsTableCompanion(
@@ -3486,16 +2498,6 @@ class FlashcardsTableCompanion extends UpdateCompanion<FlashcardsTableData> {
       sourceHighlightId: sourceHighlightId ?? this.sourceHighlightId,
       creationSource: creationSource ?? this.creationSource,
       createdAt: createdAt ?? this.createdAt,
-      fsrsState: fsrsState ?? this.fsrsState,
-      stability: stability ?? this.stability,
-      difficulty: difficulty ?? this.difficulty,
-      retrievability: retrievability ?? this.retrievability,
-      reps: reps ?? this.reps,
-      lapses: lapses ?? this.lapses,
-      lastReviewAt: lastReviewAt ?? this.lastReviewAt,
-      nextReviewAt: nextReviewAt ?? this.nextReviewAt,
-      scheduledDays: scheduledDays ?? this.scheduledDays,
-      elapsedDays: elapsedDays ?? this.elapsedDays,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3527,36 +2529,6 @@ class FlashcardsTableCompanion extends UpdateCompanion<FlashcardsTableData> {
     if (createdAt.present) {
       map['created_at'] = Variable<String>(createdAt.value);
     }
-    if (fsrsState.present) {
-      map['fsrs_state'] = Variable<String>(fsrsState.value);
-    }
-    if (stability.present) {
-      map['stability'] = Variable<double>(stability.value);
-    }
-    if (difficulty.present) {
-      map['difficulty'] = Variable<double>(difficulty.value);
-    }
-    if (retrievability.present) {
-      map['retrievability'] = Variable<double>(retrievability.value);
-    }
-    if (reps.present) {
-      map['reps'] = Variable<int>(reps.value);
-    }
-    if (lapses.present) {
-      map['lapses'] = Variable<int>(lapses.value);
-    }
-    if (lastReviewAt.present) {
-      map['last_review_at'] = Variable<String>(lastReviewAt.value);
-    }
-    if (nextReviewAt.present) {
-      map['next_review_at'] = Variable<String>(nextReviewAt.value);
-    }
-    if (scheduledDays.present) {
-      map['scheduled_days'] = Variable<int>(scheduledDays.value);
-    }
-    if (elapsedDays.present) {
-      map['elapsed_days'] = Variable<int>(elapsedDays.value);
-    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3574,16 +2546,6 @@ class FlashcardsTableCompanion extends UpdateCompanion<FlashcardsTableData> {
           ..write('sourceHighlightId: $sourceHighlightId, ')
           ..write('creationSource: $creationSource, ')
           ..write('createdAt: $createdAt, ')
-          ..write('fsrsState: $fsrsState, ')
-          ..write('stability: $stability, ')
-          ..write('difficulty: $difficulty, ')
-          ..write('retrievability: $retrievability, ')
-          ..write('reps: $reps, ')
-          ..write('lapses: $lapses, ')
-          ..write('lastReviewAt: $lastReviewAt, ')
-          ..write('nextReviewAt: $nextReviewAt, ')
-          ..write('scheduledDays: $scheduledDays, ')
-          ..write('elapsedDays: $elapsedDays, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3595,9 +2557,7 @@ class $DictionaryTableTable extends DictionaryTable
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-
   $DictionaryTableTable(this.attachedDatabase, [this._alias]);
-
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -3626,6 +2586,28 @@ class $DictionaryTableTable extends DictionaryTable
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pronunciationMeta = const VerificationMeta(
+    'pronunciation',
+  );
+  @override
+  late final GeneratedColumn<String> pronunciation = GeneratedColumn<String>(
+    'pronunciation',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _partOfSpeechMeta = const VerificationMeta(
+    'partOfSpeech',
+  );
+  @override
+  late final GeneratedColumn<String> partOfSpeech = GeneratedColumn<String>(
+    'part_of_speech',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _contextMeta = const VerificationMeta(
     'context',
@@ -3681,6 +2663,570 @@ class $DictionaryTableTable extends DictionaryTable
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    word,
+    translation,
+    pronunciation,
+    partOfSpeech,
+    context,
+    sourceId,
+    sourceType,
+    usageExamples,
+    addedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'dictionary_table';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DictionaryTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('word')) {
+      context.handle(
+        _wordMeta,
+        word.isAcceptableOrUnknown(data['word']!, _wordMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_wordMeta);
+    }
+    if (data.containsKey('translation')) {
+      context.handle(
+        _translationMeta,
+        translation.isAcceptableOrUnknown(
+          data['translation']!,
+          _translationMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_translationMeta);
+    }
+    if (data.containsKey('pronunciation')) {
+      context.handle(
+        _pronunciationMeta,
+        pronunciation.isAcceptableOrUnknown(
+          data['pronunciation']!,
+          _pronunciationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('part_of_speech')) {
+      context.handle(
+        _partOfSpeechMeta,
+        partOfSpeech.isAcceptableOrUnknown(
+          data['part_of_speech']!,
+          _partOfSpeechMeta,
+        ),
+      );
+    }
+    if (data.containsKey('context')) {
+      context.handle(
+        _contextMeta,
+        this.context.isAcceptableOrUnknown(data['context']!, _contextMeta),
+      );
+    }
+    if (data.containsKey('source_id')) {
+      context.handle(
+        _sourceIdMeta,
+        sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
+      );
+    }
+    if (data.containsKey('source_type')) {
+      context.handle(
+        _sourceTypeMeta,
+        sourceType.isAcceptableOrUnknown(data['source_type']!, _sourceTypeMeta),
+      );
+    }
+    if (data.containsKey('usage_examples')) {
+      context.handle(
+        _usageExamplesMeta,
+        usageExamples.isAcceptableOrUnknown(
+          data['usage_examples']!,
+          _usageExamplesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('added_at')) {
+      context.handle(
+        _addedAtMeta,
+        addedAt.isAcceptableOrUnknown(data['added_at']!, _addedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_addedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DictionaryTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DictionaryTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      word: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}word'],
+      )!,
+      translation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}translation'],
+      )!,
+      pronunciation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pronunciation'],
+      ),
+      partOfSpeech: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}part_of_speech'],
+      ),
+      context: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}context'],
+      ),
+      sourceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_id'],
+      ),
+      sourceType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_type'],
+      ),
+      usageExamples: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}usage_examples'],
+      ),
+      addedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}added_at'],
+      )!,
+    );
+  }
+
+  @override
+  $DictionaryTableTable createAlias(String alias) {
+    return $DictionaryTableTable(attachedDatabase, alias);
+  }
+}
+
+class DictionaryTableData extends DataClass
+    implements Insertable<DictionaryTableData> {
+  final String id;
+  final String word;
+  final String translation;
+  final String? pronunciation;
+  final String? partOfSpeech;
+  final String? context;
+  final String? sourceId;
+  final String? sourceType;
+  final String? usageExamples;
+  final String addedAt;
+  const DictionaryTableData({
+    required this.id,
+    required this.word,
+    required this.translation,
+    this.pronunciation,
+    this.partOfSpeech,
+    this.context,
+    this.sourceId,
+    this.sourceType,
+    this.usageExamples,
+    required this.addedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['word'] = Variable<String>(word);
+    map['translation'] = Variable<String>(translation);
+    if (!nullToAbsent || pronunciation != null) {
+      map['pronunciation'] = Variable<String>(pronunciation);
+    }
+    if (!nullToAbsent || partOfSpeech != null) {
+      map['part_of_speech'] = Variable<String>(partOfSpeech);
+    }
+    if (!nullToAbsent || context != null) {
+      map['context'] = Variable<String>(context);
+    }
+    if (!nullToAbsent || sourceId != null) {
+      map['source_id'] = Variable<String>(sourceId);
+    }
+    if (!nullToAbsent || sourceType != null) {
+      map['source_type'] = Variable<String>(sourceType);
+    }
+    if (!nullToAbsent || usageExamples != null) {
+      map['usage_examples'] = Variable<String>(usageExamples);
+    }
+    map['added_at'] = Variable<String>(addedAt);
+    return map;
+  }
+
+  DictionaryTableCompanion toCompanion(bool nullToAbsent) {
+    return DictionaryTableCompanion(
+      id: Value(id),
+      word: Value(word),
+      translation: Value(translation),
+      pronunciation: pronunciation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pronunciation),
+      partOfSpeech: partOfSpeech == null && nullToAbsent
+          ? const Value.absent()
+          : Value(partOfSpeech),
+      context: context == null && nullToAbsent
+          ? const Value.absent()
+          : Value(context),
+      sourceId: sourceId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceId),
+      sourceType: sourceType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceType),
+      usageExamples: usageExamples == null && nullToAbsent
+          ? const Value.absent()
+          : Value(usageExamples),
+      addedAt: Value(addedAt),
+    );
+  }
+
+  factory DictionaryTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DictionaryTableData(
+      id: serializer.fromJson<String>(json['id']),
+      word: serializer.fromJson<String>(json['word']),
+      translation: serializer.fromJson<String>(json['translation']),
+      pronunciation: serializer.fromJson<String?>(json['pronunciation']),
+      partOfSpeech: serializer.fromJson<String?>(json['partOfSpeech']),
+      context: serializer.fromJson<String?>(json['context']),
+      sourceId: serializer.fromJson<String?>(json['sourceId']),
+      sourceType: serializer.fromJson<String?>(json['sourceType']),
+      usageExamples: serializer.fromJson<String?>(json['usageExamples']),
+      addedAt: serializer.fromJson<String>(json['addedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'word': serializer.toJson<String>(word),
+      'translation': serializer.toJson<String>(translation),
+      'pronunciation': serializer.toJson<String?>(pronunciation),
+      'partOfSpeech': serializer.toJson<String?>(partOfSpeech),
+      'context': serializer.toJson<String?>(context),
+      'sourceId': serializer.toJson<String?>(sourceId),
+      'sourceType': serializer.toJson<String?>(sourceType),
+      'usageExamples': serializer.toJson<String?>(usageExamples),
+      'addedAt': serializer.toJson<String>(addedAt),
+    };
+  }
+
+  DictionaryTableData copyWith({
+    String? id,
+    String? word,
+    String? translation,
+    Value<String?> pronunciation = const Value.absent(),
+    Value<String?> partOfSpeech = const Value.absent(),
+    Value<String?> context = const Value.absent(),
+    Value<String?> sourceId = const Value.absent(),
+    Value<String?> sourceType = const Value.absent(),
+    Value<String?> usageExamples = const Value.absent(),
+    String? addedAt,
+  }) => DictionaryTableData(
+    id: id ?? this.id,
+    word: word ?? this.word,
+    translation: translation ?? this.translation,
+    pronunciation: pronunciation.present
+        ? pronunciation.value
+        : this.pronunciation,
+    partOfSpeech: partOfSpeech.present ? partOfSpeech.value : this.partOfSpeech,
+    context: context.present ? context.value : this.context,
+    sourceId: sourceId.present ? sourceId.value : this.sourceId,
+    sourceType: sourceType.present ? sourceType.value : this.sourceType,
+    usageExamples: usageExamples.present
+        ? usageExamples.value
+        : this.usageExamples,
+    addedAt: addedAt ?? this.addedAt,
+  );
+  DictionaryTableData copyWithCompanion(DictionaryTableCompanion data) {
+    return DictionaryTableData(
+      id: data.id.present ? data.id.value : this.id,
+      word: data.word.present ? data.word.value : this.word,
+      translation: data.translation.present
+          ? data.translation.value
+          : this.translation,
+      pronunciation: data.pronunciation.present
+          ? data.pronunciation.value
+          : this.pronunciation,
+      partOfSpeech: data.partOfSpeech.present
+          ? data.partOfSpeech.value
+          : this.partOfSpeech,
+      context: data.context.present ? data.context.value : this.context,
+      sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
+      sourceType: data.sourceType.present
+          ? data.sourceType.value
+          : this.sourceType,
+      usageExamples: data.usageExamples.present
+          ? data.usageExamples.value
+          : this.usageExamples,
+      addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DictionaryTableData(')
+          ..write('id: $id, ')
+          ..write('word: $word, ')
+          ..write('translation: $translation, ')
+          ..write('pronunciation: $pronunciation, ')
+          ..write('partOfSpeech: $partOfSpeech, ')
+          ..write('context: $context, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('sourceType: $sourceType, ')
+          ..write('usageExamples: $usageExamples, ')
+          ..write('addedAt: $addedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    word,
+    translation,
+    pronunciation,
+    partOfSpeech,
+    context,
+    sourceId,
+    sourceType,
+    usageExamples,
+    addedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DictionaryTableData &&
+          other.id == this.id &&
+          other.word == this.word &&
+          other.translation == this.translation &&
+          other.pronunciation == this.pronunciation &&
+          other.partOfSpeech == this.partOfSpeech &&
+          other.context == this.context &&
+          other.sourceId == this.sourceId &&
+          other.sourceType == this.sourceType &&
+          other.usageExamples == this.usageExamples &&
+          other.addedAt == this.addedAt);
+}
+
+class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
+  final Value<String> id;
+  final Value<String> word;
+  final Value<String> translation;
+  final Value<String?> pronunciation;
+  final Value<String?> partOfSpeech;
+  final Value<String?> context;
+  final Value<String?> sourceId;
+  final Value<String?> sourceType;
+  final Value<String?> usageExamples;
+  final Value<String> addedAt;
+  final Value<int> rowid;
+  const DictionaryTableCompanion({
+    this.id = const Value.absent(),
+    this.word = const Value.absent(),
+    this.translation = const Value.absent(),
+    this.pronunciation = const Value.absent(),
+    this.partOfSpeech = const Value.absent(),
+    this.context = const Value.absent(),
+    this.sourceId = const Value.absent(),
+    this.sourceType = const Value.absent(),
+    this.usageExamples = const Value.absent(),
+    this.addedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DictionaryTableCompanion.insert({
+    required String id,
+    required String word,
+    required String translation,
+    this.pronunciation = const Value.absent(),
+    this.partOfSpeech = const Value.absent(),
+    this.context = const Value.absent(),
+    this.sourceId = const Value.absent(),
+    this.sourceType = const Value.absent(),
+    this.usageExamples = const Value.absent(),
+    required String addedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       word = Value(word),
+       translation = Value(translation),
+       addedAt = Value(addedAt);
+  static Insertable<DictionaryTableData> custom({
+    Expression<String>? id,
+    Expression<String>? word,
+    Expression<String>? translation,
+    Expression<String>? pronunciation,
+    Expression<String>? partOfSpeech,
+    Expression<String>? context,
+    Expression<String>? sourceId,
+    Expression<String>? sourceType,
+    Expression<String>? usageExamples,
+    Expression<String>? addedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (word != null) 'word': word,
+      if (translation != null) 'translation': translation,
+      if (pronunciation != null) 'pronunciation': pronunciation,
+      if (partOfSpeech != null) 'part_of_speech': partOfSpeech,
+      if (context != null) 'context': context,
+      if (sourceId != null) 'source_id': sourceId,
+      if (sourceType != null) 'source_type': sourceType,
+      if (usageExamples != null) 'usage_examples': usageExamples,
+      if (addedAt != null) 'added_at': addedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DictionaryTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? word,
+    Value<String>? translation,
+    Value<String?>? pronunciation,
+    Value<String?>? partOfSpeech,
+    Value<String?>? context,
+    Value<String?>? sourceId,
+    Value<String?>? sourceType,
+    Value<String?>? usageExamples,
+    Value<String>? addedAt,
+    Value<int>? rowid,
+  }) {
+    return DictionaryTableCompanion(
+      id: id ?? this.id,
+      word: word ?? this.word,
+      translation: translation ?? this.translation,
+      pronunciation: pronunciation ?? this.pronunciation,
+      partOfSpeech: partOfSpeech ?? this.partOfSpeech,
+      context: context ?? this.context,
+      sourceId: sourceId ?? this.sourceId,
+      sourceType: sourceType ?? this.sourceType,
+      usageExamples: usageExamples ?? this.usageExamples,
+      addedAt: addedAt ?? this.addedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (word.present) {
+      map['word'] = Variable<String>(word.value);
+    }
+    if (translation.present) {
+      map['translation'] = Variable<String>(translation.value);
+    }
+    if (pronunciation.present) {
+      map['pronunciation'] = Variable<String>(pronunciation.value);
+    }
+    if (partOfSpeech.present) {
+      map['part_of_speech'] = Variable<String>(partOfSpeech.value);
+    }
+    if (context.present) {
+      map['context'] = Variable<String>(context.value);
+    }
+    if (sourceId.present) {
+      map['source_id'] = Variable<String>(sourceId.value);
+    }
+    if (sourceType.present) {
+      map['source_type'] = Variable<String>(sourceType.value);
+    }
+    if (usageExamples.present) {
+      map['usage_examples'] = Variable<String>(usageExamples.value);
+    }
+    if (addedAt.present) {
+      map['added_at'] = Variable<String>(addedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DictionaryTableCompanion(')
+          ..write('id: $id, ')
+          ..write('word: $word, ')
+          ..write('translation: $translation, ')
+          ..write('pronunciation: $pronunciation, ')
+          ..write('partOfSpeech: $partOfSpeech, ')
+          ..write('context: $context, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('sourceType: $sourceType, ')
+          ..write('usageExamples: $usageExamples, ')
+          ..write('addedAt: $addedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ReviewItemsTableTable extends ReviewItemsTable
+    with TableInfo<$ReviewItemsTableTable, ReviewItemsTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReviewItemsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _itemIdMeta = const VerificationMeta('itemId');
+  @override
+  late final GeneratedColumn<String> itemId = GeneratedColumn<String>(
+    'item_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _itemTypeMeta = const VerificationMeta(
+    'itemType',
+  );
+  @override
+  late final GeneratedColumn<String> itemType = GeneratedColumn<String>(
+    'item_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceIdMeta = const VerificationMeta(
+    'sourceId',
+  );
+  @override
+  late final GeneratedColumn<String> sourceId = GeneratedColumn<String>(
+    'source_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _fsrsStateMeta = const VerificationMeta(
     'fsrsState',
@@ -3796,17 +3342,11 @@ class $DictionaryTableTable extends DictionaryTable
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
-
   @override
   List<GeneratedColumn> get $columns => [
-    id,
-    word,
-    translation,
-    context,
+    itemId,
+    itemType,
     sourceId,
-    sourceType,
-    usageExamples,
-    addedAt,
     fsrsState,
     stability,
     difficulty,
@@ -3818,79 +3358,39 @@ class $DictionaryTableTable extends DictionaryTable
     scheduledDays,
     elapsedDays,
   ];
-
   @override
   String get aliasedName => _alias ?? actualTableName;
-
   @override
   String get actualTableName => $name;
-  static const String $name = 'dictionary_table';
-
+  static const String $name = 'review_items_table';
   @override
   VerificationContext validateIntegrity(
-    Insertable<DictionaryTableData> instance, {
+    Insertable<ReviewItemsTableData> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    } else if (isInserting) {
-      context.missing(_idMeta);
-    }
-    if (data.containsKey('word')) {
+    if (data.containsKey('item_id')) {
       context.handle(
-        _wordMeta,
-        word.isAcceptableOrUnknown(data['word']!, _wordMeta),
+        _itemIdMeta,
+        itemId.isAcceptableOrUnknown(data['item_id']!, _itemIdMeta),
       );
     } else if (isInserting) {
-      context.missing(_wordMeta);
+      context.missing(_itemIdMeta);
     }
-    if (data.containsKey('translation')) {
+    if (data.containsKey('item_type')) {
       context.handle(
-        _translationMeta,
-        translation.isAcceptableOrUnknown(
-          data['translation']!,
-          _translationMeta,
-        ),
+        _itemTypeMeta,
+        itemType.isAcceptableOrUnknown(data['item_type']!, _itemTypeMeta),
       );
     } else if (isInserting) {
-      context.missing(_translationMeta);
-    }
-    if (data.containsKey('context')) {
-      context.handle(
-        _contextMeta,
-        this.context.isAcceptableOrUnknown(data['context']!, _contextMeta),
-      );
+      context.missing(_itemTypeMeta);
     }
     if (data.containsKey('source_id')) {
       context.handle(
         _sourceIdMeta,
         sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
       );
-    }
-    if (data.containsKey('source_type')) {
-      context.handle(
-        _sourceTypeMeta,
-        sourceType.isAcceptableOrUnknown(data['source_type']!, _sourceTypeMeta),
-      );
-    }
-    if (data.containsKey('usage_examples')) {
-      context.handle(
-        _usageExamplesMeta,
-        usageExamples.isAcceptableOrUnknown(
-          data['usage_examples']!,
-          _usageExamplesMeta,
-        ),
-      );
-    }
-    if (data.containsKey('added_at')) {
-      context.handle(
-        _addedAtMeta,
-        addedAt.isAcceptableOrUnknown(data['added_at']!, _addedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_addedAtMeta);
     }
     if (data.containsKey('fsrs_state')) {
       context.handle(
@@ -3971,44 +3471,23 @@ class $DictionaryTableTable extends DictionaryTable
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-
+  Set<GeneratedColumn> get $primaryKey => {itemId};
   @override
-  DictionaryTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+  ReviewItemsTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return DictionaryTableData(
-      id: attachedDatabase.typeMapping.read(
+    return ReviewItemsTableData(
+      itemId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}id'],
+        data['${effectivePrefix}item_id'],
       )!,
-      word: attachedDatabase.typeMapping.read(
+      itemType: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}word'],
+        data['${effectivePrefix}item_type'],
       )!,
-      translation: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}translation'],
-      )!,
-      context: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}context'],
-      ),
       sourceId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}source_id'],
       ),
-      sourceType: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}source_type'],
-      ),
-      usageExamples: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}usage_examples'],
-      ),
-      addedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}added_at'],
-      )!,
       fsrsState: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}fsrs_state'],
@@ -4053,21 +3532,16 @@ class $DictionaryTableTable extends DictionaryTable
   }
 
   @override
-  $DictionaryTableTable createAlias(String alias) {
-    return $DictionaryTableTable(attachedDatabase, alias);
+  $ReviewItemsTableTable createAlias(String alias) {
+    return $ReviewItemsTableTable(attachedDatabase, alias);
   }
 }
 
-class DictionaryTableData extends DataClass
-    implements Insertable<DictionaryTableData> {
-  final String id;
-  final String word;
-  final String translation;
-  final String? context;
+class ReviewItemsTableData extends DataClass
+    implements Insertable<ReviewItemsTableData> {
+  final String itemId;
+  final String itemType;
   final String? sourceId;
-  final String? sourceType;
-  final String? usageExamples;
-  final String addedAt;
   final String fsrsState;
   final double stability;
   final double difficulty;
@@ -4078,16 +3552,10 @@ class DictionaryTableData extends DataClass
   final String? nextReviewAt;
   final int scheduledDays;
   final int elapsedDays;
-
-  const DictionaryTableData({
-    required this.id,
-    required this.word,
-    required this.translation,
-    this.context,
+  const ReviewItemsTableData({
+    required this.itemId,
+    required this.itemType,
     this.sourceId,
-    this.sourceType,
-    this.usageExamples,
-    required this.addedAt,
     required this.fsrsState,
     required this.stability,
     required this.difficulty,
@@ -4099,26 +3567,14 @@ class DictionaryTableData extends DataClass
     required this.scheduledDays,
     required this.elapsedDays,
   });
-
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<String>(id);
-    map['word'] = Variable<String>(word);
-    map['translation'] = Variable<String>(translation);
-    if (!nullToAbsent || context != null) {
-      map['context'] = Variable<String>(context);
-    }
+    map['item_id'] = Variable<String>(itemId);
+    map['item_type'] = Variable<String>(itemType);
     if (!nullToAbsent || sourceId != null) {
       map['source_id'] = Variable<String>(sourceId);
     }
-    if (!nullToAbsent || sourceType != null) {
-      map['source_type'] = Variable<String>(sourceType);
-    }
-    if (!nullToAbsent || usageExamples != null) {
-      map['usage_examples'] = Variable<String>(usageExamples);
-    }
-    map['added_at'] = Variable<String>(addedAt);
     map['fsrs_state'] = Variable<String>(fsrsState);
     map['stability'] = Variable<double>(stability);
     map['difficulty'] = Variable<double>(difficulty);
@@ -4136,24 +3592,13 @@ class DictionaryTableData extends DataClass
     return map;
   }
 
-  DictionaryTableCompanion toCompanion(bool nullToAbsent) {
-    return DictionaryTableCompanion(
-      id: Value(id),
-      word: Value(word),
-      translation: Value(translation),
-      context: context == null && nullToAbsent
-          ? const Value.absent()
-          : Value(context),
+  ReviewItemsTableCompanion toCompanion(bool nullToAbsent) {
+    return ReviewItemsTableCompanion(
+      itemId: Value(itemId),
+      itemType: Value(itemType),
       sourceId: sourceId == null && nullToAbsent
           ? const Value.absent()
           : Value(sourceId),
-      sourceType: sourceType == null && nullToAbsent
-          ? const Value.absent()
-          : Value(sourceType),
-      usageExamples: usageExamples == null && nullToAbsent
-          ? const Value.absent()
-          : Value(usageExamples),
-      addedAt: Value(addedAt),
       fsrsState: Value(fsrsState),
       stability: Value(stability),
       difficulty: Value(difficulty),
@@ -4171,20 +3616,15 @@ class DictionaryTableData extends DataClass
     );
   }
 
-  factory DictionaryTableData.fromJson(
+  factory ReviewItemsTableData.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return DictionaryTableData(
-      id: serializer.fromJson<String>(json['id']),
-      word: serializer.fromJson<String>(json['word']),
-      translation: serializer.fromJson<String>(json['translation']),
-      context: serializer.fromJson<String?>(json['context']),
+    return ReviewItemsTableData(
+      itemId: serializer.fromJson<String>(json['itemId']),
+      itemType: serializer.fromJson<String>(json['itemType']),
       sourceId: serializer.fromJson<String?>(json['sourceId']),
-      sourceType: serializer.fromJson<String?>(json['sourceType']),
-      usageExamples: serializer.fromJson<String?>(json['usageExamples']),
-      addedAt: serializer.fromJson<String>(json['addedAt']),
       fsrsState: serializer.fromJson<String>(json['fsrsState']),
       stability: serializer.fromJson<double>(json['stability']),
       difficulty: serializer.fromJson<double>(json['difficulty']),
@@ -4197,19 +3637,13 @@ class DictionaryTableData extends DataClass
       elapsedDays: serializer.fromJson<int>(json['elapsedDays']),
     );
   }
-
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<String>(id),
-      'word': serializer.toJson<String>(word),
-      'translation': serializer.toJson<String>(translation),
-      'context': serializer.toJson<String?>(context),
+      'itemId': serializer.toJson<String>(itemId),
+      'itemType': serializer.toJson<String>(itemType),
       'sourceId': serializer.toJson<String?>(sourceId),
-      'sourceType': serializer.toJson<String?>(sourceType),
-      'usageExamples': serializer.toJson<String?>(usageExamples),
-      'addedAt': serializer.toJson<String>(addedAt),
       'fsrsState': serializer.toJson<String>(fsrsState),
       'stability': serializer.toJson<double>(stability),
       'difficulty': serializer.toJson<double>(difficulty),
@@ -4223,15 +3657,10 @@ class DictionaryTableData extends DataClass
     };
   }
 
-  DictionaryTableData copyWith({
-    String? id,
-    String? word,
-    String? translation,
-    Value<String?> context = const Value.absent(),
+  ReviewItemsTableData copyWith({
+    String? itemId,
+    String? itemType,
     Value<String?> sourceId = const Value.absent(),
-    Value<String?> sourceType = const Value.absent(),
-    Value<String?> usageExamples = const Value.absent(),
-    String? addedAt,
     String? fsrsState,
     double? stability,
     double? difficulty,
@@ -4242,17 +3671,10 @@ class DictionaryTableData extends DataClass
     Value<String?> nextReviewAt = const Value.absent(),
     int? scheduledDays,
     int? elapsedDays,
-  }) => DictionaryTableData(
-    id: id ?? this.id,
-    word: word ?? this.word,
-    translation: translation ?? this.translation,
-    context: context.present ? context.value : this.context,
+  }) => ReviewItemsTableData(
+    itemId: itemId ?? this.itemId,
+    itemType: itemType ?? this.itemType,
     sourceId: sourceId.present ? sourceId.value : this.sourceId,
-    sourceType: sourceType.present ? sourceType.value : this.sourceType,
-    usageExamples: usageExamples.present
-        ? usageExamples.value
-        : this.usageExamples,
-    addedAt: addedAt ?? this.addedAt,
     fsrsState: fsrsState ?? this.fsrsState,
     stability: stability ?? this.stability,
     difficulty: difficulty ?? this.difficulty,
@@ -4264,23 +3686,11 @@ class DictionaryTableData extends DataClass
     scheduledDays: scheduledDays ?? this.scheduledDays,
     elapsedDays: elapsedDays ?? this.elapsedDays,
   );
-
-  DictionaryTableData copyWithCompanion(DictionaryTableCompanion data) {
-    return DictionaryTableData(
-      id: data.id.present ? data.id.value : this.id,
-      word: data.word.present ? data.word.value : this.word,
-      translation: data.translation.present
-          ? data.translation.value
-          : this.translation,
-      context: data.context.present ? data.context.value : this.context,
+  ReviewItemsTableData copyWithCompanion(ReviewItemsTableCompanion data) {
+    return ReviewItemsTableData(
+      itemId: data.itemId.present ? data.itemId.value : this.itemId,
+      itemType: data.itemType.present ? data.itemType.value : this.itemType,
       sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
-      sourceType: data.sourceType.present
-          ? data.sourceType.value
-          : this.sourceType,
-      usageExamples: data.usageExamples.present
-          ? data.usageExamples.value
-          : this.usageExamples,
-      addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
       fsrsState: data.fsrsState.present ? data.fsrsState.value : this.fsrsState,
       stability: data.stability.present ? data.stability.value : this.stability,
       difficulty: data.difficulty.present
@@ -4308,15 +3718,10 @@ class DictionaryTableData extends DataClass
 
   @override
   String toString() {
-    return (StringBuffer('DictionaryTableData(')
-          ..write('id: $id, ')
-          ..write('word: $word, ')
-          ..write('translation: $translation, ')
-          ..write('context: $context, ')
+    return (StringBuffer('ReviewItemsTableData(')
+          ..write('itemId: $itemId, ')
+          ..write('itemType: $itemType, ')
           ..write('sourceId: $sourceId, ')
-          ..write('sourceType: $sourceType, ')
-          ..write('usageExamples: $usageExamples, ')
-          ..write('addedAt: $addedAt, ')
           ..write('fsrsState: $fsrsState, ')
           ..write('stability: $stability, ')
           ..write('difficulty: $difficulty, ')
@@ -4333,14 +3738,9 @@ class DictionaryTableData extends DataClass
 
   @override
   int get hashCode => Object.hash(
-    id,
-    word,
-    translation,
-    context,
+    itemId,
+    itemType,
     sourceId,
-    sourceType,
-    usageExamples,
-    addedAt,
     fsrsState,
     stability,
     difficulty,
@@ -4352,19 +3752,13 @@ class DictionaryTableData extends DataClass
     scheduledDays,
     elapsedDays,
   );
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is DictionaryTableData &&
-          other.id == this.id &&
-          other.word == this.word &&
-          other.translation == this.translation &&
-          other.context == this.context &&
+      (other is ReviewItemsTableData &&
+          other.itemId == this.itemId &&
+          other.itemType == this.itemType &&
           other.sourceId == this.sourceId &&
-          other.sourceType == this.sourceType &&
-          other.usageExamples == this.usageExamples &&
-          other.addedAt == this.addedAt &&
           other.fsrsState == this.fsrsState &&
           other.stability == this.stability &&
           other.difficulty == this.difficulty &&
@@ -4377,15 +3771,10 @@ class DictionaryTableData extends DataClass
           other.elapsedDays == this.elapsedDays);
 }
 
-class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
-  final Value<String> id;
-  final Value<String> word;
-  final Value<String> translation;
-  final Value<String?> context;
+class ReviewItemsTableCompanion extends UpdateCompanion<ReviewItemsTableData> {
+  final Value<String> itemId;
+  final Value<String> itemType;
   final Value<String?> sourceId;
-  final Value<String?> sourceType;
-  final Value<String?> usageExamples;
-  final Value<String> addedAt;
   final Value<String> fsrsState;
   final Value<double> stability;
   final Value<double> difficulty;
@@ -4397,16 +3786,10 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
   final Value<int> scheduledDays;
   final Value<int> elapsedDays;
   final Value<int> rowid;
-
-  const DictionaryTableCompanion({
-    this.id = const Value.absent(),
-    this.word = const Value.absent(),
-    this.translation = const Value.absent(),
-    this.context = const Value.absent(),
+  const ReviewItemsTableCompanion({
+    this.itemId = const Value.absent(),
+    this.itemType = const Value.absent(),
     this.sourceId = const Value.absent(),
-    this.sourceType = const Value.absent(),
-    this.usageExamples = const Value.absent(),
-    this.addedAt = const Value.absent(),
     this.fsrsState = const Value.absent(),
     this.stability = const Value.absent(),
     this.difficulty = const Value.absent(),
@@ -4419,16 +3802,10 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
     this.elapsedDays = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-
-  DictionaryTableCompanion.insert({
-    required String id,
-    required String word,
-    required String translation,
-    this.context = const Value.absent(),
+  ReviewItemsTableCompanion.insert({
+    required String itemId,
+    required String itemType,
     this.sourceId = const Value.absent(),
-    this.sourceType = const Value.absent(),
-    this.usageExamples = const Value.absent(),
-    required String addedAt,
     this.fsrsState = const Value.absent(),
     this.stability = const Value.absent(),
     this.difficulty = const Value.absent(),
@@ -4440,20 +3817,12 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
     this.scheduledDays = const Value.absent(),
     this.elapsedDays = const Value.absent(),
     this.rowid = const Value.absent(),
-  }) : id = Value(id),
-       word = Value(word),
-       translation = Value(translation),
-       addedAt = Value(addedAt);
-
-  static Insertable<DictionaryTableData> custom({
-    Expression<String>? id,
-    Expression<String>? word,
-    Expression<String>? translation,
-    Expression<String>? context,
+  }) : itemId = Value(itemId),
+       itemType = Value(itemType);
+  static Insertable<ReviewItemsTableData> custom({
+    Expression<String>? itemId,
+    Expression<String>? itemType,
     Expression<String>? sourceId,
-    Expression<String>? sourceType,
-    Expression<String>? usageExamples,
-    Expression<String>? addedAt,
     Expression<String>? fsrsState,
     Expression<double>? stability,
     Expression<double>? difficulty,
@@ -4467,14 +3836,9 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (word != null) 'word': word,
-      if (translation != null) 'translation': translation,
-      if (context != null) 'context': context,
+      if (itemId != null) 'item_id': itemId,
+      if (itemType != null) 'item_type': itemType,
       if (sourceId != null) 'source_id': sourceId,
-      if (sourceType != null) 'source_type': sourceType,
-      if (usageExamples != null) 'usage_examples': usageExamples,
-      if (addedAt != null) 'added_at': addedAt,
       if (fsrsState != null) 'fsrs_state': fsrsState,
       if (stability != null) 'stability': stability,
       if (difficulty != null) 'difficulty': difficulty,
@@ -4489,15 +3853,10 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
     });
   }
 
-  DictionaryTableCompanion copyWith({
-    Value<String>? id,
-    Value<String>? word,
-    Value<String>? translation,
-    Value<String?>? context,
+  ReviewItemsTableCompanion copyWith({
+    Value<String>? itemId,
+    Value<String>? itemType,
     Value<String?>? sourceId,
-    Value<String?>? sourceType,
-    Value<String?>? usageExamples,
-    Value<String>? addedAt,
     Value<String>? fsrsState,
     Value<double>? stability,
     Value<double>? difficulty,
@@ -4510,15 +3869,10 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
     Value<int>? elapsedDays,
     Value<int>? rowid,
   }) {
-    return DictionaryTableCompanion(
-      id: id ?? this.id,
-      word: word ?? this.word,
-      translation: translation ?? this.translation,
-      context: context ?? this.context,
+    return ReviewItemsTableCompanion(
+      itemId: itemId ?? this.itemId,
+      itemType: itemType ?? this.itemType,
       sourceId: sourceId ?? this.sourceId,
-      sourceType: sourceType ?? this.sourceType,
-      usageExamples: usageExamples ?? this.usageExamples,
-      addedAt: addedAt ?? this.addedAt,
       fsrsState: fsrsState ?? this.fsrsState,
       stability: stability ?? this.stability,
       difficulty: difficulty ?? this.difficulty,
@@ -4536,29 +3890,14 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<String>(id.value);
+    if (itemId.present) {
+      map['item_id'] = Variable<String>(itemId.value);
     }
-    if (word.present) {
-      map['word'] = Variable<String>(word.value);
-    }
-    if (translation.present) {
-      map['translation'] = Variable<String>(translation.value);
-    }
-    if (context.present) {
-      map['context'] = Variable<String>(context.value);
+    if (itemType.present) {
+      map['item_type'] = Variable<String>(itemType.value);
     }
     if (sourceId.present) {
       map['source_id'] = Variable<String>(sourceId.value);
-    }
-    if (sourceType.present) {
-      map['source_type'] = Variable<String>(sourceType.value);
-    }
-    if (usageExamples.present) {
-      map['usage_examples'] = Variable<String>(usageExamples.value);
-    }
-    if (addedAt.present) {
-      map['added_at'] = Variable<String>(addedAt.value);
     }
     if (fsrsState.present) {
       map['fsrs_state'] = Variable<String>(fsrsState.value);
@@ -4598,15 +3937,10 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
 
   @override
   String toString() {
-    return (StringBuffer('DictionaryTableCompanion(')
-          ..write('id: $id, ')
-          ..write('word: $word, ')
-          ..write('translation: $translation, ')
-          ..write('context: $context, ')
+    return (StringBuffer('ReviewItemsTableCompanion(')
+          ..write('itemId: $itemId, ')
+          ..write('itemType: $itemType, ')
           ..write('sourceId: $sourceId, ')
-          ..write('sourceType: $sourceType, ')
-          ..write('usageExamples: $usageExamples, ')
-          ..write('addedAt: $addedAt, ')
           ..write('fsrsState: $fsrsState, ')
           ..write('stability: $stability, ')
           ..write('difficulty: $difficulty, ')
@@ -4628,9 +3962,7 @@ class $ReviewLogsTableTable extends ReviewLogsTable
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-
   $ReviewLogsTableTable(this.attachedDatabase, [this._alias]);
-
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -4757,7 +4089,6 @@ class $ReviewLogsTableTable extends ReviewLogsTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4773,14 +4104,11 @@ class $ReviewLogsTableTable extends ReviewLogsTable
     reviewDurationMs,
     reviewedAt,
   ];
-
   @override
   String get aliasedName => _alias ?? actualTableName;
-
   @override
   String get actualTableName => $name;
   static const String $name = 'review_logs_table';
-
   @override
   VerificationContext validateIntegrity(
     Insertable<ReviewLogsTableData> instance, {
@@ -4905,7 +4233,6 @@ class $ReviewLogsTableTable extends ReviewLogsTable
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
-
   @override
   ReviewLogsTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -4981,7 +4308,6 @@ class ReviewLogsTableData extends DataClass
   final int elapsedDays;
   final int? reviewDurationMs;
   final String reviewedAt;
-
   const ReviewLogsTableData({
     required this.id,
     required this.itemId,
@@ -4996,7 +4322,6 @@ class ReviewLogsTableData extends DataClass
     this.reviewDurationMs,
     required this.reviewedAt,
   });
-
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -5058,7 +4383,6 @@ class ReviewLogsTableData extends DataClass
       reviewedAt: serializer.fromJson<String>(json['reviewedAt']),
     );
   }
-
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -5110,7 +4434,6 @@ class ReviewLogsTableData extends DataClass
         : this.reviewDurationMs,
     reviewedAt: reviewedAt ?? this.reviewedAt,
   );
-
   ReviewLogsTableData copyWithCompanion(ReviewLogsTableCompanion data) {
     return ReviewLogsTableData(
       id: data.id.present ? data.id.value : this.id,
@@ -5178,7 +4501,6 @@ class ReviewLogsTableData extends DataClass
     reviewDurationMs,
     reviewedAt,
   );
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -5211,7 +4533,6 @@ class ReviewLogsTableCompanion extends UpdateCompanion<ReviewLogsTableData> {
   final Value<int?> reviewDurationMs;
   final Value<String> reviewedAt;
   final Value<int> rowid;
-
   const ReviewLogsTableCompanion({
     this.id = const Value.absent(),
     this.itemId = const Value.absent(),
@@ -5227,7 +4548,6 @@ class ReviewLogsTableCompanion extends UpdateCompanion<ReviewLogsTableData> {
     this.reviewedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-
   ReviewLogsTableCompanion.insert({
     required String id,
     required String itemId,
@@ -5253,7 +4573,6 @@ class ReviewLogsTableCompanion extends UpdateCompanion<ReviewLogsTableData> {
        scheduledDays = Value(scheduledDays),
        elapsedDays = Value(elapsedDays),
        reviewedAt = Value(reviewedAt);
-
   static Insertable<ReviewLogsTableData> custom({
     Expression<String>? id,
     Expression<String>? itemId,
@@ -5390,7 +4709,6 @@ class ReviewLogsTableCompanion extends UpdateCompanion<ReviewLogsTableData> {
 
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
-
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $BooksTableTable booksTable = $BooksTableTable(this);
   late final $ArticlesTableTable articlesTable = $ArticlesTableTable(this);
@@ -5403,6 +4721,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $DictionaryTableTable dictionaryTable = $DictionaryTableTable(
     this,
   );
+  late final $ReviewItemsTableTable reviewItemsTable = $ReviewItemsTableTable(
+    this,
+  );
   late final $ReviewLogsTableTable reviewLogsTable = $ReviewLogsTableTable(
     this,
   );
@@ -5411,11 +4732,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final HighlightsDao highlightsDao = HighlightsDao(this as AppDatabase);
   late final FlashcardsDao flashcardsDao = FlashcardsDao(this as AppDatabase);
   late final DictionaryDao dictionaryDao = DictionaryDao(this as AppDatabase);
-
+  late final ReviewItemsDao reviewItemsDao = ReviewItemsDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
-
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     booksTable,
@@ -5423,6 +4745,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     highlightsTable,
     flashcardsTable,
     dictionaryTable,
+    reviewItemsTable,
     reviewLogsTable,
   ];
 }
@@ -5469,7 +4792,6 @@ class $$BooksTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -5540,7 +4862,6 @@ class $$BooksTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -5611,7 +4932,6 @@ class $$BooksTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -5815,7 +5135,6 @@ class $$ArticlesTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -5881,7 +5200,6 @@ class $$ArticlesTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -5947,7 +5265,6 @@ class $$ArticlesTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -6120,16 +5437,6 @@ typedef $$HighlightsTableTableCreateCompanionBuilder =
       Value<double?> scrollOffset,
       Value<String> color,
       required String createdAt,
-      Value<String> fsrsState,
-      Value<double> stability,
-      Value<double> difficulty,
-      Value<double> retrievability,
-      Value<int> reps,
-      Value<int> lapses,
-      Value<String?> lastReviewAt,
-      Value<String?> nextReviewAt,
-      Value<int> scheduledDays,
-      Value<int> elapsedDays,
       Value<int> rowid,
     });
 typedef $$HighlightsTableTableUpdateCompanionBuilder =
@@ -6144,16 +5451,6 @@ typedef $$HighlightsTableTableUpdateCompanionBuilder =
       Value<double?> scrollOffset,
       Value<String> color,
       Value<String> createdAt,
-      Value<String> fsrsState,
-      Value<double> stability,
-      Value<double> difficulty,
-      Value<double> retrievability,
-      Value<int> reps,
-      Value<int> lapses,
-      Value<String?> lastReviewAt,
-      Value<String?> nextReviewAt,
-      Value<int> scheduledDays,
-      Value<int> elapsedDays,
       Value<int> rowid,
     });
 
@@ -6166,7 +5463,6 @@ class $$HighlightsTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -6216,56 +5512,6 @@ class $$HighlightsTableTableFilterComposer
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
   );
-
-  ColumnFilters<String> get fsrsState => $composableBuilder(
-    column: $table.fsrsState,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<double> get stability => $composableBuilder(
-    column: $table.stability,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<double> get difficulty => $composableBuilder(
-    column: $table.difficulty,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<double> get retrievability => $composableBuilder(
-    column: $table.retrievability,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get reps => $composableBuilder(
-    column: $table.reps,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get lapses => $composableBuilder(
-    column: $table.lapses,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get lastReviewAt => $composableBuilder(
-    column: $table.lastReviewAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get nextReviewAt => $composableBuilder(
-    column: $table.nextReviewAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get scheduledDays => $composableBuilder(
-    column: $table.scheduledDays,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get elapsedDays => $composableBuilder(
-    column: $table.elapsedDays,
-    builder: (column) => ColumnFilters(column),
-  );
 }
 
 class $$HighlightsTableTableOrderingComposer
@@ -6277,7 +5523,6 @@ class $$HighlightsTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -6327,56 +5572,6 @@ class $$HighlightsTableTableOrderingComposer
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
-
-  ColumnOrderings<String> get fsrsState => $composableBuilder(
-    column: $table.fsrsState,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<double> get stability => $composableBuilder(
-    column: $table.stability,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<double> get difficulty => $composableBuilder(
-    column: $table.difficulty,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<double> get retrievability => $composableBuilder(
-    column: $table.retrievability,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get reps => $composableBuilder(
-    column: $table.reps,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get lapses => $composableBuilder(
-    column: $table.lapses,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get lastReviewAt => $composableBuilder(
-    column: $table.lastReviewAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get nextReviewAt => $composableBuilder(
-    column: $table.nextReviewAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get scheduledDays => $composableBuilder(
-    column: $table.scheduledDays,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get elapsedDays => $composableBuilder(
-    column: $table.elapsedDays,
-    builder: (column) => ColumnOrderings(column),
-  );
 }
 
 class $$HighlightsTableTableAnnotationComposer
@@ -6388,7 +5583,6 @@ class $$HighlightsTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -6426,48 +5620,6 @@ class $$HighlightsTableTableAnnotationComposer
 
   GeneratedColumn<String> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  GeneratedColumn<String> get fsrsState =>
-      $composableBuilder(column: $table.fsrsState, builder: (column) => column);
-
-  GeneratedColumn<double> get stability =>
-      $composableBuilder(column: $table.stability, builder: (column) => column);
-
-  GeneratedColumn<double> get difficulty => $composableBuilder(
-    column: $table.difficulty,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<double> get retrievability => $composableBuilder(
-    column: $table.retrievability,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get reps =>
-      $composableBuilder(column: $table.reps, builder: (column) => column);
-
-  GeneratedColumn<int> get lapses =>
-      $composableBuilder(column: $table.lapses, builder: (column) => column);
-
-  GeneratedColumn<String> get lastReviewAt => $composableBuilder(
-    column: $table.lastReviewAt,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get nextReviewAt => $composableBuilder(
-    column: $table.nextReviewAt,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get scheduledDays => $composableBuilder(
-    column: $table.scheduledDays,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get elapsedDays => $composableBuilder(
-    column: $table.elapsedDays,
-    builder: (column) => column,
-  );
 }
 
 class $$HighlightsTableTableTableManager
@@ -6517,16 +5669,6 @@ class $$HighlightsTableTableTableManager
                 Value<double?> scrollOffset = const Value.absent(),
                 Value<String> color = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
-                Value<String> fsrsState = const Value.absent(),
-                Value<double> stability = const Value.absent(),
-                Value<double> difficulty = const Value.absent(),
-                Value<double> retrievability = const Value.absent(),
-                Value<int> reps = const Value.absent(),
-                Value<int> lapses = const Value.absent(),
-                Value<String?> lastReviewAt = const Value.absent(),
-                Value<String?> nextReviewAt = const Value.absent(),
-                Value<int> scheduledDays = const Value.absent(),
-                Value<int> elapsedDays = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HighlightsTableCompanion(
                 id: id,
@@ -6539,16 +5681,6 @@ class $$HighlightsTableTableTableManager
                 scrollOffset: scrollOffset,
                 color: color,
                 createdAt: createdAt,
-                fsrsState: fsrsState,
-                stability: stability,
-                difficulty: difficulty,
-                retrievability: retrievability,
-                reps: reps,
-                lapses: lapses,
-                lastReviewAt: lastReviewAt,
-                nextReviewAt: nextReviewAt,
-                scheduledDays: scheduledDays,
-                elapsedDays: elapsedDays,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6563,16 +5695,6 @@ class $$HighlightsTableTableTableManager
                 Value<double?> scrollOffset = const Value.absent(),
                 Value<String> color = const Value.absent(),
                 required String createdAt,
-                Value<String> fsrsState = const Value.absent(),
-                Value<double> stability = const Value.absent(),
-                Value<double> difficulty = const Value.absent(),
-                Value<double> retrievability = const Value.absent(),
-                Value<int> reps = const Value.absent(),
-                Value<int> lapses = const Value.absent(),
-                Value<String?> lastReviewAt = const Value.absent(),
-                Value<String?> nextReviewAt = const Value.absent(),
-                Value<int> scheduledDays = const Value.absent(),
-                Value<int> elapsedDays = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HighlightsTableCompanion.insert(
                 id: id,
@@ -6585,16 +5707,6 @@ class $$HighlightsTableTableTableManager
                 scrollOffset: scrollOffset,
                 color: color,
                 createdAt: createdAt,
-                fsrsState: fsrsState,
-                stability: stability,
-                difficulty: difficulty,
-                retrievability: retrievability,
-                reps: reps,
-                lapses: lapses,
-                lastReviewAt: lastReviewAt,
-                nextReviewAt: nextReviewAt,
-                scheduledDays: scheduledDays,
-                elapsedDays: elapsedDays,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -6636,16 +5748,6 @@ typedef $$FlashcardsTableTableCreateCompanionBuilder =
       Value<String?> sourceHighlightId,
       Value<String> creationSource,
       required String createdAt,
-      Value<String> fsrsState,
-      Value<double> stability,
-      Value<double> difficulty,
-      Value<double> retrievability,
-      Value<int> reps,
-      Value<int> lapses,
-      Value<String?> lastReviewAt,
-      Value<String?> nextReviewAt,
-      Value<int> scheduledDays,
-      Value<int> elapsedDays,
       Value<int> rowid,
     });
 typedef $$FlashcardsTableTableUpdateCompanionBuilder =
@@ -6658,16 +5760,6 @@ typedef $$FlashcardsTableTableUpdateCompanionBuilder =
       Value<String?> sourceHighlightId,
       Value<String> creationSource,
       Value<String> createdAt,
-      Value<String> fsrsState,
-      Value<double> stability,
-      Value<double> difficulty,
-      Value<double> retrievability,
-      Value<int> reps,
-      Value<int> lapses,
-      Value<String?> lastReviewAt,
-      Value<String?> nextReviewAt,
-      Value<int> scheduledDays,
-      Value<int> elapsedDays,
       Value<int> rowid,
     });
 
@@ -6680,7 +5772,6 @@ class $$FlashcardsTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -6720,56 +5811,6 @@ class $$FlashcardsTableTableFilterComposer
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
   );
-
-  ColumnFilters<String> get fsrsState => $composableBuilder(
-    column: $table.fsrsState,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<double> get stability => $composableBuilder(
-    column: $table.stability,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<double> get difficulty => $composableBuilder(
-    column: $table.difficulty,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<double> get retrievability => $composableBuilder(
-    column: $table.retrievability,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get reps => $composableBuilder(
-    column: $table.reps,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get lapses => $composableBuilder(
-    column: $table.lapses,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get lastReviewAt => $composableBuilder(
-    column: $table.lastReviewAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get nextReviewAt => $composableBuilder(
-    column: $table.nextReviewAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get scheduledDays => $composableBuilder(
-    column: $table.scheduledDays,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get elapsedDays => $composableBuilder(
-    column: $table.elapsedDays,
-    builder: (column) => ColumnFilters(column),
-  );
 }
 
 class $$FlashcardsTableTableOrderingComposer
@@ -6781,7 +5822,6 @@ class $$FlashcardsTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -6821,56 +5861,6 @@ class $$FlashcardsTableTableOrderingComposer
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
-
-  ColumnOrderings<String> get fsrsState => $composableBuilder(
-    column: $table.fsrsState,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<double> get stability => $composableBuilder(
-    column: $table.stability,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<double> get difficulty => $composableBuilder(
-    column: $table.difficulty,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<double> get retrievability => $composableBuilder(
-    column: $table.retrievability,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get reps => $composableBuilder(
-    column: $table.reps,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get lapses => $composableBuilder(
-    column: $table.lapses,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get lastReviewAt => $composableBuilder(
-    column: $table.lastReviewAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get nextReviewAt => $composableBuilder(
-    column: $table.nextReviewAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get scheduledDays => $composableBuilder(
-    column: $table.scheduledDays,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get elapsedDays => $composableBuilder(
-    column: $table.elapsedDays,
-    builder: (column) => ColumnOrderings(column),
-  );
 }
 
 class $$FlashcardsTableTableAnnotationComposer
@@ -6882,7 +5872,6 @@ class $$FlashcardsTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -6910,48 +5899,6 @@ class $$FlashcardsTableTableAnnotationComposer
 
   GeneratedColumn<String> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  GeneratedColumn<String> get fsrsState =>
-      $composableBuilder(column: $table.fsrsState, builder: (column) => column);
-
-  GeneratedColumn<double> get stability =>
-      $composableBuilder(column: $table.stability, builder: (column) => column);
-
-  GeneratedColumn<double> get difficulty => $composableBuilder(
-    column: $table.difficulty,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<double> get retrievability => $composableBuilder(
-    column: $table.retrievability,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get reps =>
-      $composableBuilder(column: $table.reps, builder: (column) => column);
-
-  GeneratedColumn<int> get lapses =>
-      $composableBuilder(column: $table.lapses, builder: (column) => column);
-
-  GeneratedColumn<String> get lastReviewAt => $composableBuilder(
-    column: $table.lastReviewAt,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get nextReviewAt => $composableBuilder(
-    column: $table.nextReviewAt,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get scheduledDays => $composableBuilder(
-    column: $table.scheduledDays,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get elapsedDays => $composableBuilder(
-    column: $table.elapsedDays,
-    builder: (column) => column,
-  );
 }
 
 class $$FlashcardsTableTableTableManager
@@ -6999,16 +5946,6 @@ class $$FlashcardsTableTableTableManager
                 Value<String?> sourceHighlightId = const Value.absent(),
                 Value<String> creationSource = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
-                Value<String> fsrsState = const Value.absent(),
-                Value<double> stability = const Value.absent(),
-                Value<double> difficulty = const Value.absent(),
-                Value<double> retrievability = const Value.absent(),
-                Value<int> reps = const Value.absent(),
-                Value<int> lapses = const Value.absent(),
-                Value<String?> lastReviewAt = const Value.absent(),
-                Value<String?> nextReviewAt = const Value.absent(),
-                Value<int> scheduledDays = const Value.absent(),
-                Value<int> elapsedDays = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FlashcardsTableCompanion(
                 id: id,
@@ -7019,16 +5956,6 @@ class $$FlashcardsTableTableTableManager
                 sourceHighlightId: sourceHighlightId,
                 creationSource: creationSource,
                 createdAt: createdAt,
-                fsrsState: fsrsState,
-                stability: stability,
-                difficulty: difficulty,
-                retrievability: retrievability,
-                reps: reps,
-                lapses: lapses,
-                lastReviewAt: lastReviewAt,
-                nextReviewAt: nextReviewAt,
-                scheduledDays: scheduledDays,
-                elapsedDays: elapsedDays,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -7041,16 +5968,6 @@ class $$FlashcardsTableTableTableManager
                 Value<String?> sourceHighlightId = const Value.absent(),
                 Value<String> creationSource = const Value.absent(),
                 required String createdAt,
-                Value<String> fsrsState = const Value.absent(),
-                Value<double> stability = const Value.absent(),
-                Value<double> difficulty = const Value.absent(),
-                Value<double> retrievability = const Value.absent(),
-                Value<int> reps = const Value.absent(),
-                Value<int> lapses = const Value.absent(),
-                Value<String?> lastReviewAt = const Value.absent(),
-                Value<String?> nextReviewAt = const Value.absent(),
-                Value<int> scheduledDays = const Value.absent(),
-                Value<int> elapsedDays = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FlashcardsTableCompanion.insert(
                 id: id,
@@ -7061,16 +5978,6 @@ class $$FlashcardsTableTableTableManager
                 sourceHighlightId: sourceHighlightId,
                 creationSource: creationSource,
                 createdAt: createdAt,
-                fsrsState: fsrsState,
-                stability: stability,
-                difficulty: difficulty,
-                retrievability: retrievability,
-                reps: reps,
-                lapses: lapses,
-                lastReviewAt: lastReviewAt,
-                nextReviewAt: nextReviewAt,
-                scheduledDays: scheduledDays,
-                elapsedDays: elapsedDays,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -7107,21 +6014,13 @@ typedef $$DictionaryTableTableCreateCompanionBuilder =
       required String id,
       required String word,
       required String translation,
+      Value<String?> pronunciation,
+      Value<String?> partOfSpeech,
       Value<String?> context,
       Value<String?> sourceId,
       Value<String?> sourceType,
       Value<String?> usageExamples,
       required String addedAt,
-      Value<String> fsrsState,
-      Value<double> stability,
-      Value<double> difficulty,
-      Value<double> retrievability,
-      Value<int> reps,
-      Value<int> lapses,
-      Value<String?> lastReviewAt,
-      Value<String?> nextReviewAt,
-      Value<int> scheduledDays,
-      Value<int> elapsedDays,
       Value<int> rowid,
     });
 typedef $$DictionaryTableTableUpdateCompanionBuilder =
@@ -7129,21 +6028,13 @@ typedef $$DictionaryTableTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> word,
       Value<String> translation,
+      Value<String?> pronunciation,
+      Value<String?> partOfSpeech,
       Value<String?> context,
       Value<String?> sourceId,
       Value<String?> sourceType,
       Value<String?> usageExamples,
       Value<String> addedAt,
-      Value<String> fsrsState,
-      Value<double> stability,
-      Value<double> difficulty,
-      Value<double> retrievability,
-      Value<int> reps,
-      Value<int> lapses,
-      Value<String?> lastReviewAt,
-      Value<String?> nextReviewAt,
-      Value<int> scheduledDays,
-      Value<int> elapsedDays,
       Value<int> rowid,
     });
 
@@ -7156,7 +6047,6 @@ class $$DictionaryTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -7169,6 +6059,16 @@ class $$DictionaryTableTableFilterComposer
 
   ColumnFilters<String> get translation => $composableBuilder(
     column: $table.translation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pronunciation => $composableBuilder(
+    column: $table.pronunciation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get partOfSpeech => $composableBuilder(
+    column: $table.partOfSpeech,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7194,6 +6094,292 @@ class $$DictionaryTableTableFilterComposer
 
   ColumnFilters<String> get addedAt => $composableBuilder(
     column: $table.addedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DictionaryTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $DictionaryTableTable> {
+  $$DictionaryTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get word => $composableBuilder(
+    column: $table.word,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get translation => $composableBuilder(
+    column: $table.translation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get pronunciation => $composableBuilder(
+    column: $table.pronunciation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get partOfSpeech => $composableBuilder(
+    column: $table.partOfSpeech,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get context => $composableBuilder(
+    column: $table.context,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceId => $composableBuilder(
+    column: $table.sourceId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceType => $composableBuilder(
+    column: $table.sourceType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get usageExamples => $composableBuilder(
+    column: $table.usageExamples,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DictionaryTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DictionaryTableTable> {
+  $$DictionaryTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get word =>
+      $composableBuilder(column: $table.word, builder: (column) => column);
+
+  GeneratedColumn<String> get translation => $composableBuilder(
+    column: $table.translation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get pronunciation => $composableBuilder(
+    column: $table.pronunciation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get partOfSpeech => $composableBuilder(
+    column: $table.partOfSpeech,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get context =>
+      $composableBuilder(column: $table.context, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceId =>
+      $composableBuilder(column: $table.sourceId, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceType => $composableBuilder(
+    column: $table.sourceType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get usageExamples => $composableBuilder(
+    column: $table.usageExamples,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get addedAt =>
+      $composableBuilder(column: $table.addedAt, builder: (column) => column);
+}
+
+class $$DictionaryTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DictionaryTableTable,
+          DictionaryTableData,
+          $$DictionaryTableTableFilterComposer,
+          $$DictionaryTableTableOrderingComposer,
+          $$DictionaryTableTableAnnotationComposer,
+          $$DictionaryTableTableCreateCompanionBuilder,
+          $$DictionaryTableTableUpdateCompanionBuilder,
+          (
+            DictionaryTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $DictionaryTableTable,
+              DictionaryTableData
+            >,
+          ),
+          DictionaryTableData,
+          PrefetchHooks Function()
+        > {
+  $$DictionaryTableTableTableManager(
+    _$AppDatabase db,
+    $DictionaryTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DictionaryTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DictionaryTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DictionaryTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> word = const Value.absent(),
+                Value<String> translation = const Value.absent(),
+                Value<String?> pronunciation = const Value.absent(),
+                Value<String?> partOfSpeech = const Value.absent(),
+                Value<String?> context = const Value.absent(),
+                Value<String?> sourceId = const Value.absent(),
+                Value<String?> sourceType = const Value.absent(),
+                Value<String?> usageExamples = const Value.absent(),
+                Value<String> addedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DictionaryTableCompanion(
+                id: id,
+                word: word,
+                translation: translation,
+                pronunciation: pronunciation,
+                partOfSpeech: partOfSpeech,
+                context: context,
+                sourceId: sourceId,
+                sourceType: sourceType,
+                usageExamples: usageExamples,
+                addedAt: addedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String word,
+                required String translation,
+                Value<String?> pronunciation = const Value.absent(),
+                Value<String?> partOfSpeech = const Value.absent(),
+                Value<String?> context = const Value.absent(),
+                Value<String?> sourceId = const Value.absent(),
+                Value<String?> sourceType = const Value.absent(),
+                Value<String?> usageExamples = const Value.absent(),
+                required String addedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => DictionaryTableCompanion.insert(
+                id: id,
+                word: word,
+                translation: translation,
+                pronunciation: pronunciation,
+                partOfSpeech: partOfSpeech,
+                context: context,
+                sourceId: sourceId,
+                sourceType: sourceType,
+                usageExamples: usageExamples,
+                addedAt: addedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DictionaryTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DictionaryTableTable,
+      DictionaryTableData,
+      $$DictionaryTableTableFilterComposer,
+      $$DictionaryTableTableOrderingComposer,
+      $$DictionaryTableTableAnnotationComposer,
+      $$DictionaryTableTableCreateCompanionBuilder,
+      $$DictionaryTableTableUpdateCompanionBuilder,
+      (
+        DictionaryTableData,
+        BaseReferences<
+          _$AppDatabase,
+          $DictionaryTableTable,
+          DictionaryTableData
+        >,
+      ),
+      DictionaryTableData,
+      PrefetchHooks Function()
+    >;
+typedef $$ReviewItemsTableTableCreateCompanionBuilder =
+    ReviewItemsTableCompanion Function({
+      required String itemId,
+      required String itemType,
+      Value<String?> sourceId,
+      Value<String> fsrsState,
+      Value<double> stability,
+      Value<double> difficulty,
+      Value<double> retrievability,
+      Value<int> reps,
+      Value<int> lapses,
+      Value<String?> lastReviewAt,
+      Value<String?> nextReviewAt,
+      Value<int> scheduledDays,
+      Value<int> elapsedDays,
+      Value<int> rowid,
+    });
+typedef $$ReviewItemsTableTableUpdateCompanionBuilder =
+    ReviewItemsTableCompanion Function({
+      Value<String> itemId,
+      Value<String> itemType,
+      Value<String?> sourceId,
+      Value<String> fsrsState,
+      Value<double> stability,
+      Value<double> difficulty,
+      Value<double> retrievability,
+      Value<int> reps,
+      Value<int> lapses,
+      Value<String?> lastReviewAt,
+      Value<String?> nextReviewAt,
+      Value<int> scheduledDays,
+      Value<int> elapsedDays,
+      Value<int> rowid,
+    });
+
+class $$ReviewItemsTableTableFilterComposer
+    extends Composer<_$AppDatabase, $ReviewItemsTableTable> {
+  $$ReviewItemsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get itemId => $composableBuilder(
+    column: $table.itemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get itemType => $composableBuilder(
+    column: $table.itemType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceId => $composableBuilder(
+    column: $table.sourceId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7248,53 +6434,27 @@ class $$DictionaryTableTableFilterComposer
   );
 }
 
-class $$DictionaryTableTableOrderingComposer
-    extends Composer<_$AppDatabase, $DictionaryTableTable> {
-  $$DictionaryTableTableOrderingComposer({
+class $$ReviewItemsTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReviewItemsTableTable> {
+  $$ReviewItemsTableTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
-  ColumnOrderings<String> get id => $composableBuilder(
-    column: $table.id,
+  ColumnOrderings<String> get itemId => $composableBuilder(
+    column: $table.itemId,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get word => $composableBuilder(
-    column: $table.word,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get translation => $composableBuilder(
-    column: $table.translation,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get context => $composableBuilder(
-    column: $table.context,
+  ColumnOrderings<String> get itemType => $composableBuilder(
+    column: $table.itemType,
     builder: (column) => ColumnOrderings(column),
   );
 
   ColumnOrderings<String> get sourceId => $composableBuilder(
     column: $table.sourceId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get sourceType => $composableBuilder(
-    column: $table.sourceType,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get usageExamples => $composableBuilder(
-    column: $table.usageExamples,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get addedAt => $composableBuilder(
-    column: $table.addedAt,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -7349,45 +6509,23 @@ class $$DictionaryTableTableOrderingComposer
   );
 }
 
-class $$DictionaryTableTableAnnotationComposer
-    extends Composer<_$AppDatabase, $DictionaryTableTable> {
-  $$DictionaryTableTableAnnotationComposer({
+class $$ReviewItemsTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReviewItemsTableTable> {
+  $$ReviewItemsTableTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get itemId =>
+      $composableBuilder(column: $table.itemId, builder: (column) => column);
 
-  GeneratedColumn<String> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get word =>
-      $composableBuilder(column: $table.word, builder: (column) => column);
-
-  GeneratedColumn<String> get translation => $composableBuilder(
-    column: $table.translation,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get context =>
-      $composableBuilder(column: $table.context, builder: (column) => column);
+  GeneratedColumn<String> get itemType =>
+      $composableBuilder(column: $table.itemType, builder: (column) => column);
 
   GeneratedColumn<String> get sourceId =>
       $composableBuilder(column: $table.sourceId, builder: (column) => column);
-
-  GeneratedColumn<String> get sourceType => $composableBuilder(
-    column: $table.sourceType,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get usageExamples => $composableBuilder(
-    column: $table.usageExamples,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get addedAt =>
-      $composableBuilder(column: $table.addedAt, builder: (column) => column);
 
   GeneratedColumn<String> get fsrsState =>
       $composableBuilder(column: $table.fsrsState, builder: (column) => column);
@@ -7432,51 +6570,46 @@ class $$DictionaryTableTableAnnotationComposer
   );
 }
 
-class $$DictionaryTableTableTableManager
+class $$ReviewItemsTableTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $DictionaryTableTable,
-          DictionaryTableData,
-          $$DictionaryTableTableFilterComposer,
-          $$DictionaryTableTableOrderingComposer,
-          $$DictionaryTableTableAnnotationComposer,
-          $$DictionaryTableTableCreateCompanionBuilder,
-          $$DictionaryTableTableUpdateCompanionBuilder,
+          $ReviewItemsTableTable,
+          ReviewItemsTableData,
+          $$ReviewItemsTableTableFilterComposer,
+          $$ReviewItemsTableTableOrderingComposer,
+          $$ReviewItemsTableTableAnnotationComposer,
+          $$ReviewItemsTableTableCreateCompanionBuilder,
+          $$ReviewItemsTableTableUpdateCompanionBuilder,
           (
-            DictionaryTableData,
+            ReviewItemsTableData,
             BaseReferences<
               _$AppDatabase,
-              $DictionaryTableTable,
-              DictionaryTableData
+              $ReviewItemsTableTable,
+              ReviewItemsTableData
             >,
           ),
-          DictionaryTableData,
+          ReviewItemsTableData,
           PrefetchHooks Function()
         > {
-  $$DictionaryTableTableTableManager(
+  $$ReviewItemsTableTableTableManager(
     _$AppDatabase db,
-    $DictionaryTableTable table,
+    $ReviewItemsTableTable table,
   ) : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$DictionaryTableTableFilterComposer($db: db, $table: table),
+              $$ReviewItemsTableTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$DictionaryTableTableOrderingComposer($db: db, $table: table),
+              $$ReviewItemsTableTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$DictionaryTableTableAnnotationComposer($db: db, $table: table),
+              $$ReviewItemsTableTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<String> id = const Value.absent(),
-                Value<String> word = const Value.absent(),
-                Value<String> translation = const Value.absent(),
-                Value<String?> context = const Value.absent(),
+                Value<String> itemId = const Value.absent(),
+                Value<String> itemType = const Value.absent(),
                 Value<String?> sourceId = const Value.absent(),
-                Value<String?> sourceType = const Value.absent(),
-                Value<String?> usageExamples = const Value.absent(),
-                Value<String> addedAt = const Value.absent(),
                 Value<String> fsrsState = const Value.absent(),
                 Value<double> stability = const Value.absent(),
                 Value<double> difficulty = const Value.absent(),
@@ -7488,15 +6621,10 @@ class $$DictionaryTableTableTableManager
                 Value<int> scheduledDays = const Value.absent(),
                 Value<int> elapsedDays = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => DictionaryTableCompanion(
-                id: id,
-                word: word,
-                translation: translation,
-                context: context,
+              }) => ReviewItemsTableCompanion(
+                itemId: itemId,
+                itemType: itemType,
                 sourceId: sourceId,
-                sourceType: sourceType,
-                usageExamples: usageExamples,
-                addedAt: addedAt,
                 fsrsState: fsrsState,
                 stability: stability,
                 difficulty: difficulty,
@@ -7511,14 +6639,9 @@ class $$DictionaryTableTableTableManager
               ),
           createCompanionCallback:
               ({
-                required String id,
-                required String word,
-                required String translation,
-                Value<String?> context = const Value.absent(),
+                required String itemId,
+                required String itemType,
                 Value<String?> sourceId = const Value.absent(),
-                Value<String?> sourceType = const Value.absent(),
-                Value<String?> usageExamples = const Value.absent(),
-                required String addedAt,
                 Value<String> fsrsState = const Value.absent(),
                 Value<double> stability = const Value.absent(),
                 Value<double> difficulty = const Value.absent(),
@@ -7530,15 +6653,10 @@ class $$DictionaryTableTableTableManager
                 Value<int> scheduledDays = const Value.absent(),
                 Value<int> elapsedDays = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => DictionaryTableCompanion.insert(
-                id: id,
-                word: word,
-                translation: translation,
-                context: context,
+              }) => ReviewItemsTableCompanion.insert(
+                itemId: itemId,
+                itemType: itemType,
                 sourceId: sourceId,
-                sourceType: sourceType,
-                usageExamples: usageExamples,
-                addedAt: addedAt,
                 fsrsState: fsrsState,
                 stability: stability,
                 difficulty: difficulty,
@@ -7559,25 +6677,25 @@ class $$DictionaryTableTableTableManager
       );
 }
 
-typedef $$DictionaryTableTableProcessedTableManager =
+typedef $$ReviewItemsTableTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $DictionaryTableTable,
-      DictionaryTableData,
-      $$DictionaryTableTableFilterComposer,
-      $$DictionaryTableTableOrderingComposer,
-      $$DictionaryTableTableAnnotationComposer,
-      $$DictionaryTableTableCreateCompanionBuilder,
-      $$DictionaryTableTableUpdateCompanionBuilder,
+      $ReviewItemsTableTable,
+      ReviewItemsTableData,
+      $$ReviewItemsTableTableFilterComposer,
+      $$ReviewItemsTableTableOrderingComposer,
+      $$ReviewItemsTableTableAnnotationComposer,
+      $$ReviewItemsTableTableCreateCompanionBuilder,
+      $$ReviewItemsTableTableUpdateCompanionBuilder,
       (
-        DictionaryTableData,
+        ReviewItemsTableData,
         BaseReferences<
           _$AppDatabase,
-          $DictionaryTableTable,
-          DictionaryTableData
+          $ReviewItemsTableTable,
+          ReviewItemsTableData
         >,
       ),
-      DictionaryTableData,
+      ReviewItemsTableData,
       PrefetchHooks Function()
     >;
 typedef $$ReviewLogsTableTableCreateCompanionBuilder =
@@ -7622,7 +6740,6 @@ class $$ReviewLogsTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -7693,7 +6810,6 @@ class $$ReviewLogsTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -7764,7 +6880,6 @@ class $$ReviewLogsTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -7945,24 +7060,19 @@ typedef $$ReviewLogsTableTableProcessedTableManager =
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
-
   $AppDatabaseManager(this._db);
-
   $$BooksTableTableTableManager get booksTable =>
       $$BooksTableTableTableManager(_db, _db.booksTable);
-
   $$ArticlesTableTableTableManager get articlesTable =>
       $$ArticlesTableTableTableManager(_db, _db.articlesTable);
-
   $$HighlightsTableTableTableManager get highlightsTable =>
       $$HighlightsTableTableTableManager(_db, _db.highlightsTable);
-
   $$FlashcardsTableTableTableManager get flashcardsTable =>
       $$FlashcardsTableTableTableManager(_db, _db.flashcardsTable);
-
   $$DictionaryTableTableTableManager get dictionaryTable =>
       $$DictionaryTableTableTableManager(_db, _db.dictionaryTable);
-
+  $$ReviewItemsTableTableTableManager get reviewItemsTable =>
+      $$ReviewItemsTableTableTableManager(_db, _db.reviewItemsTable);
   $$ReviewLogsTableTableTableManager get reviewLogsTable =>
       $$ReviewLogsTableTableTableManager(_db, _db.reviewLogsTable);
 }

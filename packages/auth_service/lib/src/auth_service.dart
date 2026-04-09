@@ -37,6 +37,8 @@ abstract class AuthService {
 }
 
 /// Stub auth service — always unauthenticated.
+///
+/// TODO: replace with real auth implementation (e.g. Firebase Auth / custom backend).
 class NoopAuthService implements AuthService {
   const NoopAuthService();
 

@@ -32,10 +32,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    assert(() {
-      debugPrint('[SCREEN] build SplashScreen');
-      return true;
-    }());
+    debugLogScreenBuild('SplashScreen');
 
     return Scaffold(
       backgroundColor: context.colors.surface,
@@ -51,7 +48,7 @@ class _SplashScreenState extends State<SplashScreen> {
             const SizedBox(height: AppSpacing.md),
             Text(
               'Readflex',
-              style: context.text.headlineLarge?.copyWith(
+              style: context.text.headlineLarge.copyWith(
                 color: context.colors.primary,
               ),
             ),

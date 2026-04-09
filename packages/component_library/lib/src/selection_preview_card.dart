@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_radius.dart';
 import 'theme/tokens/app_spacing.dart';
 
@@ -21,9 +22,7 @@ class SelectionPreviewCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color:
-            backgroundColor ??
-            Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: backgroundColor ?? context.colors.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Text(

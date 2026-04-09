@@ -5,7 +5,7 @@ import 'rating.dart';
 import 'reviewable_type.dart';
 
 /// A record of a single FSRS review for any reviewable item.
-final class ReviewLog extends Equatable {
+class ReviewLog extends Equatable {
   const ReviewLog({
     required this.id,
     required this.itemId,

@@ -9,10 +9,8 @@ void showSubscriptionPaywallSheet(
   BuildContext context, {
   required SubscriptionService subscriptionService,
 }) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
+  showAppBottomSheet<void>(
+    context,
     builder: (_) => SubscriptionPaywallSheet(
       subscriptionService: subscriptionService,
     ),
@@ -55,7 +53,7 @@ class _SubscriptionPaywallSheetView extends StatelessWidget {
 
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.xl),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -64,12 +62,12 @@ class _SubscriptionPaywallSheetView extends StatelessWidget {
                   title: 'Readflex Premium',
                   onClose: () => Navigator.of(context).pop(),
                 ),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.lg),
                 const Icon(Icons.workspace_premium, size: 64),
                 const SizedBox(height: AppSpacing.md),
                 Text(
                   'Unlock Premium Features',
-                  style: Theme.of(context).textTheme.headlineSmall,
+                  style: context.text.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -85,14 +83,14 @@ class _SubscriptionPaywallSheetView extends StatelessWidget {
                   icon: Icons.cloud_sync,
                   text: 'Cloud sync across devices',
                 ),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.lg),
                 if (state.status == SubscriptionPaywallStatus.failure)
                   Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                     child: Text(
                       'Purchase failed. Please try again.',
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
+                        color: context.colors.error,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -135,7 +133,7 @@ class _FeatureItem extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
         children: [
-          Icon(icon, color: Theme.of(context).colorScheme.primary),
+          Icon(icon, color: context.colors.primary),
           const SizedBox(width: AppSpacing.sm),
           Expanded(child: Text(text)),
         ],

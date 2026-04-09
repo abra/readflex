@@ -1,24 +1,21 @@
 import 'package:domain_models/domain_models.dart';
 import 'package:local_storage/local_storage.dart';
-import 'package:review_scheduler/review_scheduler.dart';
 import 'package:uuid/uuid.dart' show Uuid;
 
 import 'mappers/flashcard_to_domain.dart';
 import 'mappers/flashcard_to_storage.dart';
-import 'mappers/review_log_to_storage.dart';
 
+// Top-level const so the Uuid generator is shared across all repository
+// instances and allocated once at program start. `Uuid` is stateless for v4
+// generation, so there's no benefit to holding it as an instance field.
 const _uuid = Uuid();
 
-/// Domain repository for flashcards with FSRS v6 scheduling.
+/// Domain repository for flashcards.
 class FlashcardRepository {
-  FlashcardRepository({
-    required AppDatabase database,
-    ReviewScheduler? reviewScheduler,
-  }) : _dao = database.flashcardsDao,
-       _reviewScheduler = reviewScheduler ?? ReviewScheduler();
+  FlashcardRepository({required AppDatabase database})
+    : _dao = database.flashcardsDao;
 
   final FlashcardsDao _dao;
-  final ReviewScheduler _reviewScheduler;
 
   // ─── CRUD ───
 
@@ -29,18 +26,6 @@ class FlashcardRepository {
 
   Future<List<Flashcard>> getFlashcardsByDeck(String deckId) async {
     final rows = await _dao.flashcardsByDeck(deckId);
-    return rows.map((r) => r.toDomainModel()).toList();
-  }
-
-  Future<List<Flashcard>> getDueFlashcards() async {
-    final now = DateTime.now().toUtc().toIso8601String();
-    final rows = await _dao.dueFlashcards(now);
-    return rows.map((r) => r.toDomainModel()).toList();
-  }
-
-  Future<List<Flashcard>> getDueFlashcardsBySource(String sourceId) async {
-    final now = DateTime.now().toUtc().toIso8601String();
-    final rows = await _dao.dueFlashcardsByDeck(sourceId, now);
     return rows.map((r) => r.toDomainModel()).toList();
   }
 
@@ -78,27 +63,5 @@ class FlashcardRepository {
 
   Future<void> deleteFlashcard(String id) async {
     await _dao.deleteFlashcard(id);
-  }
-
-  // ─── Review (FSRS) ───
-
-  Future<Flashcard> recordReview(
-    Flashcard flashcard,
-    Rating rating, {
-    int? reviewDurationMs,
-  }) async {
-    final result = _reviewScheduler.computeReview(
-      itemId: flashcard.id,
-      itemType: ReviewableType.flashcard,
-      currentFsrs: flashcard.fsrs,
-      rating: rating,
-      reviewDurationMs: reviewDurationMs,
-    );
-
-    final updated = flashcard.copyWith(fsrs: result.fsrs);
-    await _dao.updateFlashcard(updated.toStorageModel());
-    await _dao.insertReviewLog(result.log.toStorageModel());
-
-    return updated;
   }
 }

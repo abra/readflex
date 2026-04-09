@@ -5,7 +5,7 @@ import 'package:highlight_repository/highlight_repository.dart';
 
 enum HighlightSheetStatus { idle, saving, success, failure }
 
-final class HighlightSheetState extends Equatable {
+class HighlightSheetState extends Equatable {
   const HighlightSheetState({
     this.status = HighlightSheetStatus.idle,
     this.selectedColor = HighlightColor.yellow,
@@ -67,7 +67,8 @@ class HighlightCubit extends Cubit<HighlightSheetState> {
         scrollOffset: scrollOffset,
       );
       emit(state.copyWith(status: HighlightSheetStatus.success));
-    } catch (e) {
+    } catch (e, st) {
+      addError(e, st);
       emit(state.copyWith(status: HighlightSheetStatus.failure));
     }
   }

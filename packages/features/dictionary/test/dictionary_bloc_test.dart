@@ -4,6 +4,7 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers/fake_dictionary_repository.dart';
+import 'helpers/fake_fsrs_repository.dart';
 
 final _entry1 = DictionaryEntry(
   id: '1',
@@ -22,15 +23,20 @@ final _entry2 = DictionaryEntry(
 void main() {
   group('DictionaryBloc', () {
     late FakeDictionaryRepository repository;
+    late FakeFsrsRepository fsrsRepository;
 
     setUp(() {
       repository = FakeDictionaryRepository();
+      fsrsRepository = FakeFsrsRepository();
     });
 
     blocTest<DictionaryBloc, DictionaryState>(
       'emits loading then success with entries',
       setUp: () => repository.seed([_entry1, _entry2]),
-      build: () => DictionaryBloc(dictionaryRepository: repository),
+      build: () => DictionaryBloc(
+        dictionaryRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       act: (bloc) => bloc.add(const DictionaryLoadRequested()),
       expect: () => [
         const DictionaryState(status: DictionaryStatus.loading),
@@ -44,7 +50,10 @@ void main() {
 
     blocTest<DictionaryBloc, DictionaryState>(
       'emits success with empty list when no entries',
-      build: () => DictionaryBloc(dictionaryRepository: repository),
+      build: () => DictionaryBloc(
+        dictionaryRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       act: (bloc) => bloc.add(const DictionaryLoadRequested()),
       expect: () => [
         const DictionaryState(status: DictionaryStatus.loading),
@@ -55,7 +64,10 @@ void main() {
     blocTest<DictionaryBloc, DictionaryState>(
       'emits failure when repository throws',
       setUp: () => repository.shouldThrow = true,
-      build: () => DictionaryBloc(dictionaryRepository: repository),
+      build: () => DictionaryBloc(
+        dictionaryRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       act: (bloc) => bloc.add(const DictionaryLoadRequested()),
       expect: () => [
         const DictionaryState(status: DictionaryStatus.loading),
@@ -65,7 +77,10 @@ void main() {
 
     blocTest<DictionaryBloc, DictionaryState>(
       'search filters entries by query',
-      build: () => DictionaryBloc(dictionaryRepository: repository),
+      build: () => DictionaryBloc(
+        dictionaryRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       seed: () => DictionaryState(
         status: DictionaryStatus.success,
         entries: [_entry1, _entry2],
@@ -84,7 +99,10 @@ void main() {
 
     blocTest<DictionaryBloc, DictionaryState>(
       'search by translation also works',
-      build: () => DictionaryBloc(dictionaryRepository: repository),
+      build: () => DictionaryBloc(
+        dictionaryRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       seed: () => DictionaryState(
         status: DictionaryStatus.success,
         entries: [_entry1, _entry2],
@@ -104,7 +122,10 @@ void main() {
     blocTest<DictionaryBloc, DictionaryState>(
       'delete entry removes it and reloads',
       setUp: () => repository.seed([_entry1, _entry2]),
-      build: () => DictionaryBloc(dictionaryRepository: repository),
+      build: () => DictionaryBloc(
+        dictionaryRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       seed: () => DictionaryState(
         status: DictionaryStatus.success,
         entries: [_entry1, _entry2],
@@ -125,7 +146,10 @@ void main() {
         repository.seed([_entry1]);
         repository.shouldThrow = true;
       },
-      build: () => DictionaryBloc(dictionaryRepository: repository),
+      build: () => DictionaryBloc(
+        dictionaryRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       seed: () => DictionaryState(
         status: DictionaryStatus.success,
         entries: [_entry1],

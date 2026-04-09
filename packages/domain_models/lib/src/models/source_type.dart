@@ -4,10 +4,8 @@ enum SourceType {
   article
   ;
 
-  /// Parses a [SourceType] from a stored string value.
-  static SourceType from(String? value) => switch (value) {
-    'book' => SourceType.book,
-    'article' => SourceType.article,
-    _ => SourceType.book,
-  };
+  /// Parses a [SourceType] from its stored [name]. Falls back to [book] on
+  /// unknown or null values.
+  static SourceType from(String? value) =>
+      value == null ? book : values.asNameMap()[value] ?? book;
 }

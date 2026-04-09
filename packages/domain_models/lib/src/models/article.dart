@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart' show Equatable;
 
 /// An article imported from the web.
-final class Article extends Equatable {
+class Article extends Equatable {
   const Article({
     required this.id,
     required this.title,

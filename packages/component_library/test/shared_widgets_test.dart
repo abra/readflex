@@ -34,18 +34,6 @@ void main() {
     expect(find.text('Selected text'), findsOneWidget);
   });
 
-  testWidgets('DestructiveDismissBackground shows delete icon', (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: DestructiveDismissBackground(),
-        ),
-      ),
-    );
-
-    expect(find.byIcon(Icons.delete), findsOneWidget);
-  });
-
   testWidgets('ButtonLoadingIndicator renders progress indicator', (
     tester,
   ) async {

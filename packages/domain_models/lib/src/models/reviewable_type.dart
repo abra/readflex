@@ -5,11 +5,10 @@ enum ReviewableType {
   dictionary
   ;
 
-  static ReviewableType from(String value) => switch (value) {
-    'highlight' => ReviewableType.highlight,
-    'dictionary' => ReviewableType.dictionary,
-    _ => ReviewableType.flashcard,
-  };
+  /// Parses a [ReviewableType] from its stored [name]. Falls back to
+  /// [flashcard] on unknown values.
+  static ReviewableType from(String value) =>
+      values.asNameMap()[value] ?? flashcard;
 
   String toStorageString() => name;
 }

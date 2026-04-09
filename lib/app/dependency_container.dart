@@ -12,6 +12,7 @@ import 'package:book_repository/book_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
 import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
+import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:notification_service/notification_service.dart';
@@ -35,6 +36,7 @@ class DependenciesContainer {
     required this.highlightRepository,
     required this.flashcardRepository,
     required this.dictionaryRepository,
+    required this.fsrsRepository,
     required this.articleParser,
     required this.translationService,
     required this.aiService,
@@ -54,6 +56,7 @@ class DependenciesContainer {
   final HighlightRepository highlightRepository;
   final FlashcardRepository flashcardRepository;
   final DictionaryRepository dictionaryRepository;
+  final FsrsRepository fsrsRepository;
   final ArticleParser articleParser;
   final TranslationService translationService;
   final AiService aiService;

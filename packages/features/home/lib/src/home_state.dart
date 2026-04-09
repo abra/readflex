@@ -2,7 +2,7 @@ part of 'home_bloc.dart';
 
 enum HomeStatus { initial, loading, success, failure }
 
-final class HomeState extends Equatable {
+class HomeState extends Equatable {
   const HomeState({
     this.status = HomeStatus.initial,
     this.recentBooks = const [],

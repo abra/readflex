@@ -5,10 +5,8 @@ enum CreationSource {
   aiSelection
   ;
 
-  static CreationSource from(String value) => switch (value) {
-    'manual' => manual,
-    'aiHighlight' => aiHighlight,
-    'aiSelection' => aiSelection,
-    _ => manual,
-  };
+  /// Parses a [CreationSource] from its stored [name]. Falls back to [manual]
+  /// on unknown values.
+  static CreationSource from(String value) =>
+      values.asNameMap()[value] ?? manual;
 }

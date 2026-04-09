@@ -37,10 +37,7 @@ class ReaderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    assert(() {
-      debugPrint('[SCREEN] build ReaderScreen(sourceId: $sourceId)');
-      return true;
-    }());
+    debugLogScreenBuild('ReaderScreen(sourceId: $sourceId)');
 
     return BlocProvider(
       create: (_) => ReaderBloc(
@@ -95,6 +92,7 @@ class _ReaderView extends StatelessWidget {
     // );
   }
 
+  // ignore: unused_element
   Widget _buildBody(BuildContext context, ReaderState state) {
     return switch (state.status) {
       ReaderStatus.initial || ReaderStatus.loading => const Center(
@@ -125,7 +123,8 @@ class _ReaderView extends StatelessWidget {
   }
 }
 
-final class _ReaderAppBarState {
+// ignore: unused_element
+class _ReaderAppBarState {
   const _ReaderAppBarState({
     required this.title,
     required this.highlightCount,
@@ -145,6 +144,7 @@ final class _ReaderAppBarState {
   int get hashCode => Object.hash(title, highlightCount);
 }
 
+// ignore: unused_element
 class _ReaderAppBar extends StatelessWidget {
   const _ReaderAppBar({
     required this.title,
@@ -246,8 +246,9 @@ class _ReadyContentState extends State<_ReadyContent> {
     final appearance = PreferencesScope.readerAppearanceOf(context);
     final readerTheme = ReaderThemePreset.fromId(appearance.themeId).data;
     final readerFont = ReaderFontPreset.fromId(appearance.fontId);
-    final bodyLarge = Theme.of(context).textTheme.bodyLarge!;
-    final readerTextStyle = Theme.of(context).textTheme.bodyLarge!.copyWith(
+    final text = context.text;
+    final bodyLarge = text.bodyLarge;
+    final readerTextStyle = bodyLarge.copyWith(
       fontFamily: readerFont.fontFamily,
       fontSize: bodyLarge.fontSize! * appearance.textScale,
       height: appearance.lineHeight,
@@ -263,7 +264,7 @@ class _ReadyContentState extends State<_ReadyContent> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 720),
               child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.xxl),
+                padding: const EdgeInsets.all(AppSpacing.xl),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: readerTheme.surfaceColor,
@@ -272,8 +273,8 @@ class _ReadyContentState extends State<_ReadyContent> {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xxl,
-                      vertical: AppSpacing.xxxl,
+                      horizontal: AppSpacing.xl,
+                      vertical: AppSpacing.xxl,
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -286,8 +287,9 @@ class _ReadyContentState extends State<_ReadyContent> {
                         const SizedBox(height: AppSpacing.lg),
                         Text(
                           state.title,
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(color: readerTheme.primaryTextColor),
+                          style: text.headlineSmall.copyWith(
+                            color: readerTheme.primaryTextColor,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: AppSpacing.lg),
@@ -299,7 +301,7 @@ class _ReadyContentState extends State<_ReadyContent> {
                           textAlign: TextAlign.start,
                         ),
                         if (state.isBook && state.book != null) ...[
-                          const SizedBox(height: AppSpacing.xl),
+                          const SizedBox(height: AppSpacing.lg),
                           LinearProgressIndicator(
                             value: state.book!.readingProgress,
                             minHeight: 4,
@@ -307,10 +309,9 @@ class _ReadyContentState extends State<_ReadyContent> {
                           const SizedBox(height: AppSpacing.sm),
                           Text(
                             '${(state.book!.readingProgress * 100).toInt()}% read',
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: readerTheme.secondaryTextColor,
-                                ),
+                            style: text.labelSmall.copyWith(
+                              color: readerTheme.secondaryTextColor,
+                            ),
                           ),
                         ],
                       ],
@@ -457,7 +458,7 @@ class _ReviewReminderBanner extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.school, size: 20),
+            const Icon(Icons.school, size: AppIconSize.sm),
             const SizedBox(width: AppSpacing.sm),
             const Expanded(
               child: Text('You have items to review'),
@@ -467,7 +468,7 @@ class _ReviewReminderBanner extends StatelessWidget {
               child: const Text('Review'),
             ),
             IconButton(
-              icon: const Icon(Icons.close, size: 18),
+              icon: const Icon(Icons.close, size: AppIconSize.sm),
               onPressed: onDismiss,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),

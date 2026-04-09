@@ -13,10 +13,13 @@ class FakeDictionaryRepository implements DictionaryRepository {
   Future<DictionaryEntry> addEntry({
     required String word,
     required String translation,
+    String? pronunciation,
+    String? partOfSpeech,
     String? context,
     String? sourceId,
     SourceType? sourceType,
     List<String> usageExamples = const [],
+    DateTime? addedAt,
   }) async {
     if (shouldThrow) throw Exception('addEntry failed');
 
@@ -24,11 +27,13 @@ class FakeDictionaryRepository implements DictionaryRepository {
       id: 'de-${entries.length + 1}',
       word: word,
       translation: translation,
+      pronunciation: pronunciation,
+      partOfSpeech: partOfSpeech,
       context: context,
       sourceId: sourceId,
       sourceType: sourceType,
       usageExamples: usageExamples,
-      addedAt: DateTime.now(),
+      addedAt: addedAt ?? DateTime.now(),
     );
     entries.add(entry);
     return entry;

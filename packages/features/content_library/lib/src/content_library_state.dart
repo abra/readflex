@@ -2,7 +2,7 @@ part of 'content_library_bloc.dart';
 
 enum ContentLibraryStatus { initial, loading, success, failure }
 
-final class ContentLibraryState extends Equatable {
+class ContentLibraryState extends Equatable {
   const ContentLibraryState({
     this.status = ContentLibraryStatus.initial,
     this.books = const [],

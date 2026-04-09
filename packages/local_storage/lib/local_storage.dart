@@ -3,4 +3,5 @@ export 'src/daos/books_dao.dart';
 export 'src/daos/dictionary_dao.dart';
 export 'src/daos/flashcards_dao.dart';
 export 'src/daos/highlights_dao.dart';
+export 'src/daos/review_items_dao.dart';
 export 'src/database.dart';

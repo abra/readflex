@@ -12,9 +12,8 @@ void showHighlightSheet(
   required HighlightRepository highlightRepository,
   required TextSelectionContext selection,
 }) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
+  showAppBottomSheet<void>(
+    context,
     builder: (_) => HighlightSheet(
       highlightRepository: highlightRepository,
       selection: selection,
@@ -61,7 +60,7 @@ class _HighlightSheetView extends StatelessWidget {
           title: 'Highlight',
           onClose: () => Navigator.of(context).pop(),
           headerSpacing: AppSpacing.sm,
-          bodyPadding: const EdgeInsets.all(AppSpacing.xl),
+          bodyPadding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -112,7 +111,7 @@ class _HighlightSheetView extends StatelessWidget {
                   child: Text(
                     'Failed to save highlight',
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
+                      color: context.colors.error,
                     ),
                   ),
                 ),
@@ -139,7 +138,7 @@ class _HighlightSheetView extends StatelessWidget {
   }
 
   Color _colorForHighlight(BuildContext context, HighlightColor color) {
-    final ext = Theme.of(context).ext;
+    final ext = context.appColors;
     return switch (color) {
       HighlightColor.yellow => ext.highlightYellow,
       HighlightColor.green => ext.highlightGreen,

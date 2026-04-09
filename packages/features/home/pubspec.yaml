@@ -21,8 +21,8 @@ dependencies:
     path: ../../article_repository
   highlight_repository:
     path: ../../highlight_repository
-  flashcard_repository:
-    path: ../../flashcard_repository
+  fsrs_repository:
+    path: ../../fsrs_repository
   component_library:
     path: ../../component_library
 
