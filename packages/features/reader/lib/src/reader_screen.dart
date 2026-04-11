@@ -260,11 +260,26 @@ class _ReadyContentState extends State<_ReadyContent> {
               constraints: const BoxConstraints(maxWidth: 720),
               child: state.isArticle && state.articleContent.isNotEmpty
                   ? ArticleContentView(
+                      // Keying by article id keeps the same State instance as
+                      // the bloc re-emits with updated Article (lastOpenedAt,
+                      // currentScrollOffset), so initState / the post-frame
+                      // restore only fires once per opened article.
+                      key: ValueKey(state.article?.id),
                       html: state.articleContent,
                       textStyle: readerTextStyle,
                       accentColor: readerTheme.accentColor,
                       secondaryTextColor: readerTheme.secondaryTextColor,
                       dividerColor: readerTheme.dividerColor,
+                      // Base URL for resolving relative <img src> — readability
+                      // rewrites most but not all, and protocol-relative URLs
+                      // still need a scheme.
+                      articleUrl: state.article?.url,
+                      initialScrollFraction: state.article?.currentScrollOffset,
+                      onScrollFractionChanged: (fraction) {
+                        bloc.add(
+                          ReaderPositionUpdated(scrollOffset: fraction),
+                        );
+                      },
                       onSelectionChanged: (selectedText) {
                         if (selectedText == null) {
                           bloc.add(const ReaderTextDeselected());

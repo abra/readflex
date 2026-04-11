@@ -1,3 +1,4 @@
+import 'package:article_parser/article_parser.dart';
 import 'package:content_library/content_library.dart';
 import 'package:dictionary/dictionary.dart';
 import 'package:flashcard/flashcard.dart';
@@ -291,24 +292,52 @@ Future<String?> _redirectHomeIfNeeded(DependenciesContainer deps) async {
   return null;
 }
 
-Future<bool> _importArticle(
+Future<ArticleImportOutcome> _importArticle(
   DependenciesContainer dependencies,
   String url,
 ) async {
-  // This helper lives in routing as composition glue for the reusable import
-  // flow and keeps the flow itself free from app-specific dependencies.
-  // TODO: replace the current parser stub when the real article import
-  // pipeline is connected.
-  if (url.trim().isEmpty) {
-    return false;
+  // This helper lives in routing as composition glue between the import
+  // flow feature (user-facing, knows nothing about parser/repo) and the
+  // infrastructure it drives. It also acts as the translation layer from
+  // infrastructure exceptions to user-facing ArticleImportFailureReason
+  // categories.
+  final trimmed = url.trim();
+  if (trimmed.isEmpty) {
+    return const ArticleImportOutcome.failure(
+      ArticleImportFailureReason.invalidUrl,
+    );
   }
 
+  final ParsedArticle parsed;
   try {
-    final parsed = await dependencies.articleParser.parse(url.trim());
+    parsed = await dependencies.articleParser.parse(trimmed);
+  } on ArticleParserException catch (e, st) {
+    dependencies.logger.warn(
+      'Article parse failed for $trimmed (${e.reason})',
+      error: e,
+      stackTrace: st,
+    );
+    return ArticleImportOutcome.failure(_mapParserFailure(e.reason));
+  } catch (e, st) {
+    dependencies.logger.warn(
+      'Article parse threw unexpectedly for $trimmed',
+      error: e,
+      stackTrace: st,
+    );
+    return const ArticleImportOutcome.failure(
+      ArticleImportFailureReason.unknown,
+    );
+  }
 
+  // TODO: download inline <img> assets to app documents and rewrite src to
+  // local paths before persisting, so articles remain readable offline and
+  // survive source pages removing/rotating images. Should live alongside
+  // addArticle (repo owns both DB row and file-system assets, like book
+  // files), with matching cleanup on article deletion.
+  try {
     await dependencies.articleRepository.addArticle(
       title: parsed.title,
-      url: url.trim(),
+      url: trimmed,
       content: parsed.cleanedHtml,
       siteName: parsed.siteName,
       byline: parsed.byline,
@@ -319,17 +348,29 @@ Future<bool> _importArticle(
       textLength: parsed.textLength,
       estimatedWordCount: parsed.estimatedWordCount,
     );
-
-    return true;
   } catch (e, st) {
-    // Log and swallow — the import flow sheet reports failure to the user
-    // via its own UI state; we only need a trail in the logs to diagnose
-    // which stage (parser / DB insert) failed in production.
+    // Parser already produced a ParsedArticle, so anything failing here is
+    // local storage / file IO. Dedicated bucket lets the sheet show
+    // "couldn't save" rather than blaming the network.
     dependencies.logger.warn(
-      'Article import failed for $url',
+      'Article persist failed for $trimmed',
       error: e,
       stackTrace: st,
     );
-    return false;
+    return const ArticleImportOutcome.failure(
+      ArticleImportFailureReason.storage,
+    );
   }
+
+  return const ArticleImportOutcome.success();
+}
+
+ArticleImportFailureReason _mapParserFailure(ArticleParserFailure reason) {
+  return switch (reason) {
+    ArticleParserFailure.invalidUrl => ArticleImportFailureReason.invalidUrl,
+    ArticleParserFailure.network => ArticleImportFailureReason.network,
+    ArticleParserFailure.httpStatus => ArticleImportFailureReason.httpError,
+    ArticleParserFailure.noContent =>
+      ArticleImportFailureReason.noReadableContent,
+  };
 }

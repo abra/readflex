@@ -3,6 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:import_flow/import_flow.dart';
 
 void main() {
+  const unknownFailure = ArticleImportOutcome.failure(
+    ArticleImportFailureReason.unknown,
+  );
+  const successOutcome = ArticleImportOutcome.success();
+
   testWidgets('book import keeps sheet open when callback returns false', (
     tester,
   ) async {
@@ -16,7 +21,7 @@ void main() {
             bookPickerCalls += 1;
             return false;
           },
-          onImportArticle: (_) async => false,
+          onImportArticle: (_) async => unknownFailure,
         ),
       ),
     );
@@ -41,7 +46,7 @@ void main() {
           onOpen: (context) => showImportFlowSheet(
             context,
             onImportBook: () async => true,
-            onImportArticle: (_) async => false,
+            onImportArticle: (_) async => unknownFailure,
           ),
         ),
       );
@@ -68,7 +73,7 @@ void main() {
         onOpen: (context) => showImportFlowSheet(
           context,
           onImportBook: () async => false,
-          onImportArticle: (_) async => true,
+          onImportArticle: (_) async => successOutcome,
         ),
       ),
     );
@@ -98,7 +103,7 @@ void main() {
         onOpen: (context) => showImportFlowSheet(
           context,
           onImportBook: () async => false,
-          onImportArticle: (_) async => true,
+          onImportArticle: (_) async => successOutcome,
         ),
       ),
     );
@@ -116,7 +121,7 @@ void main() {
     expect(find.text('Add to Library'), findsOneWidget);
   });
 
-  testWidgets('article import keeps sheet open on failed import', (
+  testWidgets('article import surfaces network failure with specific message', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -124,7 +129,9 @@ void main() {
         onOpen: (context) => showImportFlowSheet(
           context,
           onImportBook: () async => false,
-          onImportArticle: (_) async => false,
+          onImportArticle: (_) async => const ArticleImportOutcome.failure(
+            ArticleImportFailureReason.network,
+          ),
         ),
       ),
     );
@@ -139,9 +146,44 @@ void main() {
     await tester.tap(find.text('Import'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Failed to import article'), findsOneWidget);
+    expect(
+      find.textContaining("Couldn't reach the site"),
+      findsOneWidget,
+    );
     expect(find.text('Add to Library'), findsOneWidget);
   });
+
+  testWidgets(
+    'article import surfaces noReadableContent failure with specific message',
+    (tester) async {
+      await tester.pumpWidget(
+        _TestHost(
+          onOpen: (context) => showImportFlowSheet(
+            context,
+            onImportBook: () async => false,
+            onImportArticle: (_) async => const ArticleImportOutcome.failure(
+              ArticleImportFailureReason.noReadableContent,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Add article by URL'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'https://example.com');
+      await tester.tap(find.text('Import'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining("doesn't have a readable article"),
+        findsOneWidget,
+      );
+    },
+  );
 }
 
 class _TestHost extends StatefulWidget {

@@ -5,6 +5,11 @@ import 'theme/tokens/app_radius.dart';
 import 'theme/tokens/app_spacing.dart';
 
 /// A reusable collection card with a visual media area and compact metadata.
+///
+/// Must be hosted inside a bounded-height parent (typical case: a grid cell
+/// with `childAspectRatio`). The media area takes whatever vertical space is
+/// left after the text block — this keeps the card from overflowing when the
+/// cell's aspect ratio and an intrinsic-height media don't agree.
 class MediaCollectionCard extends StatelessWidget {
   const MediaCollectionCard({
     required this.media,
@@ -13,7 +18,6 @@ class MediaCollectionCard extends StatelessWidget {
     this.meta,
     this.onTap,
     this.topRight,
-    this.mediaAspectRatio = 0.74,
     super.key,
   });
 
@@ -23,7 +27,6 @@ class MediaCollectionCard extends StatelessWidget {
   final String? meta;
   final VoidCallback? onTap;
   final Widget? topRight;
-  final double mediaAspectRatio;
 
   @override
   Widget build(BuildContext context) {
@@ -37,8 +40,7 @@ class MediaCollectionCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AspectRatio(
-              aspectRatio: mediaAspectRatio,
+            Expanded(
               child: Stack(
                 fit: StackFit.expand,
                 children: [

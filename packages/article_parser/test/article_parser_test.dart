@@ -78,34 +78,42 @@ was presented.</p>
       expect(result.textLength, greaterThan(100));
     });
 
-    test('parse throws on invalid URL', () async {
+    test('parse throws invalidUrl for garbage input', () async {
       final parser = ReadabilityArticleParser(
         httpClient: MockClient((_) async => http.Response('', 200)),
       );
 
       await expectLater(
         parser.parse('not a url'),
-        throwsA(isA<ArticleParserException>()),
+        throwsA(
+          isA<ArticleParserException>().having(
+            (e) => e.reason,
+            'reason',
+            ArticleParserFailure.invalidUrl,
+          ),
+        ),
       );
     });
 
-    test('parse throws on non-200 status', () async {
+    test('parse throws httpStatus with statusCode on non-200', () async {
       final client = MockClient((_) async => http.Response('Not Found', 404));
       final parser = ReadabilityArticleParser(httpClient: client);
 
       await expectLater(
         parser.parse('https://example.com/missing'),
         throwsA(
-          isA<ArticleParserException>().having(
-            (e) => e.message,
-            'message',
-            contains('404'),
-          ),
+          isA<ArticleParserException>()
+              .having(
+                (e) => e.reason,
+                'reason',
+                ArticleParserFailure.httpStatus,
+              )
+              .having((e) => e.statusCode, 'statusCode', 404),
         ),
       );
     });
 
-    test('parse throws on network error', () async {
+    test('parse throws network on client exception', () async {
       final client = MockClient(
         (_) async => throw Exception('Connection refused'),
       );
@@ -115,9 +123,32 @@ was presented.</p>
         parser.parse('https://example.com/story'),
         throwsA(
           isA<ArticleParserException>().having(
-            (e) => e.message,
-            'message',
-            contains('Network error'),
+            (e) => e.reason,
+            'reason',
+            ArticleParserFailure.network,
+          ),
+        ),
+      );
+    });
+
+    test('parse throws noContent when readability returns nothing', () async {
+      // A page without any article-like content: readability should bail.
+      final client = MockClient((_) async {
+        return http.Response(
+          '<html><body></body></html>',
+          200,
+          headers: const {'content-type': 'text/html; charset=utf-8'},
+        );
+      });
+      final parser = ReadabilityArticleParser(httpClient: client);
+
+      await expectLater(
+        parser.parse('https://example.com/empty'),
+        throwsA(
+          isA<ArticleParserException>().having(
+            (e) => e.reason,
+            'reason',
+            ArticleParserFailure.noContent,
           ),
         ),
       );

@@ -34,14 +34,39 @@ class ParsedArticle {
   final int estimatedWordCount;
 }
 
+/// Stage of the parse pipeline that failed. Callers map this to a
+/// user-facing message — the exception [message] is kept for logs only.
+enum ArticleParserFailure {
+  /// URL didn't parse / had no scheme.
+  invalidUrl,
+
+  /// Network couldn't reach the host (DNS, timeout, refused connection).
+  network,
+
+  /// Host replied with a non-200 status. [ArticleParserException.statusCode]
+  /// carries the code.
+  httpStatus,
+
+  /// Readability ran but couldn't extract a readable body from the page.
+  noContent,
+}
+
 /// Thrown when article parsing fails.
 class ArticleParserException implements Exception {
-  const ArticleParserException(this.message);
+  const ArticleParserException({
+    required this.reason,
+    required this.message,
+    this.statusCode,
+  });
 
+  final ArticleParserFailure reason;
   final String message;
 
+  /// Populated when [reason] is [ArticleParserFailure.httpStatus].
+  final int? statusCode;
+
   @override
-  String toString() => 'ArticleParserException: $message';
+  String toString() => 'ArticleParserException($reason): $message';
 }
 
 /// Fetches article HTML and extracts readable content on-device.
@@ -65,7 +90,10 @@ class ReadabilityArticleParser implements ArticleParser {
   Future<ParsedArticle> parse(String url) async {
     final uri = Uri.tryParse(url);
     if (uri == null || !uri.hasScheme) {
-      throw const ArticleParserException('Invalid URL');
+      throw const ArticleParserException(
+        reason: ArticleParserFailure.invalidUrl,
+        message: 'Invalid URL',
+      );
     }
 
     final http.Response response;
@@ -75,12 +103,17 @@ class ReadabilityArticleParser implements ArticleParser {
         headers: const {'User-Agent': _userAgent},
       );
     } catch (e) {
-      throw ArticleParserException('Network error: $e');
+      throw ArticleParserException(
+        reason: ArticleParserFailure.network,
+        message: 'Network error: $e',
+      );
     }
 
     if (response.statusCode != 200) {
       throw ArticleParserException(
-        'HTTP ${response.statusCode} fetching $url',
+        reason: ArticleParserFailure.httpStatus,
+        message: 'HTTP ${response.statusCode} fetching $url',
+        statusCode: response.statusCode,
       );
     }
 
@@ -90,7 +123,10 @@ class ReadabilityArticleParser implements ArticleParser {
     final article = readabilityInstance.parse();
 
     if (article == null || (article.content ?? '').isEmpty) {
-      throw const ArticleParserException('No readable content found');
+      throw const ArticleParserException(
+        reason: ArticleParserFailure.noContent,
+        message: 'No readable content found',
+      );
     }
 
     return ParsedArticle(
