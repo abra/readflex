@@ -18,7 +18,7 @@ final _article = Article(
   id: '2',
   title: 'Test Article',
   url: 'https://example.com',
-  cleanedHtml: '<p>Hello</p>',
+  contentPath: '/articles/2.html',
   addedAt: DateTime(2026, 1, 2),
 );
 
@@ -133,7 +133,7 @@ void main() {
         id: '2',
         title: 'Newer',
         url: 'https://example.com',
-        cleanedHtml: '<p>hi</p>',
+        contentPath: '/articles/2.html',
         addedAt: DateTime(2026, 6, 1),
       );
 

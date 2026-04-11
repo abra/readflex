@@ -6,13 +6,13 @@ Article _article({
   String title = 'Test Article',
   String? siteName,
   String url = 'https://example.com/article',
-  String cleanedHtml = '<p>Hello</p>',
+  String contentPath = '/articles/1.html',
 }) => Article(
   id: id,
   title: title,
   siteName: siteName,
   url: url,
-  cleanedHtml: cleanedHtml,
+  contentPath: contentPath,
   addedAt: DateTime(2026),
 );
 

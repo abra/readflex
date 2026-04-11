@@ -28,7 +28,7 @@ void main() {
     id: 'article-1',
     title: 'Test Article',
     url: 'https://example.com/article',
-    cleanedHtml: '<p>Content</p>',
+    contentPath: '/articles/article-1.html',
     addedAt: DateTime(2024, 1, 1),
     siteName: 'Example',
     currentScrollOffset: 0.5,

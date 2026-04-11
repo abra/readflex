@@ -309,7 +309,7 @@ Future<bool> _importArticle(
     await dependencies.articleRepository.addArticle(
       title: parsed.title,
       url: url.trim(),
-      cleanedHtml: parsed.cleanedHtml,
+      content: parsed.cleanedHtml,
       siteName: parsed.siteName,
       byline: parsed.byline,
       excerpt: parsed.excerpt,

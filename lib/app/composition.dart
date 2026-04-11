@@ -4,6 +4,8 @@
 // composeDependencies() can be called independently in tests
 // with substituted implementations.
 
+import 'dart:io';
+
 import 'package:ai_service/ai_service.dart';
 import 'package:article_parser/article_parser.dart';
 import 'package:article_repository/article_repository.dart';
@@ -19,6 +21,8 @@ import 'package:local_storage/local_storage.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:notification_service/notification_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex/app/config/application_config.dart';
 import 'package:readflex/app/dependency_container.dart';
@@ -106,8 +110,22 @@ Future<DependenciesContainer> createDependenciesContainer(
   // ─── Database ───
   final database = AppDatabase();
 
+  // ─── Filesystem layout ───
+  // Articles are stored as files on disk (body + cover) so that the DB
+  // only holds metadata and list queries stay cheap. Directories are
+  // created eagerly so repositories don't have to race on first write.
+  final documentsDir = await getApplicationDocumentsDirectory();
+  final articlesDir = Directory(p.join(documentsDir.path, 'articles'));
+  final articleCoversDir = Directory(
+    p.join(documentsDir.path, 'article_covers'),
+  );
+
   // ─── Repositories ───
-  final articleRepository = ArticleRepository(database: database);
+  final articleRepository = ArticleRepository(
+    database: database,
+    articlesDirectory: articlesDir,
+    coversDirectory: articleCoversDir,
+  );
   final bookRepository = BookRepository(database: database);
   final highlightRepository = HighlightRepository(database: database);
   final flashcardRepository = FlashcardRepository(database: database);

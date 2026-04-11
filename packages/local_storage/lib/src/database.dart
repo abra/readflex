@@ -48,7 +48,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -235,6 +235,15 @@ class AppDatabase extends _$AppDatabase {
         await customStatement(
           'ALTER TABLE articles_table ADD COLUMN text_length INTEGER NOT NULL DEFAULT 0',
         );
+      }
+      if (from < 6) {
+        // Rebuild articles_table: cleanedHtml TEXT is replaced by contentPath
+        // pointing to a file on disk, and coverImagePath is added for locally
+        // cached covers. No real article data exists yet (articles were only
+        // produced by the stub parser), so we drop and recreate instead of
+        // carrying a conversion step.
+        await customStatement('DROP TABLE IF EXISTS articles_table');
+        await migrator.createTable(articlesTable);
       }
     },
   );

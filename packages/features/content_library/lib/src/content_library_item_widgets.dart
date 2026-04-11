@@ -243,6 +243,17 @@ class _ArticleMedia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Prefer the locally cached cover if we have one — it's offline-safe
+    // and avoids hitting the origin on every list rebuild. Fall back to
+    // the remote URL only when the article has no local copy (e.g. the
+    // download failed during import).
+    if (article.coverImagePath case final path? when path.isNotEmpty) {
+      return Image.file(
+        File(path),
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _ArticlePlaceholder(article: article),
+      );
+    }
     if (article.coverImageUrl case final url? when url.isNotEmpty) {
       return Image.network(
         url,

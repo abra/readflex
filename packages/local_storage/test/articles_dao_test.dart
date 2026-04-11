@@ -17,13 +17,13 @@ void main() {
     String id = 'a1',
     String title = 'Test Article',
     String url = 'https://example.com',
-    String cleanedHtml = '<p>Content</p>',
+    String contentPath = '/articles/a1.html',
     String addedAt = '2026-01-01T00:00:00.000Z',
   }) => ArticlesTableCompanion.insert(
     id: id,
     title: title,
     url: url,
-    cleanedHtml: cleanedHtml,
+    contentPath: contentPath,
     addedAt: addedAt,
   );
 

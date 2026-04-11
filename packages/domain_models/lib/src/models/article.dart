@@ -1,12 +1,16 @@
 import 'package:equatable/equatable.dart' show Equatable;
 
 /// An article imported from the web.
+///
+/// Content (HTML) and cover image live on disk — see [contentPath] and
+/// [coverImagePath]. Use `ArticleRepository.readContent(article)` to load
+/// the HTML body; list queries do not hydrate it.
 class Article extends Equatable {
   const Article({
     required this.id,
     required this.title,
     required this.url,
-    required this.cleanedHtml,
+    required this.contentPath,
     required this.addedAt,
     this.siteName,
     this.byline,
@@ -14,6 +18,7 @@ class Article extends Equatable {
     this.publishedTime,
     this.lang,
     this.coverImageUrl,
+    this.coverImagePath,
     this.textLength = 0,
     this.estimatedWordCount = 0,
     this.currentScrollOffset = 0.0,
@@ -29,8 +34,18 @@ class Article extends Equatable {
   final String? publishedTime;
   final String? lang;
   final String url;
-  final String cleanedHtml;
+
+  /// Absolute path to the cleaned HTML file on disk.
+  final String contentPath;
+
+  /// Original remote cover URL from article metadata. Kept as reference /
+  /// fallback; prefer [coverImagePath] for display when available.
   final String? coverImageUrl;
+
+  /// Absolute path to the locally cached cover image, or `null` if the
+  /// article has no cover or the download failed.
+  final String? coverImagePath;
+
   final int textLength;
   final int estimatedWordCount;
   final double currentScrollOffset;
@@ -48,8 +63,9 @@ class Article extends Equatable {
     Object? publishedTime = _absent,
     Object? lang = _absent,
     String? url,
-    String? cleanedHtml,
+    String? contentPath,
     Object? coverImageUrl = _absent,
+    Object? coverImagePath = _absent,
     int? textLength,
     int? estimatedWordCount,
     double? currentScrollOffset,
@@ -66,10 +82,13 @@ class Article extends Equatable {
         : publishedTime as String?,
     lang: lang == _absent ? this.lang : lang as String?,
     url: url ?? this.url,
-    cleanedHtml: cleanedHtml ?? this.cleanedHtml,
+    contentPath: contentPath ?? this.contentPath,
     coverImageUrl: coverImageUrl == _absent
         ? this.coverImageUrl
         : coverImageUrl as String?,
+    coverImagePath: coverImagePath == _absent
+        ? this.coverImagePath
+        : coverImagePath as String?,
     textLength: textLength ?? this.textLength,
     estimatedWordCount: estimatedWordCount ?? this.estimatedWordCount,
     currentScrollOffset: currentScrollOffset ?? this.currentScrollOffset,
@@ -90,8 +109,9 @@ class Article extends Equatable {
     publishedTime,
     lang,
     url,
-    cleanedHtml,
+    contentPath,
     coverImageUrl,
+    coverImagePath,
     textLength,
     estimatedWordCount,
     currentScrollOffset,

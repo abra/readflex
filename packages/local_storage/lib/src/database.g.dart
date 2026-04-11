@@ -772,12 +772,12 @@ class $ArticlesTableTable extends ArticlesTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _cleanedHtmlMeta = const VerificationMeta(
-    'cleanedHtml',
+  static const VerificationMeta _contentPathMeta = const VerificationMeta(
+    'contentPath',
   );
   @override
-  late final GeneratedColumn<String> cleanedHtml = GeneratedColumn<String>(
-    'cleaned_html',
+  late final GeneratedColumn<String> contentPath = GeneratedColumn<String>(
+    'content_path',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -789,6 +789,17 @@ class $ArticlesTableTable extends ArticlesTable
   @override
   late final GeneratedColumn<String> coverImageUrl = GeneratedColumn<String>(
     'cover_image_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _coverImagePathMeta = const VerificationMeta(
+    'coverImagePath',
+  );
+  @override
+  late final GeneratedColumn<String> coverImagePath = GeneratedColumn<String>(
+    'cover_image_path',
     aliasedName,
     true,
     type: DriftSqlType.string,
@@ -912,8 +923,9 @@ class $ArticlesTableTable extends ArticlesTable
     title,
     siteName,
     url,
-    cleanedHtml,
+    contentPath,
     coverImageUrl,
+    coverImagePath,
     byline,
     excerpt,
     publishedTime,
@@ -964,16 +976,16 @@ class $ArticlesTableTable extends ArticlesTable
     } else if (isInserting) {
       context.missing(_urlMeta);
     }
-    if (data.containsKey('cleaned_html')) {
+    if (data.containsKey('content_path')) {
       context.handle(
-        _cleanedHtmlMeta,
-        cleanedHtml.isAcceptableOrUnknown(
-          data['cleaned_html']!,
-          _cleanedHtmlMeta,
+        _contentPathMeta,
+        contentPath.isAcceptableOrUnknown(
+          data['content_path']!,
+          _contentPathMeta,
         ),
       );
     } else if (isInserting) {
-      context.missing(_cleanedHtmlMeta);
+      context.missing(_contentPathMeta);
     }
     if (data.containsKey('cover_image_url')) {
       context.handle(
@@ -981,6 +993,15 @@ class $ArticlesTableTable extends ArticlesTable
         coverImageUrl.isAcceptableOrUnknown(
           data['cover_image_url']!,
           _coverImageUrlMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cover_image_path')) {
+      context.handle(
+        _coverImagePathMeta,
+        coverImagePath.isAcceptableOrUnknown(
+          data['cover_image_path']!,
+          _coverImagePathMeta,
         ),
       );
     }
@@ -1083,13 +1104,17 @@ class $ArticlesTableTable extends ArticlesTable
         DriftSqlType.string,
         data['${effectivePrefix}url'],
       )!,
-      cleanedHtml: attachedDatabase.typeMapping.read(
+      contentPath: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}cleaned_html'],
+        data['${effectivePrefix}content_path'],
       )!,
       coverImageUrl: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}cover_image_url'],
+      ),
+      coverImagePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cover_image_path'],
       ),
       byline: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -1146,8 +1171,19 @@ class ArticlesTableData extends DataClass
   final String title;
   final String? siteName;
   final String url;
-  final String cleanedHtml;
+
+  /// Absolute path to the cleaned HTML file on disk, written during import.
+  /// Article body lives on disk rather than in the DB so [allArticles] stays
+  /// cheap — list queries no longer hydrate megabytes of HTML per row.
+  final String contentPath;
+
+  /// Original remote cover image URL from the article metadata. Kept as
+  /// reference / fallback when the local cache is missing.
   final String? coverImageUrl;
+
+  /// Absolute path to the locally-cached cover image. Null if the cover
+  /// couldn't be downloaded or the article has no cover.
+  final String? coverImagePath;
   final String? byline;
   final String? excerpt;
   final String? publishedTime;
@@ -1166,8 +1202,9 @@ class ArticlesTableData extends DataClass
     required this.title,
     this.siteName,
     required this.url,
-    required this.cleanedHtml,
+    required this.contentPath,
     this.coverImageUrl,
+    this.coverImagePath,
     this.byline,
     this.excerpt,
     this.publishedTime,
@@ -1188,9 +1225,12 @@ class ArticlesTableData extends DataClass
       map['site_name'] = Variable<String>(siteName);
     }
     map['url'] = Variable<String>(url);
-    map['cleaned_html'] = Variable<String>(cleanedHtml);
+    map['content_path'] = Variable<String>(contentPath);
     if (!nullToAbsent || coverImageUrl != null) {
       map['cover_image_url'] = Variable<String>(coverImageUrl);
+    }
+    if (!nullToAbsent || coverImagePath != null) {
+      map['cover_image_path'] = Variable<String>(coverImagePath);
     }
     if (!nullToAbsent || byline != null) {
       map['byline'] = Variable<String>(byline);
@@ -1223,10 +1263,13 @@ class ArticlesTableData extends DataClass
           ? const Value.absent()
           : Value(siteName),
       url: Value(url),
-      cleanedHtml: Value(cleanedHtml),
+      contentPath: Value(contentPath),
       coverImageUrl: coverImageUrl == null && nullToAbsent
           ? const Value.absent()
           : Value(coverImageUrl),
+      coverImagePath: coverImagePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coverImagePath),
       byline: byline == null && nullToAbsent
           ? const Value.absent()
           : Value(byline),
@@ -1258,8 +1301,9 @@ class ArticlesTableData extends DataClass
       title: serializer.fromJson<String>(json['title']),
       siteName: serializer.fromJson<String?>(json['siteName']),
       url: serializer.fromJson<String>(json['url']),
-      cleanedHtml: serializer.fromJson<String>(json['cleanedHtml']),
+      contentPath: serializer.fromJson<String>(json['contentPath']),
       coverImageUrl: serializer.fromJson<String?>(json['coverImageUrl']),
+      coverImagePath: serializer.fromJson<String?>(json['coverImagePath']),
       byline: serializer.fromJson<String?>(json['byline']),
       excerpt: serializer.fromJson<String?>(json['excerpt']),
       publishedTime: serializer.fromJson<String?>(json['publishedTime']),
@@ -1282,8 +1326,9 @@ class ArticlesTableData extends DataClass
       'title': serializer.toJson<String>(title),
       'siteName': serializer.toJson<String?>(siteName),
       'url': serializer.toJson<String>(url),
-      'cleanedHtml': serializer.toJson<String>(cleanedHtml),
+      'contentPath': serializer.toJson<String>(contentPath),
       'coverImageUrl': serializer.toJson<String?>(coverImageUrl),
+      'coverImagePath': serializer.toJson<String?>(coverImagePath),
       'byline': serializer.toJson<String?>(byline),
       'excerpt': serializer.toJson<String?>(excerpt),
       'publishedTime': serializer.toJson<String?>(publishedTime),
@@ -1302,8 +1347,9 @@ class ArticlesTableData extends DataClass
     String? title,
     Value<String?> siteName = const Value.absent(),
     String? url,
-    String? cleanedHtml,
+    String? contentPath,
     Value<String?> coverImageUrl = const Value.absent(),
+    Value<String?> coverImagePath = const Value.absent(),
     Value<String?> byline = const Value.absent(),
     Value<String?> excerpt = const Value.absent(),
     Value<String?> publishedTime = const Value.absent(),
@@ -1319,10 +1365,13 @@ class ArticlesTableData extends DataClass
     title: title ?? this.title,
     siteName: siteName.present ? siteName.value : this.siteName,
     url: url ?? this.url,
-    cleanedHtml: cleanedHtml ?? this.cleanedHtml,
+    contentPath: contentPath ?? this.contentPath,
     coverImageUrl: coverImageUrl.present
         ? coverImageUrl.value
         : this.coverImageUrl,
+    coverImagePath: coverImagePath.present
+        ? coverImagePath.value
+        : this.coverImagePath,
     byline: byline.present ? byline.value : this.byline,
     excerpt: excerpt.present ? excerpt.value : this.excerpt,
     publishedTime: publishedTime.present
@@ -1342,12 +1391,15 @@ class ArticlesTableData extends DataClass
       title: data.title.present ? data.title.value : this.title,
       siteName: data.siteName.present ? data.siteName.value : this.siteName,
       url: data.url.present ? data.url.value : this.url,
-      cleanedHtml: data.cleanedHtml.present
-          ? data.cleanedHtml.value
-          : this.cleanedHtml,
+      contentPath: data.contentPath.present
+          ? data.contentPath.value
+          : this.contentPath,
       coverImageUrl: data.coverImageUrl.present
           ? data.coverImageUrl.value
           : this.coverImageUrl,
+      coverImagePath: data.coverImagePath.present
+          ? data.coverImagePath.value
+          : this.coverImagePath,
       byline: data.byline.present ? data.byline.value : this.byline,
       excerpt: data.excerpt.present ? data.excerpt.value : this.excerpt,
       publishedTime: data.publishedTime.present
@@ -1380,8 +1432,9 @@ class ArticlesTableData extends DataClass
           ..write('title: $title, ')
           ..write('siteName: $siteName, ')
           ..write('url: $url, ')
-          ..write('cleanedHtml: $cleanedHtml, ')
+          ..write('contentPath: $contentPath, ')
           ..write('coverImageUrl: $coverImageUrl, ')
+          ..write('coverImagePath: $coverImagePath, ')
           ..write('byline: $byline, ')
           ..write('excerpt: $excerpt, ')
           ..write('publishedTime: $publishedTime, ')
@@ -1402,8 +1455,9 @@ class ArticlesTableData extends DataClass
     title,
     siteName,
     url,
-    cleanedHtml,
+    contentPath,
     coverImageUrl,
+    coverImagePath,
     byline,
     excerpt,
     publishedTime,
@@ -1423,8 +1477,9 @@ class ArticlesTableData extends DataClass
           other.title == this.title &&
           other.siteName == this.siteName &&
           other.url == this.url &&
-          other.cleanedHtml == this.cleanedHtml &&
+          other.contentPath == this.contentPath &&
           other.coverImageUrl == this.coverImageUrl &&
+          other.coverImagePath == this.coverImagePath &&
           other.byline == this.byline &&
           other.excerpt == this.excerpt &&
           other.publishedTime == this.publishedTime &&
@@ -1442,8 +1497,9 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
   final Value<String> title;
   final Value<String?> siteName;
   final Value<String> url;
-  final Value<String> cleanedHtml;
+  final Value<String> contentPath;
   final Value<String?> coverImageUrl;
+  final Value<String?> coverImagePath;
   final Value<String?> byline;
   final Value<String?> excerpt;
   final Value<String?> publishedTime;
@@ -1460,8 +1516,9 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     this.title = const Value.absent(),
     this.siteName = const Value.absent(),
     this.url = const Value.absent(),
-    this.cleanedHtml = const Value.absent(),
+    this.contentPath = const Value.absent(),
     this.coverImageUrl = const Value.absent(),
+    this.coverImagePath = const Value.absent(),
     this.byline = const Value.absent(),
     this.excerpt = const Value.absent(),
     this.publishedTime = const Value.absent(),
@@ -1479,8 +1536,9 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     required String title,
     this.siteName = const Value.absent(),
     required String url,
-    required String cleanedHtml,
+    required String contentPath,
     this.coverImageUrl = const Value.absent(),
+    this.coverImagePath = const Value.absent(),
     this.byline = const Value.absent(),
     this.excerpt = const Value.absent(),
     this.publishedTime = const Value.absent(),
@@ -1495,15 +1553,16 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
   }) : id = Value(id),
        title = Value(title),
        url = Value(url),
-       cleanedHtml = Value(cleanedHtml),
+       contentPath = Value(contentPath),
        addedAt = Value(addedAt);
   static Insertable<ArticlesTableData> custom({
     Expression<String>? id,
     Expression<String>? title,
     Expression<String>? siteName,
     Expression<String>? url,
-    Expression<String>? cleanedHtml,
+    Expression<String>? contentPath,
     Expression<String>? coverImageUrl,
+    Expression<String>? coverImagePath,
     Expression<String>? byline,
     Expression<String>? excerpt,
     Expression<String>? publishedTime,
@@ -1521,8 +1580,9 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
       if (title != null) 'title': title,
       if (siteName != null) 'site_name': siteName,
       if (url != null) 'url': url,
-      if (cleanedHtml != null) 'cleaned_html': cleanedHtml,
+      if (contentPath != null) 'content_path': contentPath,
       if (coverImageUrl != null) 'cover_image_url': coverImageUrl,
+      if (coverImagePath != null) 'cover_image_path': coverImagePath,
       if (byline != null) 'byline': byline,
       if (excerpt != null) 'excerpt': excerpt,
       if (publishedTime != null) 'published_time': publishedTime,
@@ -1544,8 +1604,9 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     Value<String>? title,
     Value<String?>? siteName,
     Value<String>? url,
-    Value<String>? cleanedHtml,
+    Value<String>? contentPath,
     Value<String?>? coverImageUrl,
+    Value<String?>? coverImagePath,
     Value<String?>? byline,
     Value<String?>? excerpt,
     Value<String?>? publishedTime,
@@ -1563,8 +1624,9 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
       title: title ?? this.title,
       siteName: siteName ?? this.siteName,
       url: url ?? this.url,
-      cleanedHtml: cleanedHtml ?? this.cleanedHtml,
+      contentPath: contentPath ?? this.contentPath,
       coverImageUrl: coverImageUrl ?? this.coverImageUrl,
+      coverImagePath: coverImagePath ?? this.coverImagePath,
       byline: byline ?? this.byline,
       excerpt: excerpt ?? this.excerpt,
       publishedTime: publishedTime ?? this.publishedTime,
@@ -1594,11 +1656,14 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     if (url.present) {
       map['url'] = Variable<String>(url.value);
     }
-    if (cleanedHtml.present) {
-      map['cleaned_html'] = Variable<String>(cleanedHtml.value);
+    if (contentPath.present) {
+      map['content_path'] = Variable<String>(contentPath.value);
     }
     if (coverImageUrl.present) {
       map['cover_image_url'] = Variable<String>(coverImageUrl.value);
+    }
+    if (coverImagePath.present) {
+      map['cover_image_path'] = Variable<String>(coverImagePath.value);
     }
     if (byline.present) {
       map['byline'] = Variable<String>(byline.value);
@@ -1645,8 +1710,9 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
           ..write('title: $title, ')
           ..write('siteName: $siteName, ')
           ..write('url: $url, ')
-          ..write('cleanedHtml: $cleanedHtml, ')
+          ..write('contentPath: $contentPath, ')
           ..write('coverImageUrl: $coverImageUrl, ')
+          ..write('coverImagePath: $coverImagePath, ')
           ..write('byline: $byline, ')
           ..write('excerpt: $excerpt, ')
           ..write('publishedTime: $publishedTime, ')
@@ -5349,8 +5415,9 @@ typedef $$ArticlesTableTableCreateCompanionBuilder =
       required String title,
       Value<String?> siteName,
       required String url,
-      required String cleanedHtml,
+      required String contentPath,
       Value<String?> coverImageUrl,
+      Value<String?> coverImagePath,
       Value<String?> byline,
       Value<String?> excerpt,
       Value<String?> publishedTime,
@@ -5369,8 +5436,9 @@ typedef $$ArticlesTableTableUpdateCompanionBuilder =
       Value<String> title,
       Value<String?> siteName,
       Value<String> url,
-      Value<String> cleanedHtml,
+      Value<String> contentPath,
       Value<String?> coverImageUrl,
+      Value<String?> coverImagePath,
       Value<String?> byline,
       Value<String?> excerpt,
       Value<String?> publishedTime,
@@ -5413,13 +5481,18 @@ class $$ArticlesTableTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get cleanedHtml => $composableBuilder(
-    column: $table.cleanedHtml,
+  ColumnFilters<String> get contentPath => $composableBuilder(
+    column: $table.contentPath,
     builder: (column) => ColumnFilters(column),
   );
 
   ColumnFilters<String> get coverImageUrl => $composableBuilder(
     column: $table.coverImageUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get coverImagePath => $composableBuilder(
+    column: $table.coverImagePath,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5503,13 +5576,18 @@ class $$ArticlesTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get cleanedHtml => $composableBuilder(
-    column: $table.cleanedHtml,
+  ColumnOrderings<String> get contentPath => $composableBuilder(
+    column: $table.contentPath,
     builder: (column) => ColumnOrderings(column),
   );
 
   ColumnOrderings<String> get coverImageUrl => $composableBuilder(
     column: $table.coverImageUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get coverImagePath => $composableBuilder(
+    column: $table.coverImagePath,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -5585,13 +5663,18 @@ class $$ArticlesTableTableAnnotationComposer
   GeneratedColumn<String> get url =>
       $composableBuilder(column: $table.url, builder: (column) => column);
 
-  GeneratedColumn<String> get cleanedHtml => $composableBuilder(
-    column: $table.cleanedHtml,
+  GeneratedColumn<String> get contentPath => $composableBuilder(
+    column: $table.contentPath,
     builder: (column) => column,
   );
 
   GeneratedColumn<String> get coverImageUrl => $composableBuilder(
     column: $table.coverImageUrl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get coverImagePath => $composableBuilder(
+    column: $table.coverImagePath,
     builder: (column) => column,
   );
 
@@ -5677,8 +5760,9 @@ class $$ArticlesTableTableTableManager
                 Value<String> title = const Value.absent(),
                 Value<String?> siteName = const Value.absent(),
                 Value<String> url = const Value.absent(),
-                Value<String> cleanedHtml = const Value.absent(),
+                Value<String> contentPath = const Value.absent(),
                 Value<String?> coverImageUrl = const Value.absent(),
+                Value<String?> coverImagePath = const Value.absent(),
                 Value<String?> byline = const Value.absent(),
                 Value<String?> excerpt = const Value.absent(),
                 Value<String?> publishedTime = const Value.absent(),
@@ -5695,8 +5779,9 @@ class $$ArticlesTableTableTableManager
                 title: title,
                 siteName: siteName,
                 url: url,
-                cleanedHtml: cleanedHtml,
+                contentPath: contentPath,
                 coverImageUrl: coverImageUrl,
+                coverImagePath: coverImagePath,
                 byline: byline,
                 excerpt: excerpt,
                 publishedTime: publishedTime,
@@ -5715,8 +5800,9 @@ class $$ArticlesTableTableTableManager
                 required String title,
                 Value<String?> siteName = const Value.absent(),
                 required String url,
-                required String cleanedHtml,
+                required String contentPath,
                 Value<String?> coverImageUrl = const Value.absent(),
+                Value<String?> coverImagePath = const Value.absent(),
                 Value<String?> byline = const Value.absent(),
                 Value<String?> excerpt = const Value.absent(),
                 Value<String?> publishedTime = const Value.absent(),
@@ -5733,8 +5819,9 @@ class $$ArticlesTableTableTableManager
                 title: title,
                 siteName: siteName,
                 url: url,
-                cleanedHtml: cleanedHtml,
+                contentPath: contentPath,
                 coverImageUrl: coverImageUrl,
+                coverImagePath: coverImagePath,
                 byline: byline,
                 excerpt: excerpt,
                 publishedTime: publishedTime,

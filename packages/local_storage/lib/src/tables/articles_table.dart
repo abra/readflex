@@ -9,9 +9,18 @@ class ArticlesTable extends Table {
 
   TextColumn get url => text()();
 
-  TextColumn get cleanedHtml => text()();
+  /// Absolute path to the cleaned HTML file on disk, written during import.
+  /// Article body lives on disk rather than in the DB so [allArticles] stays
+  /// cheap — list queries no longer hydrate megabytes of HTML per row.
+  TextColumn get contentPath => text()();
 
+  /// Original remote cover image URL from the article metadata. Kept as
+  /// reference / fallback when the local cache is missing.
   TextColumn get coverImageUrl => text().nullable()();
+
+  /// Absolute path to the locally-cached cover image. Null if the cover
+  /// couldn't be downloaded or the article has no cover.
+  TextColumn get coverImagePath => text().nullable()();
 
   // Readability-extracted metadata. All nullable because some sites expose
   // only a subset of these fields.
