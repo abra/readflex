@@ -265,6 +265,15 @@ class _ReadyContentState extends State<_ReadyContent> {
                       accentColor: readerTheme.accentColor,
                       secondaryTextColor: readerTheme.secondaryTextColor,
                       dividerColor: readerTheme.dividerColor,
+                      onSelectionChanged: (selectedText) {
+                        if (selectedText == null) {
+                          bloc.add(const ReaderTextDeselected());
+                        } else {
+                          bloc.add(
+                            ReaderTextSelected(selectedText: selectedText),
+                          );
+                        }
+                      },
                     )
                   // Book rendering is still deferred until the book track
                   // vendors foliate-js into the reader package, so books

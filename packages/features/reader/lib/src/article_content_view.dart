@@ -19,6 +19,7 @@ class ArticleContentView extends StatelessWidget {
     required this.accentColor,
     required this.secondaryTextColor,
     required this.dividerColor,
+    this.onSelectionChanged,
     super.key,
   });
 
@@ -27,6 +28,14 @@ class ArticleContentView extends StatelessWidget {
   final Color accentColor;
   final Color secondaryTextColor;
   final Color dividerColor;
+
+  /// Fires whenever the user's selection inside the article changes.
+  ///
+  /// Receives the plain text of the current selection, or `null` when the
+  /// selection has been cleared (tap outside, collapsed selection). The
+  /// reader screen forwards this to [ReaderBloc] so the context panel
+  /// with TextAction buttons can light up for articles.
+  final ValueChanged<String?>? onSelectionChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -40,11 +49,13 @@ class ArticleContentView extends StatelessWidget {
       if (widget != null) widgets.add(widget);
     }
 
-    // SelectionArea lets the user drag-select text. Wiring selection
-    // events into ReaderBloc (for TextAction context panel) is left to a
-    // later vertical — reading the article end-to-end already adds value
-    // on its own.
     return SelectionArea(
+      onSelectionChanged: (selection) {
+        final handler = onSelectionChanged;
+        if (handler == null) return;
+        final text = selection?.plainText.trim() ?? '';
+        handler(text.isEmpty ? null : text);
+      },
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.xl,
