@@ -235,6 +235,65 @@ class _ReadyContentState extends State<_ReadyContent> {
     }
   }
 
+  Widget _buildReaderBody({
+    required ReaderState state,
+    required ReaderThemeData readerTheme,
+    required TextStyle readerTextStyle,
+    required AppTextTheme text,
+    required ReaderBloc bloc,
+  }) {
+    // Three disjoint cases:
+    //   1. Article with hydrated content → render it.
+    //   2. Article whose content file is missing / empty → show an
+    //      article-specific error (NOT the book placeholder, which used
+    //      to be the accidental catch-all and showed "Book rendering is
+    //      not implemented yet" for broken article reads).
+    //   3. Book → hero-card placeholder until foliate-js lands.
+    if (state.isArticle) {
+      if (state.articleContent.isEmpty) {
+        return _MissingArticleContent(
+          state: state,
+          readerTheme: readerTheme,
+          readerTextStyle: readerTextStyle,
+          text: text,
+        );
+      }
+      return ArticleContentView(
+        // Keying by article id keeps the same State instance as the
+        // bloc re-emits with updated Article (lastOpenedAt,
+        // currentScrollOffset), so initState / the post-frame restore
+        // only fires once per opened article.
+        key: ValueKey(state.article?.id),
+        html: state.articleContent,
+        textStyle: readerTextStyle,
+        accentColor: readerTheme.accentColor,
+        secondaryTextColor: readerTheme.secondaryTextColor,
+        dividerColor: readerTheme.dividerColor,
+        // Base URL for resolving relative <img src> — readability
+        // rewrites most but not all, and protocol-relative URLs still
+        // need a scheme.
+        articleUrl: state.article?.url,
+        initialScrollFraction: state.article?.currentScrollOffset,
+        onScrollFractionChanged: (fraction) {
+          bloc.add(ReaderPositionUpdated(scrollOffset: fraction));
+        },
+        onSelectionChanged: (selectedText) {
+          if (selectedText == null) {
+            bloc.add(const ReaderTextDeselected());
+          } else {
+            bloc.add(ReaderTextSelected(selectedText: selectedText));
+          }
+        },
+      );
+    }
+    return _BookPlaceholder(
+      state: state,
+      readerTheme: readerTheme,
+      readerTextStyle: readerTextStyle,
+      text: text,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<ReaderBloc>();
@@ -258,47 +317,13 @@ class _ReadyContentState extends State<_ReadyContent> {
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 720),
-              child: state.isArticle && state.articleContent.isNotEmpty
-                  ? ArticleContentView(
-                      // Keying by article id keeps the same State instance as
-                      // the bloc re-emits with updated Article (lastOpenedAt,
-                      // currentScrollOffset), so initState / the post-frame
-                      // restore only fires once per opened article.
-                      key: ValueKey(state.article?.id),
-                      html: state.articleContent,
-                      textStyle: readerTextStyle,
-                      accentColor: readerTheme.accentColor,
-                      secondaryTextColor: readerTheme.secondaryTextColor,
-                      dividerColor: readerTheme.dividerColor,
-                      // Base URL for resolving relative <img src> — readability
-                      // rewrites most but not all, and protocol-relative URLs
-                      // still need a scheme.
-                      articleUrl: state.article?.url,
-                      initialScrollFraction: state.article?.currentScrollOffset,
-                      onScrollFractionChanged: (fraction) {
-                        bloc.add(
-                          ReaderPositionUpdated(scrollOffset: fraction),
-                        );
-                      },
-                      onSelectionChanged: (selectedText) {
-                        if (selectedText == null) {
-                          bloc.add(const ReaderTextDeselected());
-                        } else {
-                          bloc.add(
-                            ReaderTextSelected(selectedText: selectedText),
-                          );
-                        }
-                      },
-                    )
-                  // Book rendering is still deferred until the book track
-                  // vendors foliate-js into the reader package, so books
-                  // keep the hero-card placeholder for now.
-                  : _BookPlaceholder(
-                      state: state,
-                      readerTheme: readerTheme,
-                      readerTextStyle: readerTextStyle,
-                      text: text,
-                    ),
+              child: _buildReaderBody(
+                state: state,
+                readerTheme: readerTheme,
+                readerTextStyle: readerTextStyle,
+                text: text,
+                bloc: bloc,
+              ),
             ),
           ),
         ),
@@ -485,6 +510,70 @@ class _BookPlaceholder extends StatelessWidget {
                   ),
                 ),
               ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown when an article loaded successfully from the DB but its cached
+/// HTML file is missing or empty on disk. Most common cause: the iOS
+/// simulator rebuilt the app container and the old absolute paths went
+/// stale. The new repo writes filenames + resolves at read time, so
+/// this mainly triggers now when an import partially failed.
+class _MissingArticleContent extends StatelessWidget {
+  const _MissingArticleContent({
+    required this.state,
+    required this.readerTheme,
+    required this.readerTextStyle,
+    required this.text,
+  });
+
+  final ReaderState state;
+  final ReaderThemeData readerTheme;
+  final TextStyle readerTextStyle;
+  final AppTextTheme text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: readerTheme.surfaceColor,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: readerTheme.dividerColor),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.xxl,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 48,
+                color: readerTheme.accentColor,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                state.title,
+                style: text.headlineSmall.copyWith(
+                  color: readerTheme.primaryTextColor,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                'This article\'s cached content is missing. Remove it '
+                'from your library and re-import the URL to fix it.',
+                style: readerTextStyle,
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
         ),

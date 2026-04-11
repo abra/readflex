@@ -16,8 +16,11 @@ const _uuid = Uuid();
 /// Wraps [ArticlesDao] from `local_storage` and owns on-disk storage of
 /// article content and cover images. Article HTML is written to
 /// [articlesDirectory] as `<id>.html`; cover images are downloaded to
-/// [coversDirectory]. The DB row only stores paths, keeping list queries
-/// cheap regardless of article length.
+/// [coversDirectory]. The DB row stores only the filename for each —
+/// this repo resolves filenames against the current directories on
+/// every read, so the DB survives iOS Documents-UUID changes across
+/// simulator reinstalls. Domain [Article]s handed back to callers
+/// always carry absolute paths.
 ///
 /// Exceptions from the DAO and file I/O propagate to callers (BLoCs).
 class ArticleRepository {
@@ -38,12 +41,12 @@ class ArticleRepository {
 
   Future<List<Article>> getArticles() async {
     final rows = await _dao.allArticles();
-    return rows.map((r) => r.toDomainModel()).toList();
+    return rows.map(_rowToDomain).toList();
   }
 
   Future<Article?> getArticleById(String id) async {
     final row = await _dao.articleById(id);
-    return row?.toDomainModel();
+    return row != null ? _rowToDomain(row) : null;
   }
 
   /// Reads the HTML body for [article] from disk. Returns an empty string
@@ -112,14 +115,21 @@ class ArticleRepository {
   Future<void> deleteArticle(String id) async {
     final row = await _dao.articleById(id);
     if (row != null) {
-      await _tryDelete(File(row.contentPath));
-      final coverPath = row.coverImagePath;
-      if (coverPath != null) {
-        await _tryDelete(File(coverPath));
+      // Row fields are filenames — resolve to absolute paths against the
+      // current directories before deleting.
+      await _tryDelete(File(p.join(_articlesDir.path, row.contentPath)));
+      final coverFilename = row.coverImagePath;
+      if (coverFilename != null) {
+        await _tryDelete(File(p.join(_coversDir.path, coverFilename)));
       }
     }
     await _dao.deleteArticle(id);
   }
+
+  Article _rowToDomain(ArticlesTableData row) => row.toDomainModel(
+    articlesDir: _articlesDir,
+    coversDir: _coversDir,
+  );
 
   Future<String?> _tryDownloadCover(String articleId, String url) async {
     try {

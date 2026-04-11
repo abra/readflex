@@ -231,6 +231,11 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
+                const _SectionCard(
+                  title: 'Cover Art',
+                  child: _CoverArtPreview(),
+                ),
+                const SizedBox(height: AppSpacing.lg),
                 _SectionCard(
                   title: 'Library Grid',
                   child: GridView.count(
@@ -647,6 +652,95 @@ class _ActionRowCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CoverArtPreview extends StatelessWidget {
+  const _CoverArtPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Grid-tile size: the common case in the Library screen. Four
+        // items so we can eyeball the gradient palette variance and
+        // confirm progress + article badge render at realistic sizes.
+        GridView.count(
+          crossAxisCount: 3,
+          crossAxisSpacing: AppSpacing.md,
+          mainAxisSpacing: AppSpacing.md,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          childAspectRatio: 0.66,
+          children: const [
+            AppCoverArt(
+              title: 'Atomic Habits',
+              subtitle: 'James Clear',
+              progress: 0.42,
+            ),
+            AppCoverArt(
+              title: 'Deep Work',
+              subtitle: 'Cal Newport',
+            ),
+            AppCoverArt(
+              title: 'Matter-style Reading Interfaces',
+              subtitle: 'matter.com',
+              isArticle: true,
+              progress: 0.65,
+            ),
+            AppCoverArt(
+              title: 'Long-form UX for Focused Reading',
+              subtitle: 'readwise.io',
+              isArticle: true,
+            ),
+            AppCoverArt(
+              title: 'Thinking in Systems',
+              subtitle: 'Donella Meadows',
+              progress: 0.9,
+            ),
+            AppCoverArt(
+              title: 'The Pragmatic Programmer',
+              subtitle: 'Hunt & Thomas',
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        // List-thumbnail size: verifies typography clamps kick in and the
+        // article badge is suppressed at small heights.
+        Row(
+          children: const [
+            SizedBox(
+              width: 44,
+              height: 60,
+              child: AppCoverArt(title: 'Atomic Habits'),
+            ),
+            SizedBox(width: AppSpacing.sm),
+            SizedBox(
+              width: 44,
+              height: 60,
+              child: AppCoverArt(
+                title: 'Matter Reading',
+                isArticle: true,
+                progress: 0.4,
+              ),
+            ),
+            SizedBox(width: AppSpacing.sm),
+            SizedBox(
+              width: 44,
+              height: 60,
+              child: AppCoverArt(title: 'Deep Work'),
+            ),
+            SizedBox(width: AppSpacing.sm),
+            SizedBox(
+              width: 44,
+              height: 60,
+              child: AppCoverArt(title: 'The Pragmatic Programmer'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

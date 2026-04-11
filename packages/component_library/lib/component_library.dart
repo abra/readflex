@@ -22,6 +22,7 @@ export 'src/debug_screen_logging.dart';
 // Widgets
 export 'src/show_app_bottom_sheet.dart';
 export 'src/action_bottom_sheet_layout.dart';
+export 'src/app_cover_art.dart';
 export 'src/bottom_sheet_header.dart';
 export 'src/button_loading_indicator.dart';
 export 'src/centered_circular_progress_indicator.dart';

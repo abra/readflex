@@ -9,17 +9,23 @@ class ArticlesTable extends Table {
 
   TextColumn get url => text()();
 
-  /// Absolute path to the cleaned HTML file on disk, written during import.
-  /// Article body lives on disk rather than in the DB so [allArticles] stays
-  /// cheap — list queries no longer hydrate megabytes of HTML per row.
+  /// Filename (not path) of the cleaned HTML file written to the app's
+  /// articles directory during import — e.g. `<uuid>.html`. Resolved to
+  /// an absolute path by `ArticleRepository` against the current
+  /// articles directory on every read. Storing only the filename keeps
+  /// rows valid across iOS Documents-UUID changes (happens on every
+  /// clean reinstall of the simulator build), and keeps `allArticles()`
+  /// cheap since the HTML body itself still lives on disk.
   TextColumn get contentPath => text()();
 
   /// Original remote cover image URL from the article metadata. Kept as
   /// reference / fallback when the local cache is missing.
   TextColumn get coverImageUrl => text().nullable()();
 
-  /// Absolute path to the locally-cached cover image. Null if the cover
-  /// couldn't be downloaded or the article has no cover.
+  /// Filename of the locally-cached cover image in the app's covers
+  /// directory. Null if the cover couldn't be downloaded or the article
+  /// has no cover. Resolved to an absolute path by `ArticleRepository`
+  /// the same way [contentPath] is.
   TextColumn get coverImagePath => text().nullable()();
 
   // Readability-extracted metadata. All nullable because some sites expose

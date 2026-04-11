@@ -48,7 +48,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -242,6 +242,17 @@ class AppDatabase extends _$AppDatabase {
         // cached covers. No real article data exists yet (articles were only
         // produced by the stub parser), so we drop and recreate instead of
         // carrying a conversion step.
+        await customStatement('DROP TABLE IF EXISTS articles_table');
+        await migrator.createTable(articlesTable);
+      }
+      if (from < 7) {
+        // articles_table.contentPath / coverImagePath flip from absolute
+        // paths to filenames only. ArticleRepository now resolves them
+        // against the current articles/covers directories on every read,
+        // so the DB survives iOS Documents-UUID changes between simulator
+        // reinstalls. Same rationale as the v5→v6 rebuild: article data is
+        // still dev-only, so a drop+recreate is cheaper than writing a
+        // path-stripping migration.
         await customStatement('DROP TABLE IF EXISTS articles_table');
         await migrator.createTable(articlesTable);
       }

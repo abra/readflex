@@ -35,7 +35,10 @@ class Article extends Equatable {
   final String? lang;
   final String url;
 
-  /// Absolute path to the cleaned HTML file on disk.
+  /// Absolute path to the cleaned HTML file on disk, resolved against
+  /// the current articles directory by [ArticleRepository]. The DB only
+  /// persists the filename so the same row stays valid after the iOS
+  /// Documents directory UUID changes across reinstalls.
   final String contentPath;
 
   /// Original remote cover URL from article metadata. Kept as reference /
@@ -43,7 +46,9 @@ class Article extends Equatable {
   final String? coverImageUrl;
 
   /// Absolute path to the locally cached cover image, or `null` if the
-  /// article has no cover or the download failed.
+  /// article has no cover or the download failed. Like [contentPath],
+  /// this is resolved by [ArticleRepository] at read time against the
+  /// current covers directory.
   final String? coverImagePath;
 
   final int textLength;
