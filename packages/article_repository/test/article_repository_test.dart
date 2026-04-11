@@ -27,6 +27,30 @@ void main() {
       expect(article.id, isNotEmpty);
     });
 
+    test('addArticle persists readability metadata round-trip', () async {
+      final created = await repo.addArticle(
+        title: 'Metadata Article',
+        url: 'https://example.com/meta',
+        cleanedHtml: '<p>body</p>',
+        siteName: 'Example Daily',
+        byline: 'Jane Writer',
+        excerpt: 'A short description.',
+        publishedTime: '2026-04-01T12:00:00Z',
+        lang: 'en',
+        textLength: 1234,
+        estimatedWordCount: 200,
+      );
+
+      final fetched = await repo.getArticleById(created.id);
+      expect(fetched, isNotNull);
+      expect(fetched!.byline, 'Jane Writer');
+      expect(fetched.excerpt, 'A short description.');
+      expect(fetched.publishedTime, '2026-04-01T12:00:00Z');
+      expect(fetched.lang, 'en');
+      expect(fetched.textLength, 1234);
+      expect(fetched.estimatedWordCount, 200);
+    });
+
     test('getArticles returns all added articles', () async {
       await repo.addArticle(
         title: 'Art 1',

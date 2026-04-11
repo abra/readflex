@@ -32,7 +32,12 @@ class ArticleRepository {
     required String url,
     required String cleanedHtml,
     String? siteName,
+    String? byline,
+    String? excerpt,
+    String? publishedTime,
+    String? lang,
     String? coverImageUrl,
+    int textLength = 0,
     int estimatedWordCount = 0,
   }) async {
     final now = DateTime.now();
@@ -43,7 +48,12 @@ class ArticleRepository {
       cleanedHtml: cleanedHtml,
       addedAt: now,
       siteName: siteName,
+      byline: byline,
+      excerpt: excerpt,
+      publishedTime: publishedTime,
+      lang: lang,
       coverImageUrl: coverImageUrl,
+      textLength: textLength,
       estimatedWordCount: estimatedWordCount,
     );
     await _dao.insertArticle(article.toStorageModel());

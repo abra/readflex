@@ -48,7 +48,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -215,6 +215,26 @@ class AppDatabase extends _$AppDatabase {
             await customStatement('ALTER TABLE $table DROP COLUMN $col');
           }
         }
+      }
+      if (from < 5) {
+        // Extend articles_table with readability-derived metadata columns.
+        // All new columns are nullable or defaulted so existing rows remain
+        // valid without backfill.
+        await customStatement(
+          'ALTER TABLE articles_table ADD COLUMN byline TEXT',
+        );
+        await customStatement(
+          'ALTER TABLE articles_table ADD COLUMN excerpt TEXT',
+        );
+        await customStatement(
+          'ALTER TABLE articles_table ADD COLUMN published_time TEXT',
+        );
+        await customStatement(
+          'ALTER TABLE articles_table ADD COLUMN lang TEXT',
+        );
+        await customStatement(
+          'ALTER TABLE articles_table ADD COLUMN text_length INTEGER NOT NULL DEFAULT 0',
+        );
       }
     },
   );

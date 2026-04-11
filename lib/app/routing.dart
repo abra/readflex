@@ -311,7 +311,12 @@ Future<bool> _importArticle(
       url: url.trim(),
       cleanedHtml: parsed.cleanedHtml,
       siteName: parsed.siteName,
+      byline: parsed.byline,
+      excerpt: parsed.excerpt,
+      publishedTime: parsed.publishedTime,
+      lang: parsed.lang,
       coverImageUrl: parsed.coverImageUrl,
+      textLength: parsed.textLength,
       estimatedWordCount: parsed.estimatedWordCount,
     );
 

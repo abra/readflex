@@ -794,6 +794,58 @@ class $ArticlesTableTable extends ArticlesTable
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _bylineMeta = const VerificationMeta('byline');
+  @override
+  late final GeneratedColumn<String> byline = GeneratedColumn<String>(
+    'byline',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _excerptMeta = const VerificationMeta(
+    'excerpt',
+  );
+  @override
+  late final GeneratedColumn<String> excerpt = GeneratedColumn<String>(
+    'excerpt',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _publishedTimeMeta = const VerificationMeta(
+    'publishedTime',
+  );
+  @override
+  late final GeneratedColumn<String> publishedTime = GeneratedColumn<String>(
+    'published_time',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _langMeta = const VerificationMeta('lang');
+  @override
+  late final GeneratedColumn<String> lang = GeneratedColumn<String>(
+    'lang',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _textLengthMeta = const VerificationMeta(
+    'textLength',
+  );
+  @override
+  late final GeneratedColumn<int> textLength = GeneratedColumn<int>(
+    'text_length',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _estimatedWordCountMeta =
       const VerificationMeta('estimatedWordCount');
   @override
@@ -862,6 +914,11 @@ class $ArticlesTableTable extends ArticlesTable
     url,
     cleanedHtml,
     coverImageUrl,
+    byline,
+    excerpt,
+    publishedTime,
+    lang,
+    textLength,
     estimatedWordCount,
     currentScrollOffset,
     addedAt,
@@ -925,6 +982,39 @@ class $ArticlesTableTable extends ArticlesTable
           data['cover_image_url']!,
           _coverImageUrlMeta,
         ),
+      );
+    }
+    if (data.containsKey('byline')) {
+      context.handle(
+        _bylineMeta,
+        byline.isAcceptableOrUnknown(data['byline']!, _bylineMeta),
+      );
+    }
+    if (data.containsKey('excerpt')) {
+      context.handle(
+        _excerptMeta,
+        excerpt.isAcceptableOrUnknown(data['excerpt']!, _excerptMeta),
+      );
+    }
+    if (data.containsKey('published_time')) {
+      context.handle(
+        _publishedTimeMeta,
+        publishedTime.isAcceptableOrUnknown(
+          data['published_time']!,
+          _publishedTimeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('lang')) {
+      context.handle(
+        _langMeta,
+        lang.isAcceptableOrUnknown(data['lang']!, _langMeta),
+      );
+    }
+    if (data.containsKey('text_length')) {
+      context.handle(
+        _textLengthMeta,
+        textLength.isAcceptableOrUnknown(data['text_length']!, _textLengthMeta),
       );
     }
     if (data.containsKey('estimated_word_count')) {
@@ -1001,6 +1091,26 @@ class $ArticlesTableTable extends ArticlesTable
         DriftSqlType.string,
         data['${effectivePrefix}cover_image_url'],
       ),
+      byline: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}byline'],
+      ),
+      excerpt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}excerpt'],
+      ),
+      publishedTime: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}published_time'],
+      ),
+      lang: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}lang'],
+      ),
+      textLength: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}text_length'],
+      )!,
       estimatedWordCount: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}estimated_word_count'],
@@ -1038,6 +1148,14 @@ class ArticlesTableData extends DataClass
   final String url;
   final String cleanedHtml;
   final String? coverImageUrl;
+  final String? byline;
+  final String? excerpt;
+  final String? publishedTime;
+  final String? lang;
+
+  /// Plain-text character count reported by readability_dart. Useful for
+  /// ranking and reading-time estimates without re-parsing.
+  final int textLength;
   final int estimatedWordCount;
   final double currentScrollOffset;
   final String addedAt;
@@ -1050,6 +1168,11 @@ class ArticlesTableData extends DataClass
     required this.url,
     required this.cleanedHtml,
     this.coverImageUrl,
+    this.byline,
+    this.excerpt,
+    this.publishedTime,
+    this.lang,
+    required this.textLength,
     required this.estimatedWordCount,
     required this.currentScrollOffset,
     required this.addedAt,
@@ -1069,6 +1192,19 @@ class ArticlesTableData extends DataClass
     if (!nullToAbsent || coverImageUrl != null) {
       map['cover_image_url'] = Variable<String>(coverImageUrl);
     }
+    if (!nullToAbsent || byline != null) {
+      map['byline'] = Variable<String>(byline);
+    }
+    if (!nullToAbsent || excerpt != null) {
+      map['excerpt'] = Variable<String>(excerpt);
+    }
+    if (!nullToAbsent || publishedTime != null) {
+      map['published_time'] = Variable<String>(publishedTime);
+    }
+    if (!nullToAbsent || lang != null) {
+      map['lang'] = Variable<String>(lang);
+    }
+    map['text_length'] = Variable<int>(textLength);
     map['estimated_word_count'] = Variable<int>(estimatedWordCount);
     map['current_scroll_offset'] = Variable<double>(currentScrollOffset);
     map['added_at'] = Variable<String>(addedAt);
@@ -1091,6 +1227,17 @@ class ArticlesTableData extends DataClass
       coverImageUrl: coverImageUrl == null && nullToAbsent
           ? const Value.absent()
           : Value(coverImageUrl),
+      byline: byline == null && nullToAbsent
+          ? const Value.absent()
+          : Value(byline),
+      excerpt: excerpt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(excerpt),
+      publishedTime: publishedTime == null && nullToAbsent
+          ? const Value.absent()
+          : Value(publishedTime),
+      lang: lang == null && nullToAbsent ? const Value.absent() : Value(lang),
+      textLength: Value(textLength),
       estimatedWordCount: Value(estimatedWordCount),
       currentScrollOffset: Value(currentScrollOffset),
       addedAt: Value(addedAt),
@@ -1113,6 +1260,11 @@ class ArticlesTableData extends DataClass
       url: serializer.fromJson<String>(json['url']),
       cleanedHtml: serializer.fromJson<String>(json['cleanedHtml']),
       coverImageUrl: serializer.fromJson<String?>(json['coverImageUrl']),
+      byline: serializer.fromJson<String?>(json['byline']),
+      excerpt: serializer.fromJson<String?>(json['excerpt']),
+      publishedTime: serializer.fromJson<String?>(json['publishedTime']),
+      lang: serializer.fromJson<String?>(json['lang']),
+      textLength: serializer.fromJson<int>(json['textLength']),
       estimatedWordCount: serializer.fromJson<int>(json['estimatedWordCount']),
       currentScrollOffset: serializer.fromJson<double>(
         json['currentScrollOffset'],
@@ -1132,6 +1284,11 @@ class ArticlesTableData extends DataClass
       'url': serializer.toJson<String>(url),
       'cleanedHtml': serializer.toJson<String>(cleanedHtml),
       'coverImageUrl': serializer.toJson<String?>(coverImageUrl),
+      'byline': serializer.toJson<String?>(byline),
+      'excerpt': serializer.toJson<String?>(excerpt),
+      'publishedTime': serializer.toJson<String?>(publishedTime),
+      'lang': serializer.toJson<String?>(lang),
+      'textLength': serializer.toJson<int>(textLength),
       'estimatedWordCount': serializer.toJson<int>(estimatedWordCount),
       'currentScrollOffset': serializer.toJson<double>(currentScrollOffset),
       'addedAt': serializer.toJson<String>(addedAt),
@@ -1147,6 +1304,11 @@ class ArticlesTableData extends DataClass
     String? url,
     String? cleanedHtml,
     Value<String?> coverImageUrl = const Value.absent(),
+    Value<String?> byline = const Value.absent(),
+    Value<String?> excerpt = const Value.absent(),
+    Value<String?> publishedTime = const Value.absent(),
+    Value<String?> lang = const Value.absent(),
+    int? textLength,
     int? estimatedWordCount,
     double? currentScrollOffset,
     String? addedAt,
@@ -1161,6 +1323,13 @@ class ArticlesTableData extends DataClass
     coverImageUrl: coverImageUrl.present
         ? coverImageUrl.value
         : this.coverImageUrl,
+    byline: byline.present ? byline.value : this.byline,
+    excerpt: excerpt.present ? excerpt.value : this.excerpt,
+    publishedTime: publishedTime.present
+        ? publishedTime.value
+        : this.publishedTime,
+    lang: lang.present ? lang.value : this.lang,
+    textLength: textLength ?? this.textLength,
     estimatedWordCount: estimatedWordCount ?? this.estimatedWordCount,
     currentScrollOffset: currentScrollOffset ?? this.currentScrollOffset,
     addedAt: addedAt ?? this.addedAt,
@@ -1179,6 +1348,15 @@ class ArticlesTableData extends DataClass
       coverImageUrl: data.coverImageUrl.present
           ? data.coverImageUrl.value
           : this.coverImageUrl,
+      byline: data.byline.present ? data.byline.value : this.byline,
+      excerpt: data.excerpt.present ? data.excerpt.value : this.excerpt,
+      publishedTime: data.publishedTime.present
+          ? data.publishedTime.value
+          : this.publishedTime,
+      lang: data.lang.present ? data.lang.value : this.lang,
+      textLength: data.textLength.present
+          ? data.textLength.value
+          : this.textLength,
       estimatedWordCount: data.estimatedWordCount.present
           ? data.estimatedWordCount.value
           : this.estimatedWordCount,
@@ -1204,6 +1382,11 @@ class ArticlesTableData extends DataClass
           ..write('url: $url, ')
           ..write('cleanedHtml: $cleanedHtml, ')
           ..write('coverImageUrl: $coverImageUrl, ')
+          ..write('byline: $byline, ')
+          ..write('excerpt: $excerpt, ')
+          ..write('publishedTime: $publishedTime, ')
+          ..write('lang: $lang, ')
+          ..write('textLength: $textLength, ')
           ..write('estimatedWordCount: $estimatedWordCount, ')
           ..write('currentScrollOffset: $currentScrollOffset, ')
           ..write('addedAt: $addedAt, ')
@@ -1221,6 +1404,11 @@ class ArticlesTableData extends DataClass
     url,
     cleanedHtml,
     coverImageUrl,
+    byline,
+    excerpt,
+    publishedTime,
+    lang,
+    textLength,
     estimatedWordCount,
     currentScrollOffset,
     addedAt,
@@ -1237,6 +1425,11 @@ class ArticlesTableData extends DataClass
           other.url == this.url &&
           other.cleanedHtml == this.cleanedHtml &&
           other.coverImageUrl == this.coverImageUrl &&
+          other.byline == this.byline &&
+          other.excerpt == this.excerpt &&
+          other.publishedTime == this.publishedTime &&
+          other.lang == this.lang &&
+          other.textLength == this.textLength &&
           other.estimatedWordCount == this.estimatedWordCount &&
           other.currentScrollOffset == this.currentScrollOffset &&
           other.addedAt == this.addedAt &&
@@ -1251,6 +1444,11 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
   final Value<String> url;
   final Value<String> cleanedHtml;
   final Value<String?> coverImageUrl;
+  final Value<String?> byline;
+  final Value<String?> excerpt;
+  final Value<String?> publishedTime;
+  final Value<String?> lang;
+  final Value<int> textLength;
   final Value<int> estimatedWordCount;
   final Value<double> currentScrollOffset;
   final Value<String> addedAt;
@@ -1264,6 +1462,11 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     this.url = const Value.absent(),
     this.cleanedHtml = const Value.absent(),
     this.coverImageUrl = const Value.absent(),
+    this.byline = const Value.absent(),
+    this.excerpt = const Value.absent(),
+    this.publishedTime = const Value.absent(),
+    this.lang = const Value.absent(),
+    this.textLength = const Value.absent(),
     this.estimatedWordCount = const Value.absent(),
     this.currentScrollOffset = const Value.absent(),
     this.addedAt = const Value.absent(),
@@ -1278,6 +1481,11 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     required String url,
     required String cleanedHtml,
     this.coverImageUrl = const Value.absent(),
+    this.byline = const Value.absent(),
+    this.excerpt = const Value.absent(),
+    this.publishedTime = const Value.absent(),
+    this.lang = const Value.absent(),
+    this.textLength = const Value.absent(),
     this.estimatedWordCount = const Value.absent(),
     this.currentScrollOffset = const Value.absent(),
     required String addedAt,
@@ -1296,6 +1504,11 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     Expression<String>? url,
     Expression<String>? cleanedHtml,
     Expression<String>? coverImageUrl,
+    Expression<String>? byline,
+    Expression<String>? excerpt,
+    Expression<String>? publishedTime,
+    Expression<String>? lang,
+    Expression<int>? textLength,
     Expression<int>? estimatedWordCount,
     Expression<double>? currentScrollOffset,
     Expression<String>? addedAt,
@@ -1310,6 +1523,11 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
       if (url != null) 'url': url,
       if (cleanedHtml != null) 'cleaned_html': cleanedHtml,
       if (coverImageUrl != null) 'cover_image_url': coverImageUrl,
+      if (byline != null) 'byline': byline,
+      if (excerpt != null) 'excerpt': excerpt,
+      if (publishedTime != null) 'published_time': publishedTime,
+      if (lang != null) 'lang': lang,
+      if (textLength != null) 'text_length': textLength,
       if (estimatedWordCount != null)
         'estimated_word_count': estimatedWordCount,
       if (currentScrollOffset != null)
@@ -1328,6 +1546,11 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     Value<String>? url,
     Value<String>? cleanedHtml,
     Value<String?>? coverImageUrl,
+    Value<String?>? byline,
+    Value<String?>? excerpt,
+    Value<String?>? publishedTime,
+    Value<String?>? lang,
+    Value<int>? textLength,
     Value<int>? estimatedWordCount,
     Value<double>? currentScrollOffset,
     Value<String>? addedAt,
@@ -1342,6 +1565,11 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
       url: url ?? this.url,
       cleanedHtml: cleanedHtml ?? this.cleanedHtml,
       coverImageUrl: coverImageUrl ?? this.coverImageUrl,
+      byline: byline ?? this.byline,
+      excerpt: excerpt ?? this.excerpt,
+      publishedTime: publishedTime ?? this.publishedTime,
+      lang: lang ?? this.lang,
+      textLength: textLength ?? this.textLength,
       estimatedWordCount: estimatedWordCount ?? this.estimatedWordCount,
       currentScrollOffset: currentScrollOffset ?? this.currentScrollOffset,
       addedAt: addedAt ?? this.addedAt,
@@ -1371,6 +1599,21 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     }
     if (coverImageUrl.present) {
       map['cover_image_url'] = Variable<String>(coverImageUrl.value);
+    }
+    if (byline.present) {
+      map['byline'] = Variable<String>(byline.value);
+    }
+    if (excerpt.present) {
+      map['excerpt'] = Variable<String>(excerpt.value);
+    }
+    if (publishedTime.present) {
+      map['published_time'] = Variable<String>(publishedTime.value);
+    }
+    if (lang.present) {
+      map['lang'] = Variable<String>(lang.value);
+    }
+    if (textLength.present) {
+      map['text_length'] = Variable<int>(textLength.value);
     }
     if (estimatedWordCount.present) {
       map['estimated_word_count'] = Variable<int>(estimatedWordCount.value);
@@ -1404,6 +1647,11 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
           ..write('url: $url, ')
           ..write('cleanedHtml: $cleanedHtml, ')
           ..write('coverImageUrl: $coverImageUrl, ')
+          ..write('byline: $byline, ')
+          ..write('excerpt: $excerpt, ')
+          ..write('publishedTime: $publishedTime, ')
+          ..write('lang: $lang, ')
+          ..write('textLength: $textLength, ')
           ..write('estimatedWordCount: $estimatedWordCount, ')
           ..write('currentScrollOffset: $currentScrollOffset, ')
           ..write('addedAt: $addedAt, ')
@@ -5103,6 +5351,11 @@ typedef $$ArticlesTableTableCreateCompanionBuilder =
       required String url,
       required String cleanedHtml,
       Value<String?> coverImageUrl,
+      Value<String?> byline,
+      Value<String?> excerpt,
+      Value<String?> publishedTime,
+      Value<String?> lang,
+      Value<int> textLength,
       Value<int> estimatedWordCount,
       Value<double> currentScrollOffset,
       required String addedAt,
@@ -5118,6 +5371,11 @@ typedef $$ArticlesTableTableUpdateCompanionBuilder =
       Value<String> url,
       Value<String> cleanedHtml,
       Value<String?> coverImageUrl,
+      Value<String?> byline,
+      Value<String?> excerpt,
+      Value<String?> publishedTime,
+      Value<String?> lang,
+      Value<int> textLength,
       Value<int> estimatedWordCount,
       Value<double> currentScrollOffset,
       Value<String> addedAt,
@@ -5162,6 +5420,31 @@ class $$ArticlesTableTableFilterComposer
 
   ColumnFilters<String> get coverImageUrl => $composableBuilder(
     column: $table.coverImageUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get byline => $composableBuilder(
+    column: $table.byline,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get excerpt => $composableBuilder(
+    column: $table.excerpt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get publishedTime => $composableBuilder(
+    column: $table.publishedTime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lang => $composableBuilder(
+    column: $table.lang,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get textLength => $composableBuilder(
+    column: $table.textLength,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5230,6 +5513,31 @@ class $$ArticlesTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get byline => $composableBuilder(
+    column: $table.byline,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get excerpt => $composableBuilder(
+    column: $table.excerpt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get publishedTime => $composableBuilder(
+    column: $table.publishedTime,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lang => $composableBuilder(
+    column: $table.lang,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get textLength => $composableBuilder(
+    column: $table.textLength,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get estimatedWordCount => $composableBuilder(
     column: $table.estimatedWordCount,
     builder: (column) => ColumnOrderings(column),
@@ -5284,6 +5592,25 @@ class $$ArticlesTableTableAnnotationComposer
 
   GeneratedColumn<String> get coverImageUrl => $composableBuilder(
     column: $table.coverImageUrl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get byline =>
+      $composableBuilder(column: $table.byline, builder: (column) => column);
+
+  GeneratedColumn<String> get excerpt =>
+      $composableBuilder(column: $table.excerpt, builder: (column) => column);
+
+  GeneratedColumn<String> get publishedTime => $composableBuilder(
+    column: $table.publishedTime,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lang =>
+      $composableBuilder(column: $table.lang, builder: (column) => column);
+
+  GeneratedColumn<int> get textLength => $composableBuilder(
+    column: $table.textLength,
     builder: (column) => column,
   );
 
@@ -5352,6 +5679,11 @@ class $$ArticlesTableTableTableManager
                 Value<String> url = const Value.absent(),
                 Value<String> cleanedHtml = const Value.absent(),
                 Value<String?> coverImageUrl = const Value.absent(),
+                Value<String?> byline = const Value.absent(),
+                Value<String?> excerpt = const Value.absent(),
+                Value<String?> publishedTime = const Value.absent(),
+                Value<String?> lang = const Value.absent(),
+                Value<int> textLength = const Value.absent(),
                 Value<int> estimatedWordCount = const Value.absent(),
                 Value<double> currentScrollOffset = const Value.absent(),
                 Value<String> addedAt = const Value.absent(),
@@ -5365,6 +5697,11 @@ class $$ArticlesTableTableTableManager
                 url: url,
                 cleanedHtml: cleanedHtml,
                 coverImageUrl: coverImageUrl,
+                byline: byline,
+                excerpt: excerpt,
+                publishedTime: publishedTime,
+                lang: lang,
+                textLength: textLength,
                 estimatedWordCount: estimatedWordCount,
                 currentScrollOffset: currentScrollOffset,
                 addedAt: addedAt,
@@ -5380,6 +5717,11 @@ class $$ArticlesTableTableTableManager
                 required String url,
                 required String cleanedHtml,
                 Value<String?> coverImageUrl = const Value.absent(),
+                Value<String?> byline = const Value.absent(),
+                Value<String?> excerpt = const Value.absent(),
+                Value<String?> publishedTime = const Value.absent(),
+                Value<String?> lang = const Value.absent(),
+                Value<int> textLength = const Value.absent(),
                 Value<int> estimatedWordCount = const Value.absent(),
                 Value<double> currentScrollOffset = const Value.absent(),
                 required String addedAt,
@@ -5393,6 +5735,11 @@ class $$ArticlesTableTableTableManager
                 url: url,
                 cleanedHtml: cleanedHtml,
                 coverImageUrl: coverImageUrl,
+                byline: byline,
+                excerpt: excerpt,
+                publishedTime: publishedTime,
+                lang: lang,
+                textLength: textLength,
                 estimatedWordCount: estimatedWordCount,
                 currentScrollOffset: currentScrollOffset,
                 addedAt: addedAt,
