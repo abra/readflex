@@ -1,5 +1,5 @@
 name: article_parser
-description: "HTTP client to backend article cleaning service."
+description: "On-device article parser using readability_dart."
 publish_to: none
 version: 0.1.0
 
@@ -9,6 +9,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  http: ^1.6.0
+
+  # Local path dep during MVP. Will be switched to git/pub before release.
+  readability_dart:
+    path: /Users/aizen/Projects/readability_dart
 
 dev_dependencies:
   flutter_test:
