@@ -96,7 +96,10 @@ void main() {
       blocTest<ReaderBloc, ReaderState>(
         'loads article by ID when no book matches',
         setUp: () {
-          articleRepository.seedArticle(testArticle);
+          articleRepository.seedArticle(
+            testArticle,
+            content: '<p>Hello from disk</p>',
+          );
         },
         build: buildBloc,
         act: (bloc) =>
@@ -107,7 +110,12 @@ void main() {
               .having((s) => s.status, 'status', ReaderStatus.ready)
               .having((s) => s.sourceType, 'sourceType', SourceType.article)
               .having((s) => s.title, 'title', 'Test Article')
-              .having((s) => s.article, 'article', isNotNull),
+              .having((s) => s.article, 'article', isNotNull)
+              .having(
+                (s) => s.articleContent,
+                'articleContent',
+                '<p>Hello from disk</p>',
+              ),
         ],
         verify: (_) {
           expect(articleRepository.updatedArticle, isNotNull);

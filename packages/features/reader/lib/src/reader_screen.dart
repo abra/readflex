@@ -10,6 +10,7 @@ import 'package:highlight_repository/highlight_repository.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:shared/shared.dart';
 
+import 'article_content_view.dart';
 import 'reader_bloc.dart';
 
 /// Approximate height of the context panel, used to offset the review banner.
@@ -67,32 +68,29 @@ class _ReaderView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: implement reader UI with WebView (foliate-js / flutter_inappwebview).
-    return Placeholder();
-    // return Scaffold(
-    //   appBar: PreferredSize(
-    //     preferredSize: const Size.fromHeight(kToolbarHeight),
-    //     child: BlocSelector<ReaderBloc, ReaderState, _ReaderAppBarState>(
-    //       selector: (state) => _ReaderAppBarState(
-    //         title: state.title,
-    //         highlightCount: state.highlights.length,
-    //       ),
-    //       builder: (context, appBarState) {
-    //         return _ReaderAppBar(
-    //           title: appBarState.title,
-    //           highlightCount: appBarState.highlightCount,
-    //         );
-    //       },
-    //     ),
-    //   ),
-    //   body: BlocBuilder<ReaderBloc, ReaderState>(
-    //     buildWhen: (previous, current) => previous != current,
-    //     builder: (context, state) => _buildBody(context, state),
-    //   ),
-    // );
+    return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: BlocSelector<ReaderBloc, ReaderState, _ReaderAppBarState>(
+          selector: (state) => _ReaderAppBarState(
+            title: state.title,
+            highlightCount: state.highlights.length,
+          ),
+          builder: (context, appBarState) {
+            return _ReaderAppBar(
+              title: appBarState.title,
+              highlightCount: appBarState.highlightCount,
+            );
+          },
+        ),
+      ),
+      body: BlocBuilder<ReaderBloc, ReaderState>(
+        buildWhen: (previous, current) => previous != current,
+        builder: (context, state) => _buildBody(context, state),
+      ),
+    );
   }
 
-  // ignore: unused_element
   Widget _buildBody(BuildContext context, ReaderState state) {
     return switch (state.status) {
       ReaderStatus.initial || ReaderStatus.loading => const Center(
@@ -123,7 +121,6 @@ class _ReaderView extends StatelessWidget {
   }
 }
 
-// ignore: unused_element
 class _ReaderAppBarState {
   const _ReaderAppBarState({
     required this.title,
@@ -144,7 +141,6 @@ class _ReaderAppBarState {
   int get hashCode => Object.hash(title, highlightCount);
 }
 
-// ignore: unused_element
 class _ReaderAppBar extends StatelessWidget {
   const _ReaderAppBar({
     required this.title,
@@ -257,68 +253,28 @@ class _ReadyContentState extends State<_ReadyContent> {
 
     return Stack(
       children: [
-        // TODO: replace placeholder with WebView (foliate-js / flutter_inappwebview).
         ColoredBox(
           color: readerTheme.backgroundColor,
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 720),
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: readerTheme.surfaceColor,
-                    borderRadius: BorderRadius.circular(AppRadius.lg),
-                    border: Border.all(color: readerTheme.dividerColor),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xl,
-                      vertical: AppSpacing.xxl,
+              child: state.isArticle && state.articleContent.isNotEmpty
+                  ? ArticleContentView(
+                      html: state.articleContent,
+                      textStyle: readerTextStyle,
+                      accentColor: readerTheme.accentColor,
+                      secondaryTextColor: readerTheme.secondaryTextColor,
+                      dividerColor: readerTheme.dividerColor,
+                    )
+                  // Book rendering is still deferred until the book track
+                  // vendors foliate-js into the reader package, so books
+                  // keep the hero-card placeholder for now.
+                  : _BookPlaceholder(
+                      state: state,
+                      readerTheme: readerTheme,
+                      readerTextStyle: readerTextStyle,
+                      text: text,
                     ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          state.isBook ? Icons.menu_book : Icons.article,
-                          size: 48,
-                          color: readerTheme.accentColor,
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        Text(
-                          state.title,
-                          style: text.headlineSmall.copyWith(
-                            color: readerTheme.primaryTextColor,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        Text(
-                          state.isBook
-                              ? 'This is where the book content will be rendered. The final reader should inherit the selected reading theme, font and typography settings.'
-                              : 'This is where the article content will be rendered. The final reader should inherit the selected reading theme, font and typography settings.',
-                          style: readerTextStyle,
-                          textAlign: TextAlign.start,
-                        ),
-                        if (state.isBook && state.book != null) ...[
-                          const SizedBox(height: AppSpacing.lg),
-                          LinearProgressIndicator(
-                            value: state.book!.readingProgress,
-                            minHeight: 4,
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Text(
-                            '${(state.book!.readingProgress * 100).toInt()}% read',
-                            style: text.labelSmall.copyWith(
-                              color: readerTheme.secondaryTextColor,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ),
             ),
           ),
         ),
@@ -432,6 +388,80 @@ class _ContextPanel extends StatelessWidget {
                 );
               }).toList(),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BookPlaceholder extends StatelessWidget {
+  const _BookPlaceholder({
+    required this.state,
+    required this.readerTheme,
+    required this.readerTextStyle,
+    required this.text,
+  });
+
+  final ReaderState state;
+  final ReaderThemeData readerTheme;
+  final TextStyle readerTextStyle;
+  final AppTextTheme text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: readerTheme.surfaceColor,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: readerTheme.dividerColor),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.xxl,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                state.isBook ? Icons.menu_book : Icons.article,
+                size: 48,
+                color: readerTheme.accentColor,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                state.title,
+                style: text.headlineSmall.copyWith(
+                  color: readerTheme.primaryTextColor,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                'Book rendering is not implemented yet. Once the book track '
+                'vendors foliate-js into the reader package, this placeholder '
+                'will be replaced by the real WebView-based reader.',
+                style: readerTextStyle,
+                textAlign: TextAlign.start,
+              ),
+              if (state.isBook && state.book != null) ...[
+                const SizedBox(height: AppSpacing.lg),
+                LinearProgressIndicator(
+                  value: state.book!.readingProgress,
+                  minHeight: 4,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  '${(state.book!.readingProgress * 100).toInt()}% read',
+                  style: text.labelSmall.copyWith(
+                    color: readerTheme.secondaryTextColor,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),

@@ -66,6 +66,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
           event.sourceId,
         );
 
+        // Read the HTML body from disk on demand — the DB row only stores
+        // the path, so the reader has to explicitly ask for the content.
+        final content = await _articleRepository.readContent(article);
+
         // Update lastOpenedAt
         await _articleRepository.updateArticle(
           article.copyWith(lastOpenedAt: DateTime.now()),
@@ -77,6 +81,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             sourceType: SourceType.article,
             title: article.title,
             article: article,
+            articleContent: content,
             highlights: highlights,
           ),
         );
