@@ -51,12 +51,12 @@ dependencies:
     path: packages/notification_service
   preferences_service:
     path: packages/preferences_service
+  reader_server:
+    path: packages/reader_server
+  reader_webview:
+    path: packages/reader_webview
 
   # Feature packages
-  splash:
-    path: packages/features/splash
-  onboarding:
-    path: packages/features/onboarding
   content_library:
     path: packages/features/content_library
   import_flow:
@@ -104,3 +104,19 @@ flutter_launcher_icons:
 
 flutter:
   uses-material-design: true
+
+  # Fonts live physically inside packages/component_library/fonts/ but must
+  # be declared here at the APP level to be bundled into the built app and
+  # reachable by their short family name. Flutter does not auto-bundle fonts
+  # declared only in a package's pubspec.yaml — without this section every
+  # `fontFamily: 'SourceSerif4'` / `'Geist'` silently falls back to the
+  # system font, which on iOS is SF Pro (looks like a generic sans).
+  fonts:
+    - family: Geist
+      fonts:
+        - asset: packages/component_library/fonts/Geist-Variable.ttf
+    - family: SourceSerif4
+      fonts:
+        - asset: packages/component_library/fonts/SourceSerif4-Variable.ttf
+        - asset: packages/component_library/fonts/SourceSerif4-Italic-Variable.ttf
+          style: italic

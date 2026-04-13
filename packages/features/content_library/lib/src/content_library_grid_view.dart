@@ -9,32 +9,30 @@ class ContentLibraryGridView extends StatelessWidget {
     required this.items,
     required this.onBookPressed,
     required this.onArticlePressed,
-    required this.onBookDeleted,
-    required this.onArticleDeleted,
     super.key,
   });
 
   final List<Object> items;
   final void Function(Book book) onBookPressed;
   final void Function(Article article) onArticlePressed;
-  final void Function(Book book) onBookDeleted;
-  final void Function(Article article) onArticleDeleted;
 
   @override
   Widget build(BuildContext context) {
+    // 3-column grid. Aspect ratio accommodates cover (2:3 proportion)
+    // plus progress bar, 2-line title, and author/site below it.
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        AppSpacing.sm,
+        0,
         AppSpacing.lg,
         AppSpacing.xxl,
       ),
       physics: const AlwaysScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 220,
-        mainAxisSpacing: AppSpacing.lg,
-        crossAxisSpacing: AppSpacing.lg,
-        childAspectRatio: 0.58,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 0,
+        crossAxisSpacing: AppSpacing.md,
+        childAspectRatio: 0.48,
       ),
       itemCount: items.length,
       itemBuilder: (context, index) {
@@ -43,12 +41,10 @@ class ContentLibraryGridView extends StatelessWidget {
           Book book => BookLibraryGridTile(
             book: book,
             onTap: () => onBookPressed(book),
-            onDelete: () => onBookDeleted(book),
           ),
           Article article => ArticleLibraryGridTile(
             article: article,
             onTap: () => onArticlePressed(article),
-            onDelete: () => onArticleDeleted(article),
           ),
           _ => const SizedBox.shrink(),
         };

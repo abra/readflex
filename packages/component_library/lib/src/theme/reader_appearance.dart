@@ -51,7 +51,7 @@ enum ReaderFontPreset {
   String get fontFamily => switch (this) {
     serif => AppTypography.fontFamilySerif,
     sans => AppTypography.fontFamilySans,
-    geist => 'Geist',
+    geist => AppTypography.fontFamilySans,
   };
 }
 

@@ -1,195 +1,325 @@
 import 'package:flutter/material.dart';
 
+import 'app_icons.dart';
 import 'theme/tokens/app_radius.dart';
 
 /// Stylised cover placeholder used when a book or article has no real
 /// cover image of its own.
 ///
-/// Intended as a fallback inside list/grid tiles — orchestration of the
-/// "try real cover, then fall back to this" strategy happens at the call
-/// site (see `_BookMedia` / `_ArticleMedia` in content_library). This
-/// widget itself never fetches images; it only paints the decorative
-/// gradient + diagonal pattern + title/subtitle/progress overlays.
+/// Ported from `readwell_demo`'s `ReadwellCoverArt` — every clamp,
+/// reserve, stripe, and font ratio is kept 1:1 so a library grid here
+/// reads the same as the demo. The only semantic deviation is how the
+/// gradient is picked: the demo stores a curated `(color1, color2)` pair
+/// per item in its data layer, whereas we pick deterministically from a
+/// shared palette keyed by [seed] (usually the book / article id).
 ///
-/// Colors are deterministic for a given [seed] (usually the book/article
-/// id, or the title when no id is available), so the same item always
-/// draws the same gradient across sessions. When [seed] is omitted, the
-/// title's hashCode is used.
-///
-/// Must be hosted inside a bounded box (grid cell, SizedBox, Expanded).
-/// The widget fills the available space and scales its typography and
-/// padding to the rendered height so the same component works equally
-/// well at 40x56 (list thumbnail) and 220x380 (grid tile).
+/// Must be hosted inside a bounded box (grid cell, SizedBox, LayoutBuilder).
+/// Caller passes the exact [height] / [width] — the widget does not
+/// consult `LayoutBuilder` internally because several typography and
+/// reserve decisions key off of `height` and need to be stable for a
+/// given tile size.
 class AppCoverArt extends StatelessWidget {
   const AppCoverArt({
     required this.title,
-    this.subtitle,
+    required this.height,
+    this.width,
+    this.author,
+    this.source,
     this.seed,
-    this.progress,
     this.isArticle = false,
+    this.showAuthor = true,
+    this.showTitle = true,
+    this.progress,
     super.key,
   });
 
   final String title;
 
-  /// Secondary line under the title. Typically the book author or the
-  /// article's site name.
-  final String? subtitle;
+  /// Book author line, shown under the title when [showAuthor] is true
+  /// and the cover is tall enough for extended meta (`height >= 110`).
+  final String? author;
+
+  /// Small uppercase label shown *above* the title — only for articles,
+  /// and only at extended meta size. Used for site name / publication
+  /// (e.g. "AP NEWS", "THE GUARDIAN").
+  final String? source;
 
   /// Opaque seed used to pick a gradient deterministically. Defaults to
   /// [title] when null — callers that have a stable id should pass it so
   /// renaming a book doesn't shuffle its cover color.
   final String? seed;
 
-  /// Reading progress in `[0, 1]`. A progress bar overlay renders only
-  /// when this is strictly between 0 and 1 (so "not started" and
-  /// "finished" items stay clean).
+  /// Render as article: adds a small newspaper icon in the top-left
+  /// corner and surfaces the [source] label above the title.
+  final bool isArticle;
+
+  /// When false, suppresses the author line even if [author] is set.
+  /// Used by the list view thumbnail where the full author text lives
+  /// next to the thumbnail, not on top of it.
+  final bool showAuthor;
+
+  /// When false, suppresses the title, author, and source text on the
+  /// cover entirely — only the gradient + stripe texture is drawn (plus
+  /// the article icon / progress pill, if any). Used by the library
+  /// list-mode thumbnail where all textual info lives in the right-hand
+  /// column, not stamped on the cover. This deviates from readwell_demo
+  /// (the demo keeps the title on the cover in list mode), and is an
+  /// explicit user request for readflex.
+  final bool showTitle;
+
+  /// Reading progress in `[0, 1]`. When non-null, a rounded progress pill
+  /// is rendered at the bottom of the cover. The caller decides whether
+  /// to pass a value or `null` — the widget does not filter.
   final double? progress;
 
-  /// When true, a small `article` icon is drawn in the top-right corner
-  /// so articles are visually distinguishable from books at a glance.
-  final bool isArticle;
+  final double height;
+  final double? width;
 
   @override
   Widget build(BuildContext context) {
+    // Numbers come straight from readwell_demo's ReadwellCoverArt — do
+    // not "clean up" these magic values; they were tuned together and
+    // the visual falls apart quickly if you round them.
+    final contentPadding = (height * 0.075).clamp(6.0, 12.0).toDouble();
+    final titleFontSize = (height * 0.06875).clamp(6.0, 11.0).toDouble();
+    final authorFontSize = (height * 0.06).clamp(7.0, 9.0).toDouble();
+    final sourceFontSize = (height * 0.05).clamp(7.0, 8.0).toDouble();
+    final articleIconSize = (height * 0.075).clamp(10.0, 12.0).toDouble();
+    final showExtendedMeta = height >= 110;
+
+    final clampedProgress = progress?.clamp(0.0, 1.0);
+    final showProgress = clampedProgress != null;
+    final progressBarHeight = (height * 0.022).clamp(3.0, 4.0).toDouble();
+    final progressBottomInset = (contentPadding * 0.7).clamp(4.0, 8.0);
+    final progressReservedSpace = showProgress
+        ? progressBarHeight + progressBottomInset + 4
+        : 0.0;
+
+    final titleMaxLines = _computeTitleMaxLines(
+      titleFontSize: titleFontSize,
+      authorFontSize: authorFontSize,
+      sourceFontSize: sourceFontSize,
+      contentPadding: contentPadding,
+      progressReservedSpace: progressReservedSpace,
+      showExtendedMeta: showExtendedMeta,
+    );
+
     final gradient = _pickGradient(seed ?? title);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadius.sm),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final height = constraints.maxHeight.isFinite
-              ? constraints.maxHeight
-              : 160.0;
-          // Typography and padding scale linearly with the rendered height
-          // so the same widget reads well at thumb size (40x56) and full
-          // grid-tile size (~200x340). Clamps keep text from disappearing
-          // on tiny previews or blowing up on hero covers.
-          final contentPadding = (height * 0.075).clamp(6.0, 14.0);
-          final titleFontSize = (height * 0.065).clamp(11.0, 20.0);
-          final subtitleFontSize = (height * 0.05).clamp(9.0, 13.0);
-          final showSubtitle = subtitle != null && height >= 90;
-          final showProgressBar =
-              progress != null && progress! > 0 && progress! < 1;
-
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              // Gradient base.
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [gradient.$1, gradient.$2],
-                  ),
-                ),
-              ),
-
-              // Diagonal stripe pattern overlay — kept faint so it reads as
-              // texture, not decoration competing with the text.
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: const _DiagonalStripesPainter(
-                    color: Color(0x0DFFFFFF), // white @ 5%
-                    spacing: 8,
-                    strokeWidth: 1.5,
-                  ),
-                ),
-              ),
-
-              // Title / subtitle anchored to the bottom. Padding has to
-              // account for the progress bar's 4px reservation so text
-              // doesn't collide with the bar even when progress is 0/1.
-              Positioned(
-                left: contentPadding,
-                right: contentPadding,
-                bottom: contentPadding + (showProgressBar ? 8 : 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: height < 120 ? 2 : 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: titleFontSize,
-                        fontWeight: FontWeight.w700,
-                        height: 1.15,
-                      ),
-                    ),
-                    if (showSubtitle) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.75),
-                          fontSize: subtitleFontSize,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-
-              // Progress bar pinned to the very bottom.
-              if (showProgressBar)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    height: 3,
-                    color: Colors.white.withValues(alpha: 0.18),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: FractionallySizedBox(
-                        widthFactor: progress!.clamp(0.0, 1.0),
-                        child: Container(
-                          color: Colors.white.withValues(alpha: 0.92),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-              // Article badge in the top-right, hidden on thumbnails where
-              // it'd just be visual noise.
-              if (isArticle && height >= 110)
-                Positioned(
-                  top: contentPadding,
-                  right: contentPadding,
-                  child: Icon(
-                    Icons.article_outlined,
-                    size: (height * 0.1).clamp(14.0, 20.0),
-                    color: Colors.white.withValues(alpha: 0.55),
-                  ),
-                ),
-            ],
-          );
-        },
+    return Container(
+      height: height,
+      width: width,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [gradient.$1, gradient.$2],
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          _buildStripeTexture(),
+          if (showTitle)
+            _buildTextColumn(
+              contentPadding: contentPadding,
+              progressReservedSpace: progressReservedSpace,
+              titleFontSize: titleFontSize,
+              titleMaxLines: titleMaxLines,
+              authorFontSize: authorFontSize,
+              sourceFontSize: sourceFontSize,
+              showExtendedMeta: showExtendedMeta,
+            ),
+          if (isArticle && showExtendedMeta)
+            _buildArticleBadge(articleIconSize),
+          if (showProgress)
+            _buildProgressPill(
+              contentPadding: contentPadding,
+              progressBarHeight: progressBarHeight,
+              progressBottomInset: progressBottomInset,
+              clampedProgress: clampedProgress,
+            ),
+        ],
       ),
     );
   }
 
-  // Fixed palette of 8 curated gradient pairs. A larger palette would give
-  // more variation but risks visual incoherence; 8 is enough that a page
-  // full of cards doesn't look repetitive without feeling random.
+  int _computeTitleMaxLines({
+    required double titleFontSize,
+    required double authorFontSize,
+    required double sourceFontSize,
+    required double contentPadding,
+    required double progressReservedSpace,
+    required bool showExtendedMeta,
+  }) {
+    // Dynamic title line count: grow the title to fill whatever vertical
+    // space is left after padding, progress pill, and any kicker meta
+    // lines. Ellipsis only triggers when the text physically doesn't fit
+    // — fixed `maxLines` (demo's 2/3) leaves big gaps on tall article
+    // tiles, which the user explicitly rejected.
+    const titleLineHeight = 1.2;
+    final authorReserve =
+        showTitle && showAuthor && author != null && showExtendedMeta
+        ? authorFontSize * 1.2 + 4
+        : 0.0;
+    final sourceReserve =
+        showTitle && isArticle && source != null && showExtendedMeta
+        ? sourceFontSize * 1.2 + 4
+        : 0.0;
+    final availableTitleHeight =
+        height -
+        contentPadding * 2 -
+        progressReservedSpace -
+        authorReserve -
+        sourceReserve;
+    final fittingLines =
+        (availableTitleHeight / (titleFontSize * titleLineHeight)).floor();
+    return fittingLines.clamp(1, isArticle ? 10 : 5).toInt();
+  }
+
+  Widget _buildStripeTexture() {
+    // Opacity(0.1) on top of a stroke painted at alpha 0.05 gives an
+    // effective alpha ≈ 0.005 — "texture, not decoration".
+    return const Positioned.fill(
+      child: Opacity(
+        opacity: 0.1,
+        child: CustomPaint(painter: _DiagonalStripesPainter()),
+      ),
+    );
+  }
+
+  Widget _buildTextColumn({
+    required double contentPadding,
+    required double progressReservedSpace,
+    required double titleFontSize,
+    required int titleMaxLines,
+    required double authorFontSize,
+    required double sourceFontSize,
+    required bool showExtendedMeta,
+  }) {
+    return Positioned(
+      left: contentPadding,
+      right: contentPadding,
+      bottom: contentPadding + progressReservedSpace,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            title,
+            maxLines: titleMaxLines,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: titleFontSize,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+              height: 1.2,
+            ),
+          ),
+          if (showAuthor && author != null && showExtendedMeta) ...[
+            const SizedBox(height: 4),
+            Text(
+              author!.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: authorFontSize,
+                color: Colors.white.withValues(alpha: 0.5),
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+          if (isArticle && source != null && showExtendedMeta) ...[
+            const SizedBox(height: 4),
+            Text(
+              source!.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: sourceFontSize,
+                color: Colors.white.withValues(alpha: 0.7),
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildArticleBadge(double iconSize) {
+    return Positioned(
+      top: 8,
+      left: 8,
+      child: Icon(
+        AppIcons.language,
+        size: iconSize,
+        color: Colors.white.withValues(alpha: 0.4),
+      ),
+    );
+  }
+
+  Widget _buildProgressPill({
+    required double contentPadding,
+    required double progressBarHeight,
+    required double progressBottomInset,
+    required double clampedProgress,
+  }) {
+    return Positioned(
+      left: contentPadding,
+      right: contentPadding,
+      bottom: progressBottomInset,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(999),
+        child: LayoutBuilder(
+          builder: (context, constraints) => SizedBox(
+            height: progressBarHeight,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: ColoredBox(
+                    color: Colors.white.withValues(alpha: 0.18),
+                  ),
+                ),
+                Container(
+                  width: constraints.maxWidth * clampedProgress,
+                  color: Colors.white.withValues(alpha: 0.92),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Palette seeded from readwell_demo/demo_data.dart — the demo hand-picks
+  // a pair per `BookItem`; we don't have per-item colors in our domain, so
+  // we hash the seed into this list. Stable across runs, so a given book /
+  // article always draws the same gradient.
+  //
+  // Deviation from the demo: three of the demo's pairs (crimson, orange,
+  // green) have ~equal lightness between the two stops, which produces an
+  // almost-flat tile next to the other 9 pairs that all go from a dark
+  // topLeft to a light bottomRight. Those three are replaced here with
+  // honest dark→light pairs in the same hue family, so every cover shows
+  // a consistent diagonal fall-off.
   static (Color, Color) _pickGradient(String seed) {
     const palettes = <(Color, Color)>[
-      (Color(0xFF4C5578), Color(0xFF2B3147)), // dusty indigo
-      (Color(0xFF7A6B52), Color(0xFF3F372A)), // warm brown
-      (Color(0xFF4F6F6B), Color(0xFF263C3A)), // muted teal
-      (Color(0xFF8A5B6C), Color(0xFF3E2A33)), // dusty rose
-      (Color(0xFF5A7A8C), Color(0xFF2C3E4A)), // overcast blue
-      (Color(0xFF7C6A8A), Color(0xFF3A3145)), // twilight violet
-      (Color(0xFF6F7A4A), Color(0xFF363C22)), // olive
-      (Color(0xFF8A6F4A), Color(0xFF4A3820)), // tobacco
+      (Color(0xFF8B4513), Color(0xFFD2691E)), // saddle brown
+      (Color(0xFF1a1a2e), Color(0xFFe2c044)), // near black → mustard
+      (Color(0xFF2c3e50), Color(0xFFe74c3c)), // navy → red
+      (Color(0xFF0d1b2a), Color(0xFF1b4965)), // deep navy
+      (Color(0xFF2d3436), Color(0xFF636e72)), // charcoal
+      (Color(0xFF6b2fa0), Color(0xFFc471ed)), // purple
+      (Color(0xFF1e3a2b), Color(0xFF4a7c59)), // forest
+      (Color(0xFF7f1d1d), Color(0xFFf87171)), // crimson (readflex: dark→light)
+      (Color(0xFF7c2d12), Color(0xFFfb923c)), // orange (readflex: dark→light)
+      (Color(0xFF14532d), Color(0xFF4ade80)), // green (readflex: dark→light)
+      (Color(0xFF34495e), Color(0xFF7f8c8d)), // slate
+      (Color(0xFF2c3e50), Color(0xFF3498db)), // navy → blue
     ];
 
     // hashCode is fine here — we only need stable bucketing, not crypto.
@@ -200,44 +330,27 @@ class AppCoverArt extends StatelessWidget {
   }
 }
 
-/// Paints a pattern of parallel 45° stripes across the entire canvas.
-///
-/// Lines are spaced [spacing] pixels apart along the top edge and drawn
-/// down-and-right, so the pattern tiles seamlessly regardless of the
-/// parent's aspect ratio.
+/// Paints 45° stripes across the canvas, matched to `readwell_demo`:
+/// stroke width 2, spacing 4 px along the top edge, color white @ 5%
+/// (effective alpha ≈ 0.005 once the wrapping `Opacity(0.1)` applies).
 class _DiagonalStripesPainter extends CustomPainter {
-  const _DiagonalStripesPainter({
-    required this.color,
-    required this.spacing,
-    required this.strokeWidth,
-  });
-
-  final Color color;
-  final double spacing;
-  final double strokeWidth;
+  const _DiagonalStripesPainter();
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke;
+      ..color = Colors.white.withValues(alpha: 0.05)
+      ..strokeWidth = 2;
 
-    // Start well to the left so the first stripe covers the top-left
-    // corner; end past the right edge by size.height so the last stripe
-    // covers the bottom-right.
-    for (var x = -size.height; x < size.width + size.height; x += spacing) {
+    for (double i = -size.height; i < size.width + size.height; i += 4) {
       canvas.drawLine(
-        Offset(x, 0),
-        Offset(x + size.height, size.height),
+        Offset(i, 0),
+        Offset(i + size.height, size.height),
         paint,
       );
     }
   }
 
   @override
-  bool shouldRepaint(_DiagonalStripesPainter old) =>
-      old.color != color ||
-      old.spacing != spacing ||
-      old.strokeWidth != strokeWidth;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'app_icons.dart';
 import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_spacing.dart';
 
@@ -21,7 +22,10 @@ class BottomSheetHeader extends StatelessWidget {
         Text(title, style: context.text.titleLarge),
         Transform.translate(
           offset: const Offset(AppSpacing.sm, 0),
-          child: IconButton(icon: const Icon(Icons.close), onPressed: onClose),
+          child: IconButton(
+            icon: const Icon(AppIcons.close),
+            onPressed: onClose,
+          ),
         ),
       ],
     );

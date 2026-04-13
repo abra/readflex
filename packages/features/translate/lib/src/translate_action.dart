@@ -1,3 +1,4 @@
+import 'package:component_library/component_library.dart';
 import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:shared/shared.dart';
@@ -19,7 +20,7 @@ class TranslateAction extends TextAction {
   String get label => 'Translate';
 
   @override
-  IconData get icon => Icons.translate;
+  IconData get icon => AppIcons.translate;
 
   @override
   void onExecute(BuildContext context, TextSelectionContext selection) {

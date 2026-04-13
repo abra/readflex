@@ -1,4 +1,3 @@
-import 'package:article_parser/article_parser.dart';
 import 'package:content_library/content_library.dart';
 import 'package:dictionary/dictionary.dart';
 import 'package:flashcard/flashcard.dart';
@@ -7,15 +6,15 @@ import 'package:go_router/go_router.dart';
 import 'package:highlight/highlight.dart';
 import 'package:home/home.dart';
 import 'package:import_flow/import_flow.dart';
-import 'package:onboarding/onboarding.dart';
 import 'package:practice/practice.dart';
 import 'package:profile/profile.dart';
 import 'package:reader/reader.dart';
 import 'package:readflex/app/dependency_container.dart';
 import 'package:readflex/app/design_system_screen.dart';
-import 'package:readflex/app/first_import_screen.dart';
-import 'package:readflex/app/tab_container_screen.dart';
-import 'package:splash/splash.dart';
+import 'package:readflex/app/screens/first_import_screen.dart';
+import 'package:readflex/app/screens/onboarding_screen.dart';
+import 'package:readflex/app/screens/splash_screen.dart';
+import 'package:readflex/app/screens/tab_container_screen.dart';
 import 'package:subscription_paywall/subscription_paywall.dart';
 import 'package:translate/translate.dart';
 
@@ -43,18 +42,19 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
     // builds so production logs stay focused on actual errors.
     debugLogDiagnostics: deps.config.isDev,
     initialLocation: AppRoutes.root,
-    redirect: (context, state) async {
+    redirect: (context, state) {
       final location = state.uri.path;
 
+      // Only `/` and `/home` need async redirect logic (onboarding /
+      // first-import guards). Every other path returns null synchronously
+      // so GoRouter finalises the route in one pass without an
+      // intermediate build-destroy-rebuild cycle.
       if (location == AppRoutes.root) {
         return _resolveEntryRoute(deps);
       }
 
       if (location == AppRoutes.home) {
-        final redirect = await _redirectHomeIfNeeded(deps);
-        if (redirect != null) {
-          return redirect;
-        }
+        return _redirectHomeIfNeeded(deps);
       }
 
       return null;
@@ -114,13 +114,17 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                   onAddPressed: () async {
                     await showImportFlowSheet(
                       context,
-                      onImportBook: () async {
-                        // TODO: integrate file_picker + book import.
-                        // Return false until the flow can confirm a book was
-                        // actually added, not just that the picker was opened.
-                        return false;
-                      },
-                      onImportArticle: (url) => _importArticle(deps, url),
+                      onImportBook: () => importBook(
+                        bookRepository: deps.bookRepository,
+                        readerServerPort: deps.readerServer.port,
+                        logger: deps.logger,
+                      ),
+                      onImportArticle: (url) => importArticle(
+                        url: url,
+                        articleRepository: deps.articleRepository,
+                        articleParser: deps.articleParser,
+                        logger: deps.logger,
+                      ),
                     );
                   },
                 ),
@@ -180,6 +184,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
           final sourceId = state.pathParameters['sourceId']!;
           return ReaderScreen(
             sourceId: sourceId,
+            serverPort: deps.readerServer.port,
             bookRepository: deps.bookRepository,
             articleRepository: deps.articleRepository,
             highlightRepository: deps.highlightRepository,
@@ -227,13 +232,17 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
           onAddPressed: () async {
             await showImportFlowSheet(
               context,
-              onImportBook: () async {
-                // TODO: integrate file_picker + book import.
-                // Return false until the flow can confirm a book was actually
-                // added to the repository.
-                return false;
-              },
-              onImportArticle: (url) => _importArticle(deps, url),
+              onImportBook: () => importBook(
+                bookRepository: deps.bookRepository,
+                readerServerPort: deps.readerServer.port,
+                logger: deps.logger,
+              ),
+              onImportArticle: (url) => importArticle(
+                url: url,
+                articleRepository: deps.articleRepository,
+                articleParser: deps.articleParser,
+                logger: deps.logger,
+              ),
             );
 
             final books = await deps.bookRepository.getBooks();
@@ -290,87 +299,4 @@ Future<String?> _redirectHomeIfNeeded(DependenciesContainer deps) async {
   }
 
   return null;
-}
-
-Future<ArticleImportOutcome> _importArticle(
-  DependenciesContainer dependencies,
-  String url,
-) async {
-  // This helper lives in routing as composition glue between the import
-  // flow feature (user-facing, knows nothing about parser/repo) and the
-  // infrastructure it drives. It also acts as the translation layer from
-  // infrastructure exceptions to user-facing ArticleImportFailureReason
-  // categories.
-  final trimmed = url.trim();
-  if (trimmed.isEmpty) {
-    return const ArticleImportOutcome.failure(
-      ArticleImportFailureReason.invalidUrl,
-    );
-  }
-
-  final ParsedArticle parsed;
-  try {
-    parsed = await dependencies.articleParser.parse(trimmed);
-  } on ArticleParserException catch (e, st) {
-    dependencies.logger.warn(
-      'Article parse failed for $trimmed (${e.reason})',
-      error: e,
-      stackTrace: st,
-    );
-    return ArticleImportOutcome.failure(_mapParserFailure(e.reason));
-  } catch (e, st) {
-    dependencies.logger.warn(
-      'Article parse threw unexpectedly for $trimmed',
-      error: e,
-      stackTrace: st,
-    );
-    return const ArticleImportOutcome.failure(
-      ArticleImportFailureReason.unknown,
-    );
-  }
-
-  // TODO: download inline <img> assets to app documents and rewrite src to
-  // local paths before persisting, so articles remain readable offline and
-  // survive source pages removing/rotating images. Should live alongside
-  // addArticle (repo owns both DB row and file-system assets, like book
-  // files), with matching cleanup on article deletion.
-  try {
-    await dependencies.articleRepository.addArticle(
-      title: parsed.title,
-      url: trimmed,
-      content: parsed.cleanedHtml,
-      siteName: parsed.siteName,
-      byline: parsed.byline,
-      excerpt: parsed.excerpt,
-      publishedTime: parsed.publishedTime,
-      lang: parsed.lang,
-      coverImageUrl: parsed.coverImageUrl,
-      textLength: parsed.textLength,
-      estimatedWordCount: parsed.estimatedWordCount,
-    );
-  } catch (e, st) {
-    // Parser already produced a ParsedArticle, so anything failing here is
-    // local storage / file IO. Dedicated bucket lets the sheet show
-    // "couldn't save" rather than blaming the network.
-    dependencies.logger.warn(
-      'Article persist failed for $trimmed',
-      error: e,
-      stackTrace: st,
-    );
-    return const ArticleImportOutcome.failure(
-      ArticleImportFailureReason.storage,
-    );
-  }
-
-  return const ArticleImportOutcome.success();
-}
-
-ArticleImportFailureReason _mapParserFailure(ArticleParserFailure reason) {
-  return switch (reason) {
-    ArticleParserFailure.invalidUrl => ArticleImportFailureReason.invalidUrl,
-    ArticleParserFailure.network => ArticleImportFailureReason.network,
-    ArticleParserFailure.httpStatus => ArticleImportFailureReason.httpError,
-    ArticleParserFailure.noContent =>
-      ArticleImportFailureReason.noReadableContent,
-  };
 }

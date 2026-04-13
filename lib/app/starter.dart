@@ -7,16 +7,18 @@
 
 import 'dart:async';
 
+import 'package:dev_data/dev_data.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:monitoring/monitoring.dart';
+import 'package:reader_webview/reader_webview.dart';
 import 'package:readflex/app/bloc/app_bloc_observer.dart';
 import 'package:readflex/app/bloc/bloc_transformer.dart';
 import 'package:readflex/app/composition.dart';
 import 'package:readflex/app/config/application_config.dart';
-import 'package:readflex/app/initialization_failed_screen.dart';
 import 'package:readflex/app/root_context.dart';
+import 'package:readflex/app/screens/initialization_failed_screen.dart';
 
 /// Initializes dependencies and runs app.
 Future<void> starter() async {
@@ -54,6 +56,28 @@ Future<void> starter() async {
           logger: logger,
           errorReporter: errorReporter,
         );
+
+        final deps = compositionResult.dependencies;
+
+        // Extract WebView assets (foliate-js, article reader) to cache
+        // so the HTTP server can serve them as plain files.
+        // TODO: remove force after initial development.
+        final assetExtractor = AssetExtractor(
+          targetDirectory: deps.readerServer.assetsDirectory,
+        );
+        await assetExtractor.extractAll(force: true);
+
+        // Start the local HTTP server that serves books and articles
+        // to the reader WebView.
+        await deps.readerServer.start();
+
+        // TODO: remove dev seed data once real content import flow is complete.
+        if (config.isDev) {
+          await seedDictionary(
+            dictionaryRepository: deps.dictionaryRepository,
+            fsrsRepository: deps.fsrsRepository,
+          );
+        }
 
         runApp(RootContext(compositionResult: compositionResult));
       } on Object catch (e, stackTrace) {

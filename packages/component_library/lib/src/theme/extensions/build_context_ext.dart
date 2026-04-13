@@ -16,7 +16,10 @@ import 'app_colors_ext.dart';
 /// need the `!` operator.
 extension BuildContextThemeX on BuildContext {
   ThemeData get theme => Theme.of(this);
+
   ColorScheme get colors => theme.colorScheme;
+
   AppTextTheme get text => AppTextTheme(theme.textTheme);
+
   AppColorsExt get appColors => theme.ext;
 }

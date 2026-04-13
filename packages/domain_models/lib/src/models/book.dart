@@ -14,6 +14,7 @@ class Book extends Equatable {
     this.coverImagePath,
     this.totalLocations = 0,
     this.currentLocation = 0,
+    this.currentCfi,
     this.readingProgress = 0.0,
     this.lastOpenedAt,
     this.isFinished = false,
@@ -27,6 +28,11 @@ class Book extends Equatable {
   final String filePath;
   final int totalLocations;
   final int currentLocation;
+
+  /// EPUB CFI position string from foliate-js. Used to restore reading
+  /// position. `currentLocation` is kept for legacy/display purposes.
+  final String? currentCfi;
+
   final double readingProgress;
   final DateTime addedAt;
   final DateTime? lastOpenedAt;
@@ -42,6 +48,7 @@ class Book extends Equatable {
     String? filePath,
     int? totalLocations,
     int? currentLocation,
+    Object? currentCfi = _absent,
     double? readingProgress,
     Object? lastOpenedAt = _absent,
     bool? isFinished,
@@ -56,6 +63,7 @@ class Book extends Equatable {
     filePath: filePath ?? this.filePath,
     totalLocations: totalLocations ?? this.totalLocations,
     currentLocation: currentLocation ?? this.currentLocation,
+    currentCfi: currentCfi == _absent ? this.currentCfi : currentCfi as String?,
     readingProgress: readingProgress ?? this.readingProgress,
     addedAt: addedAt,
     lastOpenedAt: lastOpenedAt == _absent
@@ -74,6 +82,7 @@ class Book extends Equatable {
     filePath,
     totalLocations,
     currentLocation,
+    currentCfi,
     readingProgress,
     addedAt,
     lastOpenedAt,

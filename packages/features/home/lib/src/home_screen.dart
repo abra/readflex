@@ -147,7 +147,7 @@ class _StatsRow extends StatelessWidget {
       children: [
         Expanded(
           child: _StatCard(
-            icon: Icons.library_books,
+            icon: AppIcons.library,
             label: 'Sources',
             value: '${state.totalSources}',
             color: colorScheme.primary,
@@ -156,7 +156,7 @@ class _StatsRow extends StatelessWidget {
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _StatCard(
-            icon: Icons.highlight,
+            icon: AppIcons.highlight,
             label: 'Highlights',
             value: '${state.totalHighlights}',
             color: colorScheme.secondary,
@@ -165,7 +165,7 @@ class _StatsRow extends StatelessWidget {
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _StatCard(
-            icon: Icons.school,
+            icon: AppIcons.practice,
             label: 'Due',
             value: '${state.dueFlashcards}',
             color: state.dueFlashcards > 0

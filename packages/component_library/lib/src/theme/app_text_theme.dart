@@ -18,18 +18,32 @@ class AppTextTheme {
   final TextTheme _source;
 
   TextStyle get displayLarge => _source.displayLarge!;
+
   TextStyle get displayMedium => _source.displayMedium!;
+
   TextStyle get displaySmall => _source.displaySmall!;
+
   TextStyle get headlineLarge => _source.headlineLarge!;
+
   TextStyle get headlineMedium => _source.headlineMedium!;
+
   TextStyle get headlineSmall => _source.headlineSmall!;
+
   TextStyle get titleLarge => _source.titleLarge!;
+
   TextStyle get titleMedium => _source.titleMedium!;
+
   TextStyle get titleSmall => _source.titleSmall!;
+
   TextStyle get bodyLarge => _source.bodyLarge!;
+
   TextStyle get bodyMedium => _source.bodyMedium!;
+
   TextStyle get bodySmall => _source.bodySmall!;
+
   TextStyle get labelLarge => _source.labelLarge!;
+
   TextStyle get labelMedium => _source.labelMedium!;
+
   TextStyle get labelSmall => _source.labelSmall!;
 }

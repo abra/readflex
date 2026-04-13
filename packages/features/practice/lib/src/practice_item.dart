@@ -10,6 +10,7 @@ sealed class PracticeItem extends Equatable {
   factory PracticeItem.dictionary(DictionaryEntry entry) = DictionaryItem;
 
   String get itemId;
+
   ReviewableType get itemType;
 }
 

@@ -19,6 +19,22 @@ class ContentLibraryBloc
     on<ContentLibraryBookDeleted>(_onBookDeleted);
     on<ContentLibraryArticleDeleted>(_onArticleDeleted);
     on<ContentLibraryRefreshRequested>(_onRefreshRequested);
+    on<ContentLibrarySearchQueryChanged>(_onSearchQueryChanged);
+    on<ContentLibraryFilterChanged>(_onFilterChanged);
+  }
+
+  void _onSearchQueryChanged(
+    ContentLibrarySearchQueryChanged event,
+    Emitter<ContentLibraryState> emit,
+  ) {
+    emit(state.copyWith(searchQuery: event.query));
+  }
+
+  void _onFilterChanged(
+    ContentLibraryFilterChanged event,
+    Emitter<ContentLibraryState> emit,
+  ) {
+    emit(state.copyWith(filter: event.filter));
   }
 
   final BookRepository _bookRepository;

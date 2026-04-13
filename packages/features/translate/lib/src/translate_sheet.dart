@@ -140,7 +140,7 @@ class _TranslateSheetView extends StatelessWidget {
                         ),
                   icon: state.status == TranslateStatus.saving
                       ? const ButtonLoadingIndicator(size: AppIconSize.sm)
-                      : const Icon(Icons.bookmark_add),
+                      : const Icon(AppIcons.bookmarkAdd),
                   label: const Text('Save to Dictionary'),
                 ),
             ],

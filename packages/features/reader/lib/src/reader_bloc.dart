@@ -66,10 +66,6 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
           event.sourceId,
         );
 
-        // Read the HTML body from disk on demand — the DB row only stores
-        // the path, so the reader has to explicitly ask for the content.
-        final content = await _articleRepository.readContent(article);
-
         // Update lastOpenedAt
         await _articleRepository.updateArticle(
           article.copyWith(lastOpenedAt: DateTime.now()),
@@ -81,7 +77,6 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             sourceType: SourceType.article,
             title: article.title,
             article: article,
-            articleContent: content,
             highlights: highlights,
           ),
         );
@@ -98,20 +93,22 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     ReaderPositionUpdated event,
     Emitter<ReaderState> emit,
   ) async {
+    // Position saves are pure side-effects — the UI doesn't need a
+    // rebuild. We persist to DB and skip the emit.
     try {
       if (state.book != null) {
-        final updated = state.book!.copyWith(
-          currentLocation: event.location,
-          readingProgress: event.progress,
+        await _bookRepository.updateBook(
+          state.book!.copyWith(
+            currentCfi: event.cfi,
+            readingProgress: event.progress,
+          ),
         );
-        await _bookRepository.updateBook(updated);
-        emit(state.copyWith(book: updated));
       } else if (state.article != null) {
-        final updated = state.article!.copyWith(
-          currentScrollOffset: event.scrollOffset,
+        await _articleRepository.updateArticle(
+          state.article!.copyWith(
+            currentScrollOffset: event.scrollOffset,
+          ),
         );
-        await _articleRepository.updateArticle(updated);
-        emit(state.copyWith(article: updated));
       }
     } catch (e, st) {
       // Non-fatal: position save failed, don't disrupt reading. Log via

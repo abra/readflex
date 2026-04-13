@@ -16,6 +16,8 @@ class BooksTable extends Table {
 
   IntColumn get currentLocation => integer().withDefault(const Constant(0))();
 
+  TextColumn get currentCfi => text().nullable()();
+
   RealColumn get readingProgress => real().withDefault(const Constant(0.0))();
 
   TextColumn get addedAt => text()(); // ISO 8601

@@ -11,18 +11,15 @@ void main() {
   late AppDatabase db;
   late Directory tempRoot;
   late Directory articlesDir;
-  late Directory coversDir;
   late ArticleRepository repo;
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     tempRoot = Directory.systemTemp.createTempSync('article_repo_test_');
     articlesDir = Directory('${tempRoot.path}/articles');
-    coversDir = Directory('${tempRoot.path}/covers');
     repo = ArticleRepository(
       database: db,
       articlesDirectory: articlesDir,
-      coversDirectory: coversDir,
       // Default stub: every download succeeds with a tiny PNG payload.
       httpClient: MockClient(
         (_) async => http.Response.bytes(
@@ -42,7 +39,7 @@ void main() {
   });
 
   group('ArticleRepository', () {
-    test('addArticle writes content to disk and returns article', () async {
+    test('addArticle writes content to per-article directory', () async {
       final article = await repo.addArticle(
         title: 'My Article',
         url: 'https://example.com/article',
@@ -52,7 +49,7 @@ void main() {
       expect(article.title, 'My Article');
       expect(article.siteName, 'Example');
       expect(article.id, isNotEmpty);
-      expect(article.contentPath, endsWith('${article.id}.html'));
+      expect(article.contentPath, endsWith('${article.id}/content.html'));
       expect(File(article.contentPath).existsSync(), isTrue);
       expect(File(article.contentPath).readAsStringSync(), '<p>Hello</p>');
     });
@@ -81,7 +78,7 @@ void main() {
       expect(fetched.estimatedWordCount, 200);
     });
 
-    test('addArticle downloads cover image to covers directory', () async {
+    test('addArticle downloads cover image into article directory', () async {
       final article = await repo.addArticle(
         title: 'With Cover',
         url: 'https://example.com/c',
@@ -98,7 +95,6 @@ void main() {
       final failingRepo = ArticleRepository(
         database: db,
         articlesDirectory: articlesDir,
-        coversDirectory: coversDir,
         httpClient: MockClient((_) async => http.Response('nope', 500)),
       );
       final article = await failingRepo.addArticle(
@@ -110,6 +106,50 @@ void main() {
       expect(article.coverImagePath, isNull);
       expect(article.coverImageUrl, 'https://cdn.example.com/broken.jpg');
       expect(File(article.contentPath).existsSync(), isTrue);
+    });
+
+    test('addArticle downloads body images and rewrites src', () async {
+      final article = await repo.addArticle(
+        title: 'With Images',
+        url: 'https://example.com/img',
+        content: '<p>Text</p><img src="https://cdn.example.com/photo.png">',
+      );
+      final html = File(article.contentPath).readAsStringSync();
+      // Original URL should be replaced with a local relative path.
+      expect(html, isNot(contains('https://cdn.example.com/photo.png')));
+      expect(html, contains('images/'));
+
+      // Image file should exist in the article's images directory.
+      final imgDir = Directory(
+        '${articlesDir.path}/${article.id}/images',
+      );
+      expect(imgDir.existsSync(), isTrue);
+      expect(imgDir.listSync(), hasLength(1));
+    });
+
+    test('addArticle keeps original src when image download fails', () async {
+      final failingRepo = ArticleRepository(
+        database: db,
+        articlesDirectory: articlesDir,
+        httpClient: MockClient((_) async => http.Response('nope', 500)),
+      );
+      final article = await failingRepo.addArticle(
+        title: 'Img Fail',
+        url: 'https://example.com/if',
+        content: '<img src="https://cdn.example.com/broken.png"><p>text</p>',
+      );
+      final html = File(article.contentPath).readAsStringSync();
+      expect(html, contains('https://cdn.example.com/broken.png'));
+    });
+
+    test('addArticle skips non-http image src', () async {
+      final article = await repo.addArticle(
+        title: 'Data URI',
+        url: 'https://example.com/d',
+        content: '<img src="data:image/png;base64,abc"><p>text</p>',
+      );
+      final html = File(article.contentPath).readAsStringSync();
+      expect(html, contains('data:image/png;base64,abc'));
     });
 
     test('readContent returns the written HTML body', () async {
@@ -148,22 +188,21 @@ void main() {
       expect(found!.title, 'Find Article');
     });
 
-    test('deleteArticle removes article row and its files', () async {
+    test('deleteArticle removes entire article directory', () async {
       final created = await repo.addArticle(
         title: 'Remove',
         url: 'https://a.com/del',
-        content: '<p>bye</p>',
+        content: '<img src="https://cdn.example.com/pic.png"><p>bye</p>',
         coverImageUrl: 'https://cdn.example.com/cover.jpg',
       );
-      expect(File(created.contentPath).existsSync(), isTrue);
-      expect(File(created.coverImagePath!).existsSync(), isTrue);
+      final articleDir = Directory('${articlesDir.path}/${created.id}');
+      expect(articleDir.existsSync(), isTrue);
 
       await repo.deleteArticle(created.id);
 
       final articles = await repo.getArticles();
       expect(articles, isEmpty);
-      expect(File(created.contentPath).existsSync(), isFalse);
-      expect(File(created.coverImagePath!).existsSync(), isFalse);
+      expect(articleDir.existsSync(), isFalse);
     });
 
     test('updateArticle persists scroll offset', () async {

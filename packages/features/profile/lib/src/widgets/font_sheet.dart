@@ -114,7 +114,7 @@ class _FontSheet extends StatelessWidget {
               Row(
                 children: [
                   _SizeButton(
-                    icon: Icons.remove,
+                    icon: AppIcons.remove,
                     onTap: () {
                       final v = (textScale - _textScaleStep).clamp(
                         _minTextScale,
@@ -134,7 +134,7 @@ class _FontSheet extends StatelessWidget {
                     ),
                   ),
                   _SizeButton(
-                    icon: Icons.add,
+                    icon: AppIcons.add,
                     onTap: () {
                       final v = (textScale + _textScaleStep).clamp(
                         _minTextScale,

@@ -31,7 +31,9 @@ class ArticlesTable extends Table {
   // Readability-extracted metadata. All nullable because some sites expose
   // only a subset of these fields.
   TextColumn get byline => text().nullable()();
+
   TextColumn get excerpt => text().nullable()();
+
   TextColumn get publishedTime => text().nullable()(); // ISO 8601 or raw
   TextColumn get lang => text().nullable()();
 

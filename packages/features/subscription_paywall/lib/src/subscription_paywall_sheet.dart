@@ -63,7 +63,7 @@ class _SubscriptionPaywallSheetView extends StatelessWidget {
                   onClose: () => Navigator.of(context).pop(),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                const Icon(Icons.workspace_premium, size: 64),
+                const Icon(AppIcons.premium, size: 64),
                 const SizedBox(height: AppSpacing.md),
                 Text(
                   'Unlock Premium Features',
@@ -72,15 +72,15 @@ class _SubscriptionPaywallSheetView extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 const _FeatureItem(
-                  icon: Icons.translate,
+                  icon: AppIcons.translate,
                   text: 'AI-powered translations with context',
                 ),
                 const _FeatureItem(
-                  icon: Icons.auto_awesome,
+                  icon: AppIcons.sparkles,
                   text: 'AI-generated flashcards',
                 ),
                 const _FeatureItem(
-                  icon: Icons.cloud_sync,
+                  icon: AppIcons.cloudSync,
                   text: 'Cloud sync across devices',
                 ),
                 const SizedBox(height: AppSpacing.lg),

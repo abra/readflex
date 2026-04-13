@@ -10,8 +10,22 @@ dependencies:
   flutter:
     sdk: flutter
 
+  file_picker: ^11.0.2
+
   component_library:
     path: ../../component_library
+  domain_models:
+    path: ../../domain_models
+  book_repository:
+    path: ../../book_repository
+  article_repository:
+    path: ../../article_repository
+  article_parser:
+    path: ../../article_parser
+  reader_webview:
+    path: ../../reader_webview
+  monitoring:
+    path: ../../monitoring
 
 dev_dependencies:
   flutter_test:

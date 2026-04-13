@@ -79,7 +79,7 @@ class HighlightCardContent extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.format_quote, color: context.colors.primary),
+        Icon(AppIcons.quote, color: context.colors.primary),
         const SizedBox(height: AppSpacing.md),
         Text(
           highlight.text,
@@ -122,7 +122,7 @@ class DictionaryCardContent extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.translate, color: context.colors.primary),
+        Icon(AppIcons.translate, color: context.colors.primary),
         const SizedBox(height: AppSpacing.md),
         Text(
           entry.word,

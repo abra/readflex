@@ -12,6 +12,7 @@ extension BookToStorage on Book {
     filePath: Value(filePath),
     totalLocations: Value(totalLocations),
     currentLocation: Value(currentLocation),
+    currentCfi: Value(currentCfi),
     readingProgress: Value(readingProgress),
     addedAt: Value(addedAt.toIso8601String()),
     lastOpenedAt: Value(lastOpenedAt?.toIso8601String()),

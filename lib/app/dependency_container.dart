@@ -18,6 +18,7 @@ import 'package:monitoring/monitoring.dart';
 import 'package:notification_service/notification_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:preferences_service/preferences_service.dart';
+import 'package:reader_server/reader_server.dart';
 import 'package:readflex/app/config/application_config.dart';
 import 'package:subscription_service/subscription_service.dart';
 import 'package:translation_service/translation_service.dart';
@@ -43,6 +44,7 @@ class DependenciesContainer {
     required this.subscriptionService,
     required this.connectivityService,
     required this.notificationService,
+    required this.readerServer,
   });
 
   final Logger logger;
@@ -63,6 +65,7 @@ class DependenciesContainer {
   final SubscriptionService subscriptionService;
   final ConnectivityService connectivityService;
   final NotificationService notificationService;
+  final ReaderServer readerServer;
 }
 
 /// A special version of [DependenciesContainer] that is used in tests.

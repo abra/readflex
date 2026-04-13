@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:readflex/app/first_import_screen.dart';
+import 'package:readflex/app/screens/first_import_screen.dart';
 
 void main() {
   Widget buildSubject({

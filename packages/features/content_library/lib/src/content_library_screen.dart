@@ -27,8 +27,8 @@ class ContentLibraryScreen extends StatelessWidget {
   final BookRepository bookRepository;
   final ArticleRepository articleRepository;
   final PreferencesService preferencesService;
-  final void Function(Book book) onBookPressed;
-  final void Function(Article article) onArticlePressed;
+  final Future<void> Function(Book book) onBookPressed;
+  final Future<void> Function(Article article) onArticlePressed;
   final AsyncCallback onAddPressed;
 
   @override
@@ -58,7 +58,7 @@ class ContentLibraryScreen extends StatelessWidget {
   }
 }
 
-class ContentLibraryView extends StatelessWidget {
+class ContentLibraryView extends StatefulWidget {
   const ContentLibraryView({
     required this.onBookPressed,
     required this.onArticlePressed,
@@ -66,125 +66,547 @@ class ContentLibraryView extends StatelessWidget {
     super.key,
   });
 
-  final void Function(Book book) onBookPressed;
-  final void Function(Article article) onArticlePressed;
+  final Future<void> Function(Book book) onBookPressed;
+  final Future<void> Function(Article article) onArticlePressed;
   final AsyncCallback onAddPressed;
 
   @override
+  State<ContentLibraryView> createState() => _ContentLibraryViewState();
+}
+
+class _ContentLibraryViewState extends State<ContentLibraryView> {
+  // Search field is a local controller + local state: the bloc only
+  // needs to know about query changes (not every keystroke triggers a
+  // new load), so we debounce by just emitting into the bloc on change.
+  // Using a controller rather than a pure `onChanged` lets us clear the
+  // field when the user taps the clear button.
+  final _searchController = TextEditingController();
+
+  // Scroll-under scrim visibility. The demo toggles the shadow on the
+  // first vertical scroll, so we track `extentBefore > 0`.
+  bool _showHeaderShadow = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleAdd(BuildContext context) async {
+    await widget.onAddPressed();
+    if (!context.mounted) return;
+    context.read<ContentLibraryBloc>().add(
+      const ContentLibraryRefreshRequested(),
+    );
+  }
+
+  Future<void> _handleBookTap(BuildContext context, Book book) async {
+    await widget.onBookPressed(book);
+    if (!context.mounted) return;
+    context.read<ContentLibraryBloc>().add(
+      const ContentLibraryRefreshRequested(),
+    );
+  }
+
+  Future<void> _handleArticleTap(
+    BuildContext context,
+    Article article,
+  ) async {
+    await widget.onArticlePressed(article);
+    if (!context.mounted) return;
+    context.read<ContentLibraryBloc>().add(
+      const ContentLibraryRefreshRequested(),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Library'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: AppSpacing.md),
-            child:
-                BlocBuilder<
-                  ContentLibraryLayoutCubit,
-                  ContentLibraryLayoutMode
-                >(
-                  builder: (context, layoutMode) {
-                    final cubit = context.read<ContentLibraryLayoutCubit>();
-                    return SegmentedButton<ContentLibraryLayoutMode>(
-                      showSelectedIcon: false,
-                      segments: const [
-                        ButtonSegment(
-                          value: ContentLibraryLayoutMode.list,
-                          icon: Icon(Icons.view_list_outlined),
-                          label: Text('List'),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _handleAdd(context),
+        backgroundColor: colors.primary.withValues(alpha: 0.9),
+        foregroundColor: colors.onPrimary,
+        shape: const CircleBorder(),
+        elevation: 3,
+        child: const Icon(AppIcons.add, size: 24),
+      ),
+      body: SafeArea(
+        bottom: false,
+        child: BlocBuilder<ContentLibraryBloc, ContentLibraryState>(
+          builder: (context, state) {
+            final bloc = context.read<ContentLibraryBloc>();
+
+            return switch (state.status) {
+              ContentLibraryStatus.initial || ContentLibraryStatus.loading =>
+                const CenteredCircularProgressIndicator(),
+              ContentLibraryStatus.failure => ErrorState(
+                message: 'Failed to load library',
+                retryLabel: 'Retry',
+                onRetry: () => bloc.add(const ContentLibraryLoadRequested()),
+              ),
+              ContentLibraryStatus.success => Column(
+                children: [
+                  _LibraryHeader(
+                    state: state,
+                    searchController: _searchController,
+                    onSearchChanged: (query) => bloc.add(
+                      ContentLibrarySearchQueryChanged(query),
+                    ),
+                    onFilterChanged: (filter) => bloc.add(
+                      ContentLibraryFilterChanged(filter),
+                    ),
+                  ),
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        NotificationListener<ScrollNotification>(
+                          onNotification: (notification) {
+                            if (notification.metrics.axis != Axis.vertical) {
+                              return false;
+                            }
+                            final shouldShow =
+                                notification.metrics.extentBefore > 0;
+                            if (shouldShow != _showHeaderShadow && mounted) {
+                              setState(
+                                () => _showHeaderShadow = shouldShow,
+                              );
+                            }
+                            return false;
+                          },
+                          child: _LibraryBody(
+                            state: state,
+                            onBookPressed: (book) =>
+                                _handleBookTap(context, book),
+                            onArticlePressed: (article) =>
+                                _handleArticleTap(context, article),
+                            onRefresh: () async {
+                              bloc.add(
+                                const ContentLibraryRefreshRequested(),
+                              );
+                            },
+                            onAddPressed: () => _handleAdd(context),
+                          ),
                         ),
-                        ButtonSegment(
-                          value: ContentLibraryLayoutMode.grid,
-                          icon: Icon(Icons.grid_view_outlined),
-                          label: Text('Grid'),
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: ScrollEdgeFade(
+                            visible: _showHeaderShadow,
+                          ),
                         ),
                       ],
-                      selected: {layoutMode},
-                      onSelectionChanged: (value) {
-                        cubit.setLayoutMode(value.first);
-                      },
-                    );
-                  },
+                    ),
+                  ),
+                ],
+              ),
+            };
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// Full sticky header: serif title + item counter, search field, filter
+/// segment pills, and results-count + view toggle row. The "+" affordance
+/// lives as a Scaffold FAB, not in the header (see `readwell_demo`).
+class _LibraryHeader extends StatelessWidget {
+  const _LibraryHeader({
+    required this.state,
+    required this.searchController,
+    required this.onSearchChanged,
+    required this.onFilterChanged,
+  });
+
+  final ContentLibraryState state;
+  final TextEditingController searchController;
+  final ValueChanged<String> onSearchChanged;
+  final ValueChanged<ContentLibraryFilter> onFilterChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final visibleCount = state.visibleItems.length;
+
+    // Demo uses literals 20/16/12/4/…; project convention is to stick to
+    // AppSpacing tokens, so we take the nearest token in each slot.
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Library',
+                style: context.text.headlineMedium.copyWith(
+                  color: colors.onSurface,
                 ),
+              ),
+              Text(
+                '${state.totalCount} items',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colors.onSurface.withValues(alpha: 0.55),
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: AppSpacing.lg),
+          TextField(
+            controller: searchController,
+            onChanged: onSearchChanged,
+            style: TextStyle(fontSize: 14, color: colors.onSurface),
+            decoration: InputDecoration(
+              hintText: 'Search books & articles...',
+              prefixIcon: Icon(
+                AppIcons.search,
+                size: AppIconSize.xs,
+                color: colors.onSurface.withValues(alpha: 0.55),
+              ),
+              suffixIcon: state.searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(AppIcons.close, size: AppIconSize.xs),
+                      onPressed: () {
+                        searchController.clear();
+                        onSearchChanged('');
+                      },
+                    )
+                  : null,
+              isDense: true,
+              filled: true,
+              fillColor: colors.surfaceContainerHighest,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          _FilterSegments(
+            active: state.filter,
+            onChanged: onFilterChanged,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '$visibleCount results',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colors.onSurface.withValues(alpha: 0.55),
+                ),
+              ),
+              const _LayoutToggle(),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await onAddPressed();
-          if (!context.mounted) return;
-          context.read<ContentLibraryBloc>().add(
-            const ContentLibraryRefreshRequested(),
-          );
-        },
-        child: const Icon(Icons.add),
-      ),
-      body: BlocBuilder<ContentLibraryBloc, ContentLibraryState>(
-        builder: (context, state) {
-          final bloc = context.read<ContentLibraryBloc>();
+    );
+  }
+}
 
-          return switch (state.status) {
-            ContentLibraryStatus.initial || ContentLibraryStatus.loading =>
-              const CenteredCircularProgressIndicator(),
-            ContentLibraryStatus.failure => ErrorState(
-              message: 'Failed to load library',
-              retryLabel: 'Retry',
-              onRetry: () => bloc.add(const ContentLibraryLoadRequested()),
-            ),
-            ContentLibraryStatus.success =>
-              state.isEmpty
-                  ? const EmptyState(
-                      message:
-                          'Your library is empty.\nTap + to add a book or article.',
-                    )
-                  : RefreshIndicator(
-                      onRefresh: () async {
-                        bloc.add(const ContentLibraryRefreshRequested());
-                      },
-                      child:
-                          BlocBuilder<
-                            ContentLibraryLayoutCubit,
-                            ContentLibraryLayoutMode
-                          >(
-                            builder: (context, layoutMode) {
-                              return switch (layoutMode) {
-                                ContentLibraryLayoutMode.list =>
-                                  ContentLibraryListView(
-                                    items: state.items,
-                                    onBookPressed: onBookPressed,
-                                    onArticlePressed: onArticlePressed,
-                                    onBookDeleted: (book) =>
-                                        _deleteBook(context, book),
-                                    onArticleDeleted: (article) =>
-                                        _deleteArticle(context, article),
-                                  ),
-                                ContentLibraryLayoutMode.grid =>
-                                  ContentLibraryGridView(
-                                    items: state.items,
-                                    onBookPressed: onBookPressed,
-                                    onArticlePressed: onArticlePressed,
-                                    onBookDeleted: (book) =>
-                                        _deleteBook(context, book),
-                                    onArticleDeleted: (article) =>
-                                        _deleteArticle(context, article),
-                                  ),
-                              };
-                            },
-                          ),
+class _FilterSegments extends StatelessWidget {
+  const _FilterSegments({
+    required this.active,
+    required this.onChanged,
+  });
+
+  final ContentLibraryFilter active;
+  final ValueChanged<ContentLibraryFilter> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    // Demo: 40px pill height (matches AppSizes.iconButtonSize), separator
+    // 6 (→ xs=4), padding H14 (→ md=12), radius 16 (→ AppRadius.lg).
+    // Active pill uses onSurface/surface, inactive uses secondary/onSecondary.
+    return SizedBox(
+      height: AppSizes.iconButtonSize,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: ContentLibraryFilter.values.length,
+        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.xs),
+        itemBuilder: (_, i) {
+          final filter = ContentLibraryFilter.values[i];
+          final selected = filter == active;
+
+          return Material(
+            color: Colors.transparent,
+            child: Ink(
+              decoration: BoxDecoration(
+                color: selected ? colors.onSurface : colors.secondary,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+              ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                onTap: () => onChanged(filter),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minHeight: AppSizes.iconButtonSize,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
                     ),
-          };
+                    child: Center(
+                      child: Text(
+                        _labelFor(filter),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: selected ? colors.surface : colors.onSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
         },
       ),
     );
   }
 
-  void _deleteBook(BuildContext context, Book book) {
-    final bloc = context.read<ContentLibraryBloc>();
-    bloc.add(ContentLibraryBookDeleted(book.id));
-  }
+  static String _labelFor(ContentLibraryFilter filter) => switch (filter) {
+    ContentLibraryFilter.all => 'All',
+    ContentLibraryFilter.books => 'Books',
+    ContentLibraryFilter.articles => 'Articles',
+    ContentLibraryFilter.saved => 'Saved',
+    ContentLibraryFilter.finished => 'Finished',
+  };
+}
 
-  void _deleteArticle(BuildContext context, Article article) {
-    final bloc = context.read<ContentLibraryBloc>();
-    bloc.add(ContentLibraryArticleDeleted(article.id));
+class _LayoutToggle extends StatelessWidget {
+  const _LayoutToggle();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<ContentLibraryLayoutCubit, ContentLibraryLayoutMode>(
+      builder: (context, mode) {
+        final cubit = context.read<ContentLibraryLayoutCubit>();
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _LayoutToggleButton(
+              icon: AppIcons.viewList,
+              active: mode == ContentLibraryLayoutMode.list,
+              onTap: () => cubit.setLayoutMode(ContentLibraryLayoutMode.list),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            _LayoutToggleButton(
+              icon: AppIcons.viewGrid,
+              active: mode == ContentLibraryLayoutMode.grid,
+              onTap: () => cubit.setLayoutMode(ContentLibraryLayoutMode.grid),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _LayoutToggleButton extends StatelessWidget {
+  const _LayoutToggleButton({
+    required this.icon,
+    required this.active,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    // Demo button: 40x40 (→ AppSizes.iconButtonSize), radius 10 (→ sm=8,
+    // −2), icon 16 (→ AppIconSize.xs). Active surface is `cs.secondary`,
+    // active icon uses full onSurface, inactive uses onSurface @ 55%.
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(
+          color: active ? colors.secondary : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: SizedBox(
+            width: AppSizes.iconButtonSize,
+            height: AppSizes.iconButtonSize,
+            child: Center(
+              child: Icon(
+                icon,
+                size: AppIconSize.xs,
+                color: active
+                    ? colors.onSurface
+                    : colors.onSurface.withValues(alpha: 0.55),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LibraryBody extends StatelessWidget {
+  const _LibraryBody({
+    required this.state,
+    required this.onBookPressed,
+    required this.onArticlePressed,
+    required this.onRefresh,
+    required this.onAddPressed,
+  });
+
+  final ContentLibraryState state;
+  final void Function(Book book) onBookPressed;
+  final void Function(Article article) onArticlePressed;
+  final Future<void> Function() onRefresh;
+  final VoidCallback onAddPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final visibleItems = state.visibleItems;
+
+    // Two distinct empty states:
+    //   1. Library genuinely has nothing — call the user to import.
+    //   2. Library has items but the current filter/search filters
+    //      them all out — call them to relax the filter.
+    if (visibleItems.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: onRefresh,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.6,
+            child: state.isEmpty
+                ? const _EmptyLibraryState()
+                : const _NoResultsState(),
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: BlocBuilder<ContentLibraryLayoutCubit, ContentLibraryLayoutMode>(
+        builder: (context, layoutMode) {
+          return switch (layoutMode) {
+            ContentLibraryLayoutMode.list => ContentLibraryListView(
+              items: visibleItems,
+              onBookPressed: onBookPressed,
+              onArticlePressed: onArticlePressed,
+            ),
+            ContentLibraryLayoutMode.grid => ContentLibraryGridView(
+              items: visibleItems,
+              onBookPressed: onBookPressed,
+              onArticlePressed: onArticlePressed,
+            ),
+          };
+        },
+      ),
+    );
+  }
+}
+
+/// Shown when the library is completely empty — nudges the user toward
+/// importing their first book or article via the FAB.
+class _EmptyLibraryState extends StatelessWidget {
+  const _EmptyLibraryState();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = context.text;
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: colors.surfaceContainerHighest,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              AppIcons.book,
+              size: 28,
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text('Your library is empty', style: text.titleMedium),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Import your first book or article to get started',
+            style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shown when the library has items but the current search / filter
+/// produces an empty result set. Separate from the completely-empty
+/// state because the call to action is different: "relax the filter",
+/// not "import content".
+class _NoResultsState extends StatelessWidget {
+  const _NoResultsState();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = context.text;
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: colors.surfaceContainerHighest,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              AppIcons.searchOff,
+              size: 24,
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text('No results found', style: text.titleMedium),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Try a different search or filter',
+            style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
   }
 }

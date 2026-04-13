@@ -12,7 +12,6 @@ import 'package:article_repository/article_repository.dart';
 import 'package:auth_service/auth_service.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
-import 'package:dev_data/dev_data.dart';
 import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:fsrs_repository/fsrs_repository.dart';
@@ -24,6 +23,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:preferences_service/preferences_service.dart';
+import 'package:reader_server/reader_server.dart';
 import 'package:readflex/app/config/application_config.dart';
 import 'package:readflex/app/dependency_container.dart';
 import 'package:subscription_service/subscription_service.dart';
@@ -111,22 +111,26 @@ Future<DependenciesContainer> createDependenciesContainer(
   final database = AppDatabase();
 
   // ─── Filesystem layout ───
-  // Articles are stored as files on disk (body + cover) so that the DB
-  // only holds metadata and list queries stay cheap. Directories are
-  // created eagerly so repositories don't have to race on first write.
   final documentsDir = await getApplicationDocumentsDirectory();
   final articlesDir = Directory(p.join(documentsDir.path, 'articles'));
-  final articleCoversDir = Directory(
-    p.join(documentsDir.path, 'article_covers'),
+  final booksDir = Directory(p.join(documentsDir.path, 'books'));
+  final readerAssetsDir = Directory(p.join(documentsDir.path, 'reader_assets'));
+
+  final readerServer = ReaderServer(
+    articlesDirectory: articlesDir,
+    assetsDirectory: readerAssetsDir,
+    logger: logger,
   );
 
   // ─── Repositories ───
   final articleRepository = ArticleRepository(
     database: database,
     articlesDirectory: articlesDir,
-    coversDirectory: articleCoversDir,
   );
-  final bookRepository = BookRepository(database: database);
+  final bookRepository = BookRepository(
+    database: database,
+    booksDirectory: booksDir,
+  );
   final highlightRepository = HighlightRepository(database: database);
   final flashcardRepository = FlashcardRepository(database: database);
   final dictionaryRepository = DictionaryRepository(database: database);
@@ -134,7 +138,7 @@ Future<DependenciesContainer> createDependenciesContainer(
 
   // ─── Preferences ───
   final preferencesService = await PreferencesService.create(
-    supportedCodes: ['en', 'ru'],
+    supportedCodes: config.supportedLocaleCodes,
   );
 
   // TODO: replace Noop stubs with real implementations.
@@ -145,14 +149,6 @@ Future<DependenciesContainer> createDependenciesContainer(
   const subscriptionService = NoopSubscriptionService();
   final connectivityService = NoopConnectivityService();
   const notificationService = NoopNotificationService();
-
-  // TODO: remove dev seed data once real content import flow is complete.
-  if (config.isDev) {
-    await seedDictionary(
-      dictionaryRepository: dictionaryRepository,
-      fsrsRepository: fsrsRepository,
-    );
-  }
 
   return DependenciesContainer(
     logger: logger,
@@ -173,5 +169,6 @@ Future<DependenciesContainer> createDependenciesContainer(
     subscriptionService: subscriptionService,
     connectivityService: connectivityService,
     notificationService: notificationService,
+    readerServer: readerServer,
   );
 }

@@ -172,7 +172,7 @@ class _CompletedView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.celebration, size: 64),
+          const Icon(AppIcons.celebration, size: 64),
           const SizedBox(height: AppSpacing.md),
           Text(
             'Session complete!',

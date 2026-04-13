@@ -231,7 +231,7 @@ class _SearchField extends StatelessWidget {
       decoration: InputDecoration(
         hintText: 'Search words...',
         prefixIcon: Icon(
-          Icons.search,
+          AppIcons.search,
           size: AppIconSize.sm,
           color: cs.onSurface.withValues(alpha: 0.55),
         ),
@@ -269,7 +269,7 @@ class _EmptySearch extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.menu_book,
+              AppIcons.book,
               size: AppIconSize.md,
               color: cs.onSurface.withValues(alpha: 0.55),
             ),
@@ -347,7 +347,7 @@ class _WordCard extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(top: AppSpacing.xxs),
                         child: Icon(
-                          Icons.volume_up,
+                          AppIcons.volumeUp,
                           size: AppIconSize.sm,
                           color: cs.onSurface.withValues(alpha: 0.55),
                         ),

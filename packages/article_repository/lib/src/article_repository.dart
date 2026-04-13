@@ -14,29 +14,30 @@ const _uuid = Uuid();
 /// Domain repository for articles.
 ///
 /// Wraps [ArticlesDao] from `local_storage` and owns on-disk storage of
-/// article content and cover images. Article HTML is written to
-/// [articlesDirectory] as `<id>.html`; cover images are downloaded to
-/// [coversDirectory]. The DB row stores only the filename for each —
-/// this repo resolves filenames against the current directories on
-/// every read, so the DB survives iOS Documents-UUID changes across
-/// simulator reinstalls. Domain [Article]s handed back to callers
-/// always carry absolute paths.
+/// article content, cover images, and body images. Each article lives in
+/// its own directory under [articlesDirectory]:
 ///
-/// Exceptions from the DAO and file I/O propagate to callers (BLoCs).
+/// ```
+/// articles/<uuid>/
+///   content.html       — cleaned HTML from readability
+///   cover.<ext>        — cover image (if available)
+///   images/<hash>.ext  — downloaded body images
+/// ```
+///
+/// The DB row stores only filenames (`content.html`, `cover.png`) for
+/// each — this repo resolves filenames against the per-article directory
+/// on every read, so the DB survives iOS Documents-UUID changes.
 class ArticleRepository {
   ArticleRepository({
     required AppDatabase database,
     required Directory articlesDirectory,
-    required Directory coversDirectory,
     http.Client? httpClient,
   }) : _dao = database.articlesDao,
        _articlesDir = articlesDirectory,
-       _coversDir = coversDirectory,
        _httpClient = httpClient ?? http.Client();
 
   final ArticlesDao _dao;
   final Directory _articlesDir;
-  final Directory _coversDir;
   final http.Client _httpClient;
 
   Future<List<Article>> getArticles() async {
@@ -59,9 +60,8 @@ class ArticleRepository {
   }
 
   /// Creates a new article from parsed content. Writes [content] to disk
-  /// and, if [coverImageUrl] is set, best-effort downloads the cover image
-  /// to the covers directory. Failure to download the cover does not fail
-  /// the whole import — the article is still saved without a local cover.
+  /// after downloading any referenced images. If [coverImageUrl] is set,
+  /// best-effort downloads the cover image into the article directory.
   Future<Article> addArticle({
     required String title,
     required String url,
@@ -78,13 +78,17 @@ class ArticleRepository {
     final id = _uuid.v4();
     final now = DateTime.now();
 
-    await _articlesDir.create(recursive: true);
-    final contentFile = File(p.join(_articlesDir.path, '$id.html'));
-    await contentFile.writeAsString(content);
+    final articleDir = Directory(p.join(_articlesDir.path, id));
+    await articleDir.create(recursive: true);
 
-    String? coverImagePath;
+    // Download body images and rewrite HTML src to local relative paths.
+    final processedContent = await _downloadArticleImages(articleDir, content);
+    final contentFile = File(p.join(articleDir.path, 'content.html'));
+    await contentFile.writeAsString(processedContent);
+
+    String? coverFilename;
     if (coverImageUrl != null && coverImageUrl.isNotEmpty) {
-      coverImagePath = await _tryDownloadCover(id, coverImageUrl);
+      coverFilename = await _tryDownloadCover(articleDir, coverImageUrl);
     }
 
     final article = Article(
@@ -99,7 +103,9 @@ class ArticleRepository {
       publishedTime: publishedTime,
       lang: lang,
       coverImageUrl: coverImageUrl,
-      coverImagePath: coverImagePath,
+      coverImagePath: coverFilename != null
+          ? p.join(articleDir.path, coverFilename)
+          : null,
       textLength: textLength,
       estimatedWordCount: estimatedWordCount,
     );
@@ -113,25 +119,94 @@ class ArticleRepository {
   }
 
   Future<void> deleteArticle(String id) async {
-    final row = await _dao.articleById(id);
-    if (row != null) {
-      // Row fields are filenames — resolve to absolute paths against the
-      // current directories before deleting.
-      await _tryDelete(File(p.join(_articlesDir.path, row.contentPath)));
-      final coverFilename = row.coverImagePath;
-      if (coverFilename != null) {
-        await _tryDelete(File(p.join(_coversDir.path, coverFilename)));
-      }
-    }
     await _dao.deleteArticle(id);
+    // Remove the entire article directory (content + cover + images).
+    final articleDir = Directory(p.join(_articlesDir.path, id));
+    await _tryDeleteDirectory(articleDir);
   }
 
   Article _rowToDomain(ArticlesTableData row) => row.toDomainModel(
     articlesDir: _articlesDir,
-    coversDir: _coversDir,
   );
 
-  Future<String?> _tryDownloadCover(String articleId, String url) async {
+  // ── Image downloading ──
+
+  static final _imgSrcRegex = RegExp(
+    r'''<img[^>]+src=["']([^"']+)["']''',
+    caseSensitive: false,
+  );
+
+  /// Downloads images referenced in [html] to [articleDir]/images/ and
+  /// rewrites their `src` to relative `images/<hash>.<ext>` paths.
+  /// Images that fail to download keep their original URL.
+  Future<String> _downloadArticleImages(
+    Directory articleDir,
+    String html,
+  ) async {
+    final matches = _imgSrcRegex.allMatches(html);
+
+    // Collect unique HTTP(S) image URLs.
+    final urls = <String>{};
+    for (final match in matches) {
+      final url = match.group(1)!;
+      if (url.startsWith('http')) urls.add(url);
+    }
+    if (urls.isEmpty) return html;
+
+    final imagesDir = Directory(p.join(articleDir.path, 'images'));
+    await imagesDir.create(recursive: true);
+
+    // Download each unique URL and build a replacement map.
+    final replacements = <String, String>{};
+    for (final url in urls) {
+      final localFilename = await _tryDownloadImage(imagesDir, url);
+      if (localFilename != null) {
+        replacements[url] = 'images/$localFilename';
+      }
+    }
+
+    // Apply replacements in one pass.
+    var result = html;
+    for (final entry in replacements.entries) {
+      result = result.replaceAll(entry.key, entry.value);
+    }
+    return result;
+  }
+
+  /// Best-effort image download. Returns the local filename on success,
+  /// null on any failure.
+  Future<String?> _tryDownloadImage(Directory imagesDir, String url) async {
+    try {
+      final uri = Uri.tryParse(url);
+      if (uri == null) return null;
+      final response = await _httpClient.get(uri);
+      if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
+        return null;
+      }
+      final ext = _extensionFor(uri, response.headers['content-type']);
+      final hash = url.hashCode
+          .toUnsigned(32)
+          .toRadixString(16)
+          .padLeft(
+            8,
+            '0',
+          );
+      final filename = '$hash$ext';
+      await File(p.join(imagesDir.path, filename)).writeAsBytes(
+        response.bodyBytes,
+      );
+      return filename;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Best-effort cover download. Returns the local filename (e.g. `cover.png`)
+  /// on success, null on failure.
+  Future<String?> _tryDownloadCover(
+    Directory articleDir,
+    String url,
+  ) async {
     try {
       final uri = Uri.tryParse(url);
       if (uri == null || !uri.hasScheme) return null;
@@ -139,15 +214,13 @@ class ArticleRepository {
       if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
         return null;
       }
-      await _coversDir.create(recursive: true);
       final ext = _extensionFor(uri, response.headers['content-type']);
-      final file = File(p.join(_coversDir.path, '$articleId$ext'));
-      await file.writeAsBytes(response.bodyBytes);
-      return file.path;
+      final filename = 'cover$ext';
+      await File(p.join(articleDir.path, filename)).writeAsBytes(
+        response.bodyBytes,
+      );
+      return filename;
     } catch (_) {
-      // Cover download is best-effort; failures are swallowed so a flaky
-      // CDN can't block the rest of the import. The article will simply
-      // render the placeholder until a later re-import or sync.
       return null;
     }
   }
@@ -166,15 +239,15 @@ class ArticleRepository {
     return '.img';
   }
 
-  Future<void> _tryDelete(File file) async {
+  // ── Cleanup helpers ──
+
+  Future<void> _tryDeleteDirectory(Directory dir) async {
     try {
-      if (await file.exists()) {
-        await file.delete();
+      if (await dir.exists()) {
+        await dir.delete(recursive: true);
       }
     } catch (_) {
-      // File cleanup is best-effort — orphaned files get reclaimed on the
-      // next maintenance pass, and we don't want a failing delete to
-      // block the DB row from being removed.
+      // Best-effort — orphaned dirs get reclaimed on maintenance pass.
     }
   }
 }

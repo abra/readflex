@@ -9,41 +9,40 @@ class ContentLibraryListView extends StatelessWidget {
     required this.items,
     required this.onBookPressed,
     required this.onArticlePressed,
-    required this.onBookDeleted,
-    required this.onArticleDeleted,
     super.key,
   });
 
   final List<Object> items;
   final void Function(Book book) onBookPressed;
   final void Function(Article article) onArticlePressed;
-  final void Function(Book book) onBookDeleted;
-  final void Function(Article article) onArticleDeleted;
 
   @override
   Widget build(BuildContext context) {
-    return ListView.separated(
+    // Demo uses ListView.builder with per-row bottom borders (no
+    // Divider/SizedBox separators) so the last row draws no extra line
+    // under it. We replicate that by passing `showDivider` to each tile.
+    return ListView.builder(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        AppSpacing.sm,
+        0,
         AppSpacing.lg,
         AppSpacing.xxl,
       ),
       physics: const AlwaysScrollableScrollPhysics(),
       itemCount: items.length,
-      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {
         final item = items[index];
+        final showDivider = index < items.length - 1;
         return switch (item) {
           Book book => BookLibraryListTile(
             book: book,
+            showDivider: showDivider,
             onTap: () => onBookPressed(book),
-            onDelete: () => onBookDeleted(book),
           ),
           Article article => ArticleLibraryListTile(
             article: article,
+            showDivider: showDivider,
             onTap: () => onArticlePressed(article),
-            onDelete: () => onArticleDeleted(article),
           ),
           _ => const SizedBox.shrink(),
         };

@@ -5,12 +5,15 @@ part of 'dictionary_dao.dart';
 // ignore_for_file: type=lint
 mixin _$DictionaryDaoMixin on DatabaseAccessor<AppDatabase> {
   $DictionaryTableTable get dictionaryTable => attachedDatabase.dictionaryTable;
+
   DictionaryDaoManager get managers => DictionaryDaoManager(this);
 }
 
 class DictionaryDaoManager {
   final _$DictionaryDaoMixin _db;
+
   DictionaryDaoManager(this._db);
+
   $$DictionaryTableTableTableManager get dictionaryTable =>
       $$DictionaryTableTableTableManager(
         _db.attachedDatabase,

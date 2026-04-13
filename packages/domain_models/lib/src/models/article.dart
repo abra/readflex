@@ -53,6 +53,20 @@ class Article extends Equatable {
 
   final int textLength;
   final int estimatedWordCount;
+
+  /// Reading progress as a fraction in `[0.0, 1.0]`, where `1.0` is the
+  /// bottom of the rendered article. Double-duties as both the saved
+  /// restore position (reader jumps back here on reopen) AND the source
+  /// the library cover reads for its progress pill — for articles these
+  /// are the same number. Named `offset` for historical reasons; the
+  /// value is a normalized fraction, not a raw pixel offset. A fraction
+  /// stays portable across font size / text scale / device width
+  /// changes that would invalidate raw pixels on reflow.
+  ///
+  /// Analogous to `Book.readingProgress`, but books additionally carry a
+  /// separate `currentLocation` int for CFI-style restore because their
+  /// restore key is a different type from their 0..1 progress. Articles
+  /// don't need that split.
   final double currentScrollOffset;
   final DateTime addedAt;
   final DateTime? lastOpenedAt;

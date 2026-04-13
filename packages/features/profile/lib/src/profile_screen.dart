@@ -161,13 +161,13 @@ class _ProfileViewState extends State<_ProfileView> {
                       _SettingsGroup(
                         children: [
                           _SettingsRow(
-                            icon: Icons.text_fields,
+                            icon: AppIcons.textFields,
                             label: 'Font & Text Size',
                             detail: _currentFontLabel(context),
                             onTap: () => _showFontSheet(context),
                           ),
                           _SettingsRow(
-                            icon: Icons.language,
+                            icon: AppIcons.language,
                             label: 'Translation Language',
                             detail: 'English',
                           ),
@@ -181,21 +181,21 @@ class _ProfileViewState extends State<_ProfileView> {
                       _SettingsGroup(
                         children: [
                           _SettingsRow(
-                            icon: Icons.cloud_outlined,
+                            icon: AppIcons.cloud,
                             label: 'Sync & Backup',
                             detail: 'Off',
                           ),
                           _SettingsRow(
-                            icon: Icons.download_outlined,
+                            icon: AppIcons.download,
                             label: 'Offline Downloads',
                           ),
                           _SettingsRow(
-                            icon: Icons.notifications_outlined,
+                            icon: AppIcons.notifications,
                             label: 'Notifications',
                             detail: 'On',
                           ),
                           _SettingsRow(
-                            icon: Icons.shield_outlined,
+                            icon: AppIcons.shield,
                             label: 'Privacy',
                           ),
                         ],
@@ -208,12 +208,12 @@ class _ProfileViewState extends State<_ProfileView> {
                       _SettingsGroup(
                         children: [
                           _SettingsRow(
-                            icon: Icons.info_outline,
+                            icon: AppIcons.info,
                             label: 'Version',
                             detail: widget.appVersion,
                           ),
                           _SettingsRow(
-                            icon: Icons.menu_book_outlined,
+                            icon: AppIcons.terms,
                             label: 'Terms & Licenses',
                           ),
                         ],
@@ -226,7 +226,7 @@ class _ProfileViewState extends State<_ProfileView> {
                       _SettingsGroup(
                         children: [
                           _SettingsRow(
-                            icon: Icons.design_services_outlined,
+                            icon: AppIcons.designSystem,
                             label: 'Design System',
                             onTap: widget.onDesignSystemPressed,
                           ),
@@ -247,7 +247,7 @@ class _ProfileViewState extends State<_ProfileView> {
                                   : () =>
                                         context.read<ProfileCubit>().signOut(),
                               icon: Icon(
-                                Icons.logout,
+                                AppIcons.logOut,
                                 size: AppIconSize.sm,
                                 color: cs.error,
                               ),
@@ -399,7 +399,7 @@ class _ProfileHeader extends StatelessWidget {
           ),
         ),
         Icon(
-          Icons.chevron_right,
+          AppIcons.chevronRight,
           size: AppIconSize.sm,
           color: cs.onSurface.withValues(alpha: 0.3),
         ),

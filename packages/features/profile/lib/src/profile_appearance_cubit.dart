@@ -3,26 +3,7 @@ import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:preferences_service/preferences_service.dart';
 
-class ProfileAppearanceState extends Equatable {
-  const ProfileAppearanceState({
-    required this.themeMode,
-    required this.readerAppearance,
-  });
-
-  final ThemeMode themeMode;
-  final ReaderAppearancePreferences readerAppearance;
-
-  ProfileAppearanceState copyWith({
-    ThemeMode? themeMode,
-    ReaderAppearancePreferences? readerAppearance,
-  }) => ProfileAppearanceState(
-    themeMode: themeMode ?? this.themeMode,
-    readerAppearance: readerAppearance ?? this.readerAppearance,
-  );
-
-  @override
-  List<Object?> get props => [themeMode, readerAppearance];
-}
+part 'profile_appearance_state.dart';
 
 class ProfileAppearanceCubit extends Cubit<ProfileAppearanceState> {
   ProfileAppearanceCubit({

@@ -1,16 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:preferences_service/preferences_service.dart';
 
-enum ContentLibraryLayoutMode { list, grid }
-
-extension ContentLibraryLayoutModeX on ContentLibraryLayoutMode {
-  String get id => name;
-
-  static ContentLibraryLayoutMode fromId(String? value) => switch (value) {
-    'list' => ContentLibraryLayoutMode.list,
-    _ => ContentLibraryLayoutMode.grid,
-  };
-}
+part 'content_library_layout_state.dart';
 
 class ContentLibraryLayoutCubit extends Cubit<ContentLibraryLayoutMode> {
   ContentLibraryLayoutCubit({

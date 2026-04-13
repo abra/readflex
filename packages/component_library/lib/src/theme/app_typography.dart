@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 
 /// App typography system.
 ///
-/// [textTheme] defines all text roles. Display/headline styles use
-/// Source Serif 4 for a warm literary feel; body/title/label use Inter
-/// for clean UI readability.
+/// [textTheme] defines all text roles. Display styles use Source Serif 4
+/// for a warm literary feel; headline/title/body/label use Geist for
+/// clean UI readability — Geist has a narrower advance width than Inter,
+/// which fits longer titles in compact surfaces (e.g. library grid
+/// covers) without losing legibility on Cyrillic and Latin.
 ///
 /// Use [serif] for literary / reading content (Source Serif 4).
-/// Use [sans] for UI elements (Inter).
+/// Use [sans] for UI elements (Geist).
 abstract final class AppTypography {
-  static const String fontFamilySans = 'Inter';
+  static const String fontFamilySans = 'Geist';
   static const String fontFamilySerif = 'SourceSerif4';
 
   static const TextTheme textTheme = TextTheme(
@@ -32,19 +34,16 @@ abstract final class AppTypography {
       fontWeight: FontWeight.w600,
     ),
     headlineLarge: TextStyle(
-      fontFamily: fontFamilySerif,
       fontSize: 32,
       height: 1.12,
       fontWeight: FontWeight.w600,
     ),
     headlineMedium: TextStyle(
-      fontFamily: fontFamilySerif,
       fontSize: 28,
       height: 1.16,
       fontWeight: FontWeight.w600,
     ),
     headlineSmall: TextStyle(
-      fontFamily: fontFamilySerif,
       fontSize: 24,
       height: 1.2,
       fontWeight: FontWeight.w600,

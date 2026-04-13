@@ -48,7 +48,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -255,6 +255,34 @@ class AppDatabase extends _$AppDatabase {
         // path-stripping migration.
         await customStatement('DROP TABLE IF EXISTS articles_table');
         await migrator.createTable(articlesTable);
+      }
+      if (from < 8) {
+        // Add normalized reading_progress to articles, mirroring
+        // books_table. Purely additive with a 0.0 default — no backfill
+        // needed. See Article.readingProgress doc for why this is kept
+        // separate from the existing current_scroll_offset column.
+        await customStatement(
+          'ALTER TABLE articles_table ADD COLUMN reading_progress REAL NOT NULL DEFAULT 0.0',
+        );
+      }
+      if (from < 9) {
+        // Reverse v8. `reading_progress` turned out to be a duplicate of
+        // the existing `current_scroll_offset` — for articles the reader
+        // already stores a normalized [0, 1] fraction in that column (see
+        // ArticleContentView.onScrollFractionChanged), not a raw pixel
+        // offset as the name implies. A second column holding the same
+        // value was pure waste, so we drop it and let the library cover
+        // read from `current_scroll_offset` directly. Books are unaffected
+        // — they still have their own `reading_progress` column because
+        // their restore key (`current_location`) is a different type.
+        //
+        // DROP COLUMN works on SQLite 3.35+. This ships both to users who
+        // are upgrading straight from v7 (they never saw the column) and
+        // to those who ran v8 once — idempotent either way since v8 runs
+        // first in the same transaction when upgrading from <8.
+        await customStatement(
+          'ALTER TABLE articles_table DROP COLUMN reading_progress',
+        );
       }
     },
   );

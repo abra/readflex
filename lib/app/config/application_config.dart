@@ -33,6 +33,9 @@ class ApplicationConfig {
 
   /// Whether the app is running in development environment.
   bool get isDev => environment == Environment.dev;
+
+  /// Supported locale codes for the app.
+  List<String> get supportedLocaleCodes => const ['en', 'ru'];
 }
 
 /// A special version of [ApplicationConfig] that is used in tests.

@@ -12,7 +12,6 @@ dependencies:
 
   flutter_bloc: ^9.1.1
   equatable: ^2.0.8
-  html: ^0.15.6
 
   domain_models:
     path: ../../domain_models
@@ -28,6 +27,8 @@ dependencies:
     path: ../../highlight_repository
   component_library:
     path: ../../component_library
+  reader_webview:
+    path: ../../reader_webview
 
 dev_dependencies:
   flutter_test:

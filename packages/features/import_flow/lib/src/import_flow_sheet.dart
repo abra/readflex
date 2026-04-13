@@ -1,71 +1,20 @@
-import 'dart:developer' as developer;
-
 import 'package:component_library/component_library.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-enum ImportFlowResult { bookImported, articleImported }
-
-/// Outcome of an article import attempt. Callers return this from the
-/// [showImportFlowSheet] `onImportArticle` callback so the sheet can show
-/// a reason-specific error message instead of a generic "failed".
-sealed class ArticleImportOutcome {
-  const ArticleImportOutcome();
-
-  /// Successful import — the sheet will close.
-  const factory ArticleImportOutcome.success() = ArticleImportSuccess;
-
-  /// Import failed for [reason]. The sheet renders a message keyed off the
-  /// reason and stays open so the user can retry or edit the URL.
-  const factory ArticleImportOutcome.failure(
-    ArticleImportFailureReason reason,
-  ) = ArticleImportFailure;
-}
-
-final class ArticleImportSuccess extends ArticleImportOutcome {
-  const ArticleImportSuccess();
-}
-
-final class ArticleImportFailure extends ArticleImportOutcome {
-  const ArticleImportFailure(this.reason);
-
-  final ArticleImportFailureReason reason;
-}
-
-/// User-facing categories of article import failure.
-///
-/// Intentionally coarse: the sheet only needs enough to show a helpful
-/// one-line message. Exact technical details stay in logs.
-enum ArticleImportFailureReason {
-  /// URL didn't parse.
-  invalidUrl,
-
-  /// Device offline / DNS / timeout — anything network-shaped.
-  network,
-
-  /// Site responded but with an error status.
-  httpError,
-
-  /// Fetched successfully but readability couldn't extract an article.
-  noReadableContent,
-
-  /// Import reached the repository but saving to disk or DB failed.
-  storage,
-
-  /// Catch-all for unexpected failures.
-  unknown,
-}
+import 'article_import_outcome.dart';
+import 'import_flow_result.dart';
 
 /// Shows the import bottom sheet.
 ///
-/// Two options: import book (file picker) or import article (URL).
-/// [onImportBook] must return `true` only when content was actually added.
-/// [onImportArticle] returns an [ArticleImportOutcome] so the sheet can
-/// translate infrastructure-level failures (parser, storage) into a
-/// human-readable message.
+/// [onImportBook] — called when the user taps "Import book file".
+/// Should open a file picker, import the book, and return `true` on success.
+///
+/// [onImportArticle] — called with the URL when the user submits an
+/// article link. Returns an [ArticleImportOutcome] so the sheet can show
+/// reason-specific error messages.
 Future<ImportFlowResult?> showImportFlowSheet(
   BuildContext context, {
-  required AsyncValueGetter<bool> onImportBook,
+  required Future<bool> Function() onImportBook,
   required Future<ArticleImportOutcome> Function(String url) onImportArticle,
 }) {
   return showAppBottomSheet<ImportFlowResult>(
@@ -83,7 +32,7 @@ class _ImportFlowSheet extends StatefulWidget {
     required this.onImportArticle,
   });
 
-  final AsyncValueGetter<bool> onImportBook;
+  final Future<bool> Function() onImportBook;
   final Future<ArticleImportOutcome> Function(String url) onImportArticle;
 
   @override
@@ -104,14 +53,14 @@ class _ImportFlowSheetState extends State<_ImportFlowSheet> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ListTile(
-                  leading: const Icon(Icons.upload_file),
+                  leading: const Icon(AppIcons.uploadFile),
                   title: const Text('Import book file'),
                   subtitle: const Text('EPUB, PDF, FB2, MOBI'),
                   enabled: !_isImportingBook,
                   onTap: _isImportingBook ? null : _handleBookImport,
                 ),
                 ListTile(
-                  leading: const Icon(Icons.link),
+                  leading: const Icon(AppIcons.link),
                   title: const Text('Add article by URL'),
                   subtitle: const Text('Paste a web article link'),
                   onTap: () => setState(() => _showUrlInput = true),
@@ -235,23 +184,7 @@ class _ArticleUrlInputState extends State<_ArticleUrlInput> {
       _errorMessage = null;
     });
 
-    ArticleImportOutcome outcome;
-    try {
-      outcome = await widget.onImportArticle(url);
-    } catch (e, st) {
-      // Any exception that escapes the callback is a bug in the composition
-      // glue (it's supposed to hand us a typed outcome). Log and fall back
-      // to the generic 'unknown' bucket so the user still sees something.
-      developer.log(
-        'Article import threw unexpectedly',
-        error: e,
-        stackTrace: st,
-        name: 'ImportFlowSheet',
-      );
-      outcome = const ArticleImportOutcome.failure(
-        ArticleImportFailureReason.unknown,
-      );
-    }
+    final outcome = await widget.onImportArticle(url);
 
     if (!mounted) return;
 

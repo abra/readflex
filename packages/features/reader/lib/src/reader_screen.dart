@@ -8,9 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:preferences_service/preferences_service.dart';
+import 'package:reader_webview/reader_webview.dart';
 import 'package:shared/shared.dart';
 
-import 'article_content_view.dart';
 import 'reader_bloc.dart';
 
 /// Approximate height of the context panel, used to offset the review banner.
@@ -19,6 +19,7 @@ const _kContextPanelHeight = 80.0;
 class ReaderScreen extends StatelessWidget {
   const ReaderScreen({
     required this.sourceId,
+    required this.serverPort,
     required this.bookRepository,
     required this.articleRepository,
     required this.highlightRepository,
@@ -29,6 +30,7 @@ class ReaderScreen extends StatelessWidget {
   });
 
   final String sourceId;
+  final int serverPort;
   final BookRepository bookRepository;
   final ArticleRepository articleRepository;
   final HighlightRepository highlightRepository;
@@ -47,6 +49,7 @@ class ReaderScreen extends StatelessWidget {
         highlightRepository: highlightRepository,
       )..add(ReaderSourceLoadRequested(sourceId: sourceId)),
       child: _ReaderView(
+        serverPort: serverPort,
         textActions: textActions,
         onCheckDueItems: onCheckDueItems,
         onStartMiniReview: onStartMiniReview,
@@ -57,11 +60,13 @@ class ReaderScreen extends StatelessWidget {
 
 class _ReaderView extends StatelessWidget {
   const _ReaderView({
+    required this.serverPort,
     required this.textActions,
     this.onCheckDueItems,
     this.onStartMiniReview,
   });
 
+  final int serverPort;
   final List<TextAction> textActions;
   final Future<int> Function(String sourceId)? onCheckDueItems;
   final void Function(BuildContext context, String sourceId)? onStartMiniReview;
@@ -100,7 +105,7 @@ class _ReaderView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 48),
+            const Icon(AppIcons.error, size: 48),
             const SizedBox(height: AppSpacing.md),
             const Text('Failed to load content'),
             const SizedBox(height: AppSpacing.md),
@@ -113,6 +118,7 @@ class _ReaderView extends StatelessWidget {
       ),
       ReaderStatus.ready => _ReadyContent(
         state: state,
+        serverPort: serverPort,
         textActions: textActions,
         onCheckDueItems: onCheckDueItems,
         onStartMiniReview: onStartMiniReview,
@@ -163,7 +169,7 @@ class _ReaderAppBar extends StatelessWidget {
           Badge(
             label: Text('$highlightCount'),
             child: IconButton(
-              icon: const Icon(Icons.highlight),
+              icon: const Icon(AppIcons.highlight),
               onPressed: () {
                 // TODO: show highlights list as bottom sheet.
               },
@@ -177,12 +183,14 @@ class _ReaderAppBar extends StatelessWidget {
 class _ReadyContent extends StatefulWidget {
   const _ReadyContent({
     required this.state,
+    required this.serverPort,
     required this.textActions,
     this.onCheckDueItems,
     this.onStartMiniReview,
   });
 
   final ReaderState state;
+  final int serverPort;
   final List<TextAction> textActions;
   final Future<int> Function(String sourceId)? onCheckDueItems;
   final void Function(BuildContext context, String sourceId)? onStartMiniReview;
@@ -238,60 +246,95 @@ class _ReadyContentState extends State<_ReadyContent> {
   Widget _buildReaderBody({
     required ReaderState state,
     required ReaderThemeData readerTheme,
-    required TextStyle readerTextStyle,
-    required AppTextTheme text,
     required ReaderBloc bloc,
   }) {
-    // Three disjoint cases:
-    //   1. Article with hydrated content → render it.
-    //   2. Article whose content file is missing / empty → show an
-    //      article-specific error (NOT the book placeholder, which used
-    //      to be the accidental catch-all and showed "Book rendering is
-    //      not implemented yet" for broken article reads).
-    //   3. Book → hero-card placeholder until foliate-js lands.
+    final highlights = state.highlights
+        .map(
+          (h) => ReaderHighlight(
+            id: h.id,
+            text: h.text,
+            cfiRange: h.cfiRange,
+          ),
+        )
+        .toList();
+
+    final articleStyle = ReaderStyle(
+      textColor: _colorToHex(readerTheme.primaryTextColor),
+      bgColor: _colorToHex(readerTheme.backgroundColor),
+      accentColor: _colorToHex(readerTheme.accentColor),
+      secondaryColor: _colorToHex(readerTheme.secondaryTextColor),
+      dividerColor: _colorToHex(readerTheme.dividerColor),
+    );
+
     if (state.isArticle) {
-      if (state.articleContent.isEmpty) {
-        return _MissingArticleContent(
-          state: state,
-          readerTheme: readerTheme,
-          readerTextStyle: readerTextStyle,
-          text: text,
-        );
-      }
-      return ArticleContentView(
-        // Keying by article id keeps the same State instance as the
-        // bloc re-emits with updated Article (lastOpenedAt,
-        // currentScrollOffset), so initState / the post-frame restore
-        // only fires once per opened article.
+      return ArticleReaderWebView(
         key: ValueKey(state.article?.id),
-        html: state.articleContent,
-        textStyle: readerTextStyle,
-        accentColor: readerTheme.accentColor,
-        secondaryTextColor: readerTheme.secondaryTextColor,
-        dividerColor: readerTheme.dividerColor,
-        // Base URL for resolving relative <img src> — readability
-        // rewrites most but not all, and protocol-relative URLs still
-        // need a scheme.
-        articleUrl: state.article?.url,
+        serverPort: widget.serverPort,
+        articleId: state.article!.id,
         initialScrollFraction: state.article?.currentScrollOffset,
-        onScrollFractionChanged: (fraction) {
-          bloc.add(ReaderPositionUpdated(scrollOffset: fraction));
+        style: articleStyle,
+        highlights: highlights,
+        onPositionChanged: (fraction) {
+          bloc.add(
+            ReaderPositionUpdated(
+              scrollOffset: fraction,
+              progress: fraction,
+            ),
+          );
         },
-        onSelectionChanged: (selectedText) {
-          if (selectedText == null) {
-            bloc.add(const ReaderTextDeselected());
-          } else {
-            bloc.add(ReaderTextSelected(selectedText: selectedText));
-          }
+        onTextSelected: (selection) {
+          bloc.add(
+            ReaderTextSelected(
+              selectedText: selection.text,
+              scrollOffset: selection.scrollOffset,
+            ),
+          );
+        },
+        onTextDeselected: () {
+          bloc.add(const ReaderTextDeselected());
         },
       );
     }
-    return _BookPlaceholder(
-      state: state,
-      readerTheme: readerTheme,
-      readerTextStyle: readerTextStyle,
-      text: text,
+
+    return BookReaderWebView(
+      key: ValueKey(state.book?.id),
+      serverPort: widget.serverPort,
+      bookFilePath: state.book!.filePath,
+      initialCfi: state.book?.currentCfi,
+      foliateStyle: FoliateStyle(
+        fontColor: _colorToHex(readerTheme.primaryTextColor),
+        backgroundColor: _colorToHex(readerTheme.backgroundColor),
+      ),
+      highlights: highlights,
+      onPositionChanged: (position) {
+        bloc.add(
+          ReaderPositionUpdated(
+            cfi: position.cfi,
+            progress: position.fraction,
+          ),
+        );
+      },
+      onTextSelected: (selection) {
+        bloc.add(
+          ReaderTextSelected(
+            selectedText: selection.text,
+            cfiRange: selection.cfiRange,
+          ),
+        );
+      },
+      onTextDeselected: () {
+        bloc.add(const ReaderTextDeselected());
+      },
     );
+  }
+
+  static String _colorToHex(Color color) {
+    final r = (color.r * 255.0).round().clamp(0, 255);
+    final g = (color.g * 255.0).round().clamp(0, 255);
+    final b = (color.b * 255.0).round().clamp(0, 255);
+    return '#${r.toRadixString(16).padLeft(2, '0')}'
+        '${g.toRadixString(16).padLeft(2, '0')}'
+        '${b.toRadixString(16).padLeft(2, '0')}';
   }
 
   @override
@@ -300,31 +343,15 @@ class _ReadyContentState extends State<_ReadyContent> {
     final state = widget.state;
     final appearance = PreferencesScope.readerAppearanceOf(context);
     final readerTheme = ReaderThemePreset.fromId(appearance.themeId).data;
-    final readerFont = ReaderFontPreset.fromId(appearance.fontId);
-    final text = context.text;
-    final bodyLarge = text.bodyLarge;
-    final readerTextStyle = bodyLarge.copyWith(
-      fontFamily: readerFont.fontFamily,
-      fontSize: bodyLarge.fontSize! * appearance.textScale,
-      height: appearance.lineHeight,
-      color: readerTheme.primaryTextColor,
-    );
 
     return Stack(
       children: [
         ColoredBox(
           color: readerTheme.backgroundColor,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
-              child: _buildReaderBody(
-                state: state,
-                readerTheme: readerTheme,
-                readerTextStyle: readerTextStyle,
-                text: text,
-                bloc: bloc,
-              ),
-            ),
+          child: _buildReaderBody(
+            state: state,
+            readerTheme: readerTheme,
+            bloc: bloc,
           ),
         ),
 
@@ -444,144 +471,6 @@ class _ContextPanel extends StatelessWidget {
   }
 }
 
-class _BookPlaceholder extends StatelessWidget {
-  const _BookPlaceholder({
-    required this.state,
-    required this.readerTheme,
-    required this.readerTextStyle,
-    required this.text,
-  });
-
-  final ReaderState state;
-  final ReaderThemeData readerTheme;
-  final TextStyle readerTextStyle;
-  final AppTextTheme text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: readerTheme.surfaceColor,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(color: readerTheme.dividerColor),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl,
-            vertical: AppSpacing.xxl,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                state.isBook ? Icons.menu_book : Icons.article,
-                size: 48,
-                color: readerTheme.accentColor,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                state.title,
-                style: text.headlineSmall.copyWith(
-                  color: readerTheme.primaryTextColor,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                'Book rendering is not implemented yet. Once the book track '
-                'vendors foliate-js into the reader package, this placeholder '
-                'will be replaced by the real WebView-based reader.',
-                style: readerTextStyle,
-                textAlign: TextAlign.start,
-              ),
-              if (state.isBook && state.book != null) ...[
-                const SizedBox(height: AppSpacing.lg),
-                LinearProgressIndicator(
-                  value: state.book!.readingProgress,
-                  minHeight: 4,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  '${(state.book!.readingProgress * 100).toInt()}% read',
-                  style: text.labelSmall.copyWith(
-                    color: readerTheme.secondaryTextColor,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Shown when an article loaded successfully from the DB but its cached
-/// HTML file is missing or empty on disk. Most common cause: the iOS
-/// simulator rebuilt the app container and the old absolute paths went
-/// stale. The new repo writes filenames + resolves at read time, so
-/// this mainly triggers now when an import partially failed.
-class _MissingArticleContent extends StatelessWidget {
-  const _MissingArticleContent({
-    required this.state,
-    required this.readerTheme,
-    required this.readerTextStyle,
-    required this.text,
-  });
-
-  final ReaderState state;
-  final ReaderThemeData readerTheme;
-  final TextStyle readerTextStyle;
-  final AppTextTheme text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: readerTheme.surfaceColor,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(color: readerTheme.dividerColor),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl,
-            vertical: AppSpacing.xxl,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 48,
-                color: readerTheme.accentColor,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                state.title,
-                style: text.headlineSmall.copyWith(
-                  color: readerTheme.primaryTextColor,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                'This article\'s cached content is missing. Remove it '
-                'from your library and re-import the URL to fix it.',
-                style: readerTextStyle,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ReviewReminderBanner extends StatelessWidget {
   const _ReviewReminderBanner({
     required this.onReview,
@@ -601,7 +490,7 @@ class _ReviewReminderBanner extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.school, size: AppIconSize.sm),
+            const Icon(AppIcons.practice, size: AppIconSize.sm),
             const SizedBox(width: AppSpacing.sm),
             const Expanded(
               child: Text('You have items to review'),
@@ -611,7 +500,7 @@ class _ReviewReminderBanner extends StatelessWidget {
               child: const Text('Review'),
             ),
             IconButton(
-              icon: const Icon(Icons.close, size: AppIconSize.sm),
+              icon: const Icon(AppIcons.close, size: AppIconSize.sm),
               onPressed: onDismiss,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),

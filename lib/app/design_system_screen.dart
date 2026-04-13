@@ -42,12 +42,12 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                     segments: const [
                       ButtonSegment(
                         value: ThemeMode.light,
-                        icon: Icon(Icons.light_mode_outlined),
+                        icon: Icon(AppIcons.lightMode),
                         label: Text('Light'),
                       ),
                       ButtonSegment(
                         value: ThemeMode.dark,
-                        icon: Icon(Icons.dark_mode_outlined),
+                        icon: Icon(AppIcons.darkMode),
                         label: Text('Dark'),
                       ),
                     ],
@@ -150,12 +150,12 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                           const SizedBox(width: AppSpacing.sm),
                           IconButton(
                             onPressed: () {},
-                            icon: const Icon(Icons.bookmark_border),
+                            icon: const Icon(AppIcons.bookmark),
                           ),
                           const SizedBox(width: AppSpacing.sm),
                           IconButton(
                             onPressed: () {},
-                            icon: const Icon(Icons.tune),
+                            icon: const Icon(AppIcons.tune),
                           ),
                         ],
                       ),
@@ -280,7 +280,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                     children: [
                       Card(
                         child: ListTile(
-                          leading: const Icon(Icons.menu_book_outlined),
+                          leading: const Icon(AppIcons.book),
                           title: const Text('Sample Article'),
                           subtitle: const Text(
                             'A quiet reading surface with subtle borders',
@@ -293,7 +293,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       _ActionRowCard(
-                        leading: const Icon(Icons.auto_awesome_outlined),
+                        leading: const Icon(AppIcons.sparkles),
                         title: 'Premium',
                         subtitle:
                             'Unlock AI tools and deeper reading workflows',
@@ -331,18 +331,18 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                       },
                       destinations: const [
                         NavigationDestination(
-                          icon: Icon(Icons.home_outlined),
-                          selectedIcon: Icon(Icons.home),
+                          icon: Icon(AppIcons.home),
+                          selectedIcon: Icon(AppIcons.home),
                           label: 'Home',
                         ),
                         NavigationDestination(
-                          icon: Icon(Icons.library_books_outlined),
-                          selectedIcon: Icon(Icons.library_books),
+                          icon: Icon(AppIcons.library),
+                          selectedIcon: Icon(AppIcons.library),
                           label: 'Library',
                         ),
                         NavigationDestination(
-                          icon: Icon(Icons.person_outline),
-                          selectedIcon: Icon(Icons.person),
+                          icon: Icon(AppIcons.profile),
+                          selectedIcon: Icon(AppIcons.profile),
                           label: 'Profile',
                         ),
                       ],
@@ -510,7 +510,7 @@ class _DemoLibraryCard extends StatelessWidget {
         ),
         child: const Padding(
           padding: EdgeInsets.all(AppSpacing.xs),
-          child: Icon(Icons.more_horiz, size: AppIconSize.sm),
+          child: Icon(AppIcons.moreHorizontal, size: AppIconSize.sm),
         ),
       ),
     );
@@ -656,6 +656,51 @@ class _ActionRowCard extends StatelessWidget {
   }
 }
 
+class _CoverArtSample {
+  const _CoverArtSample({
+    required this.title,
+    this.author,
+    this.source,
+    this.isArticle = false,
+    this.progress,
+  });
+
+  final String title;
+  final String? author;
+  final String? source;
+  final bool isArticle;
+  final double? progress;
+}
+
+const _coverArtSamples = <_CoverArtSample>[
+  _CoverArtSample(
+    title: 'Atomic Habits',
+    author: 'James Clear',
+    progress: 0.42,
+  ),
+  _CoverArtSample(title: 'Deep Work', author: 'Cal Newport'),
+  _CoverArtSample(
+    title: 'Matter-style Reading Interfaces',
+    source: 'matter.com',
+    isArticle: true,
+    progress: 0.65,
+  ),
+  _CoverArtSample(
+    title: 'Long-form UX for Focused Reading',
+    source: 'readwise.io',
+    isArticle: true,
+  ),
+  _CoverArtSample(
+    title: 'Thinking in Systems',
+    author: 'Donella Meadows',
+    progress: 0.9,
+  ),
+  _CoverArtSample(
+    title: 'The Pragmatic Programmer',
+    author: 'Hunt & Thomas',
+  ),
+];
+
 class _CoverArtPreview extends StatelessWidget {
   const _CoverArtPreview();
 
@@ -667,44 +712,30 @@ class _CoverArtPreview extends StatelessWidget {
         // Grid-tile size: the common case in the Library screen. Four
         // items so we can eyeball the gradient palette variance and
         // confirm progress + article badge render at realistic sizes.
-        GridView.count(
-          crossAxisCount: 3,
-          crossAxisSpacing: AppSpacing.md,
-          mainAxisSpacing: AppSpacing.md,
+        GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: AppSpacing.md,
+            mainAxisSpacing: AppSpacing.md,
+            childAspectRatio: 0.66,
+          ),
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 0.66,
-          children: const [
-            AppCoverArt(
-              title: 'Atomic Habits',
-              subtitle: 'James Clear',
-              progress: 0.42,
-            ),
-            AppCoverArt(
-              title: 'Deep Work',
-              subtitle: 'Cal Newport',
-            ),
-            AppCoverArt(
-              title: 'Matter-style Reading Interfaces',
-              subtitle: 'matter.com',
-              isArticle: true,
-              progress: 0.65,
-            ),
-            AppCoverArt(
-              title: 'Long-form UX for Focused Reading',
-              subtitle: 'readwise.io',
-              isArticle: true,
-            ),
-            AppCoverArt(
-              title: 'Thinking in Systems',
-              subtitle: 'Donella Meadows',
-              progress: 0.9,
-            ),
-            AppCoverArt(
-              title: 'The Pragmatic Programmer',
-              subtitle: 'Hunt & Thomas',
-            ),
-          ],
+          itemCount: _coverArtSamples.length,
+          itemBuilder: (context, index) {
+            final sample = _coverArtSamples[index];
+            return LayoutBuilder(
+              builder: (context, constraints) => AppCoverArt(
+                title: sample.title,
+                author: sample.author,
+                source: sample.source,
+                isArticle: sample.isArticle,
+                progress: sample.progress,
+                height: constraints.maxHeight,
+                width: constraints.maxWidth,
+              ),
+            );
+          },
         ),
         const SizedBox(height: AppSpacing.lg),
         // List-thumbnail size: verifies typography clamps kick in and the
@@ -714,7 +745,12 @@ class _CoverArtPreview extends StatelessWidget {
             SizedBox(
               width: 44,
               height: 60,
-              child: AppCoverArt(title: 'Atomic Habits'),
+              child: AppCoverArt(
+                title: 'Atomic Habits',
+                height: 60,
+                width: 44,
+                showAuthor: false,
+              ),
             ),
             SizedBox(width: AppSpacing.sm),
             SizedBox(
@@ -724,19 +760,32 @@ class _CoverArtPreview extends StatelessWidget {
                 title: 'Matter Reading',
                 isArticle: true,
                 progress: 0.4,
+                height: 60,
+                width: 44,
+                showAuthor: false,
               ),
             ),
             SizedBox(width: AppSpacing.sm),
             SizedBox(
               width: 44,
               height: 60,
-              child: AppCoverArt(title: 'Deep Work'),
+              child: AppCoverArt(
+                title: 'Deep Work',
+                height: 60,
+                width: 44,
+                showAuthor: false,
+              ),
             ),
             SizedBox(width: AppSpacing.sm),
             SizedBox(
               width: 44,
               height: 60,
-              child: AppCoverArt(title: 'The Pragmatic Programmer'),
+              child: AppCoverArt(
+                title: 'The Pragmatic Programmer',
+                height: 60,
+                width: 44,
+                showAuthor: false,
+              ),
             ),
           ],
         ),

@@ -3,6 +3,8 @@
 // StatefulWidget so that GoRouter is created once in initState and disposed
 // properly, avoiding recreation on every settings change (theme/locale).
 
+import 'dart:io' show Platform;
+
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -18,7 +20,8 @@ class MaterialContext extends StatefulWidget {
   State<MaterialContext> createState() => _MaterialContextState();
 }
 
-class _MaterialContextState extends State<MaterialContext> {
+class _MaterialContextState extends State<MaterialContext>
+    with WidgetsBindingObserver {
   static final _globalKey = GlobalKey(debugLabel: 'MaterialContext');
 
   late final GoRouter _router;
@@ -27,12 +30,26 @@ class _MaterialContextState extends State<MaterialContext> {
   void initState() {
     super.initState();
     _router = buildRouter(deps: DependenciesScope.of(context));
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _router.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // iOS can kill the loopback socket while the app is suspended.
+    // Restart the server when the app comes back to the foreground.
+    if (state == AppLifecycleState.resumed && Platform.isIOS) {
+      final server = DependenciesScope.of(context).readerServer;
+      if (!server.isRunning) {
+        server.start();
+      }
+    }
   }
 
   @override

@@ -17,10 +17,10 @@ class AppInputThemes {
     return InputDecorationTheme(
       filled: true,
       fillColor: palette.secondary,
-      hintStyle: textTheme.bodyMedium?.copyWith(
+      hintStyle: textTheme.bodyMedium!.copyWith(
         color: palette.foreground.withValues(alpha: 0.4),
       ),
-      labelStyle: textTheme.bodyMedium?.copyWith(
+      labelStyle: textTheme.bodyMedium!.copyWith(
         color: palette.mutedForeground,
       ),
       contentPadding: const EdgeInsets.symmetric(

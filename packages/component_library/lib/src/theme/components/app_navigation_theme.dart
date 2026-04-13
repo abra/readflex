@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../tokens/app_colors.dart';
 import '../tokens/app_elevation.dart';
+import '../tokens/app_radius.dart';
 import '../tokens/app_sizes.dart';
 import '../tokens/app_spacing.dart';
 
@@ -45,7 +46,7 @@ class AppNavigationThemes {
       showDragHandle: false,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppSizes.bottomSheetRadius),
+          top: Radius.circular(AppRadius.xl),
         ),
       ),
     );
@@ -57,7 +58,7 @@ class AppNavigationThemes {
       surfaceTintColor: Colors.transparent,
       elevation: AppElevation.level0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSizes.bottomSheetRadius),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
       ),
     );
   }

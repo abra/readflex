@@ -9,7 +9,6 @@ class ReaderState extends Equatable {
     this.title = '',
     this.book,
     this.article,
-    this.articleContent = '',
     this.highlights = const [],
     this.selectedText = '',
     this.selectionCfiRange,
@@ -24,10 +23,6 @@ class ReaderState extends Equatable {
   final String title;
   final Book? book;
   final Article? article;
-
-  /// HTML body for the loaded article, read from [Article.contentPath].
-  /// Empty when the source is a book or the content couldn't be read.
-  final String articleContent;
 
   final List<Highlight> highlights;
 
@@ -58,7 +53,6 @@ class ReaderState extends Equatable {
     String? title,
     Object? book = _absent,
     Object? article = _absent,
-    String? articleContent,
     List<Highlight>? highlights,
     String? selectedText,
     Object? selectionCfiRange = _absent,
@@ -74,7 +68,6 @@ class ReaderState extends Equatable {
     title: title ?? this.title,
     book: book == _absent ? this.book : book as Book?,
     article: article == _absent ? this.article : article as Article?,
-    articleContent: articleContent ?? this.articleContent,
     highlights: highlights ?? this.highlights,
     selectedText: selectedText ?? this.selectedText,
     selectionCfiRange: selectionCfiRange == _absent
@@ -97,7 +90,6 @@ class ReaderState extends Equatable {
     title,
     book,
     article,
-    articleContent,
     highlights,
     selectedText,
     selectionCfiRange,

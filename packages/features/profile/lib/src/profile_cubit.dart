@@ -3,40 +3,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:subscription_service/subscription_service.dart';
 
-class ProfileState extends Equatable {
-  const ProfileState({
-    this.authStatus = AuthStatus.unauthenticated,
-    this.email,
-    this.subscriptionStatus = SubscriptionStatus.free,
-    this.isLoading = false,
-  });
-
-  final AuthStatus authStatus;
-  final String? email;
-  final SubscriptionStatus subscriptionStatus;
-  final bool isLoading;
-
-  bool get isAuthenticated => authStatus == AuthStatus.authenticated;
-
-  bool get isPremium => subscriptionStatus == SubscriptionStatus.premium;
-
-  static const _absent = Object();
-
-  ProfileState copyWith({
-    AuthStatus? authStatus,
-    Object? email = _absent,
-    SubscriptionStatus? subscriptionStatus,
-    bool? isLoading,
-  }) => ProfileState(
-    authStatus: authStatus ?? this.authStatus,
-    email: email == _absent ? this.email : email as String?,
-    subscriptionStatus: subscriptionStatus ?? this.subscriptionStatus,
-    isLoading: isLoading ?? this.isLoading,
-  );
-
-  @override
-  List<Object?> get props => [authStatus, email, subscriptionStatus, isLoading];
-}
+part 'profile_state.dart';
 
 class ProfileCubit extends Cubit<ProfileState> {
   ProfileCubit({

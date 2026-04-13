@@ -110,12 +110,7 @@ void main() {
               .having((s) => s.status, 'status', ReaderStatus.ready)
               .having((s) => s.sourceType, 'sourceType', SourceType.article)
               .having((s) => s.title, 'title', 'Test Article')
-              .having((s) => s.article, 'article', isNotNull)
-              .having(
-                (s) => s.articleContent,
-                'articleContent',
-                '<p>Hello from disk</p>',
-              ),
+              .having((s) => s.article, 'article', isNotNull),
         ],
         verify: (_) {
           expect(articleRepository.updatedArticle, isNotNull);
@@ -163,11 +158,17 @@ void main() {
           book: testBook,
         ),
         act: (bloc) => bloc.add(
-          const ReaderPositionUpdated(location: 200, progress: 0.2),
+          const ReaderPositionUpdated(
+            cfi: 'epubcfi(/6/4!/4/2)',
+            progress: 0.2,
+          ),
         ),
         verify: (_) {
           expect(bookRepository.updatedBook, isNotNull);
-          expect(bookRepository.updatedBook!.currentLocation, 200);
+          expect(
+            bookRepository.updatedBook!.currentCfi,
+            'epubcfi(/6/4!/4/2)',
+          );
           expect(bookRepository.updatedBook!.readingProgress, 0.2);
         },
       );

@@ -43,6 +43,7 @@ class AppTheme {
   static final ThemeData _darkCached = _buildDark();
 
   static ThemeData light() => _lightCached;
+
   static ThemeData dark() => _darkCached;
 }
 
@@ -91,8 +92,14 @@ ThemeData _buildLight() {
     surfaceTint: Colors.transparent,
   );
 
+  // NOTE: do NOT pass fontFamily to .apply() — it unconditionally
+  // overwrites fontFamily on every TextStyle in the theme, wiping out
+  // the serif family we set on display styles inside
+  // AppTypography.textTheme. Roles without an explicit fontFamily fall
+  // through to ThemeData.fontFamily (= sans) on render, which is what
+  // we want for titleMedium / body / label. .apply() still applies the
+  // body/display color tints correctly either way.
   final textTheme = AppTypography.textTheme.apply(
-    fontFamily: AppTypography.fontFamilySans,
     bodyColor: palette.foreground,
     displayColor: palette.foreground,
   );
@@ -151,8 +158,14 @@ ThemeData _buildDark() {
     surfaceTint: Colors.transparent,
   );
 
+  // NOTE: do NOT pass fontFamily to .apply() — it unconditionally
+  // overwrites fontFamily on every TextStyle in the theme, wiping out
+  // the serif family we set on display styles inside
+  // AppTypography.textTheme. Roles without an explicit fontFamily fall
+  // through to ThemeData.fontFamily (= sans) on render, which is what
+  // we want for titleMedium / body / label. .apply() still applies the
+  // body/display color tints correctly either way.
   final textTheme = AppTypography.textTheme.apply(
-    fontFamily: AppTypography.fontFamilySans,
     bodyColor: palette.foreground,
     displayColor: palette.foreground,
   );

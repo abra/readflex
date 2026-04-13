@@ -35,21 +35,21 @@ class _ThemeRow extends StatelessWidget {
       children: [
         _ThemeButton(
           label: 'Light',
-          icon: Icons.wb_sunny_outlined,
+          icon: AppIcons.lightMode,
           active: themeMode == ThemeMode.light,
           onTap: () => onChanged(ThemeMode.light),
         ),
         const SizedBox(width: AppSpacing.sm),
         _ThemeButton(
           label: 'Dark',
-          icon: Icons.dark_mode_outlined,
+          icon: AppIcons.darkMode,
           active: themeMode == ThemeMode.dark,
           onTap: () => onChanged(ThemeMode.dark),
         ),
         const SizedBox(width: AppSpacing.sm),
         _ThemeButton(
           label: 'Auto',
-          icon: Icons.monitor_outlined,
+          icon: AppIcons.systemMode,
           active: themeMode == ThemeMode.system,
           onTap: () => onChanged(ThemeMode.system),
         ),
@@ -200,7 +200,7 @@ class _SettingsRow extends StatelessWidget {
             // Only show chevron when the row is actually navigable.
             if (enabled)
               Icon(
-                Icons.chevron_right,
+                AppIcons.chevronRight,
                 size: AppIconSize.sm,
                 color: cs.onSurface.withValues(alpha: 0.3),
               ),
