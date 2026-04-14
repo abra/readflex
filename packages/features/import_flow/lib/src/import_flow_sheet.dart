@@ -6,6 +6,15 @@ import 'import_flow_result.dart';
 
 /// Shows the import bottom sheet.
 ///
+/// Currently uses a callback-based API with local `setState` because the
+/// flow is simple (pick action → execute → done/error). No Cubit needed yet.
+///
+/// When the sheet evolves into a multi-step flow (animated screen
+/// transitions, progress bar, loading/success/error states within a single
+/// sheet), introduce an `ImportFlowCubit` to manage step transitions and
+/// intermediate UI states. The callbacks will remain — the Cubit will call
+/// them and translate results into state changes for the UI.
+///
 /// [onImportBook] — called when the user taps "Import book file".
 /// Should open a file picker, import the book, and return `true` on success.
 ///

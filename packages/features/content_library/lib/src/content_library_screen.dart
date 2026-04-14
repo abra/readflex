@@ -262,38 +262,10 @@ class _LibraryHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
-          TextField(
+          SearchField(
+            hintText: 'Search books & articles...',
             controller: searchController,
             onChanged: onSearchChanged,
-            style: TextStyle(fontSize: 14, color: colors.onSurface),
-            decoration: InputDecoration(
-              hintText: 'Search books & articles...',
-              prefixIcon: Icon(
-                AppIcons.search,
-                size: AppIconSize.xs,
-                color: colors.onSurface.withValues(alpha: 0.55),
-              ),
-              suffixIcon: state.searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(AppIcons.close, size: AppIconSize.xs),
-                      onPressed: () {
-                        searchController.clear();
-                        onSearchChanged('');
-                      },
-                    )
-                  : null,
-              isDense: true,
-              filled: true,
-              fillColor: colors.surfaceContainerHighest,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm,
-              ),
-            ),
           ),
           const SizedBox(height: AppSpacing.lg),
           _FilterSegments(
@@ -500,8 +472,17 @@ class _LibraryBody extends StatelessWidget {
           child: SizedBox(
             height: MediaQuery.of(context).size.height * 0.6,
             child: state.isEmpty
-                ? const _EmptyLibraryState()
-                : const _NoResultsState(),
+                ? const EmptyState(
+                    icon: AppIcons.book,
+                    message: 'Your library is empty',
+                    subtitle:
+                        'Import your first book or article to get started',
+                  )
+                : const EmptyState(
+                    icon: AppIcons.searchOff,
+                    message: 'No results found',
+                    subtitle: 'Try a different search or filter',
+                  ),
           ),
         ),
       );
@@ -524,88 +505,6 @@ class _LibraryBody extends StatelessWidget {
             ),
           };
         },
-      ),
-    );
-  }
-}
-
-/// Shown when the library is completely empty — nudges the user toward
-/// importing their first book or article via the FAB.
-class _EmptyLibraryState extends StatelessWidget {
-  const _EmptyLibraryState();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final text = context.text;
-
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: colors.surfaceContainerHighest,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              AppIcons.book,
-              size: 28,
-              color: colors.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text('Your library is empty', style: text.titleMedium),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Import your first book or article to get started',
-            style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Shown when the library has items but the current search / filter
-/// produces an empty result set. Separate from the completely-empty
-/// state because the call to action is different: "relax the filter",
-/// not "import content".
-class _NoResultsState extends StatelessWidget {
-  const _NoResultsState();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final text = context.text;
-
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: colors.surfaceContainerHighest,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              AppIcons.searchOff,
-              size: 24,
-              color: colors.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text('No results found', style: text.titleMedium),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Try a different search or filter',
-            style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
-          ),
-        ],
       ),
     );
   }

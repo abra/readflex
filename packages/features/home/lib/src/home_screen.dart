@@ -146,7 +146,7 @@ class _StatsRow extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _StatCard(
+          child: StatCard(
             icon: AppIcons.library,
             label: 'Sources',
             value: '${state.totalSources}',
@@ -155,7 +155,7 @@ class _StatsRow extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
-          child: _StatCard(
+          child: StatCard(
             icon: AppIcons.highlight,
             label: 'Highlights',
             value: '${state.totalHighlights}',
@@ -164,7 +164,7 @@ class _StatsRow extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
-          child: _StatCard(
+          child: StatCard(
             icon: AppIcons.practice,
             label: 'Due',
             value: '${state.dueFlashcards}',
@@ -175,52 +175,6 @@ class _StatsRow extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-    this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            vertical: AppSpacing.md,
-            horizontal: AppSpacing.sm,
-          ),
-          child: Column(
-            children: [
-              Icon(icon, color: color),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                value,
-                style: context.text.headlineSmall.copyWith(color: color),
-              ),
-              Text(
-                label,
-                style: context.text.bodySmall,
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

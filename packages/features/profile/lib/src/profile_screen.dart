@@ -138,7 +138,7 @@ class _ProfileViewState extends State<_ProfileView> {
                       const SizedBox(height: AppSpacing.lg),
 
                       // ─── Appearance ───
-                      _SectionLabel(label: 'APPEARANCE'),
+                      SectionLabel(label: 'APPEARANCE'),
                       const SizedBox(height: AppSpacing.md),
                       BlocBuilder<
                         ProfileAppearanceCubit,
@@ -156,17 +156,17 @@ class _ProfileViewState extends State<_ProfileView> {
                       const SizedBox(height: AppSpacing.lg),
 
                       // ─── Reading ───
-                      _SectionLabel(label: 'READING'),
+                      SectionLabel(label: 'READING'),
                       const SizedBox(height: AppSpacing.md),
-                      _SettingsGroup(
+                      SettingsGroup(
                         children: [
-                          _SettingsRow(
+                          SettingsRow(
                             icon: AppIcons.textFields,
                             label: 'Font & Text Size',
                             detail: _currentFontLabel(context),
                             onTap: () => _showFontSheet(context),
                           ),
-                          _SettingsRow(
+                          SettingsRow(
                             icon: AppIcons.language,
                             label: 'Translation Language',
                             detail: 'English',
@@ -176,25 +176,25 @@ class _ProfileViewState extends State<_ProfileView> {
                       const SizedBox(height: AppSpacing.lg),
 
                       // ─── General ───
-                      _SectionLabel(label: 'GENERAL'),
+                      SectionLabel(label: 'GENERAL'),
                       const SizedBox(height: AppSpacing.md),
-                      _SettingsGroup(
+                      SettingsGroup(
                         children: [
-                          _SettingsRow(
+                          SettingsRow(
                             icon: AppIcons.cloud,
                             label: 'Sync & Backup',
                             detail: 'Off',
                           ),
-                          _SettingsRow(
+                          SettingsRow(
                             icon: AppIcons.download,
                             label: 'Offline Downloads',
                           ),
-                          _SettingsRow(
+                          SettingsRow(
                             icon: AppIcons.notifications,
                             label: 'Notifications',
                             detail: 'On',
                           ),
-                          _SettingsRow(
+                          SettingsRow(
                             icon: AppIcons.shield,
                             label: 'Privacy',
                           ),
@@ -203,16 +203,16 @@ class _ProfileViewState extends State<_ProfileView> {
                       const SizedBox(height: AppSpacing.lg),
 
                       // ─── About ───
-                      _SectionLabel(label: 'ABOUT'),
+                      SectionLabel(label: 'ABOUT'),
                       const SizedBox(height: AppSpacing.md),
-                      _SettingsGroup(
+                      SettingsGroup(
                         children: [
-                          _SettingsRow(
+                          SettingsRow(
                             icon: AppIcons.info,
                             label: 'Version',
                             detail: widget.appVersion,
                           ),
-                          _SettingsRow(
+                          SettingsRow(
                             icon: AppIcons.terms,
                             label: 'Terms & Licenses',
                           ),
@@ -221,11 +221,11 @@ class _ProfileViewState extends State<_ProfileView> {
                       const SizedBox(height: AppSpacing.lg),
 
                       // ─── Dev ───
-                      _SectionLabel(label: 'DEVELOPER'),
+                      SectionLabel(label: 'DEVELOPER'),
                       const SizedBox(height: AppSpacing.md),
-                      _SettingsGroup(
+                      SettingsGroup(
                         children: [
-                          _SettingsRow(
+                          SettingsRow(
                             icon: AppIcons.designSystem,
                             label: 'Design System',
                             onTap: widget.onDesignSystemPressed,
@@ -365,22 +365,10 @@ class _ProfileHeader extends StatelessWidget {
                   ),
                   if (state.isPremium) ...[
                     const SizedBox(width: AppSpacing.sm),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm,
-                        vertical: AppSpacing.xxs,
-                      ),
-                      decoration: BoxDecoration(
-                        color: appColors.proBadge.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                      ),
-                      child: Text(
-                        'PRO',
-                        style: context.text.labelSmall.copyWith(
-                          color: appColors.proBadgeForeground,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
+                    AppBadge(
+                      label: 'PRO',
+                      foreground: appColors.proBadgeForeground,
+                      background: appColors.proBadge.withValues(alpha: 0.15),
                     ),
                   ],
                 ],
@@ -417,52 +405,18 @@ class _StatsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Row(
       children: [
-        _StatTile(value: '0', label: 'Books'),
+        Expanded(
+          child: StatCard(value: '0', label: 'Books'),
+        ),
         SizedBox(width: AppSpacing.sm),
-        _StatTile(value: '0h', label: 'Read time'),
+        Expanded(
+          child: StatCard(value: '0h', label: 'Read time'),
+        ),
         SizedBox(width: AppSpacing.sm),
-        _StatTile(value: '0', label: 'Streak'),
+        Expanded(
+          child: StatCard(value: '0', label: 'Streak'),
+        ),
       ],
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  const _StatTile({required this.value, required this.label});
-
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.colors;
-    final cardColor = Theme.of(context).cardTheme.color ?? cs.surface;
-
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: cs.outline.withValues(alpha: 0.45)),
-        ),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: context.text.titleMedium.copyWith(color: cs.onSurface),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              label,
-              style: context.text.labelSmall.copyWith(
-                fontWeight: FontWeight.w400,
-                color: cs.onSurface.withValues(alpha: 0.55),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

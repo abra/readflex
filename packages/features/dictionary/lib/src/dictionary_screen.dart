@@ -94,14 +94,18 @@ class _DictionaryViewState extends State<_DictionaryView> {
                             ),
                           ),
                           const SizedBox(width: AppSpacing.md),
-                          _MasteredBadge(
-                            count: state.masteredCount,
-                            appColors: appColors,
+                          AppBadge(
+                            label: '${state.masteredCount} mastered',
+                            foreground: appColors.successForeground,
+                            background: appColors.success.withValues(
+                              alpha: 0.12,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: AppSpacing.lg),
-                      _SearchField(
+                      SearchField(
+                        hintText: 'Search words...',
                         onChanged: (query) => context
                             .read<DictionaryBloc>()
                             .add(DictionarySearchChanged(query)),
@@ -133,7 +137,10 @@ class _DictionaryViewState extends State<_DictionaryView> {
                           return false;
                         },
                         child: state.filteredEntries.isEmpty
-                            ? const _EmptySearch()
+                            ? const EmptyState(
+                                icon: AppIcons.book,
+                                message: 'No words found',
+                              )
                             : ListView.separated(
                                 padding: const EdgeInsets.fromLTRB(
                                   AppSpacing.lg,
@@ -189,104 +196,6 @@ class _DictionaryViewState extends State<_DictionaryView> {
 }
 
 // ─── Header Widgets ─────────────────────────────────────────
-
-class _MasteredBadge extends StatelessWidget {
-  const _MasteredBadge({required this.count, required this.appColors});
-
-  final int count;
-  final AppColorsExt appColors;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 2,
-      ),
-      decoration: BoxDecoration(
-        color: appColors.success.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(AppRadius.md),
-      ),
-      child: Text(
-        '$count mastered',
-        style: context.text.labelSmall.copyWith(
-          fontWeight: FontWeight.w500,
-          color: appColors.successForeground,
-        ),
-      ),
-    );
-  }
-}
-
-class _SearchField extends StatelessWidget {
-  const _SearchField({required this.onChanged});
-
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.colors;
-    return TextField(
-      onChanged: onChanged,
-      decoration: InputDecoration(
-        hintText: 'Search words...',
-        prefixIcon: Icon(
-          AppIcons.search,
-          size: AppIconSize.sm,
-          color: cs.onSurface.withValues(alpha: 0.55),
-        ),
-        filled: true,
-        fillColor: cs.secondary,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-      ),
-      style: context.text.bodyMedium.copyWith(color: cs.onSurface),
-    );
-  }
-}
-
-// ─── Empty Search ───────────────────────────────────────────
-
-class _EmptySearch extends StatelessWidget {
-  const _EmptySearch();
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.colors;
-
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerHighest,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              AppIcons.book,
-              size: AppIconSize.md,
-              color: cs.onSurface.withValues(alpha: 0.55),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            'No words found',
-            style: context.text.bodyMedium.copyWith(
-              fontWeight: FontWeight.w500,
-              color: cs.onSurface,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ─── Word Card ──────────────────────────────────────────────
 
@@ -400,22 +309,10 @@ class _WordTitle extends StatelessWidget {
         ),
         if (mastered) ...[
           const SizedBox(width: AppSpacing.sm),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: AppSpacing.xxs,
-            ),
-            decoration: BoxDecoration(
-              color: appColors.success.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-            ),
-            child: Text(
-              'Mastered',
-              style: context.text.labelSmall.copyWith(
-                fontWeight: FontWeight.w500,
-                color: appColors.successForeground,
-              ),
-            ),
+          AppBadge(
+            label: 'Mastered',
+            foreground: appColors.successForeground,
+            background: appColors.success.withValues(alpha: 0.12),
           ),
         ],
       ],

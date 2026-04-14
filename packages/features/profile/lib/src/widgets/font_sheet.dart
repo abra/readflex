@@ -64,7 +64,7 @@ class _FontSheet extends StatelessWidget {
               const SizedBox(height: AppSpacing.lg),
 
               // Font selection
-              _SectionLabel(label: 'FONT'),
+              SectionLabel(label: 'FONT'),
               const SizedBox(height: AppSpacing.sm),
               Wrap(
                 spacing: AppSpacing.sm,
@@ -99,7 +99,7 @@ class _FontSheet extends StatelessWidget {
               // Size
               Row(
                 children: [
-                  _SectionLabel(label: 'SIZE'),
+                  SectionLabel(label: 'SIZE'),
                   const Spacer(),
                   Text(
                     '${(textScale * 100).round()}%',
@@ -151,7 +151,7 @@ class _FontSheet extends StatelessWidget {
               // Line spacing
               Row(
                 children: [
-                  _SectionLabel(label: 'LINE SPACING'),
+                  SectionLabel(label: 'LINE SPACING'),
                   const Spacer(),
                   Text(
                     lineHeight.toStringAsFixed(1),
