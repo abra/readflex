@@ -1,0 +1,140 @@
+import 'package:domain_models/domain_models.dart';
+import 'package:drift/drift.dart' hide isNull;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:local_storage/local_storage.dart';
+
+import 'package:highlight_repository/src/mappers/highlight_to_domain.dart';
+import 'package:highlight_repository/src/mappers/highlight_to_storage.dart';
+
+void main() {
+  final now = DateTime(2026, 4, 1);
+
+  group('HighlightToDomain', () {
+    test('maps all fields from storage to domain', () {
+      final row = HighlightsTableData(
+        id: 'h1',
+        sourceId: 'book-1',
+        sourceType: 'book',
+        highlightText: 'Important text',
+        note: 'My note',
+        cfiRange: 'epubcfi(/6/4)',
+        pageNumber: 42,
+        scrollOffset: 0.5,
+        color: 'blue',
+        createdAt: now.toIso8601String(),
+      );
+
+      final hl = row.toDomainModel();
+
+      expect(hl.id, 'h1');
+      expect(hl.sourceId, 'book-1');
+      expect(hl.sourceType, SourceType.book);
+      expect(hl.text, 'Important text');
+      expect(hl.note, 'My note');
+      expect(hl.cfiRange, 'epubcfi(/6/4)');
+      expect(hl.pageNumber, 42);
+      expect(hl.scrollOffset, 0.5);
+      expect(hl.color, HighlightColor.blue);
+      expect(hl.createdAt, now);
+    });
+
+    test('handles null optional fields', () {
+      final row = HighlightsTableData(
+        id: 'h2',
+        sourceId: 'book-1',
+        sourceType: 'article',
+        highlightText: 'Text',
+        note: null,
+        cfiRange: null,
+        pageNumber: null,
+        scrollOffset: null,
+        color: 'yellow',
+        createdAt: now.toIso8601String(),
+      );
+
+      final hl = row.toDomainModel();
+
+      expect(hl.note, isNull);
+      expect(hl.cfiRange, isNull);
+      expect(hl.pageNumber, isNull);
+      expect(hl.scrollOffset, isNull);
+    });
+
+    test('falls back to epoch for invalid date', () {
+      final row = HighlightsTableData(
+        id: 'h3',
+        sourceId: 'book-1',
+        sourceType: 'book',
+        highlightText: 'Text',
+        note: null,
+        cfiRange: null,
+        pageNumber: null,
+        scrollOffset: null,
+        color: 'yellow',
+        createdAt: 'bad',
+      );
+
+      expect(
+        row.toDomainModel().createdAt,
+        DateTime.fromMillisecondsSinceEpoch(0),
+      );
+    });
+  });
+
+  group('HighlightToStorage', () {
+    test('maps all fields from domain to companion', () {
+      final hl = Highlight(
+        id: 'h1',
+        sourceId: 'book-1',
+        sourceType: SourceType.book,
+        text: 'Important text',
+        note: 'My note',
+        cfiRange: 'epubcfi(/6/4)',
+        pageNumber: 42,
+        scrollOffset: 0.5,
+        color: HighlightColor.blue,
+        createdAt: now,
+      );
+
+      final companion = hl.toStorageModel();
+
+      expect(companion.id, const Value('h1'));
+      expect(companion.sourceId, const Value('book-1'));
+      expect(companion.sourceType, const Value('book'));
+      expect(companion.highlightText, const Value('Important text'));
+      expect(companion.note, const Value('My note'));
+      expect(companion.cfiRange, const Value('epubcfi(/6/4)'));
+      expect(companion.pageNumber, const Value(42));
+      expect(companion.scrollOffset, const Value(0.5));
+      expect(companion.color, const Value('blue'));
+      expect(companion.createdAt, Value(now.toIso8601String()));
+    });
+
+    test('round-trips through domain and back', () {
+      final original = Highlight(
+        id: 'h1',
+        sourceId: 'book-1',
+        sourceType: SourceType.book,
+        text: 'Text',
+        createdAt: now,
+      );
+
+      final companion = original.toStorageModel();
+      final row = HighlightsTableData(
+        id: companion.id.value,
+        sourceId: companion.sourceId.value,
+        sourceType: companion.sourceType.value,
+        highlightText: companion.highlightText.value,
+        note: companion.note.value,
+        cfiRange: companion.cfiRange.value,
+        pageNumber: companion.pageNumber.value,
+        scrollOffset: companion.scrollOffset.value,
+        color: companion.color.value,
+        createdAt: companion.createdAt.value,
+      );
+      final restored = row.toDomainModel();
+
+      expect(restored, equals(original));
+    });
+  });
+}

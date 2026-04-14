@@ -217,6 +217,157 @@ void main() {
     expect(find.text('Read time'), findsOneWidget);
     expect(find.byType(Card), findsNothing);
   });
+  testWidgets('BottomSheetHeader renders title and close button', (
+    tester,
+  ) async {
+    var closeTapped = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BottomSheetHeader(
+            title: 'Title',
+            onClose: () => closeTapped = true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Title'), findsOneWidget);
+    await tester.tap(find.byType(IconButton));
+    expect(closeTapped, isTrue);
+  });
+
+  testWidgets('CenteredCircularProgressIndicator renders indicator', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: CenteredCircularProgressIndicator(),
+        ),
+      ),
+    );
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
+
+  testWidgets('ErrorState renders message and retry button', (tester) async {
+    var retried = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ErrorState(
+            message: 'Something went wrong',
+            retryLabel: 'Retry',
+            onRetry: () => retried = true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Something went wrong'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+
+    await tester.tap(find.text('Retry'));
+    expect(retried, isTrue);
+  });
+
+  testWidgets('ScrollEdgeFade renders with top edge', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: ScrollEdgeFade(visible: true),
+        ),
+      ),
+    );
+
+    expect(find.byType(ScrollEdgeFade), findsOneWidget);
+    expect(find.byType(AnimatedOpacity), findsOneWidget);
+  });
+
+  testWidgets('ScrollEdgeFade hides when not visible', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: ScrollEdgeFade(visible: false),
+        ),
+      ),
+    );
+
+    final opacity = tester.widget<AnimatedOpacity>(
+      find.byType(AnimatedOpacity),
+    );
+    expect(opacity.opacity, 0);
+  });
+
+  testWidgets('MediaCollectionCard renders title and subtitle', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 300,
+            child: MediaCollectionCard(
+              media: const ColoredBox(color: Colors.blue),
+              title: 'Card Title',
+              subtitle: 'Card Subtitle',
+              meta: 'EPUB',
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Card Title'), findsOneWidget);
+    expect(find.text('Card Subtitle'), findsOneWidget);
+    expect(find.text('EPUB'), findsOneWidget);
+  });
+
+  testWidgets('MediaCollectionCard renders without optional fields', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 300,
+            child: MediaCollectionCard(
+              media: const ColoredBox(color: Colors.blue),
+              title: 'Title Only',
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Title Only'), findsOneWidget);
+  });
+
+  testWidgets('MediaCollectionCard calls onTap', (tester) async {
+    var tapped = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 300,
+            child: MediaCollectionCard(
+              media: const ColoredBox(color: Colors.blue),
+              title: 'Tappable',
+              onTap: () => tapped = true,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Tappable'));
+    await tester.pumpAndSettle();
+    expect(tapped, isTrue);
+  });
 }
 
 void _noop() {}
