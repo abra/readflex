@@ -26,26 +26,38 @@ class FsrsRepository {
     required ReviewableType itemType,
     String? sourceId,
   }) async {
-    final item = ReviewItem(
-      itemId: itemId,
-      itemType: itemType,
-      sourceId: sourceId,
-      fsrs: const FsrsCardData(),
-    );
-    await _dao.upsertItem(item.toStorageModel());
+    try {
+      final item = ReviewItem(
+        itemId: itemId,
+        itemType: itemType,
+        sourceId: sourceId,
+        fsrs: const FsrsCardData(),
+      );
+      await _dao.upsertItem(item.toStorageModel());
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   /// Removes review tracking for an item (e.g. when item is deleted).
   Future<void> deleteReviewItem(String itemId) async {
-    await _dao.deleteItem(itemId);
+    try {
+      await _dao.deleteItem(itemId);
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   // ─── Query ───
 
   /// Gets the FSRS state for a single item. Returns null if not tracked.
   Future<FsrsCardData?> getReviewState(String itemId) async {
-    final row = await _dao.byItemId(itemId);
-    return row?.toDomainModel().fsrs;
+    try {
+      final row = await _dao.byItemId(itemId);
+      return row?.toDomainModel().fsrs;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   /// Batch lookup: returns a map of itemId → FsrsCardData.
@@ -53,21 +65,33 @@ class FsrsRepository {
     List<String> itemIds,
   ) async {
     if (itemIds.isEmpty) return {};
-    final rows = await _dao.byItemIds(itemIds);
-    return {for (final r in rows) r.itemId: r.toDomainModel().fsrs};
+    try {
+      final rows = await _dao.byItemIds(itemIds);
+      return {for (final r in rows) r.itemId: r.toDomainModel().fsrs};
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   /// Returns IDs of all mastered items (fsrsState == review).
   Future<Set<String>> getMasteredItemIds({ReviewableType? type}) async {
-    final rows = await _dao.masteredItems(type: type?.toStorageString());
-    return {for (final r in rows) r.itemId};
+    try {
+      final rows = await _dao.masteredItems(type: type?.toStorageString());
+      return {for (final r in rows) r.itemId};
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   /// Returns all due review items, optionally filtered by type.
   Future<List<ReviewItem>> getDueItems({ReviewableType? type}) async {
-    final now = DateTime.now().toUtc().toIso8601String();
-    final rows = await _dao.dueItems(now, type: type?.toStorageString());
-    return rows.map((r) => r.toDomainModel()).toList();
+    try {
+      final now = DateTime.now().toUtc().toIso8601String();
+      final rows = await _dao.dueItems(now, type: type?.toStorageString());
+      return rows.map((r) => r.toDomainModel()).toList();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   /// Returns due review items for a specific source.
@@ -75,13 +99,17 @@ class FsrsRepository {
     String sourceId, {
     ReviewableType? type,
   }) async {
-    final now = DateTime.now().toUtc().toIso8601String();
-    final rows = await _dao.dueItemsBySource(
-      sourceId,
-      now,
-      type: type?.toStorageString(),
-    );
-    return rows.map((r) => r.toDomainModel()).toList();
+    try {
+      final now = DateTime.now().toUtc().toIso8601String();
+      final rows = await _dao.dueItemsBySource(
+        sourceId,
+        now,
+        type: type?.toStorageString(),
+      );
+      return rows.map((r) => r.toDomainModel()).toList();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   // ─── Review ───
@@ -100,32 +128,36 @@ class FsrsRepository {
     required Rating rating,
     int? reviewDurationMs,
   }) async {
-    // Default to a blank FsrsCardData when the item has never been reviewed —
-    // this is the "implicit creation" path (see doc above).
-    final row = await _dao.byItemId(itemId);
-    final currentFsrs = row?.toDomainModel().fsrs ?? const FsrsCardData();
+    try {
+      // Default to a blank FsrsCardData when the item has never been reviewed —
+      // this is the "implicit creation" path (see doc above).
+      final row = await _dao.byItemId(itemId);
+      final currentFsrs = row?.toDomainModel().fsrs ?? const FsrsCardData();
 
-    final result = _reviewScheduler.computeReview(
-      itemId: itemId,
-      itemType: itemType,
-      currentFsrs: currentFsrs,
-      rating: rating,
-      reviewDurationMs: reviewDurationMs,
-    );
+      final result = _reviewScheduler.computeReview(
+        itemId: itemId,
+        itemType: itemType,
+        currentFsrs: currentFsrs,
+        rating: rating,
+        reviewDurationMs: reviewDurationMs,
+      );
 
-    // Update review item state.
-    final sourceId = row?.sourceId;
-    final updated = ReviewItem(
-      itemId: itemId,
-      itemType: itemType,
-      sourceId: sourceId,
-      fsrs: result.fsrs,
-    );
-    await _dao.upsertItem(updated.toStorageModel());
+      // Update review item state.
+      final sourceId = row?.sourceId;
+      final updated = ReviewItem(
+        itemId: itemId,
+        itemType: itemType,
+        sourceId: sourceId,
+        fsrs: result.fsrs,
+      );
+      await _dao.upsertItem(updated.toStorageModel());
 
-    // Persist review log.
-    await _dao.insertReviewLog(result.log.toStorageModel());
+      // Persist review log.
+      await _dao.insertReviewLog(result.log.toStorageModel());
 
-    return result.fsrs;
+      return result.fsrs;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 }

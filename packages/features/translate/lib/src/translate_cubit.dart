@@ -38,7 +38,8 @@ class TranslateCubit extends Cubit<TranslateState> {
           usageExamples: result.usageExamples,
         ),
       );
-    } catch (e) {
+    } catch (e, st) {
+      addError(e, st);
       emit(
         state.copyWith(
           status: TranslateStatus.failure,
@@ -66,7 +67,8 @@ class TranslateCubit extends Cubit<TranslateState> {
         usageExamples: state.usageExamples,
       );
       emit(state.copyWith(status: TranslateStatus.saved));
-    } catch (e) {
+    } catch (e, st) {
+      addError(e, st);
       emit(
         state.copyWith(
           status: TranslateStatus.failure,

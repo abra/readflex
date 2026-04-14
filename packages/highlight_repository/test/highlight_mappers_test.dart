@@ -1,10 +1,9 @@
 import 'package:domain_models/domain_models.dart';
 import 'package:drift/drift.dart' hide isNull;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:local_storage/local_storage.dart';
-
 import 'package:highlight_repository/src/mappers/highlight_to_domain.dart';
 import 'package:highlight_repository/src/mappers/highlight_to_storage.dart';
+import 'package:local_storage/local_storage.dart';
 
 void main() {
   final now = DateTime(2026, 4, 1);

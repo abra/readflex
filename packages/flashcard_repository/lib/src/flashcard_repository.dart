@@ -20,18 +20,30 @@ class FlashcardRepository {
   // ─── CRUD ───
 
   Future<List<Flashcard>> getFlashcards() async {
-    final rows = await _dao.allFlashcards();
-    return rows.map((r) => r.toDomainModel()).toList();
+    try {
+      final rows = await _dao.allFlashcards();
+      return rows.map((r) => r.toDomainModel()).toList();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   Future<List<Flashcard>> getFlashcardsByDeck(String deckId) async {
-    final rows = await _dao.flashcardsByDeck(deckId);
-    return rows.map((r) => r.toDomainModel()).toList();
+    try {
+      final rows = await _dao.flashcardsByDeck(deckId);
+      return rows.map((r) => r.toDomainModel()).toList();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   Future<Flashcard?> getFlashcardById(String id) async {
-    final row = await _dao.flashcardById(id);
-    return row?.toDomainModel();
+    try {
+      final row = await _dao.flashcardById(id);
+      return row?.toDomainModel();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   Future<Flashcard> addFlashcard({
@@ -42,26 +54,38 @@ class FlashcardRepository {
     String? sourceHighlightId,
     CreationSource creationSource = CreationSource.manual,
   }) async {
-    final card = Flashcard(
-      id: _uuid.v4(),
-      deckId: deckId,
-      front: front,
-      back: back,
-      hint: hint,
-      sourceHighlightId: sourceHighlightId,
-      creationSource: creationSource,
-      createdAt: DateTime.now(),
-    );
-    await _dao.insertFlashcard(card.toStorageModel());
-    return card;
+    try {
+      final card = Flashcard(
+        id: _uuid.v4(),
+        deckId: deckId,
+        front: front,
+        back: back,
+        hint: hint,
+        sourceHighlightId: sourceHighlightId,
+        creationSource: creationSource,
+        createdAt: DateTime.now(),
+      );
+      await _dao.insertFlashcard(card.toStorageModel());
+      return card;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   Future<Flashcard> updateFlashcard(Flashcard card) async {
-    await _dao.updateFlashcard(card.toStorageModel());
-    return card;
+    try {
+      await _dao.updateFlashcard(card.toStorageModel());
+      return card;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   Future<void> deleteFlashcard(String id) async {
-    await _dao.deleteFlashcard(id);
+    try {
+      await _dao.deleteFlashcard(id);
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 }

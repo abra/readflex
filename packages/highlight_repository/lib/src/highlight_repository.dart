@@ -17,18 +17,30 @@ class HighlightRepository {
   // ─── CRUD ───
 
   Future<List<Highlight>> getHighlights() async {
-    final rows = await _dao.allHighlights();
-    return rows.map((r) => r.toDomainModel()).toList();
+    try {
+      final rows = await _dao.allHighlights();
+      return rows.map((r) => r.toDomainModel()).toList();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   Future<List<Highlight>> getHighlightsBySource(String sourceId) async {
-    final rows = await _dao.highlightsBySource(sourceId);
-    return rows.map((r) => r.toDomainModel()).toList();
+    try {
+      final rows = await _dao.highlightsBySource(sourceId);
+      return rows.map((r) => r.toDomainModel()).toList();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   Future<Highlight?> getHighlightById(String id) async {
-    final row = await _dao.highlightById(id);
-    return row?.toDomainModel();
+    try {
+      final row = await _dao.highlightById(id);
+      return row?.toDomainModel();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   Future<Highlight> addHighlight({
@@ -41,32 +53,48 @@ class HighlightRepository {
     double? scrollOffset,
     HighlightColor color = HighlightColor.yellow,
   }) async {
-    final highlight = Highlight(
-      id: _uuid.v4(),
-      sourceId: sourceId,
-      sourceType: sourceType,
-      text: text,
-      note: note,
-      cfiRange: cfiRange,
-      pageNumber: pageNumber,
-      scrollOffset: scrollOffset,
-      color: color,
-      createdAt: DateTime.now(),
-    );
-    await _dao.insertHighlight(highlight.toStorageModel());
-    return highlight;
+    try {
+      final highlight = Highlight(
+        id: _uuid.v4(),
+        sourceId: sourceId,
+        sourceType: sourceType,
+        text: text,
+        note: note,
+        cfiRange: cfiRange,
+        pageNumber: pageNumber,
+        scrollOffset: scrollOffset,
+        color: color,
+        createdAt: DateTime.now(),
+      );
+      await _dao.insertHighlight(highlight.toStorageModel());
+      return highlight;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   Future<Highlight> updateHighlight(Highlight highlight) async {
-    await _dao.updateHighlight(highlight.toStorageModel());
-    return highlight;
+    try {
+      await _dao.updateHighlight(highlight.toStorageModel());
+      return highlight;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   Future<void> deleteHighlight(String id) async {
-    await _dao.deleteHighlight(id);
+    try {
+      await _dao.deleteHighlight(id);
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   Future<void> deleteHighlightsBySource(String sourceId) async {
-    await _dao.deleteHighlightsBySource(sourceId);
+    try {
+      await _dao.deleteHighlightsBySource(sourceId);
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 }

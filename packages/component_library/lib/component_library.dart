@@ -17,8 +17,8 @@ export 'src/section_label.dart';
 export 'src/selection_preview_card.dart';
 export 'src/settings_group.dart';
 export 'src/settings_row.dart';
-export 'src/stat_card.dart';
 export 'src/show_app_bottom_sheet.dart';
+export 'src/stat_card.dart';
 // Theme
 export 'src/theme/app_text_theme.dart';
 export 'src/theme/app_theme.dart';

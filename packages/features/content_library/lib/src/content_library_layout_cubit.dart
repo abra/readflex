@@ -18,8 +18,12 @@ class ContentLibraryLayoutCubit extends Cubit<ContentLibraryLayoutMode> {
   Future<void> setLayoutMode(ContentLibraryLayoutMode mode) async {
     if (state == mode) return;
     emit(mode);
-    await _preferencesService.update(
-      (prefs) => prefs.copyWith(contentLibraryLayoutMode: mode.id),
-    );
+    try {
+      await _preferencesService.update(
+        (prefs) => prefs.copyWith(contentLibraryLayoutMode: mode.id),
+      );
+    } catch (e, st) {
+      addError(e, st);
+    }
   }
 }

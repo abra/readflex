@@ -37,13 +37,21 @@ class BookRepository {
   final Directory _booksDir;
 
   Future<List<Book>> getBooks() async {
-    final rows = await _dao.allBooks();
-    return rows.map(_rowToDomain).toList();
+    try {
+      final rows = await _dao.allBooks();
+      return rows.map(_rowToDomain).toList();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   Future<Book?> getBookById(String id) async {
-    final row = await _dao.bookById(id);
-    return row != null ? _rowToDomain(row) : null;
+    try {
+      final row = await _dao.bookById(id);
+      return row != null ? _rowToDomain(row) : null;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   /// Imports a book from [sourceFile] into the repository.
@@ -58,55 +66,72 @@ class BookRepository {
     Uint8List? coverData,
     String? coverMimeType,
   }) async {
-    final id = _uuid.v4();
-    final now = DateTime.now();
+    try {
+      final id = _uuid.v4();
+      final now = DateTime.now();
 
-    // Create per-book directory.
-    final bookDir = Directory(p.join(_booksDir.path, id));
-    await bookDir.create(recursive: true);
+      // Create per-book directory.
+      final bookDir = Directory(p.join(_booksDir.path, id));
+      await bookDir.create(recursive: true);
 
-    // Copy book file.
-    final ext = p.extension(sourceFile.path).toLowerCase();
-    final bookFileName = 'book$ext';
-    await sourceFile.copy(p.join(bookDir.path, bookFileName));
+      // Copy book file.
+      final ext = p.extension(sourceFile.path).toLowerCase();
+      final bookFileName = 'book$ext';
+      await sourceFile.copy(p.join(bookDir.path, bookFileName));
 
-    // Save cover image.
-    String? coverFileName;
-    if (coverData != null) {
-      final coverExt = _extensionForMime(coverMimeType);
-      coverFileName = 'cover$coverExt';
-      await File(p.join(bookDir.path, coverFileName)).writeAsBytes(coverData);
+      // Save cover image.
+      String? coverFileName;
+      if (coverData != null) {
+        final coverExt = _extensionForMime(coverMimeType);
+        coverFileName = 'cover$coverExt';
+        await File(
+          p.join(bookDir.path, coverFileName),
+        ).writeAsBytes(coverData);
+      }
+
+      final book = Book(
+        id: id,
+        title: title,
+        filePath: bookFileName,
+        format: format,
+        addedAt: now,
+        author: author,
+        coverImagePath: coverFileName,
+      );
+      await _dao.insertBook(book.toStorageModel());
+      return _resolve(book);
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
     }
-
-    final book = Book(
-      id: id,
-      title: title,
-      filePath: bookFileName,
-      format: format,
-      addedAt: now,
-      author: author,
-      coverImagePath: coverFileName,
-    );
-    await _dao.insertBook(book.toStorageModel());
-    return _resolve(book);
   }
 
   Future<Book> updateBook(Book book) async {
-    // The caller works with resolved (absolute) paths, but the DB must
-    // store only filenames so toDomainModel can re-resolve them against
-    // the current booksDir on every read.
-    final storageBook = _unresolve(book);
-    await _dao.updateBook(storageBook.toStorageModel());
-    return book;
+    try {
+      // The caller works with resolved (absolute) paths, but the DB must
+      // store only filenames so toDomainModel can re-resolve them against
+      // the current booksDir on every read.
+      final storageBook = _unresolve(book);
+      await _dao.updateBook(storageBook.toStorageModel());
+      return book;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   /// Deletes the book from DB and removes its directory from disk.
   Future<void> deleteBook(String id) async {
-    await _dao.deleteBook(id);
-    final bookDir = Directory(p.join(_booksDir.path, id));
-    if (await bookDir.exists()) {
-      await bookDir.delete(recursive: true);
+    try {
+      await _dao.deleteBook(id);
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
     }
+    // Best-effort cleanup — orphaned dirs get reclaimed on maintenance pass.
+    final bookDir = Directory(p.join(_booksDir.path, id));
+    try {
+      if (await bookDir.exists()) {
+        await bookDir.delete(recursive: true);
+      }
+    } catch (_) {}
   }
 
   // ── Helpers ──

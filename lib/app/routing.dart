@@ -10,7 +10,7 @@ import 'package:practice/practice.dart';
 import 'package:profile/profile.dart';
 import 'package:reader/reader.dart';
 import 'package:readflex/app/dependency_container.dart';
-import 'package:readflex/app/design_system_screen.dart';
+import 'package:readflex/app/screens/design_system_screen.dart';
 import 'package:readflex/app/screens/first_import_screen.dart';
 import 'package:readflex/app/screens/onboarding_screen.dart';
 import 'package:readflex/app/screens/splash_screen.dart';
@@ -197,10 +197,14 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
               ),
             ],
             onCheckDueItems: (sourceId) async {
-              final items = await deps.fsrsRepository.getDueItemsBySource(
-                sourceId,
-              );
-              return items.length;
+              try {
+                final items = await deps.fsrsRepository.getDueItemsBySource(
+                  sourceId,
+                );
+                return items.length;
+              } catch (_) {
+                return 0;
+              }
             },
             onStartMiniReview: (context, sourceId) {
               showMiniReviewSheet(
@@ -245,10 +249,13 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
               ),
             );
 
-            final books = await deps.bookRepository.getBooks();
-            final articles = await deps.articleRepository.getArticles();
-
-            return books.isNotEmpty || articles.isNotEmpty;
+            try {
+              final books = await deps.bookRepository.getBooks();
+              final articles = await deps.articleRepository.getArticles();
+              return books.isNotEmpty || articles.isNotEmpty;
+            } catch (_) {
+              return false;
+            }
           },
           onContentAdded: () {
             deps.preferencesService.update(
@@ -286,10 +293,21 @@ Future<String?> _redirectHomeIfNeeded(DependenciesContainer deps) async {
   }
 
   if (!prefs.hasCompletedSetup) {
-    final books = await deps.bookRepository.getBooks();
-    final articles = await deps.articleRepository.getArticles();
-    if (books.isEmpty && articles.isEmpty) {
-      return AppRoutes.firstImport;
+    try {
+      final books = await deps.bookRepository.getBooks();
+      final articles = await deps.articleRepository.getArticles();
+      if (books.isEmpty && articles.isEmpty) {
+        return AppRoutes.firstImport;
+      }
+    } catch (e, st) {
+      // Storage failure during redirect — fall through to home where the
+      // BLoC has its own error handling and can show a proper error state.
+      deps.logger.warn(
+        'redirect content check failed',
+        error: e,
+        stackTrace: st,
+      );
+      return null;
     }
 
     // User somehow has content already — mark setup as complete.

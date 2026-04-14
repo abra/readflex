@@ -41,22 +41,34 @@ class ArticleRepository {
   final http.Client _httpClient;
 
   Future<List<Article>> getArticles() async {
-    final rows = await _dao.allArticles();
-    return rows.map(_rowToDomain).toList();
+    try {
+      final rows = await _dao.allArticles();
+      return rows.map(_rowToDomain).toList();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   Future<Article?> getArticleById(String id) async {
-    final row = await _dao.articleById(id);
-    return row != null ? _rowToDomain(row) : null;
+    try {
+      final row = await _dao.articleById(id);
+      return row != null ? _rowToDomain(row) : null;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   /// Reads the HTML body for [article] from disk. Returns an empty string
   /// if the file is missing — the caller (reader) can decide whether to
   /// treat that as a corrupt import or re-fetch.
   Future<String> readContent(Article article) async {
-    final file = File(article.contentPath);
-    if (!await file.exists()) return '';
-    return file.readAsString();
+    try {
+      final file = File(article.contentPath);
+      if (!await file.exists()) return '';
+      return file.readAsString();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   /// Creates a new article from parsed content. Writes [content] to disk
@@ -75,52 +87,67 @@ class ArticleRepository {
     int textLength = 0,
     int estimatedWordCount = 0,
   }) async {
-    final id = _uuid.v4();
-    final now = DateTime.now();
+    try {
+      final id = _uuid.v4();
+      final now = DateTime.now();
 
-    final articleDir = Directory(p.join(_articlesDir.path, id));
-    await articleDir.create(recursive: true);
+      final articleDir = Directory(p.join(_articlesDir.path, id));
+      await articleDir.create(recursive: true);
 
-    // Download body images and rewrite HTML src to local relative paths.
-    final processedContent = await _downloadArticleImages(articleDir, content);
-    final contentFile = File(p.join(articleDir.path, 'content.html'));
-    await contentFile.writeAsString(processedContent);
+      // Download body images and rewrite HTML src to local relative paths.
+      final processedContent = await _downloadArticleImages(
+        articleDir,
+        content,
+      );
+      final contentFile = File(p.join(articleDir.path, 'content.html'));
+      await contentFile.writeAsString(processedContent);
 
-    String? coverFilename;
-    if (coverImageUrl != null && coverImageUrl.isNotEmpty) {
-      coverFilename = await _tryDownloadCover(articleDir, coverImageUrl);
+      String? coverFilename;
+      if (coverImageUrl != null && coverImageUrl.isNotEmpty) {
+        coverFilename = await _tryDownloadCover(articleDir, coverImageUrl);
+      }
+
+      final article = Article(
+        id: id,
+        title: title,
+        url: url,
+        contentPath: contentFile.path,
+        addedAt: now,
+        siteName: siteName,
+        byline: byline,
+        excerpt: excerpt,
+        publishedTime: publishedTime,
+        lang: lang,
+        coverImageUrl: coverImageUrl,
+        coverImagePath: coverFilename != null
+            ? p.join(articleDir.path, coverFilename)
+            : null,
+        textLength: textLength,
+        estimatedWordCount: estimatedWordCount,
+      );
+      await _dao.insertArticle(article.toStorageModel());
+      return article;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
     }
-
-    final article = Article(
-      id: id,
-      title: title,
-      url: url,
-      contentPath: contentFile.path,
-      addedAt: now,
-      siteName: siteName,
-      byline: byline,
-      excerpt: excerpt,
-      publishedTime: publishedTime,
-      lang: lang,
-      coverImageUrl: coverImageUrl,
-      coverImagePath: coverFilename != null
-          ? p.join(articleDir.path, coverFilename)
-          : null,
-      textLength: textLength,
-      estimatedWordCount: estimatedWordCount,
-    );
-    await _dao.insertArticle(article.toStorageModel());
-    return article;
   }
 
   Future<Article> updateArticle(Article article) async {
-    await _dao.updateArticle(article.toStorageModel());
-    return article;
+    try {
+      await _dao.updateArticle(article.toStorageModel());
+      return article;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   Future<void> deleteArticle(String id) async {
-    await _dao.deleteArticle(id);
-    // Remove the entire article directory (content + cover + images).
+    try {
+      await _dao.deleteArticle(id);
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+    // Best-effort cleanup — orphaned dirs get reclaimed on maintenance pass.
     final articleDir = Directory(p.join(_articlesDir.path, id));
     await _tryDeleteDirectory(articleDir);
   }

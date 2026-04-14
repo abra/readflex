@@ -17,18 +17,30 @@ class DictionaryRepository {
   // ─── CRUD ───
 
   Future<List<DictionaryEntry>> getEntries() async {
-    final rows = await _dao.allEntries();
-    return rows.map((r) => r.toDomainModel()).toList();
+    try {
+      final rows = await _dao.allEntries();
+      return rows.map((r) => r.toDomainModel()).toList();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   Future<List<DictionaryEntry>> getEntriesBySource(String sourceId) async {
-    final rows = await _dao.entriesBySource(sourceId);
-    return rows.map((r) => r.toDomainModel()).toList();
+    try {
+      final rows = await _dao.entriesBySource(sourceId);
+      return rows.map((r) => r.toDomainModel()).toList();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   Future<DictionaryEntry?> getEntryById(String id) async {
-    final row = await _dao.entryById(id);
-    return row?.toDomainModel();
+    try {
+      final row = await _dao.entryById(id);
+      return row?.toDomainModel();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   Future<DictionaryEntry> addEntry({
@@ -42,28 +54,40 @@ class DictionaryRepository {
     List<String> usageExamples = const [],
     DateTime? addedAt,
   }) async {
-    final entry = DictionaryEntry(
-      id: _uuid.v4(),
-      word: word,
-      translation: translation,
-      pronunciation: pronunciation,
-      partOfSpeech: partOfSpeech,
-      context: context,
-      sourceId: sourceId,
-      sourceType: sourceType,
-      usageExamples: usageExamples,
-      addedAt: addedAt ?? DateTime.now(),
-    );
-    await _dao.insertEntry(entry.toStorageModel());
-    return entry;
+    try {
+      final entry = DictionaryEntry(
+        id: _uuid.v4(),
+        word: word,
+        translation: translation,
+        pronunciation: pronunciation,
+        partOfSpeech: partOfSpeech,
+        context: context,
+        sourceId: sourceId,
+        sourceType: sourceType,
+        usageExamples: usageExamples,
+        addedAt: addedAt ?? DateTime.now(),
+      );
+      await _dao.insertEntry(entry.toStorageModel());
+      return entry;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   Future<DictionaryEntry> updateEntry(DictionaryEntry entry) async {
-    await _dao.updateEntry(entry.toStorageModel());
-    return entry;
+    try {
+      await _dao.updateEntry(entry.toStorageModel());
+      return entry;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 
   Future<void> deleteEntry(String id) async {
-    await _dao.deleteEntry(id);
+    try {
+      await _dao.deleteEntry(id);
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
   }
 }

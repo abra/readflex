@@ -47,11 +47,18 @@ class ReaderServer {
   bool get isRunning => _server != null;
 
   /// Starts listening on `127.0.0.1` with a system-assigned port.
+  ///
+  /// Throws [SocketException] if the port cannot be bound.
   Future<void> start() async {
     if (_server != null) return;
-    _server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    _server!.listen(_handleRequest);
-    _logger.info('ReaderServer started on port ${_server!.port}');
+    try {
+      _server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      _server!.listen(_handleRequest);
+      _logger.info('ReaderServer started on port ${_server!.port}');
+    } catch (e, st) {
+      _logger.error('ReaderServer failed to start', error: e, stackTrace: st);
+      rethrow;
+    }
   }
 
   /// Stops the server and releases the port.

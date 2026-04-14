@@ -20,9 +20,13 @@ class ProfileAppearanceCubit extends Cubit<ProfileAppearanceState> {
 
   Future<void> setThemeMode(ThemeMode themeMode) async {
     emit(state.copyWith(themeMode: themeMode));
-    await _preferencesService.update(
-      (prefs) => prefs.copyWith(themeMode: themeMode),
-    );
+    try {
+      await _preferencesService.update(
+        (prefs) => prefs.copyWith(themeMode: themeMode),
+      );
+    } catch (e, st) {
+      addError(e, st);
+    }
   }
 
   Future<void> setReaderTheme(String themeId) async {
@@ -31,9 +35,13 @@ class ProfileAppearanceCubit extends Cubit<ProfileAppearanceState> {
         readerAppearance: state.readerAppearance.copyWith(themeId: themeId),
       ),
     );
-    await _preferencesService.update(
-      (prefs) => prefs.copyWith(readerThemeId: themeId),
-    );
+    try {
+      await _preferencesService.update(
+        (prefs) => prefs.copyWith(readerThemeId: themeId),
+      );
+    } catch (e, st) {
+      addError(e, st);
+    }
   }
 
   Future<void> setReaderFont(String fontId) async {
@@ -42,9 +50,13 @@ class ProfileAppearanceCubit extends Cubit<ProfileAppearanceState> {
         readerAppearance: state.readerAppearance.copyWith(fontId: fontId),
       ),
     );
-    await _preferencesService.update(
-      (prefs) => prefs.copyWith(readerFontId: fontId),
-    );
+    try {
+      await _preferencesService.update(
+        (prefs) => prefs.copyWith(readerFontId: fontId),
+      );
+    } catch (e, st) {
+      addError(e, st);
+    }
   }
 
   void previewTextScale(double value) {
@@ -56,9 +68,13 @@ class ProfileAppearanceCubit extends Cubit<ProfileAppearanceState> {
   }
 
   Future<void> commitTextScale(double value) async {
-    await _preferencesService.update(
-      (prefs) => prefs.copyWith(readerTextScale: value),
-    );
+    try {
+      await _preferencesService.update(
+        (prefs) => prefs.copyWith(readerTextScale: value),
+      );
+    } catch (e, st) {
+      addError(e, st);
+    }
   }
 
   void previewLineHeight(double value) {
@@ -70,8 +86,12 @@ class ProfileAppearanceCubit extends Cubit<ProfileAppearanceState> {
   }
 
   Future<void> commitLineHeight(double value) async {
-    await _preferencesService.update(
-      (prefs) => prefs.copyWith(readerLineHeight: value),
-    );
+    try {
+      await _preferencesService.update(
+        (prefs) => prefs.copyWith(readerLineHeight: value),
+      );
+    } catch (e, st) {
+      addError(e, st);
+    }
   }
 }
