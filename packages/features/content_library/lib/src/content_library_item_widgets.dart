@@ -485,14 +485,24 @@ class _BookMedia extends StatelessWidget {
         );
 
         if (book.coverImagePath case final path? when path.isNotEmpty) {
-          return ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-            child: Image.file(
-              File(path),
-              fit: BoxFit.fill,
-              width: constraints.maxWidth,
-              height: constraints.maxHeight,
-              errorBuilder: (_, _, _) => fallback,
+          return DecoratedBox(
+            position: DecorationPosition.foreground,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              border: Border.all(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                width: 2,
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              child: Image.file(
+                File(path),
+                fit: BoxFit.fill,
+                width: constraints.maxWidth,
+                height: constraints.maxHeight,
+                errorBuilder: (_, _, _) => fallback,
+              ),
             ),
           );
         }

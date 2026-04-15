@@ -117,6 +117,13 @@ class AppCoverArt extends StatelessWidget {
           colors: [gradient.$1, gradient.$2],
         ),
       ),
+      foregroundDecoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          width: 2,
+        ),
+      ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
