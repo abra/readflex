@@ -1,5 +1,5 @@
 console.log('book.js')
-console.log('AnxUA', navigator.userAgent)
+console.log('ReadflexUA', navigator.userAgent)
 
 import './view.js'
 import { FootnoteHandler } from './footnotes.js'
