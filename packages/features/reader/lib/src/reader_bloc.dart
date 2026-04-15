@@ -4,6 +4,7 @@ import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:highlight_repository/highlight_repository.dart';
+import 'package:stream_transform/stream_transform.dart';
 
 part 'reader_event.dart';
 part 'reader_state.dart';
@@ -18,7 +19,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
        _highlightRepository = highlightRepository,
        super(const ReaderState()) {
     on<ReaderSourceLoadRequested>(_onSourceLoadRequested);
-    on<ReaderPositionUpdated>(_onPositionUpdated);
+    on<ReaderPositionUpdated>(
+      _onPositionUpdated,
+      transformer: _debounce(_positionSaveDelay),
+    );
     on<ReaderTextSelected>(_onTextSelected);
     on<ReaderTextDeselected>(_onTextDeselected);
     on<ReaderReviewReminderShown>(_onReviewReminderShown);
@@ -28,6 +32,12 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   final BookRepository _bookRepository;
   final ArticleRepository _articleRepository;
   final HighlightRepository _highlightRepository;
+
+  static const _positionSaveDelay = Duration(seconds: 2);
+
+  static EventTransformer<E> _debounce<E>(Duration duration) {
+    return (events, mapper) => events.debounce(duration).asyncExpand(mapper);
+  }
 
   Future<void> _onSourceLoadRequested(
     ReaderSourceLoadRequested event,
@@ -93,8 +103,6 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     ReaderPositionUpdated event,
     Emitter<ReaderState> emit,
   ) async {
-    // Position saves are pure side-effects — the UI doesn't need a
-    // rebuild. We persist to DB and skip the emit.
     try {
       if (state.book != null) {
         await _bookRepository.updateBook(
@@ -111,9 +119,6 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         );
       }
     } catch (e, st) {
-      // Non-fatal: position save failed, don't disrupt reading. Log via
-      // addError so AppBlocObserver routes it through the logger for
-      // production debugging without surfacing the error to the UI.
       addError(e, st);
     }
   }

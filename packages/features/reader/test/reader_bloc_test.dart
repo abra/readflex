@@ -163,6 +163,7 @@ void main() {
             progress: 0.2,
           ),
         ),
+        wait: const Duration(seconds: 3),
         verify: (_) {
           expect(bookRepository.updatedBook, isNotNull);
           expect(
@@ -188,6 +189,7 @@ void main() {
         act: (bloc) => bloc.add(
           const ReaderPositionUpdated(scrollOffset: 0.75),
         ),
+        wait: const Duration(seconds: 3),
         verify: (_) {
           expect(articleRepository.updatedArticle, isNotNull);
           expect(articleRepository.updatedArticle!.currentScrollOffset, 0.75);

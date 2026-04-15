@@ -89,15 +89,15 @@ class _ReaderView extends StatelessWidget {
           },
         ),
       ),
-      body: BlocBuilder<ReaderBloc, ReaderState>(
-        buildWhen: (previous, current) => previous != current,
-        builder: (context, state) => _buildBody(context, state),
+      body: BlocSelector<ReaderBloc, ReaderState, ReaderStatus>(
+        selector: (state) => state.status,
+        builder: (context, status) => _buildBody(context, status),
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, ReaderState state) {
-    return switch (state.status) {
+  Widget _buildBody(BuildContext context, ReaderStatus status) {
+    return switch (status) {
       ReaderStatus.initial || ReaderStatus.loading => const Center(
         child: CircularProgressIndicator(),
       ),
@@ -117,7 +117,7 @@ class _ReaderView extends StatelessWidget {
         ),
       ),
       ReaderStatus.ready => _ReadyContent(
-        state: state,
+        sourceId: context.read<ReaderBloc>().state.sourceId!,
         serverPort: serverPort,
         textActions: textActions,
         onCheckDueItems: onCheckDueItems,
@@ -145,6 +145,49 @@ class _ReaderAppBarState {
 
   @override
   int get hashCode => Object.hash(title, highlightCount);
+}
+
+class _SelectionSlice {
+  const _SelectionSlice({
+    required this.hasSelection,
+    required this.selectedText,
+    this.sourceId,
+    this.sourceType,
+    this.cfiRange,
+    this.pageNumber,
+    this.scrollOffset,
+  });
+
+  final bool hasSelection;
+  final String selectedText;
+  final String? sourceId;
+  final SourceType? sourceType;
+  final String? cfiRange;
+  final int? pageNumber;
+  final double? scrollOffset;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _SelectionSlice &&
+          hasSelection == other.hasSelection &&
+          selectedText == other.selectedText &&
+          sourceId == other.sourceId &&
+          sourceType == other.sourceType &&
+          cfiRange == other.cfiRange &&
+          pageNumber == other.pageNumber &&
+          scrollOffset == other.scrollOffset;
+
+  @override
+  int get hashCode => Object.hash(
+    hasSelection,
+    selectedText,
+    sourceId,
+    sourceType,
+    cfiRange,
+    pageNumber,
+    scrollOffset,
+  );
 }
 
 class _ReaderAppBar extends StatelessWidget {
@@ -182,14 +225,14 @@ class _ReaderAppBar extends StatelessWidget {
 
 class _ReadyContent extends StatefulWidget {
   const _ReadyContent({
-    required this.state,
+    required this.sourceId,
     required this.serverPort,
     required this.textActions,
     this.onCheckDueItems,
     this.onStartMiniReview,
   });
 
-  final ReaderState state;
+  final String sourceId;
   final int serverPort;
   final List<TextAction> textActions;
   final Future<int> Function(String sourceId)? onCheckDueItems;
@@ -221,13 +264,10 @@ class _ReadyContentState extends State<_ReadyContent> {
     final onCheck = widget.onCheckDueItems;
     if (onCheck == null) return;
 
-    final sourceId = widget.state.sourceId;
-    if (sourceId == null) return;
+    final sourceId = widget.sourceId;
 
-    // Initial check after content loads
     _checkDueItems(onCheck, sourceId);
 
-    // Periodic check every 5 minutes
     _dueCheckTimer = Timer.periodic(_checkInterval, (_) {
       _checkDueItems(onCheck, sourceId);
     });
@@ -243,11 +283,9 @@ class _ReadyContentState extends State<_ReadyContent> {
     }
   }
 
-  Widget _buildReaderBody({
-    required ReaderState state,
-    required ReaderThemeData readerTheme,
-    required ReaderBloc bloc,
-  }) {
+  Widget _buildReaderBody(BuildContext context, ReaderThemeData readerTheme) {
+    final state = context.read<ReaderBloc>().state;
+    final bloc = context.read<ReaderBloc>();
     final highlights = state.highlights
         .map(
           (h) => ReaderHighlight(
@@ -339,63 +377,88 @@ class _ReadyContentState extends State<_ReadyContent> {
 
   @override
   Widget build(BuildContext context) {
-    final bloc = context.read<ReaderBloc>();
-    final state = widget.state;
     final appearance = PreferencesScope.readerAppearanceOf(context);
     final readerTheme = ReaderThemePreset.fromId(appearance.themeId).data;
 
     return Stack(
       children: [
+        // WebView body — reads BLoC state once, not subscribed to changes.
+        // Only rebuilds on theme change (PreferencesScope), never on
+        // selection or review-reminder state changes.
         ColoredBox(
           color: readerTheme.backgroundColor,
-          child: _buildReaderBody(
-            state: state,
-            readerTheme: readerTheme,
-            bloc: bloc,
-          ),
+          child: _buildReaderBody(context, readerTheme),
         ),
 
-        // Context panel (text actions) — shown when text is selected
-        if (state.hasSelection &&
-            state.sourceId != null &&
-            state.sourceType != null)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _ContextPanel(
-              selectedText: state.selectedText,
-              sourceId: state.sourceId!,
-              sourceType: state.sourceType!,
-              selectionCfiRange: state.selectionCfiRange,
-              selectionPageNumber: state.selectionPageNumber,
-              selectionScrollOffset: state.selectionScrollOffset,
-              textActions: widget.textActions,
-              panelColor: readerTheme.panelColor,
-              iconColor: readerTheme.primaryTextColor,
-              dividerColor: readerTheme.dividerColor,
-            ),
+        // Context panel — rebuilds only when selection state changes
+        BlocSelector<ReaderBloc, ReaderState, _SelectionSlice>(
+          selector: (state) => _SelectionSlice(
+            hasSelection: state.hasSelection,
+            selectedText: state.selectedText,
+            sourceId: state.sourceId,
+            sourceType: state.sourceType,
+            cfiRange: state.selectionCfiRange,
+            pageNumber: state.selectionPageNumber,
+            scrollOffset: state.selectionScrollOffset,
           ),
+          builder: (context, sel) {
+            if (!sel.hasSelection ||
+                sel.sourceId == null ||
+                sel.sourceType == null) {
+              return const SizedBox.shrink();
+            }
+            return Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _ContextPanel(
+                selectedText: sel.selectedText,
+                sourceId: sel.sourceId!,
+                sourceType: sel.sourceType!,
+                selectionCfiRange: sel.cfiRange,
+                selectionPageNumber: sel.pageNumber,
+                selectionScrollOffset: sel.scrollOffset,
+                textActions: widget.textActions,
+                panelColor: readerTheme.panelColor,
+                iconColor: readerTheme.primaryTextColor,
+                dividerColor: readerTheme.dividerColor,
+              ),
+            );
+          },
+        ),
 
-        // Review reminder banner
-        if (state.showReviewReminder)
-          Positioned(
-            left: AppSpacing.md,
-            right: AppSpacing.md,
-            bottom: state.hasSelection ? _kContextPanelHeight : AppSpacing.md,
-            child: _ReviewReminderBanner(
-              onReview: () {
-                bloc.add(const ReaderReviewReminderDismissed());
-                final sourceId = state.sourceId;
-                if (sourceId != null) {
-                  widget.onStartMiniReview?.call(context, sourceId);
-                }
-              },
-              onDismiss: () {
-                bloc.add(const ReaderReviewReminderDismissed());
-              },
-            ),
+        // Review reminder banner — rebuilds only when reminder state changes
+        BlocSelector<ReaderBloc, ReaderState, (bool, bool, String?)>(
+          selector: (state) => (
+            state.showReviewReminder,
+            state.hasSelection,
+            state.sourceId,
           ),
+          builder: (context, data) {
+            final (show, hasSelection, sourceId) = data;
+            if (!show) return const SizedBox.shrink();
+            return Positioned(
+              left: AppSpacing.md,
+              right: AppSpacing.md,
+              bottom: hasSelection ? _kContextPanelHeight : AppSpacing.md,
+              child: _ReviewReminderBanner(
+                onReview: () {
+                  context.read<ReaderBloc>().add(
+                    const ReaderReviewReminderDismissed(),
+                  );
+                  if (sourceId != null) {
+                    widget.onStartMiniReview?.call(context, sourceId);
+                  }
+                },
+                onDismiss: () {
+                  context.read<ReaderBloc>().add(
+                    const ReaderReviewReminderDismissed(),
+                  );
+                },
+              ),
+            );
+          },
+        ),
       ],
     );
   }

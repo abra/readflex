@@ -38,10 +38,10 @@ class BookPosition {
   factory BookPosition.fromMap(Map<String, dynamic> map) {
     return BookPosition(
       cfi: map['cfi'] as String,
-      fraction: (map['percentage'] as num).toDouble(),
+      fraction: (map['percentage'] as num?)?.toDouble() ?? 0,
       chapterTitle: map['chapterTitle'] as String?,
-      chapterCurrentPage: map['chapterCurrentPage'] as int?,
-      chapterTotalPages: map['chapterTotalPages'] as int?,
+      chapterCurrentPage: (map['chapterCurrentPage'] as num?)?.toInt(),
+      chapterTotalPages: (map['chapterTotalPages'] as num?)?.toInt(),
     );
   }
 }
