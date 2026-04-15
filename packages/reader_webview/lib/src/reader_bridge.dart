@@ -2,6 +2,7 @@
 ///
 /// JS → Flutter handlers report events (position, selection).
 /// Flutter → JS calls control the WebView (navigate, style, highlights).
+library;
 
 /// Position report from the article reader (scroll fraction).
 class ArticlePosition {

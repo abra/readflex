@@ -12,7 +12,7 @@ extension EntryToDomain on DictionaryTableData {
     translation: translation,
     pronunciation: pronunciation,
     partOfSpeech: partOfSpeech,
-    context: this.context,
+    context: context,
     sourceId: sourceId,
     sourceType: sourceType != null ? SourceType.from(sourceType!) : null,
     usageExamples: usageExamples != null

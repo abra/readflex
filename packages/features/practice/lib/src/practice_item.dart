@@ -3,11 +3,11 @@ part of 'practice_bloc.dart';
 sealed class PracticeItem extends Equatable {
   const PracticeItem();
 
-  factory PracticeItem.flashcard(Flashcard card) = FlashcardItem;
+  const factory PracticeItem.flashcard(Flashcard card) = FlashcardItem;
 
-  factory PracticeItem.highlight(Highlight highlight) = HighlightItem;
+  const factory PracticeItem.highlight(Highlight highlight) = HighlightItem;
 
-  factory PracticeItem.dictionary(DictionaryEntry entry) = DictionaryItem;
+  const factory PracticeItem.dictionary(DictionaryEntry entry) = DictionaryItem;
 
   String get itemId;
 

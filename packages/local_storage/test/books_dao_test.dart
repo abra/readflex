@@ -14,7 +14,7 @@ void main() {
 
   tearDown(() => db.close());
 
-  BooksTableCompanion _book({
+  BooksTableCompanion makeBook({
     String id = 'b1',
     String title = 'Test Book',
     String format = 'epub',
@@ -30,15 +30,15 @@ void main() {
 
   group('BooksDao', () {
     test('insertBook and allBooks returns inserted book', () async {
-      await dao.insertBook(_book());
+      await dao.insertBook(makeBook());
       final books = await dao.allBooks();
       expect(books, hasLength(1));
       expect(books.first.title, 'Test Book');
     });
 
     test('bookById returns correct book', () async {
-      await dao.insertBook(_book(id: 'b1'));
-      await dao.insertBook(_book(id: 'b2', title: 'Other'));
+      await dao.insertBook(makeBook(id: 'b1'));
+      await dao.insertBook(makeBook(id: 'b2', title: 'Other'));
       final book = await dao.bookById('b1');
       expect(book, isNotNull);
       expect(book!.title, 'Test Book');
@@ -50,7 +50,7 @@ void main() {
     });
 
     test('updateBook modifies existing book', () async {
-      await dao.insertBook(_book());
+      await dao.insertBook(makeBook());
       await dao.updateBook(
         const BooksTableCompanion(
           id: Value('b1'),
@@ -62,7 +62,7 @@ void main() {
     });
 
     test('deleteBook removes book', () async {
-      await dao.insertBook(_book());
+      await dao.insertBook(makeBook());
       await dao.deleteBook('b1');
       final books = await dao.allBooks();
       expect(books, isEmpty);

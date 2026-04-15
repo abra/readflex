@@ -14,7 +14,7 @@ void main() {
 
   tearDown(() => db.close());
 
-  DictionaryTableCompanion _entry({
+  DictionaryTableCompanion makeEntry({
     String id = 'e1',
     String word = 'hello',
     String translation = 'привет',
@@ -29,7 +29,7 @@ void main() {
   );
 
   test('insert and retrieve entry', () async {
-    await dao.insertEntry(_entry());
+    await dao.insertEntry(makeEntry());
     final entries = await dao.allEntries();
     expect(entries, hasLength(1));
     expect(entries.first.word, 'hello');
@@ -37,15 +37,15 @@ void main() {
   });
 
   test('entriesBySource filters correctly', () async {
-    await dao.insertEntry(_entry(id: 'e1', sourceId: 's1'));
-    await dao.insertEntry(_entry(id: 'e2', sourceId: 's2'));
+    await dao.insertEntry(makeEntry(id: 'e1', sourceId: 's1'));
+    await dao.insertEntry(makeEntry(id: 'e2', sourceId: 's2'));
     final result = await dao.entriesBySource('s1');
     expect(result, hasLength(1));
     expect(result.first.id, 'e1');
   });
 
   test('updateEntry modifies translation', () async {
-    await dao.insertEntry(_entry());
+    await dao.insertEntry(makeEntry());
     await dao.updateEntry(
       const DictionaryTableCompanion(
         id: Value('e1'),
@@ -57,7 +57,7 @@ void main() {
   });
 
   test('deleteEntry removes entry', () async {
-    await dao.insertEntry(_entry());
+    await dao.insertEntry(makeEntry());
     await dao.deleteEntry('e1');
     final entries = await dao.allEntries();
     expect(entries, isEmpty);

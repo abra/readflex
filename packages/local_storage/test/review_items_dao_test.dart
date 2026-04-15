@@ -14,7 +14,7 @@ void main() {
 
   tearDown(() => db.close());
 
-  ReviewItemsTableCompanion _item({
+  ReviewItemsTableCompanion makeItem({
     String itemId = 'f1',
     String itemType = 'flashcard',
     String? sourceId = 'book-1',
@@ -35,7 +35,7 @@ void main() {
     elapsedDays: const Value(0),
   );
 
-  ReviewLogsTableCompanion _log({
+  ReviewLogsTableCompanion makeLog({
     String id = 'log-1',
     String itemId = 'f1',
     String itemType = 'flashcard',
@@ -57,7 +57,7 @@ void main() {
 
   group('ReviewItemsDao', () {
     test('insertItem and byItemId returns inserted item', () async {
-      await dao.insertItem(_item());
+      await dao.insertItem(makeItem());
       final item = await dao.byItemId('f1');
       expect(item, isNotNull);
       expect(item!.itemType, 'flashcard');
@@ -70,17 +70,17 @@ void main() {
     });
 
     test('byItemIds returns matching items', () async {
-      await dao.insertItem(_item(itemId: 'f1'));
-      await dao.insertItem(_item(itemId: 'f2'));
-      await dao.insertItem(_item(itemId: 'f3'));
+      await dao.insertItem(makeItem(itemId: 'f1'));
+      await dao.insertItem(makeItem(itemId: 'f2'));
+      await dao.insertItem(makeItem(itemId: 'f3'));
 
       final items = await dao.byItemIds(['f1', 'f3']);
       expect(items, hasLength(2));
     });
 
     test('byType returns items of specified type', () async {
-      await dao.insertItem(_item(itemId: 'f1', itemType: 'flashcard'));
-      await dao.insertItem(_item(itemId: 'h1', itemType: 'highlight'));
+      await dao.insertItem(makeItem(itemId: 'f1', itemType: 'flashcard'));
+      await dao.insertItem(makeItem(itemId: 'h1', itemType: 'highlight'));
 
       final flashcards = await dao.byType('flashcard');
       expect(flashcards, hasLength(1));
@@ -88,15 +88,15 @@ void main() {
     });
 
     test('upsertItem updates existing item', () async {
-      await dao.insertItem(_item(fsrsState: 'new'));
-      await dao.upsertItem(_item(fsrsState: 'review'));
+      await dao.insertItem(makeItem(fsrsState: 'new'));
+      await dao.upsertItem(makeItem(fsrsState: 'review'));
 
       final item = await dao.byItemId('f1');
       expect(item!.fsrsState, 'review');
     });
 
     test('deleteItem removes item', () async {
-      await dao.insertItem(_item());
+      await dao.insertItem(makeItem());
       await dao.deleteItem('f1');
       final item = await dao.byItemId('f1');
       expect(item, isNull);
@@ -105,14 +105,14 @@ void main() {
 
   group('ReviewItemsDao due items', () {
     test('dueItems returns items with null nextReviewAt', () async {
-      await dao.insertItem(_item(itemId: 'f1', nextReviewAt: null));
+      await dao.insertItem(makeItem(itemId: 'f1', nextReviewAt: null));
       final due = await dao.dueItems('2026-04-01T00:00:00.000Z');
       expect(due, hasLength(1));
     });
 
     test('dueItems returns items with past nextReviewAt', () async {
       await dao.insertItem(
-        _item(
+        makeItem(
           itemId: 'f1',
           nextReviewAt: '2026-03-01T00:00:00.000Z',
         ),
@@ -123,7 +123,7 @@ void main() {
 
     test('dueItems excludes items with future nextReviewAt', () async {
       await dao.insertItem(
-        _item(
+        makeItem(
           itemId: 'f1',
           nextReviewAt: '2026-05-01T00:00:00.000Z',
         ),
@@ -134,10 +134,10 @@ void main() {
 
     test('dueItems filters by type', () async {
       await dao.insertItem(
-        _item(itemId: 'f1', itemType: 'flashcard', nextReviewAt: null),
+        makeItem(itemId: 'f1', itemType: 'flashcard', nextReviewAt: null),
       );
       await dao.insertItem(
-        _item(itemId: 'h1', itemType: 'highlight', nextReviewAt: null),
+        makeItem(itemId: 'h1', itemType: 'highlight', nextReviewAt: null),
       );
 
       final flashcards = await dao.dueItems(
@@ -150,10 +150,10 @@ void main() {
 
     test('dueItemsBySource filters by sourceId', () async {
       await dao.insertItem(
-        _item(itemId: 'f1', sourceId: 'book-1', nextReviewAt: null),
+        makeItem(itemId: 'f1', sourceId: 'book-1', nextReviewAt: null),
       );
       await dao.insertItem(
-        _item(itemId: 'f2', sourceId: 'book-2', nextReviewAt: null),
+        makeItem(itemId: 'f2', sourceId: 'book-2', nextReviewAt: null),
       );
 
       final due = await dao.dueItemsBySource(
@@ -167,8 +167,8 @@ void main() {
 
   group('ReviewItemsDao mastered items', () {
     test('masteredItems returns items in review state', () async {
-      await dao.insertItem(_item(itemId: 'f1', fsrsState: 'review'));
-      await dao.insertItem(_item(itemId: 'f2', fsrsState: 'learning'));
+      await dao.insertItem(makeItem(itemId: 'f1', fsrsState: 'review'));
+      await dao.insertItem(makeItem(itemId: 'f2', fsrsState: 'learning'));
 
       final mastered = await dao.masteredItems();
       expect(mastered, hasLength(1));
@@ -177,14 +177,14 @@ void main() {
 
     test('masteredItems filters by type', () async {
       await dao.insertItem(
-        _item(
+        makeItem(
           itemId: 'f1',
           itemType: 'flashcard',
           fsrsState: 'review',
         ),
       );
       await dao.insertItem(
-        _item(
+        makeItem(
           itemId: 'h1',
           itemType: 'highlight',
           fsrsState: 'review',
@@ -199,8 +199,8 @@ void main() {
 
   group('ReviewItemsDao review logs', () {
     test('insertReviewLog and reviewLogsByItem returns logs', () async {
-      await dao.insertItem(_item());
-      await dao.insertReviewLog(_log());
+      await dao.insertItem(makeItem());
+      await dao.insertReviewLog(makeLog());
 
       final logs = await dao.reviewLogsByItem('f1');
       expect(logs, hasLength(1));
@@ -213,12 +213,12 @@ void main() {
     });
 
     test('reviewLogsByItem orders by reviewedAt desc', () async {
-      await dao.insertItem(_item());
+      await dao.insertItem(makeItem());
       await dao.insertReviewLog(
-        _log(id: 'log-1', reviewedAt: '2026-04-01T00:00:00.000Z'),
+        makeLog(id: 'log-1', reviewedAt: '2026-04-01T00:00:00.000Z'),
       );
       await dao.insertReviewLog(
-        _log(id: 'log-2', reviewedAt: '2026-04-02T00:00:00.000Z'),
+        makeLog(id: 'log-2', reviewedAt: '2026-04-02T00:00:00.000Z'),
       );
 
       final logs = await dao.reviewLogsByItem('f1');

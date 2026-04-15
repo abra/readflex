@@ -13,7 +13,7 @@ void main() {
 
   tearDown(() => db.close());
 
-  FlashcardsTableCompanion _card({
+  FlashcardsTableCompanion makeCard({
     String id = 'f1',
     String deckId = 'd1',
     String front = 'Front',
@@ -28,15 +28,15 @@ void main() {
   );
 
   test('insert and retrieve flashcard', () async {
-    await dao.insertFlashcard(_card());
+    await dao.insertFlashcard(makeCard());
     final cards = await dao.allFlashcards();
     expect(cards, hasLength(1));
     expect(cards.first.front, 'Front');
   });
 
   test('flashcardsByDeck filters correctly', () async {
-    await dao.insertFlashcard(_card(id: 'f1', deckId: 'd1'));
-    await dao.insertFlashcard(_card(id: 'f2', deckId: 'd2'));
+    await dao.insertFlashcard(makeCard(id: 'f1', deckId: 'd1'));
+    await dao.insertFlashcard(makeCard(id: 'f2', deckId: 'd2'));
     final result = await dao.flashcardsByDeck('d1');
     expect(result, hasLength(1));
   });
