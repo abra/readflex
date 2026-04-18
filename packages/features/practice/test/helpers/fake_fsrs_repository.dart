@@ -15,13 +15,19 @@ class FakeFsrsRepository implements FsrsRepository {
   Future<List<ReviewItem>> getDueItemsBySource(
     String sourceId, {
     ReviewableType? type,
+    int? limit,
+    int? offset,
   }) async {
     if (shouldThrow) throw StorageException(cause: 'fake');
     return List.unmodifiable(dueItemsBySource[sourceId] ?? []);
   }
 
   @override
-  Future<List<ReviewItem>> getDueItems({ReviewableType? type}) async {
+  Future<List<ReviewItem>> getDueItems({
+    ReviewableType? type,
+    int? limit,
+    int? offset,
+  }) async {
     if (shouldThrow) throw StorageException(cause: 'fake');
     return List.unmodifiable(dueItems);
   }

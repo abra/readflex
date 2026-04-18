@@ -43,7 +43,6 @@ void main() {
         DictionaryState(
           status: DictionaryStatus.success,
           entries: [_entry1, _entry2],
-          filteredEntries: [_entry1, _entry2],
         ),
       ],
     );
@@ -84,17 +83,19 @@ void main() {
       seed: () => DictionaryState(
         status: DictionaryStatus.success,
         entries: [_entry1, _entry2],
-        filteredEntries: [_entry1, _entry2],
       ),
       act: (bloc) => bloc.add(const DictionarySearchChanged('hello')),
+      wait: const Duration(milliseconds: 400),
       expect: () => [
         DictionaryState(
           status: DictionaryStatus.success,
           entries: [_entry1, _entry2],
-          filteredEntries: [_entry1],
           searchQuery: 'hello',
         ),
       ],
+      verify: (bloc) {
+        expect(bloc.state.filteredEntries, [_entry1]);
+      },
     );
 
     blocTest<DictionaryBloc, DictionaryState>(
@@ -106,17 +107,19 @@ void main() {
       seed: () => DictionaryState(
         status: DictionaryStatus.success,
         entries: [_entry1, _entry2],
-        filteredEntries: [_entry1, _entry2],
       ),
       act: (bloc) => bloc.add(const DictionarySearchChanged('мир')),
+      wait: const Duration(milliseconds: 400),
       expect: () => [
         DictionaryState(
           status: DictionaryStatus.success,
           entries: [_entry1, _entry2],
-          filteredEntries: [_entry2],
           searchQuery: 'мир',
         ),
       ],
+      verify: (bloc) {
+        expect(bloc.state.filteredEntries, [_entry2]);
+      },
     );
 
     blocTest<DictionaryBloc, DictionaryState>(
@@ -135,7 +138,6 @@ void main() {
         DictionaryState(
           status: DictionaryStatus.success,
           entries: [_entry2],
-          filteredEntries: [_entry2],
         ),
       ],
     );
@@ -171,11 +173,24 @@ void main() {
     });
 
     test('filteredEntries returns all when query is empty', () {
+      final state = DictionaryState(entries: [_entry1, _entry2]);
+      expect(state.filteredEntries, hasLength(2));
+    });
+
+    test('filteredEntries filters by word', () {
       final state = DictionaryState(
         entries: [_entry1, _entry2],
-        filteredEntries: [_entry1, _entry2],
+        searchQuery: 'hello',
       );
-      expect(state.filteredEntries, hasLength(2));
+      expect(state.filteredEntries, [_entry1]);
+    });
+
+    test('filteredEntries filters by translation', () {
+      final state = DictionaryState(
+        entries: [_entry1, _entry2],
+        searchQuery: 'мир',
+      );
+      expect(state.filteredEntries, [_entry2]);
     });
   });
 }

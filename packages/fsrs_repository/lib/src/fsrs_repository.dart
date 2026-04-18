@@ -74,9 +74,17 @@ class FsrsRepository {
   }
 
   /// Returns IDs of all mastered items (fsrsState == review).
-  Future<Set<String>> getMasteredItemIds({ReviewableType? type}) async {
+  Future<Set<String>> getMasteredItemIds({
+    ReviewableType? type,
+    int? limit,
+    int? offset,
+  }) async {
     try {
-      final rows = await _dao.masteredItems(type: type?.toStorageString());
+      final rows = await _dao.masteredItems(
+        type: type?.toStorageString(),
+        limit: limit,
+        offset: offset,
+      );
       return {for (final r in rows) r.itemId};
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
@@ -84,10 +92,19 @@ class FsrsRepository {
   }
 
   /// Returns all due review items, optionally filtered by type.
-  Future<List<ReviewItem>> getDueItems({ReviewableType? type}) async {
+  Future<List<ReviewItem>> getDueItems({
+    ReviewableType? type,
+    int? limit,
+    int? offset,
+  }) async {
     try {
       final now = DateTime.now().toUtc().toIso8601String();
-      final rows = await _dao.dueItems(now, type: type?.toStorageString());
+      final rows = await _dao.dueItems(
+        now,
+        type: type?.toStorageString(),
+        limit: limit,
+        offset: offset,
+      );
       return rows.map((r) => r.toDomainModel()).toList();
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
@@ -98,6 +115,8 @@ class FsrsRepository {
   Future<List<ReviewItem>> getDueItemsBySource(
     String sourceId, {
     ReviewableType? type,
+    int? limit,
+    int? offset,
   }) async {
     try {
       final now = DateTime.now().toUtc().toIso8601String();
@@ -105,6 +124,8 @@ class FsrsRepository {
         sourceId,
         now,
         type: type?.toStorageString(),
+        limit: limit,
+        offset: offset,
       );
       return rows.map((r) => r.toDomainModel()).toList();
     } catch (e, st) {

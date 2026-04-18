@@ -46,6 +46,16 @@ class FlashcardRepository {
     }
   }
 
+  Future<List<Flashcard>> getFlashcardsByIds(List<String> ids) async {
+    if (ids.isEmpty) return const [];
+    try {
+      final rows = await _dao.flashcardsByIds(ids);
+      return rows.map((r) => r.toDomainModel()).toList();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
   Future<Flashcard> addFlashcard({
     required String deckId,
     required String front,

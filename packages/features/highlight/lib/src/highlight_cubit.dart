@@ -13,10 +13,12 @@ class HighlightCubit extends Cubit<HighlightSheetState> {
   final HighlightRepository _repository;
 
   void setColor(HighlightColor color) {
+    if (state.selectedColor == color) return;
     emit(state.copyWith(selectedColor: color));
   }
 
   void setNote(String note) {
+    if (state.note == note) return;
     emit(state.copyWith(note: note));
   }
 

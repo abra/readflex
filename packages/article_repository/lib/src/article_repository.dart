@@ -40,9 +40,11 @@ class ArticleRepository {
   final Directory _articlesDir;
   final http.Client _httpClient;
 
-  Future<List<Article>> getArticles() async {
+  static const _downloadTimeout = Duration(seconds: 30);
+
+  Future<List<Article>> getArticles({int? limit, int? offset}) async {
     try {
-      final rows = await _dao.allArticles();
+      final rows = await _dao.allArticles(limit: limit, offset: offset);
       return rows.map(_rowToDomain).toList();
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
@@ -63,9 +65,11 @@ class ArticleRepository {
   /// treat that as a corrupt import or re-fetch.
   Future<String> readContent(Article article) async {
     try {
-      final file = File(article.contentPath);
-      if (!await file.exists()) return '';
-      return file.readAsString();
+      return await File(article.contentPath).readAsString();
+    } on PathNotFoundException {
+      return '';
+    } on FileSystemException {
+      return '';
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }
@@ -183,21 +187,28 @@ class ArticleRepository {
     final imagesDir = Directory(p.join(articleDir.path, 'images'));
     await imagesDir.create(recursive: true);
 
-    // Download each unique URL and build a replacement map.
+    // Download all unique URLs in parallel, then build a replacement map.
+    final urlList = urls.toList();
+    final downloaded = await Future.wait(
+      urlList.map((url) => _tryDownloadImage(imagesDir, url)),
+    );
     final replacements = <String, String>{};
-    for (final url in urls) {
-      final localFilename = await _tryDownloadImage(imagesDir, url);
-      if (localFilename != null) {
-        replacements[url] = 'images/$localFilename';
+    for (var i = 0; i < urlList.length; i++) {
+      final filename = downloaded[i];
+      if (filename != null) {
+        replacements[urlList[i]] = 'images/$filename';
       }
     }
+    if (replacements.isEmpty) return html;
 
-    // Apply replacements in one pass.
-    var result = html;
-    for (final entry in replacements.entries) {
-      result = result.replaceAll(entry.key, entry.value);
-    }
-    return result;
+    // Single-pass replacement via regex union of all original URLs.
+    final pattern = RegExp(
+      replacements.keys.map(RegExp.escape).join('|'),
+    );
+    return html.replaceAllMapped(
+      pattern,
+      (m) => replacements[m.group(0)] ?? m.group(0)!,
+    );
   }
 
   /// Best-effort image download. Returns the local filename on success,
@@ -206,7 +217,7 @@ class ArticleRepository {
     try {
       final uri = Uri.tryParse(url);
       if (uri == null) return null;
-      final response = await _httpClient.get(uri);
+      final response = await _httpClient.get(uri).timeout(_downloadTimeout);
       if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
         return null;
       }
@@ -237,7 +248,7 @@ class ArticleRepository {
     try {
       final uri = Uri.tryParse(url);
       if (uri == null || !uri.hasScheme) return null;
-      final response = await _httpClient.get(uri);
+      final response = await _httpClient.get(uri).timeout(_downloadTimeout);
       if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
         return null;
       }

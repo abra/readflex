@@ -13,7 +13,7 @@ class FakeArticleRepository implements ArticleRepository {
     ..addAll(articles);
 
   @override
-  Future<List<Article>> getArticles() async {
+  Future<List<Article>> getArticles({int? limit, int? offset}) async {
     if (shouldThrow) throw StorageException(cause: 'fake error');
     return List.unmodifiable(_articles);
   }

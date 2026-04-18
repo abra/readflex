@@ -20,4 +20,10 @@ class FakeFlashcardRepository implements FlashcardRepository {
     if (shouldThrow) throw StorageException(cause: 'fake');
     return _cards[id];
   }
+
+  @override
+  Future<List<Flashcard>> getFlashcardsByIds(List<String> ids) async {
+    if (shouldThrow) throw StorageException(cause: 'fake');
+    return [for (final id in ids) ?_cards[id]];
+  }
 }

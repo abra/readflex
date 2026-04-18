@@ -9,7 +9,7 @@ class FakeArticleRepository implements ArticleRepository {
   bool shouldThrow = false;
 
   @override
-  Future<List<Article>> getArticles() async {
+  Future<List<Article>> getArticles({int? limit, int? offset}) async {
     if (shouldThrow) throw StorageException(cause: 'fake');
     return articles;
   }

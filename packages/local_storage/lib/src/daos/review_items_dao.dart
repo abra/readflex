@@ -26,55 +26,67 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
 
   /// Items that are due for review: never reviewed (nextReviewAt IS NULL)
   /// or nextReviewAt <= now.
-  Future<List<ReviewItemsTableData>> dueItems(String now, {String? type}) =>
-      (select(reviewItemsTable)
-            ..where(
-              (t) {
-                final dueCondition =
-                    t.nextReviewAt.isNull() |
-                    t.nextReviewAt.isSmallerOrEqual(Variable(now));
-                if (type != null) {
-                  return t.itemType.equals(type) & dueCondition;
-                }
-                return dueCondition;
-              },
-            )
-            ..orderBy([(t) => OrderingTerm.asc(t.nextReviewAt)]))
-          .get();
+  Future<List<ReviewItemsTableData>> dueItems(
+    String now, {
+    String? type,
+    int? limit,
+    int? offset,
+  }) {
+    final query = select(reviewItemsTable)
+      ..where((t) {
+        final dueCondition =
+            t.nextReviewAt.isNull() |
+            t.nextReviewAt.isSmallerOrEqual(Variable(now));
+        if (type != null) {
+          return t.itemType.equals(type) & dueCondition;
+        }
+        return dueCondition;
+      })
+      ..orderBy([(t) => OrderingTerm.asc(t.nextReviewAt)]);
+    if (limit != null) query.limit(limit, offset: offset);
+    return query.get();
+  }
 
   Future<List<ReviewItemsTableData>> dueItemsBySource(
     String sourceId,
     String now, {
     String? type,
-  }) =>
-      (select(reviewItemsTable)
-            ..where(
-              (t) {
-                final dueCondition =
-                    t.sourceId.equals(sourceId) &
-                    (t.nextReviewAt.isNull() |
-                        t.nextReviewAt.isSmallerOrEqual(Variable(now)));
-                if (type != null) {
-                  return t.itemType.equals(type) & dueCondition;
-                }
-                return dueCondition;
-              },
-            )
-            ..orderBy([(t) => OrderingTerm.asc(t.nextReviewAt)]))
-          .get();
+    int? limit,
+    int? offset,
+  }) {
+    final query = select(reviewItemsTable)
+      ..where((t) {
+        final dueCondition =
+            t.sourceId.equals(sourceId) &
+            (t.nextReviewAt.isNull() |
+                t.nextReviewAt.isSmallerOrEqual(Variable(now)));
+        if (type != null) {
+          return t.itemType.equals(type) & dueCondition;
+        }
+        return dueCondition;
+      })
+      ..orderBy([(t) => OrderingTerm.asc(t.nextReviewAt)]);
+    if (limit != null) query.limit(limit, offset: offset);
+    return query.get();
+  }
 
   /// Items in 'review' state (mastered).
-  Future<List<ReviewItemsTableData>> masteredItems({String? type}) =>
-      (select(reviewItemsTable)..where(
-            (t) {
-              final mastered = t.fsrsState.equals('review');
-              if (type != null) {
-                return t.itemType.equals(type) & mastered;
-              }
-              return mastered;
-            },
-          ))
-          .get();
+  Future<List<ReviewItemsTableData>> masteredItems({
+    String? type,
+    int? limit,
+    int? offset,
+  }) {
+    final query = select(reviewItemsTable)
+      ..where((t) {
+        final mastered = t.fsrsState.equals('review');
+        if (type != null) {
+          return t.itemType.equals(type) & mastered;
+        }
+        return mastered;
+      });
+    if (limit != null) query.limit(limit, offset: offset);
+    return query.get();
+  }
 
   Future<void> insertItem(ReviewItemsTableCompanion item) =>
       into(reviewItemsTable).insert(item);

@@ -36,9 +36,9 @@ class BookRepository {
   final BooksDao _dao;
   final Directory _booksDir;
 
-  Future<List<Book>> getBooks() async {
+  Future<List<Book>> getBooks({int? limit, int? offset}) async {
     try {
-      final rows = await _dao.allBooks();
+      final rows = await _dao.allBooks(limit: limit, offset: offset);
       return rows.map(_rowToDomain).toList();
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);

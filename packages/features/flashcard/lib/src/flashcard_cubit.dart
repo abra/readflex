@@ -13,14 +13,17 @@ class FlashcardCubit extends Cubit<FlashcardState> {
   final FlashcardRepository _repository;
 
   void setFront(String front) {
+    if (state.front == front) return;
     emit(state.copyWith(front: front));
   }
 
   void setBack(String back) {
+    if (state.back == back) return;
     emit(state.copyWith(back: back));
   }
 
   void setHint(String hint) {
+    if (state.hint == hint) return;
     emit(state.copyWith(hint: hint));
   }
 

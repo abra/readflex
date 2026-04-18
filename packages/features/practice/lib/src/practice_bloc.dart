@@ -103,24 +103,53 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
     }
   }
 
-  /// Resolves ReviewItems into PracticeItems by fetching the actual entities.
+  /// Resolves ReviewItems into PracticeItems by fetching the actual entities
+  /// in parallel batch queries instead of sequential per-item lookups.
   Future<List<PracticeItem>> _resolveItems(List<ReviewItem> dueItems) async {
-    final items = <PracticeItem>[];
+    final flashcardIds = <String>[];
+    final highlightIds = <String>[];
+    final dictionaryIds = <String>[];
 
     for (final due in dueItems) {
       switch (due.itemType) {
         case ReviewableType.flashcard:
-          final card = await _flashcardRepository.getFlashcardById(due.itemId);
-          if (card != null) items.add(FlashcardItem(card));
+          flashcardIds.add(due.itemId);
         case ReviewableType.highlight:
-          final hl = await _highlightRepository.getHighlightById(due.itemId);
-          if (hl != null) items.add(HighlightItem(hl));
+          highlightIds.add(due.itemId);
         case ReviewableType.dictionary:
-          final entry = await _dictionaryRepository.getEntryById(due.itemId);
-          if (entry != null) items.add(DictionaryItem(entry));
+          dictionaryIds.add(due.itemId);
       }
     }
 
+    final (cards, highlights, entries) = await (
+      _flashcardRepository.getFlashcardsByIds(flashcardIds),
+      _highlightRepository.getHighlightsByIds(highlightIds),
+      _dictionaryRepository.getEntriesByIds(dictionaryIds),
+    ).wait;
+
+    final cardMap = {for (final c in cards) c.id: c};
+    final hlMap = {for (final h in highlights) h.id: h};
+    final entryMap = {for (final e in entries) e.id: e};
+
+    // Preserve original order from dueItems, skip items deleted between
+    // scheduling and resolution.
+    final items = <PracticeItem>[];
+    for (final due in dueItems) {
+      switch (due.itemType) {
+        case ReviewableType.flashcard:
+          if (cardMap[due.itemId] case final card?) {
+            items.add(FlashcardItem(card));
+          }
+        case ReviewableType.highlight:
+          if (hlMap[due.itemId] case final hl?) {
+            items.add(HighlightItem(hl));
+          }
+        case ReviewableType.dictionary:
+          if (entryMap[due.itemId] case final entry?) {
+            items.add(DictionaryItem(entry));
+          }
+      }
+    }
     return items;
   }
 }

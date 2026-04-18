@@ -3,6 +3,7 @@ import 'package:book_repository/book_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:stream_transform/stream_transform.dart';
 
 part 'content_library_event.dart';
 part 'content_library_state.dart';
@@ -19,8 +20,17 @@ class ContentLibraryBloc
     on<ContentLibraryBookDeleted>(_onBookDeleted);
     on<ContentLibraryArticleDeleted>(_onArticleDeleted);
     on<ContentLibraryRefreshRequested>(_onRefreshRequested);
-    on<ContentLibrarySearchQueryChanged>(_onSearchQueryChanged);
+    on<ContentLibrarySearchQueryChanged>(
+      _onSearchQueryChanged,
+      transformer: _debounce(_searchDelay),
+    );
     on<ContentLibraryFilterChanged>(_onFilterChanged);
+  }
+
+  static const _searchDelay = Duration(milliseconds: 300);
+
+  static EventTransformer<E> _debounce<E>(Duration duration) {
+    return (events, mapper) => events.debounce(duration).asyncExpand(mapper);
   }
 
   void _onSearchQueryChanged(

@@ -46,18 +46,18 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     emit(state.copyWith(status: ReaderStatus.loading));
 
     try {
-      // Try book first, then article
-      final book = await _bookRepository.getBookById(event.sourceId);
-      if (book != null) {
-        final highlights = await _highlightRepository.getHighlightsBySource(
-          event.sourceId,
-        );
+      // Load book, article, and highlights in parallel. Only one of book/article
+      // will resolve to a non-null row for a given sourceId.
+      final (book, article, highlights) = await (
+        _bookRepository.getBookById(event.sourceId),
+        _articleRepository.getArticleById(event.sourceId),
+        _highlightRepository.getHighlightsBySource(event.sourceId),
+      ).wait;
 
-        // Update lastOpenedAt
+      if (book != null) {
         await _bookRepository.updateBook(
           book.copyWith(lastOpenedAt: DateTime.now()),
         );
-
         emit(
           state.copyWith(
             status: ReaderStatus.ready,
@@ -70,17 +70,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         return;
       }
 
-      final article = await _articleRepository.getArticleById(event.sourceId);
       if (article != null) {
-        final highlights = await _highlightRepository.getHighlightsBySource(
-          event.sourceId,
-        );
-
-        // Update lastOpenedAt
         await _articleRepository.updateArticle(
           article.copyWith(lastOpenedAt: DateTime.now()),
         );
-
         emit(
           state.copyWith(
             status: ReaderStatus.ready,
@@ -142,7 +135,15 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     ReaderTextDeselected event,
     Emitter<ReaderState> emit,
   ) {
-    emit(state.copyWith(hasSelection: false));
+    emit(
+      state.copyWith(
+        selectedText: '',
+        selectionCfiRange: null,
+        selectionPageNumber: null,
+        selectionScrollOffset: null,
+        hasSelection: false,
+      ),
+    );
   }
 
   void _onReviewReminderShown(

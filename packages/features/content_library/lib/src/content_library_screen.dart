@@ -135,6 +135,11 @@ class _ContentLibraryViewState extends State<ContentLibraryView> {
       body: SafeArea(
         bottom: false,
         child: BlocBuilder<ContentLibraryBloc, ContentLibraryState>(
+          buildWhen: (prev, curr) =>
+              prev.status != curr.status ||
+              prev.items != curr.items ||
+              prev.filter != curr.filter ||
+              prev.searchQuery != curr.searchQuery,
           builder: (context, state) {
             final bloc = context.read<ContentLibraryBloc>();
 

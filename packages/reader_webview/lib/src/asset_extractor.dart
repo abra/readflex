@@ -54,20 +54,20 @@ class AssetExtractor {
 
   /// Extracts all reader assets to [targetDirectory].
   ///
-  /// Skips files that already exist (assumes assets are immutable between
-  /// app versions). Call with `force: true` after an app update to refresh.
-  Future<void> extractAll({bool force = false}) async {
+  /// On unchanged [version], existing files are skipped. When [version]
+  /// differs from the last extracted version, all files are re-written.
+  /// Pass `force: true` to unconditionally re-extract.
+  Future<void> extractAll({required String version, bool force = false}) async {
+    final versionFile = File(p.join(targetDirectory.path, '.asset_version'));
+    final shouldForce = force || !await _versionMatches(versionFile, version);
+
     for (final assetPath in _assetPaths) {
       final bundleKey = 'packages/reader_webview/$assetPath';
-      // Strip the leading 'assets/' — it's a Flutter bundling convention,
-      // not a meaningful directory. The server expects files directly
-      // under targetDirectory (e.g. article/reader.html, not
-      // assets/article/reader.html).
       final relativePath = assetPath.replaceFirst('assets/', '');
       final targetPath = p.join(targetDirectory.path, relativePath);
       final targetFile = File(targetPath);
 
-      if (!force && await targetFile.exists()) continue;
+      if (!shouldForce && await targetFile.exists()) continue;
 
       await Directory(p.dirname(targetPath)).create(recursive: true);
 
@@ -78,11 +78,22 @@ class AssetExtractor {
           flush: true,
         );
       } catch (e) {
-        // Asset missing from bundle — skip silently. This can happen if
-        // a format handler (e.g. comic-book.js) was trimmed from the
-        // vendored set.
         continue;
       }
+    }
+
+    if (shouldForce) {
+      await versionFile.parent.create(recursive: true);
+      await versionFile.writeAsString(version, flush: true);
+    }
+  }
+
+  Future<bool> _versionMatches(File versionFile, String version) async {
+    if (!await versionFile.exists()) return false;
+    try {
+      return (await versionFile.readAsString()) == version;
+    } catch (_) {
+      return false;
     }
   }
 }

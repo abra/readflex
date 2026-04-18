@@ -24,6 +24,9 @@ class DictionaryDao extends DatabaseAccessor<AppDatabase>
     dictionaryTable,
   )..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  Future<List<DictionaryTableData>> entriesByIds(List<String> ids) =>
+      (select(dictionaryTable)..where((t) => t.id.isIn(ids))).get();
+
   Future<void> insertEntry(DictionaryTableCompanion entry) =>
       into(dictionaryTable).insert(entry);
 

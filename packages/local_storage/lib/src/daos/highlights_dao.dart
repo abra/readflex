@@ -24,6 +24,9 @@ class HighlightsDao extends DatabaseAccessor<AppDatabase>
     highlightsTable,
   )..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  Future<List<HighlightsTableData>> highlightsByIds(List<String> ids) =>
+      (select(highlightsTable)..where((t) => t.id.isIn(ids))).get();
+
   Future<void> insertHighlight(HighlightsTableCompanion highlight) =>
       into(highlightsTable).insert(highlight);
 

@@ -20,4 +20,10 @@ class FakeHighlightRepository implements HighlightRepository {
     if (shouldThrow) throw StorageException(cause: 'fake');
     return _highlights[id];
   }
+
+  @override
+  Future<List<Highlight>> getHighlightsByIds(List<String> ids) async {
+    if (shouldThrow) throw StorageException(cause: 'fake');
+    return [for (final id in ids) ?_highlights[id]];
+  }
 }

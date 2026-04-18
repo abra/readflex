@@ -43,6 +43,16 @@ class HighlightRepository {
     }
   }
 
+  Future<List<Highlight>> getHighlightsByIds(List<String> ids) async {
+    if (ids.isEmpty) return const [];
+    try {
+      final rows = await _dao.highlightsByIds(ids);
+      return rows.map((r) => r.toDomainModel()).toList();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
   Future<Highlight> addHighlight({
     required String sourceId,
     required SourceType sourceType,

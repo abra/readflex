@@ -86,6 +86,8 @@ class ReadabilityArticleParser implements ArticleParser {
   static const _userAgent =
       'Mozilla/5.0 (compatible; ReadflexArticleParser/1.0)';
 
+  static const _requestTimeout = Duration(seconds: 30);
+
   @override
   Future<ParsedArticle> parse(String url) async {
     final uri = Uri.tryParse(url);
@@ -98,10 +100,9 @@ class ReadabilityArticleParser implements ArticleParser {
 
     final http.Response response;
     try {
-      response = await _httpClient.get(
-        uri,
-        headers: const {'User-Agent': _userAgent},
-      );
+      response = await _httpClient
+          .get(uri, headers: const {'User-Agent': _userAgent})
+          .timeout(_requestTimeout);
     } catch (e) {
       throw ArticleParserException(
         reason: ArticleParserFailure.network,

@@ -9,12 +9,15 @@ part 'books_dao.g.dart';
 class BooksDao extends DatabaseAccessor<AppDatabase> with _$BooksDaoMixin {
   BooksDao(super.db);
 
-  Future<List<BooksTableData>> allBooks() =>
-      (select(booksTable)..orderBy([
-            (t) => OrderingTerm.desc(t.lastOpenedAt),
-            (t) => OrderingTerm.desc(t.addedAt),
-          ]))
-          .get();
+  Future<List<BooksTableData>> allBooks({int? limit, int? offset}) {
+    final query = select(booksTable)
+      ..orderBy([
+        (t) => OrderingTerm.desc(t.lastOpenedAt),
+        (t) => OrderingTerm.desc(t.addedAt),
+      ]);
+    if (limit != null) query.limit(limit, offset: offset);
+    return query.get();
+  }
 
   Future<BooksTableData?> bookById(String id) =>
       (select(booksTable)..where((t) => t.id.equals(id))).getSingleOrNull();

@@ -97,6 +97,10 @@ class _ProfileViewState extends State<_ProfileView> {
               vertical: AppSpacing.lg,
             ),
             child: BlocBuilder<ProfileCubit, ProfileState>(
+              buildWhen: (prev, curr) =>
+                  prev.authStatus != curr.authStatus ||
+                  prev.email != curr.email ||
+                  prev.subscriptionStatus != curr.subscriptionStatus,
               builder: (context, state) => _ProfileHeader(
                 state: state,
                 appColors: appColors,

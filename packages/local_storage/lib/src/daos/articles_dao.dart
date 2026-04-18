@@ -10,12 +10,15 @@ class ArticlesDao extends DatabaseAccessor<AppDatabase>
     with _$ArticlesDaoMixin {
   ArticlesDao(super.db);
 
-  Future<List<ArticlesTableData>> allArticles() =>
-      (select(articlesTable)..orderBy([
-            (t) => OrderingTerm.desc(t.lastOpenedAt),
-            (t) => OrderingTerm.desc(t.addedAt),
-          ]))
-          .get();
+  Future<List<ArticlesTableData>> allArticles({int? limit, int? offset}) {
+    final query = select(articlesTable)
+      ..orderBy([
+        (t) => OrderingTerm.desc(t.lastOpenedAt),
+        (t) => OrderingTerm.desc(t.addedAt),
+      ]);
+    if (limit != null) query.limit(limit, offset: offset);
+    return query.get();
+  }
 
   Future<ArticlesTableData?> articleById(String id) =>
       (select(articlesTable)..where((t) => t.id.equals(id))).getSingleOrNull();

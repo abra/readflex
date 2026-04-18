@@ -48,10 +48,14 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (migrator) async {
+      await migrator.createAll();
+      await _createIndexes();
+    },
     onUpgrade: (migrator, from, to) async {
       if (from < 2) {
         // Add FSRS columns to highlights
@@ -265,6 +269,12 @@ class AppDatabase extends _$AppDatabase {
           'ALTER TABLE articles_table ADD COLUMN reading_progress REAL NOT NULL DEFAULT 0.0',
         );
       }
+      if (from < 10) {
+        await _createIndexes();
+      }
+      if (from < 11) {
+        await _createIndexes();
+      }
       if (from < 9) {
         // Reverse v8. `reading_progress` turned out to be a duplicate of
         // the existing `current_scroll_offset` — for articles the reader
@@ -286,6 +296,33 @@ class AppDatabase extends _$AppDatabase {
       }
     },
   );
+
+  Future<void> _createIndexes() async {
+    // Composite indexes for the hot-path review_items queries:
+    // dueItemsBySource(sourceId, nextReviewAt) and dueItems(itemType, nextReviewAt).
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_review_items_source_next
+      ON review_items_table (source_id, next_review_at)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_review_items_type_next
+      ON review_items_table (item_type, next_review_at)
+    ''');
+    // FK lookup indexes — highlightsBySource / flashcardsByDeck / entriesBySource
+    // scan these columns on every source/deck filter.
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_highlights_source
+      ON highlights_table (source_id)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_flashcards_deck
+      ON flashcards_table (deck_id)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_dictionary_source
+      ON dictionary_table (source_id)
+    ''');
+  }
 }
 
 LazyDatabase _openConnection() => LazyDatabase(() async {

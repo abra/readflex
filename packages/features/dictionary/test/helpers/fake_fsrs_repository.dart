@@ -9,7 +9,11 @@ class FakeFsrsRepository implements FsrsRepository {
   bool shouldThrow = false;
 
   @override
-  Future<Set<String>> getMasteredItemIds({ReviewableType? type}) async {
+  Future<Set<String>> getMasteredItemIds({
+    ReviewableType? type,
+    int? limit,
+    int? offset,
+  }) async {
     if (shouldThrow) throw StorageException(cause: 'fake');
     return masteredIds;
   }

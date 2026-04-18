@@ -20,4 +20,10 @@ class FakeDictionaryRepository implements DictionaryRepository {
     if (shouldThrow) throw StorageException(cause: 'fake');
     return _entries[id];
   }
+
+  @override
+  Future<List<DictionaryEntry>> getEntriesByIds(List<String> ids) async {
+    if (shouldThrow) throw StorageException(cause: 'fake');
+    return [for (final id in ids) ?_entries[id]];
+  }
 }

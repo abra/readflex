@@ -52,6 +52,10 @@ class _DictionaryViewState extends State<_DictionaryView> {
 
     return BlocBuilder<DictionaryBloc, DictionaryState>(
       builder: (context, state) {
+        // Cache the derived getter once per build to avoid repeated
+        // list allocation in itemCount / itemBuilder.
+        final filtered = state.filteredEntries;
+
         return switch (state.status) {
           DictionaryStatus.initial ||
           DictionaryStatus.loading => const CenteredCircularProgressIndicator(),
@@ -136,7 +140,7 @@ class _DictionaryViewState extends State<_DictionaryView> {
                           }
                           return false;
                         },
-                        child: state.filteredEntries.isEmpty
+                        child: filtered.isEmpty
                             ? const EmptyState(
                                 icon: AppIcons.book,
                                 message: 'No words found',
@@ -148,13 +152,14 @@ class _DictionaryViewState extends State<_DictionaryView> {
                                   AppSpacing.lg,
                                   80,
                                 ),
-                                itemCount: state.filteredEntries.length,
+                                itemCount: filtered.length,
                                 separatorBuilder: (_, _) =>
                                     const SizedBox(height: AppSpacing.md),
                                 itemBuilder: (_, i) {
-                                  final entry = state.filteredEntries[i];
+                                  final entry = filtered[i];
                                   final expanded = _expandedIndex == i;
                                   return _WordCard(
+                                    key: ValueKey(entry.id),
                                     entry: entry,
                                     expanded: expanded,
                                     mastered: state.isMastered(entry.id),
@@ -205,6 +210,7 @@ class _WordCard extends StatelessWidget {
     required this.expanded,
     required this.mastered,
     required this.onTap,
+    super.key,
   });
 
   final DictionaryEntry entry;

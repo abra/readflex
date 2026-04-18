@@ -9,7 +9,11 @@ class FakeFsrsRepository implements FsrsRepository {
   bool shouldThrow = false;
 
   @override
-  Future<List<ReviewItem>> getDueItems({ReviewableType? type}) async {
+  Future<List<ReviewItem>> getDueItems({
+    ReviewableType? type,
+    int? limit,
+    int? offset,
+  }) async {
     if (shouldThrow) throw StorageException(cause: 'fake');
     return List.unmodifiable(dueItems);
   }

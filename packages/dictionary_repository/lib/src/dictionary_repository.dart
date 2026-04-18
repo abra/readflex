@@ -43,6 +43,16 @@ class DictionaryRepository {
     }
   }
 
+  Future<List<DictionaryEntry>> getEntriesByIds(List<String> ids) async {
+    if (ids.isEmpty) return const [];
+    try {
+      final rows = await _dao.entriesByIds(ids);
+      return rows.map((r) => r.toDomainModel()).toList();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
   Future<DictionaryEntry> addEntry({
     required String word,
     required String translation,

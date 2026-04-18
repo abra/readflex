@@ -24,6 +24,9 @@ class FlashcardsDao extends DatabaseAccessor<AppDatabase>
     flashcardsTable,
   )..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  Future<List<FlashcardsTableData>> flashcardsByIds(List<String> ids) =>
+      (select(flashcardsTable)..where((t) => t.id.isIn(ids))).get();
+
   Future<void> insertFlashcard(FlashcardsTableCompanion card) =>
       into(flashcardsTable).insert(card);
 

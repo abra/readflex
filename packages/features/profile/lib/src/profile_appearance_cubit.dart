@@ -19,17 +19,20 @@ class ProfileAppearanceCubit extends Cubit<ProfileAppearanceState> {
   final PreferencesService _preferencesService;
 
   Future<void> setThemeMode(ThemeMode themeMode) async {
+    final previous = state;
     emit(state.copyWith(themeMode: themeMode));
     try {
       await _preferencesService.update(
         (prefs) => prefs.copyWith(themeMode: themeMode),
       );
     } catch (e, st) {
+      emit(previous);
       addError(e, st);
     }
   }
 
   Future<void> setReaderTheme(String themeId) async {
+    final previous = state;
     emit(
       state.copyWith(
         readerAppearance: state.readerAppearance.copyWith(themeId: themeId),
@@ -40,11 +43,13 @@ class ProfileAppearanceCubit extends Cubit<ProfileAppearanceState> {
         (prefs) => prefs.copyWith(readerThemeId: themeId),
       );
     } catch (e, st) {
+      emit(previous);
       addError(e, st);
     }
   }
 
   Future<void> setReaderFont(String fontId) async {
+    final previous = state;
     emit(
       state.copyWith(
         readerAppearance: state.readerAppearance.copyWith(fontId: fontId),
@@ -55,11 +60,13 @@ class ProfileAppearanceCubit extends Cubit<ProfileAppearanceState> {
         (prefs) => prefs.copyWith(readerFontId: fontId),
       );
     } catch (e, st) {
+      emit(previous);
       addError(e, st);
     }
   }
 
   void previewTextScale(double value) {
+    if (state.readerAppearance.textScale == value) return;
     emit(
       state.copyWith(
         readerAppearance: state.readerAppearance.copyWith(textScale: value),
@@ -78,6 +85,7 @@ class ProfileAppearanceCubit extends Cubit<ProfileAppearanceState> {
   }
 
   void previewLineHeight(double value) {
+    if (state.readerAppearance.lineHeight == value) return;
     emit(
       state.copyWith(
         readerAppearance: state.readerAppearance.copyWith(lineHeight: value),
