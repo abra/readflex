@@ -76,9 +76,34 @@ class ArticleReaderWebView extends StatefulWidget {
 
 class _ArticleReaderWebViewState extends State<ArticleReaderWebView> {
   InAppWebViewController? _controller;
+  bool _isReady = false;
 
   String get _baseUrl =>
       'http://127.0.0.1:${widget.serverPort}/assets/article/reader.html';
+
+  @override
+  void didUpdateWidget(covariant ArticleReaderWebView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_isReady) return;
+
+    final oldStyleJson = oldWidget.style == null
+        ? null
+        : jsonEncode(oldWidget.style!.toMap());
+    final newStyleJson = widget.style == null
+        ? null
+        : jsonEncode(widget.style!.toMap());
+    if (oldStyleJson != newStyleJson && widget.style != null) {
+      changeStyle(widget.style!);
+    }
+
+    if (_highlightsJson(oldWidget.highlights) !=
+        _highlightsJson(widget.highlights)) {
+      updateHighlights(widget.highlights);
+    }
+  }
+
+  String _highlightsJson(List<ReaderHighlight> list) =>
+      jsonEncode(list.map((h) => h.toMap()).toList());
 
   @override
   Widget build(BuildContext context) {
@@ -108,6 +133,7 @@ class _ArticleReaderWebViewState extends State<ArticleReaderWebView> {
     controller.addJavaScriptHandler(
       handlerName: 'onReady',
       callback: (_) {
+        _isReady = true;
         _applyInitialStyle();
         _renderHighlights();
         _restoreScrollPosition();

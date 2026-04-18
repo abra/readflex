@@ -22,3 +22,12 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   sqlite3: ^2.7.0
+
+  # For cross-package integration tests under test/integration/ that verify
+  # the "save item -> appears in FSRS due queue" contract.
+  highlight_repository:
+    path: ../highlight_repository
+  flashcard_repository:
+    path: ../flashcard_repository
+  dictionary_repository:
+    path: ../dictionary_repository

@@ -3,6 +3,8 @@ import 'package:flashcard/src/flashcard_action.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'helpers/fake_fsrs_repository.dart';
+
 class _FakeFlashcardRepository implements FlashcardRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -15,6 +17,7 @@ void main() {
     setUp(() {
       action = FlashcardAction(
         flashcardRepository: _FakeFlashcardRepository(),
+        fsrsRepository: FakeFsrsRepository(),
       );
     });
 

@@ -68,6 +68,60 @@ class BookReaderWebView extends StatefulWidget {
 
 class _BookReaderWebViewState extends State<BookReaderWebView> {
   InAppWebViewController? _controller;
+  bool _isReady = false;
+
+  @override
+  void didUpdateWidget(covariant BookReaderWebView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_isReady) return;
+
+    if (jsonEncode(oldWidget.foliateStyle.toMap()) !=
+        jsonEncode(widget.foliateStyle.toMap())) {
+      changeStyle(widget.foliateStyle);
+    }
+
+    _syncAnnotations(oldWidget.highlights, widget.highlights);
+  }
+
+  void _syncAnnotations(
+    List<ReaderHighlight> oldList,
+    List<ReaderHighlight> newList,
+  ) {
+    final oldById = {for (final h in oldList) h.id: h};
+    final newById = {for (final h in newList) h.id: h};
+
+    for (final h in oldList) {
+      final next = newById[h.id];
+      if (next == null && h.cfiRange != null) {
+        _evalRemoveAnnotation(h.cfiRange!);
+      }
+    }
+    for (final h in newList) {
+      final prev = oldById[h.id];
+      if (prev == null) {
+        _evalAddAnnotation(h);
+      } else if (prev.cfiRange != h.cfiRange || prev.color != h.color) {
+        if (prev.cfiRange != null) _evalRemoveAnnotation(prev.cfiRange!);
+        _evalAddAnnotation(h);
+      }
+    }
+  }
+
+  void _evalAddAnnotation(ReaderHighlight h) {
+    if (h.cfiRange == null) return;
+    final annotation = jsonEncode({
+      'id': h.id,
+      'type': 'highlight',
+      'value': h.cfiRange,
+      'color': h.color ?? '#FFE600',
+    });
+    _controller?.evaluateJavascript(source: 'addAnnotation($annotation);');
+  }
+
+  void _evalRemoveAnnotation(String cfiRange) {
+    final escaped = jsonEncode(cfiRange);
+    _controller?.evaluateJavascript(source: 'removeAnnotation($escaped);');
+  }
 
   String get _bookUrl {
     final encoded = Uri.encodeComponent(widget.bookFilePath);
@@ -120,6 +174,7 @@ class _BookReaderWebViewState extends State<BookReaderWebView> {
     controller.addJavaScriptHandler(
       handlerName: 'onLoadEnd',
       callback: (_) {
+        _isReady = true;
         _renderAnnotations();
         widget.onReady?.call();
       },
@@ -166,16 +221,7 @@ class _BookReaderWebViewState extends State<BookReaderWebView> {
 
   void _renderAnnotations() {
     for (final h in widget.highlights) {
-      if (h.cfiRange == null) continue;
-      final annotation = jsonEncode({
-        'id': h.id,
-        'type': 'highlight',
-        'value': h.cfiRange,
-        'color': h.color ?? '#FFE600',
-      });
-      _controller?.evaluateJavascript(
-        source: 'addAnnotation($annotation);',
-      );
+      _evalAddAnnotation(h);
     }
   }
 

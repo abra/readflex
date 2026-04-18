@@ -21,6 +21,8 @@ dependencies:
     path: ../../translation_service
   dictionary_repository:
     path: ../../dictionary_repository
+  fsrs_repository:
+    path: ../../fsrs_repository
   component_library:
     path: ../../component_library
 

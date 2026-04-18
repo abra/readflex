@@ -235,6 +235,52 @@ void main() {
       );
     });
 
+    group('ReaderHighlightsRefreshed', () {
+      blocTest<ReaderBloc, ReaderState>(
+        'refetches highlights for current source',
+        setUp: () {
+          highlightRepository.seedHighlights('book-1', [testHighlight]);
+        },
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          sourceType: SourceType.book,
+          book: testBook,
+        ),
+        act: (bloc) => bloc.add(const ReaderHighlightsRefreshed()),
+        expect: () => [
+          isA<ReaderState>().having(
+            (s) => s.highlights,
+            'highlights',
+            hasLength(1),
+          ),
+        ],
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'emits nothing when no source loaded',
+        build: buildBloc,
+        act: (bloc) => bloc.add(const ReaderHighlightsRefreshed()),
+        expect: () => <ReaderState>[],
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'reports error when repository throws',
+        setUp: () {
+          highlightRepository.shouldThrow = true;
+        },
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          sourceType: SourceType.book,
+          book: testBook,
+        ),
+        act: (bloc) => bloc.add(const ReaderHighlightsRefreshed()),
+        expect: () => <ReaderState>[],
+        errors: () => [isA<Exception>()],
+      );
+    });
+
     group('Review reminder', () {
       blocTest<ReaderBloc, ReaderState>(
         'show review reminder',

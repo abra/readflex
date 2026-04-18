@@ -4,18 +4,24 @@ import 'package:flashcard/src/flashcard_cubit.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers/fake_flashcard_repository.dart';
+import 'helpers/fake_fsrs_repository.dart';
 
 void main() {
   late FakeFlashcardRepository repository;
+  late FakeFsrsRepository fsrsRepository;
 
   setUp(() {
     repository = FakeFlashcardRepository();
+    fsrsRepository = FakeFsrsRepository();
   });
 
   group('FlashcardCubit', () {
     blocTest<FlashcardCubit, FlashcardState>(
       'initial state has idle status and empty fields',
-      build: () => FlashcardCubit(flashcardRepository: repository),
+      build: () => FlashcardCubit(
+        flashcardRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       verify: (cubit) {
         expect(cubit.state.status, FlashcardStatus.idle);
         expect(cubit.state.front, '');
@@ -27,7 +33,10 @@ void main() {
 
     blocTest<FlashcardCubit, FlashcardState>(
       'setFront emits state with new front',
-      build: () => FlashcardCubit(flashcardRepository: repository),
+      build: () => FlashcardCubit(
+        flashcardRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       act: (cubit) => cubit.setFront('What is X?'),
       expect: () => [
         const FlashcardState(front: 'What is X?'),
@@ -36,7 +45,10 @@ void main() {
 
     blocTest<FlashcardCubit, FlashcardState>(
       'setBack emits state with new back',
-      build: () => FlashcardCubit(flashcardRepository: repository),
+      build: () => FlashcardCubit(
+        flashcardRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       act: (cubit) => cubit.setBack('Answer'),
       expect: () => [
         const FlashcardState(back: 'Answer'),
@@ -45,7 +57,10 @@ void main() {
 
     blocTest<FlashcardCubit, FlashcardState>(
       'setHint emits state with new hint',
-      build: () => FlashcardCubit(flashcardRepository: repository),
+      build: () => FlashcardCubit(
+        flashcardRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       act: (cubit) => cubit.setHint('Think about...'),
       expect: () => [
         const FlashcardState(hint: 'Think about...'),
@@ -54,7 +69,10 @@ void main() {
 
     blocTest<FlashcardCubit, FlashcardState>(
       'canSave is true when front and back are non-empty',
-      build: () => FlashcardCubit(flashcardRepository: repository),
+      build: () => FlashcardCubit(
+        flashcardRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       seed: () => const FlashcardState(
         front: 'Q',
         back: 'A',
@@ -66,7 +84,10 @@ void main() {
 
     blocTest<FlashcardCubit, FlashcardState>(
       'save does nothing when canSave is false',
-      build: () => FlashcardCubit(flashcardRepository: repository),
+      build: () => FlashcardCubit(
+        flashcardRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       act: (cubit) => cubit.save(
         sourceId: 'book-1',
         sourceType: SourceType.book,
@@ -79,7 +100,10 @@ void main() {
 
     blocTest<FlashcardCubit, FlashcardState>(
       'save emits saving then success',
-      build: () => FlashcardCubit(flashcardRepository: repository),
+      build: () => FlashcardCubit(
+        flashcardRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       seed: () => const FlashcardState(front: 'Q', back: 'A'),
       act: (cubit) => cubit.save(
         sourceId: 'book-1',
@@ -107,7 +131,10 @@ void main() {
 
     blocTest<FlashcardCubit, FlashcardState>(
       'save passes hint when non-empty',
-      build: () => FlashcardCubit(flashcardRepository: repository),
+      build: () => FlashcardCubit(
+        flashcardRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       seed: () => const FlashcardState(
         front: 'Q',
         back: 'A',
@@ -124,7 +151,10 @@ void main() {
 
     blocTest<FlashcardCubit, FlashcardState>(
       'save passes null hint when empty',
-      build: () => FlashcardCubit(flashcardRepository: repository),
+      build: () => FlashcardCubit(
+        flashcardRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       seed: () => const FlashcardState(front: 'Q', back: 'A'),
       act: (cubit) => cubit.save(
         sourceId: 'book-1',
@@ -136,10 +166,65 @@ void main() {
     );
 
     blocTest<FlashcardCubit, FlashcardState>(
+      'save registers a review item via FSRS',
+      build: () => FlashcardCubit(
+        flashcardRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
+      seed: () => const FlashcardState(front: 'Q', back: 'A'),
+      act: (cubit) => cubit.save(
+        sourceId: 'book-1',
+        sourceType: SourceType.book,
+      ),
+      verify: (_) {
+        expect(fsrsRepository.created, hasLength(1));
+        final registered = fsrsRepository.created.first;
+        expect(registered.itemId, repository.flashcards.first.id);
+        expect(registered.itemType, ReviewableType.flashcard);
+        expect(registered.sourceId, 'book-1');
+      },
+    );
+
+    blocTest<FlashcardCubit, FlashcardState>(
+      'save still reports success if FSRS registration fails',
+      build: () {
+        fsrsRepository.shouldThrow = true;
+        return FlashcardCubit(
+          flashcardRepository: repository,
+          fsrsRepository: fsrsRepository,
+        );
+      },
+      seed: () => const FlashcardState(front: 'Q', back: 'A'),
+      act: (cubit) => cubit.save(
+        sourceId: 'book-1',
+        sourceType: SourceType.book,
+      ),
+      expect: () => [
+        const FlashcardState(
+          front: 'Q',
+          back: 'A',
+          status: FlashcardStatus.saving,
+        ),
+        const FlashcardState(
+          front: 'Q',
+          back: 'A',
+          status: FlashcardStatus.success,
+        ),
+      ],
+      errors: () => [isA<StorageException>()],
+      verify: (_) {
+        expect(repository.flashcards, hasLength(1));
+      },
+    );
+
+    blocTest<FlashcardCubit, FlashcardState>(
       'save emits saving then failure on error',
       build: () {
         repository.shouldThrow = true;
-        return FlashcardCubit(flashcardRepository: repository);
+        return FlashcardCubit(
+          flashcardRepository: repository,
+          fsrsRepository: fsrsRepository,
+        );
       },
       seed: () => const FlashcardState(front: 'Q', back: 'A'),
       act: (cubit) => cubit.save(

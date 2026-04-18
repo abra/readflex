@@ -511,8 +511,9 @@ class _ContextPanel extends StatelessWidget {
                 return IconButton(
                   icon: Icon(action.icon, color: iconColor),
                   tooltip: action.label,
-                  onPressed: () {
-                    action.onExecute(
+                  onPressed: () async {
+                    final bloc = context.read<ReaderBloc>();
+                    await action.onExecute(
                       context,
                       TextSelectionContext(
                         selectedText: selectedText,
@@ -523,6 +524,9 @@ class _ContextPanel extends StatelessWidget {
                         scrollOffset: selectionScrollOffset,
                       ),
                     );
+                    if (!bloc.isClosed) {
+                      bloc.add(const ReaderHighlightsRefreshed());
+                    }
                   },
                 );
               }).toList(),

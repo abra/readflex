@@ -29,7 +29,6 @@ Future<bool> importBook({
   final sourceFile = File(filePath);
   final ext = filePath.split('.').last.toLowerCase();
 
-  // Map azw3 to mobi (KF8 variant), cbz/txt to epub fallback for format enum.
   final format = BookFormat.fromExtension(ext) ?? BookFormat.epub;
 
   try {

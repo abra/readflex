@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:highlight/src/highlight_action.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 
+import 'helpers/fake_fsrs_repository.dart';
+
 class _FakeHighlightRepository implements HighlightRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -15,6 +17,7 @@ void main() {
     setUp(() {
       action = HighlightAction(
         highlightRepository: _FakeHighlightRepository(),
+        fsrsRepository: FakeFsrsRepository(),
       );
     });
 

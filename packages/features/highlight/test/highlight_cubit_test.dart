@@ -3,19 +3,25 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:highlight/src/highlight_cubit.dart';
 
+import 'helpers/fake_fsrs_repository.dart';
 import 'helpers/fake_highlight_repository.dart';
 
 void main() {
   late FakeHighlightRepository repository;
+  late FakeFsrsRepository fsrsRepository;
 
   setUp(() {
     repository = FakeHighlightRepository();
+    fsrsRepository = FakeFsrsRepository();
   });
 
   group('HighlightCubit', () {
     blocTest<HighlightCubit, HighlightSheetState>(
       'initial state has yellow color and idle status',
-      build: () => HighlightCubit(highlightRepository: repository),
+      build: () => HighlightCubit(
+        highlightRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       verify: (cubit) {
         expect(cubit.state.status, HighlightSheetStatus.idle);
         expect(cubit.state.selectedColor, HighlightColor.yellow);
@@ -25,7 +31,10 @@ void main() {
 
     blocTest<HighlightCubit, HighlightSheetState>(
       'setColor emits state with new color',
-      build: () => HighlightCubit(highlightRepository: repository),
+      build: () => HighlightCubit(
+        highlightRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       act: (cubit) => cubit.setColor(HighlightColor.blue),
       expect: () => [
         const HighlightSheetState(selectedColor: HighlightColor.blue),
@@ -34,7 +43,10 @@ void main() {
 
     blocTest<HighlightCubit, HighlightSheetState>(
       'setNote emits state with new note',
-      build: () => HighlightCubit(highlightRepository: repository),
+      build: () => HighlightCubit(
+        highlightRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       act: (cubit) => cubit.setNote('My note'),
       expect: () => [
         const HighlightSheetState(note: 'My note'),
@@ -43,7 +55,10 @@ void main() {
 
     blocTest<HighlightCubit, HighlightSheetState>(
       'save emits saving then success',
-      build: () => HighlightCubit(highlightRepository: repository),
+      build: () => HighlightCubit(
+        highlightRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       act: (cubit) => cubit.save(
         text: 'Selected text',
         sourceId: 'book-1',
@@ -62,7 +77,10 @@ void main() {
 
     blocTest<HighlightCubit, HighlightSheetState>(
       'save passes note when not empty',
-      build: () => HighlightCubit(highlightRepository: repository),
+      build: () => HighlightCubit(
+        highlightRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       seed: () => const HighlightSheetState(note: 'Important'),
       act: (cubit) => cubit.save(
         text: 'Text',
@@ -76,7 +94,10 @@ void main() {
 
     blocTest<HighlightCubit, HighlightSheetState>(
       'save passes null note when empty',
-      build: () => HighlightCubit(highlightRepository: repository),
+      build: () => HighlightCubit(
+        highlightRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       act: (cubit) => cubit.save(
         text: 'Text',
         sourceId: 'book-1',
@@ -89,7 +110,10 @@ void main() {
 
     blocTest<HighlightCubit, HighlightSheetState>(
       'save passes selected color',
-      build: () => HighlightCubit(highlightRepository: repository),
+      build: () => HighlightCubit(
+        highlightRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       seed: () => const HighlightSheetState(selectedColor: HighlightColor.pink),
       act: (cubit) => cubit.save(
         text: 'Text',
@@ -105,7 +129,10 @@ void main() {
       'save emits saving then failure on error',
       build: () {
         repository.shouldThrow = true;
-        return HighlightCubit(highlightRepository: repository);
+        return HighlightCubit(
+          highlightRepository: repository,
+          fsrsRepository: fsrsRepository,
+        );
       },
       act: (cubit) => cubit.save(
         text: 'Text',
@@ -119,8 +146,55 @@ void main() {
     );
 
     blocTest<HighlightCubit, HighlightSheetState>(
+      'save registers a review item via FSRS',
+      build: () => HighlightCubit(
+        highlightRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
+      act: (cubit) => cubit.save(
+        text: 'Text',
+        sourceId: 'book-1',
+        sourceType: SourceType.book,
+      ),
+      verify: (_) {
+        expect(fsrsRepository.created, hasLength(1));
+        final registered = fsrsRepository.created.first;
+        expect(registered.itemId, repository.highlights.first.id);
+        expect(registered.itemType, ReviewableType.highlight);
+        expect(registered.sourceId, 'book-1');
+      },
+    );
+
+    blocTest<HighlightCubit, HighlightSheetState>(
+      'save still reports success if FSRS registration fails',
+      build: () {
+        fsrsRepository.shouldThrow = true;
+        return HighlightCubit(
+          highlightRepository: repository,
+          fsrsRepository: fsrsRepository,
+        );
+      },
+      act: (cubit) => cubit.save(
+        text: 'Text',
+        sourceId: 'book-1',
+        sourceType: SourceType.book,
+      ),
+      expect: () => [
+        const HighlightSheetState(status: HighlightSheetStatus.saving),
+        const HighlightSheetState(status: HighlightSheetStatus.success),
+      ],
+      errors: () => [isA<StorageException>()],
+      verify: (_) {
+        expect(repository.highlights, hasLength(1));
+      },
+    );
+
+    blocTest<HighlightCubit, HighlightSheetState>(
       'save passes optional location fields',
-      build: () => HighlightCubit(highlightRepository: repository),
+      build: () => HighlightCubit(
+        highlightRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
       act: (cubit) => cubit.save(
         text: 'Text',
         sourceId: 'book-1',

@@ -2,22 +2,25 @@ import 'package:component_library/component_library.dart';
 import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:shared/shared.dart';
 import 'package:translation_service/translation_service.dart';
 
 import 'translate_cubit.dart';
 
-void showTranslateSheet(
+Future<void> showTranslateSheet(
   BuildContext context, {
   required TranslationService translationService,
   required DictionaryRepository dictionaryRepository,
+  required FsrsRepository fsrsRepository,
   required TextSelectionContext selection,
 }) {
-  showAppBottomSheet<void>(
+  return showAppBottomSheet<void>(
     context,
     builder: (_) => TranslateSheet(
       translationService: translationService,
       dictionaryRepository: dictionaryRepository,
+      fsrsRepository: fsrsRepository,
       selection: selection,
     ),
   );
@@ -27,12 +30,14 @@ class TranslateSheet extends StatelessWidget {
   const TranslateSheet({
     required this.translationService,
     required this.dictionaryRepository,
+    required this.fsrsRepository,
     required this.selection,
     super.key,
   });
 
   final TranslationService translationService;
   final DictionaryRepository dictionaryRepository;
+  final FsrsRepository fsrsRepository;
   final TextSelectionContext selection;
 
   @override
@@ -42,6 +47,7 @@ class TranslateSheet extends StatelessWidget {
           TranslateCubit(
             translationService: translationService,
             dictionaryRepository: dictionaryRepository,
+            fsrsRepository: fsrsRepository,
           )..translate(
             text: selection.selectedText,
             fromLang: 'en',

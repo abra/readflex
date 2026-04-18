@@ -57,6 +57,10 @@ final class ReaderTextDeselected extends ReaderEvent {
   const ReaderTextDeselected();
 }
 
+final class ReaderHighlightsRefreshed extends ReaderEvent {
+  const ReaderHighlightsRefreshed();
+}
+
 final class ReaderReviewReminderShown extends ReaderEvent {
   const ReaderReviewReminderShown();
 }

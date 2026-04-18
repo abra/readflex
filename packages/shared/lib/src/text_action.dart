@@ -41,5 +41,8 @@ abstract class TextAction {
 
   IconData get icon;
 
-  void onExecute(BuildContext context, TextSelectionContext selection);
+  /// Executes the action for the given text selection. Callers should
+  /// `await` this to run side effects (e.g. refresh) after the sheet
+  /// closes.
+  Future<void> onExecute(BuildContext context, TextSelectionContext selection);
 }

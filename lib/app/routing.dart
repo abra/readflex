@@ -189,11 +189,18 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
             articleRepository: deps.articleRepository,
             highlightRepository: deps.highlightRepository,
             textActions: [
-              HighlightAction(highlightRepository: deps.highlightRepository),
-              FlashcardAction(flashcardRepository: deps.flashcardRepository),
+              HighlightAction(
+                highlightRepository: deps.highlightRepository,
+                fsrsRepository: deps.fsrsRepository,
+              ),
+              FlashcardAction(
+                flashcardRepository: deps.flashcardRepository,
+                fsrsRepository: deps.fsrsRepository,
+              ),
               TranslateAction(
                 translationService: deps.translationService,
                 dictionaryRepository: deps.dictionaryRepository,
+                fsrsRepository: deps.fsrsRepository,
               ),
             ],
             onCheckDueItems: (sourceId) async {

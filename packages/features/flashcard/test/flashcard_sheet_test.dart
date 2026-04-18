@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared/shared.dart';
 
 import 'helpers/fake_flashcard_repository.dart';
+import 'helpers/fake_fsrs_repository.dart';
 
 const _selection = TextSelectionContext(
   selectedText: 'Hello world',
@@ -15,9 +16,11 @@ const _selection = TextSelectionContext(
 
 void main() {
   late FakeFlashcardRepository repository;
+  late FakeFsrsRepository fsrsRepository;
 
   setUp(() {
     repository = FakeFlashcardRepository();
+    fsrsRepository = FakeFsrsRepository();
   });
 
   Widget buildSubject() => MaterialApp(
@@ -26,6 +29,7 @@ void main() {
       body: SingleChildScrollView(
         child: FlashcardSheet(
           flashcardRepository: repository,
+          fsrsRepository: fsrsRepository,
           selection: _selection,
         ),
       ),

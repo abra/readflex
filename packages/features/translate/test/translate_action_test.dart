@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:translate/src/translate_action.dart';
 import 'package:translation_service/translation_service.dart';
 
+import 'helpers/fake_fsrs_repository.dart';
+
 class _FakeTranslationService implements TranslationService {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -22,6 +24,7 @@ void main() {
       action = TranslateAction(
         translationService: _FakeTranslationService(),
         dictionaryRepository: _FakeDictionaryRepository(),
+        fsrsRepository: FakeFsrsRepository(),
       );
     });
 

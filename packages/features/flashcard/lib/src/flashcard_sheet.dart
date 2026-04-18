@@ -2,19 +2,22 @@ import 'package:component_library/component_library.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:shared/shared.dart';
 
 import 'flashcard_cubit.dart';
 
-void showFlashcardSheet(
+Future<void> showFlashcardSheet(
   BuildContext context, {
   required FlashcardRepository flashcardRepository,
+  required FsrsRepository fsrsRepository,
   required TextSelectionContext selection,
 }) {
-  showAppBottomSheet<void>(
+  return showAppBottomSheet<void>(
     context,
     builder: (_) => FlashcardSheet(
       flashcardRepository: flashcardRepository,
+      fsrsRepository: fsrsRepository,
       selection: selection,
     ),
   );
@@ -23,11 +26,13 @@ void showFlashcardSheet(
 class FlashcardSheet extends StatelessWidget {
   const FlashcardSheet({
     required this.flashcardRepository,
+    required this.fsrsRepository,
     required this.selection,
     super.key,
   });
 
   final FlashcardRepository flashcardRepository;
+  final FsrsRepository fsrsRepository;
   final TextSelectionContext selection;
 
   @override
@@ -35,6 +40,7 @@ class FlashcardSheet extends StatelessWidget {
     return BlocProvider(
       create: (_) => FlashcardCubit(
         flashcardRepository: flashcardRepository,
+        fsrsRepository: fsrsRepository,
       ),
       child: _FlashcardSheetView(selection: selection),
     );

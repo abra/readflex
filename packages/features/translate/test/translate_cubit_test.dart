@@ -5,15 +5,18 @@ import 'package:translate/src/translate_cubit.dart';
 import 'package:translation_service/translation_service.dart';
 
 import 'helpers/fake_dictionary_repository.dart';
+import 'helpers/fake_fsrs_repository.dart';
 import 'helpers/fake_translation_service.dart';
 
 void main() {
   late FakeTranslationService translationService;
   late FakeDictionaryRepository dictionaryRepository;
+  late FakeFsrsRepository fsrsRepository;
 
   setUp(() {
     translationService = FakeTranslationService();
     dictionaryRepository = FakeDictionaryRepository();
+    fsrsRepository = FakeFsrsRepository();
   });
 
   group('TranslateCubit', () {
@@ -22,6 +25,7 @@ void main() {
       build: () => TranslateCubit(
         translationService: translationService,
         dictionaryRepository: dictionaryRepository,
+        fsrsRepository: fsrsRepository,
       ),
       verify: (cubit) {
         expect(cubit.state.status, TranslateStatus.idle);
@@ -34,6 +38,7 @@ void main() {
       build: () => TranslateCubit(
         translationService: translationService,
         dictionaryRepository: dictionaryRepository,
+        fsrsRepository: fsrsRepository,
       ),
       act: (cubit) => cubit.translate(
         text: 'hello',
@@ -62,6 +67,7 @@ void main() {
         return TranslateCubit(
           translationService: translationService,
           dictionaryRepository: dictionaryRepository,
+          fsrsRepository: fsrsRepository,
         );
       },
       act: (cubit) => cubit.translate(
@@ -87,6 +93,7 @@ void main() {
         return TranslateCubit(
           translationService: translationService,
           dictionaryRepository: dictionaryRepository,
+          fsrsRepository: fsrsRepository,
         );
       },
       act: (cubit) => cubit.translate(
@@ -108,6 +115,7 @@ void main() {
       build: () => TranslateCubit(
         translationService: translationService,
         dictionaryRepository: dictionaryRepository,
+        fsrsRepository: fsrsRepository,
       ),
       act: (cubit) => cubit.saveToDictionary(word: 'hello'),
       expect: () => [],
@@ -121,6 +129,7 @@ void main() {
       build: () => TranslateCubit(
         translationService: translationService,
         dictionaryRepository: dictionaryRepository,
+        fsrsRepository: fsrsRepository,
       ),
       seed: () => const TranslateState(
         status: TranslateStatus.translated,
@@ -150,12 +159,69 @@ void main() {
     );
 
     blocTest<TranslateCubit, TranslateState>(
+      'saveToDictionary registers a review item via FSRS',
+      build: () => TranslateCubit(
+        translationService: translationService,
+        dictionaryRepository: dictionaryRepository,
+        fsrsRepository: fsrsRepository,
+      ),
+      seed: () => const TranslateState(
+        status: TranslateStatus.translated,
+        translatedText: 'привет',
+      ),
+      act: (cubit) => cubit.saveToDictionary(
+        word: 'hello',
+        sourceId: 'book-1',
+        sourceType: SourceType.book,
+      ),
+      verify: (_) {
+        expect(fsrsRepository.created, hasLength(1));
+        final registered = fsrsRepository.created.first;
+        expect(registered.itemId, dictionaryRepository.entries.first.id);
+        expect(registered.itemType, ReviewableType.dictionary);
+        expect(registered.sourceId, 'book-1');
+      },
+    );
+
+    blocTest<TranslateCubit, TranslateState>(
+      'saveToDictionary still reports saved if FSRS registration fails',
+      build: () {
+        fsrsRepository.shouldThrow = true;
+        return TranslateCubit(
+          translationService: translationService,
+          dictionaryRepository: dictionaryRepository,
+          fsrsRepository: fsrsRepository,
+        );
+      },
+      seed: () => const TranslateState(
+        status: TranslateStatus.translated,
+        translatedText: 'привет',
+      ),
+      act: (cubit) => cubit.saveToDictionary(word: 'hello'),
+      expect: () => [
+        const TranslateState(
+          status: TranslateStatus.saving,
+          translatedText: 'привет',
+        ),
+        const TranslateState(
+          status: TranslateStatus.saved,
+          translatedText: 'привет',
+        ),
+      ],
+      errors: () => [isA<StorageException>()],
+      verify: (_) {
+        expect(dictionaryRepository.entries, hasLength(1));
+      },
+    );
+
+    blocTest<TranslateCubit, TranslateState>(
       'saveToDictionary emits failure on error',
       build: () {
         dictionaryRepository.shouldThrow = true;
         return TranslateCubit(
           translationService: translationService,
           dictionaryRepository: dictionaryRepository,
+          fsrsRepository: fsrsRepository,
         );
       },
       seed: () => const TranslateState(

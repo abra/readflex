@@ -7,6 +7,7 @@ import 'package:translate/translate.dart';
 import 'package:translation_service/translation_service.dart';
 
 import 'helpers/fake_dictionary_repository.dart';
+import 'helpers/fake_fsrs_repository.dart';
 import 'helpers/fake_translation_service.dart';
 
 const _selection = TextSelectionContext(
@@ -18,10 +19,12 @@ const _selection = TextSelectionContext(
 void main() {
   late FakeTranslationService translationService;
   late FakeDictionaryRepository dictionaryRepository;
+  late FakeFsrsRepository fsrsRepository;
 
   setUp(() {
     translationService = FakeTranslationService();
     dictionaryRepository = FakeDictionaryRepository();
+    fsrsRepository = FakeFsrsRepository();
   });
 
   Widget buildSubject() => MaterialApp(
@@ -31,6 +34,7 @@ void main() {
         child: TranslateSheet(
           translationService: translationService,
           dictionaryRepository: dictionaryRepository,
+          fsrsRepository: fsrsRepository,
           selection: _selection,
         ),
       ),

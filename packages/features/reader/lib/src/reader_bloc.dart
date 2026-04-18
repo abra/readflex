@@ -25,6 +25,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     );
     on<ReaderTextSelected>(_onTextSelected);
     on<ReaderTextDeselected>(_onTextDeselected);
+    on<ReaderHighlightsRefreshed>(_onHighlightsRefreshed);
     on<ReaderReviewReminderShown>(_onReviewReminderShown);
     on<ReaderReviewReminderDismissed>(_onReviewReminderDismissed);
   }
@@ -144,6 +145,22 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         hasSelection: false,
       ),
     );
+  }
+
+  Future<void> _onHighlightsRefreshed(
+    ReaderHighlightsRefreshed event,
+    Emitter<ReaderState> emit,
+  ) async {
+    final sourceId = state.sourceId;
+    if (sourceId == null) return;
+    try {
+      final highlights = await _highlightRepository.getHighlightsBySource(
+        sourceId,
+      );
+      emit(state.copyWith(highlights: highlights));
+    } catch (e, st) {
+      addError(e, st);
+    }
   }
 
   void _onReviewReminderShown(

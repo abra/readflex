@@ -3,7 +3,10 @@ enum BookFormat {
   epub,
   fb2,
   mobi,
-  pdf
+  pdf,
+  azw3,
+  cbz,
+  txt
   ;
 
   /// Parses a [BookFormat] from its stored [name]. Falls back to [epub] on

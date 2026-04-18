@@ -34,5 +34,8 @@ class _FakeTextAction extends TextAction {
   String get label => 'Fake';
 
   @override
-  void onExecute(BuildContext context, TextSelectionContext selection) {}
+  Future<void> onExecute(
+    BuildContext context,
+    TextSelectionContext selection,
+  ) async {}
 }

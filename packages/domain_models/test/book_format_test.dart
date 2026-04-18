@@ -8,6 +8,9 @@ void main() {
       expect(BookFormat.from('fb2'), BookFormat.fb2);
       expect(BookFormat.from('mobi'), BookFormat.mobi);
       expect(BookFormat.from('pdf'), BookFormat.pdf);
+      expect(BookFormat.from('azw3'), BookFormat.azw3);
+      expect(BookFormat.from('cbz'), BookFormat.cbz);
+      expect(BookFormat.from('txt'), BookFormat.txt);
     });
 
     test('returns epub for unknown string', () {
@@ -25,6 +28,9 @@ void main() {
       expect(BookFormat.fromExtension('.fb2'), BookFormat.fb2);
       expect(BookFormat.fromExtension('.mobi'), BookFormat.mobi);
       expect(BookFormat.fromExtension('.pdf'), BookFormat.pdf);
+      expect(BookFormat.fromExtension('.azw3'), BookFormat.azw3);
+      expect(BookFormat.fromExtension('.cbz'), BookFormat.cbz);
+      expect(BookFormat.fromExtension('.txt'), BookFormat.txt);
     });
 
     test('is case-insensitive', () {
@@ -33,8 +39,8 @@ void main() {
     });
 
     test('returns null for unknown extension', () {
-      expect(BookFormat.fromExtension('.txt'), isNull);
       expect(BookFormat.fromExtension('.doc'), isNull);
+      expect(BookFormat.fromExtension('.rtf'), isNull);
     });
   });
 }

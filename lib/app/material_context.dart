@@ -8,7 +8,9 @@ import 'dart:io' show Platform;
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:monitoring/monitoring.dart';
 import 'package:preferences_service/preferences_service.dart';
+import 'package:reader_server/reader_server.dart';
 import 'package:readflex/app/dependency_scope.dart';
 import 'package:readflex/app/routing.dart';
 
@@ -45,10 +47,23 @@ class _MaterialContextState extends State<MaterialContext>
     // iOS can kill the loopback socket while the app is suspended.
     // Restart the server when the app comes back to the foreground.
     if (state == AppLifecycleState.resumed && Platform.isIOS) {
-      final server = DependenciesScope.of(context).readerServer;
+      final deps = DependenciesScope.of(context);
+      final server = deps.readerServer;
       if (!server.isRunning) {
-        server.start();
+        _restartReaderServer(server, deps.logger);
       }
+    }
+  }
+
+  Future<void> _restartReaderServer(ReaderServer server, Logger logger) async {
+    try {
+      await server.start();
+    } catch (e, st) {
+      logger.error(
+        'ReaderServer restart after resume failed',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 

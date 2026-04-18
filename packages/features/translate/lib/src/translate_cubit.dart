@@ -2,6 +2,7 @@ import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:translation_service/translation_service.dart';
 
 part 'translate_state.dart';
@@ -10,12 +11,15 @@ class TranslateCubit extends Cubit<TranslateState> {
   TranslateCubit({
     required TranslationService translationService,
     required DictionaryRepository dictionaryRepository,
+    required FsrsRepository fsrsRepository,
   }) : _translationService = translationService,
        _dictionaryRepository = dictionaryRepository,
+       _fsrsRepository = fsrsRepository,
        super(const TranslateState());
 
   final TranslationService _translationService;
   final DictionaryRepository _dictionaryRepository;
+  final FsrsRepository _fsrsRepository;
 
   Future<void> translate({
     required String text,
@@ -59,13 +63,24 @@ class TranslateCubit extends Cubit<TranslateState> {
     emit(state.copyWith(status: TranslateStatus.saving));
 
     try {
-      await _dictionaryRepository.addEntry(
+      final entry = await _dictionaryRepository.addEntry(
         word: word,
         translation: state.translatedText,
         sourceId: sourceId,
         sourceType: sourceType,
         usageExamples: state.usageExamples,
       );
+      try {
+        await _fsrsRepository.createReviewItem(
+          itemId: entry.id,
+          itemType: ReviewableType.dictionary,
+          sourceId: sourceId,
+        );
+      } catch (e, st) {
+        // Non-fatal: entry is saved; missing FSRS row just means it won't
+        // appear in review queue until next manual registration.
+        addError(e, st);
+      }
       emit(state.copyWith(status: TranslateStatus.saved));
     } catch (e, st) {
       addError(e, st);
