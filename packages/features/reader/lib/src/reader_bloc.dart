@@ -28,6 +28,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     on<ReaderHighlightsRefreshed>(_onHighlightsRefreshed);
     on<ReaderReviewReminderShown>(_onReviewReminderShown);
     on<ReaderReviewReminderDismissed>(_onReviewReminderDismissed);
+    on<ReaderChromeToggled>(_onChromeToggled);
+    on<ReaderChromeHidden>(_onChromeHidden);
   }
 
   final BookRepository _bookRepository;
@@ -175,5 +177,20 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     Emitter<ReaderState> emit,
   ) {
     emit(state.copyWith(showReviewReminder: false));
+  }
+
+  void _onChromeToggled(
+    ReaderChromeToggled event,
+    Emitter<ReaderState> emit,
+  ) {
+    emit(state.copyWith(chromeVisible: !state.chromeVisible));
+  }
+
+  void _onChromeHidden(
+    ReaderChromeHidden event,
+    Emitter<ReaderState> emit,
+  ) {
+    if (!state.chromeVisible) return;
+    emit(state.copyWith(chromeVisible: false));
   }
 }

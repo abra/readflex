@@ -16,6 +16,7 @@ class ReaderState extends Equatable {
     this.selectionScrollOffset,
     this.hasSelection = false,
     this.showReviewReminder = false,
+    this.chromeVisible = false,
   });
 
   final ReaderStatus status;
@@ -35,6 +36,10 @@ class ReaderState extends Equatable {
 
   // Review reminder
   final bool showReviewReminder;
+
+  /// Whether the top/bottom reader chrome (app bar + bottom bar) is shown.
+  /// Defaults to `false` — readers open fullscreen; center tap toggles.
+  final bool chromeVisible;
 
   /// The source ID (book or article).
   String? get sourceId => book?.id ?? article?.id;
@@ -60,6 +65,7 @@ class ReaderState extends Equatable {
     Object? selectionScrollOffset = _absent,
     bool? hasSelection,
     bool? showReviewReminder,
+    bool? chromeVisible,
   }) => ReaderState(
     status: status ?? this.status,
     sourceType: sourceType == _absent
@@ -81,6 +87,7 @@ class ReaderState extends Equatable {
         : selectionScrollOffset as double?,
     hasSelection: hasSelection ?? this.hasSelection,
     showReviewReminder: showReviewReminder ?? this.showReviewReminder,
+    chromeVisible: chromeVisible ?? this.chromeVisible,
   );
 
   @override
@@ -97,5 +104,6 @@ class ReaderState extends Equatable {
     selectionScrollOffset,
     hasSelection,
     showReviewReminder,
+    chromeVisible,
   ];
 }

@@ -61,13 +61,18 @@ Future<void> starter() async {
 
         // Extract WebView assets (foliate-js, article reader) to cache
         // so the HTTP server can serve them as plain files.
-        // Re-extracts when the app version changes.
+        // Re-extracts when the app version changes. In dev builds we always
+        // force re-extract so local edits to foliate-js / reader assets are
+        // picked up without bumping pubspec version.
         final assetExtractor = AssetExtractor(
           targetDirectory: deps.readerServer.assetsDirectory,
         );
         final assetVersion =
             '${deps.packageInfo.version}+${deps.packageInfo.buildNumber}';
-        await assetExtractor.extractAll(version: assetVersion);
+        await assetExtractor.extractAll(
+          version: assetVersion,
+          force: config.isDev,
+        );
 
         // Start the local HTTP server that serves books and articles
         // to the reader WebView.

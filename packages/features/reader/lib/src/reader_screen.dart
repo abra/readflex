@@ -17,6 +17,10 @@ import 'reader_bloc.dart';
 /// Approximate height of the context panel, used to offset the review banner.
 const _kContextPanelHeight = 80.0;
 
+/// Duration and curve for the top/bottom chrome slide animation.
+const _kChromeAnimDuration = Duration(milliseconds: 200);
+const _kChromeAnimCurve = Curves.easeOutCubic;
+
 class ReaderScreen extends StatelessWidget {
   const ReaderScreen({
     required this.sourceId,
@@ -75,24 +79,34 @@ class _ReaderView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight),
-        child: BlocSelector<ReaderBloc, ReaderState, _ReaderAppBarState>(
-          selector: (state) => _ReaderAppBarState(
-            title: state.title,
-            highlightCount: state.highlights.length,
+      extendBodyBehindAppBar: true,
+      extendBody: true,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: BlocSelector<ReaderBloc, ReaderState, ReaderStatus>(
+              selector: (state) => state.status,
+              builder: (context, status) => _buildBody(context, status),
+            ),
           ),
-          builder: (context, appBarState) {
-            return _ReaderAppBar(
-              title: appBarState.title,
-              highlightCount: appBarState.highlightCount,
-            );
-          },
-        ),
-      ),
-      body: BlocSelector<ReaderBloc, ReaderState, ReaderStatus>(
-        selector: (state) => state.status,
-        builder: (context, status) => _buildBody(context, status),
+
+          // Top chrome: AppBar overlay. Visible by default on loading/failure
+          // so the user can always back out; on ready, controlled by
+          // `chromeVisible` (toggled by center tap).
+          BlocSelector<ReaderBloc, ReaderState, _ChromeSlice>(
+            selector: (state) => _ChromeSlice(
+              visible:
+                  state.status != ReaderStatus.ready || state.chromeVisible,
+              title: state.title,
+              highlightCount: state.highlights.length,
+            ),
+            builder: (context, slice) => _ReaderTopChrome(
+              visible: slice.visible,
+              title: slice.title,
+              highlightCount: slice.highlightCount,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -128,24 +142,47 @@ class _ReaderView extends StatelessWidget {
   }
 }
 
-class _ReaderAppBarState {
-  const _ReaderAppBarState({
+class _ChromeSlice {
+  const _ChromeSlice({
+    required this.visible,
     required this.title,
     required this.highlightCount,
   });
 
+  final bool visible;
   final String title;
   final int highlightCount;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is _ReaderAppBarState &&
+      other is _ChromeSlice &&
+          visible == other.visible &&
           title == other.title &&
           highlightCount == other.highlightCount;
 
   @override
-  int get hashCode => Object.hash(title, highlightCount);
+  int get hashCode => Object.hash(visible, title, highlightCount);
+}
+
+class _BottomChromeSlice {
+  const _BottomChromeSlice({
+    required this.visible,
+    required this.progress,
+  });
+
+  final bool visible;
+  final double progress;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _BottomChromeSlice &&
+          visible == other.visible &&
+          progress == other.progress;
+
+  @override
+  int get hashCode => Object.hash(visible, progress);
 }
 
 class _SelectionSlice {
@@ -191,35 +228,143 @@ class _SelectionSlice {
   );
 }
 
-class _ReaderAppBar extends StatelessWidget {
-  const _ReaderAppBar({
+/// Top reader chrome: AppBar rendered as an overlay that slides down from the
+/// top. Rendered above content via a Stack; height follows the status-bar
+/// padding so status-bar safe area is preserved.
+class _ReaderTopChrome extends StatelessWidget {
+  const _ReaderTopChrome({
+    required this.visible,
     required this.title,
     required this.highlightCount,
   });
 
+  final bool visible;
   final String title;
   final int highlightCount;
 
   @override
   Widget build(BuildContext context) {
-    return AppBar(
-      title: Text(
-        title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      actions: [
-        if (highlightCount > 0)
-          Badge(
-            label: Text('$highlightCount'),
-            child: IconButton(
-              icon: const Icon(AppIcons.highlight),
-              onPressed: () {
-                // TODO: show highlights list as bottom sheet.
-              },
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: IgnorePointer(
+        ignoring: !visible,
+        child: AnimatedSlide(
+          offset: visible ? Offset.zero : const Offset(0, -1),
+          duration: _kChromeAnimDuration,
+          curve: _kChromeAnimCurve,
+          child: AnimatedOpacity(
+            opacity: visible ? 1 : 0,
+            duration: _kChromeAnimDuration,
+            curve: _kChromeAnimCurve,
+            child: AppBar(
+              title: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              actions: [
+                if (highlightCount > 0)
+                  Badge(
+                    label: Text('$highlightCount'),
+                    child: IconButton(
+                      icon: const Icon(AppIcons.highlight),
+                      onPressed: () {
+                        // TODO: show highlights list as bottom sheet.
+                      },
+                    ),
+                  ),
+              ],
             ),
           ),
-      ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom reader chrome: progress bar + (future) quick-action icons. Slides
+/// up from the bottom, mirroring `_ReaderTopChrome`.
+class _ReaderBottomChrome extends StatelessWidget {
+  const _ReaderBottomChrome({
+    required this.visible,
+    required this.progress,
+    required this.panelColor,
+    required this.textColor,
+    required this.accentColor,
+    required this.dividerColor,
+  });
+
+  final bool visible;
+  final double progress;
+  final Color panelColor;
+  final Color textColor;
+  final Color accentColor;
+  final Color dividerColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final clamped = progress.clamp(0.0, 1.0);
+    final percentLabel = '${(clamped * 100).round()}%';
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: IgnorePointer(
+        ignoring: !visible,
+        child: AnimatedSlide(
+          offset: visible ? Offset.zero : const Offset(0, 1),
+          duration: _kChromeAnimDuration,
+          curve: _kChromeAnimCurve,
+          child: AnimatedOpacity(
+            opacity: visible ? 1 : 0,
+            duration: _kChromeAnimDuration,
+            curve: _kChromeAnimCurve,
+            child: Material(
+              color: panelColor,
+              elevation: 0,
+              child: SafeArea(
+                top: false,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: dividerColor)),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: LinearProgressIndicator(
+                            value: clamped,
+                            minHeight: 3,
+                            backgroundColor: dividerColor,
+                            valueColor: AlwaysStoppedAnimation(accentColor),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(
+                          percentLabel,
+                          style: TextStyle(
+                            color: textColor,
+                            fontFeatures: const [
+                              FontFeature.tabularFigures(),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -284,6 +429,13 @@ class _ReadyContentState extends State<_ReadyContent> {
     }
   }
 
+  /// Handles a WebView tap: toggles reader chrome visibility.
+  /// Coordinates are normalized to [0, 1] but currently unused — any tap
+  /// toggles chrome; page turns are handled by foliate-js swipes.
+  void _onReaderTapped(double x, double y) {
+    context.read<ReaderBloc>().add(const ReaderChromeToggled());
+  }
+
   Widget _buildReaderBody(BuildContext context, ReaderThemeData readerTheme) {
     final state = context.read<ReaderBloc>().state;
     final bloc = context.read<ReaderBloc>();
@@ -322,6 +474,7 @@ class _ReadyContentState extends State<_ReadyContent> {
           );
         },
         onTextSelected: (selection) {
+          bloc.add(const ReaderChromeHidden());
           bloc.add(
             ReaderTextSelected(
               selectedText: selection.text,
@@ -332,6 +485,7 @@ class _ReadyContentState extends State<_ReadyContent> {
         onTextDeselected: () {
           bloc.add(const ReaderTextDeselected());
         },
+        onTapped: _onReaderTapped,
       );
     }
 
@@ -379,6 +533,7 @@ class _ReadyContentState extends State<_ReadyContent> {
         );
       },
       onTextSelected: (selection) {
+        bloc.add(const ReaderChromeHidden());
         bloc.add(
           ReaderTextSelected(
             selectedText: selection.text,
@@ -389,6 +544,7 @@ class _ReadyContentState extends State<_ReadyContent> {
       onTextDeselected: () {
         bloc.add(const ReaderTextDeselected());
       },
+      onTapped: _onReaderTapped,
     );
   }
 
@@ -414,6 +570,25 @@ class _ReadyContentState extends State<_ReadyContent> {
         ColoredBox(
           color: readerTheme.backgroundColor,
           child: _buildReaderBody(context, readerTheme),
+        ),
+
+        // Bottom chrome: progress bar + controls. Slides up when chromeVisible.
+        BlocSelector<ReaderBloc, ReaderState, _BottomChromeSlice>(
+          selector: (state) => _BottomChromeSlice(
+            visible: state.chromeVisible && !state.hasSelection,
+            progress:
+                state.book?.readingProgress ??
+                state.article?.currentScrollOffset ??
+                0,
+          ),
+          builder: (context, slice) => _ReaderBottomChrome(
+            visible: slice.visible,
+            progress: slice.progress,
+            panelColor: readerTheme.panelColor,
+            textColor: readerTheme.secondaryTextColor,
+            accentColor: readerTheme.accentColor,
+            dividerColor: readerTheme.dividerColor,
+          ),
         ),
 
         // Context panel — rebuilds only when selection state changes

@@ -1,7 +1,7 @@
 import 'package:content_library/content_library.dart';
 import 'package:dictionary/dictionary.dart';
 import 'package:flashcard/flashcard.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:highlight/highlight.dart';
 import 'package:home/home.dart';
@@ -180,49 +180,58 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
       ),
       GoRoute(
         path: AppRoutes.readerPath,
-        builder: (context, state) {
+        // fullscreenDialog: true disables the iOS left-edge back-swipe
+        // gesture (CupertinoPageTransition gates that gesture on
+        // !fullscreenDialog). Without this the gesture conflicts with
+        // foliate-js page-turn swipes — a swipe at the left edge would
+        // pop the reader instead of turning the page.
+        pageBuilder: (context, state) {
           final sourceId = state.pathParameters['sourceId']!;
-          return ReaderScreen(
-            sourceId: sourceId,
-            serverPort: deps.readerServer.port,
-            bookRepository: deps.bookRepository,
-            articleRepository: deps.articleRepository,
-            highlightRepository: deps.highlightRepository,
-            textActions: [
-              HighlightAction(
-                highlightRepository: deps.highlightRepository,
-                fsrsRepository: deps.fsrsRepository,
-              ),
-              FlashcardAction(
-                flashcardRepository: deps.flashcardRepository,
-                fsrsRepository: deps.fsrsRepository,
-              ),
-              TranslateAction(
-                translationService: deps.translationService,
-                dictionaryRepository: deps.dictionaryRepository,
-                fsrsRepository: deps.fsrsRepository,
-              ),
-            ],
-            onCheckDueItems: (sourceId) async {
-              try {
-                final items = await deps.fsrsRepository.getDueItemsBySource(
-                  sourceId,
+          return MaterialPage(
+            key: state.pageKey,
+            fullscreenDialog: true,
+            child: ReaderScreen(
+              sourceId: sourceId,
+              serverPort: deps.readerServer.port,
+              bookRepository: deps.bookRepository,
+              articleRepository: deps.articleRepository,
+              highlightRepository: deps.highlightRepository,
+              textActions: [
+                HighlightAction(
+                  highlightRepository: deps.highlightRepository,
+                  fsrsRepository: deps.fsrsRepository,
+                ),
+                FlashcardAction(
+                  flashcardRepository: deps.flashcardRepository,
+                  fsrsRepository: deps.fsrsRepository,
+                ),
+                TranslateAction(
+                  translationService: deps.translationService,
+                  dictionaryRepository: deps.dictionaryRepository,
+                  fsrsRepository: deps.fsrsRepository,
+                ),
+              ],
+              onCheckDueItems: (sourceId) async {
+                try {
+                  final items = await deps.fsrsRepository.getDueItemsBySource(
+                    sourceId,
+                  );
+                  return items.length;
+                } catch (_) {
+                  return 0;
+                }
+              },
+              onStartMiniReview: (context, sourceId) {
+                showMiniReviewSheet(
+                  context,
+                  sourceId: sourceId,
+                  fsrsRepository: deps.fsrsRepository,
+                  flashcardRepository: deps.flashcardRepository,
+                  highlightRepository: deps.highlightRepository,
+                  dictionaryRepository: deps.dictionaryRepository,
                 );
-                return items.length;
-              } catch (_) {
-                return 0;
-              }
-            },
-            onStartMiniReview: (context, sourceId) {
-              showMiniReviewSheet(
-                context,
-                sourceId: sourceId,
-                fsrsRepository: deps.fsrsRepository,
-                flashcardRepository: deps.flashcardRepository,
-                highlightRepository: deps.highlightRepository,
-                dictionaryRepository: deps.dictionaryRepository,
-              );
-            },
+              },
+            ),
           );
         },
       ),

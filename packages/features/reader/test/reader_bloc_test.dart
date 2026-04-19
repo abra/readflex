@@ -281,6 +281,88 @@ void main() {
       );
     });
 
+    group('Chrome toggle', () {
+      blocTest<ReaderBloc, ReaderState>(
+        'chromeVisible defaults to false',
+        build: buildBloc,
+        verify: (bloc) {
+          expect(bloc.state.chromeVisible, isFalse);
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'ReaderChromeToggled flips hidden → visible',
+        build: buildBloc,
+        act: (bloc) => bloc.add(const ReaderChromeToggled()),
+        expect: () => [
+          isA<ReaderState>().having(
+            (s) => s.chromeVisible,
+            'chromeVisible',
+            isTrue,
+          ),
+        ],
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'ReaderChromeToggled flips visible → hidden',
+        build: buildBloc,
+        seed: () => const ReaderState(chromeVisible: true),
+        act: (bloc) => bloc.add(const ReaderChromeToggled()),
+        expect: () => [
+          isA<ReaderState>().having(
+            (s) => s.chromeVisible,
+            'chromeVisible',
+            isFalse,
+          ),
+        ],
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'ReaderChromeHidden hides when visible',
+        build: buildBloc,
+        seed: () => const ReaderState(chromeVisible: true),
+        act: (bloc) => bloc.add(const ReaderChromeHidden()),
+        expect: () => [
+          isA<ReaderState>().having(
+            (s) => s.chromeVisible,
+            'chromeVisible',
+            isFalse,
+          ),
+        ],
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'ReaderChromeHidden is a no-op when already hidden',
+        build: buildBloc,
+        act: (bloc) => bloc.add(const ReaderChromeHidden()),
+        expect: () => <ReaderState>[],
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'ReaderChromeToggled preserves other state fields',
+        setUp: () {
+          bookRepository.seedBook(testBook);
+        },
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          sourceType: SourceType.book,
+          title: testBook.title,
+          book: testBook,
+          hasSelection: true,
+          selectedText: 'keep me',
+        ),
+        act: (bloc) => bloc.add(const ReaderChromeToggled()),
+        expect: () => [
+          isA<ReaderState>()
+              .having((s) => s.chromeVisible, 'chromeVisible', isTrue)
+              .having((s) => s.hasSelection, 'hasSelection', isTrue)
+              .having((s) => s.selectedText, 'selectedText', 'keep me')
+              .having((s) => s.title, 'title', testBook.title),
+        ],
+      );
+    });
+
     group('Review reminder', () {
       blocTest<ReaderBloc, ReaderState>(
         'show review reminder',
@@ -331,6 +413,25 @@ void main() {
         const state = ReaderState(sourceType: SourceType.article);
         expect(state.isArticle, isTrue);
         expect(state.isBook, isFalse);
+      });
+
+      test('chromeVisible defaults to false', () {
+        const state = ReaderState();
+        expect(state.chromeVisible, isFalse);
+      });
+
+      test('copyWith chromeVisible updates only that field', () {
+        const state = ReaderState(title: 'T', hasSelection: true);
+        final copy = state.copyWith(chromeVisible: true);
+        expect(copy.chromeVisible, isTrue);
+        expect(copy.title, 'T');
+        expect(copy.hasSelection, isTrue);
+      });
+
+      test('states with different chromeVisible are not equal', () {
+        const a = ReaderState();
+        const b = ReaderState(chromeVisible: true);
+        expect(a, isNot(equals(b)));
       });
     });
   });

@@ -24,6 +24,7 @@
     _fixImages(container);
     _setupScrollTracking();
     _setupSelectionTracking();
+    _setupTapTracking();
     _callFlutter('onReady', {});
   };
 
@@ -163,6 +164,37 @@
         },
       });
     });
+  }
+
+  // ── Tap tracking ──
+
+  // Suppress the synthetic click that follows a text-selection gesture.
+  // `selectionchange` fires before `click`, so we record the time and
+  // ignore clicks within a short window after a selection was cleared or
+  // still active. Matches the book.js 200ms debounce.
+  const TAP_SELECTION_DEBOUNCE_MS = 200;
+  let _lastSelectionAt = 0;
+
+  function _setupTapTracking() {
+    document.addEventListener('selectionchange', function () {
+      _lastSelectionAt = Date.now();
+    }, true);
+
+    document.addEventListener('click', function (event) {
+      // Don't treat taps on interactive elements as reader taps.
+      if (event.target.closest('a, button, input, label, .reader-highlight')) {
+        return;
+      }
+
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed && sel.toString().trim()) return;
+
+      if (Date.now() - _lastSelectionAt < TAP_SELECTION_DEBOUNCE_MS) return;
+
+      const x = event.clientX / window.innerWidth;
+      const y = event.clientY / window.innerHeight;
+      _callFlutter('onClick', { x: x, y: y });
+    }, { passive: true });
   }
 
   // ── Highlight rendering ──

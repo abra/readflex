@@ -68,3 +68,13 @@ final class ReaderReviewReminderShown extends ReaderEvent {
 final class ReaderReviewReminderDismissed extends ReaderEvent {
   const ReaderReviewReminderDismissed();
 }
+
+/// User tapped the reader — flip chrome visibility.
+final class ReaderChromeToggled extends ReaderEvent {
+  const ReaderChromeToggled();
+}
+
+/// Force-hide chrome (e.g. when text selection begins).
+final class ReaderChromeHidden extends ReaderEvent {
+  const ReaderChromeHidden();
+}

@@ -29,6 +29,7 @@ class BookReaderWebView extends StatefulWidget {
     this.onTextSelected,
     this.onTextDeselected,
     this.onHighlightTapped,
+    this.onTapped,
     super.key,
   });
 
@@ -61,6 +62,10 @@ class BookReaderWebView extends StatefulWidget {
 
   /// Fires when the user taps an existing highlight annotation.
   final void Function(String highlightId)? onHighlightTapped;
+
+  /// Fires when the user taps empty reader space (no selection, no link).
+  /// Coordinates are normalized to [0, 1] over the viewport.
+  final void Function(double x, double y)? onTapped;
 
   @override
   State<BookReaderWebView> createState() => _BookReaderWebViewState();
@@ -215,6 +220,18 @@ class _BookReaderWebViewState extends State<BookReaderWebView> {
         final annotation = data['annotation'] as Map<String, dynamic>?;
         final id = annotation?['id'] as String?;
         if (id != null) widget.onHighlightTapped?.call(id);
+      },
+    );
+
+    controller.addJavaScriptHandler(
+      handlerName: 'onClick',
+      callback: (args) {
+        if (args.isEmpty) return;
+        final data = args.first as Map<String, dynamic>;
+        final x = (data['x'] as num?)?.toDouble();
+        final y = (data['y'] as num?)?.toDouble();
+        if (x == null || y == null) return;
+        widget.onTapped?.call(x, y);
       },
     );
   }
