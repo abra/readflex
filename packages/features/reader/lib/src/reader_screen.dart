@@ -334,12 +334,28 @@ class _ReadyContentState extends State<_ReadyContent> {
       );
     }
 
+    final appearance = PreferencesScope.readerAppearanceOf(context);
+    final fontPreset = ReaderFontPreset.fromId(appearance.fontId);
+    final layout = BookLayoutPreset.standard.data;
+
     return BookReaderWebView(
       key: ValueKey(state.book?.id),
       serverPort: widget.serverPort,
       bookFilePath: state.book!.filePath,
       initialCfi: state.book?.currentCfi,
       foliateStyle: FoliateStyle(
+        fontName: fontPreset.fontFamily,
+        fontSize: layout.fontSize,
+        fontWeight: layout.fontWeight,
+        letterSpacing: layout.letterSpacing,
+        spacing: layout.lineHeight,
+        paragraphSpacing: layout.paragraphSpacing,
+        textIndent: layout.textIndent,
+        topMargin: layout.topMargin,
+        bottomMargin: layout.bottomMargin,
+        sideMargin: layout.sideMargin,
+        justify: layout.justify,
+        hyphenate: layout.hyphenate,
         fontColor: _colorToHex(readerTheme.primaryTextColor),
         backgroundColor: _colorToHex(readerTheme.backgroundColor),
       ),
