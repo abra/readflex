@@ -11,6 +11,7 @@ import 'package:preferences_service/preferences_service.dart';
 import 'package:reader_webview/reader_webview.dart';
 import 'package:shared/shared.dart';
 
+import 'book_custom_css.dart';
 import 'reader_bloc.dart';
 
 /// Approximate height of the context panel, used to offset the review banner.
@@ -336,7 +337,11 @@ class _ReadyContentState extends State<_ReadyContent> {
 
     final appearance = PreferencesScope.readerAppearanceOf(context);
     final fontPreset = ReaderFontPreset.fromId(appearance.fontId);
-    final layout = BookLayoutPreset.standard.data;
+    final layout = BookLayoutPreset.fromId(appearance.layoutId).data;
+    final customCSS = buildBookCustomCSS(
+      theme: readerTheme,
+      invertImagesInDark: appearance.invertImagesInDark,
+    );
 
     return BookReaderWebView(
       key: ValueKey(state.book?.id),
@@ -358,6 +363,8 @@ class _ReadyContentState extends State<_ReadyContent> {
         hyphenate: layout.hyphenate,
         fontColor: _colorToHex(readerTheme.primaryTextColor),
         backgroundColor: _colorToHex(readerTheme.backgroundColor),
+        customCSS: customCSS,
+        customCSSEnabled: true,
       ),
       highlights: highlights,
       onPositionChanged: (position) {

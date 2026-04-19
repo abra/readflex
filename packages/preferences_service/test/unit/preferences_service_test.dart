@@ -51,16 +51,42 @@ void main() {
         (s) => s.copyWith(
           readerThemeId: 'night',
           readerFontId: 'geist',
+          readerLayoutId: 'comfortable',
           readerTextScale: 1.2,
           readerLineHeight: 1.8,
+          readerInvertImagesInDark: false,
         ),
       );
 
       expect(service.current.readerThemeId, 'night');
       expect(service.current.readerFontId, 'geist');
+      expect(service.current.readerLayoutId, 'comfortable');
       expect(service.current.readerTextScale, 1.2);
       expect(service.current.readerLineHeight, 1.8);
+      expect(service.current.readerInvertImagesInDark, isFalse);
     });
+
+    test(
+      'readerLayoutId and readerInvertImagesInDark persist across recreations',
+      () async {
+        final service = await PreferencesService.create(
+          supportedCodes: _supportedCodes,
+        );
+        await service.update(
+          (s) => s.copyWith(
+            readerLayoutId: 'compact',
+            readerInvertImagesInDark: false,
+          ),
+        );
+
+        final service2 = await PreferencesService.create(
+          supportedCodes: _supportedCodes,
+        );
+
+        expect(service2.current.readerLayoutId, 'compact');
+        expect(service2.current.readerInvertImagesInDark, isFalse);
+      },
+    );
 
     test('update() emits updated preferences on stream', () async {
       final service = await PreferencesService.create(
