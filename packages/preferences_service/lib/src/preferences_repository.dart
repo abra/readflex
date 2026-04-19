@@ -36,6 +36,9 @@ class PreferencesRepository {
         readerLineHeight: (map['readerLineHeight'] as num?)?.toDouble() ?? 1.55,
         readerInvertImagesInDark:
             map['readerInvertImagesInDark'] as bool? ?? true,
+        readerOverrideFont: map['readerOverrideFont'] as bool? ?? true,
+        readerOverrideColor: map['readerOverrideColor'] as bool? ?? true,
+        readerUseBookLayout: map['readerUseBookLayout'] as bool? ?? true,
         onboardingCompleted: map['onboardingCompleted'] as bool? ?? false,
         hasCompletedSetup: map['hasCompletedSetup'] as bool? ?? false,
       );
@@ -63,6 +66,9 @@ class PreferencesRepository {
       'readerTextScale': prefs.readerTextScale,
       'readerLineHeight': prefs.readerLineHeight,
       'readerInvertImagesInDark': prefs.readerInvertImagesInDark,
+      'readerOverrideFont': prefs.readerOverrideFont,
+      'readerOverrideColor': prefs.readerOverrideColor,
+      'readerUseBookLayout': prefs.readerUseBookLayout,
       'onboardingCompleted': prefs.onboardingCompleted,
       'hasCompletedSetup': prefs.hasCompletedSetup,
     };

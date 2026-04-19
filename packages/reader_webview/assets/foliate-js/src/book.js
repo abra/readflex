@@ -457,6 +457,13 @@ const getView = async file => {
   return view
 }
 
+// Three override flags let callers decide whether reader preferences beat
+// publisher CSS:
+//   overrideFont   — force font-family and font-weight
+//   overrideColor  — force text color (accent links live in customCSS instead)
+//   useBookLayout  — force line-height, text-indent, hyphenation, margins
+// When a flag is false, the corresponding rules are omitted and the book's
+// own CSS wins. Defaults preserve the historical "override everything" behavior.
 const getCSS = ({ fontSize,
   fontName,
   fontPath,
@@ -474,23 +481,42 @@ const getCSS = ({ fontSize,
   backgroundImage,
   flow,
   customCSS,
-  customCSSEnabled
+  customCSSEnabled,
+  overrideFont = true,
+  overrideColor = true,
+  useBookLayout = true,
 }) => {
 
-  const fontFamily = fontName === 'book' ? '' :
+  const fontFamilyDecl = !overrideFont || fontName === 'book' ? '' :
     fontName === 'system' ? 'font-family: system-ui !important;' :
       `font-family: ${fontName} !important;`
 
-  const writingModeCSS = writingMode === 'auto' ? '' : `writing-mode: ${writingMode} !important;`
+  const writingModeDecl = writingMode === 'auto' ? '' : `writing-mode: ${writingMode} !important;`
 
-  const backgroundImageCSS = !backgroundImage || flow || backgroundImage === 'none' ? 'background: none !important;' :
+  const backgroundImageDecl = !backgroundImage || flow || backgroundImage === 'none' ? 'background: none !important;' :
     `background-image: url('${backgroundImage}') !important;
     background-size: 100% 100% !important;
     background-repeat: repeat !important;
-    background-attachment: scroll !important; 
+    background-attachment: scroll !important;
     background-position: center center !important;
     background-clip: content-box !important;`
 
+  const htmlColorDecl = overrideColor ? `color: ${fontColor} !important;` : ''
+  const paraColorDecl = overrideColor ? `color: ${fontColor} !important;` : ''
+  const paraFontWeightDecl = overrideFont ? `font-weight: ${fontWeight} !important;` : ''
+  const headingLineHeightDecl = useBookLayout ? `line-height: ${spacing} !important;` : ''
+  const paraLayoutDecl = useBookLayout ? `
+        line-height: ${spacing} !important;
+        ${textIndent < 0 ? '' : 'text-indent: ' + textIndent + 'em !important;'}
+        -webkit-hyphens: ${hyphenate ? 'auto' : 'manual'};
+        hyphens: ${hyphenate ? 'auto' : 'manual'};
+        -webkit-hyphenate-limit-before: 3;
+        -webkit-hyphenate-limit-after: 2;
+        -webkit-hyphenate-limit-lines: 2;
+        hanging-punctuation: allow-end last;
+        widows: 2;
+        margin-block-start: ${paragraphSpacing / 2}em !important;
+        margin-block-end: ${paragraphSpacing / 2}em !important;` : ''
 
   // Some CSS selectors are inspired by https://github.com/readest/foliate-js
   return `
@@ -502,13 +528,13 @@ const getCSS = ({ fontSize,
     }
 
     html {
-        ${writingModeCSS}
-        color: ${fontColor} !important;
-        ${backgroundImageCSS}
+        ${writingModeDecl}
+        ${htmlColorDecl}
+        ${backgroundImageDecl}
         background-color: transparent !important;
         letter-spacing: ${letterSpacing}px;
         font-size: ${fontSize}em;
-        orphans: 1;  
+        orphans: 1;
         widows: 1;
     }
 
@@ -524,48 +550,29 @@ const getCSS = ({ fontSize,
     }
 
     img, svg {
-        // height: auto !important;
-        // width: auto !important;
         object-fit: contain !important;
         break-inside: avoid !important;
         box-sizing: border-box !important;
         font-size: initial !important;
-        // height: initial !important;
-        // width: initial !important;
     }
 
-    a:link {
-        color:rgb(167, 96, 52) !important;
-    }
-    
     a > img {
         font-size: ${fontSize}em !important;
     }
 
     * {
-        // line-height: ${spacing}em !important;
-        ${fontFamily}
+        ${fontFamilyDecl}
     }
 
     h1, h2, h3, h4, h5, h6 {
-        line-height: ${spacing} !important;
+        ${headingLineHeightDecl}
     }
 
     p, li, blockquote, dd, div:not(:has(*:not(b, a, em, i, strong, u, span))), font {
-        color: ${fontColor} !important;
-        line-height: ${spacing} !important;
-        font-weight: ${fontWeight} !important;
+        ${paraColorDecl}
+        ${paraFontWeightDecl}
         text-align: ${textAlign === 'auto' ? (justify ? 'justify' : 'start') : textAlign};
-        ${textIndent < 0 ? '' : 'text-indent: ' + textIndent + 'em !important;'}
-        -webkit-hyphens: ${hyphenate ? 'auto' : 'manual'};
-        hyphens: ${hyphenate ? 'auto' : 'manual'};
-        -webkit-hyphenate-limit-before: 3;
-        -webkit-hyphenate-limit-after: 2;
-        -webkit-hyphenate-limit-lines: 2;
-        hanging-punctuation: allow-end last;
-        widows: 2;
-        margin-block-start: ${paragraphSpacing / 2}em !important;
-        margin-block-end: ${paragraphSpacing / 2}em !important;
+        ${paraLayoutDecl}
     }
 
     .anx-text-center,
@@ -759,6 +766,9 @@ const replaceFootnote = (view) => {
     customCSS: style.customCSS,
     customCSSEnabled: style.customCSSEnabled,
     writingMode: style.writingMode,
+    overrideFont: style.overrideFont,
+    overrideColor: style.overrideColor,
+    useBookLayout: style.useBookLayout,
   }
   renderer.setStyles(getCSS(footNoteStyle))
   // set background color of dialog
@@ -1361,7 +1371,10 @@ const setStyle = (oldStyle) => {
     backgroundImage: style.backgroundImage,
     flow: turn.scroll,
     customCSS: style.customCSS,
-    customCSSEnabled: style.customCSSEnabled
+    customCSSEnabled: style.customCSSEnabled,
+    overrideFont: style.overrideFont,
+    overrideColor: style.overrideColor,
+    useBookLayout: style.useBookLayout,
   }
   reader.view.renderer.setStyles?.(getCSS(newStyle))
 

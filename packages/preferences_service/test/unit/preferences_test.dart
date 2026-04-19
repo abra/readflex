@@ -4,6 +4,18 @@ import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
 
+const _baseRA = ReaderAppearancePreferences(
+  themeId: 'paper',
+  fontId: 'serif',
+  layoutId: 'standard',
+  textScale: 1.0,
+  lineHeight: 1.55,
+  invertImagesInDark: true,
+  overrideFont: true,
+  overrideColor: true,
+  useBookLayout: true,
+);
+
 void main() {
   group('Preferences', () {
     test('defaults', () {
@@ -17,6 +29,9 @@ void main() {
       expect(prefs.readerTextScale, 1.0);
       expect(prefs.readerLineHeight, 1.55);
       expect(prefs.readerInvertImagesInDark, isTrue);
+      expect(prefs.readerOverrideFont, isTrue);
+      expect(prefs.readerOverrideColor, isTrue);
+      expect(prefs.readerUseBookLayout, isTrue);
       expect(prefs.onboardingCompleted, isFalse);
       expect(prefs.hasCompletedSetup, isFalse);
     });
@@ -60,6 +75,9 @@ void main() {
         readerTextScale: 1.2,
         readerLineHeight: 1.8,
         readerInvertImagesInDark: false,
+        readerOverrideFont: false,
+        readerOverrideColor: false,
+        readerUseBookLayout: false,
       );
       final ra = prefs.readerAppearance;
 
@@ -69,24 +87,20 @@ void main() {
       expect(ra.textScale, 1.2);
       expect(ra.lineHeight, 1.8);
       expect(ra.invertImagesInDark, isFalse);
+      expect(ra.overrideFont, isFalse);
+      expect(ra.overrideColor, isFalse);
+      expect(ra.useBookLayout, isFalse);
     });
   });
 
   group('ReaderAppearancePreferences', () {
     test('copyWith updates selected fields', () {
-      const ra = ReaderAppearancePreferences(
-        themeId: 'paper',
-        fontId: 'serif',
-        layoutId: 'standard',
-        textScale: 1.0,
-        lineHeight: 1.55,
-        invertImagesInDark: true,
-      );
-      final updated = ra.copyWith(
+      final updated = _baseRA.copyWith(
         themeId: 'night',
         textScale: 1.3,
         layoutId: 'compact',
         invertImagesInDark: false,
+        overrideFont: false,
       );
 
       expect(updated.themeId, 'night');
@@ -95,17 +109,13 @@ void main() {
       expect(updated.textScale, 1.3);
       expect(updated.lineHeight, 1.55);
       expect(updated.invertImagesInDark, isFalse);
+      expect(updated.overrideFont, isFalse);
+      expect(updated.overrideColor, isTrue);
+      expect(updated.useBookLayout, isTrue);
     });
 
     test('equality', () {
-      const a = ReaderAppearancePreferences(
-        themeId: 'paper',
-        fontId: 'serif',
-        layoutId: 'standard',
-        textScale: 1.0,
-        lineHeight: 1.55,
-        invertImagesInDark: true,
-      );
+      const a = _baseRA;
       const b = ReaderAppearancePreferences(
         themeId: 'paper',
         fontId: 'serif',
@@ -113,26 +123,27 @@ void main() {
         textScale: 1.0,
         lineHeight: 1.55,
         invertImagesInDark: true,
+        overrideFont: true,
+        overrideColor: true,
+        useBookLayout: true,
       );
       expect(a, equals(b));
       expect(a.hashCode, b.hashCode);
     });
 
     test('different fields are not equal', () {
-      const a = ReaderAppearancePreferences(
-        themeId: 'paper',
-        fontId: 'serif',
-        layoutId: 'standard',
-        textScale: 1.0,
-        lineHeight: 1.55,
-        invertImagesInDark: true,
+      expect(_baseRA, isNot(equals(_baseRA.copyWith(fontId: 'geist'))));
+      expect(
+        _baseRA,
+        isNot(equals(_baseRA.copyWith(layoutId: 'comfortable'))),
       );
-      final b = a.copyWith(fontId: 'geist');
-      expect(a, isNot(equals(b)));
-      final c = a.copyWith(layoutId: 'comfortable');
-      expect(a, isNot(equals(c)));
-      final d = a.copyWith(invertImagesInDark: false);
-      expect(a, isNot(equals(d)));
+      expect(
+        _baseRA,
+        isNot(equals(_baseRA.copyWith(invertImagesInDark: false))),
+      );
+      expect(_baseRA, isNot(equals(_baseRA.copyWith(overrideFont: false))));
+      expect(_baseRA, isNot(equals(_baseRA.copyWith(overrideColor: false))));
+      expect(_baseRA, isNot(equals(_baseRA.copyWith(useBookLayout: false))));
     });
   });
 }

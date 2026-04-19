@@ -142,6 +142,9 @@ class FoliateStyle {
     this.allowScript = false,
     this.customCSS = '',
     this.customCSSEnabled = false,
+    this.overrideFont = true,
+    this.overrideColor = true,
+    this.useBookLayout = true,
   });
 
   final double fontSize;
@@ -182,6 +185,15 @@ class FoliateStyle {
   final String customCSS;
   final bool customCSSEnabled;
 
+  /// When `false`, publisher font-family / font-weight win over reader prefs.
+  final bool overrideFont;
+
+  /// When `false`, publisher text color wins over reader prefs.
+  final bool overrideColor;
+
+  /// When `false`, publisher line-height / indent / hyphenation / margins win.
+  final bool useBookLayout;
+
   Map<String, dynamic> toMap() => {
     'fontSize': fontSize,
     'fontName': fontName,
@@ -206,6 +218,9 @@ class FoliateStyle {
     'allowScript': allowScript,
     'customCSS': customCSS,
     'customCSSEnabled': customCSSEnabled,
+    'overrideFont': overrideFont,
+    'overrideColor': overrideColor,
+    'useBookLayout': useBookLayout,
   };
 }
 

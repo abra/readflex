@@ -11,6 +11,9 @@ class ReaderAppearancePreferences {
     required this.textScale,
     required this.lineHeight,
     required this.invertImagesInDark,
+    required this.overrideFont,
+    required this.overrideColor,
+    required this.useBookLayout,
   });
 
   final String themeId;
@@ -20,6 +23,15 @@ class ReaderAppearancePreferences {
   final double lineHeight;
   final bool invertImagesInDark;
 
+  /// When `false`, publisher font-family / font-weight win over reader prefs.
+  final bool overrideFont;
+
+  /// When `false`, publisher text color wins over reader prefs.
+  final bool overrideColor;
+
+  /// When `false`, publisher line-height / indent / hyphenation / margins win.
+  final bool useBookLayout;
+
   ReaderAppearancePreferences copyWith({
     String? themeId,
     String? fontId,
@@ -27,6 +39,9 @@ class ReaderAppearancePreferences {
     double? textScale,
     double? lineHeight,
     bool? invertImagesInDark,
+    bool? overrideFont,
+    bool? overrideColor,
+    bool? useBookLayout,
   }) => ReaderAppearancePreferences(
     themeId: themeId ?? this.themeId,
     fontId: fontId ?? this.fontId,
@@ -34,6 +49,9 @@ class ReaderAppearancePreferences {
     textScale: textScale ?? this.textScale,
     lineHeight: lineHeight ?? this.lineHeight,
     invertImagesInDark: invertImagesInDark ?? this.invertImagesInDark,
+    overrideFont: overrideFont ?? this.overrideFont,
+    overrideColor: overrideColor ?? this.overrideColor,
+    useBookLayout: useBookLayout ?? this.useBookLayout,
   );
 
   @override
@@ -45,7 +63,10 @@ class ReaderAppearancePreferences {
           layoutId == other.layoutId &&
           textScale == other.textScale &&
           lineHeight == other.lineHeight &&
-          invertImagesInDark == other.invertImagesInDark;
+          invertImagesInDark == other.invertImagesInDark &&
+          overrideFont == other.overrideFont &&
+          overrideColor == other.overrideColor &&
+          useBookLayout == other.useBookLayout;
 
   @override
   int get hashCode => Object.hash(
@@ -55,6 +76,9 @@ class ReaderAppearancePreferences {
     textScale,
     lineHeight,
     invertImagesInDark,
+    overrideFont,
+    overrideColor,
+    useBookLayout,
   );
 }
 
@@ -70,6 +94,9 @@ class Preferences {
     this.readerTextScale = 1.0,
     this.readerLineHeight = 1.55,
     this.readerInvertImagesInDark = true,
+    this.readerOverrideFont = true,
+    this.readerOverrideColor = true,
+    this.readerUseBookLayout = true,
     this.onboardingCompleted = false,
     this.hasCompletedSetup = false,
   });
@@ -83,6 +110,9 @@ class Preferences {
   final double readerTextScale;
   final double readerLineHeight;
   final bool readerInvertImagesInDark;
+  final bool readerOverrideFont;
+  final bool readerOverrideColor;
+  final bool readerUseBookLayout;
 
   /// Whether the user has completed the onboarding flow.
   final bool onboardingCompleted;
@@ -98,6 +128,9 @@ class Preferences {
         textScale: readerTextScale,
         lineHeight: readerLineHeight,
         invertImagesInDark: readerInvertImagesInDark,
+        overrideFont: readerOverrideFont,
+        overrideColor: readerOverrideColor,
+        useBookLayout: readerUseBookLayout,
       );
 
   Preferences copyWith({
@@ -110,6 +143,9 @@ class Preferences {
     double? readerTextScale,
     double? readerLineHeight,
     bool? readerInvertImagesInDark,
+    bool? readerOverrideFont,
+    bool? readerOverrideColor,
+    bool? readerUseBookLayout,
     bool? onboardingCompleted,
     bool? hasCompletedSetup,
   }) => Preferences(
@@ -124,6 +160,9 @@ class Preferences {
     readerLineHeight: readerLineHeight ?? this.readerLineHeight,
     readerInvertImagesInDark:
         readerInvertImagesInDark ?? this.readerInvertImagesInDark,
+    readerOverrideFont: readerOverrideFont ?? this.readerOverrideFont,
+    readerOverrideColor: readerOverrideColor ?? this.readerOverrideColor,
+    readerUseBookLayout: readerUseBookLayout ?? this.readerUseBookLayout,
     onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
     hasCompletedSetup: hasCompletedSetup ?? this.hasCompletedSetup,
   );
@@ -141,6 +180,9 @@ class Preferences {
           readerTextScale == other.readerTextScale &&
           readerLineHeight == other.readerLineHeight &&
           readerInvertImagesInDark == other.readerInvertImagesInDark &&
+          readerOverrideFont == other.readerOverrideFont &&
+          readerOverrideColor == other.readerOverrideColor &&
+          readerUseBookLayout == other.readerUseBookLayout &&
           onboardingCompleted == other.onboardingCompleted &&
           hasCompletedSetup == other.hasCompletedSetup;
 
@@ -155,6 +197,9 @@ class Preferences {
     readerTextScale,
     readerLineHeight,
     readerInvertImagesInDark,
+    readerOverrideFont,
+    readerOverrideColor,
+    readerUseBookLayout,
     onboardingCompleted,
     hasCompletedSetup,
   ]);

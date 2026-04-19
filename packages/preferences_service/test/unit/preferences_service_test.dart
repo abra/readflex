@@ -88,6 +88,27 @@ void main() {
       },
     );
 
+    test('override flags persist across recreations', () async {
+      final service = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+      await service.update(
+        (s) => s.copyWith(
+          readerOverrideFont: false,
+          readerOverrideColor: false,
+          readerUseBookLayout: false,
+        ),
+      );
+
+      final service2 = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+
+      expect(service2.current.readerOverrideFont, isFalse);
+      expect(service2.current.readerOverrideColor, isFalse);
+      expect(service2.current.readerUseBookLayout, isFalse);
+    });
+
     test('update() emits updated preferences on stream', () async {
       final service = await PreferencesService.create(
         supportedCodes: _supportedCodes,

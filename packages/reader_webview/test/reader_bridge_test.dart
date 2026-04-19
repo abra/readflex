@@ -159,6 +159,22 @@ void main() {
       expect(map['allowScript'], false);
       expect(map['customCSS'], '');
       expect(map['customCSSEnabled'], false);
+      expect(map['overrideFont'], true);
+      expect(map['overrideColor'], true);
+      expect(map['useBookLayout'], true);
+    });
+
+    test('override flags can be disabled', () {
+      const style = FoliateStyle(
+        overrideFont: false,
+        overrideColor: false,
+        useBookLayout: false,
+      );
+      final map = style.toMap();
+
+      expect(map['overrideFont'], false);
+      expect(map['overrideColor'], false);
+      expect(map['useBookLayout'], false);
     });
 
     test('toMap reflects custom values', () {
@@ -187,7 +203,7 @@ void main() {
 
     test('toMap has expected key count', () {
       const style = FoliateStyle();
-      expect(style.toMap().length, 23);
+      expect(style.toMap().length, 26);
     });
   });
 

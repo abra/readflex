@@ -29,6 +29,9 @@ void main() {
       expect(prefs.readerTextScale, 1.0);
       expect(prefs.readerLineHeight, 1.55);
       expect(prefs.readerInvertImagesInDark, isTrue);
+      expect(prefs.readerOverrideFont, isTrue);
+      expect(prefs.readerOverrideColor, isTrue);
+      expect(prefs.readerUseBookLayout, isTrue);
       expect(prefs.onboardingCompleted, isFalse);
       expect(prefs.hasCompletedSetup, isFalse);
     });
@@ -45,6 +48,9 @@ void main() {
         readerTextScale: 1.3,
         readerLineHeight: 1.9,
         readerInvertImagesInDark: false,
+        readerOverrideFont: false,
+        readerOverrideColor: false,
+        readerUseBookLayout: false,
         onboardingCompleted: true,
         hasCompletedSetup: true,
       );
@@ -61,6 +67,9 @@ void main() {
       const prefs = Preferences(
         readerLayoutId: 'compact',
         readerInvertImagesInDark: false,
+        readerOverrideFont: false,
+        readerOverrideColor: false,
+        readerUseBookLayout: false,
       );
 
       await repo.save(prefs);
@@ -69,6 +78,9 @@ void main() {
 
       expect(map['readerLayoutId'], 'compact');
       expect(map['readerInvertImagesInDark'], isFalse);
+      expect(map['readerOverrideFont'], isFalse);
+      expect(map['readerOverrideColor'], isFalse);
+      expect(map['readerUseBookLayout'], isFalse);
       expect(map['readerThemeId'], 'paper');
       expect(map['readerFontId'], 'serif');
       expect(map['readerTextScale'], 1.0);
@@ -101,6 +113,9 @@ void main() {
         expect(prefs.themeMode, ThemeMode.dark);
         expect(prefs.readerLayoutId, 'standard');
         expect(prefs.readerInvertImagesInDark, isTrue);
+        expect(prefs.readerOverrideFont, isTrue);
+        expect(prefs.readerOverrideColor, isTrue);
+        expect(prefs.readerUseBookLayout, isTrue);
       },
     );
 

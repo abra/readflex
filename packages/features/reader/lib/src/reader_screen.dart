@@ -365,6 +365,9 @@ class _ReadyContentState extends State<_ReadyContent> {
         backgroundColor: _colorToHex(readerTheme.backgroundColor),
         customCSS: customCSS,
         customCSSEnabled: true,
+        overrideFont: appearance.overrideFont,
+        overrideColor: appearance.overrideColor,
+        useBookLayout: appearance.useBookLayout,
       ),
       highlights: highlights,
       onPositionChanged: (position) {
