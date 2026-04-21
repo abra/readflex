@@ -23,13 +23,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       _onPositionUpdated,
       transformer: _debounce(_positionSaveDelay),
     );
-    on<ReaderTextSelected>(_onTextSelected);
-    on<ReaderTextDeselected>(_onTextDeselected);
     on<ReaderHighlightsRefreshed>(_onHighlightsRefreshed);
-    on<ReaderReviewReminderShown>(_onReviewReminderShown);
-    on<ReaderReviewReminderDismissed>(_onReviewReminderDismissed);
-    on<ReaderChromeToggled>(_onChromeToggled);
-    on<ReaderChromeHidden>(_onChromeHidden);
   }
 
   final BookRepository _bookRepository;
@@ -119,36 +113,6 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     }
   }
 
-  void _onTextSelected(
-    ReaderTextSelected event,
-    Emitter<ReaderState> emit,
-  ) {
-    emit(
-      state.copyWith(
-        selectedText: event.selectedText,
-        selectionCfiRange: event.cfiRange,
-        selectionPageNumber: event.pageNumber,
-        selectionScrollOffset: event.scrollOffset,
-        hasSelection: true,
-      ),
-    );
-  }
-
-  void _onTextDeselected(
-    ReaderTextDeselected event,
-    Emitter<ReaderState> emit,
-  ) {
-    emit(
-      state.copyWith(
-        selectedText: '',
-        selectionCfiRange: null,
-        selectionPageNumber: null,
-        selectionScrollOffset: null,
-        hasSelection: false,
-      ),
-    );
-  }
-
   Future<void> _onHighlightsRefreshed(
     ReaderHighlightsRefreshed event,
     Emitter<ReaderState> emit,
@@ -163,34 +127,5 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     } catch (e, st) {
       addError(e, st);
     }
-  }
-
-  void _onReviewReminderShown(
-    ReaderReviewReminderShown event,
-    Emitter<ReaderState> emit,
-  ) {
-    emit(state.copyWith(showReviewReminder: true));
-  }
-
-  void _onReviewReminderDismissed(
-    ReaderReviewReminderDismissed event,
-    Emitter<ReaderState> emit,
-  ) {
-    emit(state.copyWith(showReviewReminder: false));
-  }
-
-  void _onChromeToggled(
-    ReaderChromeToggled event,
-    Emitter<ReaderState> emit,
-  ) {
-    emit(state.copyWith(chromeVisible: !state.chromeVisible));
-  }
-
-  void _onChromeHidden(
-    ReaderChromeHidden event,
-    Emitter<ReaderState> emit,
-  ) {
-    if (!state.chromeVisible) return;
-    emit(state.copyWith(chromeVisible: false));
   }
 }

@@ -13,6 +13,8 @@ import 'package:shared/shared.dart';
 
 import 'book_custom_css.dart';
 import 'reader_bloc.dart';
+import 'reader_chrome_cubit.dart';
+import 'reader_selection_cubit.dart';
 
 /// Approximate height of the context panel, used to offset the review banner.
 const _kContextPanelHeight = 80.0;
@@ -47,12 +49,18 @@ class ReaderScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     debugLogScreenBuild('ReaderScreen(sourceId: $sourceId)');
 
-    return BlocProvider(
-      create: (_) => ReaderBloc(
-        bookRepository: bookRepository,
-        articleRepository: articleRepository,
-        highlightRepository: highlightRepository,
-      )..add(ReaderSourceLoadRequested(sourceId: sourceId)),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => ReaderBloc(
+            bookRepository: bookRepository,
+            articleRepository: articleRepository,
+            highlightRepository: highlightRepository,
+          )..add(ReaderSourceLoadRequested(sourceId: sourceId)),
+        ),
+        BlocProvider(create: (_) => ReaderChromeCubit()),
+        BlocProvider(create: (_) => ReaderSelectionCubit()),
+      ],
       child: _ReaderView(
         serverPort: serverPort,
         textActions: textActions,
@@ -95,23 +103,7 @@ class _ReaderView extends StatelessWidget {
               ),
             ),
           ),
-
-          // Top chrome: AppBar overlay. Visible by default on loading/failure
-          // so the user can always back out; on ready, controlled by
-          // `chromeVisible` (toggled by center tap).
-          BlocSelector<ReaderBloc, ReaderState, _ChromeSlice>(
-            selector: (state) => _ChromeSlice(
-              visible:
-                  state.status != ReaderStatus.ready || state.chromeVisible,
-              title: state.title,
-              highlightCount: state.highlights.length,
-            ),
-            builder: (context, slice) => _ReaderTopChrome(
-              visible: slice.visible,
-              title: slice.title,
-              highlightCount: slice.highlightCount,
-            ),
-          ),
+          const _TopChromeDriver(),
         ],
       ),
     );
@@ -165,95 +157,33 @@ class _ReaderBody extends StatelessWidget {
   }
 }
 
-class _ChromeSlice {
-  const _ChromeSlice({
-    required this.visible,
-    required this.title,
-    required this.highlightCount,
-  });
-
-  final bool visible;
-  final String title;
-  final int highlightCount;
+/// Combines status/title/highlights from [ReaderBloc] with chrome visibility
+/// from [ReaderChromeCubit] to drive the top AppBar overlay.
+class _TopChromeDriver extends StatelessWidget {
+  const _TopChromeDriver();
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is _ChromeSlice &&
-          visible == other.visible &&
-          title == other.title &&
-          highlightCount == other.highlightCount;
+  Widget build(BuildContext context) {
+    final status = context.select<ReaderBloc, ReaderStatus>(
+      (b) => b.state.status,
+    );
+    final title = context.select<ReaderBloc, String>((b) => b.state.title);
+    final highlightCount = context.select<ReaderBloc, int>(
+      (b) => b.state.highlights.length,
+    );
+    final chromeVisible = context.select<ReaderChromeCubit, bool>(
+      (c) => c.state.chromeVisible,
+    );
 
-  @override
-  int get hashCode => Object.hash(visible, title, highlightCount);
+    return _ReaderTopChrome(
+      visible: status != ReaderStatus.ready || chromeVisible,
+      title: title,
+      highlightCount: highlightCount,
+    );
+  }
 }
 
-class _BottomChromeSlice {
-  const _BottomChromeSlice({
-    required this.visible,
-    required this.progress,
-  });
-
-  final bool visible;
-  final double progress;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is _BottomChromeSlice &&
-          visible == other.visible &&
-          progress == other.progress;
-
-  @override
-  int get hashCode => Object.hash(visible, progress);
-}
-
-class _SelectionSlice {
-  const _SelectionSlice({
-    required this.hasSelection,
-    required this.selectedText,
-    this.sourceId,
-    this.sourceType,
-    this.cfiRange,
-    this.pageNumber,
-    this.scrollOffset,
-  });
-
-  final bool hasSelection;
-  final String selectedText;
-  final String? sourceId;
-  final SourceType? sourceType;
-  final String? cfiRange;
-  final int? pageNumber;
-  final double? scrollOffset;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is _SelectionSlice &&
-          hasSelection == other.hasSelection &&
-          selectedText == other.selectedText &&
-          sourceId == other.sourceId &&
-          sourceType == other.sourceType &&
-          cfiRange == other.cfiRange &&
-          pageNumber == other.pageNumber &&
-          scrollOffset == other.scrollOffset;
-
-  @override
-  int get hashCode => Object.hash(
-    hasSelection,
-    selectedText,
-    sourceId,
-    sourceType,
-    cfiRange,
-    pageNumber,
-    scrollOffset,
-  );
-}
-
-/// Top reader chrome: AppBar rendered as an overlay that slides down from the
-/// top. Rendered above content via a Stack; height follows the status-bar
-/// padding so status-bar safe area is preserved.
+/// Top reader chrome: AppBar overlay that slides down from the top.
 class _ReaderTopChrome extends StatelessWidget {
   const _ReaderTopChrome({
     required this.visible,
@@ -307,8 +237,7 @@ class _ReaderTopChrome extends StatelessWidget {
   }
 }
 
-/// Bottom reader chrome: progress bar + (future) quick-action icons. Slides
-/// up from the bottom, mirroring `_ReaderTopChrome`.
+/// Bottom reader chrome: progress bar. Slides up from the bottom.
 class _ReaderBottomChrome extends StatelessWidget {
   const _ReaderBottomChrome({
     required this.visible,
@@ -416,6 +345,7 @@ class _ReadyContentState extends State<_ReadyContent> {
   // queries while reading. An initial check runs on load for items already due.
   static const _checkInterval = Duration(minutes: 5);
   Timer? _dueCheckTimer;
+  bool _showReminder = false;
 
   @override
   void initState() {
@@ -434,9 +364,7 @@ class _ReadyContentState extends State<_ReadyContent> {
     if (onCheck == null) return;
 
     final sourceId = widget.sourceId;
-
     _checkDueItems(onCheck, sourceId);
-
     _dueCheckTimer = Timer.periodic(_checkInterval, (_) {
       _checkDueItems(onCheck, sourceId);
     });
@@ -448,7 +376,7 @@ class _ReadyContentState extends State<_ReadyContent> {
   ) async {
     final count = await onCheck(sourceId);
     if (count > 0 && mounted) {
-      context.read<ReaderBloc>().add(const ReaderReviewReminderShown());
+      setState(() => _showReminder = true);
     }
   }
 
@@ -461,7 +389,7 @@ class _ReadyContentState extends State<_ReadyContent> {
       children: [
         // WebView body — reads BLoC state once, not subscribed to changes.
         // Only rebuilds on theme change (PreferencesScope), never on
-        // selection or review-reminder state changes.
+        // selection or reminder state changes.
         ColoredBox(
           color: readerTheme.backgroundColor,
           child: _ReaderWebViewBody(
@@ -469,96 +397,138 @@ class _ReadyContentState extends State<_ReadyContent> {
             readerTheme: readerTheme,
           ),
         ),
-
-        // Bottom chrome: progress bar + controls. Slides up when chromeVisible.
-        BlocSelector<ReaderBloc, ReaderState, _BottomChromeSlice>(
-          selector: (state) => _BottomChromeSlice(
-            visible: state.chromeVisible && !state.hasSelection,
-            progress:
-                state.book?.readingProgress ??
-                state.article?.currentScrollOffset ??
-                0,
-          ),
-          builder: (context, slice) => _ReaderBottomChrome(
-            visible: slice.visible,
-            progress: slice.progress,
-            panelColor: readerTheme.panelColor,
-            textColor: readerTheme.secondaryTextColor,
-            accentColor: readerTheme.accentColor,
-            dividerColor: readerTheme.dividerColor,
-          ),
+        _BottomChromeDriver(readerTheme: readerTheme),
+        _ContextPanelDriver(
+          readerTheme: readerTheme,
+          textActions: widget.textActions,
         ),
-
-        // Context panel — rebuilds only when selection state changes
-        BlocSelector<ReaderBloc, ReaderState, _SelectionSlice>(
-          selector: (state) => _SelectionSlice(
-            hasSelection: state.hasSelection,
-            selectedText: state.selectedText,
-            sourceId: state.sourceId,
-            sourceType: state.sourceType,
-            cfiRange: state.selectionCfiRange,
-            pageNumber: state.selectionPageNumber,
-            scrollOffset: state.selectionScrollOffset,
-          ),
-          builder: (context, sel) {
-            if (!sel.hasSelection ||
-                sel.sourceId == null ||
-                sel.sourceType == null) {
-              return const SizedBox.shrink();
-            }
-            return Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: _ContextPanel(
-                selectedText: sel.selectedText,
-                sourceId: sel.sourceId!,
-                sourceType: sel.sourceType!,
-                selectionCfiRange: sel.cfiRange,
-                selectionPageNumber: sel.pageNumber,
-                selectionScrollOffset: sel.scrollOffset,
-                textActions: widget.textActions,
-                panelColor: readerTheme.panelColor,
-                iconColor: readerTheme.primaryTextColor,
-                dividerColor: readerTheme.dividerColor,
-              ),
-            );
-          },
-        ),
-
-        // Review reminder banner — rebuilds only when reminder state changes
-        BlocSelector<ReaderBloc, ReaderState, (bool, bool, String?)>(
-          selector: (state) => (
-            state.showReviewReminder,
-            state.hasSelection,
-            state.sourceId,
-          ),
-          builder: (context, data) {
-            final (show, hasSelection, sourceId) = data;
-            if (!show) return const SizedBox.shrink();
-            return Positioned(
-              left: AppSpacing.md,
-              right: AppSpacing.md,
-              bottom: hasSelection ? _kContextPanelHeight : AppSpacing.md,
-              child: _ReviewReminderBanner(
-                onReview: () {
-                  context.read<ReaderBloc>().add(
-                    const ReaderReviewReminderDismissed(),
-                  );
-                  if (sourceId != null) {
-                    widget.onStartMiniReview?.call(context, sourceId);
-                  }
-                },
-                onDismiss: () {
-                  context.read<ReaderBloc>().add(
-                    const ReaderReviewReminderDismissed(),
-                  );
-                },
-              ),
-            );
-          },
+        _ReviewReminderDriver(
+          show: _showReminder,
+          onDismiss: () => setState(() => _showReminder = false),
+          onStartMiniReview: widget.onStartMiniReview,
         ),
       ],
+    );
+  }
+}
+
+/// Combines chrome visibility from [ReaderChromeCubit], selection state from
+/// [ReaderSelectionCubit], and reading progress from [ReaderBloc].
+class _BottomChromeDriver extends StatelessWidget {
+  const _BottomChromeDriver({required this.readerTheme});
+
+  final ReaderThemeData readerTheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final chromeVisible = context.select<ReaderChromeCubit, bool>(
+      (c) => c.state.chromeVisible,
+    );
+    final hasSelection = context.select<ReaderSelectionCubit, bool>(
+      (c) => c.state.hasSelection,
+    );
+    final progress = context.select<ReaderBloc, double>(
+      (b) =>
+          b.state.book?.readingProgress ??
+          b.state.article?.currentScrollOffset ??
+          0,
+    );
+
+    return _ReaderBottomChrome(
+      visible: chromeVisible && !hasSelection,
+      progress: progress,
+      panelColor: readerTheme.panelColor,
+      textColor: readerTheme.secondaryTextColor,
+      accentColor: readerTheme.accentColor,
+      dividerColor: readerTheme.dividerColor,
+    );
+  }
+}
+
+/// Reads selection from [ReaderSelectionCubit] and source info from
+/// [ReaderBloc] to show/hide the text-action context panel.
+class _ContextPanelDriver extends StatelessWidget {
+  const _ContextPanelDriver({
+    required this.readerTheme,
+    required this.textActions,
+  });
+
+  final ReaderThemeData readerTheme;
+  final List<TextAction> textActions;
+
+  @override
+  Widget build(BuildContext context) {
+    final sel = context.select<ReaderSelectionCubit, ReaderSelectionState>(
+      (c) => c.state,
+    );
+    final sourceId = context.select<ReaderBloc, String?>(
+      (b) => b.state.sourceId,
+    );
+    final sourceType = context.select<ReaderBloc, SourceType?>(
+      (b) => b.state.sourceType,
+    );
+
+    if (!sel.hasSelection || sourceId == null || sourceType == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: _ContextPanel(
+        selectedText: sel.selectedText,
+        sourceId: sourceId,
+        sourceType: sourceType,
+        selectionCfiRange: sel.cfiRange,
+        selectionPageNumber: sel.pageNumber,
+        selectionScrollOffset: sel.scrollOffset,
+        textActions: textActions,
+        panelColor: readerTheme.panelColor,
+        iconColor: readerTheme.primaryTextColor,
+        dividerColor: readerTheme.dividerColor,
+      ),
+    );
+  }
+}
+
+/// Renders the review reminder banner when [show] is true. Positions itself
+/// above the context panel when text is selected.
+class _ReviewReminderDriver extends StatelessWidget {
+  const _ReviewReminderDriver({
+    required this.show,
+    required this.onDismiss,
+    this.onStartMiniReview,
+  });
+
+  final bool show;
+  final VoidCallback onDismiss;
+  final void Function(BuildContext context, String sourceId)? onStartMiniReview;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!show) return const SizedBox.shrink();
+
+    final hasSelection = context.select<ReaderSelectionCubit, bool>(
+      (c) => c.state.hasSelection,
+    );
+    final sourceId = context.select<ReaderBloc, String?>(
+      (b) => b.state.sourceId,
+    );
+
+    return Positioned(
+      left: AppSpacing.md,
+      right: AppSpacing.md,
+      bottom: hasSelection ? _kContextPanelHeight : AppSpacing.md,
+      child: _ReviewReminderBanner(
+        onReview: () {
+          onDismiss();
+          if (sourceId != null) {
+            onStartMiniReview?.call(context, sourceId);
+          }
+        },
+        onDismiss: onDismiss,
+      ),
     );
   }
 }
@@ -575,6 +545,8 @@ class _ReaderWebViewBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<ReaderBloc>();
+    final chromeCubit = context.read<ReaderChromeCubit>();
+    final selectionCubit = context.read<ReaderSelectionCubit>();
     final state = bloc.state;
     final highlights = state.highlights
         .map(
@@ -594,9 +566,7 @@ class _ReaderWebViewBody extends StatelessWidget {
       dividerColor: _colorToHex(readerTheme.dividerColor),
     );
 
-    void onTapped(double x, double y) {
-      bloc.add(const ReaderChromeToggled());
-    }
+    void onTapped(double x, double y) => chromeCubit.toggle();
 
     if (state.isArticle) {
       return ArticleReaderWebView(
@@ -608,24 +578,17 @@ class _ReaderWebViewBody extends StatelessWidget {
         highlights: highlights,
         onPositionChanged: (fraction) {
           bloc.add(
-            ReaderPositionUpdated(
-              scrollOffset: fraction,
-              progress: fraction,
-            ),
+            ReaderPositionUpdated(scrollOffset: fraction, progress: fraction),
           );
         },
         onTextSelected: (selection) {
-          bloc.add(const ReaderChromeHidden());
-          bloc.add(
-            ReaderTextSelected(
-              selectedText: selection.text,
-              scrollOffset: selection.scrollOffset,
-            ),
+          chromeCubit.hide();
+          selectionCubit.select(
+            text: selection.text,
+            scrollOffset: selection.scrollOffset,
           );
         },
-        onTextDeselected: () {
-          bloc.add(const ReaderTextDeselected());
-        },
+        onTextDeselected: () => selectionCubit.deselect(),
         onTapped: onTapped,
       );
     }
@@ -667,24 +630,17 @@ class _ReaderWebViewBody extends StatelessWidget {
       highlights: highlights,
       onPositionChanged: (position) {
         bloc.add(
-          ReaderPositionUpdated(
-            cfi: position.cfi,
-            progress: position.fraction,
-          ),
+          ReaderPositionUpdated(cfi: position.cfi, progress: position.fraction),
         );
       },
       onTextSelected: (selection) {
-        bloc.add(const ReaderChromeHidden());
-        bloc.add(
-          ReaderTextSelected(
-            selectedText: selection.text,
-            cfiRange: selection.cfiRange,
-          ),
+        chromeCubit.hide();
+        selectionCubit.select(
+          text: selection.text,
+          cfiRange: selection.cfiRange,
         );
       },
-      onTextDeselected: () {
-        bloc.add(const ReaderTextDeselected());
-      },
+      onTextDeselected: () => selectionCubit.deselect(),
       onTapped: onTapped,
     );
   }
@@ -794,13 +750,8 @@ class _ReviewReminderBanner extends StatelessWidget {
           children: [
             const Icon(AppIcons.practice, size: AppIconSize.sm),
             const SizedBox(width: AppSpacing.sm),
-            const Expanded(
-              child: Text('You have items to review'),
-            ),
-            TextButton(
-              onPressed: onReview,
-              child: const Text('Review'),
-            ),
+            const Expanded(child: Text('You have items to review')),
+            TextButton(onPressed: onReview, child: const Text('Review')),
             IconButton(
               icon: const Icon(AppIcons.close, size: AppIconSize.sm),
               onPressed: onDismiss,

@@ -63,7 +63,6 @@ void main() {
         expect(bloc.state.title, '');
         expect(bloc.state.book, isNull);
         expect(bloc.state.article, isNull);
-        expect(bloc.state.hasSelection, isFalse);
       },
     );
 
@@ -197,44 +196,6 @@ void main() {
       );
     });
 
-    group('ReaderTextSelected / Deselected', () {
-      blocTest<ReaderBloc, ReaderState>(
-        'text selected updates selection state',
-        build: buildBloc,
-        act: (bloc) => bloc.add(
-          const ReaderTextSelected(
-            selectedText: 'Some text',
-            cfiRange: 'epubcfi(/6/4)',
-            pageNumber: 42,
-          ),
-        ),
-        expect: () => [
-          isA<ReaderState>()
-              .having((s) => s.hasSelection, 'hasSelection', isTrue)
-              .having((s) => s.selectedText, 'selectedText', 'Some text')
-              .having((s) => s.selectionCfiRange, 'cfiRange', 'epubcfi(/6/4)')
-              .having((s) => s.selectionPageNumber, 'pageNumber', 42),
-        ],
-      );
-
-      blocTest<ReaderBloc, ReaderState>(
-        'text deselected clears selection',
-        build: buildBloc,
-        seed: () => const ReaderState(
-          selectedText: 'Some text',
-          hasSelection: true,
-        ),
-        act: (bloc) => bloc.add(const ReaderTextDeselected()),
-        expect: () => [
-          isA<ReaderState>().having(
-            (s) => s.hasSelection,
-            'hasSelection',
-            isFalse,
-          ),
-        ],
-      );
-    });
-
     group('ReaderHighlightsRefreshed', () {
       blocTest<ReaderBloc, ReaderState>(
         'refetches highlights for current source',
@@ -281,117 +242,6 @@ void main() {
       );
     });
 
-    group('Chrome toggle', () {
-      blocTest<ReaderBloc, ReaderState>(
-        'chromeVisible defaults to false',
-        build: buildBloc,
-        verify: (bloc) {
-          expect(bloc.state.chromeVisible, isFalse);
-        },
-      );
-
-      blocTest<ReaderBloc, ReaderState>(
-        'ReaderChromeToggled flips hidden → visible',
-        build: buildBloc,
-        act: (bloc) => bloc.add(const ReaderChromeToggled()),
-        expect: () => [
-          isA<ReaderState>().having(
-            (s) => s.chromeVisible,
-            'chromeVisible',
-            isTrue,
-          ),
-        ],
-      );
-
-      blocTest<ReaderBloc, ReaderState>(
-        'ReaderChromeToggled flips visible → hidden',
-        build: buildBloc,
-        seed: () => const ReaderState(chromeVisible: true),
-        act: (bloc) => bloc.add(const ReaderChromeToggled()),
-        expect: () => [
-          isA<ReaderState>().having(
-            (s) => s.chromeVisible,
-            'chromeVisible',
-            isFalse,
-          ),
-        ],
-      );
-
-      blocTest<ReaderBloc, ReaderState>(
-        'ReaderChromeHidden hides when visible',
-        build: buildBloc,
-        seed: () => const ReaderState(chromeVisible: true),
-        act: (bloc) => bloc.add(const ReaderChromeHidden()),
-        expect: () => [
-          isA<ReaderState>().having(
-            (s) => s.chromeVisible,
-            'chromeVisible',
-            isFalse,
-          ),
-        ],
-      );
-
-      blocTest<ReaderBloc, ReaderState>(
-        'ReaderChromeHidden is a no-op when already hidden',
-        build: buildBloc,
-        act: (bloc) => bloc.add(const ReaderChromeHidden()),
-        expect: () => <ReaderState>[],
-      );
-
-      blocTest<ReaderBloc, ReaderState>(
-        'ReaderChromeToggled preserves other state fields',
-        setUp: () {
-          bookRepository.seedBook(testBook);
-        },
-        build: buildBloc,
-        seed: () => ReaderState(
-          status: ReaderStatus.ready,
-          sourceType: SourceType.book,
-          title: testBook.title,
-          book: testBook,
-          hasSelection: true,
-          selectedText: 'keep me',
-        ),
-        act: (bloc) => bloc.add(const ReaderChromeToggled()),
-        expect: () => [
-          isA<ReaderState>()
-              .having((s) => s.chromeVisible, 'chromeVisible', isTrue)
-              .having((s) => s.hasSelection, 'hasSelection', isTrue)
-              .having((s) => s.selectedText, 'selectedText', 'keep me')
-              .having((s) => s.title, 'title', testBook.title),
-        ],
-      );
-    });
-
-    group('Review reminder', () {
-      blocTest<ReaderBloc, ReaderState>(
-        'show review reminder',
-        build: buildBloc,
-        act: (bloc) => bloc.add(const ReaderReviewReminderShown()),
-        expect: () => [
-          isA<ReaderState>().having(
-            (s) => s.showReviewReminder,
-            'showReviewReminder',
-            isTrue,
-          ),
-        ],
-      );
-
-      blocTest<ReaderBloc, ReaderState>(
-        'dismiss review reminder',
-        build: buildBloc,
-        seed: () => const ReaderState(showReviewReminder: true),
-        act: (bloc) => bloc.add(const ReaderReviewReminderDismissed()),
-        expect: () => [
-          isA<ReaderState>().having(
-            (s) => s.showReviewReminder,
-            'showReviewReminder',
-            isFalse,
-          ),
-        ],
-      );
-    });
-
     group('ReaderState computed', () {
       test('sourceId returns book id', () {
         final state = ReaderState(book: testBook);
@@ -415,23 +265,11 @@ void main() {
         expect(state.isBook, isFalse);
       });
 
-      test('chromeVisible defaults to false', () {
-        const state = ReaderState();
-        expect(state.chromeVisible, isFalse);
-      });
-
-      test('copyWith chromeVisible updates only that field', () {
-        const state = ReaderState(title: 'T', hasSelection: true);
-        final copy = state.copyWith(chromeVisible: true);
-        expect(copy.chromeVisible, isTrue);
+      test('copyWith preserves unrelated fields', () {
+        final state = ReaderState(title: 'T', book: testBook);
+        final copy = state.copyWith(highlights: []);
         expect(copy.title, 'T');
-        expect(copy.hasSelection, isTrue);
-      });
-
-      test('states with different chromeVisible are not equal', () {
-        const a = ReaderState();
-        const b = ReaderState(chromeVisible: true);
-        expect(a, isNot(equals(b)));
+        expect(copy.book, testBook);
       });
     });
   });

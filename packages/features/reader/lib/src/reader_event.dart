@@ -36,45 +36,6 @@ final class ReaderPositionUpdated extends ReaderEvent {
   List<Object?> get props => [cfi, progress, scrollOffset];
 }
 
-final class ReaderTextSelected extends ReaderEvent {
-  const ReaderTextSelected({
-    required this.selectedText,
-    this.cfiRange,
-    this.pageNumber,
-    this.scrollOffset,
-  });
-
-  final String selectedText;
-  final String? cfiRange;
-  final int? pageNumber;
-  final double? scrollOffset;
-
-  @override
-  List<Object?> get props => [selectedText, cfiRange, pageNumber, scrollOffset];
-}
-
-final class ReaderTextDeselected extends ReaderEvent {
-  const ReaderTextDeselected();
-}
-
 final class ReaderHighlightsRefreshed extends ReaderEvent {
   const ReaderHighlightsRefreshed();
-}
-
-final class ReaderReviewReminderShown extends ReaderEvent {
-  const ReaderReviewReminderShown();
-}
-
-final class ReaderReviewReminderDismissed extends ReaderEvent {
-  const ReaderReviewReminderDismissed();
-}
-
-/// User tapped the reader — flip chrome visibility.
-final class ReaderChromeToggled extends ReaderEvent {
-  const ReaderChromeToggled();
-}
-
-/// Force-hide chrome (e.g. when text selection begins).
-final class ReaderChromeHidden extends ReaderEvent {
-  const ReaderChromeHidden();
 }
