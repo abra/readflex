@@ -32,6 +32,7 @@ class ArticleReaderWebView extends StatefulWidget {
     this.onTextDeselected,
     this.onHighlightTapped,
     this.onTapped,
+    this.onLoadError,
     super.key,
   });
 
@@ -74,6 +75,9 @@ class ArticleReaderWebView extends StatefulWidget {
   /// Fires when the user taps empty reader space (no selection, no link).
   /// Coordinates are normalized to [0, 1] over the viewport.
   final void Function(double x, double y)? onTapped;
+
+  /// Fires when article HTML cannot be loaded from the reader server.
+  final VoidCallback? onLoadError;
 
   @override
   State<ArticleReaderWebView> createState() => _ArticleReaderWebViewState();
@@ -181,7 +185,10 @@ class _ArticleReaderWebViewState extends State<ArticleReaderWebView> {
     );
 
     final html = widget.articleHtml ?? await _fetchArticleHtml();
-    if (html == null) return;
+    if (html == null) {
+      widget.onLoadError?.call();
+      return;
+    }
 
     final escaped = jsonEncode(html);
     await _controller?.evaluateJavascript(

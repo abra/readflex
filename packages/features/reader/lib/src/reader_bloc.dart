@@ -19,8 +19,12 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
        _highlightRepository = highlightRepository,
        super(const ReaderState()) {
     on<ReaderSourceLoadRequested>(_onSourceLoadRequested);
-    on<ReaderPositionUpdated>(
-      _onPositionUpdated,
+    on<ReaderBookPositionUpdated>(
+      _onBookPositionUpdated,
+      transformer: _debounce(_positionSaveDelay),
+    );
+    on<ReaderArticlePositionUpdated>(
+      _onArticlePositionUpdated,
       transformer: _debounce(_positionSaveDelay),
     );
     on<ReaderHighlightsRefreshed>(_onHighlightsRefreshed);
@@ -89,29 +93,41 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     }
   }
 
-  Future<void> _onPositionUpdated(
-    ReaderPositionUpdated event,
+  Future<void> _onBookPositionUpdated(
+    ReaderBookPositionUpdated event,
     Emitter<ReaderState> emit,
   ) async {
+    if (state.book == null) return;
     try {
-      if (state.book != null) {
-        await _bookRepository.updateBook(
-          state.book!.copyWith(
-            currentCfi: event.cfi,
-            readingProgress: event.progress,
-          ),
-        );
-      } else if (state.article != null) {
-        await _articleRepository.updateArticle(
-          state.article!.copyWith(
-            currentScrollOffset: event.scrollOffset,
-          ),
-        );
-      }
+      await _bookRepository.updateBook(
+        state.book!.copyWith(
+          currentCfi: event.cfi,
+          readingProgress: event.progress,
+        ),
+      );
     } catch (e, st) {
       addError(e, st);
     }
   }
+
+  Future<void> _onArticlePositionUpdated(
+    ReaderArticlePositionUpdated event,
+    Emitter<ReaderState> emit,
+  ) async {
+    if (state.article == null) return;
+    try {
+      await _articleRepository.updateArticle(
+        state.article!.copyWith(currentScrollOffset: event.scrollOffset),
+      );
+    } catch (e, st) {
+      addError(e, st);
+    }
+  }
+
+  /// Routes an external error through BLoC's error pipeline (e.g. from a
+  /// widget that detects a failure but cannot emit state itself).
+  void reportError(Object error, StackTrace stackTrace) =>
+      addError(error, stackTrace);
 
   Future<void> _onHighlightsRefreshed(
     ReaderHighlightsRefreshed event,

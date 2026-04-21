@@ -143,7 +143,7 @@ void main() {
       );
     });
 
-    group('ReaderPositionUpdated', () {
+    group('ReaderBookPositionUpdated', () {
       blocTest<ReaderBloc, ReaderState>(
         'updates book position',
         setUp: () {
@@ -157,7 +157,7 @@ void main() {
           book: testBook,
         ),
         act: (bloc) => bloc.add(
-          const ReaderPositionUpdated(
+          const ReaderBookPositionUpdated(
             cfi: 'epubcfi(/6/4!/4/2)',
             progress: 0.2,
           ),
@@ -174,6 +174,22 @@ void main() {
       );
 
       blocTest<ReaderBloc, ReaderState>(
+        'no-op when no book in state',
+        build: buildBloc,
+        seed: () => const ReaderState(status: ReaderStatus.ready),
+        act: (bloc) => bloc.add(
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/4!/4/2)',
+            progress: 0.2,
+          ),
+        ),
+        wait: const Duration(seconds: 3),
+        verify: (_) => expect(bookRepository.updatedBook, isNull),
+      );
+    });
+
+    group('ReaderArticlePositionUpdated', () {
+      blocTest<ReaderBloc, ReaderState>(
         'updates article scroll offset',
         setUp: () {
           articleRepository.seedArticle(testArticle);
@@ -186,13 +202,24 @@ void main() {
           article: testArticle,
         ),
         act: (bloc) => bloc.add(
-          const ReaderPositionUpdated(scrollOffset: 0.75),
+          const ReaderArticlePositionUpdated(scrollOffset: 0.75),
         ),
         wait: const Duration(seconds: 3),
         verify: (_) {
           expect(articleRepository.updatedArticle, isNotNull);
           expect(articleRepository.updatedArticle!.currentScrollOffset, 0.75);
         },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'no-op when no article in state',
+        build: buildBloc,
+        seed: () => const ReaderState(status: ReaderStatus.ready),
+        act: (bloc) => bloc.add(
+          const ReaderArticlePositionUpdated(scrollOffset: 0.75),
+        ),
+        wait: const Duration(seconds: 3),
+        verify: (_) => expect(articleRepository.updatedArticle, isNull),
       );
     });
 

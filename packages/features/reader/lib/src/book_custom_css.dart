@@ -1,5 +1,6 @@
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+
+import 'reader_color_utils.dart';
 
 /// Builds unified CSS overlayed on top of foliate-js defaults and EPUB
 /// publisher CSS. Controls typography scale, link/blockquote/code treatment
@@ -10,9 +11,9 @@ String buildBookCustomCSS({
   required ReaderThemeData theme,
   required bool invertImagesInDark,
 }) {
-  final accent = _hex(theme.accentColor);
-  final divider = _hex(theme.dividerColor);
-  final panel = _hex(theme.panelColor);
+  final accent = colorToHex(theme.accentColor);
+  final divider = colorToHex(theme.dividerColor);
+  final panel = colorToHex(theme.panelColor);
   final isDark = theme.backgroundColor.computeLuminance() < 0.5;
 
   final buffer = StringBuffer();
@@ -45,13 +46,4 @@ String buildBookCustomCSS({
     );
   }
   return buffer.toString();
-}
-
-String _hex(Color color) {
-  final r = (color.r * 255.0).round().clamp(0, 255);
-  final g = (color.g * 255.0).round().clamp(0, 255);
-  final b = (color.b * 255.0).round().clamp(0, 255);
-  return '#${r.toRadixString(16).padLeft(2, '0')}'
-      '${g.toRadixString(16).padLeft(2, '0')}'
-      '${b.toRadixString(16).padLeft(2, '0')}';
 }

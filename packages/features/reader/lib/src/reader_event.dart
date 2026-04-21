@@ -16,24 +16,26 @@ final class ReaderSourceLoadRequested extends ReaderEvent {
   List<Object?> get props => [sourceId];
 }
 
-final class ReaderPositionUpdated extends ReaderEvent {
-  const ReaderPositionUpdated({
-    this.cfi,
-    this.progress,
-    this.scrollOffset,
+final class ReaderBookPositionUpdated extends ReaderEvent {
+  const ReaderBookPositionUpdated({
+    required this.cfi,
+    required this.progress,
   });
 
-  /// Book: CFI string from foliate-js.
-  final String? cfi;
-
-  /// Book: overall reading progress in [0, 1].
-  final double? progress;
-
-  /// Article: scroll fraction in [0, 1].
-  final double? scrollOffset;
+  final String cfi;
+  final double progress;
 
   @override
-  List<Object?> get props => [cfi, progress, scrollOffset];
+  List<Object?> get props => [cfi, progress];
+}
+
+final class ReaderArticlePositionUpdated extends ReaderEvent {
+  const ReaderArticlePositionUpdated({required this.scrollOffset});
+
+  final double scrollOffset;
+
+  @override
+  List<Object?> get props => [scrollOffset];
 }
 
 final class ReaderHighlightsRefreshed extends ReaderEvent {

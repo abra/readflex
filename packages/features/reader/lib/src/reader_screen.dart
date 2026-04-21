@@ -12,6 +12,7 @@ import 'package:shared/shared.dart';
 import 'book_custom_css.dart';
 import 'reader_bloc.dart';
 import 'reader_chrome_cubit.dart';
+import 'reader_color_utils.dart';
 import 'reader_review_reminder_cubit.dart';
 import 'reader_selection_cubit.dart';
 
@@ -21,6 +22,27 @@ const _kContextPanelHeight = 80.0;
 /// Duration and curve for the top/bottom chrome slide animation.
 const _kChromeAnimDuration = Duration(milliseconds: 200);
 const _kChromeAnimCurve = Curves.easeOutCubic;
+
+/// Carries the optional review-reminder and mini-review callbacks down the
+/// reader widget tree, eliminating prop drilling through 4+ layers.
+class _ReaderCallbacksScope extends InheritedWidget {
+  const _ReaderCallbacksScope({
+    required this.onCheckDueItems,
+    required this.onStartMiniReview,
+    required super.child,
+  });
+
+  final Future<int> Function(String sourceId)? onCheckDueItems;
+  final void Function(BuildContext context, String sourceId)? onStartMiniReview;
+
+  static _ReaderCallbacksScope? of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_ReaderCallbacksScope>();
+
+  @override
+  bool updateShouldNotify(_ReaderCallbacksScope old) =>
+      onCheckDueItems != old.onCheckDueItems ||
+      onStartMiniReview != old.onStartMiniReview;
+}
 
 class ReaderScreen extends StatelessWidget {
   const ReaderScreen({
@@ -48,23 +70,25 @@ class ReaderScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     debugLogScreenBuild('ReaderScreen(sourceId: $sourceId)');
 
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(
-          create: (_) => ReaderBloc(
-            bookRepository: bookRepository,
-            articleRepository: articleRepository,
-            highlightRepository: highlightRepository,
-          )..add(ReaderSourceLoadRequested(sourceId: sourceId)),
+    return _ReaderCallbacksScope(
+      onCheckDueItems: onCheckDueItems,
+      onStartMiniReview: onStartMiniReview,
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (_) => ReaderBloc(
+              bookRepository: bookRepository,
+              articleRepository: articleRepository,
+              highlightRepository: highlightRepository,
+            )..add(ReaderSourceLoadRequested(sourceId: sourceId)),
+          ),
+          BlocProvider(create: (_) => ReaderChromeCubit()),
+          BlocProvider(create: (_) => ReaderSelectionCubit()),
+        ],
+        child: _ReaderView(
+          serverPort: serverPort,
+          textActions: textActions,
         ),
-        BlocProvider(create: (_) => ReaderChromeCubit()),
-        BlocProvider(create: (_) => ReaderSelectionCubit()),
-      ],
-      child: _ReaderView(
-        serverPort: serverPort,
-        textActions: textActions,
-        onCheckDueItems: onCheckDueItems,
-        onStartMiniReview: onStartMiniReview,
       ),
     );
   }
@@ -74,14 +98,10 @@ class _ReaderView extends StatelessWidget {
   const _ReaderView({
     required this.serverPort,
     required this.textActions,
-    this.onCheckDueItems,
-    this.onStartMiniReview,
   });
 
   final int serverPort;
   final List<TextAction> textActions;
-  final Future<int> Function(String sourceId)? onCheckDueItems;
-  final void Function(BuildContext context, String sourceId)? onStartMiniReview;
 
   @override
   Widget build(BuildContext context) {
@@ -97,8 +117,6 @@ class _ReaderView extends StatelessWidget {
                 status: status,
                 serverPort: serverPort,
                 textActions: textActions,
-                onCheckDueItems: onCheckDueItems,
-                onStartMiniReview: onStartMiniReview,
               ),
             ),
           ),
@@ -114,15 +132,11 @@ class _ReaderBody extends StatelessWidget {
     required this.status,
     required this.serverPort,
     required this.textActions,
-    this.onCheckDueItems,
-    this.onStartMiniReview,
   });
 
   final ReaderStatus status;
   final int serverPort;
   final List<TextAction> textActions;
-  final Future<int> Function(String sourceId)? onCheckDueItems;
-  final void Function(BuildContext context, String sourceId)? onStartMiniReview;
 
   @override
   Widget build(BuildContext context) {
@@ -149,8 +163,6 @@ class _ReaderBody extends StatelessWidget {
         sourceId: context.read<ReaderBloc>().state.sourceId!,
         serverPort: serverPort,
         textActions: textActions,
-        onCheckDueItems: onCheckDueItems,
-        onStartMiniReview: onStartMiniReview,
       ),
     };
   }
@@ -325,27 +337,23 @@ class _ReadyContent extends StatelessWidget {
     required this.sourceId,
     required this.serverPort,
     required this.textActions,
-    this.onCheckDueItems,
-    this.onStartMiniReview,
   });
 
   final String sourceId;
   final int serverPort;
   final List<TextAction> textActions;
-  final Future<int> Function(String sourceId)? onCheckDueItems;
-  final void Function(BuildContext context, String sourceId)? onStartMiniReview;
 
   @override
   Widget build(BuildContext context) {
+    final callbacks = _ReaderCallbacksScope.of(context);
     return BlocProvider(
       create: (_) => ReaderReviewReminderCubit(
         sourceId: sourceId,
-        onCheckDueItems: onCheckDueItems,
+        onCheckDueItems: callbacks?.onCheckDueItems,
       ),
       child: _ReadyContentBody(
         serverPort: serverPort,
         textActions: textActions,
-        onStartMiniReview: onStartMiniReview,
       ),
     );
   }
@@ -355,12 +363,10 @@ class _ReadyContentBody extends StatelessWidget {
   const _ReadyContentBody({
     required this.serverPort,
     required this.textActions,
-    this.onStartMiniReview,
   });
 
   final int serverPort;
   final List<TextAction> textActions;
-  final void Function(BuildContext context, String sourceId)? onStartMiniReview;
 
   @override
   Widget build(BuildContext context) {
@@ -384,7 +390,7 @@ class _ReadyContentBody extends StatelessWidget {
           readerTheme: readerTheme,
           textActions: textActions,
         ),
-        _ReviewReminderDriver(onStartMiniReview: onStartMiniReview),
+        const _ReviewReminderDriver(),
       ],
     );
   }
@@ -450,6 +456,8 @@ class _ContextPanelDriver extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    final bloc = context.read<ReaderBloc>();
+
     return Positioned(
       left: 0,
       right: 0,
@@ -465,6 +473,12 @@ class _ContextPanelDriver extends StatelessWidget {
         panelColor: readerTheme.panelColor,
         iconColor: readerTheme.primaryTextColor,
         dividerColor: readerTheme.dividerColor,
+        onActionCompleted: () {
+          if (!bloc.isClosed) bloc.add(const ReaderHighlightsRefreshed());
+        },
+        onActionError: (e, st) {
+          if (!bloc.isClosed) bloc.reportError(e, st);
+        },
       ),
     );
   }
@@ -473,9 +487,7 @@ class _ContextPanelDriver extends StatelessWidget {
 /// Renders the review reminder banner when [ReaderReviewReminderCubit] reports
 /// due items. Positions itself above the context panel when text is selected.
 class _ReviewReminderDriver extends StatelessWidget {
-  const _ReviewReminderDriver({this.onStartMiniReview});
-
-  final void Function(BuildContext context, String sourceId)? onStartMiniReview;
+  const _ReviewReminderDriver();
 
   @override
   Widget build(BuildContext context) {
@@ -492,6 +504,9 @@ class _ReviewReminderDriver extends StatelessWidget {
       (b) => b.state.sourceId,
     );
     final reminderCubit = context.read<ReaderReviewReminderCubit>();
+    final onStartMiniReview = _ReaderCallbacksScope.of(
+      context,
+    )?.onStartMiniReview;
 
     return Positioned(
       left: AppSpacing.md,
@@ -536,11 +551,11 @@ class _ReaderWebViewBody extends StatelessWidget {
         .toList();
 
     final articleStyle = ReaderStyle(
-      textColor: _colorToHex(readerTheme.primaryTextColor),
-      bgColor: _colorToHex(readerTheme.backgroundColor),
-      accentColor: _colorToHex(readerTheme.accentColor),
-      secondaryColor: _colorToHex(readerTheme.secondaryTextColor),
-      dividerColor: _colorToHex(readerTheme.dividerColor),
+      textColor: colorToHex(readerTheme.primaryTextColor),
+      bgColor: colorToHex(readerTheme.backgroundColor),
+      accentColor: colorToHex(readerTheme.accentColor),
+      secondaryColor: colorToHex(readerTheme.secondaryTextColor),
+      dividerColor: colorToHex(readerTheme.dividerColor),
     );
 
     void onTapped(double x, double y) => chromeCubit.toggle();
@@ -554,10 +569,12 @@ class _ReaderWebViewBody extends StatelessWidget {
         style: articleStyle,
         highlights: highlights,
         onPositionChanged: (fraction) {
-          bloc.add(
-            ReaderPositionUpdated(scrollOffset: fraction, progress: fraction),
-          );
+          bloc.add(ReaderArticlePositionUpdated(scrollOffset: fraction));
         },
+        onLoadError: () => bloc.reportError(
+          StateError('Article HTML failed to load from reader server'),
+          StackTrace.current,
+        ),
         onTextSelected: (selection) {
           chromeCubit.hide();
           selectionCubit.select(
@@ -596,8 +613,8 @@ class _ReaderWebViewBody extends StatelessWidget {
         sideMargin: layout.sideMargin,
         justify: layout.justify,
         hyphenate: layout.hyphenate,
-        fontColor: _colorToHex(readerTheme.primaryTextColor),
-        backgroundColor: _colorToHex(readerTheme.backgroundColor),
+        fontColor: colorToHex(readerTheme.primaryTextColor),
+        backgroundColor: colorToHex(readerTheme.backgroundColor),
         customCSS: customCSS,
         customCSSEnabled: true,
         overrideFont: appearance.overrideFont,
@@ -607,7 +624,10 @@ class _ReaderWebViewBody extends StatelessWidget {
       highlights: highlights,
       onPositionChanged: (position) {
         bloc.add(
-          ReaderPositionUpdated(cfi: position.cfi, progress: position.fraction),
+          ReaderBookPositionUpdated(
+            cfi: position.cfi,
+            progress: position.fraction,
+          ),
         );
       },
       onTextSelected: (selection) {
@@ -623,15 +643,6 @@ class _ReaderWebViewBody extends StatelessWidget {
   }
 }
 
-String _colorToHex(Color color) {
-  final r = (color.r * 255.0).round().clamp(0, 255);
-  final g = (color.g * 255.0).round().clamp(0, 255);
-  final b = (color.b * 255.0).round().clamp(0, 255);
-  return '#${r.toRadixString(16).padLeft(2, '0')}'
-      '${g.toRadixString(16).padLeft(2, '0')}'
-      '${b.toRadixString(16).padLeft(2, '0')}';
-}
-
 class _ContextPanel extends StatelessWidget {
   const _ContextPanel({
     required this.selectedText,
@@ -641,6 +652,8 @@ class _ContextPanel extends StatelessWidget {
     required this.panelColor,
     required this.iconColor,
     required this.dividerColor,
+    required this.onActionCompleted,
+    required this.onActionError,
     this.selectionCfiRange,
     this.selectionPageNumber,
     this.selectionScrollOffset,
@@ -653,6 +666,8 @@ class _ContextPanel extends StatelessWidget {
   final Color panelColor;
   final Color iconColor;
   final Color dividerColor;
+  final VoidCallback onActionCompleted;
+  final void Function(Object error, StackTrace stack) onActionError;
   final String? selectionCfiRange;
   final int? selectionPageNumber;
   final double? selectionScrollOffset;
@@ -680,20 +695,21 @@ class _ContextPanel extends StatelessWidget {
                   icon: Icon(action.icon, color: iconColor),
                   tooltip: action.label,
                   onPressed: () async {
-                    final bloc = context.read<ReaderBloc>();
-                    await action.onExecute(
-                      context,
-                      TextSelectionContext(
-                        selectedText: selectedText,
-                        sourceId: sourceId,
-                        sourceType: sourceType,
-                        cfiRange: selectionCfiRange,
-                        pageNumber: selectionPageNumber,
-                        scrollOffset: selectionScrollOffset,
-                      ),
-                    );
-                    if (!bloc.isClosed) {
-                      bloc.add(const ReaderHighlightsRefreshed());
+                    try {
+                      await action.onExecute(
+                        context,
+                        TextSelectionContext(
+                          selectedText: selectedText,
+                          sourceId: sourceId,
+                          sourceType: sourceType,
+                          cfiRange: selectionCfiRange,
+                          pageNumber: selectionPageNumber,
+                          scrollOffset: selectionScrollOffset,
+                        ),
+                      );
+                      onActionCompleted();
+                    } catch (e, st) {
+                      onActionError(e, st);
                     }
                   },
                 );
