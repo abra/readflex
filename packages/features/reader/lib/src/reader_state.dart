@@ -20,7 +20,9 @@ class ReaderState extends Equatable {
   final List<Highlight> highlights;
 
   String? get sourceId => book?.id ?? article?.id;
+
   bool get isBook => sourceType == SourceType.book;
+
   bool get isArticle => sourceType == SourceType.article;
 
   static const _absent = Object();
