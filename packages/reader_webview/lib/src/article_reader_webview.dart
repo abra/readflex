@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import 'reader_bridge.dart';
+import 'reader_common_handlers.dart';
 
 /// WebView-based article reader.
 ///
@@ -114,14 +114,9 @@ class _ArticleReaderWebViewState extends State<ArticleReaderWebView> {
   Widget build(BuildContext context) {
     return InAppWebView(
       initialUrlRequest: URLRequest(url: WebUri(_baseUrl)),
-      initialSettings: InAppWebViewSettings(
-        supportZoom: false,
-        transparentBackground: true,
-        isInspectable: kDebugMode,
-        useHybridComposition: true,
-        javaScriptEnabled: true,
-        // Page is served from http://127.0.0.1 but article images are
-        // https://. Android WebView blocks this by default.
+      // Page is served from http://127.0.0.1 but article images are
+      // https://. Android WebView blocks this by default.
+      initialSettings: baseReaderSettings(
         mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
       ),
       onWebViewCreated: _onWebViewCreated,
@@ -157,23 +152,6 @@ class _ArticleReaderWebViewState extends State<ArticleReaderWebView> {
     );
 
     controller.addJavaScriptHandler(
-      handlerName: 'onSelectionEnd',
-      callback: (args) {
-        if (args.isEmpty) return;
-        final data = args.first as Map<String, dynamic>;
-        final selection = ReaderSelection.fromMap(data);
-        widget.onTextSelected?.call(selection);
-      },
-    );
-
-    controller.addJavaScriptHandler(
-      handlerName: 'onSelectionCleared',
-      callback: (_) {
-        widget.onTextDeselected?.call();
-      },
-    );
-
-    controller.addJavaScriptHandler(
       handlerName: 'onHighlightTap',
       callback: (args) {
         if (args.isEmpty) return;
@@ -183,16 +161,11 @@ class _ArticleReaderWebViewState extends State<ArticleReaderWebView> {
       },
     );
 
-    controller.addJavaScriptHandler(
-      handlerName: 'onClick',
-      callback: (args) {
-        if (args.isEmpty) return;
-        final data = args.first as Map<String, dynamic>;
-        final x = (data['x'] as num?)?.toDouble();
-        final y = (data['y'] as num?)?.toDouble();
-        if (x == null || y == null) return;
-        widget.onTapped?.call(x, y);
-      },
+    registerSharedReaderHandlers(
+      controller,
+      onTextSelected: widget.onTextSelected,
+      onTextDeselected: widget.onTextDeselected,
+      onTapped: widget.onTapped,
     );
   }
 

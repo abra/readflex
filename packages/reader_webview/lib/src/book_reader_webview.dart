@@ -1,10 +1,10 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import 'reader_bridge.dart';
+import 'reader_common_handlers.dart';
 
 /// WebView-based book reader backed by foliate-js.
 ///
@@ -159,13 +159,7 @@ class _BookReaderWebViewState extends State<BookReaderWebView> {
   Widget build(BuildContext context) {
     return InAppWebView(
       initialUrlRequest: URLRequest(url: WebUri(_indexUrl)),
-      initialSettings: InAppWebViewSettings(
-        supportZoom: false,
-        transparentBackground: true,
-        isInspectable: kDebugMode,
-        useHybridComposition: true,
-        javaScriptEnabled: true,
-      ),
+      initialSettings: baseReaderSettings(),
       onWebViewCreated: _onWebViewCreated,
     );
   }
@@ -196,23 +190,6 @@ class _BookReaderWebViewState extends State<BookReaderWebView> {
     );
 
     controller.addJavaScriptHandler(
-      handlerName: 'onSelectionEnd',
-      callback: (args) {
-        if (args.isEmpty) return;
-        final data = args.first as Map<String, dynamic>;
-        final selection = ReaderSelection.fromMap(data);
-        widget.onTextSelected?.call(selection);
-      },
-    );
-
-    controller.addJavaScriptHandler(
-      handlerName: 'onSelectionCleared',
-      callback: (_) {
-        widget.onTextDeselected?.call();
-      },
-    );
-
-    controller.addJavaScriptHandler(
       handlerName: 'onAnnotationClick',
       callback: (args) {
         if (args.isEmpty) return;
@@ -223,16 +200,11 @@ class _BookReaderWebViewState extends State<BookReaderWebView> {
       },
     );
 
-    controller.addJavaScriptHandler(
-      handlerName: 'onClick',
-      callback: (args) {
-        if (args.isEmpty) return;
-        final data = args.first as Map<String, dynamic>;
-        final x = (data['x'] as num?)?.toDouble();
-        final y = (data['y'] as num?)?.toDouble();
-        if (x == null || y == null) return;
-        widget.onTapped?.call(x, y);
-      },
+    registerSharedReaderHandlers(
+      controller,
+      onTextSelected: widget.onTextSelected,
+      onTextDeselected: widget.onTextDeselected,
+      onTapped: widget.onTapped,
     );
   }
 
