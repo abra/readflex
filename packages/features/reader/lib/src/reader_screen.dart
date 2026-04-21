@@ -86,7 +86,13 @@ class _ReaderView extends StatelessWidget {
           Positioned.fill(
             child: BlocSelector<ReaderBloc, ReaderState, ReaderStatus>(
               selector: (state) => state.status,
-              builder: (context, status) => _buildBody(context, status),
+              builder: (context, status) => _ReaderBody(
+                status: status,
+                serverPort: serverPort,
+                textActions: textActions,
+                onCheckDueItems: onCheckDueItems,
+                onStartMiniReview: onStartMiniReview,
+              ),
             ),
           ),
 
@@ -110,8 +116,25 @@ class _ReaderView extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildBody(BuildContext context, ReaderStatus status) {
+class _ReaderBody extends StatelessWidget {
+  const _ReaderBody({
+    required this.status,
+    required this.serverPort,
+    required this.textActions,
+    this.onCheckDueItems,
+    this.onStartMiniReview,
+  });
+
+  final ReaderStatus status;
+  final int serverPort;
+  final List<TextAction> textActions;
+  final Future<int> Function(String sourceId)? onCheckDueItems;
+  final void Function(BuildContext context, String sourceId)? onStartMiniReview;
+
+  @override
+  Widget build(BuildContext context) {
     return switch (status) {
       ReaderStatus.initial || ReaderStatus.loading => const Center(
         child: CircularProgressIndicator(),
@@ -429,134 +452,6 @@ class _ReadyContentState extends State<_ReadyContent> {
     }
   }
 
-  /// Handles a WebView tap: toggles reader chrome visibility.
-  /// Coordinates are normalized to [0, 1] but currently unused — any tap
-  /// toggles chrome; page turns are handled by foliate-js swipes.
-  void _onReaderTapped(double x, double y) {
-    context.read<ReaderBloc>().add(const ReaderChromeToggled());
-  }
-
-  Widget _buildReaderBody(BuildContext context, ReaderThemeData readerTheme) {
-    final state = context.read<ReaderBloc>().state;
-    final bloc = context.read<ReaderBloc>();
-    final highlights = state.highlights
-        .map(
-          (h) => ReaderHighlight(
-            id: h.id,
-            text: h.text,
-            cfiRange: h.cfiRange,
-          ),
-        )
-        .toList();
-
-    final articleStyle = ReaderStyle(
-      textColor: _colorToHex(readerTheme.primaryTextColor),
-      bgColor: _colorToHex(readerTheme.backgroundColor),
-      accentColor: _colorToHex(readerTheme.accentColor),
-      secondaryColor: _colorToHex(readerTheme.secondaryTextColor),
-      dividerColor: _colorToHex(readerTheme.dividerColor),
-    );
-
-    if (state.isArticle) {
-      return ArticleReaderWebView(
-        key: ValueKey(state.article?.id),
-        serverPort: widget.serverPort,
-        articleId: state.article!.id,
-        initialScrollFraction: state.article?.currentScrollOffset,
-        style: articleStyle,
-        highlights: highlights,
-        onPositionChanged: (fraction) {
-          bloc.add(
-            ReaderPositionUpdated(
-              scrollOffset: fraction,
-              progress: fraction,
-            ),
-          );
-        },
-        onTextSelected: (selection) {
-          bloc.add(const ReaderChromeHidden());
-          bloc.add(
-            ReaderTextSelected(
-              selectedText: selection.text,
-              scrollOffset: selection.scrollOffset,
-            ),
-          );
-        },
-        onTextDeselected: () {
-          bloc.add(const ReaderTextDeselected());
-        },
-        onTapped: _onReaderTapped,
-      );
-    }
-
-    final appearance = PreferencesScope.readerAppearanceOf(context);
-    final fontPreset = ReaderFontPreset.fromId(appearance.fontId);
-    final layout = BookLayoutPreset.fromId(appearance.layoutId).data;
-    final customCSS = buildBookCustomCSS(
-      theme: readerTheme,
-      invertImagesInDark: appearance.invertImagesInDark,
-    );
-
-    return BookReaderWebView(
-      key: ValueKey(state.book?.id),
-      serverPort: widget.serverPort,
-      bookFilePath: state.book!.filePath,
-      initialCfi: state.book?.currentCfi,
-      foliateStyle: FoliateStyle(
-        fontName: fontPreset.fontFamily,
-        fontSize: layout.fontSize,
-        fontWeight: layout.fontWeight,
-        letterSpacing: layout.letterSpacing,
-        spacing: layout.lineHeight,
-        paragraphSpacing: layout.paragraphSpacing,
-        textIndent: layout.textIndent,
-        topMargin: layout.topMargin,
-        bottomMargin: layout.bottomMargin,
-        sideMargin: layout.sideMargin,
-        justify: layout.justify,
-        hyphenate: layout.hyphenate,
-        fontColor: _colorToHex(readerTheme.primaryTextColor),
-        backgroundColor: _colorToHex(readerTheme.backgroundColor),
-        customCSS: customCSS,
-        customCSSEnabled: true,
-        overrideFont: appearance.overrideFont,
-        overrideColor: appearance.overrideColor,
-        useBookLayout: appearance.useBookLayout,
-      ),
-      highlights: highlights,
-      onPositionChanged: (position) {
-        bloc.add(
-          ReaderPositionUpdated(
-            cfi: position.cfi,
-            progress: position.fraction,
-          ),
-        );
-      },
-      onTextSelected: (selection) {
-        bloc.add(const ReaderChromeHidden());
-        bloc.add(
-          ReaderTextSelected(
-            selectedText: selection.text,
-            cfiRange: selection.cfiRange,
-          ),
-        );
-      },
-      onTextDeselected: () {
-        bloc.add(const ReaderTextDeselected());
-      },
-      onTapped: _onReaderTapped,
-    );
-  }
-
-  static String _colorToHex(Color color) {
-    final r = (color.r * 255.0).round().clamp(0, 255);
-    final g = (color.g * 255.0).round().clamp(0, 255);
-    final b = (color.b * 255.0).round().clamp(0, 255);
-    return '#${r.toRadixString(16).padLeft(2, '0')}'
-        '${g.toRadixString(16).padLeft(2, '0')}'
-        '${b.toRadixString(16).padLeft(2, '0')}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final appearance = PreferencesScope.readerAppearanceOf(context);
@@ -569,7 +464,10 @@ class _ReadyContentState extends State<_ReadyContent> {
         // selection or review-reminder state changes.
         ColoredBox(
           color: readerTheme.backgroundColor,
-          child: _buildReaderBody(context, readerTheme),
+          child: _ReaderWebViewBody(
+            serverPort: widget.serverPort,
+            readerTheme: readerTheme,
+          ),
         ),
 
         // Bottom chrome: progress bar + controls. Slides up when chromeVisible.
@@ -663,6 +561,142 @@ class _ReadyContentState extends State<_ReadyContent> {
       ],
     );
   }
+}
+
+class _ReaderWebViewBody extends StatelessWidget {
+  const _ReaderWebViewBody({
+    required this.serverPort,
+    required this.readerTheme,
+  });
+
+  final int serverPort;
+  final ReaderThemeData readerTheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final bloc = context.read<ReaderBloc>();
+    final state = bloc.state;
+    final highlights = state.highlights
+        .map(
+          (h) => ReaderHighlight(
+            id: h.id,
+            text: h.text,
+            cfiRange: h.cfiRange,
+          ),
+        )
+        .toList();
+
+    final articleStyle = ReaderStyle(
+      textColor: _colorToHex(readerTheme.primaryTextColor),
+      bgColor: _colorToHex(readerTheme.backgroundColor),
+      accentColor: _colorToHex(readerTheme.accentColor),
+      secondaryColor: _colorToHex(readerTheme.secondaryTextColor),
+      dividerColor: _colorToHex(readerTheme.dividerColor),
+    );
+
+    void onTapped(double x, double y) {
+      bloc.add(const ReaderChromeToggled());
+    }
+
+    if (state.isArticle) {
+      return ArticleReaderWebView(
+        key: ValueKey(state.article?.id),
+        serverPort: serverPort,
+        articleId: state.article!.id,
+        initialScrollFraction: state.article?.currentScrollOffset,
+        style: articleStyle,
+        highlights: highlights,
+        onPositionChanged: (fraction) {
+          bloc.add(
+            ReaderPositionUpdated(
+              scrollOffset: fraction,
+              progress: fraction,
+            ),
+          );
+        },
+        onTextSelected: (selection) {
+          bloc.add(const ReaderChromeHidden());
+          bloc.add(
+            ReaderTextSelected(
+              selectedText: selection.text,
+              scrollOffset: selection.scrollOffset,
+            ),
+          );
+        },
+        onTextDeselected: () {
+          bloc.add(const ReaderTextDeselected());
+        },
+        onTapped: onTapped,
+      );
+    }
+
+    final appearance = PreferencesScope.readerAppearanceOf(context);
+    final fontPreset = ReaderFontPreset.fromId(appearance.fontId);
+    final layout = BookLayoutPreset.fromId(appearance.layoutId).data;
+    final customCSS = buildBookCustomCSS(
+      theme: readerTheme,
+      invertImagesInDark: appearance.invertImagesInDark,
+    );
+
+    return BookReaderWebView(
+      key: ValueKey(state.book?.id),
+      serverPort: serverPort,
+      bookFilePath: state.book!.filePath,
+      initialCfi: state.book?.currentCfi,
+      foliateStyle: FoliateStyle(
+        fontName: fontPreset.fontFamily,
+        fontSize: layout.fontSize,
+        fontWeight: layout.fontWeight,
+        letterSpacing: layout.letterSpacing,
+        spacing: layout.lineHeight,
+        paragraphSpacing: layout.paragraphSpacing,
+        textIndent: layout.textIndent,
+        topMargin: layout.topMargin,
+        bottomMargin: layout.bottomMargin,
+        sideMargin: layout.sideMargin,
+        justify: layout.justify,
+        hyphenate: layout.hyphenate,
+        fontColor: _colorToHex(readerTheme.primaryTextColor),
+        backgroundColor: _colorToHex(readerTheme.backgroundColor),
+        customCSS: customCSS,
+        customCSSEnabled: true,
+        overrideFont: appearance.overrideFont,
+        overrideColor: appearance.overrideColor,
+        useBookLayout: appearance.useBookLayout,
+      ),
+      highlights: highlights,
+      onPositionChanged: (position) {
+        bloc.add(
+          ReaderPositionUpdated(
+            cfi: position.cfi,
+            progress: position.fraction,
+          ),
+        );
+      },
+      onTextSelected: (selection) {
+        bloc.add(const ReaderChromeHidden());
+        bloc.add(
+          ReaderTextSelected(
+            selectedText: selection.text,
+            cfiRange: selection.cfiRange,
+          ),
+        );
+      },
+      onTextDeselected: () {
+        bloc.add(const ReaderTextDeselected());
+      },
+      onTapped: onTapped,
+    );
+  }
+}
+
+String _colorToHex(Color color) {
+  final r = (color.r * 255.0).round().clamp(0, 255);
+  final g = (color.g * 255.0).round().clamp(0, 255);
+  final b = (color.b * 255.0).round().clamp(0, 255);
+  return '#${r.toRadixString(16).padLeft(2, '0')}'
+      '${g.toRadixString(16).padLeft(2, '0')}'
+      '${b.toRadixString(16).padLeft(2, '0')}';
 }
 
 class _ContextPanel extends StatelessWidget {
