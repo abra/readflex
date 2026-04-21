@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
@@ -14,6 +12,7 @@ import 'package:shared/shared.dart';
 import 'book_custom_css.dart';
 import 'reader_bloc.dart';
 import 'reader_chrome_cubit.dart';
+import 'reader_review_reminder_cubit.dart';
 import 'reader_selection_cubit.dart';
 
 /// Approximate height of the context panel, used to offset the review banner.
@@ -321,7 +320,7 @@ class _ReaderBottomChrome extends StatelessWidget {
   }
 }
 
-class _ReadyContent extends StatefulWidget {
+class _ReadyContent extends StatelessWidget {
   const _ReadyContent({
     required this.sourceId,
     required this.serverPort,
@@ -337,48 +336,31 @@ class _ReadyContent extends StatefulWidget {
   final void Function(BuildContext context, String sourceId)? onStartMiniReview;
 
   @override
-  State<_ReadyContent> createState() => _ReadyContentState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => ReaderReviewReminderCubit(
+        sourceId: sourceId,
+        onCheckDueItems: onCheckDueItems,
+      ),
+      child: _ReadyContentBody(
+        serverPort: serverPort,
+        textActions: textActions,
+        onStartMiniReview: onStartMiniReview,
+      ),
+    );
+  }
 }
 
-class _ReadyContentState extends State<_ReadyContent> {
-  // 5-minute interval balances responsiveness with avoiding excessive DB
-  // queries while reading. An initial check runs on load for items already due.
-  static const _checkInterval = Duration(minutes: 5);
-  Timer? _dueCheckTimer;
-  bool _showReminder = false;
+class _ReadyContentBody extends StatelessWidget {
+  const _ReadyContentBody({
+    required this.serverPort,
+    required this.textActions,
+    this.onStartMiniReview,
+  });
 
-  @override
-  void initState() {
-    super.initState();
-    _scheduleCheckDueItems();
-  }
-
-  @override
-  void dispose() {
-    _dueCheckTimer?.cancel();
-    super.dispose();
-  }
-
-  void _scheduleCheckDueItems() {
-    final onCheck = widget.onCheckDueItems;
-    if (onCheck == null) return;
-
-    final sourceId = widget.sourceId;
-    _checkDueItems(onCheck, sourceId);
-    _dueCheckTimer = Timer.periodic(_checkInterval, (_) {
-      _checkDueItems(onCheck, sourceId);
-    });
-  }
-
-  Future<void> _checkDueItems(
-    Future<int> Function(String) onCheck,
-    String sourceId,
-  ) async {
-    final count = await onCheck(sourceId);
-    if (count > 0 && mounted) {
-      setState(() => _showReminder = true);
-    }
-  }
+  final int serverPort;
+  final List<TextAction> textActions;
+  final void Function(BuildContext context, String sourceId)? onStartMiniReview;
 
   @override
   Widget build(BuildContext context) {
@@ -393,20 +375,16 @@ class _ReadyContentState extends State<_ReadyContent> {
         ColoredBox(
           color: readerTheme.backgroundColor,
           child: _ReaderWebViewBody(
-            serverPort: widget.serverPort,
+            serverPort: serverPort,
             readerTheme: readerTheme,
           ),
         ),
         _BottomChromeDriver(readerTheme: readerTheme),
         _ContextPanelDriver(
           readerTheme: readerTheme,
-          textActions: widget.textActions,
+          textActions: textActions,
         ),
-        _ReviewReminderDriver(
-          show: _showReminder,
-          onDismiss: () => setState(() => _showReminder = false),
-          onStartMiniReview: widget.onStartMiniReview,
-        ),
+        _ReviewReminderDriver(onStartMiniReview: onStartMiniReview),
       ],
     );
   }
@@ -492,21 +470,19 @@ class _ContextPanelDriver extends StatelessWidget {
   }
 }
 
-/// Renders the review reminder banner when [show] is true. Positions itself
-/// above the context panel when text is selected.
+/// Renders the review reminder banner when [ReaderReviewReminderCubit] reports
+/// due items. Positions itself above the context panel when text is selected.
 class _ReviewReminderDriver extends StatelessWidget {
-  const _ReviewReminderDriver({
-    required this.show,
-    required this.onDismiss,
-    this.onStartMiniReview,
-  });
+  const _ReviewReminderDriver({this.onStartMiniReview});
 
-  final bool show;
-  final VoidCallback onDismiss;
   final void Function(BuildContext context, String sourceId)? onStartMiniReview;
 
   @override
   Widget build(BuildContext context) {
+    final show = context.select<ReaderReviewReminderCubit, bool>(
+      (c) => c.state.showReminder,
+    );
+
     if (!show) return const SizedBox.shrink();
 
     final hasSelection = context.select<ReaderSelectionCubit, bool>(
@@ -515,6 +491,7 @@ class _ReviewReminderDriver extends StatelessWidget {
     final sourceId = context.select<ReaderBloc, String?>(
       (b) => b.state.sourceId,
     );
+    final reminderCubit = context.read<ReaderReviewReminderCubit>();
 
     return Positioned(
       left: AppSpacing.md,
@@ -522,12 +499,12 @@ class _ReviewReminderDriver extends StatelessWidget {
       bottom: hasSelection ? _kContextPanelHeight : AppSpacing.md,
       child: _ReviewReminderBanner(
         onReview: () {
-          onDismiss();
+          reminderCubit.dismiss();
           if (sourceId != null) {
             onStartMiniReview?.call(context, sourceId);
           }
         },
-        onDismiss: onDismiss,
+        onDismiss: reminderCubit.dismiss,
       ),
     );
   }
