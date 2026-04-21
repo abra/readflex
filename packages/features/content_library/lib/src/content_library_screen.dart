@@ -234,7 +234,6 @@ class _LibraryHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final visibleCount = state.visibleItems.length;
 
     // Demo uses literals 20/16/12/4/…; project convention is to stick to
     // AppSpacing tokens, so we take the nearest token in each slot.
@@ -273,21 +272,16 @@ class _LibraryHeader extends StatelessWidget {
             onChanged: onSearchChanged,
           ),
           const SizedBox(height: AppSpacing.lg),
-          _FilterSegments(
-            active: state.filter,
-            onChanged: onFilterChanged,
-          ),
-          const SizedBox(height: AppSpacing.md),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                '$visibleCount results',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: colors.onSurface.withValues(alpha: 0.55),
+              Expanded(
+                child: _FilterSegments(
+                  active: state.filter,
+                  onChanged: onFilterChanged,
                 ),
               ),
+              const SizedBox(width: AppSpacing.sm),
               const _LayoutToggle(),
             ],
           ),
@@ -315,7 +309,7 @@ class _FilterSegments extends StatelessWidget {
     // 6 (→ xs=4), padding H14 (→ md=12), radius 16 (→ AppRadius.lg).
     // Active pill uses onSurface/surface, inactive uses secondary/onSecondary.
     return SizedBox(
-      height: AppSizes.iconButtonSize,
+      height: AppSizes.chipHeight,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: ContentLibraryFilter.values.length,
@@ -329,14 +323,14 @@ class _FilterSegments extends StatelessWidget {
             child: Ink(
               decoration: BoxDecoration(
                 color: selected ? colors.onSurface : colors.secondary,
-                borderRadius: BorderRadius.circular(AppRadius.lg),
+                borderRadius: BorderRadius.circular(AppRadius.full),
               ),
               child: InkWell(
-                borderRadius: BorderRadius.circular(AppRadius.lg),
+                borderRadius: BorderRadius.circular(AppRadius.full),
                 onTap: () => onChanged(filter),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(
-                    minHeight: AppSizes.iconButtonSize,
+                    minHeight: AppSizes.chipHeight,
                   ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -346,7 +340,7 @@ class _FilterSegments extends StatelessWidget {
                       child: Text(
                         _labelFor(filter),
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: FontWeight.w500,
                           color: selected ? colors.surface : colors.onSecondary,
                         ),
@@ -428,8 +422,8 @@ class _LayoutToggleButton extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppRadius.sm),
           child: SizedBox(
-            width: AppSizes.iconButtonSize,
-            height: AppSizes.iconButtonSize,
+            width: AppSizes.chipHeight,
+            height: AppSizes.chipHeight,
             child: Center(
               child: Icon(
                 icon,
