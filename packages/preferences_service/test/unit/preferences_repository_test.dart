@@ -22,7 +22,7 @@ void main() {
       final prefs = await repo.load(_supportedCodes);
 
       expect(prefs.themeMode, ThemeMode.system);
-      expect(prefs.contentLibraryLayoutMode, 'grid');
+      expect(prefs.catalogLayoutMode, 'grid');
       expect(prefs.readerThemeId, 'paper');
       expect(prefs.readerFontId, 'serif');
       expect(prefs.readerLayoutId, 'standard');
@@ -41,7 +41,7 @@ void main() {
       const source = Preferences(
         themeMode: ThemeMode.dark,
         locale: Locale('ru'),
-        contentLibraryLayoutMode: 'list',
+        catalogLayoutMode: 'list',
         readerThemeId: 'night',
         readerFontId: 'geist',
         readerLayoutId: 'comfortable',
@@ -96,7 +96,7 @@ void main() {
           jsonEncode(<String, Object?>{
             'themeMode': 'dark',
             'locale': 'en',
-            'contentLibraryLayoutMode': 'grid',
+            'catalogLayoutMode': 'grid',
             'readerThemeId': 'paper',
             'readerFontId': 'serif',
             'readerTextScale': 1.0,

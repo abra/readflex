@@ -2,10 +2,10 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 
-import 'content_library_item_widgets.dart';
+import 'catalog_item_widgets.dart';
 
-class ContentLibraryGridView extends StatelessWidget {
-  const ContentLibraryGridView({
+class CatalogListView extends StatelessWidget {
+  const CatalogListView({
     required this.items,
     required this.onBookPressed,
     required this.onArticlePressed,
@@ -18,9 +18,10 @@ class ContentLibraryGridView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 3-column grid. Aspect ratio accommodates cover (2:3 proportion)
-    // plus progress bar, 2-line title, and author/site below it.
-    return GridView.builder(
+    // Demo uses ListView.builder with per-row bottom borders (no
+    // Divider/SizedBox separators) so the last row draws no extra line
+    // under it. We replicate that by passing `showDivider` to each tile.
+    return ListView.builder(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         0,
@@ -28,22 +29,19 @@ class ContentLibraryGridView extends StatelessWidget {
         AppSpacing.xxl,
       ),
       physics: const AlwaysScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisSpacing: 0,
-        crossAxisSpacing: AppSpacing.md,
-        childAspectRatio: 0.48,
-      ),
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
+        final showDivider = index < items.length - 1;
         return switch (item) {
-          Book book => BookLibraryGridTile(
+          Book book => BookLibraryListTile(
             book: book,
+            showDivider: showDivider,
             onTap: () => onBookPressed(book),
           ),
-          Article article => ArticleLibraryGridTile(
+          Article article => ArticleLibraryListTile(
             article: article,
+            showDivider: showDivider,
             onTap: () => onArticlePressed(article),
           ),
           _ => const SizedBox.shrink(),

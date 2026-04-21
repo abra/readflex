@@ -57,8 +57,8 @@ dependencies:
     path: packages/reader_webview
 
   # Feature packages
-  content_library:
-    path: packages/features/content_library
+  catalog:
+    path: packages/features/catalog
   import_flow:
     path: packages/features/import_flow
   home:

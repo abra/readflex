@@ -87,7 +87,7 @@ class Preferences {
   const Preferences({
     this.themeMode = ThemeMode.system,
     this.locale = const Locale('en'),
-    this.contentLibraryLayoutMode = 'grid',
+    this.catalogLayoutMode = 'grid',
     this.readerThemeId = 'paper',
     this.readerFontId = 'serif',
     this.readerLayoutId = 'standard',
@@ -103,7 +103,7 @@ class Preferences {
 
   final ThemeMode themeMode;
   final Locale locale;
-  final String contentLibraryLayoutMode;
+  final String catalogLayoutMode;
   final String readerThemeId;
   final String readerFontId;
   final String readerLayoutId;
@@ -136,7 +136,7 @@ class Preferences {
   Preferences copyWith({
     ThemeMode? themeMode,
     Locale? locale,
-    String? contentLibraryLayoutMode,
+    String? catalogLayoutMode,
     String? readerThemeId,
     String? readerFontId,
     String? readerLayoutId,
@@ -151,8 +151,7 @@ class Preferences {
   }) => Preferences(
     themeMode: themeMode ?? this.themeMode,
     locale: locale ?? this.locale,
-    contentLibraryLayoutMode:
-        contentLibraryLayoutMode ?? this.contentLibraryLayoutMode,
+    catalogLayoutMode: catalogLayoutMode ?? this.catalogLayoutMode,
     readerThemeId: readerThemeId ?? this.readerThemeId,
     readerFontId: readerFontId ?? this.readerFontId,
     readerLayoutId: readerLayoutId ?? this.readerLayoutId,
@@ -173,7 +172,7 @@ class Preferences {
       other is Preferences &&
           themeMode == other.themeMode &&
           locale == other.locale &&
-          contentLibraryLayoutMode == other.contentLibraryLayoutMode &&
+          catalogLayoutMode == other.catalogLayoutMode &&
           readerThemeId == other.readerThemeId &&
           readerFontId == other.readerFontId &&
           readerLayoutId == other.readerLayoutId &&
@@ -190,7 +189,7 @@ class Preferences {
   int get hashCode => Object.hashAll([
     themeMode,
     locale,
-    contentLibraryLayoutMode,
+    catalogLayoutMode,
     readerThemeId,
     readerFontId,
     readerLayoutId,

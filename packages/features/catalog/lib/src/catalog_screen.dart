@@ -7,14 +7,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:preferences_service/preferences_service.dart';
 
-import 'content_library_bloc.dart';
-import 'content_library_grid_view.dart';
-import 'content_library_layout_cubit.dart';
-import 'content_library_list_view.dart';
+import 'catalog_bloc.dart';
+import 'catalog_grid_view.dart';
+import 'catalog_layout_cubit.dart';
+import 'catalog_list_view.dart';
 
 /// Content library tab: shows all books and articles.
-class ContentLibraryScreen extends StatelessWidget {
-  const ContentLibraryScreen({
+class CatalogScreen extends StatelessWidget {
+  const CatalogScreen({
     required this.bookRepository,
     required this.articleRepository,
     required this.preferencesService,
@@ -33,23 +33,23 @@ class ContentLibraryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugLogScreenBuild('ContentLibraryScreen');
+    debugLogScreenBuild('CatalogScreen');
 
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (_) => ContentLibraryBloc(
+          create: (_) => CatalogBloc(
             bookRepository: bookRepository,
             articleRepository: articleRepository,
-          )..add(const ContentLibraryLoadRequested()),
+          )..add(const CatalogLoadRequested()),
         ),
         BlocProvider(
-          create: (_) => ContentLibraryLayoutCubit(
+          create: (_) => CatalogLayoutCubit(
             preferencesService: preferencesService,
           ),
         ),
       ],
-      child: ContentLibraryView(
+      child: LibraryView(
         onBookPressed: onBookPressed,
         onArticlePressed: onArticlePressed,
         onAddPressed: onAddPressed,
@@ -58,8 +58,8 @@ class ContentLibraryScreen extends StatelessWidget {
   }
 }
 
-class ContentLibraryView extends StatefulWidget {
-  const ContentLibraryView({
+class LibraryView extends StatefulWidget {
+  const LibraryView({
     required this.onBookPressed,
     required this.onArticlePressed,
     required this.onAddPressed,
@@ -71,10 +71,10 @@ class ContentLibraryView extends StatefulWidget {
   final AsyncCallback onAddPressed;
 
   @override
-  State<ContentLibraryView> createState() => _ContentLibraryViewState();
+  State<LibraryView> createState() => _LibraryViewState();
 }
 
-class _ContentLibraryViewState extends State<ContentLibraryView> {
+class _LibraryViewState extends State<LibraryView> {
   // Search field is a local controller + local state: the bloc only
   // needs to know about query changes (not every keystroke triggers a
   // new load), so we debounce by just emitting into the bloc on change.
@@ -95,16 +95,16 @@ class _ContentLibraryViewState extends State<ContentLibraryView> {
   Future<void> _handleAdd(BuildContext context) async {
     await widget.onAddPressed();
     if (!context.mounted) return;
-    context.read<ContentLibraryBloc>().add(
-      const ContentLibraryRefreshRequested(),
+    context.read<CatalogBloc>().add(
+      const CatalogRefreshRequested(),
     );
   }
 
   Future<void> _handleBookTap(BuildContext context, Book book) async {
     await widget.onBookPressed(book);
     if (!context.mounted) return;
-    context.read<ContentLibraryBloc>().add(
-      const ContentLibraryRefreshRequested(),
+    context.read<CatalogBloc>().add(
+      const CatalogRefreshRequested(),
     );
   }
 
@@ -114,8 +114,8 @@ class _ContentLibraryViewState extends State<ContentLibraryView> {
   ) async {
     await widget.onArticlePressed(article);
     if (!context.mounted) return;
-    context.read<ContentLibraryBloc>().add(
-      const ContentLibraryRefreshRequested(),
+    context.read<CatalogBloc>().add(
+      const CatalogRefreshRequested(),
     );
   }
 
@@ -134,33 +134,33 @@ class _ContentLibraryViewState extends State<ContentLibraryView> {
       ),
       body: SafeArea(
         bottom: false,
-        child: BlocBuilder<ContentLibraryBloc, ContentLibraryState>(
+        child: BlocBuilder<CatalogBloc, CatalogState>(
           buildWhen: (prev, curr) =>
               prev.status != curr.status ||
               prev.items != curr.items ||
               prev.filter != curr.filter ||
               prev.searchQuery != curr.searchQuery,
           builder: (context, state) {
-            final bloc = context.read<ContentLibraryBloc>();
+            final bloc = context.read<CatalogBloc>();
 
             return switch (state.status) {
-              ContentLibraryStatus.initial || ContentLibraryStatus.loading =>
+              CatalogStatus.initial || CatalogStatus.loading =>
                 const CenteredCircularProgressIndicator(),
-              ContentLibraryStatus.failure => ErrorState(
+              CatalogStatus.failure => ErrorState(
                 message: 'Failed to load library',
                 retryLabel: 'Retry',
-                onRetry: () => bloc.add(const ContentLibraryLoadRequested()),
+                onRetry: () => bloc.add(const CatalogLoadRequested()),
               ),
-              ContentLibraryStatus.success => Column(
+              CatalogStatus.success => Column(
                 children: [
                   _LibraryHeader(
                     state: state,
                     searchController: _searchController,
                     onSearchChanged: (query) => bloc.add(
-                      ContentLibrarySearchQueryChanged(query),
+                      CatalogSearchQueryChanged(query),
                     ),
                     onFilterChanged: (filter) => bloc.add(
-                      ContentLibraryFilterChanged(filter),
+                      CatalogFilterChanged(filter),
                     ),
                   ),
                   Expanded(
@@ -188,7 +188,7 @@ class _ContentLibraryViewState extends State<ContentLibraryView> {
                                 _handleArticleTap(context, article),
                             onRefresh: () async {
                               bloc.add(
-                                const ContentLibraryRefreshRequested(),
+                                const CatalogRefreshRequested(),
                               );
                             },
                             onAddPressed: () => _handleAdd(context),
@@ -226,10 +226,10 @@ class _LibraryHeader extends StatelessWidget {
     required this.onFilterChanged,
   });
 
-  final ContentLibraryState state;
+  final CatalogState state;
   final TextEditingController searchController;
   final ValueChanged<String> onSearchChanged;
-  final ValueChanged<ContentLibraryFilter> onFilterChanged;
+  final ValueChanged<CatalogFilter> onFilterChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -298,8 +298,8 @@ class _FilterSegments extends StatelessWidget {
     required this.onChanged,
   });
 
-  final ContentLibraryFilter active;
-  final ValueChanged<ContentLibraryFilter> onChanged;
+  final CatalogFilter active;
+  final ValueChanged<CatalogFilter> onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -312,10 +312,10 @@ class _FilterSegments extends StatelessWidget {
       height: AppSizes.chipHeight,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: ContentLibraryFilter.values.length,
+        itemCount: CatalogFilter.values.length,
         separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.xs),
         itemBuilder: (_, i) {
-          final filter = ContentLibraryFilter.values[i];
+          final filter = CatalogFilter.values[i];
           final selected = filter == active;
 
           return Material(
@@ -356,12 +356,12 @@ class _FilterSegments extends StatelessWidget {
     );
   }
 
-  static String _labelFor(ContentLibraryFilter filter) => switch (filter) {
-    ContentLibraryFilter.all => 'All',
-    ContentLibraryFilter.books => 'Books',
-    ContentLibraryFilter.articles => 'Articles',
-    ContentLibraryFilter.saved => 'Saved',
-    ContentLibraryFilter.finished => 'Finished',
+  static String _labelFor(CatalogFilter filter) => switch (filter) {
+    CatalogFilter.all => 'All',
+    CatalogFilter.books => 'Books',
+    CatalogFilter.articles => 'Articles',
+    CatalogFilter.saved => 'Saved',
+    CatalogFilter.finished => 'Finished',
   };
 }
 
@@ -370,22 +370,22 @@ class _LayoutToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ContentLibraryLayoutCubit, ContentLibraryLayoutMode>(
+    return BlocBuilder<CatalogLayoutCubit, CatalogLayoutMode>(
       builder: (context, mode) {
-        final cubit = context.read<ContentLibraryLayoutCubit>();
+        final cubit = context.read<CatalogLayoutCubit>();
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             _LayoutToggleButton(
               icon: AppIcons.viewList,
-              active: mode == ContentLibraryLayoutMode.list,
-              onTap: () => cubit.setLayoutMode(ContentLibraryLayoutMode.list),
+              active: mode == CatalogLayoutMode.list,
+              onTap: () => cubit.setLayoutMode(CatalogLayoutMode.list),
             ),
             const SizedBox(width: AppSpacing.xs),
             _LayoutToggleButton(
               icon: AppIcons.viewGrid,
-              active: mode == ContentLibraryLayoutMode.grid,
-              onTap: () => cubit.setLayoutMode(ContentLibraryLayoutMode.grid),
+              active: mode == CatalogLayoutMode.grid,
+              onTap: () => cubit.setLayoutMode(CatalogLayoutMode.grid),
             ),
           ],
         );
@@ -449,7 +449,7 @@ class _LibraryBody extends StatelessWidget {
     required this.onAddPressed,
   });
 
-  final ContentLibraryState state;
+  final CatalogState state;
   final void Function(Book book) onBookPressed;
   final void Function(Article article) onArticlePressed;
   final Future<void> Function() onRefresh;
@@ -489,15 +489,15 @@ class _LibraryBody extends StatelessWidget {
 
     return RefreshIndicator(
       onRefresh: onRefresh,
-      child: BlocBuilder<ContentLibraryLayoutCubit, ContentLibraryLayoutMode>(
+      child: BlocBuilder<CatalogLayoutCubit, CatalogLayoutMode>(
         builder: (context, layoutMode) {
           return switch (layoutMode) {
-            ContentLibraryLayoutMode.list => ContentLibraryListView(
+            CatalogLayoutMode.list => CatalogListView(
               items: visibleItems,
               onBookPressed: onBookPressed,
               onArticlePressed: onArticlePressed,
             ),
-            ContentLibraryLayoutMode.grid => ContentLibraryGridView(
+            CatalogLayoutMode.grid => CatalogGridView(
               items: visibleItems,
               onBookPressed: onBookPressed,
               onArticlePressed: onArticlePressed,

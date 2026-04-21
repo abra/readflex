@@ -1,4 +1,4 @@
-import 'package:content_library/content_library.dart';
+import 'package:catalog/catalog.dart';
 import 'package:dictionary/dictionary.dart';
 import 'package:flashcard/flashcard.dart';
 import 'package:flutter/material.dart';
@@ -101,7 +101,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
             routes: [
               GoRoute(
                 path: AppRoutes.library,
-                builder: (context, state) => ContentLibraryScreen(
+                builder: (context, state) => CatalogScreen(
                   bookRepository: deps.bookRepository,
                   articleRepository: deps.articleRepository,
                   preferencesService: deps.preferencesService,

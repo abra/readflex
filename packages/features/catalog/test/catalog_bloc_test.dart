@@ -1,5 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
-import 'package:content_library/src/content_library_bloc.dart';
+import 'package:catalog/src/catalog_bloc.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -23,7 +23,7 @@ final _article = Article(
 );
 
 void main() {
-  group('ContentLibraryBloc', () {
+  group('CatalogBloc', () {
     late FakeBookRepository repository;
     late FakeArticleRepository articleRepository;
 
@@ -32,21 +32,21 @@ void main() {
       articleRepository = FakeArticleRepository();
     });
 
-    blocTest<ContentLibraryBloc, ContentLibraryState>(
-      'emits loading then success with items on ContentLibraryLoadRequested',
+    blocTest<CatalogBloc, CatalogState>(
+      'emits loading then success with items on CatalogLoadRequested',
       setUp: () {
         repository.seedBooks([_book]);
         articleRepository.seedArticles([_article]);
       },
-      build: () => ContentLibraryBloc(
+      build: () => CatalogBloc(
         bookRepository: repository,
         articleRepository: articleRepository,
       ),
-      act: (bloc) => bloc.add(const ContentLibraryLoadRequested()),
+      act: (bloc) => bloc.add(const CatalogLoadRequested()),
       expect: () => [
-        const ContentLibraryState(status: ContentLibraryStatus.loading),
-        ContentLibraryState(
-          status: ContentLibraryStatus.success,
+        const CatalogState(status: CatalogStatus.loading),
+        CatalogState(
+          status: CatalogStatus.success,
           books: [_book],
           articles: [_article],
           items: [_article, _book],
@@ -54,73 +54,73 @@ void main() {
       ],
     );
 
-    blocTest<ContentLibraryBloc, ContentLibraryState>(
+    blocTest<CatalogBloc, CatalogState>(
       'emits success with empty lists when library is empty',
-      build: () => ContentLibraryBloc(
+      build: () => CatalogBloc(
         bookRepository: repository,
         articleRepository: articleRepository,
       ),
-      act: (bloc) => bloc.add(const ContentLibraryLoadRequested()),
+      act: (bloc) => bloc.add(const CatalogLoadRequested()),
       expect: () => [
-        const ContentLibraryState(status: ContentLibraryStatus.loading),
-        const ContentLibraryState(status: ContentLibraryStatus.success),
+        const CatalogState(status: CatalogStatus.loading),
+        const CatalogState(status: CatalogStatus.success),
       ],
     );
 
-    blocTest<ContentLibraryBloc, ContentLibraryState>(
+    blocTest<CatalogBloc, CatalogState>(
       'emits failure when repository throws',
       setUp: () => repository.shouldThrow = true,
-      build: () => ContentLibraryBloc(
+      build: () => CatalogBloc(
         bookRepository: repository,
         articleRepository: articleRepository,
       ),
-      act: (bloc) => bloc.add(const ContentLibraryLoadRequested()),
+      act: (bloc) => bloc.add(const CatalogLoadRequested()),
       expect: () => [
-        const ContentLibraryState(status: ContentLibraryStatus.loading),
-        const ContentLibraryState(status: ContentLibraryStatus.failure),
+        const CatalogState(status: CatalogStatus.loading),
+        const CatalogState(status: CatalogStatus.failure),
       ],
     );
 
-    blocTest<ContentLibraryBloc, ContentLibraryState>(
-      'ContentLibraryBookDeleted removes book and reloads',
+    blocTest<CatalogBloc, CatalogState>(
+      'CatalogBookDeleted removes book and reloads',
       setUp: () {
         repository.seedBooks([_book]);
       },
-      build: () => ContentLibraryBloc(
+      build: () => CatalogBloc(
         bookRepository: repository,
         articleRepository: articleRepository,
       ),
-      seed: () => ContentLibraryState(
-        status: ContentLibraryStatus.success,
+      seed: () => CatalogState(
+        status: CatalogStatus.success,
         books: [_book],
       ),
-      act: (bloc) => bloc.add(ContentLibraryBookDeleted(_book.id)),
+      act: (bloc) => bloc.add(CatalogBookDeleted(_book.id)),
       expect: () => [
-        const ContentLibraryState(status: ContentLibraryStatus.success),
+        const CatalogState(status: CatalogStatus.success),
       ],
     );
 
-    blocTest<ContentLibraryBloc, ContentLibraryState>(
-      'ContentLibraryArticleDeleted removes article and reloads',
+    blocTest<CatalogBloc, CatalogState>(
+      'CatalogArticleDeleted removes article and reloads',
       setUp: () {
         articleRepository.seedArticles([_article]);
       },
-      build: () => ContentLibraryBloc(
+      build: () => CatalogBloc(
         bookRepository: repository,
         articleRepository: articleRepository,
       ),
-      seed: () => ContentLibraryState(
-        status: ContentLibraryStatus.success,
+      seed: () => CatalogState(
+        status: CatalogStatus.success,
         articles: [_article],
       ),
-      act: (bloc) => bloc.add(ContentLibraryArticleDeleted(_article.id)),
+      act: (bloc) => bloc.add(CatalogArticleDeleted(_article.id)),
       expect: () => [
-        const ContentLibraryState(status: ContentLibraryStatus.success),
+        const CatalogState(status: CatalogStatus.success),
       ],
     );
   });
 
-  group('ContentLibraryState', () {
+  group('CatalogState', () {
     test('items are sorted by addedAt descending', () {
       final older = Book(
         id: '1',
@@ -137,8 +137,8 @@ void main() {
         addedAt: DateTime(2026, 6, 1),
       );
 
-      final state = ContentLibraryState(
-        status: ContentLibraryStatus.success,
+      final state = CatalogState(
+        status: CatalogStatus.success,
         books: [older],
         articles: [newer],
         items: [newer, older],
@@ -148,7 +148,7 @@ void main() {
     });
 
     test('isEmpty is true when no items', () {
-      const state = ContentLibraryState(status: ContentLibraryStatus.success);
+      const state = CatalogState(status: CatalogStatus.success);
       expect(state.isEmpty, isTrue);
     });
   });

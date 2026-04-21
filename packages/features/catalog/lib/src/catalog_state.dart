@@ -1,23 +1,23 @@
-part of 'content_library_bloc.dart';
+part of 'catalog_bloc.dart';
 
-enum ContentLibraryStatus { initial, loading, success, failure }
+enum CatalogStatus { initial, loading, success, failure }
 
 /// Filter segments mirrored from the readwell_demo Library screen. Kept
 /// as an enum (not a string) so switches are exhaustive and renames are
 /// refactor-safe.
-enum ContentLibraryFilter { all, books, articles, saved, finished }
+enum CatalogFilter { all, books, articles, saved, finished }
 
-class ContentLibraryState extends Equatable {
-  const ContentLibraryState({
-    this.status = ContentLibraryStatus.initial,
+class CatalogState extends Equatable {
+  const CatalogState({
+    this.status = CatalogStatus.initial,
     this.books = const [],
     this.articles = const [],
     this.items = const [],
-    this.filter = ContentLibraryFilter.all,
+    this.filter = CatalogFilter.all,
     this.searchQuery = '',
   });
 
-  final ContentLibraryStatus status;
+  final CatalogStatus status;
   final List<Book> books;
   final List<Article> articles;
 
@@ -26,7 +26,7 @@ class ContentLibraryState extends Equatable {
   /// should actually render.
   final List<Object> items;
 
-  final ContentLibraryFilter filter;
+  final CatalogFilter filter;
   final String searchQuery;
 
   bool get isEmpty => books.isEmpty && articles.isEmpty;
@@ -45,15 +45,15 @@ class ContentLibraryState extends Equatable {
     return items.where((item) {
       // 1. Filter by segment.
       final matchesFilter = switch (filter) {
-        ContentLibraryFilter.all => true,
-        ContentLibraryFilter.books => item is Book,
-        ContentLibraryFilter.articles => item is Article,
-        ContentLibraryFilter.saved => switch (item) {
+        CatalogFilter.all => true,
+        CatalogFilter.books => item is Book,
+        CatalogFilter.articles => item is Article,
+        CatalogFilter.saved => switch (item) {
           Book book => !book.isFinished,
           Article article => !article.isFinished,
           _ => false,
         },
-        ContentLibraryFilter.finished => switch (item) {
+        CatalogFilter.finished => switch (item) {
           Book book => book.isFinished,
           Article article => article.isFinished,
           _ => false,
@@ -73,14 +73,14 @@ class ContentLibraryState extends Equatable {
     }).toList();
   }
 
-  ContentLibraryState copyWith({
-    ContentLibraryStatus? status,
+  CatalogState copyWith({
+    CatalogStatus? status,
     List<Book>? books,
     List<Article>? articles,
     List<Object>? items,
-    ContentLibraryFilter? filter,
+    CatalogFilter? filter,
     String? searchQuery,
-  }) => ContentLibraryState(
+  }) => CatalogState(
     status: status ?? this.status,
     books: books ?? this.books,
     articles: articles ?? this.articles,

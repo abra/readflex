@@ -22,7 +22,7 @@ void main() {
       const prefs = Preferences();
       expect(prefs.themeMode, ThemeMode.system);
       expect(prefs.locale, const Locale('en'));
-      expect(prefs.contentLibraryLayoutMode, 'grid');
+      expect(prefs.catalogLayoutMode, 'grid');
       expect(prefs.readerThemeId, 'paper');
       expect(prefs.readerFontId, 'serif');
       expect(prefs.readerLayoutId, 'standard');
@@ -41,13 +41,13 @@ void main() {
       final updated = prefs.copyWith(
         themeMode: ThemeMode.dark,
         locale: const Locale('ru'),
-        contentLibraryLayoutMode: 'list',
+        catalogLayoutMode: 'list',
         onboardingCompleted: true,
       );
 
       expect(updated.themeMode, ThemeMode.dark);
       expect(updated.locale, const Locale('ru'));
-      expect(updated.contentLibraryLayoutMode, 'list');
+      expect(updated.catalogLayoutMode, 'list');
       expect(updated.onboardingCompleted, isTrue);
       // Unchanged fields preserved
       expect(updated.readerThemeId, 'paper');
