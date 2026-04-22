@@ -5,6 +5,8 @@
 // initialization logic.
 
 import 'package:auth_service/auth_service.dart';
+import 'package:connectivity_service/connectivity_service.dart'
+    show ConnectivityScope;
 import 'package:flutter/widgets.dart';
 import 'package:preferences_service/preferences_service.dart'
     show PreferencesScope;
@@ -25,7 +27,10 @@ class RootContext extends StatelessWidget {
         service: compositionResult.dependencies.preferencesService,
         child: AuthScope(
           service: compositionResult.dependencies.authService,
-          child: const MaterialContext(),
+          child: ConnectivityScope(
+            service: compositionResult.dependencies.connectivityService,
+            child: const MaterialContext(),
+          ),
         ),
       ),
     );

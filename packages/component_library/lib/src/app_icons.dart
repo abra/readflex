@@ -79,6 +79,7 @@ abstract final class AppIcons {
   // ── States ────────────────────────────────────────────────
   static const IconData error = LucideIcons.alertCircle;
   static const IconData celebration = LucideIcons.partyPopper;
+  static const IconData offline = LucideIcons.wifiOff;
 
   // ── Formatting (design system demo) ───────────────────────
   static const IconData tune = LucideIcons.sparkles;

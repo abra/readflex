@@ -147,7 +147,7 @@ Future<DependenciesContainer> createDependenciesContainer(
   const translationService = NoopTranslationService();
   const aiService = NoopAiService();
   const subscriptionService = NoopSubscriptionService();
-  final connectivityService = NoopConnectivityService();
+  final connectivityService = await ConnectivityPlusService.create();
   const notificationService = NoopNotificationService();
 
   return DependenciesContainer(
