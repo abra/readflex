@@ -7,10 +7,12 @@ class FakeArticleRepository implements ArticleRepository {
 
   List<Article> articles = [];
   bool shouldThrow = false;
+  int? lastLimitPassed;
 
   @override
   Future<List<Article>> getArticles({int? limit, int? offset}) async {
     if (shouldThrow) throw StorageException(cause: 'fake');
+    lastLimitPassed = limit;
     return articles;
   }
 }

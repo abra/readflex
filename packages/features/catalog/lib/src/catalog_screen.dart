@@ -86,6 +86,9 @@ class _LibraryViewState extends State<LibraryView> {
   // first vertical scroll, so we track `extentBefore > 0`.
   bool _showHeaderShadow = false;
 
+  // Guards the FAB against re-entry while an import sheet is being pushed.
+  bool _addInFlight = false;
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -93,11 +96,17 @@ class _LibraryViewState extends State<LibraryView> {
   }
 
   Future<void> _handleAdd(BuildContext context) async {
-    await widget.onAddPressed();
-    if (!context.mounted) return;
-    context.read<CatalogBloc>().add(
-      const CatalogRefreshRequested(),
-    );
+    if (_addInFlight) return;
+    _addInFlight = true;
+    try {
+      await widget.onAddPressed();
+      if (!context.mounted) return;
+      context.read<CatalogBloc>().add(
+        const CatalogRefreshRequested(),
+      );
+    } finally {
+      _addInFlight = false;
+    }
   }
 
   Future<void> _handleBookTap(BuildContext context, Book book) async {

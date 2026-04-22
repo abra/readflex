@@ -240,6 +240,21 @@ void main() {
       expect(response.statusCode, 400);
     });
 
+    test('rejects absolute path via url-encoded leading slash', () async {
+      // Create a sibling file outside assetsDir. An absolute path in the
+      // second arg of p.join overrides the first on Unix, so without an
+      // explicit guard the server would read files anywhere on disk.
+      final secret = File('${tempDir.path}/secret.txt');
+      await secret.writeAsString('TOP SECRET');
+
+      final response = await client.get(
+        Uri.parse(url('/assets/${Uri.encodeComponent(secret.path)}')),
+      );
+
+      expect(response.statusCode, isNot(200));
+      expect(response.body, isNot('TOP SECRET'));
+    });
+
     test('returns 400 when path is missing', () async {
       final response = await client.get(Uri.parse(url('/assets')));
       expect(response.statusCode, 400);

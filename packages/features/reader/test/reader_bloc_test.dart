@@ -129,7 +129,33 @@ void main() {
       );
 
       blocTest<ReaderBloc, ReaderState>(
-        'emits failure when repository throws',
+        'prefers book when both a book and an article match the same id',
+        // Books win over articles by ordering in the parallel resolver.
+        // Guards the invariant: id collisions load the book, not the article.
+        setUp: () {
+          bookRepository.seedBook(testBook);
+          articleRepository.seedArticle(
+            Article(
+              id: testBook.id,
+              title: 'Collider',
+              url: 'https://example.com/collider',
+              contentPath: '/articles/collider.html',
+              addedAt: DateTime(2024, 1, 1),
+            ),
+          );
+        },
+        build: buildBloc,
+        act: (bloc) =>
+            bloc.add(ReaderSourceLoadRequested(sourceId: testBook.id)),
+        verify: (bloc) {
+          expect(bloc.state.sourceType, SourceType.book);
+          expect(bloc.state.book, isNotNull);
+          expect(bloc.state.article, isNull);
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'emits failure AND reports error when repository throws',
         setUp: () {
           bookRepository.shouldThrow = true;
         },
@@ -140,6 +166,9 @@ void main() {
           const ReaderState(status: ReaderStatus.loading),
           const ReaderState(status: ReaderStatus.failure),
         ],
+        // Must reach AppBlocObserver / error reporter — a silent failure
+        // swallows stacktrace and blinds observability.
+        errors: () => hasLength(1),
       );
     });
 

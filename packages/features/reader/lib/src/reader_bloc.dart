@@ -88,7 +88,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       }
 
       emit(state.copyWith(status: ReaderStatus.failure));
-    } catch (e) {
+    } catch (e, st) {
+      addError(e, st);
       emit(state.copyWith(status: ReaderStatus.failure));
     }
   }

@@ -263,7 +263,7 @@ class ReaderServer {
 
     final relativePath = segments.sublist(1).join('/');
 
-    if (relativePath.contains('..')) {
+    if (!_isWithin(_assetsDir, relativePath)) {
       _respond(request, HttpStatus.badRequest, 'Invalid asset path.');
       _logRequest('GET', path, HttpStatus.badRequest, stopwatch);
       return;
@@ -285,6 +285,15 @@ class ReaderServer {
   }
 
   // ── Helpers ──
+
+  /// Verifies that joining [root] with [relativePath] stays inside [root].
+  /// Catches absolute-path substitution (`p.join('/root', '/etc/x') → '/etc/x'`)
+  /// and `..` segments that survive percent-decoding.
+  static bool _isWithin(Directory root, String relativePath) {
+    final resolved = p.canonicalize(p.join(root.path, relativePath));
+    final rootPath = p.canonicalize(root.path);
+    return p.isWithin(rootPath, resolved) || resolved == rootPath;
+  }
 
   void _respond(HttpRequest request, int status, String body) {
     request.response

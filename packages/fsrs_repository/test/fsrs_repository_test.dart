@@ -210,12 +210,24 @@ void main() {
         rating: Rating.good,
       );
 
-      // Still queryable by source after review.
-      final fromSource = await repo.getDueItemsBySource('book-7');
-      // nextReviewAt may be in future; query returns items whose nextReviewAt
-      // is null OR <= now. After one review, it will be in the future, so
-      // this source-query should now be empty.
-      expect(fromSource, isEmpty);
+      final row = await db.reviewItemsDao.byItemId('hl-1');
+      expect(row?.sourceId, 'book-7');
+    });
+
+    test('implicit creation preserves sourceId when provided', () async {
+      // Per the recordReview docstring, callers may rely on implicit creation
+      // — the first review registers the item in FSRS tracking. sourceId must
+      // be preserved on that implicit path, otherwise source-scoped queries
+      // (review-by-book, review-by-article) silently miss the card forever.
+      await repo.recordReview(
+        itemId: 'hl-new',
+        itemType: ReviewableType.highlight,
+        rating: Rating.good,
+        sourceId: 'book-42',
+      );
+
+      final row = await db.reviewItemsDao.byItemId('hl-new');
+      expect(row?.sourceId, 'book-42');
     });
 
     test('two consecutive reviews increment reps to 2', () async {

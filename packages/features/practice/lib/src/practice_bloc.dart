@@ -39,7 +39,9 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
     emit(state.copyWith(status: PracticeStatus.loading));
 
     try {
-      final dueItems = await _fsrsRepository.getDueItems();
+      // A single session rarely goes past a few dozen cards; load a generous
+      // slice instead of the whole due queue to avoid OOM on large decks.
+      final dueItems = await _fsrsRepository.getDueItems(limit: 50);
       final items = await _resolveItems(dueItems);
 
       if (items.isEmpty) {

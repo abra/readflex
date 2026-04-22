@@ -1,6 +1,18 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_review_reminder_cubit.dart';
+
+class _ErrorCollectingObserver extends BlocObserver {
+  final List<Object> errors = [];
+  @override
+  void onError(BlocBase<dynamic> bloc, Object error, StackTrace stackTrace) {
+    errors.add(error);
+    super.onError(bloc, error, stackTrace);
+  }
+}
 
 void main() {
   group('ReaderReviewReminderCubit', () {
@@ -92,6 +104,68 @@ void main() {
         build: () => buildCubit(),
         act: (c) => c.dismiss(),
         expect: () => <ReaderReviewReminderState>[],
+      );
+    });
+
+    group('error handling', () {
+      test(
+        'callback exception is routed through addError, not leaked to zone',
+        () async {
+          // The fire-and-forget _check() inside _start() means any error from
+          // the callback becomes an unhandled Future error unless the cubit
+          // catches it and routes via addError (→ BlocObserver.onError).
+          final observer = _ErrorCollectingObserver();
+          final previous = Bloc.observer;
+          Bloc.observer = observer;
+          addTearDown(() => Bloc.observer = previous);
+
+          final zoneErrors = <Object>[];
+          await runZonedGuarded(
+            () async {
+              ReaderReviewReminderCubit(
+                sourceId: 'test-source',
+                onCheckDueItems: (_) async => throw Exception('boom'),
+                checkInterval: const Duration(hours: 24),
+              );
+              await Future<void>.delayed(const Duration(milliseconds: 20));
+            },
+            (e, st) => zoneErrors.add(e),
+          );
+
+          expect(
+            zoneErrors,
+            isEmpty,
+            reason: 'callback exception must not leak to the zone',
+          );
+          expect(
+            observer.errors,
+            hasLength(1),
+            reason: 'callback exception must reach BlocObserver.onError',
+          );
+        },
+      );
+    });
+
+    group('lifecycle', () {
+      test(
+        'does not emit after close() even when callback resolves late',
+        () async {
+          final gate = Completer<int>();
+          final cubit = ReaderReviewReminderCubit(
+            sourceId: 'test',
+            onCheckDueItems: (_) => gate.future,
+            checkInterval: const Duration(hours: 24),
+          );
+          final states = <ReaderReviewReminderState>[];
+          final sub = cubit.stream.listen(states.add);
+
+          await cubit.close();
+          gate.complete(5);
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+
+          expect(states, isEmpty);
+          await sub.cancel();
+        },
       );
     });
 

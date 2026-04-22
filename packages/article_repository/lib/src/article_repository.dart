@@ -60,16 +60,12 @@ class ArticleRepository {
     }
   }
 
-  /// Reads the HTML body for [article] from disk. Returns an empty string
-  /// if the file is missing — the caller (reader) can decide whether to
-  /// treat that as a corrupt import or re-fetch.
+  /// Reads the HTML body for [article] from disk. Throws [StorageException]
+  /// if the file is missing or unreadable — a silent empty string would hide
+  /// corrupted imports from the caller and from observability.
   Future<String> readContent(Article article) async {
     try {
       return await File(article.contentPath).readAsString();
-    } on PathNotFoundException {
-      return '';
-    } on FileSystemException {
-      return '';
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }

@@ -111,6 +111,23 @@ void main() {
         const HomeState(status: HomeStatus.failure),
       ],
     );
+
+    blocTest<HomeBloc, HomeState>(
+      'passes a limit to book/article repositories (guards against OOM)',
+      // Home only surfaces the top-5 recent items; loading every book/article
+      // row on a large library is wasteful and can OOM on low-end devices.
+      build: () => HomeBloc(
+        bookRepository: bookRepo,
+        articleRepository: articleRepo,
+        highlightRepository: highlightRepo,
+        fsrsRepository: fsrsRepo,
+      ),
+      act: (bloc) => bloc.add(const HomeLoadRequested()),
+      verify: (_) {
+        expect(bookRepo.lastLimitPassed, isNotNull);
+        expect(articleRepo.lastLimitPassed, isNotNull);
+      },
+    );
   });
 
   group('HomeState', () {

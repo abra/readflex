@@ -189,5 +189,21 @@ void main() {
 
       expect(service.current, const Preferences());
     });
+
+    test('dispose() closes the broadcast stream', () async {
+      final service = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+      var closed = false;
+      final sub = service.stream.listen(
+        (_) {},
+        onDone: () => closed = true,
+      );
+
+      await service.dispose();
+
+      expect(closed, isTrue);
+      await sub.cancel();
+    });
   });
 }

@@ -7,10 +7,12 @@ class FakeBookRepository implements BookRepository {
 
   List<Book> books = [];
   bool shouldThrow = false;
+  int? lastLimitPassed;
 
   @override
   Future<List<Book>> getBooks({int? limit, int? offset}) async {
     if (shouldThrow) throw StorageException(cause: 'fake');
+    lastLimitPassed = limit;
     return books;
   }
 }

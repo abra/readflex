@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:component_library/component_library.dart';
 import 'package:catalog/catalog.dart';
 import 'package:domain_models/domain_models.dart';
@@ -121,5 +123,44 @@ void main() {
     await tester.pump();
 
     expect(find.byType(FloatingActionButton), findsOneWidget);
+  });
+
+  testWidgets('FAB guards against double-tap while import is in-flight', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    var invocations = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: CatalogScreen(
+          bookRepository: bookRepository,
+          articleRepository: articleRepository,
+          preferencesService: preferencesService,
+          onBookPressed: (_) async {},
+          onArticlePressed: (_) async {},
+          onAddPressed: () async {
+            invocations++;
+            await gate.future;
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pump();
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pump();
+
+    expect(
+      invocations,
+      1,
+      reason: 'second tap during in-flight import must be ignored',
+    );
+
+    gate.complete();
+    await tester.pumpAndSettle();
   });
 }

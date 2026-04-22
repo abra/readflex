@@ -129,6 +129,52 @@ void main() {
       });
     });
 
+    group('retrievability', () {
+      test('is 0 for cards in new/learning state', () {
+        final result = review();
+        expect(result.fsrs.retrievability, 0.0);
+      });
+
+      test('is > 0 for cards in review state', () {
+        final inReview =
+            const FsrsCardData(
+              state: FsrsState.review,
+              stability: 10,
+              difficulty: 5,
+              reps: 3,
+            ).copyWith(
+              lastReviewAt: DateTime.now().toUtc().subtract(
+                const Duration(days: 1),
+              ),
+              nextReviewAt: DateTime.now().toUtc().add(
+                const Duration(days: 5),
+              ),
+            );
+
+        final result = review(current: inReview, rating: Rating.good);
+        expect(result.fsrs.retrievability, greaterThan(0));
+      });
+    });
+
+    group('state transitions', () {
+      test('Rating.again on review card transitions to relearning', () {
+        final inReview =
+            const FsrsCardData(
+              state: FsrsState.review,
+              stability: 10,
+              difficulty: 5,
+              reps: 3,
+            ).copyWith(
+              lastReviewAt: DateTime.now().toUtc().subtract(
+                const Duration(days: 5),
+              ),
+            );
+
+        final result = review(current: inReview, rating: Rating.again);
+        expect(result.fsrs.state, FsrsState.relearning);
+      });
+    });
+
     group('rating influence on scheduling', () {
       test('Rating.easy schedules further out than Rating.good', () {
         final easy = review(rating: Rating.easy).fsrs;

@@ -147,6 +147,7 @@ class FsrsRepository {
     required String itemId,
     required ReviewableType itemType,
     required Rating rating,
+    String? sourceId,
     int? reviewDurationMs,
   }) async {
     try {
@@ -163,12 +164,12 @@ class FsrsRepository {
         reviewDurationMs: reviewDurationMs,
       );
 
-      // Update review item state.
-      final sourceId = row?.sourceId;
+      // Prefer a caller-supplied sourceId on implicit creation; keep the
+      // existing one on subsequent reviews so passing null doesn't wipe it.
       final updated = ReviewItem(
         itemId: itemId,
         itemType: itemType,
-        sourceId: sourceId,
+        sourceId: row?.sourceId ?? sourceId,
         fsrs: result.fsrs,
       );
       await _dao.upsertItem(updated.toStorageModel());

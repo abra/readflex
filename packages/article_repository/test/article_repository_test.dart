@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:article_repository/article_repository.dart';
+import 'package:domain_models/domain_models.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -160,6 +161,22 @@ void main() {
       );
       final content = await repo.readContent(article);
       expect(content, '<h1>Title</h1><p>body</p>');
+    });
+
+    test('readContent throws StorageException when file is missing', () async {
+      // A silent empty-string return hides import corruption from the caller
+      // and from observability. Missing content must surface as an error.
+      final article = await repo.addArticle(
+        title: 'Gone',
+        url: 'https://example.com/g',
+        content: '<p>bye</p>',
+      );
+      await File(article.contentPath).delete();
+
+      await expectLater(
+        () => repo.readContent(article),
+        throwsA(isA<StorageException>()),
+      );
     });
 
     test('getArticles returns all added articles', () async {

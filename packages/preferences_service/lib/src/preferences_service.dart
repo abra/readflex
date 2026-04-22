@@ -42,4 +42,6 @@ class PreferencesService {
     }
     _controller.add(_current);
   }
+
+  Future<void> dispose() => _controller.close();
 }

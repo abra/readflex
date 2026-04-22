@@ -320,4 +320,32 @@ void main() {
       expect(state.reviewed, 1);
     });
   });
+
+  group('PracticeBloc pagination', () {
+    late FakeFsrsRepository fsrsRepository;
+    late FakeFlashcardRepository flashcardRepository;
+    late FakeHighlightRepository highlightRepository;
+    late FakeDictionaryRepository dictionaryRepository;
+
+    setUp(() {
+      fsrsRepository = FakeFsrsRepository();
+      flashcardRepository = FakeFlashcardRepository();
+      highlightRepository = FakeHighlightRepository();
+      dictionaryRepository = FakeDictionaryRepository();
+    });
+
+    blocTest<PracticeBloc, PracticeState>(
+      'passes a limit to getDueItems (guards against OOM on large decks)',
+      build: () => _buildBloc(
+        fsrsRepository: fsrsRepository,
+        flashcardRepository: flashcardRepository,
+        highlightRepository: highlightRepository,
+        dictionaryRepository: dictionaryRepository,
+      ),
+      act: (bloc) => bloc.add(const PracticeLoadRequested()),
+      verify: (_) {
+        expect(fsrsRepository.lastDueLimitPassed, isNotNull);
+      },
+    );
+  });
 }

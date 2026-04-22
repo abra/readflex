@@ -118,6 +118,36 @@ void main() {
         const CatalogState(status: CatalogStatus.success),
       ],
     );
+
+    blocTest<CatalogBloc, CatalogState>(
+      'concurrent delete + refresh both run sequentially and land on success',
+      setUp: () {
+        repository.seedBooks([_book]);
+        articleRepository.seedArticles([_article]);
+      },
+      build: () => CatalogBloc(
+        bookRepository: repository,
+        articleRepository: articleRepository,
+      ),
+      seed: () => CatalogState(
+        status: CatalogStatus.success,
+        books: [_book],
+        articles: [_article],
+      ),
+      act: (bloc) {
+        // Fire both in the same tick. Default BLoC transformer is sequential:
+        // the second event must wait for the first to finish, and neither
+        // may leave the bloc in a dangling state.
+        bloc
+          ..add(CatalogBookDeleted(_book.id))
+          ..add(const CatalogRefreshRequested());
+      },
+      verify: (bloc) {
+        expect(bloc.state.status, CatalogStatus.success);
+        expect(bloc.state.books, isEmpty);
+        expect(bloc.state.articles, [_article]);
+      },
+    );
   });
 
   group('CatalogState', () {

@@ -46,9 +46,13 @@ class ReaderReviewReminderCubit extends Cubit<ReaderReviewReminderState> {
     String sourceId,
     Future<int> Function(String) onCheckDueItems,
   ) async {
-    final count = await onCheckDueItems(sourceId);
-    if (!isClosed && count > 0) {
-      emit(const ReaderReviewReminderState(showReminder: true));
+    try {
+      final count = await onCheckDueItems(sourceId);
+      if (!isClosed && count > 0) {
+        emit(const ReaderReviewReminderState(showReminder: true));
+      }
+    } catch (e, st) {
+      if (!isClosed) addError(e, st);
     }
   }
 

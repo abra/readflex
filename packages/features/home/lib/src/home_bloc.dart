@@ -36,8 +36,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     emit(state.copyWith(status: HomeStatus.loading));
 
     try {
-      final books = await _bookRepository.getBooks();
-      final articles = await _articleRepository.getArticles();
+      // Home surfaces the top-5 recent items; 20 each gives plenty of headroom
+      // for the lastOpenedAt-sorted merge without hauling the whole library in.
+      final books = await _bookRepository.getBooks(limit: 20);
+      final articles = await _articleRepository.getArticles(limit: 20);
       final highlights = await _highlightRepository.getHighlights();
       final dueCards = await _fsrsRepository.getDueItems();
 
