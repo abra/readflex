@@ -1,7 +1,8 @@
-/// Local push notification service for review reminders.
-///
-/// Wraps `flutter_local_notifications` in production.
-/// Schedules notifications based on FSRS `nextReviewAt`.
+/// Contract for scheduling local (on-device) push notifications that
+/// remind the user to review due flashcards / highlights / dictionary
+/// entries. The production implementation wraps
+/// `flutter_local_notifications`; reminder times come from
+/// `FsrsRepository.nextReviewAt`.
 abstract class NotificationService {
   /// Schedule a review reminder at [scheduledAt].
   Future<void> scheduleReviewReminder({
@@ -18,9 +19,9 @@ abstract class NotificationService {
   Future<void> cancelAll();
 }
 
-/// Stub — does nothing.
-///
-/// TODO: replace with real implementation wrapping flutter_local_notifications.
+/// Stub [NotificationService] that silently discards every schedule/cancel
+/// call. Used in tests and during development until the real
+/// `flutter_local_notifications`-backed implementation is wired in.
 class NoopNotificationService implements NotificationService {
   const NoopNotificationService();
 

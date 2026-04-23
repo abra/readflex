@@ -1,5 +1,8 @@
 import 'package:flutter/painting.dart';
 
+/// Converts a Flutter [Color] to a `#rrggbb` string for injecting into the
+/// reader WebView's CSS and foliate-js style config (alpha is dropped —
+/// neither consumer needs it).
 String colorToHex(Color color) {
   final r = (color.r * 255.0).round().clamp(0, 255);
   final g = (color.g * 255.0).round().clamp(0, 255);

@@ -5,6 +5,9 @@ import '../tables/dictionary_table.dart';
 
 part 'dictionary_dao.g.dart';
 
+/// CRUD access to [DictionaryTable] with an extra by-source filter for the
+/// reader's "words from this book" view. Consumed by
+/// `DictionaryRepository`, which wraps errors in `StorageException`.
 @DriftAccessor(tables: [DictionaryTable])
 class DictionaryDao extends DatabaseAccessor<AppDatabase>
     with _$DictionaryDaoMixin {

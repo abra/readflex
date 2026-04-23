@@ -1,5 +1,10 @@
 import 'package:drift/drift.dart';
 
+/// Drift schema for imported articles. Body HTML and cover images live on
+/// disk under the app's articles directory; rows store only filenames (see
+/// [contentPath], [coverImagePath]) so they stay valid across iOS
+/// Documents-UUID changes. Paired with `ArticleRepository` which owns
+/// resolution, download, and cleanup of those files.
 class ArticlesTable extends Table {
   TextColumn get id => text()();
 

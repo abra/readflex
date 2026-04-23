@@ -10,6 +10,12 @@ part 'home_event.dart';
 
 part 'home_state.dart';
 
+/// Drives the Home tab dashboard.
+///
+/// Aggregates data from four repositories (books, articles, highlights,
+/// FSRS) into a single [HomeState] with totals + the top-5 recent items.
+/// Loads in a single pass on [HomeLoadRequested] — there is no incremental
+/// refresh yet; the tab is expected to be re-entered fresh via navigation.
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
   HomeBloc({
     required BookRepository bookRepository,

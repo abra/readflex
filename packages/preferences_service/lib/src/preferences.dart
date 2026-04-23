@@ -2,7 +2,11 @@ import 'dart:ui' show Locale;
 
 import 'package:flutter/material.dart' show ThemeMode;
 
-/// Reading-specific appearance settings selected by the user.
+/// Reader-scoped appearance slice of [Preferences] (theme / font / layout
+/// IDs plus per-trait toggles). Exposed separately so widgets that only
+/// care about reader look can subscribe via
+/// [PreferencesScope.readerAppearanceOf] and skip rebuilds when unrelated
+/// preferences change.
 class ReaderAppearancePreferences {
   const ReaderAppearancePreferences({
     required this.themeId,
@@ -82,7 +86,10 @@ class ReaderAppearancePreferences {
   );
 }
 
-/// Stores user preferences: theme mode, locale, onboarding and setup flags.
+/// Immutable snapshot of every user-configurable preference in the app —
+/// app theme, locale, catalog layout, reader appearance, and onboarding
+/// flags. Loaded at startup, mutated via [PreferencesService.update], and
+/// surfaced to widgets through [PreferencesScope].
 class Preferences {
   const Preferences({
     this.themeMode = ThemeMode.system,

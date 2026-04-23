@@ -5,6 +5,9 @@ import 'package:subscription_service/subscription_service.dart';
 
 import 'subscription_paywall_cubit.dart';
 
+/// Opens the [SubscriptionPaywallSheet] as a modal bottom sheet. Call
+/// from any surface that gates a premium feature (pro badge in profile,
+/// lock icon taps, etc.).
 void showSubscriptionPaywallSheet(
   BuildContext context, {
   required SubscriptionService subscriptionService,
@@ -17,6 +20,12 @@ void showSubscriptionPaywallSheet(
   );
 }
 
+/// Full-screen bottom sheet that upsells Readflex Premium and runs the
+/// purchase flow.
+///
+/// Provides its own [SubscriptionPaywallCubit] and closes itself once
+/// the user becomes premium. Usually launched via
+/// [showSubscriptionPaywallSheet], not constructed directly.
 class SubscriptionPaywallSheet extends StatelessWidget {
   const SubscriptionPaywallSheet({
     required this.subscriptionService,

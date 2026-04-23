@@ -1,5 +1,9 @@
 import 'package:drift/drift.dart';
 
+/// Drift schema for text highlights captured in the reader. [sourceId] +
+/// [sourceType] identify the book or article; position is stored as either
+/// an EPUB [cfiRange] (books) or a [scrollOffset] / [pageNumber] (articles).
+/// FSRS review state lives separately in `review_items_table`.
 class HighlightsTable extends Table {
   TextColumn get id => text()();
 

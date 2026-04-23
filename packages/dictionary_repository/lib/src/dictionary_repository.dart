@@ -7,7 +7,12 @@ import 'mappers/entry_to_storage.dart';
 
 const _uuid = Uuid();
 
-/// Domain repository for dictionary entries.
+/// Domain repository for saved dictionary entries (words / phrases /
+/// idioms).
+///
+/// Wraps [DictionaryDao] from `local_storage` and turns low-level DB errors
+/// into [StorageException]. FSRS review state is not stored here — that
+/// lives in `FsrsRepository` and is joined by `itemId`.
 class DictionaryRepository {
   DictionaryRepository({required AppDatabase database})
     : _dao = database.dictionaryDao;

@@ -1,5 +1,7 @@
 part of 'profile_appearance_cubit.dart';
 
+/// Snapshot of appearance preferences shown on [ProfileScreen]: the
+/// app-wide theme mode plus the full reader appearance bundle.
 class ProfileAppearanceState extends Equatable {
   const ProfileAppearanceState({
     required this.themeMode,

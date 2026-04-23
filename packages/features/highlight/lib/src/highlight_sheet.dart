@@ -8,6 +8,8 @@ import 'package:shared/shared.dart';
 
 import 'highlight_cubit.dart';
 
+/// Opens the [HighlightSheet] as a modal bottom sheet. Called by
+/// [HighlightAction] from the reader's text-selection context panel.
 Future<void> showHighlightSheet(
   BuildContext context, {
   required HighlightRepository highlightRepository,
@@ -24,6 +26,11 @@ Future<void> showHighlightSheet(
   );
 }
 
+/// Bottom sheet for creating a new highlight from selected reader text.
+///
+/// Shows the selected passage, a color picker, and an optional note field.
+/// Provides its own [HighlightCubit]; closes itself on successful save.
+/// Usually launched via [showHighlightSheet], not constructed directly.
 class HighlightSheet extends StatelessWidget {
   const HighlightSheet({
     required this.highlightRepository,

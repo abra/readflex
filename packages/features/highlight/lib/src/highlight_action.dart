@@ -6,7 +6,12 @@ import 'package:shared/shared.dart';
 
 import 'highlight_sheet.dart';
 
-/// TextAction implementation that opens the highlight bottom sheet.
+/// Reader plug-in that lets the user save the currently selected text as a
+/// [Highlight].
+///
+/// Registered in the composition root as one of the [TextAction]s passed
+/// to the reader — appears in the reader's text-selection context panel
+/// with the "Highlight" label. Tapping it opens [showHighlightSheet].
 class HighlightAction extends TextAction {
   HighlightAction({
     required this.highlightRepository,

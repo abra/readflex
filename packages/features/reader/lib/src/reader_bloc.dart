@@ -9,6 +9,19 @@ import 'package:stream_transform/stream_transform.dart';
 part 'reader_event.dart';
 part 'reader_state.dart';
 
+/// Owns the loaded source (book or article) and its highlights for the
+/// reader screen.
+///
+/// Responsibilities:
+///   * resolve a [sourceId] into either a [Book] or [Article] on load and
+///     bump its `lastOpenedAt` timestamp;
+///   * debounce position updates (2s) coming from the WebView and persist
+///     them back to the repository;
+///   * refresh highlights when a TextAction (e.g. "Highlight") completes.
+///
+/// UI-only concerns (chrome visibility, selection, review-reminder banner)
+/// live in separate cubits — see [ReaderChromeCubit], [ReaderSelectionCubit],
+/// [ReaderReviewReminderCubit].
 class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   ReaderBloc({
     required BookRepository bookRepository,

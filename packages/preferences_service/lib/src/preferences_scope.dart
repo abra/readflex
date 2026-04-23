@@ -10,7 +10,16 @@ enum _PreferencesAspect {
   readerAppearance,
 }
 
-/// Listens to [PreferencesService] and provides [Preferences] to the subtree.
+/// Subscribes to [PreferencesService] and exposes [Preferences] to the
+/// subtree.
+///
+/// Backed by an [InheritedModel] so widgets can subscribe to one *aspect*
+/// (`themeMode`, `readerAppearance`, or all of [Preferences]) and skip
+/// rebuilds when unrelated fields change. Access via [of] /
+/// [themeModeOf] / [readerAppearanceOf].
+///
+/// Mounted near the app root, fed by a [StreamBuilder] over
+/// [PreferencesService.stream] that re-wraps the subtree on every emit.
 class PreferencesScope extends StatelessWidget {
   const PreferencesScope({
     required this.service,

@@ -8,6 +8,12 @@ import 'mappers/review_log_to_storage.dart';
 
 /// Centralized repository for FSRS review state across all reviewable items
 /// (flashcards, highlights, dictionary entries).
+///
+/// Wraps [ReviewItemsDao] and the pure-Dart [ReviewScheduler]: queries the
+/// due queue, records reviews (compute next state + append to review logs),
+/// and surfaces mastered-set lookups. Entity repositories store the items
+/// themselves; FSRS state is joined here by `itemId`. Wraps low-level DB
+/// errors in [StorageException].
 class FsrsRepository {
   FsrsRepository({
     required AppDatabase database,

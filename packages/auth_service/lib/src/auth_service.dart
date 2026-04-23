@@ -1,7 +1,8 @@
-/// User authentication state.
+/// User authentication state exposed by [AuthService].
 enum AuthStatus { unauthenticated, authenticated }
 
-/// Authenticated user data.
+/// Identity of the currently signed-in user. `null` when
+/// [AuthService.status] is [AuthStatus.unauthenticated].
 class AuthUser {
   const AuthUser({required this.id, required this.email});
 
@@ -9,10 +10,13 @@ class AuthUser {
   final String email;
 }
 
-/// Auth service managing registration, login, token storage.
+/// Contract for authentication (sign in / sign up / sign out) and
+/// reactive auth state.
 ///
-/// Tokens stored in `flutter_secure_storage` (Keychain / EncryptedSharedPreferences).
-/// Exposes a [Stream<AuthStatus>] for reactive auth state.
+/// Tokens are persisted in `flutter_secure_storage`
+/// (Keychain / EncryptedSharedPreferences) by the production
+/// implementation. [statusStream] drives [AuthScope] so the widget tree
+/// rebuilds when the user signs in or out.
 abstract class AuthService {
   /// Current auth status.
   AuthStatus get status;
@@ -36,9 +40,10 @@ abstract class AuthService {
   void dispose();
 }
 
-/// Stub auth service — always unauthenticated.
-///
-/// TODO: replace with real auth implementation (e.g. Firebase Auth / custom backend).
+/// Stub [AuthService] that reports [AuthStatus.unauthenticated] forever
+/// and accepts sign-in/sign-up calls as no-ops. Used during development
+/// until the real auth backend is wired; swap for a real implementation
+/// (Firebase Auth, custom backend) in `DependenciesContainer`.
 class NoopAuthService implements AuthService {
   const NoopAuthService();
 

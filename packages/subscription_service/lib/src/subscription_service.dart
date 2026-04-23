@@ -1,7 +1,8 @@
-/// Premium subscription status.
+/// Premium subscription tier of the current user.
 enum SubscriptionStatus { free, premium }
 
-/// Service to check and manage premium subscription.
+/// Contract for reading and refreshing the user's premium subscription
+/// status. Used to gate premium-only features (lock icon → paywall).
 abstract class SubscriptionService {
   /// Current subscription status.
   SubscriptionStatus get status;
@@ -13,9 +14,9 @@ abstract class SubscriptionService {
   Future<void> refresh();
 }
 
-/// Stub — always free tier.
-///
-/// TODO: replace with real subscription service (RevenueCat / in-app purchases).
+/// Stub [SubscriptionService] that reports every user as free tier and
+/// ignores refresh calls. Used during development until the real
+/// implementation (RevenueCat / in-app purchases) is wired in.
 class NoopSubscriptionService implements SubscriptionService {
   const NoopSubscriptionService();
 

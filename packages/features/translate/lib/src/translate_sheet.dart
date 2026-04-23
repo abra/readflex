@@ -8,6 +8,8 @@ import 'package:translation_service/translation_service.dart';
 
 import 'translate_cubit.dart';
 
+/// Opens the [TranslateSheet] as a modal bottom sheet. Called by
+/// [TranslateAction] from the reader's text-selection context panel.
 Future<void> showTranslateSheet(
   BuildContext context, {
   required TranslationService translationService,
@@ -26,6 +28,12 @@ Future<void> showTranslateSheet(
   );
 }
 
+/// Bottom sheet that translates selected reader text and offers to save
+/// it to the dictionary.
+///
+/// Provides its own [TranslateCubit] and kicks off the translation
+/// immediately on build. Closes itself once the entry is saved.
+/// Usually launched via [showTranslateSheet], not constructed directly.
 class TranslateSheet extends StatelessWidget {
   const TranslateSheet({
     required this.translationService,

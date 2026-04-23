@@ -7,7 +7,10 @@ import 'package:flutter/material.dart' show ThemeMode;
 import 'preferences.dart';
 import 'preferences_storage.dart';
 
-/// Loads and persists [Preferences] via [PreferencesStorage].
+/// Serialises [Preferences] to/from a single JSON blob in
+/// [PreferencesStorage]. Owns the schema (key names, default values) and
+/// fallback logic: corrupt JSON on disk falls back to defaults so the app
+/// still launches.
 class PreferencesRepository {
   PreferencesRepository(this._storage);
 

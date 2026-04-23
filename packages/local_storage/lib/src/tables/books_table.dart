@@ -1,5 +1,10 @@
 import 'package:drift/drift.dart';
 
+/// Drift schema for imported books. The book file and extracted cover live
+/// on disk under the app's books directory; [filePath] and [coverImagePath]
+/// hold only filenames so rows survive iOS Documents-UUID changes.
+/// `currentCfi` stores the foliate-js position key for restore; the legacy
+/// [currentLocation]/[totalLocations] ints are kept for display.
 class BooksTable extends Table {
   TextColumn get id => text()();
 

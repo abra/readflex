@@ -4,7 +4,9 @@
 /// Flutter → JS calls control the WebView (navigate, style, highlights).
 library;
 
-/// Position report from the article reader (scroll fraction).
+/// Current reading position inside an article WebView, reported by JS
+/// `onRelocated` on every scroll. Articles have no CFI — progress is
+/// expressed purely as a scroll fraction in `[0, 1]`.
 class ArticlePosition {
   const ArticlePosition({required this.fraction});
 
@@ -15,7 +17,9 @@ class ArticlePosition {
   }
 }
 
-/// Position report from the book reader (CFI + progress fraction).
+/// Current reading position inside a book WebView, reported by foliate-js
+/// on every page turn. Includes the EPUB CFI (for exact restore), an
+/// overall progress fraction, and optional chapter context.
 class BookPosition {
   const BookPosition({
     required this.cfi,
@@ -46,7 +50,9 @@ class BookPosition {
   }
 }
 
-/// Text selection from the WebView.
+/// User text selection surfaced from the reader WebView. Books carry a
+/// CFI range, articles carry a scroll fraction — either is enough to
+/// restore the anchor later (e.g. for a highlight).
 class ReaderSelection {
   const ReaderSelection({
     required this.text,
@@ -71,7 +77,9 @@ class ReaderSelection {
   }
 }
 
-/// Style parameters passed to the WebView via `changeStyle()`.
+/// Appearance bundle for the article reader. Every field is optional; set
+/// fields are forwarded to the WebView as CSS variables via the JS
+/// `changeStyle()` call. Used by [ArticleReaderWebView].
 class ReaderStyle {
   const ReaderStyle({
     this.fontFamily,
@@ -113,10 +121,11 @@ class ReaderStyle {
   }
 }
 
-/// Style parameters for the foliate-js book reader.
-///
-/// Passed as the `style` URL param when loading `index.html`.
-/// Property names match the JS object keys that `book.js` reads.
+/// Appearance bundle for the foliate-js book reader. Passed as the
+/// `style` query param on the initial `index.html` load and via
+/// `changeStyle()` thereafter. Field names mirror the JS object keys that
+/// foliate-js's `book.js` reads — do not rename without updating the
+/// bundled JS.
 class FoliateStyle {
   const FoliateStyle({
     this.fontSize = 1.4,
@@ -224,7 +233,9 @@ class FoliateStyle {
   };
 }
 
-/// A highlight to render in the WebView.
+/// A highlight annotation the WebView should render. For books the
+/// [cfiRange] pins the annotation to exact text; articles match by
+/// [text]. [color] overrides the default yellow when set.
 class ReaderHighlight {
   const ReaderHighlight({
     required this.id,

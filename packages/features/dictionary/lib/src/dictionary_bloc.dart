@@ -8,6 +8,14 @@ import 'package:stream_transform/stream_transform.dart';
 part 'dictionary_event.dart';
 part 'dictionary_state.dart';
 
+/// Backs the Dictionary tab ([DictionaryScreen]).
+///
+/// Loads saved [DictionaryEntry]s from [DictionaryRepository] on
+/// [DictionaryLoadRequested] together with the set of mastered ids from
+/// [FsrsRepository] for the "Mastered" badge. Handles debounced search
+/// ([DictionarySearchChanged]) and entry removal
+/// ([DictionaryEntryDeleted]) — deleting also drops the matching FSRS
+/// review row.
 class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
   DictionaryBloc({
     required DictionaryRepository dictionaryRepository,

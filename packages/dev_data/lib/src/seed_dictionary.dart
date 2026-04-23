@@ -2,10 +2,11 @@ import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:fsrs_repository/fsrs_repository.dart';
 
-/// Seeds the dictionary with sample words for development.
-///
-/// TODO: remove when real content import flow is complete.
-/// No-ops if entries already exist.
+/// Inserts a handful of sample dictionary entries (plus matching FSRS
+/// review items) into the local DB on first run, so UI development has
+/// content to render. No-ops if the dictionary table already has any
+/// rows. Called from composition only behind a dev flag; safe to remove
+/// once the real import flow fully replaces manual seeding.
 Future<void> seedDictionary({
   required DictionaryRepository dictionaryRepository,
   required FsrsRepository fsrsRepository,

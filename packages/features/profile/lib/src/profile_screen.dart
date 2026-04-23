@@ -11,7 +11,13 @@ import 'profile_cubit.dart';
 part 'widgets/font_sheet.dart';
 part 'widgets/settings_widgets.dart';
 
-/// Profile tab: settings, auth status, premium.
+/// Profile tab root screen (route `/profile`).
+///
+/// Shows account header, reading stats, appearance/reading/general/about
+/// settings groups, and a sign-out button. Owns [ProfileCubit] (account
+/// data) and [ProfileAppearanceCubit] (theme + reader preferences) for
+/// its subtree. Navigation callbacks for sign-in, paywall, and the
+/// design-system screen are injected by the composition root.
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({
     required this.authService,

@@ -7,6 +7,8 @@ import 'package:shared/shared.dart';
 
 import 'flashcard_cubit.dart';
 
+/// Opens the [FlashcardSheet] as a modal bottom sheet. Called by
+/// [FlashcardAction] from the reader's text-selection context panel.
 Future<void> showFlashcardSheet(
   BuildContext context, {
   required FlashcardRepository flashcardRepository,
@@ -23,6 +25,11 @@ Future<void> showFlashcardSheet(
   );
 }
 
+/// Bottom sheet for composing a new flashcard from selected reader text.
+///
+/// Shows the selected passage plus front, back, and optional hint fields.
+/// Provides its own [FlashcardCubit]; closes itself on successful save.
+/// Usually launched via [showFlashcardSheet], not constructed directly.
 class FlashcardSheet extends StatelessWidget {
   const FlashcardSheet({
     required this.flashcardRepository,

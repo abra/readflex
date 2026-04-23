@@ -7,7 +7,12 @@ import 'package:fsrs_repository/fsrs_repository.dart';
 
 import 'dictionary_bloc.dart';
 
-/// Dictionary tab: browse saved words and phrases.
+/// Dictionary tab root screen (route `/dictionary`).
+///
+/// Browses saved words and phrases with search, shows the "mastered"
+/// badge for entries the FSRS scheduler has graduated, and lets the user
+/// expand a card to see usage examples and the source. Owns the
+/// [DictionaryBloc] for its subtree.
 class DictionaryScreen extends StatelessWidget {
   const DictionaryScreen({
     required this.dictionaryRepository,

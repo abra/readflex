@@ -6,10 +6,19 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 
-import 'practice_bloc.dart';
+import 'practice_item.dart';
+import 'practice_item_resolver.dart';
 
 part 'mini_review_state.dart';
 
+/// Short in-reader review session scoped to a single source (book or
+/// article).
+///
+/// Mirrors [PracticeBloc]'s flow (load → reveal → rate → advance) but talks
+/// to `fsrs_repository.getDueItemsBySource(sourceId)` so it only surfaces
+/// items the user created while reading the current source. Uses the same
+/// [PracticeItemResolver] as the main practice session so resolution logic
+/// stays in one place.
 class MiniReviewCubit extends Cubit<MiniReviewState> {
   MiniReviewCubit({
     required FsrsRepository fsrsRepository,
@@ -17,64 +26,22 @@ class MiniReviewCubit extends Cubit<MiniReviewState> {
     required HighlightRepository highlightRepository,
     required DictionaryRepository dictionaryRepository,
   }) : _fsrsRepository = fsrsRepository,
-       _flashcardRepository = flashcardRepository,
-       _highlightRepository = highlightRepository,
-       _dictionaryRepository = dictionaryRepository,
+       _resolver = PracticeItemResolver(
+         flashcardRepository: flashcardRepository,
+         highlightRepository: highlightRepository,
+         dictionaryRepository: dictionaryRepository,
+       ),
        super(const MiniReviewState());
 
   final FsrsRepository _fsrsRepository;
-  final FlashcardRepository _flashcardRepository;
-  final HighlightRepository _highlightRepository;
-  final DictionaryRepository _dictionaryRepository;
+  final PracticeItemResolver _resolver;
 
   Future<void> load(String sourceId) async {
     emit(state.copyWith(status: MiniReviewStatus.loading));
 
     try {
       final dueItems = await _fsrsRepository.getDueItemsBySource(sourceId);
-
-      final flashcardIds = <String>[];
-      final highlightIds = <String>[];
-      final dictionaryIds = <String>[];
-
-      for (final due in dueItems) {
-        switch (due.itemType) {
-          case ReviewableType.flashcard:
-            flashcardIds.add(due.itemId);
-          case ReviewableType.highlight:
-            highlightIds.add(due.itemId);
-          case ReviewableType.dictionary:
-            dictionaryIds.add(due.itemId);
-        }
-      }
-
-      final (cards, highlights, entries) = await (
-        _flashcardRepository.getFlashcardsByIds(flashcardIds),
-        _highlightRepository.getHighlightsByIds(highlightIds),
-        _dictionaryRepository.getEntriesByIds(dictionaryIds),
-      ).wait;
-
-      final cardMap = {for (final c in cards) c.id: c};
-      final hlMap = {for (final h in highlights) h.id: h};
-      final entryMap = {for (final e in entries) e.id: e};
-
-      final items = <PracticeItem>[];
-      for (final due in dueItems) {
-        switch (due.itemType) {
-          case ReviewableType.flashcard:
-            if (cardMap[due.itemId] case final card?) {
-              items.add(PracticeItem.flashcard(card));
-            }
-          case ReviewableType.highlight:
-            if (hlMap[due.itemId] case final hl?) {
-              items.add(PracticeItem.highlight(hl));
-            }
-          case ReviewableType.dictionary:
-            if (entryMap[due.itemId] case final entry?) {
-              items.add(PracticeItem.dictionary(entry));
-            }
-        }
-      }
+      final items = await _resolver.resolve(dueItems);
 
       if (items.isEmpty) {
         emit(state.copyWith(status: MiniReviewStatus.empty, items: []));

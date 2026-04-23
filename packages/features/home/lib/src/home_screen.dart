@@ -9,7 +9,12 @@ import 'package:highlight_repository/highlight_repository.dart';
 
 import 'home_bloc.dart';
 
-/// Home tab: dashboard with stats and recent items.
+/// Entry point for the Home tab.
+///
+/// Pure composition: creates [HomeBloc] with all four repositories, kicks
+/// off the initial load, and delegates rendering to [HomeView]. Navigation
+/// callbacks (`onBookPressed`, `onArticlePressed`, `onPracticePressed`) are
+/// wired in the composition root.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({
     required this.bookRepository,
@@ -50,6 +55,9 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
+/// Stateless body of the Home tab: reads [HomeBloc] state and renders the
+/// dashboard (stats row + Continue Reading list). Currently a placeholder
+/// while the port is in progress — see commented-out reference layout below.
 class HomeView extends StatelessWidget {
   const HomeView({
     required this.onBookPressed,

@@ -1,4 +1,7 @@
-/// Thrown when AI service is unavailable (no network, backend error).
+/// Thrown when the AI backend is unreachable or returns an error.
+///
+/// AI has no offline fallback — features surface this as "Unavailable
+/// offline" in the UI.
 class AiServiceException implements Exception {
   const AiServiceException(this.message);
 
@@ -8,10 +11,12 @@ class AiServiceException implements Exception {
   String toString() => 'AiServiceException: $message';
 }
 
-/// HTTP client to own backend which calls DeepSeek API.
+/// Contract for AI-backed content generation (hints, usage examples).
 ///
-/// API keys stay on server, model swappable without app update.
-/// No fallback — throws [AiServiceException] when unavailable.
+/// Implementations talk to Readflex's own backend, which in turn proxies
+/// DeepSeek (or any swapped-in model). API keys stay server-side so the
+/// model can change without an app update. No offline fallback — methods
+/// throw [AiServiceException] when the backend is unreachable.
 abstract class AiService {
   /// Generates a hint for a flashcard based on front/back text.
   Future<String> generateHint({required String front, required String back});
@@ -23,9 +28,9 @@ abstract class AiService {
   });
 }
 
-/// Stub that returns empty results. Used during development.
-///
-/// TODO: replace with real HTTP client to own backend → DeepSeek API.
+/// Stub [AiService] that returns empty strings / lists without touching
+/// the network. Used during development and in tests; swap for the real
+/// HTTP client (→ own backend → DeepSeek) in `DependenciesContainer`.
 class NoopAiService implements AiService {
   const NoopAiService();
 

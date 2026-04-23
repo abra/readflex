@@ -8,6 +8,10 @@ import 'mappers/highlight_to_storage.dart';
 const _uuid = Uuid();
 
 /// Domain repository for text highlights.
+///
+/// Wraps [HighlightsDao] from `local_storage` and turns low-level DB errors
+/// into [StorageException]. Does not own FSRS review state — that lives in
+/// `FsrsRepository` and is joined by `itemId`.
 class HighlightRepository {
   HighlightRepository({required AppDatabase database})
     : _dao = database.highlightsDao;
@@ -100,6 +104,9 @@ class HighlightRepository {
     }
   }
 
+  /// Bulk-deletes every highlight attached to [sourceId]. Called when the
+  /// parent book or article is removed so the highlights table doesn't
+  /// accumulate orphans.
   Future<void> deleteHighlightsBySource(String sourceId) async {
     try {
       await _dao.deleteHighlightsBySource(sourceId);

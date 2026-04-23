@@ -7,9 +7,14 @@ import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 
 import 'mini_review_cubit.dart';
-import 'practice_bloc.dart';
+import 'practice_item.dart';
 import 'review_card_views.dart';
 
+/// Opens the in-reader mini review bottom sheet scoped to [sourceId].
+///
+/// Used by the reader's inline review reminder — the user taps "Review"
+/// on the reminder banner and this sheet surfaces only items due for the
+/// book or article currently being read.
 void showMiniReviewSheet(
   BuildContext context, {
   required String sourceId,

@@ -1,7 +1,11 @@
 part of 'dictionary_bloc.dart';
 
+/// Load status of the dictionary screen.
 enum DictionaryStatus { initial, loading, success, failure }
 
+/// State of the Dictionary tab: all saved entries, current search query,
+/// and the ids of entries the FSRS scheduler treats as mastered. The
+/// derived [filteredEntries] powers the list.
 class DictionaryState extends Equatable {
   const DictionaryState({
     this.status = DictionaryStatus.initial,

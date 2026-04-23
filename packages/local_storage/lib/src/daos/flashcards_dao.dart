@@ -5,6 +5,9 @@ import '../tables/flashcards_table.dart';
 
 part 'flashcards_dao.g.dart';
 
+/// CRUD access to [FlashcardsTable] with a by-deck filter and a batch
+/// by-ids lookup used by the practice feature. Consumed by
+/// `FlashcardRepository`, which wraps errors in `StorageException`.
 @DriftAccessor(tables: [FlashcardsTable])
 class FlashcardsDao extends DatabaseAccessor<AppDatabase>
     with _$FlashcardsDaoMixin {

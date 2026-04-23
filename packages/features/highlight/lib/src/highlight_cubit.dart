@@ -6,6 +6,13 @@ import 'package:highlight_repository/highlight_repository.dart';
 
 part 'highlight_state.dart';
 
+/// Drives the highlight bottom sheet: holds the draft color and note,
+/// persists the highlight via [HighlightRepository] on save, and
+/// registers a matching FSRS review row so the highlight enters the
+/// practice queue.
+///
+/// FSRS registration failure is treated as non-fatal — the highlight is
+/// still saved and the error is surfaced through [addError].
 class HighlightCubit extends Cubit<HighlightSheetState> {
   HighlightCubit({
     required HighlightRepository highlightRepository,

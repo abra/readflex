@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:readability_dart/readability_dart.dart' as readability;
 
-/// Result of parsing an article URL.
+/// Cleaned article content extracted from a web page, along with metadata
+/// (title, byline, cover image, language). Produced by [ArticleParser.parse]
+/// and consumed by the import flow / reader server.
 class ParsedArticle {
   const ParsedArticle({
     required this.title,
@@ -69,14 +71,19 @@ class ArticleParserException implements Exception {
   String toString() => 'ArticleParserException($reason): $message';
 }
 
-/// Fetches article HTML and extracts readable content on-device.
+/// Contract for fetching an article URL and extracting its readable
+/// content. Used by the import flow to turn an arbitrary web page into a
+/// [ParsedArticle] that the reader server can serve.
 abstract class ArticleParser {
-  /// Parses article at [url] and returns cleaned content.
+  /// Fetches [url] and returns the cleaned article. Throws
+  /// [ArticleParserException] with a [ArticleParserFailure] reason on any
+  /// step that fails (invalid URL, network, non-200 status, empty content).
   Future<ParsedArticle> parse(String url);
 }
 
-/// Real implementation: fetches HTML via [http.Client] and runs
-/// `readability_dart` locally to extract clean content.
+/// Production [ArticleParser]: fetches HTML over [http.Client] and runs
+/// `readability_dart` on-device to extract the main content. No backend
+/// round-trip — cleaning happens entirely in the app process.
 class ReadabilityArticleParser implements ArticleParser {
   ReadabilityArticleParser({http.Client? httpClient})
     : _httpClient = httpClient ?? http.Client();
@@ -192,8 +199,9 @@ class ReadabilityArticleParser implements ArticleParser {
   }
 }
 
-/// Stub implementation that returns a placeholder article. Used in tests
-/// and anywhere a deterministic parser is needed without network access.
+/// Deterministic stub [ArticleParser] that returns a placeholder article
+/// without touching the network. Used in tests and for developer
+/// environments where the real parser is disabled.
 class NoopArticleParser implements ArticleParser {
   const NoopArticleParser();
 

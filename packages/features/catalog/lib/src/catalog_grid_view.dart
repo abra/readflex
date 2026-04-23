@@ -2,8 +2,14 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 
-import 'catalog_item_widgets.dart';
+import 'catalog_grid_tile.dart';
 
+/// Scrollable 3-column grid of mixed book/article tiles.
+///
+/// Knows only about the layout (spacing, aspect ratio) and dispatches to the
+/// right tile widget for each item type. Item types beyond book/article are
+/// silently rendered as empty space — keeps the switch total without forcing
+/// every caller to filter first.
 class CatalogGridView extends StatelessWidget {
   const CatalogGridView({
     required this.items,

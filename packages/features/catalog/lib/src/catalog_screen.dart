@@ -8,11 +8,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:preferences_service/preferences_service.dart';
 
 import 'catalog_bloc.dart';
-import 'catalog_grid_view.dart';
+import 'catalog_body.dart';
+import 'catalog_header.dart';
 import 'catalog_layout_cubit.dart';
-import 'catalog_list_view.dart';
 
-/// Content library tab: shows all books and articles.
+/// Entry point for the Library tab.
+///
+/// Pure composition: creates [CatalogBloc] + [CatalogLayoutCubit], kicks
+/// off the initial load, and hands the widget tree down to [_CatalogView].
+/// All external callbacks (`onBookPressed`, `onArticlePressed`,
+/// `onAddPressed`) come from the composition root (`routing.dart`) — the
+/// feature itself doesn't know about navigation.
 class CatalogScreen extends StatelessWidget {
   const CatalogScreen({
     required this.bookRepository,
@@ -49,7 +55,7 @@ class CatalogScreen extends StatelessWidget {
           ),
         ),
       ],
-      child: LibraryView(
+      child: _CatalogView(
         onBookPressed: onBookPressed,
         onArticlePressed: onArticlePressed,
         onAddPressed: onAddPressed,
@@ -58,12 +64,19 @@ class CatalogScreen extends StatelessWidget {
   }
 }
 
-class LibraryView extends StatefulWidget {
-  const LibraryView({
+/// Stateful shell that owns the transient UI state of the catalog screen —
+/// the search text controller, the scroll-under scrim flag, and the
+/// in-flight guard for the FAB — and assembles [CatalogHeader] + [CatalogBody]
+/// around them.
+///
+/// Keeping this state local (rather than in [CatalogBloc]) means it doesn't
+/// survive navigation, which is what we want: re-entering the screen starts
+/// fresh.
+class _CatalogView extends StatefulWidget {
+  const _CatalogView({
     required this.onBookPressed,
     required this.onArticlePressed,
     required this.onAddPressed,
-    super.key,
   });
 
   final Future<void> Function(Book book) onBookPressed;
@@ -71,22 +84,20 @@ class LibraryView extends StatefulWidget {
   final AsyncCallback onAddPressed;
 
   @override
-  State<LibraryView> createState() => _LibraryViewState();
+  State<_CatalogView> createState() => _CatalogViewState();
 }
 
-class _LibraryViewState extends State<LibraryView> {
-  // Search field is a local controller + local state: the bloc only
-  // needs to know about query changes (not every keystroke triggers a
-  // new load), so we debounce by just emitting into the bloc on change.
-  // Using a controller rather than a pure `onChanged` lets us clear the
-  // field when the user taps the clear button.
+class _CatalogViewState extends State<_CatalogView> {
+  /// Search field is a local controller + local state: the bloc only needs
+  /// to know about query changes (not every keystroke triggers a new load),
+  /// and owning a controller lets us clear the field from the clear button.
   final _searchController = TextEditingController();
 
-  // Scroll-under scrim visibility. The demo toggles the shadow on the
-  // first vertical scroll, so we track `extentBefore > 0`.
+  /// Scroll-under scrim visibility. The demo toggles the shadow on the
+  /// first vertical scroll, so we track `extentBefore > 0`.
   bool _showHeaderShadow = false;
 
-  // Guards the FAB against re-entry while an import sheet is being pushed.
+  /// Guards the FAB against re-entry while an import sheet is being pushed.
   bool _addInFlight = false;
 
   @override
@@ -101,9 +112,7 @@ class _LibraryViewState extends State<LibraryView> {
     try {
       await widget.onAddPressed();
       if (!context.mounted) return;
-      context.read<CatalogBloc>().add(
-        const CatalogRefreshRequested(),
-      );
+      context.read<CatalogBloc>().add(const CatalogRefreshRequested());
     } finally {
       _addInFlight = false;
     }
@@ -112,9 +121,7 @@ class _LibraryViewState extends State<LibraryView> {
   Future<void> _handleBookTap(BuildContext context, Book book) async {
     await widget.onBookPressed(book);
     if (!context.mounted) return;
-    context.read<CatalogBloc>().add(
-      const CatalogRefreshRequested(),
-    );
+    context.read<CatalogBloc>().add(const CatalogRefreshRequested());
   }
 
   Future<void> _handleArticleTap(
@@ -123,9 +130,7 @@ class _LibraryViewState extends State<LibraryView> {
   ) async {
     await widget.onArticlePressed(article);
     if (!context.mounted) return;
-    context.read<CatalogBloc>().add(
-      const CatalogRefreshRequested(),
-    );
+    context.read<CatalogBloc>().add(const CatalogRefreshRequested());
   }
 
   @override
@@ -162,15 +167,13 @@ class _LibraryViewState extends State<LibraryView> {
               ),
               CatalogStatus.success => Column(
                 children: [
-                  _LibraryHeader(
+                  CatalogHeader(
                     state: state,
                     searchController: _searchController,
-                    onSearchChanged: (query) => bloc.add(
-                      CatalogSearchQueryChanged(query),
-                    ),
-                    onFilterChanged: (filter) => bloc.add(
-                      CatalogFilterChanged(filter),
-                    ),
+                    onSearchChanged: (query) =>
+                        bloc.add(CatalogSearchQueryChanged(query)),
+                    onFilterChanged: (filter) =>
+                        bloc.add(CatalogFilterChanged(filter)),
                   ),
                   Expanded(
                     child: Stack(
@@ -189,27 +192,22 @@ class _LibraryViewState extends State<LibraryView> {
                             }
                             return false;
                           },
-                          child: _LibraryBody(
+                          child: CatalogBody(
                             state: state,
                             onBookPressed: (book) =>
                                 _handleBookTap(context, book),
                             onArticlePressed: (article) =>
                                 _handleArticleTap(context, article),
                             onRefresh: () async {
-                              bloc.add(
-                                const CatalogRefreshRequested(),
-                              );
+                              bloc.add(const CatalogRefreshRequested());
                             },
-                            onAddPressed: () => _handleAdd(context),
                           ),
                         ),
                         Positioned(
                           top: 0,
                           left: 0,
                           right: 0,
-                          child: ScrollEdgeFade(
-                            visible: _showHeaderShadow,
-                          ),
+                          child: ScrollEdgeFade(visible: _showHeaderShadow),
                         ),
                       ],
                     ),
@@ -219,300 +217,6 @@ class _LibraryViewState extends State<LibraryView> {
             };
           },
         ),
-      ),
-    );
-  }
-}
-
-/// Full sticky header: serif title + item counter, search field, filter
-/// segment pills, and results-count + view toggle row. The "+" affordance
-/// lives as a Scaffold FAB, not in the header (see `readwell_demo`).
-class _LibraryHeader extends StatelessWidget {
-  const _LibraryHeader({
-    required this.state,
-    required this.searchController,
-    required this.onSearchChanged,
-    required this.onFilterChanged,
-  });
-
-  final CatalogState state;
-  final TextEditingController searchController;
-  final ValueChanged<String> onSearchChanged;
-  final ValueChanged<CatalogFilter> onFilterChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-
-    // Demo uses literals 20/16/12/4/…; project convention is to stick to
-    // AppSpacing tokens, so we take the nearest token in each slot.
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.lg,
-        0,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Library',
-                style: context.text.headlineMedium.copyWith(
-                  color: colors.onSurface,
-                ),
-              ),
-              Text(
-                '${state.totalCount} items',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: colors.onSurface.withValues(alpha: 0.55),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          SearchField(
-            hintText: 'Search books & articles...',
-            controller: searchController,
-            onChanged: onSearchChanged,
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: _FilterSegments(
-                  active: state.filter,
-                  onChanged: onFilterChanged,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              const _LayoutToggle(),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-        ],
-      ),
-    );
-  }
-}
-
-class _FilterSegments extends StatelessWidget {
-  const _FilterSegments({
-    required this.active,
-    required this.onChanged,
-  });
-
-  final CatalogFilter active;
-  final ValueChanged<CatalogFilter> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-
-    // Demo: 40px pill height (matches AppSizes.iconButtonSize), separator
-    // 6 (→ xs=4), padding H14 (→ md=12), radius 16 (→ AppRadius.lg).
-    // Active pill uses onSurface/surface, inactive uses secondary/onSecondary.
-    return SizedBox(
-      height: AppSizes.chipHeight,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: CatalogFilter.values.length,
-        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.xs),
-        itemBuilder: (_, i) {
-          final filter = CatalogFilter.values[i];
-          final selected = filter == active;
-
-          return Material(
-            color: Colors.transparent,
-            child: Ink(
-              decoration: BoxDecoration(
-                color: selected ? colors.onSurface : colors.secondary,
-                borderRadius: BorderRadius.circular(AppRadius.full),
-              ),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(AppRadius.full),
-                onTap: () => onChanged(filter),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minHeight: AppSizes.chipHeight,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                    ),
-                    child: Center(
-                      child: Text(
-                        _labelFor(filter),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: selected ? colors.surface : colors.onSecondary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  static String _labelFor(CatalogFilter filter) => switch (filter) {
-    CatalogFilter.all => 'All',
-    CatalogFilter.books => 'Books',
-    CatalogFilter.articles => 'Articles',
-    CatalogFilter.saved => 'Saved',
-    CatalogFilter.finished => 'Finished',
-  };
-}
-
-class _LayoutToggle extends StatelessWidget {
-  const _LayoutToggle();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<CatalogLayoutCubit, CatalogLayoutMode>(
-      builder: (context, mode) {
-        final cubit = context.read<CatalogLayoutCubit>();
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _LayoutToggleButton(
-              icon: AppIcons.viewList,
-              active: mode == CatalogLayoutMode.list,
-              onTap: () => cubit.setLayoutMode(CatalogLayoutMode.list),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            _LayoutToggleButton(
-              icon: AppIcons.viewGrid,
-              active: mode == CatalogLayoutMode.grid,
-              onTap: () => cubit.setLayoutMode(CatalogLayoutMode.grid),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _LayoutToggleButton extends StatelessWidget {
-  const _LayoutToggleButton({
-    required this.icon,
-    required this.active,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    // Demo button: 40x40 (→ AppSizes.iconButtonSize), radius 10 (→ sm=8,
-    // −2), icon 16 (→ AppIconSize.xs). Active surface is `cs.secondary`,
-    // active icon uses full onSurface, inactive uses onSurface @ 55%.
-    return Material(
-      color: Colors.transparent,
-      child: Ink(
-        decoration: BoxDecoration(
-          color: active ? colors.secondary : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-        ),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          child: SizedBox(
-            width: AppSizes.chipHeight,
-            height: AppSizes.chipHeight,
-            child: Center(
-              child: Icon(
-                icon,
-                size: AppIconSize.xs,
-                color: active
-                    ? colors.onSurface
-                    : colors.onSurface.withValues(alpha: 0.55),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LibraryBody extends StatelessWidget {
-  const _LibraryBody({
-    required this.state,
-    required this.onBookPressed,
-    required this.onArticlePressed,
-    required this.onRefresh,
-    required this.onAddPressed,
-  });
-
-  final CatalogState state;
-  final void Function(Book book) onBookPressed;
-  final void Function(Article article) onArticlePressed;
-  final Future<void> Function() onRefresh;
-  final VoidCallback onAddPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final visibleItems = state.visibleItems;
-
-    // Two distinct empty states:
-    //   1. Library genuinely has nothing — call the user to import.
-    //   2. Library has items but the current filter/search filters
-    //      them all out — call them to relax the filter.
-    if (visibleItems.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: onRefresh,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.6,
-            child: state.isEmpty
-                ? const EmptyState(
-                    icon: AppIcons.book,
-                    message: 'Your library is empty',
-                    subtitle:
-                        'Import your first book or article to get started',
-                  )
-                : const EmptyState(
-                    icon: AppIcons.searchOff,
-                    message: 'No results found',
-                    subtitle: 'Try a different search or filter',
-                  ),
-          ),
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      child: BlocBuilder<CatalogLayoutCubit, CatalogLayoutMode>(
-        builder: (context, layoutMode) {
-          return switch (layoutMode) {
-            CatalogLayoutMode.list => CatalogListView(
-              items: visibleItems,
-              onBookPressed: onBookPressed,
-              onArticlePressed: onArticlePressed,
-            ),
-            CatalogLayoutMode.grid => CatalogGridView(
-              items: visibleItems,
-              onBookPressed: onBookPressed,
-              onArticlePressed: onArticlePressed,
-            ),
-          };
-        },
       ),
     );
   }

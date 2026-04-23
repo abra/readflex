@@ -2,6 +2,10 @@ part of 'reader_bloc.dart';
 
 enum ReaderStatus { initial, loading, ready, failure }
 
+/// Snapshot of the loaded source. Exactly one of [book] / [article] is
+/// non-null once [status] reaches [ReaderStatus.ready], disambiguated by
+/// [sourceType]. Highlights are loaded alongside the source and refreshed
+/// on demand via [ReaderHighlightsRefreshed].
 class ReaderState extends Equatable {
   const ReaderState({
     this.status = ReaderStatus.initial,

@@ -3,8 +3,12 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import 'reader_bridge.dart';
 
-/// Registers the three JS→Flutter handlers that are identical between the
-/// book and article WebViews: [onSelectionEnd], [onSelectionCleared], [onClick].
+/// Registers the three JS → Flutter bridge handlers that are identical
+/// for both reader WebViews — `onSelectionEnd`, `onSelectionCleared`,
+/// `onClick` — and wires each one to the provided Dart callback.
+///
+/// Extracted so [BookReaderWebView] and [ArticleReaderWebView] don't
+/// duplicate the same glue code.
 void registerSharedReaderHandlers(
   InAppWebViewController controller, {
   void Function(ReaderSelection)? onTextSelected,
@@ -38,9 +42,11 @@ void registerSharedReaderHandlers(
   );
 }
 
-/// Common [InAppWebViewSettings] shared by both reader WebViews.
-/// Article reader additionally passes [mixedContentMode] to allow
-/// https images inside an http-served page.
+/// Base [InAppWebViewSettings] shared by both reader WebViews: zoom off,
+/// transparent background, hybrid composition, JS enabled, DevTools
+/// inspectable only in debug. The article reader additionally opts into
+/// [mixedContentMode] so `https://` article images render inside the
+/// `http://127.0.0.1` localhost page.
 InAppWebViewSettings baseReaderSettings({
   MixedContentMode? mixedContentMode,
 }) => InAppWebViewSettings(

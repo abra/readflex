@@ -5,6 +5,12 @@ import 'package:subscription_service/subscription_service.dart';
 
 part 'profile_state.dart';
 
+/// Drives the account portion of [ProfileScreen]: auth state, current
+/// email, and premium status.
+///
+/// Snapshots values from [AuthService] and [SubscriptionService] on
+/// [load], and handles [signOut] with a loading flag and non-fatal error
+/// logging.
 class ProfileCubit extends Cubit<ProfileState> {
   ProfileCubit({
     required AuthService authService,

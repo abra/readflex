@@ -44,6 +44,15 @@ class _ReaderCallbacksScope extends InheritedWidget {
       onStartMiniReview != old.onStartMiniReview;
 }
 
+/// Full-screen reader for a book or article (route `/reader/:sourceId`).
+///
+/// Composition only: wires [ReaderBloc] (source + highlights + position
+/// persistence), [ReaderChromeCubit] (chrome visibility) and
+/// [ReaderSelectionCubit] (text selection) around an internal
+/// [_ReaderView], and exposes optional review-reminder callbacks via an
+/// [InheritedWidget] instead of prop-drilling. [textActions] follow the
+/// plugin contract from `package:shared` — features like Highlight /
+/// Flashcard / Translate are wired in the composition root.
 class ReaderScreen extends StatelessWidget {
   const ReaderScreen({
     required this.sourceId,
@@ -179,9 +188,6 @@ class _TopChromeDriver extends StatelessWidget {
       (b) => b.state.status,
     );
     final title = context.select<ReaderBloc, String>((b) => b.state.title);
-    final highlightCount = context.select<ReaderBloc, int>(
-      (b) => b.state.highlights.length,
-    );
     final chromeVisible = context.select<ReaderChromeCubit, bool>(
       (c) => c.state.chromeVisible,
     );
@@ -189,22 +195,19 @@ class _TopChromeDriver extends StatelessWidget {
     return _ReaderTopChrome(
       visible: status != ReaderStatus.ready || chromeVisible,
       title: title,
-      highlightCount: highlightCount,
     );
   }
 }
 
-/// Top reader chrome: AppBar overlay that slides down from the top.
+/// Top reader chrome: AppBar overlay that slides down from the top when
+/// `chromeVisible` is true. Shows only the source title for now — a
+/// highlights-list action button is planned but intentionally kept out
+/// until there's a real bottom sheet for it to open.
 class _ReaderTopChrome extends StatelessWidget {
-  const _ReaderTopChrome({
-    required this.visible,
-    required this.title,
-    required this.highlightCount,
-  });
+  const _ReaderTopChrome({required this.visible, required this.title});
 
   final bool visible;
   final String title;
-  final int highlightCount;
 
   @override
   Widget build(BuildContext context) {
@@ -228,18 +231,6 @@ class _ReaderTopChrome extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              actions: [
-                if (highlightCount > 0)
-                  Badge(
-                    label: Text('$highlightCount'),
-                    child: IconButton(
-                      icon: const Icon(AppIcons.highlight),
-                      onPressed: () {
-                        // TODO: show highlights list as bottom sheet.
-                      },
-                    ),
-                  ),
-              ],
             ),
           ),
         ),

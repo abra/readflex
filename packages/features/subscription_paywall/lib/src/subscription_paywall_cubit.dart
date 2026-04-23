@@ -4,6 +4,9 @@ import 'package:subscription_service/subscription_service.dart';
 
 part 'subscription_paywall_state.dart';
 
+/// Drives the subscription paywall sheet: reads current premium status
+/// from [SubscriptionService], runs the purchase flow, and reports
+/// success/failure back to the UI. On success the sheet dismisses itself.
 class SubscriptionPaywallCubit extends Cubit<SubscriptionPaywallState> {
   SubscriptionPaywallCubit({required SubscriptionService subscriptionService})
     : _subscriptionService = subscriptionService,

@@ -1,7 +1,10 @@
 import 'package:domain_models/domain_models.dart' show SourceType;
 import 'package:flutter/widgets.dart';
 
-/// Context passed to a [TextAction] when the user selects text in the reader.
+/// Payload delivered to a [TextAction] when the user selects text in the
+/// reader — the selected string plus enough positional metadata
+/// (CFI range / scroll offset / page number) for the action to save an
+/// anchor back to the source.
 class TextSelectionContext {
   const TextSelectionContext({
     required this.selectedText,

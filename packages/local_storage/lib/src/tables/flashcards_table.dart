@@ -1,5 +1,8 @@
 import 'package:drift/drift.dart';
 
+/// Drift schema for flashcards. Cards are grouped by [deckId]; optional
+/// [sourceHighlightId] backlinks to the highlight a card was generated
+/// from. FSRS review state lives separately in `review_items_table`.
 class FlashcardsTable extends Table {
   TextColumn get id => text()();
 

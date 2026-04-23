@@ -6,6 +6,10 @@ import '../tables/review_logs_table.dart';
 
 part 'review_items_dao.g.dart';
 
+/// CRUD + due-queue queries over [ReviewItemsTable] and append-only writes
+/// to [ReviewLogsTable]. Backs `FsrsRepository`, which wraps errors in
+/// `StorageException`. Hot paths ([dueItems], [dueItemsBySource]) are
+/// served by composite indexes created in `AppDatabase._createIndexes`.
 @DriftAccessor(tables: [ReviewItemsTable, ReviewLogsTable])
 class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
     with _$ReviewItemsDaoMixin {

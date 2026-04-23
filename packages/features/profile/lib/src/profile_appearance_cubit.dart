@@ -5,6 +5,12 @@ import 'package:preferences_service/preferences_service.dart';
 
 part 'profile_appearance_state.dart';
 
+/// Drives the appearance controls on [ProfileScreen] (theme mode, reader
+/// theme/font/text scale/line height).
+///
+/// Writes through [PreferencesService] and rolls state back on failure.
+/// Slider "preview" setters (`previewTextScale`, `previewLineHeight`) emit
+/// locally for immediate feedback; `commit*` variants persist on drag end.
 class ProfileAppearanceCubit extends Cubit<ProfileAppearanceState> {
   ProfileAppearanceCubit({
     required PreferencesService preferencesService,

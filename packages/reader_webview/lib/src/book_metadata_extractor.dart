@@ -5,7 +5,9 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
-/// Metadata extracted from a book file by foliate-js.
+/// Title / author / description / cover image extracted from a book file
+/// by foliate-js. Produced by [BookMetadataExtractor] during import and
+/// stored on the [Book] domain model.
 class BookMetadata {
   const BookMetadata({
     required this.title,

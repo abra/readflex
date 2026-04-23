@@ -6,7 +6,12 @@ import 'package:shared/shared.dart';
 
 import 'flashcard_sheet.dart';
 
-/// TextAction implementation that opens the flashcard bottom sheet.
+/// Reader plug-in that lets the user turn the currently selected text into
+/// a new [Flashcard].
+///
+/// Registered in the composition root as one of the [TextAction]s passed
+/// to the reader — appears in the reader's text-selection context panel
+/// with the "Flashcard" label. Tapping it opens [showFlashcardSheet].
 class FlashcardAction extends TextAction {
   FlashcardAction({
     required this.flashcardRepository,

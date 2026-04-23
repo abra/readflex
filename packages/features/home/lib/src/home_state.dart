@@ -2,6 +2,9 @@ part of 'home_bloc.dart';
 
 enum HomeStatus { initial, loading, success, failure }
 
+/// Snapshot of Home-tab data: recent books/articles, an interleaved list of
+/// the 5 most recent items (pre-sorted in the bloc), and the totals the
+/// stats row surfaces (highlights, due flashcards, derived sources count).
 class HomeState extends Equatable {
   const HomeState({
     this.status = HomeStatus.initial,

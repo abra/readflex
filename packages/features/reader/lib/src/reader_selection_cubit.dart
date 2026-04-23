@@ -1,6 +1,10 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+/// Current in-WebView text selection, mirrored into Flutter so the context
+/// panel can drive its show/hide animation and pass position metadata to
+/// TextAction handlers. Exactly one of [cfiRange] (book) or [scrollOffset]
+/// (article) is populated while [hasSelection] is true.
 class ReaderSelectionState extends Equatable {
   const ReaderSelectionState({
     this.selectedText = '',
@@ -51,6 +55,9 @@ class ReaderSelectionState extends Equatable {
   ];
 }
 
+/// Mirrors WebView text-selection events into Flutter state so the
+/// [_ContextPanel] can appear/disappear and TextActions can access the
+/// selected text + location metadata.
 class ReaderSelectionCubit extends Cubit<ReaderSelectionState> {
   ReaderSelectionCubit() : super(const ReaderSelectionState());
 

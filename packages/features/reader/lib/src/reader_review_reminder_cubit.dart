@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+/// Whether the inline "you have items to review" banner should be shown
+/// above the reader.
 class ReaderReviewReminderState extends Equatable {
   const ReaderReviewReminderState({this.showReminder = false});
 
@@ -17,6 +19,12 @@ class ReaderReviewReminderState extends Equatable {
   List<Object?> get props => [showReminder];
 }
 
+/// Periodically polls the host for due review items on the current source
+/// and surfaces a banner when there's something to review.
+///
+/// The reader itself knows nothing about flashcards/highlights — the poll
+/// callback is injected from the composition root. [dismiss] hides the
+/// banner for the current session (closing the screen resets it).
 class ReaderReviewReminderCubit extends Cubit<ReaderReviewReminderState> {
   ReaderReviewReminderCubit({
     required String sourceId,

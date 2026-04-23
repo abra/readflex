@@ -1,16 +1,26 @@
-part of 'practice_bloc.dart';
+import 'package:domain_models/domain_models.dart';
+import 'package:equatable/equatable.dart';
 
+/// One thing the user is asked to review in a practice session.
+///
+/// Sealed hierarchy with three concrete variants — [FlashcardItem],
+/// [HighlightItem], [DictionaryItem] — one per [ReviewableType]. The bloc
+/// keeps them in FSRS "due" order; the UI picks a card view based on the
+/// runtime type.
 sealed class PracticeItem extends Equatable {
   const PracticeItem();
 
   const factory PracticeItem.flashcard(Flashcard card) = FlashcardItem;
-
   const factory PracticeItem.highlight(Highlight highlight) = HighlightItem;
-
   const factory PracticeItem.dictionary(DictionaryEntry entry) = DictionaryItem;
 
+  /// Domain id of the underlying entity. Used to round-trip the item
+  /// through `fsrs_repository` on rate.
   String get itemId;
 
+  /// FSRS type the underlying entity belongs to. Keeps the bloc from
+  /// pattern-matching on the sealed type every time it wants to record a
+  /// review.
   ReviewableType get itemType;
 }
 

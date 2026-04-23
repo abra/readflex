@@ -5,7 +5,13 @@ import 'preferences.dart';
 import 'preferences_repository.dart';
 import 'preferences_storage.dart';
 
-/// Loads, persists and streams [Preferences].
+/// Single source of truth for user [Preferences]: loads them at startup,
+/// persists edits through [PreferencesRepository], and emits the new
+/// snapshot on [stream] so [PreferencesScope] rebuilds listeners.
+///
+/// Save failures are non-fatal — the in-memory value is kept and emitted
+/// so the current session stays consistent; the old value is restored on
+/// next launch.
 class PreferencesService {
   PreferencesService._(this._repository, this._current);
 
@@ -13,6 +19,9 @@ class PreferencesService {
   final _controller = StreamController<Preferences>.broadcast();
   Preferences _current;
 
+  /// Constructs the service asynchronously, loading the initial
+  /// [Preferences] from disk. [supportedCodes] bounds locale resolution
+  /// (device locale → first supported → `en`).
   static Future<PreferencesService> create({
     required List<String> supportedCodes,
   }) async {
@@ -21,10 +30,17 @@ class PreferencesService {
     return PreferencesService._(repository, current);
   }
 
+  /// Broadcast stream of [Preferences] snapshots, one per successful
+  /// [update]. Does not replay the current value — combine with [current]
+  /// or an `initialData:` on [StreamBuilder].
   Stream<Preferences> get stream => _controller.stream;
 
+  /// Latest in-memory [Preferences] snapshot.
   Preferences get current => _current;
 
+  /// Applies [transform] to the current snapshot, saves the result, and
+  /// emits it on [stream]. Persistence failures are logged, not thrown —
+  /// the new value still takes effect for this session.
   Future<void> update(Preferences Function(Preferences) transform) async {
     _current = transform(_current);
     try {

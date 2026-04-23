@@ -1,7 +1,10 @@
 part of 'subscription_paywall_cubit.dart';
 
+/// Lifecycle of the paywall sheet's purchase action.
 enum SubscriptionPaywallStatus { idle, purchasing, success, failure }
 
+/// State of the paywall sheet: purchase lifecycle plus the user's
+/// current premium flag.
 class SubscriptionPaywallState extends Equatable {
   const SubscriptionPaywallState({
     this.status = SubscriptionPaywallStatus.idle,

@@ -2,8 +2,13 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 
-import 'catalog_item_widgets.dart';
+import 'catalog_list_tile.dart';
 
+/// Vertically scrolling list of mixed book/article rows.
+///
+/// Each row is one tile; per-row bottom hairlines are drawn by the tile
+/// itself (see `showDivider`) so there's no trailing separator under the
+/// last row. Unknown item types render as empty space.
 class CatalogListView extends StatelessWidget {
   const CatalogListView({
     required this.items,
@@ -18,9 +23,6 @@ class CatalogListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Demo uses ListView.builder with per-row bottom borders (no
-    // Divider/SizedBox separators) so the last row draws no extra line
-    // under it. We replicate that by passing `showDivider` to each tile.
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,

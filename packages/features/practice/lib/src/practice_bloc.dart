@@ -6,10 +6,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 
+import 'practice_item.dart';
+import 'practice_item_resolver.dart';
+
 part 'practice_event.dart';
-part 'practice_item.dart';
 part 'practice_state.dart';
 
+/// Global practice session — drives the Practice tab.
+///
+/// Responsibility is narrow: load all currently-due review items from FSRS,
+/// expand them into display-ready [PracticeItem]s via [PracticeItemResolver],
+/// track revealed/current index, and record the user's rating back into FSRS.
+/// The merging of FSRS ids → domain entities lives in the resolver, not here.
 class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
   PracticeBloc({
     required FsrsRepository fsrsRepository,
@@ -17,9 +25,11 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
     required HighlightRepository highlightRepository,
     required DictionaryRepository dictionaryRepository,
   }) : _fsrsRepository = fsrsRepository,
-       _flashcardRepository = flashcardRepository,
-       _highlightRepository = highlightRepository,
-       _dictionaryRepository = dictionaryRepository,
+       _resolver = PracticeItemResolver(
+         flashcardRepository: flashcardRepository,
+         highlightRepository: highlightRepository,
+         dictionaryRepository: dictionaryRepository,
+       ),
        super(const PracticeState()) {
     on<PracticeLoadRequested>(_onLoadRequested);
     on<PracticeCardRated>(_onCardRated);
@@ -28,9 +38,7 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
   }
 
   final FsrsRepository _fsrsRepository;
-  final FlashcardRepository _flashcardRepository;
-  final HighlightRepository _highlightRepository;
-  final DictionaryRepository _dictionaryRepository;
+  final PracticeItemResolver _resolver;
 
   Future<void> _onLoadRequested(
     PracticeLoadRequested event,
@@ -42,7 +50,7 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
       // A single session rarely goes past a few dozen cards; load a generous
       // slice instead of the whole due queue to avoid OOM on large decks.
       final dueItems = await _fsrsRepository.getDueItems(limit: 50);
-      final items = await _resolveItems(dueItems);
+      final items = await _resolver.resolve(dueItems);
 
       if (items.isEmpty) {
         emit(state.copyWith(status: PracticeStatus.empty, items: []));
@@ -89,10 +97,7 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
     }
   }
 
-  void _onItemNext(
-    PracticeItemNext event,
-    Emitter<PracticeState> emit,
-  ) {
+  void _onItemNext(PracticeItemNext event, Emitter<PracticeState> emit) {
     _advance(emit);
   }
 
@@ -103,55 +108,5 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
     } else {
       emit(state.copyWith(currentIndex: nextIndex, isRevealed: false));
     }
-  }
-
-  /// Resolves ReviewItems into PracticeItems by fetching the actual entities
-  /// in parallel batch queries instead of sequential per-item lookups.
-  Future<List<PracticeItem>> _resolveItems(List<ReviewItem> dueItems) async {
-    final flashcardIds = <String>[];
-    final highlightIds = <String>[];
-    final dictionaryIds = <String>[];
-
-    for (final due in dueItems) {
-      switch (due.itemType) {
-        case ReviewableType.flashcard:
-          flashcardIds.add(due.itemId);
-        case ReviewableType.highlight:
-          highlightIds.add(due.itemId);
-        case ReviewableType.dictionary:
-          dictionaryIds.add(due.itemId);
-      }
-    }
-
-    final (cards, highlights, entries) = await (
-      _flashcardRepository.getFlashcardsByIds(flashcardIds),
-      _highlightRepository.getHighlightsByIds(highlightIds),
-      _dictionaryRepository.getEntriesByIds(dictionaryIds),
-    ).wait;
-
-    final cardMap = {for (final c in cards) c.id: c};
-    final hlMap = {for (final h in highlights) h.id: h};
-    final entryMap = {for (final e in entries) e.id: e};
-
-    // Preserve original order from dueItems, skip items deleted between
-    // scheduling and resolution.
-    final items = <PracticeItem>[];
-    for (final due in dueItems) {
-      switch (due.itemType) {
-        case ReviewableType.flashcard:
-          if (cardMap[due.itemId] case final card?) {
-            items.add(FlashcardItem(card));
-          }
-        case ReviewableType.highlight:
-          if (hlMap[due.itemId] case final hl?) {
-            items.add(HighlightItem(hl));
-          }
-        case ReviewableType.dictionary:
-          if (entryMap[due.itemId] case final entry?) {
-            items.add(DictionaryItem(entry));
-          }
-      }
-    }
-    return items;
   }
 }

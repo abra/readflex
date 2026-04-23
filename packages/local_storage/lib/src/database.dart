@@ -22,6 +22,14 @@ import 'tables/review_logs_table.dart';
 
 part 'database.g.dart';
 
+/// Single Drift-generated SQLite database (`readflex.db`) holding every
+/// table and DAO the app uses. Repositories receive an [AppDatabase] via DI
+/// and extract the DAO they need — there are no per-feature databases.
+///
+/// Schema version lives in [schemaVersion]; all forward migrations are in
+/// [migration]. Use [AppDatabase.forTesting] with an in-memory executor to
+/// exercise schema + migrations without touching the real app documents
+/// directory.
 @DriftDatabase(
   tables: [
     BooksTable,

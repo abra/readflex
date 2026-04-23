@@ -11,6 +11,10 @@ import 'mappers/flashcard_to_storage.dart';
 const _uuid = Uuid();
 
 /// Domain repository for flashcards.
+///
+/// Wraps [FlashcardsDao] from `local_storage` and turns low-level DB errors
+/// into [StorageException]. FSRS review state is not stored here — that
+/// lives in `FsrsRepository` and is joined by `itemId`.
 class FlashcardRepository {
   FlashcardRepository({required AppDatabase database})
     : _dao = database.flashcardsDao;

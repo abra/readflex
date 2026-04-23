@@ -1,7 +1,11 @@
 part of 'mini_review_cubit.dart';
 
+/// Lifecycle of an in-reader mini review session.
 enum MiniReviewStatus { loading, reviewing, empty, completed, failure }
 
+/// State of the in-reader mini review: source-scoped due items plus the
+/// same cursor shape as [PracticeState] so both sessions can reuse the
+/// card widgets in `review_card_views.dart`.
 class MiniReviewState extends Equatable {
   const MiniReviewState({
     this.status = MiniReviewStatus.loading,

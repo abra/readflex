@@ -1,5 +1,7 @@
 part of 'profile_cubit.dart';
 
+/// Account state shown on [ProfileScreen]: auth status + email and the
+/// user's subscription tier. [isLoading] gates the sign-out button.
 class ProfileState extends Equatable {
   const ProfileState({
     this.authStatus = AuthStatus.unauthenticated,

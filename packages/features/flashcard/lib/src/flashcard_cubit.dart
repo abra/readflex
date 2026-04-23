@@ -6,6 +6,13 @@ import 'package:fsrs_repository/fsrs_repository.dart';
 
 part 'flashcard_state.dart';
 
+/// Drives the flashcard bottom sheet: holds the draft front/back/hint,
+/// persists the flashcard via [FlashcardRepository] on save, and
+/// registers a matching FSRS review row so the card enters the practice
+/// queue.
+///
+/// FSRS registration failure is treated as non-fatal — the flashcard is
+/// still saved and the error is surfaced through [addError].
 class FlashcardCubit extends Cubit<FlashcardState> {
   FlashcardCubit({
     required FlashcardRepository flashcardRepository,

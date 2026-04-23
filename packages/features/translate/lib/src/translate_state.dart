@@ -1,7 +1,11 @@
 part of 'translate_cubit.dart';
 
+/// Lifecycle of the translate sheet: translation in flight, translation
+/// ready, dictionary save in flight, done, or error.
 enum TranslateStatus { idle, translating, translated, saving, saved, failure }
 
+/// State of the translate sheet: the translation result (text, source,
+/// usage examples) plus the current status and optional error message.
 class TranslateState extends Equatable {
   const TranslateState({
     this.status = TranslateStatus.idle,

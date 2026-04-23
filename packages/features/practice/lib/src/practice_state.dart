@@ -1,7 +1,10 @@
 part of 'practice_bloc.dart';
 
+/// Lifecycle of a practice session.
 enum PracticeStatus { initial, loading, reviewing, empty, completed, failure }
 
+/// State of the Practice tab: the resolved due queue plus the cursor
+/// (current index + reveal flag) the UI uses to pick one card view.
 class PracticeState extends Equatable {
   const PracticeState({
     this.status = PracticeStatus.initial,

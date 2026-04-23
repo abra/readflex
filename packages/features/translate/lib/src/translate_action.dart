@@ -7,7 +7,12 @@ import 'package:translation_service/translation_service.dart';
 
 import 'translate_sheet.dart';
 
-/// TextAction implementation that opens the translate bottom sheet.
+/// Reader plug-in that translates the currently selected text and lets
+/// the user save it to the dictionary.
+///
+/// Registered in the composition root as one of the [TextAction]s passed
+/// to the reader — appears in the reader's text-selection context panel
+/// with the "Translate" label. Tapping it opens [showTranslateSheet].
 class TranslateAction extends TextAction {
   TranslateAction({
     required this.translationService,

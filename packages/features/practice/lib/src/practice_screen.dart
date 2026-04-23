@@ -7,9 +7,14 @@ import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 
 import 'practice_bloc.dart';
+import 'practice_item.dart';
 import 'review_card_views.dart';
 
-/// Practice tab: review due flashcards, highlights, and dictionary entries.
+/// Practice tab root screen (route `/practice`).
+///
+/// Hosts a session that reviews all currently-due flashcards, highlights,
+/// and dictionary entries across every source. Owns the [PracticeBloc]
+/// for its subtree and kicks off the initial load on mount.
 class PracticeScreen extends StatelessWidget {
   const PracticeScreen({
     required this.fsrsRepository,
@@ -40,6 +45,8 @@ class PracticeScreen extends StatelessWidget {
   }
 }
 
+/// Body of [PracticeScreen]. Renders the correct state (loading, empty,
+/// reviewing, completed, failure) based on [PracticeBloc].
 class PracticeView extends StatelessWidget {
   const PracticeView({super.key});
 

@@ -2,7 +2,7 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 
-import 'practice_bloc.dart';
+import 'practice_item.dart';
 
 /// Returns a contextual reveal button label for the given practice item type.
 String revealLabel(PracticeItem? item) => switch (item) {

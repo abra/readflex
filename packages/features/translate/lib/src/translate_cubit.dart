@@ -7,6 +7,15 @@ import 'package:translation_service/translation_service.dart';
 
 part 'translate_state.dart';
 
+/// Drives the translate bottom sheet.
+///
+/// Triggers a translation through [TranslationService] (remote with
+/// platform fallback) and, on demand, persists the result as a
+/// [DictionaryEntry] plus a matching FSRS review row so the word enters
+/// the practice queue.
+///
+/// FSRS registration failure is treated as non-fatal — the entry is
+/// still saved and the error is surfaced through [addError].
 class TranslateCubit extends Cubit<TranslateState> {
   TranslateCubit({
     required TranslationService translationService,
