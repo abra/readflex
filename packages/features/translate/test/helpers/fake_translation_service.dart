@@ -19,4 +19,13 @@ class FakeTranslationService implements TranslationService {
           source: TranslationSource.platform,
         );
   }
+
+  @override
+  Future<List<Pronunciation>> lookupPronunciation({
+    required String word,
+    required String lang,
+  }) async => const [];
+
+  @override
+  Future<void> dispose() async {}
 }

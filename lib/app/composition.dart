@@ -144,7 +144,7 @@ Future<DependenciesContainer> createDependenciesContainer(
   // TODO: replace Noop stubs with real implementations.
   final authService = NoopAuthService();
   final articleParser = ReadabilityArticleParser();
-  const translationService = NoopTranslationService();
+  final translationService = BundledTranslationService();
   const aiService = NoopAiService();
   const subscriptionService = NoopSubscriptionService();
   final connectivityService = await ConnectivityPlusService.create();

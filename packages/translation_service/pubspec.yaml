@@ -1,5 +1,5 @@
 name: translation_service
-description: "Translation with fallback: remote server → platform (OS-level)."
+description: "Translation + word-level pronunciation lookup (bundled Wiktionary SQLite)."
 publish_to: none
 version: 0.1.0
 
@@ -10,7 +10,17 @@ dependencies:
   flutter:
     sdk: flutter
 
+  equatable: ^2.0.8
+  path: ^1.9.0
+  path_provider: ^2.0.0
+  sqflite: ^2.3.0
+
 dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
+  sqflite_common_ffi: ^2.3.0
+
+flutter:
+  assets:
+    - assets/phonetic/en.db

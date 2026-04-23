@@ -2,8 +2,7 @@
 
 Content library browser: shows all books and articles in a single merged feed
 with filter segments, search, and a list/grid toggle. Surfaced as the
-`Library` bottom-nav tab (route `/library`). Was previously named
-`content_library`.
+`Library` bottom-nav tab (route `/library`).
 
 ## Public API
 
