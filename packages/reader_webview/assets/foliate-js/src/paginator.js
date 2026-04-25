@@ -331,22 +331,14 @@ class View {
       const expandedSize = pageCount * this.#size
       this.#element.style.padding = '0'
       this.#iframe.style[side] = `${expandedSize}px`
-      // Readflex patch: upstream foliate-js sized the container as
-      // `expandedSize + size * 2` and offset the iframe/overlayer by one
-      // page on each side. Those two extra pages were a swipe-overshoot
-      // buffer for multi-chapter section transitions, but on a
-      // single-chapter EPUB (every imported article is one) they show up
-      // as dead blank pages the user can swipe to. Snap+adjacent-section
-      // logic still fires from the real first/last content page, so book
-      // chapter transitions keep working without the buffer pages.
-      this.#element.style[side] = `${expandedSize}px`
+      this.#element.style[side] = `${expandedSize + this.#size * 2}px`
       this.#iframe.style[otherSide] = '100%'
       this.#element.style[otherSide] = '100%'
       documentElement.style[side] = `${this.#size}px`
       if (this.#overlayer) {
         this.#overlayer.element.style.margin = '0'
-        this.#overlayer.element.style.left = '0'
-        this.#overlayer.element.style.top = '0'
+        this.#overlayer.element.style.left = this.#vertical ? '0' : `${this.#size}px`
+        this.#overlayer.element.style.top = this.#vertical ? `${this.#size}px` : '0'
         this.#overlayer.element.style[side] = `${expandedSize}px`
         this.#overlayer.redraw()
       }
@@ -796,7 +788,17 @@ export class Paginator extends HTMLElement {
       if (deltaPages > 1) page = originPage + 1
       else if (deltaPages < -1) page = originPage - 1
     }
-    page = Math.max(0, Math.min(pages - 1, page))
+    // Readflex patch: foliate-js sizes the section container as
+    // `expandedSize + size * 2` and treats indices 0 and `pages - 1` as
+    // swipe-overshoot buffers for chapter transitions. On a single-chapter
+    // EPUB (every imported article is one) those buffers have nowhere to
+    // go and the user just lands on a blank page. Clamp navigation away
+    // from a buffer when its corresponding adjacent section is absent —
+    // books with multiple chapters keep using the buffer in the direction
+    // they actually have a neighbour.
+    const minPage = this.#adjacentIndex(-1) == null ? 1 : 0
+    const maxPage = this.#adjacentIndex(1) == null ? pages - 2 : pages - 1
+    page = Math.max(minPage, Math.min(maxPage, page))
     const targetOffset = page * size
     const distance = Math.abs(targetOffset - signedOffset)
     const baseDuration = 450
