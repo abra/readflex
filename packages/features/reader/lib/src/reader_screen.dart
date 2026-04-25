@@ -552,10 +552,10 @@ class _ReaderWebViewBody extends StatelessWidget {
     );
 
     // Books and articles share the foliate-js path: articles are packaged
-    // as single-chapter EPUBs on import (`EpubBuilder`) and a boot-time
-    // backfill keeps older articles in sync. Position is a CFI on both
-    // sides; the article additionally writes a `[0, 1]` fraction so the
-    // catalog cover's progress pill keeps working without re-deriving it.
+    // as single-chapter EPUBs on import (`EpubBuilder`). Position is a CFI
+    // on both sides; the article additionally writes a `[0, 1]` fraction
+    // so the catalog cover's progress pill keeps working without
+    // re-deriving it.
     final isArticle = state.isArticle;
     final filePath = isArticle ? state.article!.epubPath : state.book!.filePath;
     final initialCfi = isArticle

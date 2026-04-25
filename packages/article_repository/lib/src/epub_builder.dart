@@ -146,6 +146,21 @@ class EpubBuilder {
   // wrapping) and let the paginator handle page geometry.
   static const _defaultStylesheet =
       'body { font-family: serif; line-height: 1.5; margin: 0; padding: 0; }\n'
+      // Zero out the first/last child margin to prevent foliate-js from
+      // overflowing into a leading/trailing empty column. Default browser
+      // margin on `<h1>` (chapter title we inject) and on the trailing
+      // block (often a wrapped <table> with margin: 1em 0) otherwise spills
+      // past the column boundary and the paginator allocates a blank page
+      // for that overflow.
+      'body > *:first-child { margin-top: 0 !important; '
+      'padding-top: 0 !important; }\n'
+      'body > *:last-child { margin-bottom: 0 !important; '
+      'padding-bottom: 0 !important; }\n'
+      // Defeat any `break-before: page|recto|always` a publisher might have
+      // shipped for headings — articles are single-chapter so any forced
+      // page break before the title creates a phantom leading page.
+      'h1, h2, h3, h4, h5, h6 { break-before: auto !important; '
+      'page-break-before: auto !important; }\n'
       'img { max-width: 100%; height: auto; }\n'
       'figure { margin: 1em 0; }\n'
       'figure img { display: block; margin: 0 auto; }\n'
