@@ -38,6 +38,7 @@ class AssetExtractor {
     'assets/foliate-js/src/search.js',
     'assets/foliate-js/src/dict.js',
     'assets/foliate-js/src/fixed-layout.js',
+    'assets/foliate-js/src/remote_file.js',
     // foliate-js format handlers
     'assets/foliate-js/src/pdf.js',
     'assets/foliate-js/src/fb2.js',

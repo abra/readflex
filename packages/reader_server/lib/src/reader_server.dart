@@ -74,11 +74,14 @@ class ReaderServer {
     final stopwatch = Stopwatch()..start();
 
     try {
-      if (request.method != 'GET') {
+      // HEAD is treated like GET — `_serveFile` checks the request method
+      // and skips the body for HEAD so clients can probe size/content-type
+      // without downloading. Used by `RemoteFile.open()` on the JS side.
+      if (request.method != 'GET' && request.method != 'HEAD') {
         _respond(
           request,
           HttpStatus.methodNotAllowed,
-          'Only GET is supported.',
+          'Only GET and HEAD are supported.',
         );
         _logRequest(
           request.method,
@@ -154,12 +157,12 @@ class ReaderServer {
       return;
     }
 
-    final contentType = _mimeForExtension(p.extension(filePath));
-    request.response
-      ..statusCode = HttpStatus.ok
-      ..headers.contentType = contentType;
-    await file.openRead().pipe(request.response);
-    _logRequest('GET', path, HttpStatus.ok, stopwatch);
+    await _serveFile(
+      request: request,
+      file: file,
+      contentType: _mimeForExtension(p.extension(filePath)),
+      stopwatch: stopwatch,
+    );
   }
 
   // ── /article/<id>[/images/<filename>] ──
@@ -238,12 +241,12 @@ class ReaderServer {
       return;
     }
 
-    final contentType = _mimeForExtension(p.extension(filename));
-    request.response
-      ..statusCode = HttpStatus.ok
-      ..headers.contentType = contentType;
-    await file.openRead().pipe(request.response);
-    _logRequest('GET', path, HttpStatus.ok, stopwatch);
+    await _serveFile(
+      request: request,
+      file: file,
+      contentType: _mimeForExtension(p.extension(filename)),
+      stopwatch: stopwatch,
+    );
   }
 
   // ── /assets/<path> ──
@@ -276,15 +279,141 @@ class ReaderServer {
       return;
     }
 
-    final contentType = _mimeForExtension(p.extension(relativePath));
-    request.response
-      ..statusCode = HttpStatus.ok
-      ..headers.contentType = contentType;
-    await file.openRead().pipe(request.response);
-    _logRequest('GET', path, HttpStatus.ok, stopwatch);
+    await _serveFile(
+      request: request,
+      file: file,
+      contentType: _mimeForExtension(p.extension(relativePath)),
+      stopwatch: stopwatch,
+    );
   }
 
   // ── Helpers ──
+
+  /// Streams [file] to the response, honouring an `Range: bytes=...` request
+  /// header when present.
+  ///
+  /// Without a Range header: replies `200 OK` with the full file body and a
+  /// `Content-Length` (so clients see total size up front), `Accept-Ranges:
+  /// bytes` advertises that partial requests are supported.
+  ///
+  /// With a Range header: replies `206 Partial Content` and the requested
+  /// byte slice (inclusive bounds, like the spec). Open-ended ranges
+  /// (`bytes=N-`) and suffix ranges (`bytes=-N`) are both handled. Invalid
+  /// or unsatisfiable ranges produce `416 Range Not Satisfiable` with a
+  /// proper `Content-Range: bytes */<size>` so the client can recover.
+  ///
+  /// Why we need this: zip-based formats (EPUB, CBZ) only need a small slice
+  /// to render a chapter, but a naive 200-OK download forces the WebView to
+  /// keep the whole book in memory. The `RemoteFile` shim on the JS side
+  /// uses HTTP Range to read just the bytes zip.js asks for.
+  Future<void> _serveFile({
+    required HttpRequest request,
+    required File file,
+    required ContentType contentType,
+    required Stopwatch stopwatch,
+  }) async {
+    final path = request.uri.path;
+    final method = request.method;
+    final isHead = method == 'HEAD';
+    final fileLength = await file.length();
+    final rangeHeader = request.headers.value(HttpHeaders.rangeHeader);
+    final response = request.response;
+
+    response.headers
+      ..contentType = contentType
+      ..set(HttpHeaders.acceptRangesHeader, 'bytes');
+
+    if (rangeHeader == null) {
+      response
+        ..statusCode = HttpStatus.ok
+        ..contentLength = fileLength;
+      if (isHead) {
+        await response.close();
+      } else {
+        await file.openRead().pipe(response);
+      }
+      _logRequest(method, path, HttpStatus.ok, stopwatch);
+      return;
+    }
+
+    final range = _parseRange(rangeHeader, fileLength);
+    if (range == null) {
+      response
+        ..statusCode = HttpStatus.requestedRangeNotSatisfiable
+        ..headers.set(
+          HttpHeaders.contentRangeHeader,
+          'bytes */$fileLength',
+        )
+        ..contentLength = 0;
+      await response.close();
+      _logRequest(
+        method,
+        path,
+        HttpStatus.requestedRangeNotSatisfiable,
+        stopwatch,
+      );
+      return;
+    }
+
+    final (start, end) = range;
+    response
+      ..statusCode = HttpStatus.partialContent
+      ..contentLength = end - start + 1
+      ..headers.set(
+        HttpHeaders.contentRangeHeader,
+        'bytes $start-$end/$fileLength',
+      );
+    if (isHead) {
+      await response.close();
+    } else {
+      // openRead end is exclusive, the Range header end is inclusive.
+      await file.openRead(start, end + 1).pipe(response);
+    }
+    _logRequest(method, path, HttpStatus.partialContent, stopwatch);
+  }
+
+  /// Parses an HTTP `Range` header value against a known [totalLength] and
+  /// returns an `(start, end)` tuple with inclusive bounds, clamped into
+  /// `[0, totalLength - 1]`.
+  ///
+  /// Returns `null` for headers that are syntactically invalid, address an
+  /// empty file, or specify a start past the end of the file — in those
+  /// cases the caller must reply `416`.
+  ///
+  /// Multi-range syntax (`bytes=0-100,200-300`) is intentionally not
+  /// supported: every consumer we ship issues single-range requests, and
+  /// supporting multipart/byteranges responses adds noise without payoff.
+  static (int, int)? _parseRange(String header, int totalLength) {
+    if (totalLength <= 0) return null;
+    if (!header.startsWith('bytes=')) return null;
+    final spec = header.substring('bytes='.length);
+    if (spec.isEmpty || spec.contains(',')) return null;
+
+    final dashIndex = spec.indexOf('-');
+    if (dashIndex == -1) return null;
+    final startStr = spec.substring(0, dashIndex);
+    final endStr = spec.substring(dashIndex + 1);
+
+    final lastByte = totalLength - 1;
+
+    // Suffix range: `bytes=-N` — last N bytes of the file.
+    if (startStr.isEmpty) {
+      final suffix = int.tryParse(endStr);
+      if (suffix == null || suffix <= 0) return null;
+      final start = suffix >= totalLength ? 0 : totalLength - suffix;
+      return (start, lastByte);
+    }
+
+    final start = int.tryParse(startStr);
+    if (start == null || start < 0 || start > lastByte) return null;
+
+    // Open-ended range: `bytes=N-` — N to the end of the file.
+    if (endStr.isEmpty) return (start, lastByte);
+
+    final end = int.tryParse(endStr);
+    if (end == null || end < start) return null;
+    return (start, end > lastByte ? lastByte : end);
+  }
 
   /// Verifies that joining [root] with [relativePath] stays inside [root].
   /// Catches absolute-path substitution (`p.join('/root', '/etc/x') → '/etc/x'`)

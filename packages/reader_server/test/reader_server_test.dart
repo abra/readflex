@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -327,6 +328,163 @@ void main() {
         response.headers['content-type'],
         contains('application/octet-stream'),
       );
+    });
+  });
+
+  /// Range-request behaviour. Foliate-js opens books through a `RemoteFile`
+  /// that fans out into many small `Range:` reads; the server has to honour
+  /// them, send `206 Partial Content`, advertise `Accept-Ranges: bytes` on
+  /// every full response, and bail out cleanly on bogus ranges.
+  group('Range requests', () {
+    /// 256 deterministic bytes (0..255). Lets every assertion below check
+    /// content as well as length, since the byte at any offset N is N.
+    Uint8List payload() {
+      return Uint8List.fromList(List.generate(256, (i) => i));
+    }
+
+    test('full GET advertises Accept-Ranges and Content-Length', () async {
+      final file = File('${tempDir.path}/full.epub');
+      await file.writeAsBytes(payload());
+
+      final response = await client.get(
+        Uri.parse(url('/book/${Uri.encodeComponent(file.path)}')),
+      );
+
+      expect(response.statusCode, 200);
+      expect(response.headers['accept-ranges'], 'bytes');
+      expect(response.headers['content-length'], '256');
+      expect(response.bodyBytes.length, 256);
+    });
+
+    test('returns 206 + slice for `bytes=0-9`', () async {
+      final file = File('${tempDir.path}/range.epub');
+      await file.writeAsBytes(payload());
+
+      final response = await client.get(
+        Uri.parse(url('/book/${Uri.encodeComponent(file.path)}')),
+        headers: {'Range': 'bytes=0-9'},
+      );
+
+      expect(response.statusCode, 206);
+      expect(response.headers['content-range'], 'bytes 0-9/256');
+      expect(response.headers['content-length'], '10');
+      expect(response.bodyBytes, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    });
+
+    test('clamps `bytes=200-9999` to file length', () async {
+      final file = File('${tempDir.path}/clamp.epub');
+      await file.writeAsBytes(payload());
+
+      final response = await client.get(
+        Uri.parse(url('/book/${Uri.encodeComponent(file.path)}')),
+        headers: {'Range': 'bytes=200-9999'},
+      );
+
+      expect(response.statusCode, 206);
+      expect(response.headers['content-range'], 'bytes 200-255/256');
+      expect(response.headers['content-length'], '56');
+      expect(response.bodyBytes.first, 200);
+      expect(response.bodyBytes.last, 255);
+    });
+
+    test('open-ended `bytes=250-` returns the tail of the file', () async {
+      final file = File('${tempDir.path}/openend.epub');
+      await file.writeAsBytes(payload());
+
+      final response = await client.get(
+        Uri.parse(url('/book/${Uri.encodeComponent(file.path)}')),
+        headers: {'Range': 'bytes=250-'},
+      );
+
+      expect(response.statusCode, 206);
+      expect(response.headers['content-range'], 'bytes 250-255/256');
+      expect(response.bodyBytes, [250, 251, 252, 253, 254, 255]);
+    });
+
+    test('suffix `bytes=-5` returns the last 5 bytes', () async {
+      final file = File('${tempDir.path}/suffix.epub');
+      await file.writeAsBytes(payload());
+
+      final response = await client.get(
+        Uri.parse(url('/book/${Uri.encodeComponent(file.path)}')),
+        headers: {'Range': 'bytes=-5'},
+      );
+
+      expect(response.statusCode, 206);
+      expect(response.headers['content-range'], 'bytes 251-255/256');
+      expect(response.bodyBytes, [251, 252, 253, 254, 255]);
+    });
+
+    test('rejects start past EOF with 416', () async {
+      final file = File('${tempDir.path}/past.epub');
+      await file.writeAsBytes(payload());
+
+      final response = await client.get(
+        Uri.parse(url('/book/${Uri.encodeComponent(file.path)}')),
+        headers: {'Range': 'bytes=999-1099'},
+      );
+
+      expect(response.statusCode, 416);
+      expect(response.headers['content-range'], 'bytes */256');
+    });
+
+    test('rejects unparseable range with 416', () async {
+      final file = File('${tempDir.path}/garbage.epub');
+      await file.writeAsBytes(payload());
+
+      final response = await client.get(
+        Uri.parse(url('/book/${Uri.encodeComponent(file.path)}')),
+        headers: {'Range': 'pages=0-9'},
+      );
+
+      expect(response.statusCode, 416);
+    });
+
+    test('inverted `bytes=10-5` is rejected with 416', () async {
+      final file = File('${tempDir.path}/inverted.epub');
+      await file.writeAsBytes(payload());
+
+      final response = await client.get(
+        Uri.parse(url('/book/${Uri.encodeComponent(file.path)}')),
+        headers: {'Range': 'bytes=10-5'},
+      );
+
+      expect(response.statusCode, 416);
+    });
+
+    test('Range applies to /assets/ files too', () async {
+      await Directory(
+        '${assetsDir.path}/foliate-js/src',
+      ).create(recursive: true);
+      await File(
+        '${assetsDir.path}/foliate-js/src/data.bin',
+      ).writeAsBytes(payload());
+
+      final response = await client.get(
+        Uri.parse(url('/assets/foliate-js/src/data.bin')),
+        headers: {'Range': 'bytes=4-7'},
+      );
+
+      expect(response.statusCode, 206);
+      expect(response.bodyBytes, [4, 5, 6, 7]);
+    });
+
+    test('HEAD returns size and content-type without body', () async {
+      final file = File('${tempDir.path}/head.epub');
+      await file.writeAsBytes(payload());
+
+      final response = await client.head(
+        Uri.parse(url('/book/${Uri.encodeComponent(file.path)}')),
+      );
+
+      expect(response.statusCode, 200);
+      expect(response.headers['content-length'], '256');
+      expect(response.headers['accept-ranges'], 'bytes');
+      expect(
+        response.headers['content-type'],
+        contains('application/epub+zip'),
+      );
+      expect(response.bodyBytes, isEmpty);
     });
   });
 }

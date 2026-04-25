@@ -1641,7 +1641,14 @@ var initialCfi = JSON.parse(urlParams.get('initialCfi'))
 var style = JSON.parse(urlParams.get('style'))
 var readingRules = JSON.parse(urlParams.get('readingRules'))
 
-fetch(url)
-  .then(res => res.blob())
-  .then(blob => open(new File([blob], new URL(url, window.location.origin).pathname), initialCfi))
+// Use a `Range:`-aware loader so foliate-js / zip.js can read just the
+// bytes they need rather than downloading the whole book before rendering.
+// See ./remote_file.js for the contract this implements.
+import('./remote_file.js')
+  .then(({ RemoteFile }) =>
+    new RemoteFile(url, {
+      name: new URL(url, window.location.origin).pathname,
+    }).open(),
+  )
+  .then(file => open(file, initialCfi))
   .catch(e => console.error(e))
