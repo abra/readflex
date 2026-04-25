@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:readability_dart/readability_dart.dart' as readability;
 
+import 'article_html_sanitizer.dart';
+
 /// Cleaned article content extracted from a web page, along with metadata
 /// (title, byline, cover image, language). Produced by [ArticleParser.parse]
 /// and consumed by the import flow / reader server.
@@ -85,10 +87,14 @@ abstract class ArticleParser {
 /// `readability_dart` on-device to extract the main content. No backend
 /// round-trip — cleaning happens entirely in the app process.
 class ReadabilityArticleParser implements ArticleParser {
-  ReadabilityArticleParser({http.Client? httpClient})
-    : _httpClient = httpClient ?? http.Client();
+  ReadabilityArticleParser({
+    http.Client? httpClient,
+    ArticleHtmlSanitizer? sanitizer,
+  }) : _httpClient = httpClient ?? http.Client(),
+       _sanitizer = sanitizer ?? const ArticleHtmlSanitizer();
 
   final http.Client _httpClient;
+  final ArticleHtmlSanitizer _sanitizer;
 
   static const _userAgent =
       'Mozilla/5.0 (compatible; ReadflexArticleParser/1.0)';
@@ -137,13 +143,21 @@ class ReadabilityArticleParser implements ArticleParser {
       );
     }
 
+    final rawHtml = article.content!;
+    // Cover URL is harvested from the original markup (we just need the
+    // string, never re-render the source). Sanitisation runs after, so the
+    // HTML stored on disk has had `<script>` / event handlers / unsafe
+    // URL schemes stripped — see [ArticleHtmlSanitizer].
+    final coverImageUrl = _extractCoverImage(rawHtml);
+    final cleanedHtml = _sanitizer.sanitize(rawHtml);
+
     return ParsedArticle(
       title: article.title ?? _hostTitle(uri),
-      cleanedHtml: article.content!,
+      cleanedHtml: cleanedHtml,
       siteName: article.siteName,
       byline: article.byline,
       excerpt: article.excerpt,
-      coverImageUrl: _extractCoverImage(article.content!),
+      coverImageUrl: coverImageUrl,
       publishedTime: article.publishedTime,
       lang: article.lang,
       textLength: article.length,

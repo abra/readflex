@@ -22,6 +22,7 @@ class Article extends Equatable {
     this.textLength = 0,
     this.estimatedWordCount = 0,
     this.currentScrollOffset = 0.0,
+    this.currentCfi,
     this.lastOpenedAt,
     this.isFinished = false,
   });
@@ -40,6 +41,18 @@ class Article extends Equatable {
   /// persists the filename so the same row stays valid after the iOS
   /// Documents directory UUID changes across reinstalls.
   final String contentPath;
+
+  /// Absolute path to the article packaged as a single-chapter EPUB.
+  /// The reader opens this file through foliate-js so articles render
+  /// with the same paginated UI as books. Sits in the same per-article
+  /// directory as [contentPath]; produced on import by `EpubBuilder` and,
+  /// for older articles, by the migration helper in `ArticleRepository`.
+  String get epubPath {
+    final lastSep = contentPath.lastIndexOf('/');
+    return lastSep == -1
+        ? 'article.epub'
+        : '${contentPath.substring(0, lastSep + 1)}article.epub';
+  }
 
   /// Original remote cover URL from article metadata. Kept as reference /
   /// fallback; prefer [coverImagePath] for display when available.
@@ -68,6 +81,13 @@ class Article extends Equatable {
   /// restore key is a different type from their 0..1 progress. Articles
   /// don't need that split.
   final double currentScrollOffset;
+
+  /// EPUB CFI restored on reopen — same role as [Book.currentCfi]. Articles
+  /// render through foliate-js after import packages them as EPUB; the
+  /// fraction in [currentScrollOffset] still flows to the catalog cover's
+  /// progress pill. `null` until the article has been opened.
+  final String? currentCfi;
+
   final DateTime addedAt;
   final DateTime? lastOpenedAt;
   final bool isFinished;
@@ -88,6 +108,7 @@ class Article extends Equatable {
     int? textLength,
     int? estimatedWordCount,
     double? currentScrollOffset,
+    Object? currentCfi = _absent,
     Object? lastOpenedAt = _absent,
     bool? isFinished,
   }) => Article(
@@ -111,6 +132,7 @@ class Article extends Equatable {
     textLength: textLength ?? this.textLength,
     estimatedWordCount: estimatedWordCount ?? this.estimatedWordCount,
     currentScrollOffset: currentScrollOffset ?? this.currentScrollOffset,
+    currentCfi: currentCfi == _absent ? this.currentCfi : currentCfi as String?,
     addedAt: addedAt,
     lastOpenedAt: lastOpenedAt == _absent
         ? this.lastOpenedAt
@@ -134,6 +156,7 @@ class Article extends Equatable {
     textLength,
     estimatedWordCount,
     currentScrollOffset,
+    currentCfi,
     addedAt,
     lastOpenedAt,
     isFinished,

@@ -8,9 +8,7 @@ class $BooksTableTable extends BooksTable
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-
   $BooksTableTable(this.attachedDatabase, [this._alias]);
-
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -153,7 +151,6 @@ class $BooksTableTable extends BooksTable
     ),
     defaultValue: const Constant(false),
   );
-
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -170,14 +167,11 @@ class $BooksTableTable extends BooksTable
     lastOpenedAt,
     isFinished,
   ];
-
   @override
   String get aliasedName => _alias ?? actualTableName;
-
   @override
   String get actualTableName => $name;
   static const String $name = 'books_table';
-
   @override
   VerificationContext validateIntegrity(
     Insertable<BooksTableData> instance, {
@@ -290,7 +284,6 @@ class $BooksTableTable extends BooksTable
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
-
   @override
   BooksTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -370,7 +363,6 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
   final String addedAt;
   final String? lastOpenedAt;
   final bool isFinished;
-
   const BooksTableData({
     required this.id,
     required this.title,
@@ -386,7 +378,6 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
     this.lastOpenedAt,
     required this.isFinished,
   });
-
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -461,7 +452,6 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
       isFinished: serializer.fromJson<bool>(json['isFinished']),
     );
   }
-
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -513,7 +503,6 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
     lastOpenedAt: lastOpenedAt.present ? lastOpenedAt.value : this.lastOpenedAt,
     isFinished: isFinished ?? this.isFinished,
   );
-
   BooksTableData copyWithCompanion(BooksTableCompanion data) {
     return BooksTableData(
       id: data.id.present ? data.id.value : this.id,
@@ -582,7 +571,6 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
     lastOpenedAt,
     isFinished,
   );
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -617,7 +605,6 @@ class BooksTableCompanion extends UpdateCompanion<BooksTableData> {
   final Value<String?> lastOpenedAt;
   final Value<bool> isFinished;
   final Value<int> rowid;
-
   const BooksTableCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -634,7 +621,6 @@ class BooksTableCompanion extends UpdateCompanion<BooksTableData> {
     this.isFinished = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-
   BooksTableCompanion.insert({
     required String id,
     required String title,
@@ -655,7 +641,6 @@ class BooksTableCompanion extends UpdateCompanion<BooksTableData> {
        format = Value(format),
        filePath = Value(filePath),
        addedAt = Value(addedAt);
-
   static Insertable<BooksTableData> custom({
     Expression<String>? id,
     Expression<String>? title,
@@ -799,9 +784,7 @@ class $ArticlesTableTable extends ArticlesTable
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-
   $ArticlesTableTable(this.attachedDatabase, [this._alias]);
-
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -948,6 +931,17 @@ class $ArticlesTableTable extends ArticlesTable
         requiredDuringInsert: false,
         defaultValue: const Constant(0.0),
       );
+  static const VerificationMeta _currentCfiMeta = const VerificationMeta(
+    'currentCfi',
+  );
+  @override
+  late final GeneratedColumn<String> currentCfi = GeneratedColumn<String>(
+    'current_cfi',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _addedAtMeta = const VerificationMeta(
     'addedAt',
   );
@@ -985,7 +979,6 @@ class $ArticlesTableTable extends ArticlesTable
     ),
     defaultValue: const Constant(false),
   );
-
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1002,18 +995,16 @@ class $ArticlesTableTable extends ArticlesTable
     textLength,
     estimatedWordCount,
     currentScrollOffset,
+    currentCfi,
     addedAt,
     lastOpenedAt,
     isFinished,
   ];
-
   @override
   String get aliasedName => _alias ?? actualTableName;
-
   @override
   String get actualTableName => $name;
   static const String $name = 'articles_table';
-
   @override
   VerificationContext validateIntegrity(
     Insertable<ArticlesTableData> instance, {
@@ -1128,6 +1119,12 @@ class $ArticlesTableTable extends ArticlesTable
         ),
       );
     }
+    if (data.containsKey('current_cfi')) {
+      context.handle(
+        _currentCfiMeta,
+        currentCfi.isAcceptableOrUnknown(data['current_cfi']!, _currentCfiMeta),
+      );
+    }
     if (data.containsKey('added_at')) {
       context.handle(
         _addedAtMeta,
@@ -1156,7 +1153,6 @@ class $ArticlesTableTable extends ArticlesTable
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
-
   @override
   ArticlesTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -1217,6 +1213,10 @@ class $ArticlesTableTable extends ArticlesTable
         DriftSqlType.double,
         data['${effectivePrefix}current_scroll_offset'],
       )!,
+      currentCfi: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}current_cfi'],
+      ),
       addedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}added_at'],
@@ -1272,11 +1272,21 @@ class ArticlesTableData extends DataClass
   /// ranking and reading-time estimates without re-parsing.
   final int textLength;
   final int estimatedWordCount;
+
+  /// Reading progress as a normalized `[0, 1]` fraction. Used by the
+  /// catalog cover for the progress pill. Stays in sync with [currentCfi]:
+  /// the reader writes both on every position update.
   final double currentScrollOffset;
+
+  /// EPUB CFI string used to restore reader position when the article is
+  /// reopened. Articles render through foliate-js (the import pipeline
+  /// packages each one as a single-chapter EPUB), so position is a CFI
+  /// just like books rather than a raw scroll fraction. Null when the
+  /// article hasn't been opened yet.
+  final String? currentCfi;
   final String addedAt;
   final String? lastOpenedAt;
   final bool isFinished;
-
   const ArticlesTableData({
     required this.id,
     required this.title,
@@ -1292,11 +1302,11 @@ class ArticlesTableData extends DataClass
     required this.textLength,
     required this.estimatedWordCount,
     required this.currentScrollOffset,
+    this.currentCfi,
     required this.addedAt,
     this.lastOpenedAt,
     required this.isFinished,
   });
-
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1328,6 +1338,9 @@ class ArticlesTableData extends DataClass
     map['text_length'] = Variable<int>(textLength);
     map['estimated_word_count'] = Variable<int>(estimatedWordCount);
     map['current_scroll_offset'] = Variable<double>(currentScrollOffset);
+    if (!nullToAbsent || currentCfi != null) {
+      map['current_cfi'] = Variable<String>(currentCfi);
+    }
     map['added_at'] = Variable<String>(addedAt);
     if (!nullToAbsent || lastOpenedAt != null) {
       map['last_opened_at'] = Variable<String>(lastOpenedAt);
@@ -1364,6 +1377,9 @@ class ArticlesTableData extends DataClass
       textLength: Value(textLength),
       estimatedWordCount: Value(estimatedWordCount),
       currentScrollOffset: Value(currentScrollOffset),
+      currentCfi: currentCfi == null && nullToAbsent
+          ? const Value.absent()
+          : Value(currentCfi),
       addedAt: Value(addedAt),
       lastOpenedAt: lastOpenedAt == null && nullToAbsent
           ? const Value.absent()
@@ -1394,12 +1410,12 @@ class ArticlesTableData extends DataClass
       currentScrollOffset: serializer.fromJson<double>(
         json['currentScrollOffset'],
       ),
+      currentCfi: serializer.fromJson<String?>(json['currentCfi']),
       addedAt: serializer.fromJson<String>(json['addedAt']),
       lastOpenedAt: serializer.fromJson<String?>(json['lastOpenedAt']),
       isFinished: serializer.fromJson<bool>(json['isFinished']),
     );
   }
-
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -1418,6 +1434,7 @@ class ArticlesTableData extends DataClass
       'textLength': serializer.toJson<int>(textLength),
       'estimatedWordCount': serializer.toJson<int>(estimatedWordCount),
       'currentScrollOffset': serializer.toJson<double>(currentScrollOffset),
+      'currentCfi': serializer.toJson<String?>(currentCfi),
       'addedAt': serializer.toJson<String>(addedAt),
       'lastOpenedAt': serializer.toJson<String?>(lastOpenedAt),
       'isFinished': serializer.toJson<bool>(isFinished),
@@ -1439,6 +1456,7 @@ class ArticlesTableData extends DataClass
     int? textLength,
     int? estimatedWordCount,
     double? currentScrollOffset,
+    Value<String?> currentCfi = const Value.absent(),
     String? addedAt,
     Value<String?> lastOpenedAt = const Value.absent(),
     bool? isFinished,
@@ -1463,11 +1481,11 @@ class ArticlesTableData extends DataClass
     textLength: textLength ?? this.textLength,
     estimatedWordCount: estimatedWordCount ?? this.estimatedWordCount,
     currentScrollOffset: currentScrollOffset ?? this.currentScrollOffset,
+    currentCfi: currentCfi.present ? currentCfi.value : this.currentCfi,
     addedAt: addedAt ?? this.addedAt,
     lastOpenedAt: lastOpenedAt.present ? lastOpenedAt.value : this.lastOpenedAt,
     isFinished: isFinished ?? this.isFinished,
   );
-
   ArticlesTableData copyWithCompanion(ArticlesTableCompanion data) {
     return ArticlesTableData(
       id: data.id.present ? data.id.value : this.id,
@@ -1498,6 +1516,9 @@ class ArticlesTableData extends DataClass
       currentScrollOffset: data.currentScrollOffset.present
           ? data.currentScrollOffset.value
           : this.currentScrollOffset,
+      currentCfi: data.currentCfi.present
+          ? data.currentCfi.value
+          : this.currentCfi,
       addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
       lastOpenedAt: data.lastOpenedAt.present
           ? data.lastOpenedAt.value
@@ -1525,6 +1546,7 @@ class ArticlesTableData extends DataClass
           ..write('textLength: $textLength, ')
           ..write('estimatedWordCount: $estimatedWordCount, ')
           ..write('currentScrollOffset: $currentScrollOffset, ')
+          ..write('currentCfi: $currentCfi, ')
           ..write('addedAt: $addedAt, ')
           ..write('lastOpenedAt: $lastOpenedAt, ')
           ..write('isFinished: $isFinished')
@@ -1548,11 +1570,11 @@ class ArticlesTableData extends DataClass
     textLength,
     estimatedWordCount,
     currentScrollOffset,
+    currentCfi,
     addedAt,
     lastOpenedAt,
     isFinished,
   );
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1571,6 +1593,7 @@ class ArticlesTableData extends DataClass
           other.textLength == this.textLength &&
           other.estimatedWordCount == this.estimatedWordCount &&
           other.currentScrollOffset == this.currentScrollOffset &&
+          other.currentCfi == this.currentCfi &&
           other.addedAt == this.addedAt &&
           other.lastOpenedAt == this.lastOpenedAt &&
           other.isFinished == this.isFinished);
@@ -1591,11 +1614,11 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
   final Value<int> textLength;
   final Value<int> estimatedWordCount;
   final Value<double> currentScrollOffset;
+  final Value<String?> currentCfi;
   final Value<String> addedAt;
   final Value<String?> lastOpenedAt;
   final Value<bool> isFinished;
   final Value<int> rowid;
-
   const ArticlesTableCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -1611,12 +1634,12 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     this.textLength = const Value.absent(),
     this.estimatedWordCount = const Value.absent(),
     this.currentScrollOffset = const Value.absent(),
+    this.currentCfi = const Value.absent(),
     this.addedAt = const Value.absent(),
     this.lastOpenedAt = const Value.absent(),
     this.isFinished = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-
   ArticlesTableCompanion.insert({
     required String id,
     required String title,
@@ -1632,6 +1655,7 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     this.textLength = const Value.absent(),
     this.estimatedWordCount = const Value.absent(),
     this.currentScrollOffset = const Value.absent(),
+    this.currentCfi = const Value.absent(),
     required String addedAt,
     this.lastOpenedAt = const Value.absent(),
     this.isFinished = const Value.absent(),
@@ -1641,7 +1665,6 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
        url = Value(url),
        contentPath = Value(contentPath),
        addedAt = Value(addedAt);
-
   static Insertable<ArticlesTableData> custom({
     Expression<String>? id,
     Expression<String>? title,
@@ -1657,6 +1680,7 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     Expression<int>? textLength,
     Expression<int>? estimatedWordCount,
     Expression<double>? currentScrollOffset,
+    Expression<String>? currentCfi,
     Expression<String>? addedAt,
     Expression<String>? lastOpenedAt,
     Expression<bool>? isFinished,
@@ -1679,6 +1703,7 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
         'estimated_word_count': estimatedWordCount,
       if (currentScrollOffset != null)
         'current_scroll_offset': currentScrollOffset,
+      if (currentCfi != null) 'current_cfi': currentCfi,
       if (addedAt != null) 'added_at': addedAt,
       if (lastOpenedAt != null) 'last_opened_at': lastOpenedAt,
       if (isFinished != null) 'is_finished': isFinished,
@@ -1701,6 +1726,7 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     Value<int>? textLength,
     Value<int>? estimatedWordCount,
     Value<double>? currentScrollOffset,
+    Value<String?>? currentCfi,
     Value<String>? addedAt,
     Value<String?>? lastOpenedAt,
     Value<bool>? isFinished,
@@ -1721,6 +1747,7 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
       textLength: textLength ?? this.textLength,
       estimatedWordCount: estimatedWordCount ?? this.estimatedWordCount,
       currentScrollOffset: currentScrollOffset ?? this.currentScrollOffset,
+      currentCfi: currentCfi ?? this.currentCfi,
       addedAt: addedAt ?? this.addedAt,
       lastOpenedAt: lastOpenedAt ?? this.lastOpenedAt,
       isFinished: isFinished ?? this.isFinished,
@@ -1775,6 +1802,9 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
         currentScrollOffset.value,
       );
     }
+    if (currentCfi.present) {
+      map['current_cfi'] = Variable<String>(currentCfi.value);
+    }
     if (addedAt.present) {
       map['added_at'] = Variable<String>(addedAt.value);
     }
@@ -1807,6 +1837,7 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
           ..write('textLength: $textLength, ')
           ..write('estimatedWordCount: $estimatedWordCount, ')
           ..write('currentScrollOffset: $currentScrollOffset, ')
+          ..write('currentCfi: $currentCfi, ')
           ..write('addedAt: $addedAt, ')
           ..write('lastOpenedAt: $lastOpenedAt, ')
           ..write('isFinished: $isFinished, ')
@@ -1821,9 +1852,7 @@ class $HighlightsTableTable extends HighlightsTable
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-
   $HighlightsTableTable(this.attachedDatabase, [this._alias]);
-
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -1929,7 +1958,6 @@ class $HighlightsTableTable extends HighlightsTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1943,14 +1971,11 @@ class $HighlightsTableTable extends HighlightsTable
     color,
     createdAt,
   ];
-
   @override
   String get aliasedName => _alias ?? actualTableName;
-
   @override
   String get actualTableName => $name;
   static const String $name = 'highlights_table';
-
   @override
   VerificationContext validateIntegrity(
     Insertable<HighlightsTableData> instance, {
@@ -2036,7 +2061,6 @@ class $HighlightsTableTable extends HighlightsTable
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
-
   @override
   HighlightsTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -2102,7 +2126,6 @@ class HighlightsTableData extends DataClass
   final double? scrollOffset;
   final String color;
   final String createdAt;
-
   const HighlightsTableData({
     required this.id,
     required this.sourceId,
@@ -2115,7 +2138,6 @@ class HighlightsTableData extends DataClass
     required this.color,
     required this.createdAt,
   });
-
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -2179,7 +2201,6 @@ class HighlightsTableData extends DataClass
       createdAt: serializer.fromJson<String>(json['createdAt']),
     );
   }
-
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -2220,7 +2241,6 @@ class HighlightsTableData extends DataClass
     color: color ?? this.color,
     createdAt: createdAt ?? this.createdAt,
   );
-
   HighlightsTableData copyWithCompanion(HighlightsTableCompanion data) {
     return HighlightsTableData(
       id: data.id.present ? data.id.value : this.id,
@@ -2274,7 +2294,6 @@ class HighlightsTableData extends DataClass
     color,
     createdAt,
   );
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2303,7 +2322,6 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
   final Value<String> color;
   final Value<String> createdAt;
   final Value<int> rowid;
-
   const HighlightsTableCompanion({
     this.id = const Value.absent(),
     this.sourceId = const Value.absent(),
@@ -2317,7 +2335,6 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-
   HighlightsTableCompanion.insert({
     required String id,
     required String sourceId,
@@ -2335,7 +2352,6 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
        sourceType = Value(sourceType),
        highlightText = Value(highlightText),
        createdAt = Value(createdAt);
-
   static Insertable<HighlightsTableData> custom({
     Expression<String>? id,
     Expression<String>? sourceId,
@@ -2455,9 +2471,7 @@ class $FlashcardsTableTable extends FlashcardsTable
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-
   $FlashcardsTableTable(this.attachedDatabase, [this._alias]);
-
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -2538,7 +2552,6 @@ class $FlashcardsTableTable extends FlashcardsTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2550,14 +2563,11 @@ class $FlashcardsTableTable extends FlashcardsTable
     creationSource,
     createdAt,
   ];
-
   @override
   String get aliasedName => _alias ?? actualTableName;
-
   @override
   String get actualTableName => $name;
   static const String $name = 'flashcards_table';
-
   @override
   VerificationContext validateIntegrity(
     Insertable<FlashcardsTableData> instance, {
@@ -2631,7 +2641,6 @@ class $FlashcardsTableTable extends FlashcardsTable
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
-
   @override
   FlashcardsTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -2687,7 +2696,6 @@ class FlashcardsTableData extends DataClass
   final String? sourceHighlightId;
   final String creationSource;
   final String createdAt;
-
   const FlashcardsTableData({
     required this.id,
     required this.deckId,
@@ -2698,7 +2706,6 @@ class FlashcardsTableData extends DataClass
     required this.creationSource,
     required this.createdAt,
   });
-
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -2750,7 +2757,6 @@ class FlashcardsTableData extends DataClass
       createdAt: serializer.fromJson<String>(json['createdAt']),
     );
   }
-
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -2787,7 +2793,6 @@ class FlashcardsTableData extends DataClass
     creationSource: creationSource ?? this.creationSource,
     createdAt: createdAt ?? this.createdAt,
   );
-
   FlashcardsTableData copyWithCompanion(FlashcardsTableCompanion data) {
     return FlashcardsTableData(
       id: data.id.present ? data.id.value : this.id,
@@ -2831,7 +2836,6 @@ class FlashcardsTableData extends DataClass
     creationSource,
     createdAt,
   );
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2856,7 +2860,6 @@ class FlashcardsTableCompanion extends UpdateCompanion<FlashcardsTableData> {
   final Value<String> creationSource;
   final Value<String> createdAt;
   final Value<int> rowid;
-
   const FlashcardsTableCompanion({
     this.id = const Value.absent(),
     this.deckId = const Value.absent(),
@@ -2868,7 +2871,6 @@ class FlashcardsTableCompanion extends UpdateCompanion<FlashcardsTableData> {
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-
   FlashcardsTableCompanion.insert({
     required String id,
     required String deckId,
@@ -2884,7 +2886,6 @@ class FlashcardsTableCompanion extends UpdateCompanion<FlashcardsTableData> {
        front = Value(front),
        back = Value(back),
        createdAt = Value(createdAt);
-
   static Insertable<FlashcardsTableData> custom({
     Expression<String>? id,
     Expression<String>? deckId,
@@ -2988,9 +2989,7 @@ class $DictionaryTableTable extends DictionaryTable
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-
   $DictionaryTableTable(this.attachedDatabase, [this._alias]);
-
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -3097,7 +3096,6 @@ class $DictionaryTableTable extends DictionaryTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3111,14 +3109,11 @@ class $DictionaryTableTable extends DictionaryTable
     usageExamples,
     addedAt,
   ];
-
   @override
   String get aliasedName => _alias ?? actualTableName;
-
   @override
   String get actualTableName => $name;
   static const String $name = 'dictionary_table';
-
   @override
   VerificationContext validateIntegrity(
     Insertable<DictionaryTableData> instance, {
@@ -3208,7 +3203,6 @@ class $DictionaryTableTable extends DictionaryTable
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
-
   @override
   DictionaryTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -3274,7 +3268,6 @@ class DictionaryTableData extends DataClass
   final String? sourceType;
   final String? usageExamples;
   final String addedAt;
-
   const DictionaryTableData({
     required this.id,
     required this.word,
@@ -3287,7 +3280,6 @@ class DictionaryTableData extends DataClass
     this.usageExamples,
     required this.addedAt,
   });
-
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -3361,7 +3353,6 @@ class DictionaryTableData extends DataClass
       addedAt: serializer.fromJson<String>(json['addedAt']),
     );
   }
-
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -3406,7 +3397,6 @@ class DictionaryTableData extends DataClass
         : this.usageExamples,
     addedAt: addedAt ?? this.addedAt,
   );
-
   DictionaryTableData copyWithCompanion(DictionaryTableCompanion data) {
     return DictionaryTableData(
       id: data.id.present ? data.id.value : this.id,
@@ -3462,7 +3452,6 @@ class DictionaryTableData extends DataClass
     usageExamples,
     addedAt,
   );
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3491,7 +3480,6 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
   final Value<String?> usageExamples;
   final Value<String> addedAt;
   final Value<int> rowid;
-
   const DictionaryTableCompanion({
     this.id = const Value.absent(),
     this.word = const Value.absent(),
@@ -3505,7 +3493,6 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
     this.addedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-
   DictionaryTableCompanion.insert({
     required String id,
     required String word,
@@ -3522,7 +3509,6 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
        word = Value(word),
        translation = Value(translation),
        addedAt = Value(addedAt);
-
   static Insertable<DictionaryTableData> custom({
     Expression<String>? id,
     Expression<String>? word,
@@ -3642,9 +3628,7 @@ class $ReviewItemsTableTable extends ReviewItemsTable
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-
   $ReviewItemsTableTable(this.attachedDatabase, [this._alias]);
-
   static const VerificationMeta _itemIdMeta = const VerificationMeta('itemId');
   @override
   late final GeneratedColumn<String> itemId = GeneratedColumn<String>(
@@ -3790,7 +3774,6 @@ class $ReviewItemsTableTable extends ReviewItemsTable
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
-
   @override
   List<GeneratedColumn> get $columns => [
     itemId,
@@ -3807,14 +3790,11 @@ class $ReviewItemsTableTable extends ReviewItemsTable
     scheduledDays,
     elapsedDays,
   ];
-
   @override
   String get aliasedName => _alias ?? actualTableName;
-
   @override
   String get actualTableName => $name;
   static const String $name = 'review_items_table';
-
   @override
   VerificationContext validateIntegrity(
     Insertable<ReviewItemsTableData> instance, {
@@ -3924,7 +3904,6 @@ class $ReviewItemsTableTable extends ReviewItemsTable
 
   @override
   Set<GeneratedColumn> get $primaryKey => {itemId};
-
   @override
   ReviewItemsTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -4005,7 +3984,6 @@ class ReviewItemsTableData extends DataClass
   final String? nextReviewAt;
   final int scheduledDays;
   final int elapsedDays;
-
   const ReviewItemsTableData({
     required this.itemId,
     required this.itemType,
@@ -4021,7 +3999,6 @@ class ReviewItemsTableData extends DataClass
     required this.scheduledDays,
     required this.elapsedDays,
   });
-
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -4092,7 +4069,6 @@ class ReviewItemsTableData extends DataClass
       elapsedDays: serializer.fromJson<int>(json['elapsedDays']),
     );
   }
-
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -4142,7 +4118,6 @@ class ReviewItemsTableData extends DataClass
     scheduledDays: scheduledDays ?? this.scheduledDays,
     elapsedDays: elapsedDays ?? this.elapsedDays,
   );
-
   ReviewItemsTableData copyWithCompanion(ReviewItemsTableCompanion data) {
     return ReviewItemsTableData(
       itemId: data.itemId.present ? data.itemId.value : this.itemId,
@@ -4209,7 +4184,6 @@ class ReviewItemsTableData extends DataClass
     scheduledDays,
     elapsedDays,
   );
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4244,7 +4218,6 @@ class ReviewItemsTableCompanion extends UpdateCompanion<ReviewItemsTableData> {
   final Value<int> scheduledDays;
   final Value<int> elapsedDays;
   final Value<int> rowid;
-
   const ReviewItemsTableCompanion({
     this.itemId = const Value.absent(),
     this.itemType = const Value.absent(),
@@ -4261,7 +4234,6 @@ class ReviewItemsTableCompanion extends UpdateCompanion<ReviewItemsTableData> {
     this.elapsedDays = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-
   ReviewItemsTableCompanion.insert({
     required String itemId,
     required String itemType,
@@ -4279,7 +4251,6 @@ class ReviewItemsTableCompanion extends UpdateCompanion<ReviewItemsTableData> {
     this.rowid = const Value.absent(),
   }) : itemId = Value(itemId),
        itemType = Value(itemType);
-
   static Insertable<ReviewItemsTableData> custom({
     Expression<String>? itemId,
     Expression<String>? itemType,
@@ -4423,9 +4394,7 @@ class $ReviewLogsTableTable extends ReviewLogsTable
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-
   $ReviewLogsTableTable(this.attachedDatabase, [this._alias]);
-
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -4552,7 +4521,6 @@ class $ReviewLogsTableTable extends ReviewLogsTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4568,14 +4536,11 @@ class $ReviewLogsTableTable extends ReviewLogsTable
     reviewDurationMs,
     reviewedAt,
   ];
-
   @override
   String get aliasedName => _alias ?? actualTableName;
-
   @override
   String get actualTableName => $name;
   static const String $name = 'review_logs_table';
-
   @override
   VerificationContext validateIntegrity(
     Insertable<ReviewLogsTableData> instance, {
@@ -4700,7 +4665,6 @@ class $ReviewLogsTableTable extends ReviewLogsTable
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
-
   @override
   ReviewLogsTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -4776,7 +4740,6 @@ class ReviewLogsTableData extends DataClass
   final int elapsedDays;
   final int? reviewDurationMs;
   final String reviewedAt;
-
   const ReviewLogsTableData({
     required this.id,
     required this.itemId,
@@ -4791,7 +4754,6 @@ class ReviewLogsTableData extends DataClass
     this.reviewDurationMs,
     required this.reviewedAt,
   });
-
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -4853,7 +4815,6 @@ class ReviewLogsTableData extends DataClass
       reviewedAt: serializer.fromJson<String>(json['reviewedAt']),
     );
   }
-
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -4905,7 +4866,6 @@ class ReviewLogsTableData extends DataClass
         : this.reviewDurationMs,
     reviewedAt: reviewedAt ?? this.reviewedAt,
   );
-
   ReviewLogsTableData copyWithCompanion(ReviewLogsTableCompanion data) {
     return ReviewLogsTableData(
       id: data.id.present ? data.id.value : this.id,
@@ -4973,7 +4933,6 @@ class ReviewLogsTableData extends DataClass
     reviewDurationMs,
     reviewedAt,
   );
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -5006,7 +4965,6 @@ class ReviewLogsTableCompanion extends UpdateCompanion<ReviewLogsTableData> {
   final Value<int?> reviewDurationMs;
   final Value<String> reviewedAt;
   final Value<int> rowid;
-
   const ReviewLogsTableCompanion({
     this.id = const Value.absent(),
     this.itemId = const Value.absent(),
@@ -5022,7 +4980,6 @@ class ReviewLogsTableCompanion extends UpdateCompanion<ReviewLogsTableData> {
     this.reviewedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-
   ReviewLogsTableCompanion.insert({
     required String id,
     required String itemId,
@@ -5048,7 +5005,6 @@ class ReviewLogsTableCompanion extends UpdateCompanion<ReviewLogsTableData> {
        scheduledDays = Value(scheduledDays),
        elapsedDays = Value(elapsedDays),
        reviewedAt = Value(reviewedAt);
-
   static Insertable<ReviewLogsTableData> custom({
     Expression<String>? id,
     Expression<String>? itemId,
@@ -5185,7 +5141,6 @@ class ReviewLogsTableCompanion extends UpdateCompanion<ReviewLogsTableData> {
 
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
-
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $BooksTableTable booksTable = $BooksTableTable(this);
   late final $ArticlesTableTable articlesTable = $ArticlesTableTable(this);
@@ -5212,11 +5167,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final ReviewItemsDao reviewItemsDao = ReviewItemsDao(
     this as AppDatabase,
   );
-
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
-
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     booksTable,
@@ -5273,7 +5226,6 @@ class $$BooksTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -5349,7 +5301,6 @@ class $$BooksTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -5425,7 +5376,6 @@ class $$BooksTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -5614,6 +5564,7 @@ typedef $$ArticlesTableTableCreateCompanionBuilder =
       Value<int> textLength,
       Value<int> estimatedWordCount,
       Value<double> currentScrollOffset,
+      Value<String?> currentCfi,
       required String addedAt,
       Value<String?> lastOpenedAt,
       Value<bool> isFinished,
@@ -5635,6 +5586,7 @@ typedef $$ArticlesTableTableUpdateCompanionBuilder =
       Value<int> textLength,
       Value<int> estimatedWordCount,
       Value<double> currentScrollOffset,
+      Value<String?> currentCfi,
       Value<String> addedAt,
       Value<String?> lastOpenedAt,
       Value<bool> isFinished,
@@ -5650,7 +5602,6 @@ class $$ArticlesTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -5721,6 +5672,11 @@ class $$ArticlesTableTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get currentCfi => $composableBuilder(
+    column: $table.currentCfi,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get addedAt => $composableBuilder(
     column: $table.addedAt,
     builder: (column) => ColumnFilters(column),
@@ -5746,7 +5702,6 @@ class $$ArticlesTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -5817,6 +5772,11 @@ class $$ArticlesTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get currentCfi => $composableBuilder(
+    column: $table.currentCfi,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get addedAt => $composableBuilder(
     column: $table.addedAt,
     builder: (column) => ColumnOrderings(column),
@@ -5842,7 +5802,6 @@ class $$ArticlesTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -5896,6 +5855,11 @@ class $$ArticlesTableTableAnnotationComposer
 
   GeneratedColumn<double> get currentScrollOffset => $composableBuilder(
     column: $table.currentScrollOffset,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get currentCfi => $composableBuilder(
+    column: $table.currentCfi,
     builder: (column) => column,
   );
 
@@ -5962,6 +5926,7 @@ class $$ArticlesTableTableTableManager
                 Value<int> textLength = const Value.absent(),
                 Value<int> estimatedWordCount = const Value.absent(),
                 Value<double> currentScrollOffset = const Value.absent(),
+                Value<String?> currentCfi = const Value.absent(),
                 Value<String> addedAt = const Value.absent(),
                 Value<String?> lastOpenedAt = const Value.absent(),
                 Value<bool> isFinished = const Value.absent(),
@@ -5981,6 +5946,7 @@ class $$ArticlesTableTableTableManager
                 textLength: textLength,
                 estimatedWordCount: estimatedWordCount,
                 currentScrollOffset: currentScrollOffset,
+                currentCfi: currentCfi,
                 addedAt: addedAt,
                 lastOpenedAt: lastOpenedAt,
                 isFinished: isFinished,
@@ -6002,6 +5968,7 @@ class $$ArticlesTableTableTableManager
                 Value<int> textLength = const Value.absent(),
                 Value<int> estimatedWordCount = const Value.absent(),
                 Value<double> currentScrollOffset = const Value.absent(),
+                Value<String?> currentCfi = const Value.absent(),
                 required String addedAt,
                 Value<String?> lastOpenedAt = const Value.absent(),
                 Value<bool> isFinished = const Value.absent(),
@@ -6021,6 +5988,7 @@ class $$ArticlesTableTableTableManager
                 textLength: textLength,
                 estimatedWordCount: estimatedWordCount,
                 currentScrollOffset: currentScrollOffset,
+                currentCfi: currentCfi,
                 addedAt: addedAt,
                 lastOpenedAt: lastOpenedAt,
                 isFinished: isFinished,
@@ -6089,7 +6057,6 @@ class $$HighlightsTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -6150,7 +6117,6 @@ class $$HighlightsTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -6211,7 +6177,6 @@ class $$HighlightsTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -6401,7 +6366,6 @@ class $$FlashcardsTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -6452,7 +6416,6 @@ class $$FlashcardsTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -6503,7 +6466,6 @@ class $$FlashcardsTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -6679,7 +6641,6 @@ class $$DictionaryTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -6740,7 +6701,6 @@ class $$DictionaryTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -6801,7 +6761,6 @@ class $$DictionaryTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -7003,7 +6962,6 @@ class $$ReviewItemsTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnFilters<String> get itemId => $composableBuilder(
     column: $table.itemId,
     builder: (column) => ColumnFilters(column),
@@ -7079,7 +7037,6 @@ class $$ReviewItemsTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnOrderings<String> get itemId => $composableBuilder(
     column: $table.itemId,
     builder: (column) => ColumnOrderings(column),
@@ -7155,7 +7112,6 @@ class $$ReviewItemsTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   GeneratedColumn<String> get itemId =>
       $composableBuilder(column: $table.itemId, builder: (column) => column);
 
@@ -7378,7 +7334,6 @@ class $$ReviewLogsTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -7449,7 +7404,6 @@ class $$ReviewLogsTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -7520,7 +7474,6 @@ class $$ReviewLogsTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -7701,27 +7654,19 @@ typedef $$ReviewLogsTableTableProcessedTableManager =
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
-
   $AppDatabaseManager(this._db);
-
   $$BooksTableTableTableManager get booksTable =>
       $$BooksTableTableTableManager(_db, _db.booksTable);
-
   $$ArticlesTableTableTableManager get articlesTable =>
       $$ArticlesTableTableTableManager(_db, _db.articlesTable);
-
   $$HighlightsTableTableTableManager get highlightsTable =>
       $$HighlightsTableTableTableManager(_db, _db.highlightsTable);
-
   $$FlashcardsTableTableTableManager get flashcardsTable =>
       $$FlashcardsTableTableTableManager(_db, _db.flashcardsTable);
-
   $$DictionaryTableTableTableManager get dictionaryTable =>
       $$DictionaryTableTableTableManager(_db, _db.dictionaryTable);
-
   $$ReviewItemsTableTableTableManager get reviewItemsTable =>
       $$ReviewItemsTableTableTableManager(_db, _db.reviewItemsTable);
-
   $$ReviewLogsTableTableTableManager get reviewLogsTable =>
       $$ReviewLogsTableTableTableManager(_db, _db.reviewLogsTable);
 }

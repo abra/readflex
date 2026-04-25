@@ -117,7 +117,6 @@ Future<DependenciesContainer> createDependenciesContainer(
   final readerAssetsDir = Directory(p.join(documentsDir.path, 'reader_assets'));
 
   final readerServer = ReaderServer(
-    articlesDirectory: articlesDir,
     assetsDirectory: readerAssetsDir,
     logger: logger,
   );

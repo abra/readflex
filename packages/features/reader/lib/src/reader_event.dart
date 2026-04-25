@@ -18,8 +18,9 @@ final class ReaderSourceLoadRequested extends ReaderEvent {
   List<Object?> get props => [sourceId];
 }
 
-/// Book-only: WebView reports a new reading position. Debounced; persisted
-/// to the book's `currentCfi` + `readingProgress`.
+/// foliate-js reports a new reading position. Persisted to the source's
+/// `currentCfi` + progress field (`Book.readingProgress` or
+/// `Article.currentScrollOffset`).
 final class ReaderBookPositionUpdated extends ReaderEvent {
   const ReaderBookPositionUpdated({
     required this.cfi,
@@ -31,17 +32,6 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
 
   @override
   List<Object?> get props => [cfi, progress];
-}
-
-/// Article-only: WebView reports the current scroll fraction. Debounced;
-/// persisted to the article's `currentScrollOffset`.
-final class ReaderArticlePositionUpdated extends ReaderEvent {
-  const ReaderArticlePositionUpdated({required this.scrollOffset});
-
-  final double scrollOffset;
-
-  @override
-  List<Object?> get props => [scrollOffset];
 }
 
 /// Reloads the highlight list from storage after a TextAction

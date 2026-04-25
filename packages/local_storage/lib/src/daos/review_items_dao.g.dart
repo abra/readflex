@@ -6,23 +6,18 @@ part of 'review_items_dao.dart';
 mixin _$ReviewItemsDaoMixin on DatabaseAccessor<AppDatabase> {
   $ReviewItemsTableTable get reviewItemsTable =>
       attachedDatabase.reviewItemsTable;
-
   $ReviewLogsTableTable get reviewLogsTable => attachedDatabase.reviewLogsTable;
-
   ReviewItemsDaoManager get managers => ReviewItemsDaoManager(this);
 }
 
 class ReviewItemsDaoManager {
   final _$ReviewItemsDaoMixin _db;
-
   ReviewItemsDaoManager(this._db);
-
   $$ReviewItemsTableTableTableManager get reviewItemsTable =>
       $$ReviewItemsTableTableTableManager(
         _db.attachedDatabase,
         _db.reviewItemsTable,
       );
-
   $$ReviewLogsTableTableTableManager get reviewLogsTable =>
       $$ReviewLogsTableTableTableManager(
         _db.attachedDatabase,

@@ -25,6 +25,7 @@ extension ArticleToStorage on Article {
     textLength: Value(textLength),
     estimatedWordCount: Value(estimatedWordCount),
     currentScrollOffset: Value(currentScrollOffset),
+    currentCfi: Value(currentCfi),
     addedAt: Value(addedAt.toIso8601String()),
     lastOpenedAt: Value(lastOpenedAt?.toIso8601String()),
     isFinished: Value(isFinished),

@@ -17,10 +17,6 @@ class AssetExtractor {
   /// All asset paths relative to the package's `assets/` directory.
   /// The rootBundle key includes the `packages/reader_webview/` prefix.
   static const _assetPaths = [
-    // Article reader
-    'assets/article/reader.html',
-    'assets/article/reader.css',
-    'assets/article/reader.js',
     // foliate-js entry
     'assets/foliate-js/index.html',
     // foliate-js core

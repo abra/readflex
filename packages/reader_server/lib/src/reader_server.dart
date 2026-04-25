@@ -3,29 +3,25 @@ import 'dart:io';
 import 'package:monitoring/monitoring.dart';
 import 'package:path/path.dart' as p;
 
-/// Local HTTP server that serves book files and article HTML to the
+/// Local HTTP server that serves book files and reader assets to the
 /// reader WebView.
 ///
 /// Route families:
-///   - `GET /book/<url-encoded-absolute-path>` — streams a raw book file
-///     (epub, pdf, fb2, mobi) from disk.
-///   - `GET /article/<id>` — reads `<id>/content.html` from [_articlesDir].
-///   - `GET /article/<id>/images/<filename>` — serves a downloaded body
-///     image from `<id>/images/` inside [_articlesDir].
+///   - `GET /book/<url-encoded-absolute-path>` — streams a book file
+///     (epub, pdf, fb2, mobi) from disk. Articles are packaged as
+///     single-chapter EPUBs at import time and served through this same
+///     route, so there is no article-specific route family.
 ///   - `GET /assets/<path>` — serves static files (foliate-js, CSS, JS)
 ///     from [_assetsDir].
 ///
 /// Created once in composition, lives in `DependenciesContainer`.
 class ReaderServer {
   ReaderServer({
-    required Directory articlesDirectory,
     required Directory assetsDirectory,
     required Logger logger,
-  }) : _articlesDir = articlesDirectory,
-       _assetsDir = assetsDirectory,
+  }) : _assetsDir = assetsDirectory,
        _logger = logger;
 
-  final Directory _articlesDir;
   final Directory _assetsDir;
   final Logger _logger;
 
@@ -102,8 +98,6 @@ class ReaderServer {
       switch (segments.first) {
         case 'book':
           await _handleBook(request, segments, stopwatch);
-        case 'article':
-          await _handleArticle(request, segments, stopwatch);
         case 'assets':
           await _handleAsset(request, segments, stopwatch);
         default:
@@ -161,90 +155,6 @@ class ReaderServer {
       request: request,
       file: file,
       contentType: _mimeForExtension(p.extension(filePath)),
-      stopwatch: stopwatch,
-    );
-  }
-
-  // ── /article/<id>[/images/<filename>] ──
-
-  Future<void> _handleArticle(
-    HttpRequest request,
-    List<String> segments,
-    Stopwatch stopwatch,
-  ) async {
-    final path = request.uri.path;
-
-    if (segments.length < 2) {
-      _respond(request, HttpStatus.badRequest, 'Expected /article/<id>.');
-      _logRequest('GET', path, HttpStatus.badRequest, stopwatch);
-      return;
-    }
-
-    final id = segments[1];
-
-    if (id.contains('/') || id.contains('..')) {
-      _respond(request, HttpStatus.badRequest, 'Invalid article id.');
-      _logRequest('GET', path, HttpStatus.badRequest, stopwatch);
-      return;
-    }
-
-    // /article/<id>/images/<filename>
-    if (segments.length == 4 && segments[2] == 'images') {
-      await _handleArticleImage(request, id, segments[3], stopwatch);
-      return;
-    }
-
-    // /article/<id>
-    if (segments.length != 2) {
-      _respond(request, HttpStatus.badRequest, 'Expected /article/<id>.');
-      _logRequest('GET', path, HttpStatus.badRequest, stopwatch);
-      return;
-    }
-
-    final file = File(p.join(_articlesDir.path, id, 'content.html'));
-    if (!await file.exists()) {
-      _respond(request, HttpStatus.notFound, 'Article not found.');
-      _logRequest('GET', path, HttpStatus.notFound, stopwatch);
-      return;
-    }
-
-    final html = await file.readAsString();
-
-    request.response
-      ..statusCode = HttpStatus.ok
-      ..headers.contentType = ContentType.html
-      ..write(html);
-    await request.response.close();
-    _logRequest('GET', path, HttpStatus.ok, stopwatch);
-  }
-
-  Future<void> _handleArticleImage(
-    HttpRequest request,
-    String articleId,
-    String filename,
-    Stopwatch stopwatch,
-  ) async {
-    final path = request.uri.path;
-
-    if (filename.contains('..') || filename.contains('/')) {
-      _respond(request, HttpStatus.badRequest, 'Invalid image filename.');
-      _logRequest('GET', path, HttpStatus.badRequest, stopwatch);
-      return;
-    }
-
-    final file = File(
-      p.join(_articlesDir.path, articleId, 'images', filename),
-    );
-    if (!await file.exists()) {
-      _respond(request, HttpStatus.notFound, 'Image not found.');
-      _logRequest('GET', path, HttpStatus.notFound, stopwatch);
-      return;
-    }
-
-    await _serveFile(
-      request: request,
-      file: file,
-      contentType: _mimeForExtension(p.extension(filename)),
       stopwatch: stopwatch,
     );
   }

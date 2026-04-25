@@ -4,19 +4,6 @@
 /// Flutter → JS calls control the WebView (navigate, style, highlights).
 library;
 
-/// Current reading position inside an article WebView, reported by JS
-/// `onRelocated` on every scroll. Articles have no CFI — progress is
-/// expressed purely as a scroll fraction in `[0, 1]`.
-class ArticlePosition {
-  const ArticlePosition({required this.fraction});
-
-  final double fraction;
-
-  factory ArticlePosition.fromMap(Map<String, dynamic> map) {
-    return ArticlePosition(fraction: (map['fraction'] as num).toDouble());
-  }
-}
-
 /// Current reading position inside a book WebView, reported by foliate-js
 /// on every page turn. Includes the EPUB CFI (for exact restore), an
 /// overall progress fraction, and optional chapter context.
@@ -74,50 +61,6 @@ class ReaderSelection {
       cfiRange: map['cfi'] as String?,
       scrollOffset: (map['scrollOffset'] as num?)?.toDouble(),
     );
-  }
-}
-
-/// Appearance bundle for the article reader. Every field is optional; set
-/// fields are forwarded to the WebView as CSS variables via the JS
-/// `changeStyle()` call. Used by [ArticleReaderWebView].
-class ReaderStyle {
-  const ReaderStyle({
-    this.fontFamily,
-    this.fontSize,
-    this.lineHeight,
-    this.textColor,
-    this.bgColor,
-    this.accentColor,
-    this.secondaryColor,
-    this.dividerColor,
-    this.codeBgColor,
-    this.padding,
-  });
-
-  final String? fontFamily;
-  final String? fontSize;
-  final String? lineHeight;
-  final String? textColor;
-  final String? bgColor;
-  final String? accentColor;
-  final String? secondaryColor;
-  final String? dividerColor;
-  final String? codeBgColor;
-  final String? padding;
-
-  Map<String, String> toMap() {
-    final map = <String, String>{};
-    if (fontFamily != null) map['fontFamily'] = fontFamily!;
-    if (fontSize != null) map['fontSize'] = fontSize!;
-    if (lineHeight != null) map['lineHeight'] = lineHeight!;
-    if (textColor != null) map['textColor'] = textColor!;
-    if (bgColor != null) map['bgColor'] = bgColor!;
-    if (accentColor != null) map['accentColor'] = accentColor!;
-    if (secondaryColor != null) map['secondaryColor'] = secondaryColor!;
-    if (dividerColor != null) map['dividerColor'] = dividerColor!;
-    if (codeBgColor != null) map['codeBgColor'] = codeBgColor!;
-    if (padding != null) map['padding'] = padding!;
-    return map;
   }
 }
 

@@ -541,42 +541,7 @@ class _ReaderWebViewBody extends StatelessWidget {
         )
         .toList();
 
-    final articleStyle = ReaderStyle(
-      textColor: colorToHex(readerTheme.primaryTextColor),
-      bgColor: colorToHex(readerTheme.backgroundColor),
-      accentColor: colorToHex(readerTheme.accentColor),
-      secondaryColor: colorToHex(readerTheme.secondaryTextColor),
-      dividerColor: colorToHex(readerTheme.dividerColor),
-    );
-
     void onTapped(double x, double y) => chromeCubit.toggle();
-
-    if (state.isArticle) {
-      return ArticleReaderWebView(
-        key: ValueKey(state.article?.id),
-        serverPort: serverPort,
-        articleId: state.article!.id,
-        initialScrollFraction: state.article?.currentScrollOffset,
-        style: articleStyle,
-        highlights: highlights,
-        onPositionChanged: (fraction) {
-          bloc.add(ReaderArticlePositionUpdated(scrollOffset: fraction));
-        },
-        onLoadError: () => bloc.reportError(
-          StateError('Article HTML failed to load from reader server'),
-          StackTrace.current,
-        ),
-        onTextSelected: (selection) {
-          chromeCubit.hide();
-          selectionCubit.select(
-            text: selection.text,
-            scrollOffset: selection.scrollOffset,
-          );
-        },
-        onTextDeselected: () => selectionCubit.deselect(),
-        onTapped: onTapped,
-      );
-    }
 
     final appearance = PreferencesScope.readerAppearanceOf(context);
     final fontPreset = ReaderFontPreset.fromId(appearance.fontId);
@@ -586,11 +551,22 @@ class _ReaderWebViewBody extends StatelessWidget {
       invertImagesInDark: appearance.invertImagesInDark,
     );
 
+    // Books and articles share the foliate-js path: articles are packaged
+    // as single-chapter EPUBs on import (`EpubBuilder`) and a boot-time
+    // backfill keeps older articles in sync. Position is a CFI on both
+    // sides; the article additionally writes a `[0, 1]` fraction so the
+    // catalog cover's progress pill keeps working without re-deriving it.
+    final isArticle = state.isArticle;
+    final filePath = isArticle ? state.article!.epubPath : state.book!.filePath;
+    final initialCfi = isArticle
+        ? state.article?.currentCfi
+        : state.book?.currentCfi;
+
     return BookReaderWebView(
-      key: ValueKey(state.book?.id),
+      key: ValueKey(state.sourceId),
       serverPort: serverPort,
-      bookFilePath: state.book!.filePath,
-      initialCfi: state.book?.currentCfi,
+      bookFilePath: filePath,
+      initialCfi: initialCfi,
       foliateStyle: FoliateStyle(
         fontName: fontPreset.fontFamily,
         fontSize: layout.fontSize,

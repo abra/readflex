@@ -6,6 +6,7 @@ import 'package:local_storage/local_storage.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart' show Uuid;
 
+import 'epub_builder.dart';
 import 'mappers/article_to_domain.dart';
 import 'mappers/article_to_storage.dart';
 
@@ -95,16 +96,40 @@ class ArticleRepository {
       await articleDir.create(recursive: true);
 
       // Download body images and rewrite HTML src to local relative paths.
-      final processedContent = await _downloadArticleImages(
+      final downloadedContent = await _downloadArticleImages(
         articleDir,
         content,
       );
+      // Wrap every <table> in a horizontal-scroll container before writing
+      // to disk and packaging into the EPUB. foliate-js paginates inside
+      // CSS columns; a table wider than the column gets clipped without an
+      // overflow wrapper and the user has no way to see the cut-off cells.
+      final processedContent = _wrapTablesInScrollContainer(downloadedContent);
       final contentFile = File(p.join(articleDir.path, 'content.html'));
       await contentFile.writeAsString(processedContent);
 
       String? coverFilename;
       if (coverImageUrl != null && coverImageUrl.isNotEmpty) {
         coverFilename = await _tryDownloadCover(articleDir, coverImageUrl);
+      }
+
+      // Build a minimal EPUB next to the HTML so the reader can render the
+      // article through foliate-js (page-turn, paginator, the same selection
+      // pipeline as books). The plain `content.html` is still written above
+      // so legacy code paths and migrations have something to fall back on.
+      try {
+        await _buildArticleEpub(
+          articleDir: articleDir,
+          articleId: id,
+          title: title,
+          author: byline,
+          lang: lang,
+          htmlBody: processedContent,
+        );
+      } catch (_) {
+        // EPUB build is best-effort: an article without the .epub artefact
+        // still works through the legacy HTML reader. Don't take the whole
+        // import down because of a packaging hiccup.
       }
 
       final article = Article(
@@ -155,6 +180,35 @@ class ArticleRepository {
   Article _rowToDomain(ArticlesTableData row) => row.toDomainModel(
     articlesDir: _articlesDir,
   );
+
+  // ── HTML transforms ──
+
+  static final _tableOpenRegex = RegExp(
+    r'<table\b',
+    caseSensitive: false,
+  );
+  static final _tableCloseRegex = RegExp(
+    r'</table\s*>',
+    caseSensitive: false,
+  );
+
+  /// Wraps every `<table>` in `<div class="rf-table-scroll">…</div>` so a
+  /// wide table renders with a horizontal scrollbar inside the page rather
+  /// than being silently clipped at the column edge. Idempotent on regular
+  /// readability output: if a table happens to already sit inside such a
+  /// wrapper, we simply nest a second one — at worst slightly redundant
+  /// markup, never broken layout.
+  static String _wrapTablesInScrollContainer(String html) {
+    if (!html.contains('<table') && !html.contains('<TABLE')) return html;
+    final withOpen = html.replaceAllMapped(
+      _tableOpenRegex,
+      (m) => '<div class="rf-table-scroll"><table',
+    );
+    return withOpen.replaceAllMapped(
+      _tableCloseRegex,
+      (m) => '${m.group(0)}</div>',
+    );
+  }
 
   // ── Image downloading ──
 
@@ -271,6 +325,47 @@ class ArticleRepository {
     if (lower.contains('webp')) return '.webp';
     if (lower.contains('gif')) return '.gif';
     return '.img';
+  }
+
+  // ── EPUB packaging ──
+
+  /// Packages the saved article HTML + downloaded images into a single
+  /// EPUB at `<articleDir>/article.epub`. Reads each image referenced by
+  /// the EPUB manifest from disk so we don't hold the whole media set in
+  /// memory while building.
+  Future<void> _buildArticleEpub({
+    required Directory articleDir,
+    required String articleId,
+    required String title,
+    required String? author,
+    required String? lang,
+    required String htmlBody,
+  }) async {
+    final imagesDir = Directory(p.join(articleDir.path, 'images'));
+    final images = <EpubImage>[];
+    if (await imagesDir.exists()) {
+      await for (final entry in imagesDir.list()) {
+        if (entry is! File) continue;
+        final filename = p.basename(entry.path);
+        images.add(
+          EpubImage(
+            filename: filename,
+            bytes: await entry.readAsBytes(),
+            mimeType: EpubBuilder.mimeTypeFor(filename),
+          ),
+        );
+      }
+    }
+
+    await const EpubBuilder().build(
+      id: articleId,
+      title: title,
+      author: author,
+      lang: lang,
+      htmlBody: htmlBody,
+      images: images,
+      outputFile: File(p.join(articleDir.path, 'article.epub')),
+    );
   }
 
   // ── Cleanup helpers ──

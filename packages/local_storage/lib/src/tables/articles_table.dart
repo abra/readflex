@@ -49,8 +49,18 @@ class ArticlesTable extends Table {
   IntColumn get estimatedWordCount =>
       integer().withDefault(const Constant(0))();
 
+  /// Reading progress as a normalized `[0, 1]` fraction. Used by the
+  /// catalog cover for the progress pill. Stays in sync with [currentCfi]:
+  /// the reader writes both on every position update.
   RealColumn get currentScrollOffset =>
       real().withDefault(const Constant(0.0))();
+
+  /// EPUB CFI string used to restore reader position when the article is
+  /// reopened. Articles render through foliate-js (the import pipeline
+  /// packages each one as a single-chapter EPUB), so position is a CFI
+  /// just like books rather than a raw scroll fraction. Null when the
+  /// article hasn't been opened yet.
+  TextColumn get currentCfi => text().nullable()();
 
   TextColumn get addedAt => text()(); // ISO 8601
   TextColumn get lastOpenedAt => text().nullable()(); // ISO 8601

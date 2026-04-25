@@ -8,20 +8,16 @@ import 'package:reader_server/reader_server.dart';
 
 void main() {
   late Directory tempDir;
-  late Directory articlesDir;
   late Directory assetsDir;
   late ReaderServer server;
   late http.Client client;
 
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('reader_server_test_');
-    articlesDir = Directory('${tempDir.path}/articles');
     assetsDir = Directory('${tempDir.path}/assets');
-    await articlesDir.create();
     await assetsDir.create();
 
     server = ReaderServer(
-      articlesDirectory: articlesDir,
       assetsDirectory: assetsDir,
       logger: Logger(),
     );
@@ -53,7 +49,6 @@ void main() {
 
     test('port throws before start', () {
       final unstarted = ReaderServer(
-        articlesDirectory: articlesDir,
         assetsDirectory: assetsDir,
         logger: Logger(),
       );
@@ -70,71 +65,6 @@ void main() {
       await server.stop();
       await server.stop();
       expect(server.isRunning, isFalse);
-    });
-  });
-
-  group('GET /article/<id>', () {
-    test('returns article HTML from per-article directory', () async {
-      final articleDir = Directory('${articlesDir.path}/abc123');
-      await articleDir.create();
-      await File('${articleDir.path}/content.html').writeAsString(
-        '<p>Hello world</p>',
-      );
-
-      final response = await client.get(Uri.parse(url('/article/abc123')));
-
-      expect(response.statusCode, 200);
-      expect(response.body, '<p>Hello world</p>');
-      expect(response.headers['content-type'], contains('text/html'));
-    });
-
-    test('returns 404 for missing article', () async {
-      final response = await client.get(
-        Uri.parse(url('/article/nonexistent')),
-      );
-      expect(response.statusCode, 404);
-    });
-
-    test('rejects path traversal with ..', () async {
-      final response = await client.get(
-        Uri.parse(url('/article/..%2F..%2Fetc%2Fpasswd')),
-      );
-      expect(response.statusCode, 400);
-    });
-
-    test('returns 400 when id is missing', () async {
-      final response = await client.get(Uri.parse(url('/article')));
-      expect(response.statusCode, 400);
-    });
-
-    test('serves article body image', () async {
-      final imgDir = Directory('${articlesDir.path}/art-1/images');
-      await imgDir.create(recursive: true);
-      await File('${imgDir.path}/abc123.jpg').writeAsBytes(
-        [0xFF, 0xD8, 0xFF, 0xE0],
-      );
-
-      final response = await client.get(
-        Uri.parse(url('/article/art-1/images/abc123.jpg')),
-      );
-
-      expect(response.statusCode, 200);
-      expect(response.bodyBytes, [0xFF, 0xD8, 0xFF, 0xE0]);
-      expect(response.headers['content-type'], contains('image/jpeg'));
-    });
-
-    test('returns 404 for missing article image', () async {
-      final response = await client.get(
-        Uri.parse(url('/article/art-1/images/nonexistent.jpg')),
-      );
-      expect(response.statusCode, 404);
-    });
-
-    test('rejects path traversal in image filename', () async {
-      final response = await client.get(
-        Uri.parse(url('/article/art-1/images/..%2F..%2Fsecret')),
-      );
-      expect(response.statusCode, 400);
     });
   });
 
@@ -288,7 +218,7 @@ void main() {
     });
 
     test('returns 405 for POST requests', () async {
-      final response = await client.post(Uri.parse(url('/article/abc')));
+      final response = await client.post(Uri.parse(url('/book/whatever')));
       expect(response.statusCode, 405);
     });
   });

@@ -56,7 +56,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -300,6 +300,16 @@ class AppDatabase extends _$AppDatabase {
         // first in the same transaction when upgrading from <8.
         await customStatement(
           'ALTER TABLE articles_table DROP COLUMN reading_progress',
+        );
+      }
+      if (from < 12) {
+        // Articles now render through foliate-js (each one is packaged as
+        // a single-chapter EPUB on import). Restore position is therefore
+        // a CFI string, like books. We keep `current_scroll_offset` for
+        // the library cover's progress pill — both columns are written
+        // together on every position update.
+        await customStatement(
+          'ALTER TABLE articles_table ADD COLUMN current_cfi TEXT',
         );
       }
     },

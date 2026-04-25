@@ -203,23 +203,7 @@ void main() {
       );
 
       blocTest<ReaderBloc, ReaderState>(
-        'no-op when no book in state',
-        build: buildBloc,
-        seed: () => const ReaderState(status: ReaderStatus.ready),
-        act: (bloc) => bloc.add(
-          const ReaderBookPositionUpdated(
-            cfi: 'epubcfi(/6/4!/4/2)',
-            progress: 0.2,
-          ),
-        ),
-        wait: const Duration(seconds: 3),
-        verify: (_) => expect(bookRepository.updatedBook, isNull),
-      );
-    });
-
-    group('ReaderArticlePositionUpdated', () {
-      blocTest<ReaderBloc, ReaderState>(
-        'updates article scroll offset',
+        'updates article position when article is loaded instead of a book',
         setUp: () {
           articleRepository.seedArticle(testArticle);
         },
@@ -231,24 +215,64 @@ void main() {
           article: testArticle,
         ),
         act: (bloc) => bloc.add(
-          const ReaderArticlePositionUpdated(scrollOffset: 0.75),
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/4!/4/2)',
+            progress: 0.45,
+          ),
         ),
         wait: const Duration(seconds: 3),
         verify: (_) {
           expect(articleRepository.updatedArticle, isNotNull);
-          expect(articleRepository.updatedArticle!.currentScrollOffset, 0.75);
+          expect(
+            articleRepository.updatedArticle!.currentCfi,
+            'epubcfi(/6/4!/4/2)',
+          );
+          expect(
+            articleRepository.updatedArticle!.currentScrollOffset,
+            0.45,
+          );
         },
       );
 
       blocTest<ReaderBloc, ReaderState>(
-        'no-op when no article in state',
+        'clamps progress > 1.0 to 1.0',
+        setUp: () {
+          bookRepository.seedBook(testBook);
+        },
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          sourceType: SourceType.book,
+          title: testBook.title,
+          book: testBook,
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/4!/4/2)',
+            progress: 1.05,
+          ),
+        ),
+        wait: const Duration(seconds: 3),
+        verify: (_) {
+          expect(bookRepository.updatedBook!.readingProgress, 1.0);
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'no-op when neither book nor article in state',
         build: buildBloc,
         seed: () => const ReaderState(status: ReaderStatus.ready),
         act: (bloc) => bloc.add(
-          const ReaderArticlePositionUpdated(scrollOffset: 0.75),
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/4!/4/2)',
+            progress: 0.2,
+          ),
         ),
         wait: const Duration(seconds: 3),
-        verify: (_) => expect(articleRepository.updatedArticle, isNull),
+        verify: (_) {
+          expect(bookRepository.updatedBook, isNull);
+          expect(articleRepository.updatedArticle, isNull);
+        },
       );
     });
 

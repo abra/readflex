@@ -55,6 +55,29 @@ void main() {
       expect(File(article.contentPath).readAsStringSync(), '<p>Hello</p>');
     });
 
+    test('addArticle also packages an EPUB next to the HTML', () async {
+      final article = await repo.addArticle(
+        title: 'My Article',
+        url: 'https://example.com/article',
+        content: '<p>Hello</p>',
+        byline: 'Jane',
+        lang: 'en',
+      );
+
+      final epubFile = File(
+        '${articlesDir.path}/${article.id}/article.epub',
+      );
+      expect(epubFile.existsSync(), isTrue);
+      // Sanity check — first 30 bytes of the file include "mimetype"
+      // (per the EPUB spec, the mimetype entry is uncompressed and first).
+      final head = epubFile.readAsBytesSync().sublist(0, 60);
+      expect(String.fromCharCodes(head), contains('mimetype'));
+      expect(
+        String.fromCharCodes(head),
+        contains('application/epub+zip'),
+      );
+    });
+
     test('addArticle persists readability metadata round-trip', () async {
       final created = await repo.addArticle(
         title: 'Metadata Article',
@@ -161,6 +184,42 @@ void main() {
       );
       final content = await repo.readContent(article);
       expect(content, '<h1>Title</h1><p>body</p>');
+    });
+
+    test('addArticle wraps every <table> in a horizontal-scroll div', () async {
+      // Without the wrapper, a wide table gets clipped at the foliate-js
+      // column edge and the user can't see overflowing cells.
+      final article = await repo.addArticle(
+        title: 'Tables',
+        url: 'https://example.com/t',
+        content:
+            '<p>before</p>'
+            '<table><tr><td>a</td><td>b</td></tr></table>'
+            '<p>middle</p>'
+            '<table class="data"><tr><td>c</td></tr></table>'
+            '<p>after</p>',
+      );
+      final html = File(article.contentPath).readAsStringSync();
+      expect(
+        html,
+        '<p>before</p>'
+        '<div class="rf-table-scroll"><table><tr><td>a</td><td>b</td>'
+        '</tr></table></div>'
+        '<p>middle</p>'
+        '<div class="rf-table-scroll"><table class="data"><tr><td>c</td>'
+        '</tr></table></div>'
+        '<p>after</p>',
+      );
+    });
+
+    test('addArticle leaves table-free HTML untouched', () async {
+      final article = await repo.addArticle(
+        title: 'No tables',
+        url: 'https://example.com/nt',
+        content: '<p>just paragraphs</p>',
+      );
+      final html = File(article.contentPath).readAsStringSync();
+      expect(html, '<p>just paragraphs</p>');
     });
 
     test('readContent throws StorageException when file is missing', () async {

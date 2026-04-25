@@ -1,5 +1,5 @@
 name: reader_webview
-description: "WebView reader widget: foliate-js for books, styled HTML for articles."
+description: "WebView reader widget backed by foliate-js for books and articles."
 publish_to: none
 version: 0.1.0
 
@@ -22,7 +22,6 @@ dev_dependencies:
 
 flutter:
   assets:
-    - assets/article/
     - assets/foliate-js/
     - assets/foliate-js/src/
     - assets/foliate-js/src/vendor/

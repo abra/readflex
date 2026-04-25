@@ -35,6 +35,7 @@ extension ArticleToDomain on ArticlesTableData {
       textLength: textLength,
       estimatedWordCount: estimatedWordCount,
       currentScrollOffset: currentScrollOffset,
+      currentCfi: currentCfi,
       addedAt: DateTime.tryParse(addedAt) ?? _epoch,
       lastOpenedAt: lastOpenedAt != null
           ? DateTime.tryParse(lastOpenedAt!)

@@ -4,7 +4,6 @@ import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:highlight_repository/highlight_repository.dart';
-import 'package:stream_transform/stream_transform.dart';
 
 part 'reader_event.dart';
 part 'reader_state.dart';
@@ -32,26 +31,17 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
        _highlightRepository = highlightRepository,
        super(const ReaderState()) {
     on<ReaderSourceLoadRequested>(_onSourceLoadRequested);
-    on<ReaderBookPositionUpdated>(
-      _onBookPositionUpdated,
-      transformer: _debounce(_positionSaveDelay),
-    );
-    on<ReaderArticlePositionUpdated>(
-      _onArticlePositionUpdated,
-      transformer: _debounce(_positionSaveDelay),
-    );
+    // No debounce here on purpose: the bottom chrome reads progress out of
+    // [ReaderState], so it has to update on every page turn. Each handler
+    // run does one indexed `updateBook` / `updateArticle` write; SQLite
+    // handles that volume comfortably for typical reading speeds.
+    on<ReaderBookPositionUpdated>(_onBookPositionUpdated);
     on<ReaderHighlightsRefreshed>(_onHighlightsRefreshed);
   }
 
   final BookRepository _bookRepository;
   final ArticleRepository _articleRepository;
   final HighlightRepository _highlightRepository;
-
-  static const _positionSaveDelay = Duration(seconds: 2);
-
-  static EventTransformer<E> _debounce<E>(Duration duration) {
-    return (events, mapper) => events.debounce(duration).asyncExpand(mapper);
-  }
 
   Future<void> _onSourceLoadRequested(
     ReaderSourceLoadRequested event,
@@ -107,32 +97,36 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     }
   }
 
+  /// Persists a CFI + progress fraction emitted by the WebView for the
+  /// currently-open source. Books and articles share the same event:
+  /// articles render through foliate-js too, so the position model is
+  /// identical (CFI for restore, fraction for the library cover's
+  /// progress pill).
+  ///
+  /// foliate-js can occasionally report a fraction slightly above 1.0
+  /// (overshoot at end-of-content / re-entry); we clamp to `[0, 1]` so
+  /// the catalog cover's progress pill stays sensible.
   Future<void> _onBookPositionUpdated(
     ReaderBookPositionUpdated event,
     Emitter<ReaderState> emit,
   ) async {
-    if (state.book == null) return;
+    final progress = event.progress.clamp(0.0, 1.0);
     try {
-      await _bookRepository.updateBook(
-        state.book!.copyWith(
+      if (state.book != null) {
+        final updated = state.book!.copyWith(
           currentCfi: event.cfi,
-          readingProgress: event.progress,
-        ),
-      );
-    } catch (e, st) {
-      addError(e, st);
-    }
-  }
-
-  Future<void> _onArticlePositionUpdated(
-    ReaderArticlePositionUpdated event,
-    Emitter<ReaderState> emit,
-  ) async {
-    if (state.article == null) return;
-    try {
-      await _articleRepository.updateArticle(
-        state.article!.copyWith(currentScrollOffset: event.scrollOffset),
-      );
+          readingProgress: progress,
+        );
+        await _bookRepository.updateBook(updated);
+        emit(state.copyWith(book: updated));
+      } else if (state.article != null) {
+        final updated = state.article!.copyWith(
+          currentCfi: event.cfi,
+          currentScrollOffset: progress,
+        );
+        await _articleRepository.updateArticle(updated);
+        emit(state.copyWith(article: updated));
+      }
     } catch (e, st) {
       addError(e, st);
     }

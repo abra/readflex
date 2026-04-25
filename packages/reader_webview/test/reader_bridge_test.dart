@@ -2,18 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:reader_webview/reader_webview.dart';
 
 void main() {
-  group('ArticlePosition', () {
-    test('fromMap parses fraction', () {
-      final position = ArticlePosition.fromMap({'fraction': 0.42});
-      expect(position.fraction, 0.42);
-    });
-
-    test('fromMap handles integer fraction', () {
-      final position = ArticlePosition.fromMap({'fraction': 1});
-      expect(position.fraction, 1.0);
-    });
-  });
-
   group('BookPosition', () {
     test('fromMap parses all fields', () {
       final position = BookPosition.fromMap({
@@ -54,7 +42,10 @@ void main() {
   });
 
   group('ReaderSelection', () {
-    test('fromMap parses article selection', () {
+    test('fromMap parses scroll-offset-only selection', () {
+      // Legacy article selections (pre-EPUB migration) carried only a
+      // scroll fraction; the field is still on the bridge type because
+      // the highlight flow forwards it to storage.
       final selection = ReaderSelection.fromMap({
         'text': 'Hello world',
         'scrollOffset': 0.5,
@@ -86,48 +77,6 @@ void main() {
       expect(selection.text, 'Both fields');
       expect(selection.cfiRange, 'epubcfi(/6/4)');
       expect(selection.scrollOffset, 0.3);
-    });
-  });
-
-  group('ReaderStyle', () {
-    test('toMap includes only non-null fields', () {
-      const style = ReaderStyle(
-        fontFamily: 'Geist',
-        fontSize: '18px',
-        bgColor: '#ffffff',
-      );
-
-      final map = style.toMap();
-      expect(map, {
-        'fontFamily': 'Geist',
-        'fontSize': '18px',
-        'bgColor': '#ffffff',
-      });
-    });
-
-    test('toMap returns empty map when all fields null', () {
-      const style = ReaderStyle();
-      expect(style.toMap(), isEmpty);
-    });
-
-    test('toMap includes all fields when set', () {
-      const style = ReaderStyle(
-        fontFamily: 'serif',
-        fontSize: '20px',
-        lineHeight: '1.8',
-        textColor: '#000',
-        bgColor: '#fff',
-        accentColor: '#0066cc',
-        secondaryColor: '#666',
-        dividerColor: '#e0e0e0',
-        codeBgColor: '#f5f5f5',
-        padding: '24px',
-      );
-
-      final map = style.toMap();
-      expect(map.length, 10);
-      expect(map['fontFamily'], 'serif');
-      expect(map['padding'], '24px');
     });
   });
 
