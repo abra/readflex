@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:path/path.dart' as p;
 
 /// Title / author / description / cover image extracted from a book file
 /// by foliate-js. Produced by [BookMetadataExtractor] during import and
@@ -96,6 +97,14 @@ class BookMetadataExtractor {
 
   String _buildUrl(String filePath) {
     final bookUrl = Uri.encodeComponent(filePath);
+    // Original filename WITH extension. foliate-js uses `RemoteFile.name`
+    // both for format detection (`isCBZ`/`isFBZ` match by the file's name
+    // suffix) and as a metadata fallback for formats without embedded
+    // metadata (CBZ sets `book.metadata.title = file.name`). Stripping the
+    // extension here would make foliate-js mis-detect CBZ as EPUB and
+    // fail to parse; the per-format JS strips the extension when it sets
+    // the title.
+    final fileName = p.basename(filePath);
     final params = {
       'importing': 'true',
       'url': Uri.encodeComponent(
@@ -103,6 +112,7 @@ class BookMetadataExtractor {
           'http://127.0.0.1:$serverPort/book/$bookUrl',
         ),
       ),
+      'name': Uri.encodeComponent(jsonEncode(fileName)),
       'initialCfi': Uri.encodeComponent(jsonEncode(null)),
       // foliate-js accesses style.allowScript in the Loader constructor
       // (epub.js) before the `if (importing) return` early exit. Pass a

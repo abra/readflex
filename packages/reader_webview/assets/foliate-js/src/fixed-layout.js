@@ -78,12 +78,32 @@ export class FixedLayout extends HTMLElement {
                 const doc = iframe.contentDocument
                 doc.position = position
                 this.dispatchEvent(new CustomEvent('load', { detail: { doc, index } }))
-                const { width, height } = getViewport(doc, this.defaultViewport)
-                resolve({
-                    element, iframe,
-                    width: parseFloat(width),
-                    height: parseFloat(height),
-                })
+                // CBZ pages are an HTML blob containing a single <img>;
+                // the iframe `load` event can fire before the image
+                // bitmap is decoded, leaving naturalWidth/Height at 0.
+                // getViewport then falls back to its 1000×2000 default
+                // and the page renders at the wrong scale. Wait for the
+                // image to finish loading before measuring viewport.
+                const finish = () => {
+                    const { width, height } = getViewport(doc, this.defaultViewport)
+                    resolve({
+                        element, iframe,
+                        width: parseFloat(width),
+                        height: parseFloat(height),
+                    })
+                }
+                const img = doc.querySelector('img')
+                if (img && !img.complete) {
+                    const done = () => {
+                        img.removeEventListener('load', done)
+                        img.removeEventListener('error', done)
+                        finish()
+                    }
+                    img.addEventListener('load', done)
+                    img.addEventListener('error', done)
+                } else {
+                    finish()
+                }
             }
             iframe.addEventListener('load', onload)
             iframe.src = src
@@ -92,11 +112,18 @@ export class FixedLayout extends HTMLElement {
     #render(side = this.#side) {
         if (!side) return
         const left = this.#left ?? {}
-        const right = this.#center ?? this.#right
+        const right = this.#center ?? this.#right ?? {}
         const target = side === 'left' ? left : right
         const { width, height } = this.getBoundingClientRect()
+        // Bail if the host hasn't been laid out — the ResizeObserver will
+        // re-trigger us once dimensions are real. Without this guard a
+        // 0×0 rect would silently flip portrait detection to false.
+        if (width <= 0 || height <= 0) return
+        // Same heuristic readest uses (1.2× threshold): on devices that
+        // are only marginally taller than wide (unfolded foldables, etc.)
+        // fall through to the two-up spread layout.
         const portrait = this.spread !== 'both' && this.spread !== 'portrait'
-            && height > width
+            && height > width * 1.2
         this.#portrait = portrait
         const blankWidth = left.width ?? right.width
         const blankHeight = left.height ?? right.height
@@ -155,21 +182,26 @@ export class FixedLayout extends HTMLElement {
             this.#render()
         }
     }
+    // Following readest's pattern: instead of toggling display values
+    // manually here, set `#side` and re-run `#render()` so display state
+    // has a single source of truth. Manual toggling kept getting out of
+    // sync with the rendered state on back navigation, leaving both
+    // halves of a spread visible at once.
     #goLeft() {
         if (this.#center || this.#left?.blank) return
         if (this.#portrait && this.#left?.element?.style?.display === 'none') {
-            this.#right.element.style.display = 'none'
-            this.#left.element.style.display = 'block'
             this.#side = 'left'
+            this.#render()
+            this.#reportLocation('page')
             return true
         }
     }
     #goRight() {
         if (this.#center || this.#right?.blank) return
         if (this.#portrait && this.#right?.element?.style?.display === 'none') {
-            this.#left.element.style.display = 'none'
-            this.#right.element.style.display = 'block'
             this.#side = 'right'
+            this.#render()
+            this.#reportLocation('page')
             return true
         }
     }
@@ -221,7 +253,14 @@ export class FixedLayout extends HTMLElement {
     }
     get index() {
         const spread = this.#spreads[this.#index]
-        const section = spread?.center ?? (this.side === 'left'
+        // Upstream foliate-js writes `this.side` here, but the property is
+        // only ever assigned as `#side` (private) — so `this.side` is
+        // always `undefined`, the `=== 'left'` check always fails, and the
+        // getter always returns the section on the RIGHT of a two-page
+        // spread. When the user is on the LEFT page, the saved CFI ends
+        // up pointing one section forward, and on reopen the renderer
+        // restores into the same spread but lands on the wrong half.
+        const section = spread?.center ?? (this.#side === 'left'
             ? spread.left ?? spread.right : spread.right ?? spread.left)
         return this.book.sections.indexOf(section)
     }
@@ -275,13 +314,11 @@ export class FixedLayout extends HTMLElement {
     }
     async next() {
         const s = this.rtl ? this.#goLeft() : this.#goRight()
-        if (s) this.#reportLocation('page')
-        else return this.goToSpread(this.#index + 1, this.rtl ? 'right' : 'left', 'page')
+        if (!s) return this.goToSpread(this.#index + 1, this.rtl ? 'right' : 'left', 'page')
     }
     async prev() {
         const s = this.rtl ? this.#goRight() : this.#goLeft()
-        if (s) this.#reportLocation('page')
-        else return this.goToSpread(this.#index - 1, this.rtl ? 'left' : 'right', 'page')
+        if (!s) return this.goToSpread(this.#index - 1, this.rtl ? 'left' : 'right', 'page')
     }
     getContents() {
         return Array.from(this.#root.querySelectorAll('iframe'), frame => ({

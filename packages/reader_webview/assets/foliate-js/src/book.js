@@ -5,6 +5,10 @@ import './view.js'
 import { FootnoteHandler } from './footnotes.js'
 import { Overlayer } from './overlayer.js'
 import { collapse, compare, fromRange, toRange } from './epubcfi.js'
+import {
+  attachGestures as readflexAttachGestures,
+  registerGesture as readflexRegisterGesture,
+} from './readflex_gestures.js'
 const { configure, ZipReader, BlobReader, TextWriter, BlobWriter } =
   await import('./vendor/zip.js')
 const { EPUB } = await import('./epub.js')
@@ -1000,6 +1004,11 @@ class Reader {
     this.#doc = doc
     this.#index = index
     setSelectionHandler(this.view, doc, index)
+    // Wire iframe touch events into the readflex gesture dispatcher so
+    // any registered handler (CBZ swipe, future pinch-zoom, etc.) sees
+    // them regardless of which renderer (paginator / fixed-layout) loaded
+    // the iframe.
+    readflexAttachGestures(doc)
 
     // if (!this.#originalContent) {
     // console.log('Saving original content', doc);
@@ -1633,6 +1642,34 @@ window.pullUp = () => {
   callFlutter('onPullUp')
 }
 
+// Page-flip on horizontal swipe for fixed-layout books (CBZ, fixed-layout
+// EPUB). Reflowable formats are excluded — paginator.js' built-in
+// touch+snap handler already owns swipes there. Thresholds mirror
+// readest's: ≥30px horizontal, dominance over vertical, ≥0.2 px/ms
+// release velocity (`apps/readest-app/src/app/reader/hooks/usePagination.ts`).
+readflexRegisterGesture(
+  'swipe-flip-fixed-layout',
+  detail =>
+    detail.phase === 'end'
+    && globalThis.reader?.view?.isFixedLayout === true,
+  detail => {
+    const { deltaX, deltaY, deltaT } = detail
+    if (Math.abs(deltaX) <= Math.abs(deltaY)) return false
+    if (Math.abs(deltaX) < 30) return false
+    const vx = Math.abs(deltaX / (deltaT || 1))
+    if (vx < 0.2) return false
+    const renderer = globalThis.reader?.view?.renderer
+    if (!renderer) return false
+    // dx > 0 → swipe right → previous page in LTR (next in RTL); the
+    // renderer's own next/prev already accounts for the book's reading
+    // direction internally.
+    if (deltaX > 0) renderer.prev?.()
+    else renderer.next?.()
+    return true
+  },
+  100,
+)
+
 // get varible from url
 var urlParams = new URLSearchParams(window.location.search)
 var importing = JSON.parse(urlParams.get('importing'))
@@ -1640,15 +1677,19 @@ var url = JSON.parse(urlParams.get('url'))
 var initialCfi = JSON.parse(urlParams.get('initialCfi'))
 var style = JSON.parse(urlParams.get('style'))
 var readingRules = JSON.parse(urlParams.get('readingRules'))
+// Optional caller-supplied display name. Used by formats with no embedded
+// metadata (e.g. CBZ sets `book.metadata.title = file.name`) so the title
+// doesn't fall back to the URL pathname.
+var nameParam = urlParams.get('name')
+var name = nameParam ? JSON.parse(nameParam)
+  : new URL(url, window.location.origin).pathname
 
 // Use a `Range:`-aware loader so foliate-js / zip.js can read just the
 // bytes they need rather than downloading the whole book before rendering.
 // See ./remote_file.js for the contract this implements.
 import('./remote_file.js')
   .then(({ RemoteFile }) =>
-    new RemoteFile(url, {
-      name: new URL(url, window.location.origin).pathname,
-    }).open(),
+    new RemoteFile(url, { name }).open(),
   )
   .then(file => open(file, initialCfi))
   .catch(e => console.error(e))

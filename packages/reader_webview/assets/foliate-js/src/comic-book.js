@@ -25,12 +25,22 @@ export const makeComicBook = ({ entries, loadBlob, getSize }, file) => {
 
     const book = {}
     book.getCover = () => loadBlob(files[0])
-    book.metadata = { title: file.name }
+    // Strip the archive extension from the fallback title — `file.name` is
+    // the original filename incl. `.cbz`/`.cbr`/`.cb7`/`.cbt`, and the
+    // user sees this in library/chrome. Pass the URL pathname through
+    // unchanged when no real filename is available.
+    book.metadata = { title: file.name.replace(/\.(cbz|cbr|cb7|cbt)$/i, '') }
+    // `size: 1` instead of `getSize(name)` — the byte size of each
+    // archived image biases foliate-js' progress calculation
+    // (`sizeBefore / sizeTotal`). For a CBZ each "section" is one
+    // page, so equal-weight sections give the user a linear
+    // `pageIndex / totalPages` progress reading instead of a fraction
+    // that jumps around with image-compression ratios.
     book.sections = files.map(name => ({
         id: name,
         load: () => load(name),
         unload: () => unload(name),
-        size: getSize(name),
+        size: 1,
     }))
     book.toc = files.map(name => ({ label: name, href: name }))
     book.rendition = { layout: 'pre-paginated' }
