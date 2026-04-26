@@ -57,6 +57,18 @@ class AssetExtractor {
     'assets/foliate-js/dist/bundle.js',
   ];
 
+  /// Reading-typography fonts copied from `component_library` so foliate-js
+  /// can load them via `@font-face` over the local HTTP server. Flutter's
+  /// own font registry is invisible to the WebView — without these on disk,
+  /// `font-family: SourceSerif4 / Geist` falls back to the platform default
+  /// (Times on iOS, Roboto on Android), making the reader font preset a
+  /// no-op.
+  static const _fontBundleKeys = [
+    'packages/component_library/fonts/Geist-Variable.ttf',
+    'packages/component_library/fonts/SourceSerif4-Variable.ttf',
+    'packages/component_library/fonts/SourceSerif4-Italic-Variable.ttf',
+  ];
+
   /// Extracts all reader assets to [targetDirectory].
   ///
   /// On unchanged [version], existing files are skipped. When [version]
@@ -67,38 +79,54 @@ class AssetExtractor {
     final shouldForce = force || !await _versionMatches(versionFile, version);
 
     for (final assetPath in _assetPaths) {
-      final bundleKey = 'packages/reader_webview/$assetPath';
-      final relativePath = assetPath.replaceFirst('assets/', '');
-      final targetPath = p.join(targetDirectory.path, relativePath);
-      final targetFile = File(targetPath);
+      await _extractOne(
+        bundleKey: 'packages/reader_webview/$assetPath',
+        relativeTargetPath: assetPath.replaceFirst('assets/', ''),
+        force: shouldForce,
+      );
+    }
 
-      if (!shouldForce && await targetFile.exists()) continue;
-
-      await Directory(p.dirname(targetPath)).create(recursive: true);
-
-      try {
-        final data = await rootBundle.load(bundleKey);
-        await targetFile.writeAsBytes(
-          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
-          flush: true,
-        );
-      } catch (e, st) {
-        // Continue extracting the rest — a single missing file is
-        // recoverable for most foliate-js features (e.g. a vendor lib
-        // for a format the user doesn't open). But we surface it so a
-        // corrupt release bundle is visible in logs.
-        logger?.warn(
-          'AssetExtractor failed to load $bundleKey',
-          error: e,
-          stackTrace: st,
-        );
-        continue;
-      }
+    for (final bundleKey in _fontBundleKeys) {
+      await _extractOne(
+        bundleKey: bundleKey,
+        relativeTargetPath: p.join('fonts', p.basename(bundleKey)),
+        force: shouldForce,
+      );
     }
 
     if (shouldForce) {
       await versionFile.parent.create(recursive: true);
       await versionFile.writeAsString(version, flush: true);
+    }
+  }
+
+  Future<void> _extractOne({
+    required String bundleKey,
+    required String relativeTargetPath,
+    required bool force,
+  }) async {
+    final targetPath = p.join(targetDirectory.path, relativeTargetPath);
+    final targetFile = File(targetPath);
+    if (!force && await targetFile.exists()) return;
+
+    await Directory(p.dirname(targetPath)).create(recursive: true);
+
+    try {
+      final data = await rootBundle.load(bundleKey);
+      await targetFile.writeAsBytes(
+        data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+        flush: true,
+      );
+    } catch (e, st) {
+      // Continue extracting the rest — a single missing file is
+      // recoverable for most foliate-js features (e.g. a vendor lib
+      // for a format the user doesn't open). But we surface it so a
+      // corrupt release bundle is visible in logs.
+      logger?.warn(
+        'AssetExtractor failed to load $bundleKey',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 

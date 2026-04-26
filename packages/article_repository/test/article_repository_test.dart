@@ -188,8 +188,10 @@ void main() {
     });
 
     test('addArticle wraps every <table> in a horizontal-scroll div', () async {
-      // Without the wrapper, a wide table gets clipped at the foliate-js
-      // column edge and the user can't see overflowing cells.
+      // The wrapper carries the CSS that caps the table at one viewport
+      // and gives the user a scroll affordance when it overflows; without
+      // it, foliate-js's CSS multi-column splits a tall table awkwardly
+      // (or leaves a phantom empty page when `break-inside: avoid` wins).
       final article = await repo.addArticle(
         title: 'Tables',
         url: 'https://example.com/t',

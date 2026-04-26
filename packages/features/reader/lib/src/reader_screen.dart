@@ -583,6 +583,9 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
             initialCfi: initialCfi,
             foliateStyle: FoliateStyle(
               fontName: fontPreset.fontFamily,
+              fontPath:
+                  'http://127.0.0.1:${widget.serverPort}'
+                  '/assets/fonts/${fontPreset.fontFile}',
               fontSize: layout.fontSize,
               fontWeight: layout.fontWeight,
               letterSpacing: layout.letterSpacing,

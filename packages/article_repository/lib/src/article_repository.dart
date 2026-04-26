@@ -119,10 +119,11 @@ class ArticleRepository {
         articleDir,
         content,
       );
-      // Wrap every <table> in a horizontal-scroll container before writing
-      // to disk and packaging into the EPUB. foliate-js paginates inside
-      // CSS columns; a table wider than the column gets clipped without an
-      // overflow wrapper and the user has no way to see the cut-off cells.
+      // Wrap every <table> in `<div class="rf-table-scroll">…</div>` so the
+      // CSS in `EpubBuilder` can pin the table to a single screen and let
+      // the user scroll inside it when it overflows. Without the wrapper
+      // foliate-js would split a tall table across pages (or, with
+      // `break-inside: avoid`, leave a phantom empty page).
       final processedContent = _wrapTablesInScrollContainer(downloadedContent);
       final contentFile = File(p.join(articleDir.path, 'content.html'));
       await contentFile.writeAsString(processedContent);
@@ -221,12 +222,12 @@ class ArticleRepository {
     caseSensitive: false,
   );
 
-  /// Wraps every `<table>` in `<div class="rf-table-scroll">…</div>` so a
-  /// wide table renders with a horizontal scrollbar inside the page rather
-  /// than being silently clipped at the column edge. Idempotent on regular
-  /// readability output: if a table happens to already sit inside such a
-  /// wrapper, we simply nest a second one — at worst slightly redundant
-  /// markup, never broken layout.
+  /// Wraps every `<table>` in `<div class="rf-table-scroll">…</div>`. The
+  /// wrapper carries the CSS that caps the table to one screen and gives
+  /// the user a scroll affordance when it overflows. Idempotent on
+  /// regular readability output: if a table happens to already sit inside
+  /// such a wrapper, we simply nest a second one — at worst slightly
+  /// redundant markup, never broken layout.
   static String _wrapTablesInScrollContainer(String html) {
     if (!html.contains('<table') && !html.contains('<TABLE')) return html;
     final withOpen = html.replaceAllMapped(

@@ -53,6 +53,17 @@ enum ReaderFontPreset {
     sans => AppTypography.fontFamilySans,
     geist => AppTypography.fontFamilySans,
   };
+
+  /// File name (under the reader server's `assets/fonts/` route) of the
+  /// TTF that backs [fontFamily]. The reader screen builds a localhost
+  /// URL from this so foliate-js's `@font-face` can actually load the
+  /// font — Flutter's bundled fonts are invisible to the WebView, so the
+  /// reader has to serve them itself.
+  String get fontFile => switch (this) {
+    serif => 'SourceSerif4-Variable.ttf',
+    sans => 'Geist-Variable.ttf',
+    geist => 'Geist-Variable.ttf',
+  };
 }
 
 /// Reader-specific colors detached from the app shell.
@@ -102,13 +113,13 @@ class ReaderThemeData {
 extension ReaderThemePresetX on ReaderThemePreset {
   ReaderThemeData get data => switch (this) {
     ReaderThemePreset.paper => const ReaderThemeData(
-      backgroundColor: Color(0xFFF7F1E6),
-      surfaceColor: Color(0xFFFCF7EF),
-      panelColor: Color(0xFFF0E7D8),
-      primaryTextColor: Color(0xFF2A221B),
-      secondaryTextColor: Color(0xFF76685B),
-      dividerColor: Color(0xFFD9CAB4),
-      accentColor: Color(0xFFB86A2D),
+      backgroundColor: Color(0xFFFAF8F4),
+      surfaceColor: Color(0xFFFFFFFF),
+      panelColor: Color(0xFFF0EDE6),
+      primaryTextColor: Color(0xFF2A2723),
+      secondaryTextColor: Color(0xFF6B655E),
+      dividerColor: Color(0xFFE5E1D9),
+      accentColor: Color(0xFFB85A2A),
     ),
     ReaderThemePreset.warm => const ReaderThemeData(
       backgroundColor: Color(0xFFF3E4CF),

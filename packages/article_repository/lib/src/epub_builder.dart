@@ -179,15 +179,24 @@ class EpubBuilder {
       // height, font-size on `html`). Without it, those rules can override
       // ours via cascade order even though our selectors are more specific.
       //
-      // Wide tables: `<table>` is wrapped in a `.rf-table-scroll` div by
-      // [ArticleRepository] before EPUB packaging. The wrapper gives the
-      // user a horizontal scroll affordance inside the page when the table
-      // is wider than the foliate-js column. Without it, wide tables get
-      // clipped at the column edge with no recovery.
-      '.rf-table-scroll { overflow-x: auto !important; max-width: 100%; '
-      'margin: 1em 0; -webkit-overflow-scrolling: touch; }\n'
-      '.rf-table-scroll > table { margin: 0 !important; '
-      'min-width: max-content; }\n'
+      // Tables are kept atomic (one screen): `<table>` is wrapped in
+      // `.rf-table-scroll` by [ArticleRepository]. The wrapper:
+      //   - caps height/width to one viewport so a long table never
+      //     exceeds a single page (which would otherwise leave a blank
+      //     column on the previous page — `overflow: auto` makes the
+      //     wrapper an atomic block formatting context that CSS
+      //     multi-column cannot split);
+      //   - gives the user a scroll affordance inside the box when the
+      //     table is taller/wider than the screen, so all rows and
+      //     columns remain reachable without breaking pagination;
+      //   - declares `break-inside: avoid` defensively in case publisher
+      //     CSS or foliate-js ever try to split the wrapper itself.
+      '.rf-table-scroll { display: block; max-height: 100vh; '
+      'max-width: 100%; overflow: auto !important; '
+      'break-inside: avoid !important; '
+      'page-break-inside: avoid !important; '
+      '-webkit-overflow-scrolling: touch; margin: 1em 0; }\n'
+      '.rf-table-scroll > table { margin: 0 !important; }\n'
       'table { display: table !important; border-collapse: collapse; '
       'width: 100%; margin: 1em 0; font-size: 0.65em !important; '
       'line-height: 1.3 !important; table-layout: auto; }\n'
