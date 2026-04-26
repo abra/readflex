@@ -516,7 +516,7 @@ class _ReviewReminderDriver extends StatelessWidget {
   }
 }
 
-class _ReaderWebViewBody extends StatelessWidget {
+class _ReaderWebViewBody extends StatefulWidget {
   const _ReaderWebViewBody({
     required this.serverPort,
     required this.readerTheme,
@@ -524,6 +524,17 @@ class _ReaderWebViewBody extends StatelessWidget {
 
   final int serverPort;
   final ReaderThemeData readerTheme;
+
+  @override
+  State<_ReaderWebViewBody> createState() => _ReaderWebViewBodyState();
+}
+
+class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
+  /// `true` once foliate-js has fired its `onLoadEnd` callback — at that
+  /// point the WebView has the book parsed and the first page painted.
+  /// Until then we cover the (visually empty) WebView with a loading
+  /// scrim so the user gets feedback that the tap registered.
+  bool _foliateReady = false;
 
   @override
   Widget build(BuildContext context) {
@@ -547,7 +558,7 @@ class _ReaderWebViewBody extends StatelessWidget {
     final fontPreset = ReaderFontPreset.fromId(appearance.fontId);
     final layout = BookLayoutPreset.fromId(appearance.layoutId).data;
     final customCSS = buildBookCustomCSS(
-      theme: readerTheme,
+      theme: widget.readerTheme,
       invertImagesInDark: appearance.invertImagesInDark,
     );
 
@@ -562,50 +573,96 @@ class _ReaderWebViewBody extends StatelessWidget {
         ? state.article?.currentCfi
         : state.book?.currentCfi;
 
-    return BookReaderWebView(
-      key: ValueKey(state.sourceId),
-      serverPort: serverPort,
-      bookFilePath: filePath,
-      initialCfi: initialCfi,
-      foliateStyle: FoliateStyle(
-        fontName: fontPreset.fontFamily,
-        fontSize: layout.fontSize,
-        fontWeight: layout.fontWeight,
-        letterSpacing: layout.letterSpacing,
-        spacing: layout.lineHeight,
-        paragraphSpacing: layout.paragraphSpacing,
-        textIndent: layout.textIndent,
-        topMargin: layout.topMargin,
-        bottomMargin: layout.bottomMargin,
-        sideMargin: layout.sideMargin,
-        justify: layout.justify,
-        hyphenate: layout.hyphenate,
-        fontColor: colorToHex(readerTheme.primaryTextColor),
-        backgroundColor: colorToHex(readerTheme.backgroundColor),
-        customCSS: customCSS,
-        customCSSEnabled: true,
-        overrideFont: appearance.overrideFont,
-        overrideColor: appearance.overrideColor,
-        useBookLayout: appearance.useBookLayout,
-      ),
-      highlights: highlights,
-      onPositionChanged: (position) {
-        bloc.add(
-          ReaderBookPositionUpdated(
-            cfi: position.cfi,
-            progress: position.fraction,
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: BookReaderWebView(
+            key: ValueKey(state.sourceId),
+            serverPort: widget.serverPort,
+            bookFilePath: filePath,
+            initialCfi: initialCfi,
+            foliateStyle: FoliateStyle(
+              fontName: fontPreset.fontFamily,
+              fontSize: layout.fontSize,
+              fontWeight: layout.fontWeight,
+              letterSpacing: layout.letterSpacing,
+              spacing: layout.lineHeight,
+              paragraphSpacing: layout.paragraphSpacing,
+              textIndent: layout.textIndent,
+              topMargin: layout.topMargin,
+              bottomMargin: layout.bottomMargin,
+              sideMargin: layout.sideMargin,
+              justify: layout.justify,
+              hyphenate: layout.hyphenate,
+              fontColor: colorToHex(widget.readerTheme.primaryTextColor),
+              backgroundColor: colorToHex(widget.readerTheme.backgroundColor),
+              customCSS: customCSS,
+              customCSSEnabled: true,
+              overrideFont: appearance.overrideFont,
+              overrideColor: appearance.overrideColor,
+              useBookLayout: appearance.useBookLayout,
+            ),
+            highlights: highlights,
+            onReady: () {
+              if (mounted && !_foliateReady) {
+                setState(() => _foliateReady = true);
+              }
+            },
+            onPositionChanged: (position) {
+              bloc.add(
+                ReaderBookPositionUpdated(
+                  cfi: position.cfi,
+                  progress: position.fraction,
+                ),
+              );
+            },
+            onTextSelected: (selection) {
+              chromeCubit.hide();
+              selectionCubit.select(
+                text: selection.text,
+                cfiRange: selection.cfiRange,
+              );
+            },
+            onTextDeselected: () => selectionCubit.deselect(),
+            onTapped: onTapped,
           ),
-        );
-      },
-      onTextSelected: (selection) {
-        chromeCubit.hide();
-        selectionCubit.select(
-          text: selection.text,
-          cfiRange: selection.cfiRange,
-        );
-      },
-      onTextDeselected: () => selectionCubit.deselect(),
-      onTapped: onTapped,
+        ),
+        // Loading scrim — covers the WebView while it's still mounting and
+        // foliate-js is parsing the book. Background uses the reader
+        // theme so it blends seamlessly into the rendered book once the
+        // scrim fades. Fades out after `onReady` so the transition feels
+        // intentional, not a flash.
+        //
+        // Centered spinner instead of a top-edge bar: the reader route
+        // is opened with a full-screen vertical slide transition, and a
+        // top-edge bar reads as «sliding up» during that animation. A
+        // centered circular indicator doesn't fight the route transition.
+        IgnorePointer(
+          ignoring: _foliateReady,
+          child: AnimatedOpacity(
+            opacity: _foliateReady ? 0 : 1,
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            child: ColoredBox(
+              color: widget.readerTheme.backgroundColor,
+              child: Center(
+                child: SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.4,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      widget.readerTheme.primaryTextColor.withValues(
+                        alpha: 0.55,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
