@@ -36,7 +36,11 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      display: flex;
+      /* Hidden by default; book.js flips to display:block when a
+         footnote is clicked. Without this, the empty dialog flashes
+         briefly between HTML parse and book.js execution every time
+         the reader opens. */
+      display: none;
       flex-direction: column;
     }
 
