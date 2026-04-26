@@ -65,9 +65,8 @@ class CatalogScreen extends StatelessWidget {
 }
 
 /// Stateful shell that owns the transient UI state of the catalog screen —
-/// the search text controller, the scroll-under scrim flag, and the
-/// in-flight guard for the FAB — and assembles [CatalogHeader] + [CatalogBody]
-/// around them.
+/// the search text controller and the in-flight guard for the FAB — and
+/// assembles [CatalogHeader] + [CatalogBody] around them.
 ///
 /// Keeping this state local (rather than in [CatalogBloc]) means it doesn't
 /// survive navigation, which is what we want: re-entering the screen starts
@@ -92,10 +91,6 @@ class _CatalogViewState extends State<_CatalogView> {
   /// to know about query changes (not every keystroke triggers a new load),
   /// and owning a controller lets us clear the field from the clear button.
   final _searchController = TextEditingController();
-
-  /// Scroll-under scrim visibility. The demo toggles the shadow on the
-  /// first vertical scroll, so we track `extentBefore > 0`.
-  bool _showHeaderShadow = false;
 
   /// Guards the FAB against re-entry while an import sheet is being pushed.
   bool _addInFlight = false;
@@ -176,40 +171,16 @@ class _CatalogViewState extends State<_CatalogView> {
                         bloc.add(CatalogFilterChanged(filter)),
                   ),
                   Expanded(
-                    child: Stack(
-                      children: [
-                        NotificationListener<ScrollNotification>(
-                          onNotification: (notification) {
-                            if (notification.metrics.axis != Axis.vertical) {
-                              return false;
-                            }
-                            final shouldShow =
-                                notification.metrics.extentBefore > 0;
-                            if (shouldShow != _showHeaderShadow && mounted) {
-                              setState(
-                                () => _showHeaderShadow = shouldShow,
-                              );
-                            }
-                            return false;
-                          },
-                          child: CatalogBody(
-                            state: state,
-                            onBookPressed: (book) =>
-                                _handleBookTap(context, book),
-                            onArticlePressed: (article) =>
-                                _handleArticleTap(context, article),
-                            onRefresh: () async {
-                              bloc.add(const CatalogRefreshRequested());
-                            },
-                          ),
-                        ),
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          child: ScrollEdgeFade(visible: _showHeaderShadow),
-                        ),
-                      ],
+                    child: ScrollEdgeFadeStack(
+                      child: CatalogBody(
+                        state: state,
+                        onBookPressed: (book) => _handleBookTap(context, book),
+                        onArticlePressed: (article) =>
+                            _handleArticleTap(context, article),
+                        onRefresh: () async {
+                          bloc.add(const CatalogRefreshRequested());
+                        },
+                      ),
                     ),
                   ),
                 ],

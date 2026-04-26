@@ -46,8 +46,6 @@ class _DictionaryView extends StatefulWidget {
 
 class _DictionaryViewState extends State<_DictionaryView> {
   int? _expandedIndex;
-  bool _showHeaderShadow = false;
-  bool _showFooterShadow = true;
 
   @override
   Widget build(BuildContext context) {
@@ -125,75 +123,36 @@ class _DictionaryViewState extends State<_DictionaryView> {
                 ),
                 // ─── List ───
                 Expanded(
-                  child: Stack(
-                    children: [
-                      NotificationListener<ScrollNotification>(
-                        onNotification: (notification) {
-                          if (notification.metrics.axis != Axis.vertical) {
-                            return false;
-                          }
-                          final showTop = notification.metrics.extentBefore > 0;
-                          final showBottom =
-                              notification.metrics.extentAfter > 0;
-                          if ((showTop != _showHeaderShadow ||
-                                  showBottom != _showFooterShadow) &&
-                              mounted) {
-                            setState(() {
-                              _showHeaderShadow = showTop;
-                              _showFooterShadow = showBottom;
-                            });
-                          }
-                          return false;
-                        },
-                        child: filtered.isEmpty
-                            ? const EmptyState(
-                                icon: AppIcons.book,
-                                message: 'No words found',
-                              )
-                            : ListView.separated(
-                                padding: const EdgeInsets.fromLTRB(
-                                  AppSpacing.lg,
-                                  0,
-                                  AppSpacing.lg,
-                                  80,
+                  child: ScrollEdgeFadeStack(
+                    child: filtered.isEmpty
+                        ? const EmptyState(
+                            icon: AppIcons.book,
+                            message: 'No words found',
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(
+                              AppSpacing.lg,
+                              0,
+                              AppSpacing.lg,
+                              80,
+                            ),
+                            itemCount: filtered.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: AppSpacing.md),
+                            itemBuilder: (_, i) {
+                              final entry = filtered[i];
+                              final expanded = _expandedIndex == i;
+                              return _WordCard(
+                                key: ValueKey(entry.id),
+                                entry: entry,
+                                expanded: expanded,
+                                mastered: state.isMastered(entry.id),
+                                onTap: () => setState(
+                                  () => _expandedIndex = expanded ? null : i,
                                 ),
-                                itemCount: filtered.length,
-                                separatorBuilder: (_, _) =>
-                                    const SizedBox(height: AppSpacing.md),
-                                itemBuilder: (_, i) {
-                                  final entry = filtered[i];
-                                  final expanded = _expandedIndex == i;
-                                  return _WordCard(
-                                    key: ValueKey(entry.id),
-                                    entry: entry,
-                                    expanded: expanded,
-                                    mastered: state.isMastered(entry.id),
-                                    onTap: () => setState(
-                                      () =>
-                                          _expandedIndex = expanded ? null : i,
-                                    ),
-                                  );
-                                },
-                              ),
-                      ),
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        child: ScrollEdgeFade(
-                          visible: _showHeaderShadow,
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        child: ScrollEdgeFade(
-                          visible: _showFooterShadow,
-                          edge: ScrollFadeEdge.bottom,
-                        ),
-                      ),
-                    ],
+                              );
+                            },
+                          ),
                   ),
                 ),
               ],

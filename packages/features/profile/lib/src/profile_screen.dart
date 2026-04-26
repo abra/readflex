@@ -84,9 +84,6 @@ class _ProfileView extends StatefulWidget {
 }
 
 class _ProfileViewState extends State<_ProfileView> {
-  bool _showHeaderShadow = false;
-  bool _showFooterShadow = true;
-
   @override
   Widget build(BuildContext context) {
     final cs = context.colors;
@@ -116,182 +113,143 @@ class _ProfileViewState extends State<_ProfileView> {
           ),
           // ─── Scrollable Content ───
           Expanded(
-            child: Stack(
-              children: [
-                NotificationListener<ScrollNotification>(
-                  onNotification: (notification) {
-                    if (notification.metrics.axis != Axis.vertical) {
-                      return false;
-                    }
-                    final showTop = notification.metrics.extentBefore > 0;
-                    final showBottom = notification.metrics.extentAfter > 0;
-                    if ((showTop != _showHeaderShadow ||
-                            showBottom != _showFooterShadow) &&
-                        mounted) {
-                      setState(() {
-                        _showHeaderShadow = showTop;
-                        _showFooterShadow = showBottom;
-                      });
-                    }
-                    return false;
-                  },
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      0,
-                      AppSpacing.lg,
-                      AppSpacing.lg,
+            child: ScrollEdgeFadeStack(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  0,
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                ),
+                children: [
+                  // ─── Stats ───
+                  const _StatsRow(),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // ─── Appearance ───
+                  SectionLabel(label: 'APPEARANCE'),
+                  const SizedBox(height: AppSpacing.md),
+                  BlocBuilder<ProfileAppearanceCubit, ProfileAppearanceState>(
+                    builder: (context, state) => _ThemeRow(
+                      themeMode: state.themeMode,
+                      onChanged: (mode) {
+                        context.read<ProfileAppearanceCubit>().setThemeMode(
+                          mode,
+                        );
+                      },
                     ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // ─── Reading ───
+                  SectionLabel(label: 'READING'),
+                  const SizedBox(height: AppSpacing.md),
+                  SettingsGroup(
                     children: [
-                      // ─── Stats ───
-                      const _StatsRow(),
-                      const SizedBox(height: AppSpacing.lg),
-
-                      // ─── Appearance ───
-                      SectionLabel(label: 'APPEARANCE'),
-                      const SizedBox(height: AppSpacing.md),
-                      BlocBuilder<
-                        ProfileAppearanceCubit,
-                        ProfileAppearanceState
-                      >(
-                        builder: (context, state) => _ThemeRow(
-                          themeMode: state.themeMode,
-                          onChanged: (mode) {
-                            context.read<ProfileAppearanceCubit>().setThemeMode(
-                              mode,
-                            );
-                          },
-                        ),
+                      SettingsRow(
+                        icon: AppIcons.textFields,
+                        label: 'Font & Text Size',
+                        detail: _currentFontLabel(context),
+                        onTap: () => _showFontSheet(context),
                       ),
-                      const SizedBox(height: AppSpacing.lg),
-
-                      // ─── Reading ───
-                      SectionLabel(label: 'READING'),
-                      const SizedBox(height: AppSpacing.md),
-                      SettingsGroup(
-                        children: [
-                          SettingsRow(
-                            icon: AppIcons.textFields,
-                            label: 'Font & Text Size',
-                            detail: _currentFontLabel(context),
-                            onTap: () => _showFontSheet(context),
-                          ),
-                          SettingsRow(
-                            icon: AppIcons.language,
-                            label: 'Translation Language',
-                            detail: 'English',
-                          ),
-                        ],
+                      SettingsRow(
+                        icon: AppIcons.language,
+                        label: 'Translation Language',
+                        detail: 'English',
                       ),
-                      const SizedBox(height: AppSpacing.lg),
-
-                      // ─── General ───
-                      SectionLabel(label: 'GENERAL'),
-                      const SizedBox(height: AppSpacing.md),
-                      SettingsGroup(
-                        children: [
-                          SettingsRow(
-                            icon: AppIcons.cloud,
-                            label: 'Sync & Backup',
-                            detail: 'Off',
-                          ),
-                          SettingsRow(
-                            icon: AppIcons.download,
-                            label: 'Offline Downloads',
-                          ),
-                          SettingsRow(
-                            icon: AppIcons.notifications,
-                            label: 'Notifications',
-                            detail: 'On',
-                          ),
-                          SettingsRow(
-                            icon: AppIcons.shield,
-                            label: 'Privacy',
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-
-                      // ─── About ───
-                      SectionLabel(label: 'ABOUT'),
-                      const SizedBox(height: AppSpacing.md),
-                      SettingsGroup(
-                        children: [
-                          SettingsRow(
-                            icon: AppIcons.info,
-                            label: 'Version',
-                            detail: widget.appVersion,
-                          ),
-                          SettingsRow(
-                            icon: AppIcons.terms,
-                            label: 'Terms & Licenses',
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-
-                      // ─── Dev ───
-                      SectionLabel(label: 'DEVELOPER'),
-                      const SizedBox(height: AppSpacing.md),
-                      SettingsGroup(
-                        children: [
-                          SettingsRow(
-                            icon: AppIcons.designSystem,
-                            label: 'Design System',
-                            onTap: widget.onDesignSystemPressed,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-
-                      // ─── Sign out ───
-                      BlocBuilder<ProfileCubit, ProfileState>(
-                        builder: (context, state) {
-                          if (!state.isAuthenticated) {
-                            return const SizedBox.shrink();
-                          }
-                          return Center(
-                            child: TextButton.icon(
-                              onPressed: state.isLoading
-                                  ? null
-                                  : () =>
-                                        context.read<ProfileCubit>().signOut(),
-                              icon: Icon(
-                                AppIcons.logOut,
-                                size: AppIconSize.sm,
-                                color: cs.error,
-                              ),
-                              label: Text(
-                                'Sign Out',
-                                style: context.text.bodyMedium.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                  color: cs.error,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
                     ],
                   ),
-                ),
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: ScrollEdgeFade(visible: _showHeaderShadow),
-                ),
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: ScrollEdgeFade(
-                    visible: _showFooterShadow,
-                    edge: ScrollFadeEdge.bottom,
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // ─── General ───
+                  SectionLabel(label: 'GENERAL'),
+                  const SizedBox(height: AppSpacing.md),
+                  SettingsGroup(
+                    children: [
+                      SettingsRow(
+                        icon: AppIcons.cloud,
+                        label: 'Sync & Backup',
+                        detail: 'Off',
+                      ),
+                      SettingsRow(
+                        icon: AppIcons.download,
+                        label: 'Offline Downloads',
+                      ),
+                      SettingsRow(
+                        icon: AppIcons.notifications,
+                        label: 'Notifications',
+                        detail: 'On',
+                      ),
+                      SettingsRow(
+                        icon: AppIcons.shield,
+                        label: 'Privacy',
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // ─── About ───
+                  SectionLabel(label: 'ABOUT'),
+                  const SizedBox(height: AppSpacing.md),
+                  SettingsGroup(
+                    children: [
+                      SettingsRow(
+                        icon: AppIcons.info,
+                        label: 'Version',
+                        detail: widget.appVersion,
+                      ),
+                      SettingsRow(
+                        icon: AppIcons.terms,
+                        label: 'Terms & Licenses',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // ─── Dev ───
+                  SectionLabel(label: 'DEVELOPER'),
+                  const SizedBox(height: AppSpacing.md),
+                  SettingsGroup(
+                    children: [
+                      SettingsRow(
+                        icon: AppIcons.designSystem,
+                        label: 'Design System',
+                        onTap: widget.onDesignSystemPressed,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // ─── Sign out ───
+                  BlocBuilder<ProfileCubit, ProfileState>(
+                    builder: (context, state) {
+                      if (!state.isAuthenticated) {
+                        return const SizedBox.shrink();
+                      }
+                      return Center(
+                        child: TextButton.icon(
+                          onPressed: state.isLoading
+                              ? null
+                              : () => context.read<ProfileCubit>().signOut(),
+                          icon: Icon(
+                            AppIcons.logOut,
+                            size: AppIconSize.sm,
+                            color: cs.error,
+                          ),
+                          label: Text(
+                            'Sign Out',
+                            style: context.text.bodyMedium.copyWith(
+                              fontWeight: FontWeight.w500,
+                              color: cs.error,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                ],
+              ),
             ),
           ),
         ],

@@ -107,7 +107,7 @@ class ArticleLibraryListTile extends StatelessWidget {
           ),
           Icon(
             AppIcons.language,
-            size: 20,
+            size: 24,
             color: Colors.white.withValues(alpha: _kArticleIconAlpha),
           ),
         ],
@@ -136,12 +136,12 @@ class ArticleLibraryListTile extends StatelessWidget {
 }
 
 /// Layout scaffold shared by book- and article-list tiles. Owns the row
-/// geometry (44×60 cover, 14dp gap, title/subtitle/meta column) so the
-/// type-specific tiles above stay focused on content.
+/// geometry (60×90 cover, 14dp gap, title/meta column) so the type-
+/// specific tiles above stay focused on content.
 ///
-/// Matches readwell_demo's `_ListView` row — a plain `GestureDetector`
-/// tap target that spans the whole row, with a bottom hairline for all
-/// rows except the last.
+/// Layout: up-to-3-line title on top, single combined meta strip
+/// underneath (subtitle prepended in front of the type-specific
+/// segments). Bottom hairline drawn for all rows except the last.
 class _ListRowShell extends StatelessWidget {
   const _ListRowShell({
     required this.cover,
@@ -165,6 +165,9 @@ class _ListRowShell extends StatelessWidget {
     final colors = context.colors;
     final mutedColor = colors.onSurface.withValues(alpha: _kMutedAlpha);
 
+    final metaSegments = metaBuilder(context, mutedColor);
+    final hasSubtitle = subtitle != null && subtitle!.isNotEmpty;
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -181,11 +184,12 @@ class _ListRowShell extends StatelessWidget {
               : null,
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // Fixed 44x60 cover slot. AppCoverArt clips its own corners
-            // (Container.clipBehavior), so no outer ClipRRect needed.
-            SizedBox(width: 44, height: 60, child: cover),
+            // Fixed 60x90 cover slot (2:3 book aspect). AppCoverArt clips
+            // its own corners (Container.clipBehavior), so no outer
+            // ClipRRect needed.
+            SizedBox(width: 60, height: 90, child: cover),
             // Demo uses 14dp cover-to-text gap — sits between our
             // md(12) and lg(16) tokens. `md + xxs` = 14 exactly and
             // composes from real tokens, so we don't add a new one.
@@ -197,29 +201,34 @@ class _ListRowShell extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    maxLines: 1,
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                       color: colors.onSurface,
+                      height: 1.25,
                     ),
                   ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: AppSpacing.xxs),
-                    Text(
-                      subtitle!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12, color: mutedColor),
-                    ),
-                  ],
-                  // Demo uses 6dp author-to-meta gap (between xs=4 and
+                  // Demo uses 6dp title-to-meta gap (between xs=4 and
                   // sm=8). Composed from xs + xxs to stay token-based.
                   const SizedBox(height: AppSpacing.xs + AppSpacing.xxs),
                   Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: metaBuilder(context, mutedColor),
+                    children: [
+                      if (hasSubtitle) ...[
+                        Flexible(
+                          child: Text(
+                            subtitle!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: _metaStyle(mutedColor),
+                          ),
+                        ),
+                        _MetaDot(mutedColor: mutedColor),
+                      ],
+                      ...metaSegments,
+                    ],
                   ),
                 ],
               ),
