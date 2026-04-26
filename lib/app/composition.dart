@@ -125,10 +125,12 @@ Future<DependenciesContainer> createDependenciesContainer(
   final articleRepository = ArticleRepository(
     database: database,
     articlesDirectory: articlesDir,
+    logger: logger,
   );
   final bookRepository = BookRepository(
     database: database,
     booksDirectory: booksDir,
+    logger: logger,
   );
   final highlightRepository = HighlightRepository(database: database);
   final flashcardRepository = FlashcardRepository(database: database);

@@ -66,6 +66,33 @@ class DependenciesContainer {
   final ConnectivityService connectivityService;
   final NotificationService notificationService;
   final ReaderServer readerServer;
+
+  /// Releases resources owned by the container — HTTP clients held by
+  /// repositories/services and the local reader HTTP server.
+  ///
+  /// Wired into a `WidgetsBindingObserver` for `AppLifecycleState.detached`
+  /// so a long-running session doesn't leak sockets, and so the reader
+  /// server's port is freed if the OS gives the process a chance to wind
+  /// down before kill. Best-effort: if a `close()` throws, we swallow and
+  /// continue with the rest — losing one socket is preferable to leaking
+  /// the others because the first one panicked.
+  Future<void> dispose() async {
+    try {
+      articleRepository.dispose();
+    } catch (e, st) {
+      logger.warn('articleRepository.dispose failed', error: e, stackTrace: st);
+    }
+    try {
+      articleParser.dispose();
+    } catch (e, st) {
+      logger.warn('articleParser.dispose failed', error: e, stackTrace: st);
+    }
+    try {
+      await readerServer.stop();
+    } catch (e, st) {
+      logger.warn('readerServer.stop failed', error: e, stackTrace: st);
+    }
+  }
 }
 
 /// A special version of [DependenciesContainer] that is used in tests.

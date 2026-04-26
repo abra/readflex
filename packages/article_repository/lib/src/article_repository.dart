@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:domain_models/domain_models.dart';
 import 'package:http/http.dart' as http;
 import 'package:local_storage/local_storage.dart';
+import 'package:monitoring/monitoring.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart' show Uuid;
 
@@ -33,15 +34,33 @@ class ArticleRepository {
     required AppDatabase database,
     required Directory articlesDirectory,
     http.Client? httpClient,
-  }) : _dao = database.articlesDao,
+    Logger? logger,
+  }) : _db = database,
+       _dao = database.articlesDao,
        _articlesDir = articlesDirectory,
-       _httpClient = httpClient ?? http.Client();
+       _ownsHttpClient = httpClient == null,
+       _httpClient = httpClient ?? http.Client(),
+       _logger = logger;
 
+  final AppDatabase _db;
   final ArticlesDao _dao;
   final Directory _articlesDir;
   final http.Client _httpClient;
+  final Logger? _logger;
+
+  /// `true` when the [http.Client] was created internally; we close it on
+  /// [dispose]. When the caller injects their own client (test fakes,
+  /// app-wide pool) we leave the lifecycle to them.
+  final bool _ownsHttpClient;
 
   static const _downloadTimeout = Duration(seconds: 30);
+
+  /// Releases the internally-created HTTP client. Call from app shutdown
+  /// (or test teardown) to avoid leaking sockets across long sessions.
+  /// Idempotent: closing twice is safe.
+  void dispose() {
+    if (_ownsHttpClient) _httpClient.close();
+  }
 
   Future<List<Article>> getArticles({int? limit, int? offset}) async {
     try {
@@ -88,11 +107,11 @@ class ArticleRepository {
     int textLength = 0,
     int estimatedWordCount = 0,
   }) async {
+    final id = _uuid.v4();
+    final articleDir = Directory(p.join(_articlesDir.path, id));
     try {
-      final id = _uuid.v4();
       final now = DateTime.now();
 
-      final articleDir = Directory(p.join(_articlesDir.path, id));
       await articleDir.create(recursive: true);
 
       // Download body images and rewrite HTML src to local relative paths.
@@ -113,24 +132,20 @@ class ArticleRepository {
         coverFilename = await _tryDownloadCover(articleDir, coverImageUrl);
       }
 
-      // Build a minimal EPUB next to the HTML so the reader can render the
-      // article through foliate-js (page-turn, paginator, the same selection
-      // pipeline as books). The plain `content.html` is still written above
-      // so legacy code paths and migrations have something to fall back on.
-      try {
-        await _buildArticleEpub(
-          articleDir: articleDir,
-          articleId: id,
-          title: title,
-          author: byline,
-          lang: lang,
-          htmlBody: processedContent,
-        );
-      } catch (_) {
-        // EPUB build is best-effort: an article without the .epub artefact
-        // still works through the legacy HTML reader. Don't take the whole
-        // import down because of a packaging hiccup.
-      }
+      // Build the EPUB synchronously with the rest of the import — the
+      // reader expects every article to have an `article.epub` file
+      // (foliate-js renders it through the same pipeline as books). If
+      // packaging fails, the whole import fails and we clean up below
+      // so we never leave a half-imported article that the reader can't
+      // open.
+      await _buildArticleEpub(
+        articleDir: articleDir,
+        articleId: id,
+        title: title,
+        author: byline,
+        lang: lang,
+        htmlBody: processedContent,
+      );
 
       final article = Article(
         id: id,
@@ -153,6 +168,11 @@ class ArticleRepository {
       await _dao.insertArticle(article.toStorageModel());
       return article;
     } catch (e, st) {
+      // The DB row was never inserted (insertArticle is the last step).
+      // Roll back the on-disk side too so a failed import doesn't leak
+      // the per-article directory; otherwise repeated failed imports
+      // accumulate orphaned dirs that nothing in the app references.
+      await _tryDeleteDirectory(articleDir);
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }
   }
@@ -166,9 +186,18 @@ class ArticleRepository {
     }
   }
 
+  /// Deletes the article and every dependent row in a single
+  /// transaction — highlights, flashcards, dictionary entries, plus the
+  /// review-scheduler state tied to each. Mirrors `BookRepository.deleteBook`.
   Future<void> deleteArticle(String id) async {
     try {
-      await _dao.deleteArticle(id);
+      await _db.transaction(() async {
+        await _db.reviewItemsDao.deleteItemsBySource(id);
+        await _db.highlightsDao.deleteHighlightsBySource(id);
+        await _db.flashcardsDao.deleteFlashcardsByDeck(id);
+        await _db.dictionaryDao.deleteEntriesBySource(id);
+        await _dao.deleteArticle(id);
+      });
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }
@@ -284,7 +313,16 @@ class ArticleRepository {
         response.bodyBytes,
       );
       return filename;
-    } catch (_) {
+    } catch (e, st) {
+      // Silent return is by design — the article is still usable with the
+      // original remote URL — but the failure is logged so a flaky CDN or
+      // unsupported image format shows up in observability instead of
+      // silently disappearing.
+      _logger?.debug(
+        'ArticleRepository: image download failed ($url)',
+        error: e,
+        stackTrace: st,
+      );
       return null;
     }
   }
@@ -308,7 +346,12 @@ class ArticleRepository {
         response.bodyBytes,
       );
       return filename;
-    } catch (_) {
+    } catch (e, st) {
+      _logger?.debug(
+        'ArticleRepository: cover download failed ($url)',
+        error: e,
+        stackTrace: st,
+      );
       return null;
     }
   }
@@ -375,8 +418,14 @@ class ArticleRepository {
       if (await dir.exists()) {
         await dir.delete(recursive: true);
       }
-    } catch (_) {
-      // Best-effort — orphaned dirs get reclaimed on maintenance pass.
+    } catch (e, st) {
+      // Best-effort — the DB row is already gone, so the user-visible
+      // delete succeeded; log for observability but don't surface.
+      _logger?.warn(
+        'ArticleRepository: failed to delete article directory ${dir.path}',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 }

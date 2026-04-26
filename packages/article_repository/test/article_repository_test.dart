@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:article_repository/article_repository.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -262,6 +263,85 @@ void main() {
       final found = await repo.getArticleById(created.id);
       expect(found, isNotNull);
       expect(found!.title, 'Find Article');
+    });
+
+    test('deleteArticle cascades to highlights, flashcards, dictionary,'
+        ' and review items', () async {
+      final created = await repo.addArticle(
+        title: 'Cascade source',
+        url: 'https://a.com/cascade',
+        content: '<p>x</p>',
+      );
+      final other = await repo.addArticle(
+        title: 'Untouched',
+        url: 'https://a.com/keep',
+        content: '<p>y</p>',
+      );
+
+      await db.highlightsDao.insertHighlight(
+        HighlightsTableCompanion.insert(
+          id: 'h-art-1',
+          sourceId: created.id,
+          sourceType: 'article',
+          highlightText: 'foo',
+          createdAt: DateTime.now().toIso8601String(),
+        ),
+      );
+      await db.flashcardsDao.insertFlashcard(
+        FlashcardsTableCompanion.insert(
+          id: 'f-art-1',
+          deckId: created.id,
+          front: 'Q',
+          back: 'A',
+          createdAt: DateTime.now().toIso8601String(),
+        ),
+      );
+      await db.dictionaryDao.insertEntry(
+        DictionaryTableCompanion.insert(
+          id: 'd-art-1',
+          word: 'word',
+          translation: 'слово',
+          addedAt: DateTime.now().toIso8601String(),
+          sourceId: Value(created.id),
+        ),
+      );
+      await db.reviewItemsDao.insertItem(
+        ReviewItemsTableCompanion.insert(
+          itemId: 'h-art-1',
+          itemType: 'highlight',
+          sourceId: Value(created.id),
+        ),
+      );
+      // Survivor — proves cascade is scoped to the article being deleted.
+      await db.highlightsDao.insertHighlight(
+        HighlightsTableCompanion.insert(
+          id: 'h-art-keep',
+          sourceId: other.id,
+          sourceType: 'article',
+          highlightText: 'untouched',
+          createdAt: DateTime.now().toIso8601String(),
+        ),
+      );
+
+      await repo.deleteArticle(created.id);
+
+      expect(
+        await db.highlightsDao.highlightsBySource(created.id),
+        isEmpty,
+      );
+      expect(
+        await db.flashcardsDao.flashcardsByDeck(created.id),
+        isEmpty,
+      );
+      expect(
+        await db.dictionaryDao.entriesBySource(created.id),
+        isEmpty,
+      );
+      expect(await db.reviewItemsDao.byItemId('h-art-1'), isNull);
+      expect(
+        await db.highlightsDao.highlightsBySource(other.id),
+        hasLength(1),
+      );
     });
 
     test('deleteArticle removes entire article directory', () async {

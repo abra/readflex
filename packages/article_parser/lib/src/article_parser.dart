@@ -81,6 +81,11 @@ abstract class ArticleParser {
   /// [ArticleParserException] with a [ArticleParserFailure] reason on any
   /// step that fails (invalid URL, network, non-200 status, empty content).
   Future<ParsedArticle> parse(String url);
+
+  /// Releases any resources held by the parser (e.g. an internally-owned
+  /// HTTP client). Default no-op; implementations override when they own
+  /// resources.
+  void dispose() {}
 }
 
 /// Production [ArticleParser]: fetches HTML over [http.Client] and runs
@@ -90,11 +95,21 @@ class ReadabilityArticleParser implements ArticleParser {
   ReadabilityArticleParser({
     http.Client? httpClient,
     ArticleHtmlSanitizer? sanitizer,
-  }) : _httpClient = httpClient ?? http.Client(),
+  }) : _ownsHttpClient = httpClient == null,
+       _httpClient = httpClient ?? http.Client(),
        _sanitizer = sanitizer ?? const ArticleHtmlSanitizer();
 
   final http.Client _httpClient;
   final ArticleHtmlSanitizer _sanitizer;
+
+  /// `true` when the [http.Client] was created internally; we close it on
+  /// [dispose]. Caller-injected clients are left to the caller.
+  final bool _ownsHttpClient;
+
+  @override
+  void dispose() {
+    if (_ownsHttpClient) _httpClient.close();
+  }
 
   static const _userAgent =
       'Mozilla/5.0 (compatible; ReadflexArticleParser/1.0)';
@@ -226,4 +241,7 @@ class NoopArticleParser implements ArticleParser {
     siteName: 'stub',
     estimatedWordCount: 0,
   );
+
+  @override
+  void dispose() {}
 }

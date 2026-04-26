@@ -53,6 +53,13 @@ class _MaterialContextState extends State<MaterialContext>
         _restartReaderServer(server, deps.logger);
       }
     }
+    // Best-effort cleanup when the OS signals the process is being torn
+    // down. iOS rarely delivers `detached` before SIGKILL, but Android
+    // honours it reliably enough that we get a clean socket close on
+    // most graceful shutdowns.
+    if (state == AppLifecycleState.detached) {
+      DependenciesScope.of(context).dispose();
+    }
   }
 
   Future<void> _restartReaderServer(ReaderServer server, Logger logger) async {

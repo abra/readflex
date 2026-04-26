@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:book_repository/book_repository.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:local_storage/local_storage.dart';
@@ -193,6 +194,97 @@ void main() {
       final books = await repo.getBooks();
       expect(books, isEmpty);
       expect(bookDir.existsSync(), isFalse);
+    });
+
+    test('deleteBook cascades to highlights, flashcards, dictionary,'
+        ' and review items', () async {
+      final created = await repo.addBook(
+        sourceFile: await createTempBookFile(),
+        title: 'Cascade source',
+        format: BookFormat.epub,
+      );
+      final otherBook = await repo.addBook(
+        sourceFile: await createTempBookFile(name: 'other.epub'),
+        title: 'Untouched',
+        format: BookFormat.epub,
+      );
+
+      // Seed dependents linked to the book being deleted.
+      await db.highlightsDao.insertHighlight(
+        HighlightsTableCompanion.insert(
+          id: 'h-1',
+          sourceId: created.id,
+          sourceType: 'book',
+          highlightText: 'foo',
+          createdAt: DateTime.now().toIso8601String(),
+        ),
+      );
+      await db.flashcardsDao.insertFlashcard(
+        FlashcardsTableCompanion.insert(
+          id: 'f-1',
+          deckId: created.id,
+          front: 'Q',
+          back: 'A',
+          createdAt: DateTime.now().toIso8601String(),
+        ),
+      );
+      await db.dictionaryDao.insertEntry(
+        DictionaryTableCompanion.insert(
+          id: 'd-1',
+          word: 'word',
+          translation: 'слово',
+          addedAt: DateTime.now().toIso8601String(),
+          sourceId: Value(created.id),
+        ),
+      );
+      await db.reviewItemsDao.insertItem(
+        ReviewItemsTableCompanion.insert(
+          itemId: 'h-1',
+          itemType: 'highlight',
+          sourceId: Value(created.id),
+        ),
+      );
+      // A second review item tied to the OTHER book — must survive the
+      // cascade so we can prove deletion is scoped to the right source.
+      await db.highlightsDao.insertHighlight(
+        HighlightsTableCompanion.insert(
+          id: 'h-keep',
+          sourceId: otherBook.id,
+          sourceType: 'book',
+          highlightText: 'untouched',
+          createdAt: DateTime.now().toIso8601String(),
+        ),
+      );
+      await db.reviewItemsDao.insertItem(
+        ReviewItemsTableCompanion.insert(
+          itemId: 'h-keep',
+          itemType: 'highlight',
+          sourceId: Value(otherBook.id),
+        ),
+      );
+
+      await repo.deleteBook(created.id);
+
+      expect(
+        await db.highlightsDao.highlightsBySource(created.id),
+        isEmpty,
+      );
+      expect(
+        await db.flashcardsDao.flashcardsByDeck(created.id),
+        isEmpty,
+      );
+      expect(
+        await db.dictionaryDao.entriesBySource(created.id),
+        isEmpty,
+      );
+      expect(await db.reviewItemsDao.byItemId('h-1'), isNull);
+
+      // Other book's data must survive — proves cascade is scoped.
+      expect(
+        await db.highlightsDao.highlightsBySource(otherBook.id),
+        hasLength(1),
+      );
+      expect(await db.reviewItemsDao.byItemId('h-keep'), isNotNull);
     });
 
     test('deleteBook handles missing directory gracefully', () async {

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/services.dart';
+import 'package:monitoring/monitoring.dart';
 import 'package:path/path.dart' as p;
 
 /// Extracts reader WebView assets from Flutter's rootBundle to a directory
@@ -10,9 +11,15 @@ import 'package:path/path.dart' as p;
 /// dart:io HttpServer cannot read them. This utility copies them once to
 /// a cache directory at app startup.
 class AssetExtractor {
-  AssetExtractor({required this.targetDirectory});
+  AssetExtractor({required this.targetDirectory, this.logger});
 
   final Directory targetDirectory;
+
+  /// Optional logger. When set, every asset that fails to load from the
+  /// rootBundle is reported as a warning so a corrupted release bundle
+  /// or missing asset doesn't silently degrade the reader to a blank
+  /// screen.
+  final Logger? logger;
 
   /// All asset paths relative to the package's `assets/` directory.
   /// The rootBundle key includes the `packages/reader_webview/` prefix.
@@ -75,7 +82,16 @@ class AssetExtractor {
           data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
           flush: true,
         );
-      } catch (e) {
+      } catch (e, st) {
+        // Continue extracting the rest — a single missing file is
+        // recoverable for most foliate-js features (e.g. a vendor lib
+        // for a format the user doesn't open). But we surface it so a
+        // corrupt release bundle is visible in logs.
+        logger?.warn(
+          'AssetExtractor failed to load $bundleKey',
+          error: e,
+          stackTrace: st,
+        );
         continue;
       }
     }

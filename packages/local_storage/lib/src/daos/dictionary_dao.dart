@@ -39,4 +39,9 @@ class DictionaryDao extends DatabaseAccessor<AppDatabase>
 
   Future<void> deleteEntry(String id) =>
       (delete(dictionaryTable)..where((t) => t.id.equals(id))).go();
+
+  /// Bulk-removes every saved word that points at [sourceId]. Used when
+  /// the parent book/article is deleted.
+  Future<void> deleteEntriesBySource(String sourceId) =>
+      (delete(dictionaryTable)..where((t) => t.sourceId.equals(sourceId))).go();
 }

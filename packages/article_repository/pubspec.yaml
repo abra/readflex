@@ -13,6 +13,8 @@ dependencies:
     path: ../domain_models
   local_storage:
     path: ../local_storage
+  monitoring:
+    path: ../monitoring
   drift: ^2.23.1
   archive: ^3.6.0
   http: ^1.6.0

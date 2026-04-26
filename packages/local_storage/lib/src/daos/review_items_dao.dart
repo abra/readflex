@@ -105,6 +105,22 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
   Future<void> deleteItem(String itemId) =>
       (delete(reviewItemsTable)..where((t) => t.itemId.equals(itemId))).go();
 
+  /// Bulk-removes review items by their source. Used when a book or
+  /// article is deleted so its highlight/flashcard FSRS state doesn't
+  /// linger in `dueItems()` queries.
+  Future<void> deleteItemsBySource(String sourceId) => (delete(
+    reviewItemsTable,
+  )..where((t) => t.sourceId.equals(sourceId))).go();
+
+  /// Bulk-removes review items by the underlying item ids — used when a
+  /// single highlight/flashcard/dictionary entry is deleted in isolation.
+  Future<void> deleteItemsByIds(List<String> itemIds) {
+    if (itemIds.isEmpty) return Future.value();
+    return (delete(
+      reviewItemsTable,
+    )..where((t) => t.itemId.isIn(itemIds))).go();
+  }
+
   // ─── Review logs ───
 
   Future<void> insertReviewLog(ReviewLogsTableCompanion log) =>

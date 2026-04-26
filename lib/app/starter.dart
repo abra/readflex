@@ -66,6 +66,7 @@ Future<void> starter() async {
         // picked up without bumping pubspec version.
         final assetExtractor = AssetExtractor(
           targetDirectory: deps.readerServer.assetsDirectory,
+          logger: logger,
         );
         final assetVersion =
             '${deps.packageInfo.version}+${deps.packageInfo.buildNumber}';

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:domain_models/domain_models.dart';
 import 'package:local_storage/local_storage.dart';
+import 'package:monitoring/monitoring.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart' show Uuid;
 
@@ -30,11 +31,16 @@ class BookRepository {
   BookRepository({
     required AppDatabase database,
     required Directory booksDirectory,
-  }) : _dao = database.booksDao,
-       _booksDir = booksDirectory;
+    Logger? logger,
+  }) : _db = database,
+       _dao = database.booksDao,
+       _booksDir = booksDirectory,
+       _logger = logger;
 
+  final AppDatabase _db;
   final BooksDao _dao;
   final Directory _booksDir;
+  final Logger? _logger;
 
   Future<List<Book>> getBooks({int? limit, int? offset}) async {
     try {
@@ -118,20 +124,44 @@ class BookRepository {
     }
   }
 
-  /// Deletes the book from DB and removes its directory from disk.
+  /// Deletes the book and every dependent row in a single transaction —
+  /// highlights, flashcards, dictionary entries the user saved while
+  /// reading, and the review-scheduler state for each of those.
+  /// Without this cascade the children would linger in the DB and keep
+  /// surfacing in `dueItems()` / `getHighlightsBySource()` queries even
+  /// though the parent book is gone.
+  ///
+  /// File cleanup of the per-book directory is best-effort and runs
+  /// after the DB transaction commits, so a filesystem error can't roll
+  /// back the row deletes (orphaned directories are recoverable; a
+  /// half-deleted DB state is not).
   Future<void> deleteBook(String id) async {
     try {
-      await _dao.deleteBook(id);
+      await _db.transaction(() async {
+        await _db.reviewItemsDao.deleteItemsBySource(id);
+        await _db.highlightsDao.deleteHighlightsBySource(id);
+        await _db.flashcardsDao.deleteFlashcardsByDeck(id);
+        await _db.dictionaryDao.deleteEntriesBySource(id);
+        await _dao.deleteBook(id);
+      });
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }
-    // Best-effort cleanup — orphaned dirs get reclaimed on maintenance pass.
+    // Best-effort cleanup — DB row is gone, so the user-visible delete
+    // succeeded; an orphaned directory is recoverable. Log instead of
+    // swallowing so a permission/lock failure shows up in observability.
     final bookDir = Directory(p.join(_booksDir.path, id));
     try {
       if (await bookDir.exists()) {
         await bookDir.delete(recursive: true);
       }
-    } catch (_) {}
+    } catch (e, st) {
+      _logger?.warn(
+        'BookRepository: failed to delete book directory ${bookDir.path}',
+        error: e,
+        stackTrace: st,
+      );
+    }
   }
 
   // ── Helpers ──
