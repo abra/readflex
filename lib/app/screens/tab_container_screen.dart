@@ -3,6 +3,8 @@ import 'package:connectivity_service/connectivity_service.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+const int _kDestinationCount = 5;
+
 /// Shell scaffold with bottom navigation for the main tabs.
 ///
 /// The offline strip ([OfflineBanner]) is composed with the [NavigationBar]
@@ -32,7 +34,7 @@ class TabContainerScreen extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (offline) const OfflineBanner(),
-          NavigationBar(
+          _NavBarWithIndicator(
             selectedIndex: navigationShell.currentIndex,
             onDestinationSelected: (index) {
               navigationShell.goBranch(
@@ -40,36 +42,101 @@ class TabContainerScreen extends StatelessWidget {
                 initialLocation: index == navigationShell.currentIndex,
               );
             },
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(AppIcons.home),
-                selectedIcon: Icon(AppIcons.home),
-                label: 'Home',
-              ),
-              NavigationDestination(
-                icon: Icon(AppIcons.library),
-                selectedIcon: Icon(AppIcons.library),
-                label: 'Library',
-              ),
-              NavigationDestination(
-                icon: Icon(AppIcons.dictionary),
-                selectedIcon: Icon(AppIcons.dictionary),
-                label: 'Dictionary',
-              ),
-              NavigationDestination(
-                icon: Icon(AppIcons.practice),
-                selectedIcon: Icon(AppIcons.practice),
-                label: 'Practice',
-              ),
-              NavigationDestination(
-                icon: Icon(AppIcons.profile),
-                selectedIcon: Icon(AppIcons.profile),
-                label: 'Profile',
-              ),
-            ],
           ),
         ],
       ),
+    );
+  }
+}
+
+/// [NavigationBar] wrapped in a [Stack] that overlays a thin active-tab
+/// indicator line at the very top of the selected destination.
+///
+/// Flutter's [NavigationBar] distributes its destinations as equal-width
+/// [Expanded] slots, so we can calculate each slot's center from the total
+/// bar width and overlay a centered 20×2 pill per slot without touching
+/// the bar's internal layout.
+class _NavBarWithIndicator extends StatelessWidget {
+  const _NavBarWithIndicator({
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+  });
+
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final indicatorColor = context.colors.onSurface;
+
+    return Stack(
+      children: [
+        NavigationBar(
+          selectedIndex: selectedIndex,
+          onDestinationSelected: onDestinationSelected,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(AppIcons.home),
+              selectedIcon: Icon(AppIcons.home),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: Icon(AppIcons.library),
+              selectedIcon: Icon(AppIcons.library),
+              label: 'Library',
+            ),
+            NavigationDestination(
+              icon: Icon(AppIcons.dictionary),
+              selectedIcon: Icon(AppIcons.dictionary),
+              label: 'Dictionary',
+            ),
+            NavigationDestination(
+              icon: Icon(AppIcons.practice),
+              selectedIcon: Icon(AppIcons.practice),
+              label: 'Practice',
+            ),
+            NavigationDestination(
+              icon: Icon(AppIcons.profile),
+              selectedIcon: Icon(AppIcons.profile),
+              label: 'Profile',
+            ),
+          ],
+        ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final slotWidth = constraints.maxWidth / _kDestinationCount;
+              return Row(
+                children: [
+                  for (int i = 0; i < _kDestinationCount; i++)
+                    SizedBox(
+                      width: slotWidth,
+                      child: Center(
+                        child: AnimatedOpacity(
+                          opacity: i == selectedIndex ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 180),
+                          child: Container(
+                            width: 20,
+                            height: 2,
+                            decoration: BoxDecoration(
+                              color: indicatorColor,
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.full,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
