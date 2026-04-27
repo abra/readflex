@@ -85,12 +85,14 @@ class ArticleTileCover extends StatelessWidget {
     required this.article,
     this.showTitle = true,
     this.showProgress = true,
+    this.centerText = false,
     super.key,
   });
 
   final Article article;
   final bool showTitle;
   final bool showProgress;
+  final bool centerText;
 
   @override
   Widget build(BuildContext context) {
@@ -104,6 +106,7 @@ class ArticleTileCover extends StatelessWidget {
             ? article.currentScrollOffset
             : null,
         showTitle: showTitle,
+        centerText: centerText,
         height: constraints.maxHeight,
         width: constraints.maxWidth,
       ),

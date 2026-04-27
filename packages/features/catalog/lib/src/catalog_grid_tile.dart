@@ -4,19 +4,14 @@ import 'package:flutter/material.dart';
 
 import 'catalog_tile_cover.dart';
 
-/// Fraction used to desaturate muted text / secondary colors on catalog
-/// tiles. Kept as a file-local constant so the same visual weight travels
-/// together across grid and list tiles.
-const double _kMutedAlpha = 0.55;
-
 /// Alpha for the format badge background (dark overlay on cover art).
 const double _kBadgeBackgroundAlpha = 0.55;
 
 /// Grid-mode tile for a [Book].
 ///
-/// Layout, top to bottom: cover (2:3 aspect) with optional format/finished
-/// badges → slim progress bar → two-line title → author. Tap target spans
-/// the whole column. Width is decided by the enclosing grid delegate.
+/// Cover-only: 2:3 aspect ratio with optional format/finished badges and a
+/// slim progress bar overlay. Tap target spans the whole cover. Width is
+/// decided by the enclosing grid delegate.
 class BookLibraryGridTile extends StatelessWidget {
   const BookLibraryGridTile({
     required this.book,
@@ -30,11 +25,14 @@ class BookLibraryGridTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _GridTileShell(
-      cover: BookTileCover(book: book, showTitle: false, showAuthor: false),
+      cover: BookTileCover(
+        book: book,
+        showTitle: false,
+        showAuthor: false,
+        showProgress: false,
+      ),
       isFinished: book.isFinished,
       progress: book.readingProgress,
-      title: book.title,
-      subtitle: book.author,
       formatLabel: book.format.name.toUpperCase(),
       onTap: onTap,
     );
@@ -43,9 +41,8 @@ class BookLibraryGridTile extends StatelessWidget {
 
 /// Grid-mode tile for an [Article].
 ///
-/// Same shape as [BookLibraryGridTile] but uses the article's site name as
-/// the subtitle and has no format badge. Reading progress is sourced from
-/// [Article.currentScrollOffset].
+/// Same cover-only shape as [BookLibraryGridTile] but with no format badge.
+/// Reading progress is sourced from [Article.currentScrollOffset].
 class ArticleLibraryGridTile extends StatelessWidget {
   const ArticleLibraryGridTile({
     required this.article,
@@ -59,107 +56,110 @@ class ArticleLibraryGridTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _GridTileShell(
-      cover: ArticleTileCover(article: article, showProgress: false),
+      cover: ArticleTileCover(
+        article: article,
+        showProgress: false,
+        centerText: true,
+      ),
       isFinished: article.isFinished,
       progress: article.currentScrollOffset,
-      title: article.title,
-      subtitle: article.siteName ?? domainOf(article.url),
       onTap: onTap,
     );
   }
 }
 
 /// Layout scaffold shared by both grid-mode tiles. Owns the geometry —
-/// cover aspect ratio, badge placement, progress bar size, text spacing —
-/// so book- and article-specific tiles stay small and data-focused.
+/// cover aspect ratio, badge placement, progress overlay — so book- and
+/// article-specific tiles stay small and data-focused.
 class _GridTileShell extends StatelessWidget {
   const _GridTileShell({
     required this.cover,
     required this.isFinished,
     required this.progress,
-    required this.title,
     required this.onTap,
-    this.subtitle,
     this.formatLabel,
   });
 
   final Widget cover;
   final bool isFinished;
   final double progress;
-  final String title;
-  final String? subtitle;
   final String? formatLabel;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-    final mutedColor = colors.onSurface.withValues(alpha: _kMutedAlpha);
-
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AspectRatio(
-            aspectRatio: 2 / 3,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                cover,
-                if (formatLabel != null)
-                  Positioned(
-                    top: AppSpacing.xs,
-                    left: AppSpacing.xs,
-                    child: _FormatBadge(label: formatLabel!),
-                  ),
-                if (isFinished)
-                  const Positioned(
-                    top: AppSpacing.xs,
-                    right: AppSpacing.xs,
-                    child: _FinishedBadge(),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(1),
-            child: LinearProgressIndicator(
-              value: progress.clamp(0, 1),
-              minHeight: 2,
-              backgroundColor: colors.surfaceContainerHighest,
-              color: colors.primary,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    height: 1.3,
-                    color: colors.onSurface,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            cover,
+            if (formatLabel != null)
+              Positioned(
+                top: AppSpacing.xs,
+                left: AppSpacing.xs,
+                child: _FormatBadge(label: formatLabel!),
+              ),
+            if (isFinished)
+              const Positioned(
+                top: AppSpacing.xs,
+                right: AppSpacing.xs,
+                child: _FinishedBadge(),
+              ),
+            if (progress > 0 && !isFinished) ...[
+              const Positioned(
+                left: 2,
+                right: 2,
+                top: 2,
+                bottom: 2,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(AppRadius.sm - 2),
+                      bottomRight: Radius.circular(AppRadius.sm - 2),
+                    ),
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      stops: [0.0, 0.35],
+                      colors: [Color(0xCC000000), Color(0x00000000)],
+                    ),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  subtitle ?? '',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11, color: mutedColor),
+              ),
+              Positioned(
+                left: 8,
+                right: 8,
+                bottom: 8,
+                child: LayoutBuilder(
+                  builder: (_, constraints) => ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                    child: SizedBox(
+                      height: 3,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: ColoredBox(
+                              color: Colors.white.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          Container(
+                            width:
+                                constraints.maxWidth * progress.clamp(0.0, 1.0),
+                            color: Colors.white.withValues(alpha: 0.9),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

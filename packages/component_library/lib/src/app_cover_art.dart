@@ -29,6 +29,7 @@ class AppCoverArt extends StatelessWidget {
     this.isArticle = false,
     this.showAuthor = true,
     this.showTitle = true,
+    this.centerText = false,
     this.progress,
     super.key,
   });
@@ -66,6 +67,11 @@ class AppCoverArt extends StatelessWidget {
   /// (the demo keeps the title on the cover in list mode), and is an
   /// explicit user request for readflex.
   final bool showTitle;
+
+  /// When true, the text column is vertically centered instead of
+  /// bottom-aligned. Used in grid-mode article tiles where the bottom
+  /// of the cover is reserved for the progress overlay.
+  final bool centerText;
 
   /// Reading progress in `[0, 1]`. When non-null, a rounded progress pill
   /// is rendered at the bottom of the cover. The caller decides whether
@@ -112,8 +118,8 @@ class AppCoverArt extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppRadius.sm),
         gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: isArticle ? Alignment.bottomCenter : Alignment.topLeft,
+          end: isArticle ? Alignment.topCenter : Alignment.bottomRight,
           colors: [gradient.$1, gradient.$2],
         ),
       ),
@@ -137,6 +143,7 @@ class AppCoverArt extends StatelessWidget {
               authorFontSize: authorFontSize,
               sourceFontSize: sourceFontSize,
               showExtendedMeta: showExtendedMeta,
+              articleIconSize: articleIconSize,
             ),
           if (isArticle && showExtendedMeta)
             _buildArticleBadge(articleIconSize),
@@ -204,55 +211,67 @@ class AppCoverArt extends StatelessWidget {
     required double authorFontSize,
     required double sourceFontSize,
     required bool showExtendedMeta,
+    double articleIconSize = 0,
   }) {
+    final textColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          title,
+          maxLines: titleMaxLines,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: titleFontSize,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+            height: 1.2,
+          ),
+        ),
+        if (showAuthor && author != null && showExtendedMeta) ...[
+          const SizedBox(height: 4),
+          Text(
+            author!.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: authorFontSize,
+              color: Colors.white.withValues(alpha: 0.5),
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+        if (isArticle && source != null && showExtendedMeta) ...[
+          const SizedBox(height: 4),
+          Text(
+            source!.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: sourceFontSize,
+              color: Colors.white.withValues(alpha: 0.7),
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+      ],
+    );
+
+    if (centerText) {
+      final topInset = isArticle ? 8 + articleIconSize + 4 : contentPadding;
+      return Positioned(
+        left: contentPadding,
+        right: contentPadding,
+        top: topInset,
+        child: textColumn,
+      );
+    }
+
     return Positioned(
       left: contentPadding,
       right: contentPadding,
       bottom: contentPadding + progressReservedSpace,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.end,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            title,
-            maxLines: titleMaxLines,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: titleFontSize,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-              height: 1.2,
-            ),
-          ),
-          if (showAuthor && author != null && showExtendedMeta) ...[
-            const SizedBox(height: 4),
-            Text(
-              author!.toUpperCase(),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: authorFontSize,
-                color: Colors.white.withValues(alpha: 0.5),
-                letterSpacing: 1,
-              ),
-            ),
-          ],
-          if (isArticle && source != null && showExtendedMeta) ...[
-            const SizedBox(height: 4),
-            Text(
-              source!.toUpperCase(),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: sourceFontSize,
-                color: Colors.white.withValues(alpha: 0.7),
-                letterSpacing: 1,
-              ),
-            ),
-          ],
-        ],
-      ),
+      child: textColumn,
     );
   }
 
@@ -263,7 +282,7 @@ class AppCoverArt extends StatelessWidget {
       child: Icon(
         AppIcons.language,
         size: iconSize,
-        color: Colors.white.withValues(alpha: 0.4),
+        color: Colors.white.withValues(alpha: 0.7),
       ),
     );
   }

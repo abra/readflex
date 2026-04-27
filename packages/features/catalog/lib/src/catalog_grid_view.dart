@@ -24,8 +24,6 @@ class CatalogGridView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 3-column grid. Aspect ratio accommodates cover (2:3 proportion)
-    // plus progress bar, 2-line title, and author/site below it.
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -36,9 +34,9 @@ class CatalogGridView extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        mainAxisSpacing: 0,
+        mainAxisSpacing: AppSpacing.md,
         crossAxisSpacing: AppSpacing.md,
-        childAspectRatio: 0.48,
+        childAspectRatio: 2 / 3,
       ),
       itemCount: items.length,
       itemBuilder: (context, index) {
