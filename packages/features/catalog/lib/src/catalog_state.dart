@@ -5,7 +5,7 @@ enum CatalogStatus { initial, loading, success, failure }
 /// Filter segments mirrored from the readwell_demo Library screen. Kept
 /// as an enum (not a string) so switches are exhaustive and renames are
 /// refactor-safe.
-enum CatalogFilter { all, books, articles, saved, finished }
+enum CatalogFilter { all, books, articles, comics, saved, finished }
 
 class CatalogState extends Equatable {
   const CatalogState({
@@ -46,8 +46,9 @@ class CatalogState extends Equatable {
       // 1. Filter by segment.
       final matchesFilter = switch (filter) {
         CatalogFilter.all => true,
-        CatalogFilter.books => item is Book,
+        CatalogFilter.books => item is Book && item.format != BookFormat.cbz,
         CatalogFilter.articles => item is Article,
+        CatalogFilter.comics => item is Book && item.format == BookFormat.cbz,
         CatalogFilter.saved => switch (item) {
           Book book => !book.isFinished,
           Article article => !article.isFinished,

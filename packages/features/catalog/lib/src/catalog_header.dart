@@ -47,7 +47,6 @@ class CatalogHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'Library',
@@ -55,6 +54,7 @@ class CatalogHeader extends StatelessWidget {
                   color: colors.onSurface,
                 ),
               ),
+              const Spacer(),
               Text(
                 '${state.totalCount} items',
                 style: TextStyle(
@@ -62,6 +62,8 @@ class CatalogHeader extends StatelessWidget {
                   color: colors.onSurface.withValues(alpha: _kMutedAlpha),
                 ),
               ),
+              const SizedBox(width: AppSpacing.sm),
+              const _LayoutToggle(),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -74,20 +76,6 @@ class CatalogHeader extends StatelessWidget {
           _FilterSegments(
             active: state.filter,
             onChanged: onFilterChanged,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${state.visibleItems.length} results',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: colors.onSurface.withValues(alpha: _kMutedAlpha),
-                ),
-              ),
-              const _LayoutToggle(),
-            ],
           ),
           const SizedBox(height: AppSpacing.md),
         ],
@@ -165,6 +153,7 @@ class _FilterSegments extends StatelessWidget {
     CatalogFilter.all => 'All',
     CatalogFilter.books => 'Books',
     CatalogFilter.articles => 'Articles',
+    CatalogFilter.comics => 'Comics',
     CatalogFilter.saved => 'Saved',
     CatalogFilter.finished => 'Finished',
   };
