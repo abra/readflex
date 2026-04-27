@@ -27,9 +27,9 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
       data: _themeMode == ThemeMode.dark ? AppTheme.dark() : AppTheme.light(),
       child: Builder(
         builder: (context) {
-          final theme = Theme.of(context);
           final colorScheme = context.colors;
           final text = context.text;
+          final appColors = context.appColors;
 
           return Scaffold(
             appBar: AppBar(
@@ -62,70 +62,272 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
             body: ListView(
               padding: const EdgeInsets.all(AppSpacing.lg),
               children: [
-                Text(
-                  'A compact preview of the app shell and reader surfaces.',
-                  style: text.bodyMedium,
-                ),
-                const SizedBox(height: AppSpacing.lg),
+                // ── Color Palette ──────────────────────────────────────
                 _SectionCard(
-                  title: 'Color Palette',
+                  title: 'Surface Hierarchy',
                   child: Wrap(
                     spacing: AppSpacing.sm,
                     runSpacing: AppSpacing.sm,
                     children: [
                       _ColorSwatchCard(
-                        label: 'Scaffold',
-                        color: theme.scaffoldBackgroundColor,
-                      ),
-                      _ColorSwatchCard(
-                        label: 'Surface',
+                        label: 'Background',
                         color: colorScheme.surface,
                       ),
                       _ColorSwatchCard(
-                        label: 'Raised',
+                        label: 'ContainerLowest',
+                        color: colorScheme.surfaceContainerLowest,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'ContainerLow',
+                        color: colorScheme.surfaceContainerLow,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'Container',
+                        color: colorScheme.surfaceContainer,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'ContainerHigh',
                         color: colorScheme.surfaceContainerHigh,
                       ),
                       _ColorSwatchCard(
-                        label: 'Tint',
+                        label: 'ContainerHighest',
                         color: colorScheme.surfaceContainerHighest,
-                      ),
-                      _ColorSwatchCard(
-                        label: 'Primary',
-                        color: colorScheme.primary,
-                      ),
-                      _ColorSwatchCard(
-                        label: 'Border',
-                        color: colorScheme.outline,
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 _SectionCard(
-                  title: 'Typography',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  title: 'Brand Colors',
+                  child: Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
                     children: [
-                      Text(
-                        'Display Large',
-                        style: text.displaySmall,
+                      _ColorSwatchCard(
+                        label: 'Primary',
+                        color: colorScheme.primary,
                       ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text('Title Medium', style: text.titleMedium),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        'Body text is tuned for a calmer, reading-first hierarchy instead of stock Material.',
-                        style: text.bodyLarge,
+                      _ColorSwatchCard(
+                        label: 'onPrimary',
+                        color: colorScheme.onPrimary,
                       ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        'Label text / utility controls',
-                        style: text.labelLarge,
+                      _ColorSwatchCard(
+                        label: 'Secondary',
+                        color: colorScheme.secondary,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'onSecondary',
+                        color: colorScheme.onSecondary,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'onSurface',
+                        color: colorScheme.onSurface,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'Outline',
+                        color: colorScheme.outline,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'Error',
+                        color: colorScheme.error,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'onError',
+                        color: colorScheme.onError,
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
+                _SectionCard(
+                  title: 'Extended: Highlights',
+                  child: Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: [
+                      _ColorSwatchCard(
+                        label: 'Yellow',
+                        color: appColors.highlightYellow,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'Blue',
+                        color: appColors.highlightBlue,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'Green',
+                        color: appColors.highlightGreen,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'Pink',
+                        color: appColors.highlightPink,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'Purple',
+                        color: appColors.highlightPurple,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                _SectionCard(
+                  title: 'Extended: FSRS Ratings',
+                  child: Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: [
+                      _ColorSwatchCard(
+                        label: 'Again',
+                        color: appColors.ratingAgain,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'Hard',
+                        color: appColors.ratingHard,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'Good',
+                        color: appColors.ratingGood,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'Easy',
+                        color: appColors.ratingEasy,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                _SectionCard(
+                  title: 'Extended: Semantic',
+                  child: Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: [
+                      _ColorSwatchCard(
+                        label: 'Success',
+                        color: appColors.success,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'SuccessFg',
+                        color: appColors.successForeground,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'Warning',
+                        color: appColors.warning,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'WarningFg',
+                        color: appColors.warningForeground,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'Info',
+                        color: appColors.info,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'ProBadge',
+                        color: appColors.proBadge,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'ProBadgeFg',
+                        color: appColors.proBadgeForeground,
+                      ),
+                      _ColorSwatchCard(
+                        label: 'Divider',
+                        color: appColors.divider,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Typography ────────────────────────────────────────
+                _SectionCard(
+                  title: 'Typography — Serif (display)',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _TypeRow(label: 'displayLarge', style: text.displayLarge),
+                      _TypeRow(
+                        label: 'displayMedium',
+                        style: text.displayMedium,
+                      ),
+                      _TypeRow(label: 'displaySmall', style: text.displaySmall),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                _SectionCard(
+                  title: 'Typography — Sans (UI)',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _TypeRow(
+                        label: 'headlineLarge',
+                        style: text.headlineLarge,
+                      ),
+                      _TypeRow(
+                        label: 'headlineMedium',
+                        style: text.headlineMedium,
+                      ),
+                      _TypeRow(
+                        label: 'headlineSmall',
+                        style: text.headlineSmall,
+                      ),
+                      const Divider(height: AppSpacing.xl),
+                      _TypeRow(label: 'titleLarge', style: text.titleLarge),
+                      _TypeRow(label: 'titleMedium', style: text.titleMedium),
+                      _TypeRow(label: 'titleSmall', style: text.titleSmall),
+                      const Divider(height: AppSpacing.xl),
+                      _TypeRow(label: 'bodyLarge', style: text.bodyLarge),
+                      _TypeRow(label: 'bodyMedium', style: text.bodyMedium),
+                      _TypeRow(label: 'bodySmall', style: text.bodySmall),
+                      const Divider(height: AppSpacing.xl),
+                      _TypeRow(label: 'labelLarge', style: text.labelLarge),
+                      _TypeRow(label: 'labelMedium', style: text.labelMedium),
+                      _TypeRow(label: 'labelSmall', style: text.labelSmall),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Spacing ───────────────────────────────────────────
+                _SectionCard(
+                  title: 'Spacing Tokens',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SpacingRow(label: 'xxs = 2', size: AppSpacing.xxs),
+                      _SpacingRow(label: 'xs  = 4', size: AppSpacing.xs),
+                      _SpacingRow(label: 'sm  = 8', size: AppSpacing.sm),
+                      _SpacingRow(label: 'md  = 12', size: AppSpacing.md),
+                      _SpacingRow(label: 'lg  = 16', size: AppSpacing.lg),
+                      _SpacingRow(label: 'xl  = 24', size: AppSpacing.xl),
+                      _SpacingRow(label: 'xxl = 48', size: AppSpacing.xxl),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Radius ────────────────────────────────────────────
+                _SectionCard(
+                  title: 'Radius Tokens',
+                  child: Wrap(
+                    spacing: AppSpacing.md,
+                    runSpacing: AppSpacing.md,
+                    children: [
+                      _RadiusSwatch(label: 'xs = 4', radius: AppRadius.xs),
+                      _RadiusSwatch(label: 'sm = 8', radius: AppRadius.sm),
+                      _RadiusSwatch(label: 'md = 12', radius: AppRadius.md),
+                      _RadiusSwatch(label: 'lg = 16', radius: AppRadius.lg),
+                      _RadiusSwatch(label: 'xl = 28', radius: AppRadius.xl),
+                      _RadiusSwatch(
+                        label: 'full = 999',
+                        radius: AppRadius.full,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Buttons ───────────────────────────────────────────
                 _SectionCard(
                   title: 'Buttons',
                   child: Column(
@@ -163,6 +365,8 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
+
+                // ── Inputs & Selection ────────────────────────────────
                 _SectionCard(
                   title: 'Inputs And Selection',
                   child: Column(
@@ -175,6 +379,10 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.md),
+                      const SearchField(
+                        hintText: 'Search books & articles...',
+                      ),
+                      const SizedBox(height: AppSpacing.md),
                       SegmentedButton<String>(
                         showSelectedIcon: false,
                         segments: const [
@@ -182,8 +390,14 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                             value: 'Comfort',
                             label: Text('Comfort'),
                           ),
-                          ButtonSegment(value: 'Focus', label: Text('Focus')),
-                          ButtonSegment(value: 'Study', label: Text('Study')),
+                          ButtonSegment(
+                            value: 'Focus',
+                            label: Text('Focus'),
+                          ),
+                          ButtonSegment(
+                            value: 'Study',
+                            label: Text('Study'),
+                          ),
                         ],
                         selected: _selectedSegment,
                         onSelectionChanged: (value) {
@@ -217,10 +431,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                         },
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        'Text size',
-                        style: text.labelLarge,
-                      ),
+                      Text('Text size', style: text.labelLarge),
                       Slider(
                         value: _sliderValue,
                         onChanged: (value) {
@@ -231,11 +442,231 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
+
+                // ── Badges ────────────────────────────────────────────
+                _SectionCard(
+                  title: 'Badges',
+                  child: Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: [
+                      AppBadge(
+                        label: 'PRO',
+                        foreground: appColors.proBadgeForeground,
+                        background: appColors.proBadge,
+                      ),
+                      AppBadge(
+                        label: 'Mastered',
+                        foreground: appColors.successForeground,
+                        background: appColors.success,
+                      ),
+                      AppBadge(
+                        label: 'New',
+                        foreground: colorScheme.primary,
+                        background: colorScheme.primary.withValues(alpha: 0.12),
+                      ),
+                      AppBadge(
+                        label: 'Article',
+                        foreground: colorScheme.onSecondary,
+                        background: colorScheme.secondary,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Cards & Rows ──────────────────────────────────────
+                _SectionCard(
+                  title: 'Cards And Rows',
+                  child: Column(
+                    children: [
+                      Card(
+                        child: ListTile(
+                          leading: const Icon(AppIcons.book),
+                          title: const Text('Sample Article'),
+                          subtitle: const Text(
+                            'A quiet reading surface with subtle borders',
+                          ),
+                          trailing: Text('12 min', style: text.labelMedium),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      _ActionRowCard(
+                        leading: const Icon(AppIcons.sparkles),
+                        title: 'Premium',
+                        subtitle:
+                            'Unlock AI tools and deeper reading workflows',
+                        action: FilledButton(
+                          onPressed: () {},
+                          child: const Text('Upgrade'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Stat Cards ────────────────────────────────────────
+                _SectionCard(
+                  title: 'Stat Cards',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: StatCard(
+                              value: '42',
+                              label: 'Books read',
+                              icon: AppIcons.book,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: StatCard(
+                              value: '1,248',
+                              label: 'Flashcards',
+                              icon: AppIcons.flashcard,
+                              color: appColors.info,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: StatCard(
+                              value: '97%',
+                              label: 'Retention',
+                              icon: AppIcons.practice,
+                              color: appColors.successForeground,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: StatCard(value: '128', label: 'Highlights'),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: StatCard(value: '14', label: 'Streak days'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Settings ──────────────────────────────────────────
+                _SectionCard(
+                  title: 'Settings Group',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SectionLabel(label: 'ACCOUNT'),
+                      const SizedBox(height: AppSpacing.sm),
+                      SettingsGroup(
+                        children: [
+                          SettingsRow(
+                            icon: AppIcons.profile,
+                            label: 'Profile',
+                            detail: 'Jane Doe',
+                            onTap: () {},
+                          ),
+                          SettingsRow(
+                            icon: AppIcons.notifications,
+                            label: 'Notifications',
+                            onTap: () {},
+                          ),
+                          SettingsRow(
+                            icon: AppIcons.language,
+                            label: 'Language',
+                            detail: 'English',
+                            onTap: () {},
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      const SectionLabel(label: 'ABOUT'),
+                      const SizedBox(height: AppSpacing.sm),
+                      SettingsGroup(
+                        children: [
+                          SettingsRow(
+                            icon: AppIcons.info,
+                            label: 'Version',
+                            detail: '1.0.0',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── States ────────────────────────────────────────────
+                _SectionCard(
+                  title: 'Empty States',
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        height: 160,
+                        child: EmptyState(
+                          icon: AppIcons.library,
+                          message: 'Your library is empty',
+                          subtitle: 'Add a book or article to get started',
+                        ),
+                      ),
+                      const Divider(height: AppSpacing.xl),
+                      const SizedBox(
+                        height: 100,
+                        child: EmptyState(message: 'No results found'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                _SectionCard(
+                  title: 'Error State',
+                  child: SizedBox(
+                    height: 120,
+                    child: ErrorState(
+                      message: 'Failed to load library',
+                      retryLabel: 'Retry',
+                      onRetry: () {},
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Misc Components ───────────────────────────────────
+                _SectionCard(
+                  title: 'Misc Components',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      BottomSheetHeader(title: 'Add Highlight', onClose: () {}),
+                      const Divider(height: AppSpacing.xl),
+                      const SelectionPreviewCard(
+                        text:
+                            'The obstacle is the way. What stands in the way becomes the way.',
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      const OfflineBanner(),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Cover Art ─────────────────────────────────────────
                 const _SectionCard(
                   title: 'Cover Art',
                   child: _CoverArtPreview(),
                 ),
                 const SizedBox(height: AppSpacing.lg),
+
+                // ── Library Grid ──────────────────────────────────────
                 _SectionCard(
                   title: 'Library Grid',
                   child: GridView.count(
@@ -274,38 +705,8 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                _SectionCard(
-                  title: 'Cards And Rows',
-                  child: Column(
-                    children: [
-                      Card(
-                        child: ListTile(
-                          leading: const Icon(AppIcons.book),
-                          title: const Text('Sample Article'),
-                          subtitle: const Text(
-                            'A quiet reading surface with subtle borders',
-                          ),
-                          trailing: Text(
-                            '12 min',
-                            style: text.labelMedium,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      _ActionRowCard(
-                        leading: const Icon(AppIcons.sparkles),
-                        title: 'Premium',
-                        subtitle:
-                            'Unlock AI tools and deeper reading workflows',
-                        action: FilledButton(
-                          onPressed: () {},
-                          child: const Text('Upgrade'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
+
+                // ── Reader Presets ────────────────────────────────────
                 _SectionCard(
                   title: 'Reader Presets',
                   child: Wrap(
@@ -320,6 +721,15 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
+
+                // ── Icons ─────────────────────────────────────────────
+                const _SectionCard(
+                  title: 'Icons',
+                  child: _IconsPreview(),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Navigation ────────────────────────────────────────
                 _SectionCard(
                   title: 'Navigation',
                   child: ClipRRect(
@@ -341,6 +751,16 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                           label: 'Library',
                         ),
                         NavigationDestination(
+                          icon: Icon(AppIcons.dictionary),
+                          selectedIcon: Icon(AppIcons.dictionary),
+                          label: 'Dictionary',
+                        ),
+                        NavigationDestination(
+                          icon: Icon(AppIcons.practice),
+                          selectedIcon: Icon(AppIcons.practice),
+                          label: 'Practice',
+                        ),
+                        NavigationDestination(
                           icon: Icon(AppIcons.profile),
                           selectedIcon: Icon(AppIcons.profile),
                           label: 'Profile',
@@ -359,11 +779,10 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
   }
 }
 
+// ─── Section scaffold ──────────────────────────────────────────────────────
+
 class _SectionCard extends StatelessWidget {
-  const _SectionCard({
-    required this.title,
-    required this.child,
-  });
+  const _SectionCard({required this.title, required this.child});
 
   final String title;
   final Widget child;
@@ -386,11 +805,10 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
+// ─── Color swatch ──────────────────────────────────────────────────────────
+
 class _ColorSwatchCard extends StatelessWidget {
-  const _ColorSwatchCard({
-    required this.label,
-    required this.color,
-  });
+  const _ColorSwatchCard({required this.label, required this.color});
 
   final String label;
   final Color color;
@@ -414,15 +832,52 @@ class _ColorSwatchCard extends StatelessWidget {
         children: [
           Text(
             label,
-            style: context.text.labelMedium.copyWith(
-              color: textColor,
-            ),
+            style: context.text.labelMedium.copyWith(color: textColor),
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(
             '#${color.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
-            style: context.text.bodySmall.copyWith(
-              color: textColor,
+            style: context.text.bodySmall.copyWith(color: textColor),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Typography row ────────────────────────────────────────────────────────
+
+class _TypeRow extends StatelessWidget {
+  const _TypeRow({required this.label, required this.style});
+
+  final String label;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final family = style.fontFamily ?? AppTypography.fontFamilySans;
+    final isSerif = family.contains('Serif') || family.contains('serif');
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          SizedBox(
+            width: 140,
+            child: Text(
+              label,
+              style: context.text.labelSmall.copyWith(
+                color: context.colors.onSurface.withValues(alpha: 0.45),
+                fontFamily: AppTypography.fontFamilySans,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              isSerif ? 'The quick brown fox' : 'The quick brown fox',
+              style: style,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -431,11 +886,79 @@ class _ColorSwatchCard extends StatelessWidget {
   }
 }
 
+// ─── Spacing row ───────────────────────────────────────────────────────────
+
+class _SpacingRow extends StatelessWidget {
+  const _SpacingRow({required this.label, required this.size});
+
+  final String label;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 72,
+            child: Text(
+              label,
+              style: context.text.labelSmall.copyWith(
+                color: context.colors.onSurface.withValues(alpha: 0.55),
+                fontFamily: AppTypography.fontFamilySans,
+              ),
+            ),
+          ),
+          Container(
+            width: size,
+            height: size,
+            color: context.colors.primary.withValues(alpha: 0.5),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Radius swatch ─────────────────────────────────────────────────────────
+
+class _RadiusSwatch extends StatelessWidget {
+  const _RadiusSwatch({required this.label, required this.radius});
+
+  final String label;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colors;
+    return Column(
+      children: [
+        Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest,
+            border: Border.all(color: cs.outline),
+            borderRadius: BorderRadius.circular(radius.clamp(0, 26)),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          label,
+          style: context.text.labelSmall.copyWith(
+            color: cs.onSurface.withValues(alpha: 0.55),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Reader preset card ────────────────────────────────────────────────────
+
 class _ReaderPresetCard extends StatelessWidget {
-  const _ReaderPresetCard({
-    required this.label,
-    required this.themeData,
-  });
+  const _ReaderPresetCard({required this.label, required this.themeData});
 
   final String label;
   final ReaderThemeData themeData;
@@ -482,6 +1005,114 @@ class _ReaderPresetCard extends StatelessWidget {
     );
   }
 }
+
+// ─── Icons preview ─────────────────────────────────────────────────────────
+
+class _IconsPreview extends StatelessWidget {
+  const _IconsPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colors;
+    final groups = <(String, List<(String, IconData)>)>[
+      (
+        'Navigation',
+        [
+          ('home', AppIcons.home),
+          ('library', AppIcons.library),
+          ('dictionary', AppIcons.dictionary),
+          ('practice', AppIcons.practice),
+          ('profile', AppIcons.profile),
+        ],
+      ),
+      (
+        'Actions',
+        [
+          ('add', AppIcons.add),
+          ('close', AppIcons.close),
+          ('search', AppIcons.search),
+          ('refresh', AppIcons.refresh),
+          ('remove', AppIcons.remove),
+          ('moreHoriz', AppIcons.moreHorizontal),
+          ('chevronRight', AppIcons.chevronRight),
+        ],
+      ),
+      (
+        'Content',
+        [
+          ('book', AppIcons.book),
+          ('article', AppIcons.article),
+          ('bookmark', AppIcons.bookmark),
+          ('highlight', AppIcons.highlight),
+          ('flashcard', AppIcons.flashcard),
+          ('check', AppIcons.check),
+          ('clock', AppIcons.clock),
+          ('quote', AppIcons.quote),
+        ],
+      ),
+      (
+        'Reader & Theme',
+        [
+          ('translate', AppIcons.translate),
+          ('viewList', AppIcons.viewList),
+          ('viewGrid', AppIcons.viewGrid),
+          ('lightMode', AppIcons.lightMode),
+          ('darkMode', AppIcons.darkMode),
+          ('systemMode', AppIcons.systemMode),
+        ],
+      ),
+      (
+        'States & Premium',
+        [
+          ('error', AppIcons.error),
+          ('offline', AppIcons.offline),
+          ('sparkles', AppIcons.sparkles),
+          ('premium', AppIcons.premium),
+          ('info', AppIcons.info),
+        ],
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final (groupName, icons) in groups) ...[
+          Text(
+            groupName,
+            style: context.text.labelSmall.copyWith(
+              color: cs.onSurface.withValues(alpha: 0.45),
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.sm,
+            children: [
+              for (final (iconLabel, icon) in icons)
+                Column(
+                  children: [
+                    Icon(icon, size: AppIconSize.md, color: cs.onSurface),
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      iconLabel,
+                      style: context.text.labelSmall.copyWith(
+                        color: cs.onSurface.withValues(alpha: 0.45),
+                        fontSize: 9,
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
+      ],
+    );
+  }
+}
+
+// ─── Demo library card ─────────────────────────────────────────────────────
 
 class _DemoLibraryCard extends StatelessWidget {
   const _DemoLibraryCard({
@@ -531,10 +1162,7 @@ class _DemoBookMedia extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            colors.surfaceContainerHighest,
-            colors.surfaceContainer,
-          ],
+          colors: [colors.surfaceContainerHighest, colors.surfaceContainer],
         ),
       ),
       child: Padding(
@@ -580,9 +1208,7 @@ class _DemoArticleMedia extends StatelessWidget {
     final colors = context.colors;
     final text = context.text;
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerHighest,
-      ),
+      decoration: BoxDecoration(color: colors.surfaceContainerHighest),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
@@ -601,7 +1227,7 @@ class _DemoArticleMedia extends StatelessWidget {
             Text(
               'ARTICLE',
               style: text.labelMedium.copyWith(
-                color: colors.onSurfaceVariant,
+                color: colors.onSurface.withValues(alpha: 0.55),
               ),
             ),
           ],
@@ -610,6 +1236,8 @@ class _DemoArticleMedia extends StatelessWidget {
     );
   }
 }
+
+// ─── Action row card ───────────────────────────────────────────────────────
 
 class _ActionRowCard extends StatelessWidget {
   const _ActionRowCard({
@@ -656,6 +1284,8 @@ class _ActionRowCard extends StatelessWidget {
   }
 }
 
+// ─── Cover art preview ─────────────────────────────────────────────────────
+
 class _CoverArtSample {
   const _CoverArtSample({
     required this.title,
@@ -695,10 +1325,7 @@ const _coverArtSamples = <_CoverArtSample>[
     author: 'Donella Meadows',
     progress: 0.9,
   ),
-  _CoverArtSample(
-    title: 'The Pragmatic Programmer',
-    author: 'Hunt & Thomas',
-  ),
+  _CoverArtSample(title: 'The Pragmatic Programmer', author: 'Hunt & Thomas'),
 ];
 
 class _CoverArtPreview extends StatelessWidget {
@@ -709,9 +1336,6 @@ class _CoverArtPreview extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Grid-tile size: the common case in the Library screen. Four
-        // items so we can eyeball the gradient palette variance and
-        // confirm progress + article badge render at realistic sizes.
         GridView.builder(
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
@@ -738,8 +1362,6 @@ class _CoverArtPreview extends StatelessWidget {
           },
         ),
         const SizedBox(height: AppSpacing.lg),
-        // List-thumbnail size: verifies typography clamps kick in and the
-        // article badge is suppressed at small heights.
         Row(
           children: const [
             SizedBox(
