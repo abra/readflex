@@ -18,7 +18,6 @@ class AppColorPalette {
     required this.muted,
     required this.mutedForeground,
     required this.card,
-    required this.cardForeground,
     required this.border,
     required this.error,
     required this.onError,
@@ -34,7 +33,6 @@ class AppColorPalette {
   final Color muted;
   final Color mutedForeground;
   final Color card;
-  final Color cardForeground;
   final Color border;
   final Color error;
   final Color onError;
@@ -51,7 +49,6 @@ const lightPalette = AppColorPalette(
   muted: PrimitiveColors.gray300,
   mutedForeground: PrimitiveColors.gray600,
   card: PrimitiveColors.gray100,
-  cardForeground: PrimitiveColors.gray900,
   border: PrimitiveColors.gray350,
   error: PrimitiveColors.red500,
   onError: PrimitiveColors.white,
@@ -68,7 +65,6 @@ const darkPalette = AppColorPalette(
   muted: PrimitiveColors.darkGray600,
   mutedForeground: PrimitiveColors.darkGray400,
   card: PrimitiveColors.darkGray750,
-  cardForeground: PrimitiveColors.darkGray50,
   border: PrimitiveColors.darkGray600,
   error: PrimitiveColors.red600,
   onError: PrimitiveColors.white,

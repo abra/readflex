@@ -6,8 +6,6 @@ import 'package:flutter/material.dart';
 /// or the shorthand `Theme.of(context).ext`.
 class AppColorsExt extends ThemeExtension<AppColorsExt> {
   const AppColorsExt({
-    required this.readingSurface,
-    required this.readingText,
     required this.highlightYellow,
     required this.highlightBlue,
     required this.highlightGreen,
@@ -20,19 +18,13 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
     required this.warning,
     required this.warningForeground,
     required this.info,
-    required this.infoForeground,
     required this.success,
     required this.successForeground,
     required this.proBadge,
     required this.proBadgeForeground,
-    required this.tabActive,
-    required this.tabInactive,
     required this.divider,
-    required this.aiAccent,
   });
 
-  final Color readingSurface;
-  final Color readingText;
   final Color highlightYellow;
   final Color highlightBlue;
   final Color highlightGreen;
@@ -45,20 +37,14 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
   final Color warning;
   final Color warningForeground;
   final Color info;
-  final Color infoForeground;
   final Color success;
   final Color successForeground;
   final Color proBadge;
   final Color proBadgeForeground;
-  final Color tabActive;
-  final Color tabInactive;
   final Color divider;
-  final Color aiAccent;
 
   @override
   ThemeExtension<AppColorsExt> copyWith({
-    Color? readingSurface,
-    Color? readingText,
     Color? highlightYellow,
     Color? highlightBlue,
     Color? highlightGreen,
@@ -71,19 +57,13 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
     Color? warning,
     Color? warningForeground,
     Color? info,
-    Color? infoForeground,
     Color? success,
     Color? successForeground,
     Color? proBadge,
     Color? proBadgeForeground,
-    Color? tabActive,
-    Color? tabInactive,
     Color? divider,
-    Color? aiAccent,
   }) {
     return AppColorsExt(
-      readingSurface: readingSurface ?? this.readingSurface,
-      readingText: readingText ?? this.readingText,
       highlightYellow: highlightYellow ?? this.highlightYellow,
       highlightBlue: highlightBlue ?? this.highlightBlue,
       highlightGreen: highlightGreen ?? this.highlightGreen,
@@ -96,15 +76,11 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
       warning: warning ?? this.warning,
       warningForeground: warningForeground ?? this.warningForeground,
       info: info ?? this.info,
-      infoForeground: infoForeground ?? this.infoForeground,
       success: success ?? this.success,
       successForeground: successForeground ?? this.successForeground,
       proBadge: proBadge ?? this.proBadge,
       proBadgeForeground: proBadgeForeground ?? this.proBadgeForeground,
-      tabActive: tabActive ?? this.tabActive,
-      tabInactive: tabInactive ?? this.tabInactive,
       divider: divider ?? this.divider,
-      aiAccent: aiAccent ?? this.aiAccent,
     );
   }
 
@@ -115,8 +91,6 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
   ) {
     if (other is! AppColorsExt) return this;
     return AppColorsExt(
-      readingSurface: Color.lerp(readingSurface, other.readingSurface, t)!,
-      readingText: Color.lerp(readingText, other.readingText, t)!,
       highlightYellow: Color.lerp(highlightYellow, other.highlightYellow, t)!,
       highlightBlue: Color.lerp(highlightBlue, other.highlightBlue, t)!,
       highlightGreen: Color.lerp(highlightGreen, other.highlightGreen, t)!,
@@ -133,7 +107,6 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
         t,
       )!,
       info: Color.lerp(info, other.info, t)!,
-      infoForeground: Color.lerp(infoForeground, other.infoForeground, t)!,
       success: Color.lerp(success, other.success, t)!,
       successForeground: Color.lerp(
         successForeground,
@@ -146,10 +119,7 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
         other.proBadgeForeground,
         t,
       )!,
-      tabActive: Color.lerp(tabActive, other.tabActive, t)!,
-      tabInactive: Color.lerp(tabInactive, other.tabInactive, t)!,
       divider: Color.lerp(divider, other.divider, t)!,
-      aiAccent: Color.lerp(aiAccent, other.aiAccent, t)!,
     );
   }
 }

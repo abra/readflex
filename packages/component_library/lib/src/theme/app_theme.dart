@@ -50,8 +50,6 @@ class AppTheme {
 // ─── Light theme ──────────────────────────────────────────────
 
 const _lightColorsExt = AppColorsExt(
-  readingSurface: PrimitiveColors.warmWhite,
-  readingText: PrimitiveColors.warmText,
   highlightYellow: PrimitiveColors.highlightYellowLight,
   highlightBlue: PrimitiveColors.highlightBlueLight,
   highlightGreen: PrimitiveColors.highlightGreenLight,
@@ -64,15 +62,11 @@ const _lightColorsExt = AppColorsExt(
   warning: PrimitiveColors.warningLight,
   warningForeground: PrimitiveColors.warningFgLight,
   info: PrimitiveColors.infoLight,
-  infoForeground: PrimitiveColors.infoFgLight,
   success: PrimitiveColors.successLight,
   successForeground: PrimitiveColors.successFgLight,
   proBadge: PrimitiveColors.proBadgeLight,
   proBadgeForeground: PrimitiveColors.proBadgeFgLight,
-  tabActive: PrimitiveColors.gray900,
-  tabInactive: PrimitiveColors.gray500,
   divider: PrimitiveColors.gray250,
-  aiAccent: PrimitiveColors.purple500,
 );
 
 ThemeData _buildLight() {
@@ -88,6 +82,10 @@ ThemeData _buildLight() {
     error: palette.error,
     onError: palette.onError,
     outline: palette.border,
+    surfaceContainerLowest: palette.surfaceElevated,
+    surfaceContainerLow: palette.card,
+    surfaceContainer: palette.secondary,
+    surfaceContainerHigh: palette.muted,
     surfaceContainerHighest: palette.muted,
     surfaceTint: Colors.transparent,
   );
@@ -116,8 +114,6 @@ ThemeData _buildLight() {
 // ─── Dark theme ───────────────────────────────────────────────
 
 const _darkColorsExt = AppColorsExt(
-  readingSurface: PrimitiveColors.warmSurfaceDark,
-  readingText: PrimitiveColors.warmTextDark,
   highlightYellow: PrimitiveColors.highlightYellowDark,
   highlightBlue: PrimitiveColors.highlightBlueDark,
   highlightGreen: PrimitiveColors.highlightGreenDark,
@@ -130,15 +126,11 @@ const _darkColorsExt = AppColorsExt(
   warning: PrimitiveColors.warningDark,
   warningForeground: PrimitiveColors.warningFgDark,
   info: PrimitiveColors.infoDark,
-  infoForeground: PrimitiveColors.infoFgDark,
   success: PrimitiveColors.successDark,
   successForeground: PrimitiveColors.successFgDark,
   proBadge: PrimitiveColors.proBadgeDark,
   proBadgeForeground: PrimitiveColors.proBadgeFgDark,
-  tabActive: PrimitiveColors.darkGray50,
-  tabInactive: PrimitiveColors.darkGray500,
   divider: PrimitiveColors.darkGray700,
-  aiAccent: PrimitiveColors.purple400,
 );
 
 ThemeData _buildDark() {
@@ -154,6 +146,10 @@ ThemeData _buildDark() {
     error: palette.error,
     onError: palette.onError,
     outline: palette.border,
+    surfaceContainerLowest: palette.surfaceElevated,
+    surfaceContainerLow: palette.card,
+    surfaceContainer: palette.secondary,
+    surfaceContainerHigh: palette.muted,
     surfaceContainerHighest: palette.muted,
     surfaceTint: Colors.transparent,
   );
