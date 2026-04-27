@@ -240,7 +240,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
 
                 // ── Typography ────────────────────────────────────────
                 _SectionCard(
-                  title: 'Typography — Serif (display)',
+                  title: 'Typography',
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -250,15 +250,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                         style: text.displayMedium,
                       ),
                       _TypeRow(label: 'displaySmall', style: text.displaySmall),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                _SectionCard(
-                  title: 'Typography — Sans (UI)',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                      const Divider(height: AppSpacing.xl),
                       _TypeRow(
                         label: 'headlineLarge',
                         style: text.headlineLarge,
@@ -458,7 +450,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                       AppBadge(
                         label: 'Mastered',
                         foreground: appColors.successForeground,
-                        background: appColors.success,
+                        background: appColors.success.withValues(alpha: 0.12),
                       ),
                       AppBadge(
                         label: 'New',
@@ -855,8 +847,10 @@ class _TypeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.colors;
     final family = style.fontFamily ?? AppTypography.fontFamilySans;
     final isSerif = family.contains('Serif') || family.contains('serif');
+    final familyLabel = isSerif ? 'Serif' : 'Sans';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
@@ -864,18 +858,39 @@ class _TypeRow extends StatelessWidget {
         textBaseline: TextBaseline.alphabetic,
         children: [
           SizedBox(
-            width: 140,
+            width: 130,
             child: Text(
               label,
               style: context.text.labelSmall.copyWith(
-                color: context.colors.onSurface.withValues(alpha: 0.45),
+                color: cs.onSurface.withValues(alpha: 0.45),
                 fontFamily: AppTypography.fontFamilySans,
               ),
             ),
           ),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xs,
+              vertical: 1,
+            ),
+            decoration: BoxDecoration(
+              color: isSerif ? cs.primary.withValues(alpha: 0.1) : cs.secondary,
+              borderRadius: BorderRadius.circular(AppRadius.xs),
+            ),
+            child: Text(
+              familyLabel,
+              style: context.text.labelSmall.copyWith(
+                fontSize: 9,
+                color: isSerif
+                    ? cs.primary
+                    : cs.onSurface.withValues(alpha: 0.55),
+                fontFamily: AppTypography.fontFamilySans,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              isSerif ? 'The quick brown fox' : 'The quick brown fox',
+              'The quick brown fox',
               style: style,
               overflow: TextOverflow.ellipsis,
             ),
