@@ -109,29 +109,27 @@ class _NavBarWithIndicator extends StatelessWidget {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final slotWidth = constraints.maxWidth / _kDestinationCount;
-              return Row(
-                children: [
-                  for (int i = 0; i < _kDestinationCount; i++)
-                    SizedBox(
-                      width: slotWidth,
-                      child: Center(
-                        child: AnimatedOpacity(
-                          opacity: i == selectedIndex ? 1.0 : 0.0,
-                          duration: const Duration(milliseconds: 180),
-                          child: Container(
-                            width: 20,
-                            height: 2,
-                            decoration: BoxDecoration(
-                              color: indicatorColor,
-                              borderRadius: BorderRadius.circular(
-                                AppRadius.full,
-                              ),
-                            ),
-                          ),
+              final lineLeft = (selectedIndex + 0.5) * slotWidth - 10;
+              return SizedBox(
+                height: 2,
+                child: Stack(
+                  children: [
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInOutCubic,
+                      top: 0,
+                      left: lineLeft,
+                      child: Container(
+                        width: 20,
+                        height: 2,
+                        decoration: BoxDecoration(
+                          color: indicatorColor,
+                          borderRadius: BorderRadius.circular(AppRadius.full),
                         ),
                       ),
                     ),
-                ],
+                  ],
+                ),
               );
             },
           ),
