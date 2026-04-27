@@ -71,16 +71,21 @@ class CatalogHeader extends StatelessWidget {
             onChanged: onSearchChanged,
           ),
           const SizedBox(height: AppSpacing.lg),
+          _FilterSegments(
+            active: state.filter,
+            onChanged: onFilterChanged,
+          ),
+          const SizedBox(height: AppSpacing.xs),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: _FilterSegments(
-                  active: state.filter,
-                  onChanged: onFilterChanged,
+              Text(
+                '${state.visibleItems.length} results',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colors.onSurface.withValues(alpha: _kMutedAlpha),
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
               const _LayoutToggle(),
             ],
           ),
