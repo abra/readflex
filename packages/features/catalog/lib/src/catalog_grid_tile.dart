@@ -131,8 +131,8 @@ class _GridTileShell extends StatelessWidget {
                     gradient: LinearGradient(
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
-                      stops: [0.0, 0.18],
-                      colors: [Color(0x992A2A2A), Color(0x002A2A2A)],
+                      stops: [0.0, 0.30],
+                      colors: [Color(0x8C1B1F30), Color(0x001B1F30)],
                     ),
                   ),
                 ),
@@ -150,7 +150,7 @@ class _GridTileShell extends StatelessWidget {
                         children: [
                           Positioned.fill(
                             child: ColoredBox(
-                              color: Colors.white.withValues(alpha: 0.25),
+                              color: Colors.white.withValues(alpha: 0.35),
                             ),
                           ),
                           Container(
