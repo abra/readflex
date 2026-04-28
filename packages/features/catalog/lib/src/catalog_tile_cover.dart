@@ -86,6 +86,7 @@ class ArticleTileCover extends StatelessWidget {
     this.showTitle = true,
     this.showProgress = true,
     this.centerText = false,
+    this.bottomReserve = 0,
     super.key,
   });
 
@@ -93,6 +94,9 @@ class ArticleTileCover extends StatelessWidget {
   final bool showTitle;
   final bool showProgress;
   final bool centerText;
+
+  /// Forwarded to [AppCoverArt.bottomReserve] — see its doc.
+  final double bottomReserve;
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +111,7 @@ class ArticleTileCover extends StatelessWidget {
             : null,
         showTitle: showTitle,
         centerText: centerText,
+        bottomReserve: bottomReserve,
         height: constraints.maxHeight,
         width: constraints.maxWidth,
       ),

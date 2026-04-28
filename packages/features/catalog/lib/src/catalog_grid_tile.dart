@@ -7,6 +7,12 @@ import 'catalog_tile_cover.dart';
 /// Alpha for the format badge background (dark overlay on cover art).
 const double _kBadgeBackgroundAlpha = 0.55;
 
+/// Vertical space reserved at the bottom of an article cover for the
+/// grid-shell's progress-bar overlay. Matches the bar's `bottom: 8` +
+/// `height: 3` plus a small buffer so wrapped source / ellipsised title
+/// never paint into the bar zone.
+const double _kProgressOverlayReserve = 16.0;
+
 /// Grid-mode tile for a [Book].
 ///
 /// Cover-only: 2:3 aspect ratio with optional format/finished badges and a
@@ -60,6 +66,7 @@ class ArticleLibraryGridTile extends StatelessWidget {
         article: article,
         showProgress: false,
         centerText: true,
+        bottomReserve: _kProgressOverlayReserve,
       ),
       isFinished: article.isFinished,
       progress: article.currentScrollOffset,
@@ -124,8 +131,8 @@ class _GridTileShell extends StatelessWidget {
                     gradient: LinearGradient(
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
-                      stops: [0.0, 0.35],
-                      colors: [Color(0xCC000000), Color(0x00000000)],
+                      stops: [0.0, 0.18],
+                      colors: [Color(0x992A2A2A), Color(0x002A2A2A)],
                     ),
                   ),
                 ),

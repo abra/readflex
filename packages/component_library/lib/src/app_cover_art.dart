@@ -30,6 +30,7 @@ class AppCoverArt extends StatelessWidget {
     this.showAuthor = true,
     this.showTitle = true,
     this.centerText = false,
+    this.bottomReserve = 0,
     this.progress,
     super.key,
   });
@@ -73,6 +74,15 @@ class AppCoverArt extends StatelessWidget {
   /// of the cover is reserved for the progress overlay.
   final bool centerText;
 
+  /// Pixel reserve at the bottom of the cover for an *external* overlay
+  /// that the cover itself doesn't draw — typically the grid-shell's
+  /// progress bar painted by [_GridTileShell] on top of the cover. The
+  /// title-line computation subtracts this so wrapped text never extends
+  /// into the bar zone, and in [centerText] mode the text column is
+  /// physically bounded above this inset so even ellipsis-edge cases
+  /// don't bleed into the bar.
+  final double bottomReserve;
+
   /// Reading progress in `[0, 1]`. When non-null, a rounded progress pill
   /// is rendered at the bottom of the cover. The caller decides whether
   /// to pass a value or `null` — the widget does not filter.
@@ -101,12 +111,19 @@ class AppCoverArt extends StatelessWidget {
         ? progressBarHeight + progressBottomInset + 4
         : 0.0;
 
+    final topInset = (centerText && isArticle && showExtendedMeta)
+        ? 8 + articleIconSize + 4
+        : contentPadding;
+    final effectiveBottomReserve = centerText
+        ? (bottomReserve > 0 ? bottomReserve : contentPadding)
+        : contentPadding + progressReservedSpace;
+
     final titleMaxLines = _computeTitleMaxLines(
       titleFontSize: titleFontSize,
       authorFontSize: authorFontSize,
       sourceFontSize: sourceFontSize,
-      contentPadding: contentPadding,
-      progressReservedSpace: progressReservedSpace,
+      topInset: topInset,
+      bottomReserve: effectiveBottomReserve,
       showExtendedMeta: showExtendedMeta,
     );
 
@@ -138,12 +155,13 @@ class AppCoverArt extends StatelessWidget {
             _buildTextColumn(
               contentPadding: contentPadding,
               progressReservedSpace: progressReservedSpace,
+              topInset: topInset,
+              bottomReserve: effectiveBottomReserve,
               titleFontSize: titleFontSize,
               titleMaxLines: titleMaxLines,
               authorFontSize: authorFontSize,
               sourceFontSize: sourceFontSize,
               showExtendedMeta: showExtendedMeta,
-              articleIconSize: articleIconSize,
             ),
           if (isArticle && showExtendedMeta)
             _buildArticleBadge(articleIconSize),
@@ -163,15 +181,20 @@ class AppCoverArt extends StatelessWidget {
     required double titleFontSize,
     required double authorFontSize,
     required double sourceFontSize,
-    required double contentPadding,
-    required double progressReservedSpace,
+    required double topInset,
+    required double bottomReserve,
     required bool showExtendedMeta,
   }) {
     // Dynamic title line count: grow the title to fill whatever vertical
-    // space is left after padding, progress pill, and any kicker meta
-    // lines. Ellipsis only triggers when the text physically doesn't fit
-    // — fixed `maxLines` (demo's 2/3) leaves big gaps on tall article
+    // space is left after the top inset, bottom reserve, and any kicker
+    // meta lines. Ellipsis only triggers when the text physically doesn't
+    // fit — fixed `maxLines` (demo's 2/3) leaves big gaps on tall article
     // tiles, which the user explicitly rejected.
+    //
+    // Source is reserved for up to 2 lines (its actual `maxLines` cap),
+    // so a long publication name can wrap without bleeding into the
+    // progress bar zone — the title just gets one fewer line of capacity
+    // in that worst case.
     const titleLineHeight = 1.2;
     final authorReserve =
         showTitle && showAuthor && author != null && showExtendedMeta
@@ -179,14 +202,10 @@ class AppCoverArt extends StatelessWidget {
         : 0.0;
     final sourceReserve =
         showTitle && isArticle && source != null && showExtendedMeta
-        ? sourceFontSize * 1.2 + 4
+        ? sourceFontSize * 1.2 * 2 + 4
         : 0.0;
     final availableTitleHeight =
-        height -
-        contentPadding * 2 -
-        progressReservedSpace -
-        authorReserve -
-        sourceReserve;
+        height - topInset - bottomReserve - authorReserve - sourceReserve;
     final fittingLines =
         (availableTitleHeight / (titleFontSize * titleLineHeight)).floor();
     return fittingLines.clamp(1, isArticle ? 10 : 5).toInt();
@@ -206,12 +225,13 @@ class AppCoverArt extends StatelessWidget {
   Widget _buildTextColumn({
     required double contentPadding,
     required double progressReservedSpace,
+    required double topInset,
+    required double bottomReserve,
     required double titleFontSize,
     required int titleMaxLines,
     required double authorFontSize,
     required double sourceFontSize,
     required bool showExtendedMeta,
-    double articleIconSize = 0,
   }) {
     final textColumn = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,12 +278,20 @@ class AppCoverArt extends StatelessWidget {
     );
 
     if (centerText) {
-      final topInset = isArticle ? 8 + articleIconSize + 4 : contentPadding;
+      // Bound the column between the icon (top) and the bar reserve
+      // (bottom) so a worst-case wrapped source plus a long ellipsised
+      // title can never paint into the external progress-bar zone.
+      // `Align(topLeft)` keeps the column anchored at the icon edge
+      // when its intrinsic height is shorter than the bounded box.
       return Positioned(
         left: contentPadding,
         right: contentPadding,
         top: topInset,
-        child: textColumn,
+        bottom: bottomReserve,
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: textColumn,
+        ),
       );
     }
 
