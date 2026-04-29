@@ -1,5 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:dictionary/dictionary.dart';
+import 'package:dictionary/src/dictionary_detail_sheet.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,12 +34,13 @@ void main() {
     fsrsRepository = FakeFsrsRepository();
   });
 
-  Widget buildSubject() => MaterialApp(
+  Widget buildSubject({VoidCallback? onPracticePressed}) => MaterialApp(
     theme: AppTheme.light(),
     home: Scaffold(
       body: DictionaryScreen(
         dictionaryRepository: dictionaryRepository,
         fsrsRepository: fsrsRepository,
+        onPracticePressed: onPracticePressed,
       ),
     ),
   );
@@ -57,7 +59,8 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    expect(find.text('No words found'), findsOneWidget);
+    expect(find.text('No entries found'), findsOneWidget);
+    expect(find.text('Try a different search term'), findsOneWidget);
   });
 
   testWidgets('shows Dictionary header and saved words count', (
@@ -82,34 +85,67 @@ void main() {
     expect(find.text('1 mastered'), findsOneWidget);
   });
 
-  testWidgets('shows word card with word and translation', (tester) async {
+  testWidgets('list row shows word, part of speech and translation', (
+    tester,
+  ) async {
     dictionaryRepository.seed([_entry]);
 
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
     expect(find.text('serendipity'), findsOneWidget);
+    expect(find.text('noun'), findsOneWidget);
     expect(find.text('счастливая случайность'), findsOneWidget);
   });
 
-  testWidgets('shows pronunciation and part of speech', (tester) async {
+  testWidgets('list row hides pronunciation (sheet-only)', (tester) async {
     dictionaryRepository.seed([_entry]);
 
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    expect(find.text('/ˌsɛr.ənˈdɪp.ɪ.ti/'), findsOneWidget);
-    expect(find.text('noun'), findsOneWidget);
+    expect(find.text('/ˌsɛr.ənˈdɪp.ɪ.ti/'), findsNothing);
   });
 
-  testWidgets('shows Mastered badge for mastered entries', (tester) async {
+  testWidgets('tap on row opens detail sheet with pronunciation', (
+    tester,
+  ) async {
+    dictionaryRepository.seed([_entry]);
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.tap(find.text('serendipity'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('/ˌsɛr.ənˈdɪp.ɪ.ti/'), findsOneWidget);
+    expect(
+      find.text('A serendipity led to the discovery.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('detail sheet shows Mastered badge for mastered entries', (
+    tester,
+  ) async {
     dictionaryRepository.seed([_entry]);
     fsrsRepository.masteredIds = {'de-1'};
 
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    expect(find.text('Mastered'), findsOneWidget);
+    // Before tap: only the filter chip is "Mastered"; no badge inside
+    // the (not-yet-opened) sheet.
+    final inSheet = find.descendant(
+      of: find.byType(DictionaryDetailSheet),
+      matching: find.text('Mastered'),
+    );
+    expect(inSheet, findsNothing);
+
+    await tester.tap(find.text('serendipity'));
+    await tester.pumpAndSettle();
+
+    expect(inSheet, findsOneWidget);
   });
 
   testWidgets('shows search field', (tester) async {
@@ -119,5 +155,112 @@ void main() {
     await tester.pump();
 
     expect(find.text('Search words...'), findsOneWidget);
+  });
+
+  testWidgets('shows filter chips with counts', (tester) async {
+    dictionaryRepository.seed([_entry, _entry2]);
+    fsrsRepository.masteredIds = {'de-1'};
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    expect(find.text('All'), findsOneWidget);
+    expect(find.text('Mastered'), findsOneWidget);
+    expect(find.text('Learning'), findsOneWidget);
+    expect(find.text('Recent'), findsOneWidget);
+    // Counts: 2 total, 1 mastered, 1 learning. "Recent" has no count.
+    expect(find.text('2'), findsOneWidget);
+    expect(find.text('1'), findsNWidgets(2));
+  });
+
+  testWidgets('tapping Mastered filter narrows the list', (tester) async {
+    dictionaryRepository.seed([_entry, _entry2]);
+    fsrsRepository.masteredIds = {'de-1'};
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    expect(find.text('serendipity'), findsOneWidget);
+    expect(find.text('ephemeral'), findsOneWidget);
+
+    await tester.tap(find.text('Mastered'));
+    await tester.pump();
+
+    expect(find.text('serendipity'), findsOneWidget);
+    expect(find.text('ephemeral'), findsNothing);
+  });
+
+  testWidgets('Practice button hidden when callback is null', (tester) async {
+    dictionaryRepository.seed([_entry]);
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    expect(find.text('Practice'), findsNothing);
+  });
+
+  testWidgets('Practice button visible and fires callback', (tester) async {
+    dictionaryRepository.seed([_entry]);
+    var fired = 0;
+
+    await tester.pumpWidget(buildSubject(onPracticePressed: () => fired++));
+    await tester.pump();
+
+    expect(find.text('Practice'), findsOneWidget);
+    await tester.tap(find.text('Practice'));
+    expect(fired, 1);
+  });
+
+  testWidgets('FAB opens Add word sheet', (tester) async {
+    dictionaryRepository.seed([_entry]);
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    expect(find.text('Add word'), findsNothing);
+    await tester.tap(find.byIcon(AppIcons.add));
+    await tester.pumpAndSettle();
+    expect(find.text('Add word'), findsOneWidget);
+  });
+
+  testWidgets('Add word sheet inserts entry into the list on save', (
+    tester,
+  ) async {
+    dictionaryRepository.seed([_entry]);
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.tap(find.byIcon(AppIcons.add));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextFormField, 'Word'), 'gusto');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Translation'),
+      'удовольствие',
+    );
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('gusto'), findsOneWidget);
+    expect(find.text('удовольствие'), findsOneWidget);
+  });
+
+  testWidgets('Add word sheet shows validation error for blank word', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.tap(find.byIcon(AppIcons.add));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+
+    expect(find.text('Word is required'), findsOneWidget);
+    expect(find.text('Translation is required'), findsOneWidget);
+    // Sheet stayed open
+    expect(find.text('Add word'), findsOneWidget);
   });
 }

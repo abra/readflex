@@ -20,6 +20,7 @@ abstract final class AppIcons {
   static const IconData searchOff = LucideIcons.searchX;
   static const IconData refresh = LucideIcons.rotateCcw;
   static const IconData remove = LucideIcons.minus;
+  static const IconData delete = LucideIcons.trash2;
   static const IconData moreHorizontal = LucideIcons.moreHorizontal;
   static const IconData chevronRight = LucideIcons.chevronRight;
 

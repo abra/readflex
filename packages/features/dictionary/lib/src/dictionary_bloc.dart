@@ -28,6 +28,8 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
       _onSearchChanged,
       transformer: _debounce(_searchDelay),
     );
+    on<DictionaryFilterChanged>(_onFilterChanged);
+    on<DictionaryEntryAdded>(_onEntryAdded);
     on<DictionaryEntryDeleted>(_onEntryDeleted);
   }
 
@@ -53,6 +55,32 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
     Emitter<DictionaryState> emit,
   ) {
     emit(state.copyWith(searchQuery: event.query));
+  }
+
+  void _onFilterChanged(
+    DictionaryFilterChanged event,
+    Emitter<DictionaryState> emit,
+  ) {
+    if (state.filter == event.filter) return;
+    emit(state.copyWith(filter: event.filter));
+  }
+
+  Future<void> _onEntryAdded(
+    DictionaryEntryAdded event,
+    Emitter<DictionaryState> emit,
+  ) async {
+    try {
+      await _repository.addEntry(
+        word: event.word,
+        translation: event.translation,
+        pronunciation: event.pronunciation,
+        partOfSpeech: event.partOfSpeech,
+      );
+      await _loadEntries(emit);
+    } catch (e, st) {
+      addError(e, st);
+      emit(state.copyWith(status: DictionaryStatus.failure));
+    }
   }
 
   Future<void> _onEntryDeleted(

@@ -23,4 +23,33 @@ class FakeDictionaryRepository implements DictionaryRepository {
     if (shouldThrow) throw StorageException(cause: 'fake');
     _entries.removeWhere((e) => e.id == id);
   }
+
+  @override
+  Future<DictionaryEntry> addEntry({
+    required String word,
+    required String translation,
+    String? pronunciation,
+    String? partOfSpeech,
+    String? context,
+    String? sourceId,
+    SourceType? sourceType,
+    List<String> usageExamples = const [],
+    DateTime? addedAt,
+  }) async {
+    if (shouldThrow) throw StorageException(cause: 'fake');
+    final entry = DictionaryEntry(
+      id: 'fake-${_entries.length + 1}',
+      word: word,
+      translation: translation,
+      pronunciation: pronunciation,
+      partOfSpeech: partOfSpeech,
+      context: context,
+      sourceId: sourceId,
+      sourceType: sourceType,
+      usageExamples: usageExamples,
+      addedAt: addedAt ?? DateTime(2026),
+    );
+    _entries.add(entry);
+    return entry;
+  }
 }

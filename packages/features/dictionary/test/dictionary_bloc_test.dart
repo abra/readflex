@@ -20,6 +20,13 @@ final _entry2 = DictionaryEntry(
   addedAt: DateTime(2026, 1, 2),
 );
 
+final _entry3 = DictionaryEntry(
+  id: '3',
+  word: 'serendipity',
+  translation: 'удача',
+  addedAt: DateTime(2026, 1, 3),
+);
+
 void main() {
   group('DictionaryBloc', () {
     late FakeDictionaryRepository repository;
@@ -143,6 +150,78 @@ void main() {
     );
 
     blocTest<DictionaryBloc, DictionaryState>(
+      'filter changed emits new filter state',
+      build: () => DictionaryBloc(
+        dictionaryRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
+      seed: () => DictionaryState(
+        status: DictionaryStatus.success,
+        entries: [_entry1, _entry2],
+      ),
+      act: (bloc) => bloc.add(
+        const DictionaryFilterChanged(DictionaryFilter.mastered),
+      ),
+      expect: () => [
+        DictionaryState(
+          status: DictionaryStatus.success,
+          entries: [_entry1, _entry2],
+          filter: DictionaryFilter.mastered,
+        ),
+      ],
+    );
+
+    blocTest<DictionaryBloc, DictionaryState>(
+      'add entry persists then reloads',
+      build: () => DictionaryBloc(
+        dictionaryRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
+      seed: () => const DictionaryState(status: DictionaryStatus.success),
+      act: (bloc) => bloc.add(
+        const DictionaryEntryAdded(word: 'gusto', translation: 'удовольствие'),
+      ),
+      verify: (bloc) {
+        expect(bloc.state.status, DictionaryStatus.success);
+        expect(bloc.state.entries, hasLength(1));
+        expect(bloc.state.entries.first.word, 'gusto');
+        expect(bloc.state.entries.first.translation, 'удовольствие');
+      },
+    );
+
+    blocTest<DictionaryBloc, DictionaryState>(
+      'add entry emits failure when repository throws',
+      setUp: () => repository.shouldThrow = true,
+      build: () => DictionaryBloc(
+        dictionaryRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
+      seed: () => const DictionaryState(status: DictionaryStatus.success),
+      act: (bloc) => bloc.add(
+        const DictionaryEntryAdded(word: 'gusto', translation: 'удовольствие'),
+      ),
+      expect: () => [
+        const DictionaryState(status: DictionaryStatus.failure),
+      ],
+    );
+
+    blocTest<DictionaryBloc, DictionaryState>(
+      'filter changed to same value is a no-op',
+      build: () => DictionaryBloc(
+        dictionaryRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
+      seed: () => const DictionaryState(
+        status: DictionaryStatus.success,
+        filter: DictionaryFilter.recent,
+      ),
+      act: (bloc) => bloc.add(
+        const DictionaryFilterChanged(DictionaryFilter.recent),
+      ),
+      expect: () => <DictionaryState>[],
+    );
+
+    blocTest<DictionaryBloc, DictionaryState>(
       'delete emits failure when repository throws',
       setUp: () {
         repository.seed([_entry1]);
@@ -191,6 +270,71 @@ void main() {
         searchQuery: 'мир',
       );
       expect(state.filteredEntries, [_entry2]);
+    });
+
+    test('filter Mastered keeps only mastered entries', () {
+      final state = DictionaryState(
+        entries: [_entry1, _entry2, _entry3],
+        masteredIds: const {'1', '3'},
+        filter: DictionaryFilter.mastered,
+      );
+      expect(state.filteredEntries, [_entry1, _entry3]);
+    });
+
+    test('filter Learning keeps only non-mastered entries', () {
+      final state = DictionaryState(
+        entries: [_entry1, _entry2, _entry3],
+        masteredIds: const {'1', '3'},
+        filter: DictionaryFilter.learning,
+      );
+      expect(state.filteredEntries, [_entry2]);
+    });
+
+    test('filter Recent sorts by addedAt desc and caps at recentLimit', () {
+      // Build N+1 entries so we can verify the cap.
+      final entries = [
+        for (var i = 0; i < DictionaryState.recentLimit + 2; i++)
+          DictionaryEntry(
+            id: 'e$i',
+            word: 'w$i',
+            translation: 't$i',
+            addedAt: DateTime(2026, 1, i + 1),
+          ),
+      ];
+      final state = DictionaryState(
+        entries: entries,
+        filter: DictionaryFilter.recent,
+      );
+      expect(
+        state.filteredEntries,
+        hasLength(DictionaryState.recentLimit),
+      );
+      // First result is the newest by addedAt.
+      expect(
+        state.filteredEntries.first.id,
+        entries.last.id,
+      );
+    });
+
+    test('filter and search compose: filter first, then search', () {
+      // Two mastered entries, one unmastered. Search "world" hits an
+      // unmastered entry — filter should drop it before search.
+      final state = DictionaryState(
+        entries: [_entry1, _entry2, _entry3],
+        masteredIds: const {'1', '3'},
+        filter: DictionaryFilter.mastered,
+        searchQuery: 'world',
+      );
+      expect(state.filteredEntries, isEmpty);
+    });
+
+    test('learningCount is total minus mastered', () {
+      final state = DictionaryState(
+        entries: [_entry1, _entry2, _entry3],
+        masteredIds: const {'1'},
+      );
+      expect(state.masteredCount, 1);
+      expect(state.learningCount, 2);
     });
   });
 }
