@@ -330,7 +330,7 @@ class _DictionaryListRow extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     entry.translation,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: text.bodySmall.copyWith(color: muted),
                   ),
