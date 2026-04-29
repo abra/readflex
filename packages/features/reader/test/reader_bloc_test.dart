@@ -3,13 +3,11 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_bloc.dart';
 
-import 'helpers/fake_article_repository.dart';
 import 'helpers/fake_book_repository.dart';
 import 'helpers/fake_highlight_repository.dart';
 
 void main() {
   late FakeBookRepository bookRepository;
-  late FakeArticleRepository articleRepository;
   late FakeHighlightRepository highlightRepository;
 
   final testBook = Book(
@@ -24,16 +22,6 @@ void main() {
     readingProgress: 0.1,
   );
 
-  final testArticle = Article(
-    id: 'article-1',
-    title: 'Test Article',
-    url: 'https://example.com/article',
-    contentPath: '/articles/article-1.html',
-    addedAt: DateTime(2024, 1, 1),
-    siteName: 'Example',
-    currentScrollOffset: 0.5,
-  );
-
   final testHighlight = Highlight(
     id: 'h-1',
     sourceId: 'book-1',
@@ -44,13 +32,11 @@ void main() {
 
   setUp(() {
     bookRepository = FakeBookRepository();
-    articleRepository = FakeArticleRepository();
     highlightRepository = FakeHighlightRepository();
   });
 
   ReaderBloc buildBloc() => ReaderBloc(
     bookRepository: bookRepository,
-    articleRepository: articleRepository,
     highlightRepository: highlightRepository,
   );
 
@@ -62,7 +48,6 @@ void main() {
         expect(bloc.state.status, ReaderStatus.initial);
         expect(bloc.state.title, '');
         expect(bloc.state.book, isNull);
-        expect(bloc.state.article, isNull);
       },
     );
 
@@ -80,40 +65,13 @@ void main() {
           const ReaderState(status: ReaderStatus.loading),
           isA<ReaderState>()
               .having((s) => s.status, 'status', ReaderStatus.ready)
-              .having((s) => s.sourceType, 'sourceType', SourceType.book)
               .having((s) => s.title, 'title', 'Test Book')
               .having((s) => s.book, 'book', isNotNull)
               .having((s) => s.highlights, 'highlights', hasLength(1)),
         ],
         verify: (_) {
-          // Should have updated lastOpenedAt
           expect(bookRepository.updatedBook, isNotNull);
           expect(bookRepository.updatedBook!.lastOpenedAt, isNotNull);
-        },
-      );
-
-      blocTest<ReaderBloc, ReaderState>(
-        'loads article by ID when no book matches',
-        setUp: () {
-          articleRepository.seedArticle(
-            testArticle,
-            content: '<p>Hello from disk</p>',
-          );
-        },
-        build: buildBloc,
-        act: (bloc) =>
-            bloc.add(const ReaderSourceLoadRequested(sourceId: 'article-1')),
-        expect: () => [
-          const ReaderState(status: ReaderStatus.loading),
-          isA<ReaderState>()
-              .having((s) => s.status, 'status', ReaderStatus.ready)
-              .having((s) => s.sourceType, 'sourceType', SourceType.article)
-              .having((s) => s.title, 'title', 'Test Article')
-              .having((s) => s.article, 'article', isNotNull),
-        ],
-        verify: (_) {
-          expect(articleRepository.updatedArticle, isNotNull);
-          expect(articleRepository.updatedArticle!.lastOpenedAt, isNotNull);
         },
       );
 
@@ -126,32 +84,6 @@ void main() {
           const ReaderState(status: ReaderStatus.loading),
           const ReaderState(status: ReaderStatus.failure),
         ],
-      );
-
-      blocTest<ReaderBloc, ReaderState>(
-        'prefers book when both a book and an article match the same id',
-        // Books win over articles by ordering in the parallel resolver.
-        // Guards the invariant: id collisions load the book, not the article.
-        setUp: () {
-          bookRepository.seedBook(testBook);
-          articleRepository.seedArticle(
-            Article(
-              id: testBook.id,
-              title: 'Collider',
-              url: 'https://example.com/collider',
-              contentPath: '/articles/collider.html',
-              addedAt: DateTime(2024, 1, 1),
-            ),
-          );
-        },
-        build: buildBloc,
-        act: (bloc) =>
-            bloc.add(ReaderSourceLoadRequested(sourceId: testBook.id)),
-        verify: (bloc) {
-          expect(bloc.state.sourceType, SourceType.book);
-          expect(bloc.state.book, isNotNull);
-          expect(bloc.state.article, isNull);
-        },
       );
 
       blocTest<ReaderBloc, ReaderState>(
@@ -181,7 +113,6 @@ void main() {
         build: buildBloc,
         seed: () => ReaderState(
           status: ReaderStatus.ready,
-          sourceType: SourceType.book,
           title: testBook.title,
           book: testBook,
         ),
@@ -203,38 +134,6 @@ void main() {
       );
 
       blocTest<ReaderBloc, ReaderState>(
-        'updates article position when article is loaded instead of a book',
-        setUp: () {
-          articleRepository.seedArticle(testArticle);
-        },
-        build: buildBloc,
-        seed: () => ReaderState(
-          status: ReaderStatus.ready,
-          sourceType: SourceType.article,
-          title: testArticle.title,
-          article: testArticle,
-        ),
-        act: (bloc) => bloc.add(
-          const ReaderBookPositionUpdated(
-            cfi: 'epubcfi(/6/4!/4/2)',
-            progress: 0.45,
-          ),
-        ),
-        wait: const Duration(seconds: 3),
-        verify: (_) {
-          expect(articleRepository.updatedArticle, isNotNull);
-          expect(
-            articleRepository.updatedArticle!.currentCfi,
-            'epubcfi(/6/4!/4/2)',
-          );
-          expect(
-            articleRepository.updatedArticle!.currentScrollOffset,
-            0.45,
-          );
-        },
-      );
-
-      blocTest<ReaderBloc, ReaderState>(
         'clamps progress > 1.0 to 1.0',
         setUp: () {
           bookRepository.seedBook(testBook);
@@ -242,7 +141,6 @@ void main() {
         build: buildBloc,
         seed: () => ReaderState(
           status: ReaderStatus.ready,
-          sourceType: SourceType.book,
           title: testBook.title,
           book: testBook,
         ),
@@ -259,7 +157,7 @@ void main() {
       );
 
       blocTest<ReaderBloc, ReaderState>(
-        'no-op when neither book nor article in state',
+        'no-op when no book in state',
         build: buildBloc,
         seed: () => const ReaderState(status: ReaderStatus.ready),
         act: (bloc) => bloc.add(
@@ -271,7 +169,6 @@ void main() {
         wait: const Duration(seconds: 3),
         verify: (_) {
           expect(bookRepository.updatedBook, isNull);
-          expect(articleRepository.updatedArticle, isNull);
         },
       );
     });
@@ -283,11 +180,7 @@ void main() {
           highlightRepository.seedHighlights('book-1', [testHighlight]);
         },
         build: buildBloc,
-        seed: () => ReaderState(
-          status: ReaderStatus.ready,
-          sourceType: SourceType.book,
-          book: testBook,
-        ),
+        seed: () => ReaderState(status: ReaderStatus.ready, book: testBook),
         act: (bloc) => bloc.add(const ReaderHighlightsRefreshed()),
         expect: () => [
           isA<ReaderState>().having(
@@ -311,11 +204,7 @@ void main() {
           highlightRepository.shouldThrow = true;
         },
         build: buildBloc,
-        seed: () => ReaderState(
-          status: ReaderStatus.ready,
-          sourceType: SourceType.book,
-          book: testBook,
-        ),
+        seed: () => ReaderState(status: ReaderStatus.ready, book: testBook),
         act: (bloc) => bloc.add(const ReaderHighlightsRefreshed()),
         expect: () => <ReaderState>[],
         errors: () => [isA<Exception>()],
@@ -326,23 +215,6 @@ void main() {
       test('sourceId returns book id', () {
         final state = ReaderState(book: testBook);
         expect(state.sourceId, 'book-1');
-      });
-
-      test('sourceId returns article id', () {
-        final state = ReaderState(article: testArticle);
-        expect(state.sourceId, 'article-1');
-      });
-
-      test('isBook returns true for book sourceType', () {
-        const state = ReaderState(sourceType: SourceType.book);
-        expect(state.isBook, isTrue);
-        expect(state.isArticle, isFalse);
-      });
-
-      test('isArticle returns true for article sourceType', () {
-        const state = ReaderState(sourceType: SourceType.article);
-        expect(state.isArticle, isTrue);
-        expect(state.isBook, isFalse);
       });
 
       test('copyWith preserves unrelated fields', () {

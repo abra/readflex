@@ -18,9 +18,8 @@ final class ReaderSourceLoadRequested extends ReaderEvent {
   List<Object?> get props => [sourceId];
 }
 
-/// foliate-js reports a new reading position. Persisted to the source's
-/// `currentCfi` + progress field (`Book.readingProgress` or
-/// `Article.currentScrollOffset`).
+/// foliate-js reports a new reading position. Persisted to the book's
+/// `currentCfi` + `readingProgress`.
 final class ReaderBookPositionUpdated extends ReaderEvent {
   const ReaderBookPositionUpdated({
     required this.cfi,

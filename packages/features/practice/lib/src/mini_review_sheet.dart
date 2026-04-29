@@ -80,7 +80,10 @@ class _MiniReviewSheetView extends StatelessWidget {
           title: 'Mini Review',
           onClose: () => Navigator.of(context).pop(),
           headerSpacing: AppSpacing.sm,
-          bodyPadding: const EdgeInsets.all(AppSpacing.lg),
+          bodyPadding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.lg,
+          ),
           child: _buildBody(context, state),
         );
       },

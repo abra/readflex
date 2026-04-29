@@ -74,13 +74,13 @@ void main() {
   });
 
   test('dictionary entry save -> FSRS due queue contains it', () async {
-    const sourceId = 'article-1';
+    const sourceId = 'book-2';
 
     final entry = await dictionary.addEntry(
       word: 'serendipity',
       translation: 'случайная удача',
       sourceId: sourceId,
-      sourceType: SourceType.article,
+      sourceType: SourceType.book,
     );
     await fsrs.createReviewItem(
       itemId: entry.id,

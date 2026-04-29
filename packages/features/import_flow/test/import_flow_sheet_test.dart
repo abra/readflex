@@ -1,27 +1,19 @@
+import 'dart:io';
+
+import 'package:component_library/component_library.dart';
+import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:import_flow/import_flow.dart';
 
 void main() {
-  const unknownFailure = ArticleImportOutcome.failure(
-    ArticleImportFailureReason.unknown,
-  );
-  const successOutcome = ArticleImportOutcome.success();
-
-  testWidgets('book import keeps sheet open when callback returns false', (
-    tester,
-  ) async {
-    var bookPickerCalls = 0;
-
+  testWidgets('menu state shows the Upload Book option', (tester) async {
     await tester.pumpWidget(
       _TestHost(
         onOpen: (context) => showImportFlowSheet(
           context,
-          onImportBook: () async {
-            bookPickerCalls += 1;
-            return false;
-          },
-          onImportArticle: (_) async => unknownFailure,
+          onPickBookFile: () async => null,
+          onImportBook: (file, {onProgress}) async => null,
         ),
       ),
     );
@@ -29,192 +21,131 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Import book file'));
-    await tester.pumpAndSettle();
-
-    expect(bookPickerCalls, 1);
     expect(find.text('Add to Library'), findsOneWidget);
+    expect(find.text('Upload Book'), findsOneWidget);
+    expect(find.text('Cancel'), findsOneWidget);
   });
 
-  testWidgets(
-    'book import closes sheet with result when callback returns true',
-    (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _TestHost(
-          onOpen: (context) => showImportFlowSheet(
-            context,
-            onImportBook: () async => true,
-            onImportArticle: (_) async => unknownFailure,
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('Open'));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Import book file'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Add to Library'), findsNothing);
-      expect(
-        find.text('Result: ImportFlowResult.bookImported'),
-        findsOneWidget,
-      );
-    },
-  );
-
-  testWidgets('article import closes sheet with articleImported result', (
-    tester,
-  ) async {
+  testWidgets('cancel button dismisses the sheet', (tester) async {
     await tester.pumpWidget(
       _TestHost(
         onOpen: (context) => showImportFlowSheet(
           context,
-          onImportBook: () async => false,
-          onImportArticle: (_) async => successOutcome,
+          onPickBookFile: () async => null,
+          onImportBook: (file, {onProgress}) async => null,
         ),
       ),
     );
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Add article by URL'));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.byType(TextField), 'https://example.com');
-    await tester.tap(find.text('Import'));
+    await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
 
     expect(find.text('Add to Library'), findsNothing);
-    expect(
-      find.text('Result: ImportFlowResult.articleImported'),
-      findsOneWidget,
-    );
   });
 
-  testWidgets('article import shows validation error on empty URL', (
-    tester,
-  ) async {
+  testWidgets('cancelled book picker keeps menu open', (tester) async {
+    var pickerCalls = 0;
     await tester.pumpWidget(
       _TestHost(
         onOpen: (context) => showImportFlowSheet(
           context,
-          onImportBook: () async => false,
-          onImportArticle: (_) async => successOutcome,
+          onPickBookFile: () async {
+            pickerCalls += 1;
+            return null;
+          },
+          onImportBook: (file, {onProgress}) async => null,
         ),
       ),
     );
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Add article by URL'));
+    await tester.tap(find.text('Upload Book'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Import'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Please enter a URL'), findsOneWidget);
+    expect(pickerCalls, 1);
     expect(find.text('Add to Library'), findsOneWidget);
   });
 
-  testWidgets('article import surfaces network failure with specific message', (
+  testWidgets('successful book import shows Done success card', (
     tester,
   ) async {
     await tester.pumpWidget(
       _TestHost(
         onOpen: (context) => showImportFlowSheet(
           context,
-          onImportBook: () async => false,
-          onImportArticle: (_) async => const ArticleImportOutcome.failure(
-            ArticleImportFailureReason.network,
-          ),
+          onPickBookFile: () async => File('/tmp/Test.epub'),
+          onImportBook: (file, {onProgress}) async {
+            onProgress?.call(0.5);
+            onProgress?.call(1.0);
+            return _fakeBook();
+          },
         ),
       ),
     );
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Add article by URL'));
+    await tester.tap(find.text('Upload Book'));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), 'https://example.com');
-    await tester.tap(find.text('Import'));
-    await tester.pumpAndSettle();
-
-    expect(
-      find.textContaining("Couldn't reach the site"),
-      findsOneWidget,
-    );
-    expect(find.text('Add to Library'), findsOneWidget);
+    expect(find.text('Book added!'), findsOneWidget);
+    expect(find.text('Test.epub'), findsOneWidget);
+    expect(find.text('Done'), findsOneWidget);
   });
 
-  testWidgets(
-    'article import surfaces noReadableContent failure with specific message',
-    (tester) async {
-      await tester.pumpWidget(
-        _TestHost(
-          onOpen: (context) => showImportFlowSheet(
-            context,
-            onImportBook: () async => false,
-            onImportArticle: (_) async => const ArticleImportOutcome.failure(
-              ArticleImportFailureReason.noReadableContent,
-            ),
-          ),
+  testWidgets('book import failure shows Try again button', (tester) async {
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => File('/tmp/Bad.epub'),
+          onImportBook: (file, {onProgress}) async => null,
         ),
-      );
+      ),
+    );
 
-      await tester.tap(find.text('Open'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Upload Book'));
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Add article by URL'));
-      await tester.pumpAndSettle();
-
-      await tester.enterText(find.byType(TextField), 'https://example.com');
-      await tester.tap(find.text('Import'));
-      await tester.pumpAndSettle();
-
-      expect(
-        find.textContaining("doesn't have a readable article"),
-        findsOneWidget,
-      );
-    },
-  );
+    expect(find.text('Failed to import the book'), findsOneWidget);
+    expect(find.text('Try again'), findsOneWidget);
+  });
 }
+
+Book _fakeBook() => Book(
+  id: 'book-1',
+  title: 'Test',
+  filePath: 'book.epub',
+  format: BookFormat.epub,
+  addedAt: DateTime(2026),
+);
 
 class _TestHost extends StatefulWidget {
   const _TestHost({required this.onOpen});
 
-  final Future<ImportFlowResult?> Function(BuildContext context) onOpen;
+  final Future<void> Function(BuildContext context) onOpen;
 
   @override
   State<_TestHost> createState() => _TestHostState();
 }
 
 class _TestHostState extends State<_TestHost> {
-  ImportFlowResult? _lastResult;
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      theme: AppTheme.light(),
       home: Scaffold(
         body: Builder(
-          builder: (context) => Column(
-            children: [
-              TextButton(
-                onPressed: () async {
-                  final result = await widget.onOpen(context);
-                  if (!mounted) return;
-                  setState(() => _lastResult = result);
-                },
-                child: const Text('Open'),
-              ),
-              if (_lastResult != null) Text('Result: $_lastResult'),
-            ],
+          builder: (context) => Center(
+            child: ElevatedButton(
+              onPressed: () => widget.onOpen(context),
+              child: const Text('Open'),
+            ),
           ),
         ),
       ),

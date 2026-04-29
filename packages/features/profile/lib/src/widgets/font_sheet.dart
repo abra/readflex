@@ -25,9 +25,9 @@ class _FontSheet extends StatelessWidget {
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
+        AppSpacing.xl,
         AppSpacing.md,
-        AppSpacing.lg,
+        AppSpacing.xl,
         AppSpacing.xl + bottomPadding,
       ),
       child: Column(

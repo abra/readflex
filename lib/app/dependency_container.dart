@@ -5,8 +5,6 @@
 // them easy to substitute in tests via TestDependenciesContainer.
 
 import 'package:ai_service/ai_service.dart';
-import 'package:article_parser/article_parser.dart';
-import 'package:article_repository/article_repository.dart';
 import 'package:auth_service/auth_service.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
@@ -32,13 +30,11 @@ class DependenciesContainer {
     required this.packageInfo,
     required this.preferencesService,
     required this.authService,
-    required this.articleRepository,
     required this.bookRepository,
     required this.highlightRepository,
     required this.flashcardRepository,
     required this.dictionaryRepository,
     required this.fsrsRepository,
-    required this.articleParser,
     required this.translationService,
     required this.aiService,
     required this.subscriptionService,
@@ -53,13 +49,11 @@ class DependenciesContainer {
   final PackageInfo packageInfo;
   final PreferencesService preferencesService;
   final AuthService authService;
-  final ArticleRepository articleRepository;
   final BookRepository bookRepository;
   final HighlightRepository highlightRepository;
   final FlashcardRepository flashcardRepository;
   final DictionaryRepository dictionaryRepository;
   final FsrsRepository fsrsRepository;
-  final ArticleParser articleParser;
   final TranslationService translationService;
   final AiService aiService;
   final SubscriptionService subscriptionService;
@@ -67,8 +61,8 @@ class DependenciesContainer {
   final NotificationService notificationService;
   final ReaderServer readerServer;
 
-  /// Releases resources owned by the container — HTTP clients held by
-  /// repositories/services and the local reader HTTP server.
+  /// Releases resources owned by the container — the local reader HTTP
+  /// server and any other long-lived sockets/handles.
   ///
   /// Wired into a `WidgetsBindingObserver` for `AppLifecycleState.detached`
   /// so a long-running session doesn't leak sockets, and so the reader
@@ -77,16 +71,6 @@ class DependenciesContainer {
   /// continue with the rest — losing one socket is preferable to leaking
   /// the others because the first one panicked.
   Future<void> dispose() async {
-    try {
-      articleRepository.dispose();
-    } catch (e, st) {
-      logger.warn('articleRepository.dispose failed', error: e, stackTrace: st);
-    }
-    try {
-      articleParser.dispose();
-    } catch (e, st) {
-      logger.warn('articleParser.dispose failed', error: e, stackTrace: st);
-    }
     try {
       await readerServer.stop();
     } catch (e, st) {

@@ -23,14 +23,12 @@ class CatalogBody extends StatelessWidget {
   const CatalogBody({
     required this.state,
     required this.onBookPressed,
-    required this.onArticlePressed,
     required this.onRefresh,
     super.key,
   });
 
   final CatalogState state;
   final void Function(Book book) onBookPressed;
-  final void Function(Article article) onArticlePressed;
   final Future<void> Function() onRefresh;
 
   @override
@@ -48,8 +46,7 @@ class CatalogBody extends StatelessWidget {
                 ? const EmptyState(
                     icon: AppIcons.book,
                     message: 'Your library is empty',
-                    subtitle:
-                        'Import your first book or article to get started',
+                    subtitle: 'Import your first book to get started',
                   )
                 : const EmptyState(
                     icon: AppIcons.searchOff,
@@ -67,14 +64,12 @@ class CatalogBody extends StatelessWidget {
         builder: (context, layoutMode) {
           return switch (layoutMode) {
             CatalogLayoutMode.list => CatalogListView(
-              items: visibleItems,
+              books: visibleItems,
               onBookPressed: onBookPressed,
-              onArticlePressed: onArticlePressed,
             ),
             CatalogLayoutMode.grid => CatalogGridView(
-              items: visibleItems,
+              books: visibleItems,
               onBookPressed: onBookPressed,
-              onArticlePressed: onArticlePressed,
             ),
           };
         },

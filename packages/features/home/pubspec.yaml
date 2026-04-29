@@ -17,8 +17,6 @@ dependencies:
     path: ../../domain_models
   book_repository:
     path: ../../book_repository
-  article_repository:
-    path: ../../article_repository
   highlight_repository:
     path: ../../highlight_repository
   fsrs_repository:

@@ -1,5 +1,5 @@
 name: import_flow
-description: Bottom sheet for adding books (file picker) and articles (URL)
+description: Bottom sheet for adding book files (EPUB / PDF / FB2 / ...) to the library
 version: 0.1.0
 publish_to: 'none'
 
@@ -10,7 +10,10 @@ dependencies:
   flutter:
     sdk: flutter
 
+  equatable: ^2.0.8
   file_picker: ^11.0.2
+  flutter_bloc: ^9.1.1
+  path: ^1.9.0
 
   component_library:
     path: ../../component_library
@@ -18,10 +21,6 @@ dependencies:
     path: ../../domain_models
   book_repository:
     path: ../../book_repository
-  article_repository:
-    path: ../../article_repository
-  article_parser:
-    path: ../../article_parser
   reader_webview:
     path: ../../reader_webview
   monitoring:
@@ -31,6 +30,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  bloc_test: ^10.0.0
   flutter_lints: ^6.0.0
 
 flutter:

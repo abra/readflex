@@ -63,6 +63,9 @@ class _DictionaryView extends StatelessWidget {
         foregroundColor: cs.onPrimary,
         shape: const CircleBorder(),
         elevation: 3,
+        // See `catalog_screen.dart` — tab branches stay alive, so two
+        // FABs with the default Hero tag clash during route transitions.
+        heroTag: null,
         child: const Icon(AppIcons.add, size: 24),
       ),
       body: BlocBuilder<DictionaryBloc, DictionaryState>(

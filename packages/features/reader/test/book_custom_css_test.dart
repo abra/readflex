@@ -48,8 +48,10 @@ void main() {
         theme: lightTheme,
         invertImagesInDark: true,
       );
-      expect(css, contains('code, kbd, samp'));
-      expect(css, contains('pre'));
+      expect(css, contains('code {'));
+      expect(css, contains('kbd {'));
+      expect(css, contains('samp {'));
+      expect(css, contains('pre {'));
       expect(css, contains('#f0e7d8'));
     });
 
@@ -104,8 +106,10 @@ void main() {
       for (final css in [cssOn, cssOff]) {
         expect(css, contains('a:link, a:visited'));
         expect(css, contains('blockquote'));
-        expect(css, contains('code, kbd, samp'));
-        expect(css, contains('pre'));
+        expect(css, contains('code {'));
+        expect(css, contains('kbd {'));
+        expect(css, contains('samp {'));
+        expect(css, contains('pre {'));
         expect(css, contains('h1 { font-size'));
       }
     });

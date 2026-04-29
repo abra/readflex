@@ -7,14 +7,6 @@ import 'catalog_tile_cover.dart';
 /// Alpha applied to muted metadata (secondary text, icons) in list rows.
 const double _kMutedAlpha = 0.55;
 
-/// Alpha applied to the "language" overlay icon stamped on article covers
-/// so it sits readably on top of the coloured gradient.
-const double _kArticleIconAlpha = 0.7;
-
-/// Words-per-minute assumption for the "X min" reading-time badge.
-/// Roughly matches average adult reading speed; good enough for a badge.
-const int _kWordsPerMinute = 200;
-
 /// List-mode row for a [Book].
 ///
 /// Layout: 44×60 cover on the left, two-line text column on the right
@@ -73,71 +65,8 @@ class BookLibraryListTile extends StatelessWidget {
   }
 }
 
-/// List-mode row for an [Article].
-///
-/// Mirrors [BookLibraryListTile]'s shape but overlays a "language" icon on
-/// the cover and shows the estimated reading time in the meta strip (based
-/// on [Article.estimatedWordCount] / [_kWordsPerMinute]).
-class ArticleLibraryListTile extends StatelessWidget {
-  const ArticleLibraryListTile({
-    required this.article,
-    required this.showDivider,
-    required this.onTap,
-    super.key,
-  });
-
-  final Article article;
-  final bool showDivider;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final readMinutes = article.estimatedWordCount > 0
-        ? (article.estimatedWordCount / _kWordsPerMinute).ceil()
-        : 0;
-
-    return _ListRowShell(
-      cover: Stack(
-        alignment: Alignment.center,
-        children: [
-          ArticleTileCover(
-            article: article,
-            showTitle: false,
-            showProgress: false,
-          ),
-          Icon(
-            AppIcons.language,
-            size: 24,
-            color: Colors.white.withValues(alpha: _kArticleIconAlpha),
-          ),
-        ],
-      ),
-      title: article.title,
-      subtitle: article.siteName ?? domainOf(article.url),
-      showDivider: showDivider,
-      onTap: onTap,
-      metaBuilder: (context, mutedColor) => [
-        Icon(AppIcons.article, size: 10, color: mutedColor),
-        const SizedBox(width: AppSpacing.xs),
-        Text('Article', style: _metaStyle(mutedColor)),
-        if (readMinutes > 0) ...[
-          _MetaDot(mutedColor: mutedColor),
-          Icon(AppIcons.clock, size: 10, color: mutedColor),
-          const SizedBox(width: AppSpacing.xs),
-          Text('$readMinutes min', style: _metaStyle(mutedColor)),
-        ],
-        if (article.isFinished) ...[
-          _MetaDot(mutedColor: mutedColor),
-          ..._doneBadge(context),
-        ],
-      ],
-    );
-  }
-}
-
-/// Layout scaffold shared by book- and article-list tiles. Owns the row
-/// geometry (60×90 cover, 14dp gap, title/meta column) so the type-
-/// specific tiles above stay focused on content.
+/// Layout scaffold for the book list tile. Owns the row geometry
+/// (60×90 cover, 14dp gap, title/meta column).
 ///
 /// Layout: up-to-3-line title on top, single combined meta strip
 /// underneath (subtitle prepended in front of the type-specific

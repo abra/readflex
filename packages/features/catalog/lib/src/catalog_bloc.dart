@@ -1,4 +1,3 @@
-import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
@@ -9,15 +8,11 @@ part 'catalog_event.dart';
 part 'catalog_state.dart';
 
 class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
-  CatalogBloc({
-    required BookRepository bookRepository,
-    required ArticleRepository articleRepository,
-  }) : _bookRepository = bookRepository,
-       _articleRepository = articleRepository,
-       super(const CatalogState()) {
+  CatalogBloc({required BookRepository bookRepository})
+    : _bookRepository = bookRepository,
+      super(const CatalogState()) {
     on<CatalogLoadRequested>(_onLoadRequested);
     on<CatalogBookDeleted>(_onBookDeleted);
-    on<CatalogArticleDeleted>(_onArticleDeleted);
     on<CatalogRefreshRequested>(_onRefreshRequested);
     on<CatalogSearchQueryChanged>(
       _onSearchQueryChanged,
@@ -47,7 +42,6 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
   }
 
   final BookRepository _bookRepository;
-  final ArticleRepository _articleRepository;
 
   Future<void> _onLoadRequested(
     CatalogLoadRequested event,
@@ -77,43 +71,13 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
     }
   }
 
-  Future<void> _onArticleDeleted(
-    CatalogArticleDeleted event,
-    Emitter<CatalogState> emit,
-  ) async {
-    try {
-      await _articleRepository.deleteArticle(event.articleId);
-      await _loadItems(emit);
-    } catch (e, st) {
-      addError(e, st);
-      emit(state.copyWith(status: CatalogStatus.failure));
-    }
-  }
-
   Future<void> _loadItems(Emitter<CatalogState> emit) async {
     try {
       final books = await _bookRepository.getBooks();
-      final articles = await _articleRepository.getArticles();
-      emit(
-        state.copyWith(
-          status: CatalogStatus.success,
-          books: books,
-          articles: articles,
-          items: _sortedItems(books, articles),
-        ),
-      );
+      emit(state.copyWith(status: CatalogStatus.success, books: books));
     } catch (e, st) {
       addError(e, st);
       emit(state.copyWith(status: CatalogStatus.failure));
     }
-  }
-
-  static List<Object> _sortedItems(List<Book> books, List<Article> articles) {
-    final all = <({DateTime addedAt, Object item})>[
-      for (final b in books) (addedAt: b.addedAt, item: b),
-      for (final a in articles) (addedAt: a.addedAt, item: a),
-    ];
-    all.sort((a, b) => b.addedAt.compareTo(a.addedAt));
-    return all.map((e) => e.item).toList();
   }
 }

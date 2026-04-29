@@ -1,4 +1,3 @@
-import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
@@ -8,14 +7,13 @@ import 'package:highlight_repository/highlight_repository.dart';
 part 'reader_event.dart';
 part 'reader_state.dart';
 
-/// Owns the loaded source (book or article) and its highlights for the
-/// reader screen.
+/// Owns the loaded book and its highlights for the reader screen.
 ///
 /// Responsibilities:
-///   * resolve a [sourceId] into either a [Book] or [Article] on load and
-///     bump its `lastOpenedAt` timestamp;
-///   * debounce position updates (2s) coming from the WebView and persist
-///     them back to the repository;
+///   * resolve a [sourceId] into a [Book] on load and bump its
+///     `lastOpenedAt` timestamp;
+///   * persist position updates (CFI + progress fraction) coming from the
+///     WebView back to the repository;
 ///   * refresh highlights when a TextAction (e.g. "Highlight") completes.
 ///
 /// UI-only concerns (chrome visibility, selection, review-reminder banner)
@@ -24,23 +22,20 @@ part 'reader_state.dart';
 class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   ReaderBloc({
     required BookRepository bookRepository,
-    required ArticleRepository articleRepository,
     required HighlightRepository highlightRepository,
   }) : _bookRepository = bookRepository,
-       _articleRepository = articleRepository,
        _highlightRepository = highlightRepository,
        super(const ReaderState()) {
     on<ReaderSourceLoadRequested>(_onSourceLoadRequested);
     // No debounce here on purpose: the bottom chrome reads progress out of
     // [ReaderState], so it has to update on every page turn. Each handler
-    // run does one indexed `updateBook` / `updateArticle` write; SQLite
-    // handles that volume comfortably for typical reading speeds.
+    // run does one indexed `updateBook` write; SQLite handles that volume
+    // comfortably for typical reading speeds.
     on<ReaderBookPositionUpdated>(_onBookPositionUpdated);
     on<ReaderHighlightsRefreshed>(_onHighlightsRefreshed);
   }
 
   final BookRepository _bookRepository;
-  final ArticleRepository _articleRepository;
   final HighlightRepository _highlightRepository;
 
   Future<void> _onSourceLoadRequested(
@@ -50,11 +45,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     emit(state.copyWith(status: ReaderStatus.loading));
 
     try {
-      // Load book, article, and highlights in parallel. Only one of book/article
-      // will resolve to a non-null row for a given sourceId.
-      final (book, article, highlights) = await (
+      final (book, highlights) = await (
         _bookRepository.getBookById(event.sourceId),
-        _articleRepository.getArticleById(event.sourceId),
         _highlightRepository.getHighlightsBySource(event.sourceId),
       ).wait;
 
@@ -65,25 +57,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         emit(
           state.copyWith(
             status: ReaderStatus.ready,
-            sourceType: SourceType.book,
             title: book.title,
             book: book,
-            highlights: highlights,
-          ),
-        );
-        return;
-      }
-
-      if (article != null) {
-        await _articleRepository.updateArticle(
-          article.copyWith(lastOpenedAt: DateTime.now()),
-        );
-        emit(
-          state.copyWith(
-            status: ReaderStatus.ready,
-            sourceType: SourceType.article,
-            title: article.title,
-            article: article,
             highlights: highlights,
           ),
         );
@@ -98,10 +73,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   }
 
   /// Persists a CFI + progress fraction emitted by the WebView for the
-  /// currently-open source. Books and articles share the same event:
-  /// articles render through foliate-js too, so the position model is
-  /// identical (CFI for restore, fraction for the library cover's
-  /// progress pill).
+  /// currently-open book.
   ///
   /// foliate-js can occasionally report a fraction slightly above 1.0
   /// (overshoot at end-of-content / re-entry); we clamp to `[0, 1]` so
@@ -119,13 +91,6 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         );
         await _bookRepository.updateBook(updated);
         emit(state.copyWith(book: updated));
-      } else if (state.article != null) {
-        final updated = state.article!.copyWith(
-          currentCfi: event.cfi,
-          currentScrollOffset: progress,
-        );
-        await _articleRepository.updateArticle(updated);
-        emit(state.copyWith(article: updated));
       }
     } catch (e, st) {
       addError(e, st);

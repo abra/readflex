@@ -81,14 +81,10 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                 path: AppRoutes.home,
                 builder: (context, state) => HomeScreen(
                   bookRepository: deps.bookRepository,
-                  articleRepository: deps.articleRepository,
                   highlightRepository: deps.highlightRepository,
                   fsrsRepository: deps.fsrsRepository,
                   onBookPressed: (book) => context.push(
                     AppRoutes.reader(book.id),
-                  ),
-                  onArticlePressed: (article) => context.push(
-                    AppRoutes.reader(article.id),
                   ),
                   onPracticePressed: () => context.go(
                     AppRoutes.practice,
@@ -103,27 +99,20 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                 path: AppRoutes.library,
                 builder: (context, state) => CatalogScreen(
                   bookRepository: deps.bookRepository,
-                  articleRepository: deps.articleRepository,
                   preferencesService: deps.preferencesService,
                   onBookPressed: (book) => context.push(
                     AppRoutes.reader(book.id),
                   ),
-                  onArticlePressed: (article) => context.push(
-                    AppRoutes.reader(article.id),
-                  ),
                   onAddPressed: () async {
                     await showImportFlowSheet(
                       context,
-                      onImportBook: () => importBook(
+                      onPickBookFile: pickBookFile,
+                      onImportBook: (file, {onProgress}) => importBookFile(
+                        sourceFile: file,
                         bookRepository: deps.bookRepository,
                         readerServerPort: deps.readerServer.port,
                         logger: deps.logger,
-                      ),
-                      onImportArticle: (url) => importArticle(
-                        url: url,
-                        articleRepository: deps.articleRepository,
-                        articleParser: deps.articleParser,
-                        logger: deps.logger,
+                        onProgress: onProgress,
                       ),
                     );
                   },
@@ -195,7 +184,6 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
               sourceId: sourceId,
               serverPort: deps.readerServer.port,
               bookRepository: deps.bookRepository,
-              articleRepository: deps.articleRepository,
               highlightRepository: deps.highlightRepository,
               textActions: [
                 HighlightAction(
@@ -253,23 +241,19 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
           onAddPressed: () async {
             await showImportFlowSheet(
               context,
-              onImportBook: () => importBook(
+              onPickBookFile: pickBookFile,
+              onImportBook: (file, {onProgress}) => importBookFile(
+                sourceFile: file,
                 bookRepository: deps.bookRepository,
                 readerServerPort: deps.readerServer.port,
                 logger: deps.logger,
-              ),
-              onImportArticle: (url) => importArticle(
-                url: url,
-                articleRepository: deps.articleRepository,
-                articleParser: deps.articleParser,
-                logger: deps.logger,
+                onProgress: onProgress,
               ),
             );
 
             try {
               final books = await deps.bookRepository.getBooks();
-              final articles = await deps.articleRepository.getArticles();
-              return books.isNotEmpty || articles.isNotEmpty;
+              return books.isNotEmpty;
             } catch (_) {
               return false;
             }
@@ -312,8 +296,7 @@ Future<String?> _redirectHomeIfNeeded(DependenciesContainer deps) async {
   if (!prefs.hasCompletedSetup) {
     try {
       final books = await deps.bookRepository.getBooks();
-      final articles = await deps.articleRepository.getArticles();
-      if (books.isEmpty && articles.isEmpty) {
+      if (books.isEmpty) {
         return AppRoutes.firstImport;
       }
     } catch (e, st) {

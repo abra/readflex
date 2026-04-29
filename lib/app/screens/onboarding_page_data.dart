@@ -19,7 +19,7 @@ const onboardingPages = [
     icon: AppIcons.readAnything,
     title: 'Read anything',
     description:
-        'Import books and articles, read comfortably with a customizable reader.',
+        'Import books and read comfortably with a customizable reader.',
   ),
   OnboardingPageData(
     icon: AppIcons.highlightSave,

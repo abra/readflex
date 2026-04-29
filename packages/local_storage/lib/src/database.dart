@@ -6,13 +6,11 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import 'daos/articles_dao.dart';
 import 'daos/books_dao.dart';
 import 'daos/dictionary_dao.dart';
 import 'daos/flashcards_dao.dart';
 import 'daos/highlights_dao.dart';
 import 'daos/review_items_dao.dart';
-import 'tables/articles_table.dart';
 import 'tables/books_table.dart';
 import 'tables/dictionary_table.dart';
 import 'tables/flashcards_table.dart';
@@ -33,7 +31,6 @@ part 'database.g.dart';
 @DriftDatabase(
   tables: [
     BooksTable,
-    ArticlesTable,
     HighlightsTable,
     FlashcardsTable,
     DictionaryTable,
@@ -41,7 +38,6 @@ part 'database.g.dart';
     ReviewLogsTable,
   ],
   daos: [
-    ArticlesDao,
     BooksDao,
     HighlightsDao,
     FlashcardsDao,
@@ -56,7 +52,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -249,24 +245,57 @@ class AppDatabase extends _$AppDatabase {
         );
       }
       if (from < 6) {
-        // Rebuild articles_table: cleanedHtml TEXT is replaced by contentPath
-        // pointing to a file on disk, and coverImagePath is added for locally
-        // cached covers. No real article data exists yet (articles were only
-        // produced by the stub parser), so we drop and recreate instead of
-        // carrying a conversion step.
+        // Rebuild articles_table: cleanedHtml TEXT was replaced by
+        // contentPath pointing to a file on disk. Now obsolete (articles
+        // are removed in v13), but kept for upgrade fidelity from v5.
         await customStatement('DROP TABLE IF EXISTS articles_table');
-        await migrator.createTable(articlesTable);
+        await customStatement('''
+          CREATE TABLE articles_table (
+            id TEXT NOT NULL PRIMARY KEY,
+            title TEXT NOT NULL,
+            site_name TEXT,
+            url TEXT NOT NULL,
+            content_path TEXT NOT NULL,
+            cover_image_url TEXT,
+            cover_image_path TEXT,
+            byline TEXT,
+            excerpt TEXT,
+            published_time TEXT,
+            lang TEXT,
+            text_length INTEGER NOT NULL DEFAULT 0,
+            estimated_word_count INTEGER NOT NULL DEFAULT 0,
+            current_scroll_offset REAL NOT NULL DEFAULT 0.0,
+            added_at TEXT NOT NULL,
+            last_opened_at TEXT,
+            is_finished INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
       }
       if (from < 7) {
-        // articles_table.contentPath / coverImagePath flip from absolute
-        // paths to filenames only. ArticleRepository now resolves them
-        // against the current articles/covers directories on every read,
-        // so the DB survives iOS Documents-UUID changes between simulator
-        // reinstalls. Same rationale as the v5→v6 rebuild: article data is
-        // still dev-only, so a drop+recreate is cheaper than writing a
-        // path-stripping migration.
+        // articles_table.contentPath / coverImagePath flipped from absolute
+        // paths to filenames only. Now obsolete (v13 drops the table).
         await customStatement('DROP TABLE IF EXISTS articles_table');
-        await migrator.createTable(articlesTable);
+        await customStatement('''
+          CREATE TABLE articles_table (
+            id TEXT NOT NULL PRIMARY KEY,
+            title TEXT NOT NULL,
+            site_name TEXT,
+            url TEXT NOT NULL,
+            content_path TEXT NOT NULL,
+            cover_image_url TEXT,
+            cover_image_path TEXT,
+            byline TEXT,
+            excerpt TEXT,
+            published_time TEXT,
+            lang TEXT,
+            text_length INTEGER NOT NULL DEFAULT 0,
+            estimated_word_count INTEGER NOT NULL DEFAULT 0,
+            current_scroll_offset REAL NOT NULL DEFAULT 0.0,
+            added_at TEXT NOT NULL,
+            last_opened_at TEXT,
+            is_finished INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
       }
       if (from < 8) {
         // Add normalized reading_progress to articles, mirroring
@@ -303,14 +332,18 @@ class AppDatabase extends _$AppDatabase {
         );
       }
       if (from < 12) {
-        // Articles now render through foliate-js (each one is packaged as
-        // a single-chapter EPUB on import). Restore position is therefore
-        // a CFI string, like books. We keep `current_scroll_offset` for
-        // the library cover's progress pill — both columns are written
-        // together on every position update.
+        // Articles used to render through foliate-js with a CFI restore
+        // column. Obsolete in v13 but kept here so that upgrades from
+        // <12 still execute the historical schema before v13 drops it.
         await customStatement(
           'ALTER TABLE articles_table ADD COLUMN current_cfi TEXT',
         );
+      }
+      if (from < 13) {
+        // Articles feature removed. Drop the table entirely; safe to
+        // skip if the user never had article data (e.g. clean install
+        // that goes through onCreate instead).
+        await customStatement('DROP TABLE IF EXISTS articles_table');
       }
     },
   );

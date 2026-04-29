@@ -13,9 +13,9 @@ class ActionBottomSheetLayout extends StatelessWidget {
     required this.onClose,
     required this.child,
     this.headerPadding = const EdgeInsets.fromLTRB(
+      AppSpacing.xl,
       AppSpacing.lg,
-      AppSpacing.lg,
-      AppSpacing.lg,
+      AppSpacing.xl,
       0,
     ),
     this.bodyPadding = EdgeInsets.zero,

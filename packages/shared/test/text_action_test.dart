@@ -7,14 +7,14 @@ void main() {
   test('TextSelectionContext stores selection metadata', () {
     const selection = TextSelectionContext(
       selectedText: 'hello',
-      sourceId: 'article-1',
-      sourceType: SourceType.article,
+      sourceId: 'book-1',
+      sourceType: SourceType.book,
       scrollOffset: 42,
     );
 
     expect(selection.selectedText, 'hello');
-    expect(selection.sourceId, 'article-1');
-    expect(selection.sourceType, SourceType.article);
+    expect(selection.sourceId, 'book-1');
+    expect(selection.sourceType, SourceType.book);
     expect(selection.scrollOffset, 42);
   });
 

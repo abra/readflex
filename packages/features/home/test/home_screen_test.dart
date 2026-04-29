@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:home/home.dart';
 
-import 'helpers/fake_article_repository.dart';
 import 'helpers/fake_book_repository.dart';
 // The home helpers file is named fake_flashcard_repository.dart but
 // exports FakeFsrsRepository — matching the original bloc test setup.
@@ -17,11 +16,9 @@ void main() {
       MaterialApp(
         home: HomeScreen(
           bookRepository: FakeBookRepository(),
-          articleRepository: FakeArticleRepository(),
           highlightRepository: FakeHighlightRepository(),
           fsrsRepository: FakeFsrsRepository(),
           onBookPressed: (_) {},
-          onArticlePressed: (_) {},
           onPracticePressed: () {},
         ),
       ),

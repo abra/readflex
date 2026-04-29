@@ -18,12 +18,6 @@ final class CatalogBookDeleted extends CatalogEvent {
   final String bookId;
 }
 
-final class CatalogArticleDeleted extends CatalogEvent {
-  const CatalogArticleDeleted(this.articleId);
-
-  final String articleId;
-}
-
 final class CatalogSearchQueryChanged extends CatalogEvent {
   const CatalogSearchQueryChanged(this.query);
 

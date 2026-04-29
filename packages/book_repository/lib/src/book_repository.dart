@@ -64,6 +64,12 @@ class BookRepository {
   ///
   /// Copies the file to `books/<uuid>/book.<ext>`, optionally saves
   /// [coverData] as `cover.<ext>`, and creates the DB row.
+  ///
+  /// When [onProgress] is provided the copy is streamed chunk-by-chunk so
+  /// the caller can show a real progress bar. Progress values are mapped
+  /// `0.0..0.95` for the byte-copy phase and reach `1.0` after cover and
+  /// DB rows are written. When `null` the function uses [File.copy] for
+  /// the fast path.
   Future<Book> addBook({
     required File sourceFile,
     required String title,
@@ -71,6 +77,7 @@ class BookRepository {
     String? author,
     Uint8List? coverData,
     String? coverMimeType,
+    void Function(double progress)? onProgress,
   }) async {
     try {
       final id = _uuid.v4();
@@ -83,7 +90,28 @@ class BookRepository {
       // Copy book file.
       final ext = p.extension(sourceFile.path).toLowerCase();
       final bookFileName = 'book$ext';
-      await sourceFile.copy(p.join(bookDir.path, bookFileName));
+      final destPath = p.join(bookDir.path, bookFileName);
+
+      if (onProgress != null) {
+        onProgress(0);
+        final total = await sourceFile.length();
+        final sink = File(destPath).openWrite();
+        var copied = 0;
+        try {
+          await for (final chunk in sourceFile.openRead()) {
+            sink.add(chunk);
+            copied += chunk.length;
+            // Reserve last 5% of the bar for cover + DB insert below.
+            final scaled = total == 0 ? 0.95 : (copied / total) * 0.95;
+            onProgress(scaled.clamp(0.0, 0.95));
+          }
+          await sink.flush();
+        } finally {
+          await sink.close();
+        }
+      } else {
+        await sourceFile.copy(destPath);
+      }
 
       // Save cover image.
       String? coverFileName;
@@ -94,6 +122,7 @@ class BookRepository {
           p.join(bookDir.path, coverFileName),
         ).writeAsBytes(coverData);
       }
+      onProgress?.call(0.98);
 
       final book = Book(
         id: id,
@@ -105,6 +134,7 @@ class BookRepository {
         coverImagePath: coverFileName,
       );
       await _dao.insertBook(book.toStorageModel());
+      onProgress?.call(1.0);
       return _resolve(book);
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);

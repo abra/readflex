@@ -4,22 +4,20 @@ import 'package:flutter/material.dart';
 
 import 'catalog_list_tile.dart';
 
-/// Vertically scrolling list of mixed book/article rows.
+/// Vertically scrolling list of book rows.
 ///
 /// Each row is one tile; per-row bottom hairlines are drawn by the tile
 /// itself (see `showDivider`) so there's no trailing separator under the
-/// last row. Unknown item types render as empty space.
+/// last row.
 class CatalogListView extends StatelessWidget {
   const CatalogListView({
-    required this.items,
+    required this.books,
     required this.onBookPressed,
-    required this.onArticlePressed,
     super.key,
   });
 
-  final List<Object> items;
+  final List<Book> books;
   final void Function(Book book) onBookPressed;
-  final void Function(Article article) onArticlePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -31,23 +29,15 @@ class CatalogListView extends StatelessWidget {
         AppSpacing.xxl,
       ),
       physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: items.length,
+      itemCount: books.length,
       itemBuilder: (context, index) {
-        final item = items[index];
-        final showDivider = index < items.length - 1;
-        return switch (item) {
-          Book book => BookLibraryListTile(
-            book: book,
-            showDivider: showDivider,
-            onTap: () => onBookPressed(book),
-          ),
-          Article article => ArticleLibraryListTile(
-            article: article,
-            showDivider: showDivider,
-            onTap: () => onArticlePressed(article),
-          ),
-          _ => const SizedBox.shrink(),
-        };
+        final book = books[index];
+        final showDivider = index < books.length - 1;
+        return BookLibraryListTile(
+          book: book,
+          showDivider: showDivider,
+          onTap: () => onBookPressed(book),
+        );
       },
     );
   }

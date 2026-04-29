@@ -41,7 +41,7 @@ void main() {
         word: 'article word',
         translation: 'перевод',
         sourceId: 's2',
-        sourceType: SourceType.article,
+        sourceType: SourceType.book,
       );
       final result = await repo.getEntriesBySource('s1');
       expect(result, hasLength(1));

@@ -1,4 +1,3 @@
-import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
@@ -16,25 +15,21 @@ import 'catalog_layout_cubit.dart';
 ///
 /// Pure composition: creates [CatalogBloc] + [CatalogLayoutCubit], kicks
 /// off the initial load, and hands the widget tree down to [_CatalogView].
-/// All external callbacks (`onBookPressed`, `onArticlePressed`,
-/// `onAddPressed`) come from the composition root (`routing.dart`) — the
-/// feature itself doesn't know about navigation.
+/// All external callbacks (`onBookPressed`, `onAddPressed`) come from the
+/// composition root (`routing.dart`) — the feature itself doesn't know
+/// about navigation.
 class CatalogScreen extends StatelessWidget {
   const CatalogScreen({
     required this.bookRepository,
-    required this.articleRepository,
     required this.preferencesService,
     required this.onBookPressed,
-    required this.onArticlePressed,
     required this.onAddPressed,
     super.key,
   });
 
   final BookRepository bookRepository;
-  final ArticleRepository articleRepository;
   final PreferencesService preferencesService;
   final Future<void> Function(Book book) onBookPressed;
-  final Future<void> Function(Article article) onArticlePressed;
   final AsyncCallback onAddPressed;
 
   @override
@@ -44,10 +39,9 @@ class CatalogScreen extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (_) => CatalogBloc(
-            bookRepository: bookRepository,
-            articleRepository: articleRepository,
-          )..add(const CatalogLoadRequested()),
+          create: (_) =>
+              CatalogBloc(bookRepository: bookRepository)
+                ..add(const CatalogLoadRequested()),
         ),
         BlocProvider(
           create: (_) => CatalogLayoutCubit(
@@ -57,7 +51,6 @@ class CatalogScreen extends StatelessWidget {
       ],
       child: _CatalogView(
         onBookPressed: onBookPressed,
-        onArticlePressed: onArticlePressed,
         onAddPressed: onAddPressed,
       ),
     );
@@ -74,12 +67,10 @@ class CatalogScreen extends StatelessWidget {
 class _CatalogView extends StatefulWidget {
   const _CatalogView({
     required this.onBookPressed,
-    required this.onArticlePressed,
     required this.onAddPressed,
   });
 
   final Future<void> Function(Book book) onBookPressed;
-  final Future<void> Function(Article article) onArticlePressed;
   final AsyncCallback onAddPressed;
 
   @override
@@ -119,15 +110,6 @@ class _CatalogViewState extends State<_CatalogView> {
     context.read<CatalogBloc>().add(const CatalogRefreshRequested());
   }
 
-  Future<void> _handleArticleTap(
-    BuildContext context,
-    Article article,
-  ) async {
-    await widget.onArticlePressed(article);
-    if (!context.mounted) return;
-    context.read<CatalogBloc>().add(const CatalogRefreshRequested());
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -139,6 +121,11 @@ class _CatalogViewState extends State<_CatalogView> {
         foregroundColor: colors.onPrimary,
         shape: const CircleBorder(),
         elevation: 3,
+        // Tab branches stay alive in StatefulShellRoute, so the Catalog
+        // and Dictionary FABs would otherwise share the default Hero
+        // tag during route transitions and trigger a duplicate-hero
+        // assertion. Cross-route hero animation isn't needed here.
+        heroTag: null,
         child: const Icon(AppIcons.add, size: 24),
       ),
       body: SafeArea(
@@ -146,7 +133,7 @@ class _CatalogViewState extends State<_CatalogView> {
         child: BlocBuilder<CatalogBloc, CatalogState>(
           buildWhen: (prev, curr) =>
               prev.status != curr.status ||
-              prev.items != curr.items ||
+              prev.books != curr.books ||
               prev.filter != curr.filter ||
               prev.searchQuery != curr.searchQuery,
           builder: (context, state) {
@@ -175,8 +162,6 @@ class _CatalogViewState extends State<_CatalogView> {
                       child: CatalogBody(
                         state: state,
                         onBookPressed: (book) => _handleBookTap(context, book),
-                        onArticlePressed: (article) =>
-                            _handleArticleTap(context, article),
                         onRefresh: () async {
                           bloc.add(const CatalogRefreshRequested());
                         },

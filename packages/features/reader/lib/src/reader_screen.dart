@@ -1,4 +1,3 @@
-import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
@@ -44,7 +43,7 @@ class _ReaderCallbacksScope extends InheritedWidget {
       onStartMiniReview != old.onStartMiniReview;
 }
 
-/// Full-screen reader for a book or article (route `/reader/:sourceId`).
+/// Full-screen reader for a book (route `/reader/:sourceId`).
 ///
 /// Composition only: wires [ReaderBloc] (source + highlights + position
 /// persistence), [ReaderChromeCubit] (chrome visibility) and
@@ -58,7 +57,6 @@ class ReaderScreen extends StatelessWidget {
     required this.sourceId,
     required this.serverPort,
     required this.bookRepository,
-    required this.articleRepository,
     required this.highlightRepository,
     required this.textActions,
     this.onCheckDueItems,
@@ -69,7 +67,6 @@ class ReaderScreen extends StatelessWidget {
   final String sourceId;
   final int serverPort;
   final BookRepository bookRepository;
-  final ArticleRepository articleRepository;
   final HighlightRepository highlightRepository;
   final List<TextAction> textActions;
   final Future<int> Function(String sourceId)? onCheckDueItems;
@@ -87,7 +84,6 @@ class ReaderScreen extends StatelessWidget {
           BlocProvider(
             create: (_) => ReaderBloc(
               bookRepository: bookRepository,
-              articleRepository: articleRepository,
               highlightRepository: highlightRepository,
             )..add(ReaderSourceLoadRequested(sourceId: sourceId)),
           ),
@@ -403,10 +399,7 @@ class _BottomChromeDriver extends StatelessWidget {
       (c) => c.state.hasSelection,
     );
     final progress = context.select<ReaderBloc, double>(
-      (b) =>
-          b.state.book?.readingProgress ??
-          b.state.article?.currentScrollOffset ??
-          0,
+      (b) => b.state.book?.readingProgress ?? 0,
     );
 
     return _ReaderBottomChrome(
@@ -439,11 +432,8 @@ class _ContextPanelDriver extends StatelessWidget {
     final sourceId = context.select<ReaderBloc, String?>(
       (b) => b.state.sourceId,
     );
-    final sourceType = context.select<ReaderBloc, SourceType?>(
-      (b) => b.state.sourceType,
-    );
 
-    if (!sel.hasSelection || sourceId == null || sourceType == null) {
+    if (!sel.hasSelection || sourceId == null) {
       return const SizedBox.shrink();
     }
 
@@ -456,7 +446,6 @@ class _ContextPanelDriver extends StatelessWidget {
       child: _ContextPanel(
         selectedText: sel.selectedText,
         sourceId: sourceId,
-        sourceType: sourceType,
         selectionCfiRange: sel.cfiRange,
         selectionPageNumber: sel.pageNumber,
         selectionScrollOffset: sel.scrollOffset,
@@ -562,74 +551,63 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       invertImagesInDark: appearance.invertImagesInDark,
     );
 
-    // Books and articles share the foliate-js path: articles are packaged
-    // as single-chapter EPUBs on import (`EpubBuilder`). Position is a CFI
-    // on both sides; the article additionally writes a `[0, 1]` fraction
-    // so the catalog cover's progress pill keeps working without
-    // re-deriving it.
-    final isArticle = state.isArticle;
-    final filePath = isArticle ? state.article!.epubPath : state.book!.filePath;
-    final initialCfi = isArticle
-        ? state.article?.currentCfi
-        : state.book?.currentCfi;
+    final readerSurface = BookReaderWebView(
+      key: ValueKey(state.sourceId),
+      serverPort: widget.serverPort,
+      bookFilePath: state.book!.filePath,
+      initialCfi: state.book?.currentCfi,
+      foliateStyle: FoliateStyle(
+        fontName: fontPreset.fontFamily,
+        fontPath:
+            'http://127.0.0.1:${widget.serverPort}'
+            '/assets/fonts/${fontPreset.fontFile}',
+        fontSize: layout.fontSize,
+        fontWeight: layout.fontWeight,
+        letterSpacing: layout.letterSpacing,
+        spacing: layout.lineHeight,
+        paragraphSpacing: layout.paragraphSpacing,
+        textIndent: layout.textIndent,
+        topMargin: layout.topMargin,
+        bottomMargin: layout.bottomMargin,
+        sideMargin: layout.sideMargin,
+        justify: layout.justify,
+        hyphenate: layout.hyphenate,
+        fontColor: colorToHex(widget.readerTheme.primaryTextColor),
+        backgroundColor: colorToHex(widget.readerTheme.backgroundColor),
+        customCSS: customCSS,
+        customCSSEnabled: true,
+        overrideFont: appearance.overrideFont,
+        overrideColor: appearance.overrideColor,
+        useBookLayout: appearance.useBookLayout,
+      ),
+      highlights: highlights,
+      onReady: () {
+        if (mounted && !_foliateReady) {
+          setState(() => _foliateReady = true);
+        }
+      },
+      onPositionChanged: (position) {
+        bloc.add(
+          ReaderBookPositionUpdated(
+            cfi: position.cfi,
+            progress: position.fraction,
+          ),
+        );
+      },
+      onTextSelected: (selection) {
+        chromeCubit.hide();
+        selectionCubit.select(
+          text: selection.text,
+          cfiRange: selection.cfiRange,
+        );
+      },
+      onTextDeselected: () => selectionCubit.deselect(),
+      onTapped: onTapped,
+    );
 
     return Stack(
       children: [
-        Positioned.fill(
-          child: BookReaderWebView(
-            key: ValueKey(state.sourceId),
-            serverPort: widget.serverPort,
-            bookFilePath: filePath,
-            initialCfi: initialCfi,
-            foliateStyle: FoliateStyle(
-              fontName: fontPreset.fontFamily,
-              fontPath:
-                  'http://127.0.0.1:${widget.serverPort}'
-                  '/assets/fonts/${fontPreset.fontFile}',
-              fontSize: layout.fontSize,
-              fontWeight: layout.fontWeight,
-              letterSpacing: layout.letterSpacing,
-              spacing: layout.lineHeight,
-              paragraphSpacing: layout.paragraphSpacing,
-              textIndent: layout.textIndent,
-              topMargin: layout.topMargin,
-              bottomMargin: layout.bottomMargin,
-              sideMargin: layout.sideMargin,
-              justify: layout.justify,
-              hyphenate: layout.hyphenate,
-              fontColor: colorToHex(widget.readerTheme.primaryTextColor),
-              backgroundColor: colorToHex(widget.readerTheme.backgroundColor),
-              customCSS: customCSS,
-              customCSSEnabled: true,
-              overrideFont: appearance.overrideFont,
-              overrideColor: appearance.overrideColor,
-              useBookLayout: appearance.useBookLayout,
-            ),
-            highlights: highlights,
-            onReady: () {
-              if (mounted && !_foliateReady) {
-                setState(() => _foliateReady = true);
-              }
-            },
-            onPositionChanged: (position) {
-              bloc.add(
-                ReaderBookPositionUpdated(
-                  cfi: position.cfi,
-                  progress: position.fraction,
-                ),
-              );
-            },
-            onTextSelected: (selection) {
-              chromeCubit.hide();
-              selectionCubit.select(
-                text: selection.text,
-                cfiRange: selection.cfiRange,
-              );
-            },
-            onTextDeselected: () => selectionCubit.deselect(),
-            onTapped: onTapped,
-          ),
-        ),
+        Positioned.fill(child: readerSurface),
         // Loading scrim — covers the WebView while it's still mounting and
         // foliate-js is parsing the book. Background uses the reader
         // theme so it blends seamlessly into the rendered book once the
@@ -674,7 +652,6 @@ class _ContextPanel extends StatelessWidget {
   const _ContextPanel({
     required this.selectedText,
     required this.sourceId,
-    required this.sourceType,
     required this.textActions,
     required this.panelColor,
     required this.iconColor,
@@ -688,7 +665,6 @@ class _ContextPanel extends StatelessWidget {
 
   final String selectedText;
   final String sourceId;
-  final SourceType sourceType;
   final List<TextAction> textActions;
   final Color panelColor;
   final Color iconColor;
@@ -728,7 +704,7 @@ class _ContextPanel extends StatelessWidget {
                         TextSelectionContext(
                           selectedText: selectedText,
                           sourceId: sourceId,
-                          sourceType: sourceType,
+                          sourceType: SourceType.book,
                           cfiRange: selectionCfiRange,
                           pageNumber: selectionPageNumber,
                           scrollOffset: selectionScrollOffset,

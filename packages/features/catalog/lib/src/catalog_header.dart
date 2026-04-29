@@ -68,7 +68,7 @@ class CatalogHeader extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           SearchField(
-            hintText: 'Search books & articles...',
+            hintText: 'Search books...',
             controller: searchController,
             onChanged: onSearchChanged,
           ),
@@ -84,7 +84,7 @@ class CatalogHeader extends StatelessWidget {
   }
 }
 
-/// Horizontally scrolling strip of filter pills (`All / Books / Articles /
+/// Horizontally scrolling strip of filter pills (`All / Books / Comics /
 /// Saved / Finished`). Active pill is drawn in inverse colours; the rest
 /// use the secondary surface. Scroll is deliberate — on narrow screens the
 /// trailing pills can be reached with a swipe.
@@ -152,7 +152,6 @@ class _FilterSegments extends StatelessWidget {
   static String _labelFor(CatalogFilter filter) => switch (filter) {
     CatalogFilter.all => 'All',
     CatalogFilter.books => 'Books',
-    CatalogFilter.articles => 'Articles',
     CatalogFilter.comics => 'Comics',
     CatalogFilter.saved => 'Saved',
     CatalogFilter.finished => 'Finished',

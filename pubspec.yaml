@@ -21,8 +21,6 @@ dependencies:
     path: packages/component_library
   local_storage:
     path: packages/local_storage
-  article_repository:
-    path: packages/article_repository
   book_repository:
     path: packages/book_repository
   highlight_repository:
@@ -35,8 +33,6 @@ dependencies:
     path: packages/fsrs_repository
   dev_data:
     path: packages/dev_data
-  article_parser:
-    path: packages/article_parser
   translation_service:
     path: packages/translation_service
   ai_service:

@@ -1,7 +1,6 @@
 /// The type of reading source.
 enum SourceType {
-  book,
-  article
+  book
   ;
 
   /// Parses a [SourceType] from its stored [name]. Falls back to [book] on

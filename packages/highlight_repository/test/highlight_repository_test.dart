@@ -51,7 +51,7 @@ void main() {
       );
       await repo.addHighlight(
         sourceId: 's2',
-        sourceType: SourceType.article,
+        sourceType: SourceType.book,
         text: 'Article highlight',
       );
       final result = await repo.getHighlightsBySource('s1');
@@ -111,7 +111,7 @@ void main() {
       );
       await repo.addHighlight(
         sourceId: 's2',
-        sourceType: SourceType.article,
+        sourceType: SourceType.book,
         text: 'Keep',
       );
       await repo.deleteHighlightsBySource('s1');

@@ -7,8 +7,6 @@
 import 'dart:io';
 
 import 'package:ai_service/ai_service.dart';
-import 'package:article_parser/article_parser.dart';
-import 'package:article_repository/article_repository.dart';
 import 'package:auth_service/auth_service.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
@@ -112,7 +110,6 @@ Future<DependenciesContainer> createDependenciesContainer(
 
   // ─── Filesystem layout ───
   final documentsDir = await getApplicationDocumentsDirectory();
-  final articlesDir = Directory(p.join(documentsDir.path, 'articles'));
   final booksDir = Directory(p.join(documentsDir.path, 'books'));
   final readerAssetsDir = Directory(p.join(documentsDir.path, 'reader_assets'));
 
@@ -122,11 +119,6 @@ Future<DependenciesContainer> createDependenciesContainer(
   );
 
   // ─── Repositories ───
-  final articleRepository = ArticleRepository(
-    database: database,
-    articlesDirectory: articlesDir,
-    logger: logger,
-  );
   final bookRepository = BookRepository(
     database: database,
     booksDirectory: booksDir,
@@ -144,7 +136,6 @@ Future<DependenciesContainer> createDependenciesContainer(
 
   // TODO: replace Noop stubs with real implementations.
   final authService = NoopAuthService();
-  final articleParser = ReadabilityArticleParser();
   final translationService = BundledTranslationService();
   const aiService = NoopAiService();
   const subscriptionService = NoopSubscriptionService();
@@ -158,13 +149,11 @@ Future<DependenciesContainer> createDependenciesContainer(
     packageInfo: packageInfo,
     preferencesService: preferencesService,
     authService: authService,
-    articleRepository: articleRepository,
     bookRepository: bookRepository,
     highlightRepository: highlightRepository,
     flashcardRepository: flashcardRepository,
     dictionaryRepository: dictionaryRepository,
     fsrsRepository: fsrsRepository,
-    articleParser: articleParser,
     translationService: translationService,
     aiService: aiService,
     subscriptionService: subscriptionService,

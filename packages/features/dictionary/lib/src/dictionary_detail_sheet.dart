@@ -52,9 +52,9 @@ class DictionaryDetailSheet extends StatelessWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
               AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.lg,
+              AppSpacing.xl,
               AppSpacing.md,
             ),
             child: Column(

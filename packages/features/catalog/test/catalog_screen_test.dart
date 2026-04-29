@@ -9,7 +9,6 @@ import 'package:preferences_service/preferences_service.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
-import 'helpers/fake_article_repository.dart';
 import 'helpers/fake_book_repository.dart';
 
 final _book = Book(
@@ -21,22 +20,12 @@ final _book = Book(
   addedAt: DateTime(2026),
 );
 
-final _article = Article(
-  id: 'a-1',
-  title: 'Understanding Dart',
-  url: 'https://example.com/dart',
-  contentPath: '/articles/dart.html',
-  addedAt: DateTime(2026),
-);
-
 void main() {
   late FakeBookRepository bookRepository;
-  late FakeArticleRepository articleRepository;
   late PreferencesService preferencesService;
 
   setUp(() async {
     bookRepository = FakeBookRepository();
-    articleRepository = FakeArticleRepository();
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();
     preferencesService = await PreferencesService.create(
@@ -48,22 +37,17 @@ void main() {
     theme: AppTheme.light(),
     home: CatalogScreen(
       bookRepository: bookRepository,
-      articleRepository: articleRepository,
       preferencesService: preferencesService,
       onBookPressed: (_) async {},
-      onArticlePressed: (_) async {},
       onAddPressed: () async {},
     ),
   );
 
   testWidgets('shows loading indicator initially', (tester) async {
-    // Make the repo throw to stall loading
     bookRepository.shouldThrow = true;
-    articleRepository.shouldThrow = true;
 
     await tester.pumpWidget(buildSubject());
 
-    // On first pump, BLoC emits loading → failure fast, check for error
     await tester.pump();
     expect(find.text('Failed to load library'), findsOneWidget);
   });
@@ -89,13 +73,12 @@ void main() {
     tester,
   ) async {
     bookRepository.seedBooks([_book]);
-    articleRepository.seedArticles([_article]);
 
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
     expect(find.text('Library'), findsOneWidget);
-    expect(find.text('2 items'), findsOneWidget);
+    expect(find.text('1 items'), findsOneWidget);
   });
 
   testWidgets('shows search field', (tester) async {
@@ -104,7 +87,7 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    expect(find.text('Search books & articles...'), findsOneWidget);
+    expect(find.text('Search books...'), findsOneWidget);
   });
 
   testWidgets('shows filter segments', (tester) async {
@@ -115,7 +98,7 @@ void main() {
 
     expect(find.text('All'), findsOneWidget);
     expect(find.text('Books'), findsOneWidget);
-    expect(find.text('Articles'), findsOneWidget);
+    expect(find.text('Comics'), findsOneWidget);
   });
 
   testWidgets('shows FAB', (tester) async {
@@ -136,10 +119,8 @@ void main() {
         theme: AppTheme.light(),
         home: CatalogScreen(
           bookRepository: bookRepository,
-          articleRepository: articleRepository,
           preferencesService: preferencesService,
           onBookPressed: (_) async {},
-          onArticlePressed: (_) async {},
           onAddPressed: () async {
             invocations++;
             await gate.future;

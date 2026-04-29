@@ -334,5 +334,42 @@ void main() {
       expect(sourceFile.existsSync(), isTrue);
       expect(await sourceFile.readAsString(), originalContent);
     });
+
+    test(
+      'addBook fires onProgress with monotonically growing values',
+      () async {
+        // Use a payload large enough to span multiple read chunks (default
+        // chunk size on most platforms is 64KB).
+        final big = File(p.join(tempDir.path, 'big.epub'));
+        await big.writeAsBytes(Uint8List(256 * 1024));
+
+        final values = <double>[];
+        await repo.addBook(
+          sourceFile: big,
+          title: 'Big',
+          format: BookFormat.epub,
+          onProgress: values.add,
+        );
+
+        // Must start at 0 and end at 1.
+        expect(values.first, 0.0);
+        expect(values.last, 1.0);
+
+        // Values must be non-decreasing.
+        for (var i = 1; i < values.length; i++) {
+          expect(
+            values[i],
+            greaterThanOrEqualTo(values[i - 1]),
+            reason: 'progress went backwards at index $i: $values',
+          );
+        }
+
+        // Must include the byte-copy phase (everything before 0.95) and the
+        // finalisation jumps at 0.98 and 1.0.
+        expect(values.any((v) => v > 0 && v < 0.95), isTrue);
+        expect(values, contains(0.98));
+        expect(values, contains(1.0));
+      },
+    );
   });
 }

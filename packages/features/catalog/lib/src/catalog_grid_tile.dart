@@ -7,12 +7,6 @@ import 'catalog_tile_cover.dart';
 /// Alpha for the format badge background (dark overlay on cover art).
 const double _kBadgeBackgroundAlpha = 0.55;
 
-/// Vertical space reserved at the bottom of an article cover for the
-/// grid-shell's progress-bar overlay. Matches the bar's `bottom: 8` +
-/// `height: 3` plus a small buffer so wrapped source / ellipsised title
-/// never paint into the bar zone.
-const double _kProgressOverlayReserve = 16.0;
-
 /// Grid-mode tile for a [Book].
 ///
 /// Cover-only: 2:3 aspect ratio with optional format/finished badges and a
@@ -45,39 +39,8 @@ class BookLibraryGridTile extends StatelessWidget {
   }
 }
 
-/// Grid-mode tile for an [Article].
-///
-/// Same cover-only shape as [BookLibraryGridTile] but with no format badge.
-/// Reading progress is sourced from [Article.currentScrollOffset].
-class ArticleLibraryGridTile extends StatelessWidget {
-  const ArticleLibraryGridTile({
-    required this.article,
-    required this.onTap,
-    super.key,
-  });
-
-  final Article article;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return _GridTileShell(
-      cover: ArticleTileCover(
-        article: article,
-        showProgress: false,
-        centerText: true,
-        bottomReserve: _kProgressOverlayReserve,
-      ),
-      isFinished: article.isFinished,
-      progress: article.currentScrollOffset,
-      onTap: onTap,
-    );
-  }
-}
-
-/// Layout scaffold shared by both grid-mode tiles. Owns the geometry —
-/// cover aspect ratio, badge placement, progress overlay — so book- and
-/// article-specific tiles stay small and data-focused.
+/// Layout scaffold for the grid-mode tile. Owns the geometry —
+/// cover aspect ratio, badge placement, progress overlay.
 class _GridTileShell extends StatelessWidget {
   const _GridTileShell({
     required this.cover,

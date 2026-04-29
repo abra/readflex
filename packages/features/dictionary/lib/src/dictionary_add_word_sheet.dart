@@ -77,9 +77,9 @@ class _DictionaryAddWordSheetState extends State<DictionaryAddWordSheet> {
       title: 'Add word',
       onClose: () => Navigator.of(context).pop(),
       bodyPadding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
+        AppSpacing.xl,
         AppSpacing.md,
-        AppSpacing.lg,
+        AppSpacing.xl,
         AppSpacing.lg,
       ),
       child: Form(

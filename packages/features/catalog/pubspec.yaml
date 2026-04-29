@@ -1,5 +1,5 @@
 name: catalog
-description: Book and article list with empty state
+description: Book list with empty state
 version: 0.1.0
 publish_to: 'none'
 
@@ -18,8 +18,6 @@ dependencies:
     path: ../../domain_models
   book_repository:
     path: ../../book_repository
-  article_repository:
-    path: ../../article_repository
   component_library:
     path: ../../component_library
   preferences_service:

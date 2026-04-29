@@ -17,6 +17,16 @@ String buildBookCustomCSS({
   final isDark = theme.backgroundColor.computeLuminance() < 0.5;
 
   final buffer = StringBuffer();
+  buffer.writeln('html { text-rendering: optimizeLegibility !important; }');
+  buffer.writeln(
+    'body, p, li, td, th, code, pre, kbd, samp { '
+    'word-break: break-word !important; '
+    'overflow-wrap: anywhere !important; }',
+  );
+  buffer.writeln(
+    'p:empty, span:empty, div:empty:not([class]):not([id]) { '
+    'display: none !important; }',
+  );
   buffer.writeln('a:link, a:visited { color: $accent !important; }');
   buffer.writeln(
     'blockquote { border-inline-start: 3px solid $divider !important; '
