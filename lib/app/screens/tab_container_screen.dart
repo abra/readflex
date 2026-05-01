@@ -69,6 +69,8 @@ class _NavBarWithIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     final indicatorColor = context.colors.onSurface;
 
+    final hairline = 1 / MediaQuery.devicePixelRatioOf(context);
+
     return Stack(
       children: [
         NavigationBar(
@@ -101,6 +103,13 @@ class _NavBarWithIndicator extends StatelessWidget {
               label: 'Profile',
             ),
           ],
+        ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: hairline,
+          child: ColoredBox(color: context.appColors.divider),
         ),
         Positioned(
           top: 0,
