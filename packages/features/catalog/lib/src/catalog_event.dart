@@ -13,9 +13,17 @@ final class CatalogRefreshRequested extends CatalogEvent {
 }
 
 final class CatalogBookDeleted extends CatalogEvent {
-  const CatalogBookDeleted(this.bookId);
+  const CatalogBookDeleted(this.bookId, {required this.scope});
 
   final String bookId;
+  final BookDeletionScope scope;
+}
+
+final class CatalogBooksDeleted extends CatalogEvent {
+  const CatalogBooksDeleted(this.bookIds, {required this.scope});
+
+  final Set<String> bookIds;
+  final BookDeletionScope scope;
 }
 
 final class CatalogSearchQueryChanged extends CatalogEvent {

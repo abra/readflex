@@ -1,4 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:book_repository/book_repository.dart';
 import 'package:catalog/src/catalog_bloc.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -61,10 +62,41 @@ void main() {
         status: CatalogStatus.success,
         books: [_book],
       ),
-      act: (bloc) => bloc.add(CatalogBookDeleted(_book.id)),
+      act: (bloc) => bloc.add(
+        CatalogBookDeleted(_book.id, scope: BookDeletionScope.keepLearningData),
+      ),
       expect: () => [
         const CatalogState(status: CatalogStatus.success),
       ],
+    );
+
+    blocTest<CatalogBloc, CatalogState>(
+      'CatalogBooksDeleted removes every id in batch and reloads once',
+      setUp: () {
+        final second = Book(
+          id: '2',
+          title: 'Second',
+          filePath: '/two.epub',
+          format: BookFormat.epub,
+          addedAt: DateTime(2026, 1, 2),
+        );
+        repository.seedBooks([_book, second]);
+      },
+      build: () => CatalogBloc(bookRepository: repository),
+      seed: () => CatalogState(
+        status: CatalogStatus.success,
+        books: [_book],
+      ),
+      act: (bloc) => bloc.add(
+        const CatalogBooksDeleted(
+          {'1', '2'},
+          scope: BookDeletionScope.keepLearningData,
+        ),
+      ),
+      verify: (bloc) {
+        expect(bloc.state.status, CatalogStatus.success);
+        expect(bloc.state.books, isEmpty);
+      },
     );
 
     blocTest<CatalogBloc, CatalogState>(
@@ -80,7 +112,12 @@ void main() {
         // the second event must wait for the first to finish, and neither
         // may leave the bloc in a dangling state.
         bloc
-          ..add(CatalogBookDeleted(_book.id))
+          ..add(
+            CatalogBookDeleted(
+              _book.id,
+              scope: BookDeletionScope.keepLearningData,
+            ),
+          )
           ..add(const CatalogRefreshRequested());
       },
       verify: (bloc) {

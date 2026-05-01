@@ -31,6 +31,7 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
     on<DictionaryFilterChanged>(_onFilterChanged);
     on<DictionaryEntryAdded>(_onEntryAdded);
     on<DictionaryEntryDeleted>(_onEntryDeleted);
+    on<DictionaryEntriesDeleted>(_onEntriesDeleted);
   }
 
   final DictionaryRepository _repository;
@@ -90,6 +91,22 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
     try {
       await _repository.deleteEntry(event.entryId);
       await _fsrsRepository.deleteReviewItem(event.entryId);
+      await _loadEntries(emit);
+    } catch (e, st) {
+      addError(e, st);
+      emit(state.copyWith(status: DictionaryStatus.failure));
+    }
+  }
+
+  Future<void> _onEntriesDeleted(
+    DictionaryEntriesDeleted event,
+    Emitter<DictionaryState> emit,
+  ) async {
+    try {
+      for (final id in event.entryIds) {
+        await _repository.deleteEntry(id);
+        await _fsrsRepository.deleteReviewItem(id);
+      }
       await _loadEntries(emit);
     } catch (e, st) {
       addError(e, st);

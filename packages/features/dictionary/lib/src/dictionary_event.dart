@@ -33,6 +33,15 @@ final class DictionaryEntryDeleted extends DictionaryEvent {
   final String entryId;
 }
 
+/// Bulk delete of multiple dictionary entries at once. Mirrors
+/// [DictionaryEntryDeleted] semantics — every id's FSRS row is also
+/// removed — but reloads the list once at the end instead of per id.
+final class DictionaryEntriesDeleted extends DictionaryEvent {
+  const DictionaryEntriesDeleted(this.entryIds);
+
+  final Set<String> entryIds;
+}
+
 /// Manual add-word submission from the [DictionaryAddWordSheet] form.
 /// Persists the entry, then reloads the list so the new row shows up.
 final class DictionaryEntryAdded extends DictionaryEvent {

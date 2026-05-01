@@ -13,6 +13,7 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
       super(const CatalogState()) {
     on<CatalogLoadRequested>(_onLoadRequested);
     on<CatalogBookDeleted>(_onBookDeleted);
+    on<CatalogBooksDeleted>(_onBooksDeleted);
     on<CatalogRefreshRequested>(_onRefreshRequested);
     on<CatalogSearchQueryChanged>(
       _onSearchQueryChanged,
@@ -63,7 +64,22 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
     Emitter<CatalogState> emit,
   ) async {
     try {
-      await _bookRepository.deleteBook(event.bookId);
+      await _bookRepository.deleteBook(event.bookId, scope: event.scope);
+      await _loadItems(emit);
+    } catch (e, st) {
+      addError(e, st);
+      emit(state.copyWith(status: CatalogStatus.failure));
+    }
+  }
+
+  Future<void> _onBooksDeleted(
+    CatalogBooksDeleted event,
+    Emitter<CatalogState> emit,
+  ) async {
+    try {
+      for (final id in event.bookIds) {
+        await _bookRepository.deleteBook(id, scope: event.scope);
+      }
       await _loadItems(emit);
     } catch (e, st) {
       addError(e, st);

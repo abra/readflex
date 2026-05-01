@@ -7,6 +7,7 @@ import 'package:monitoring/monitoring.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart' show Uuid;
 
+import 'book_deletion_scope.dart';
 import 'mappers/book_to_domain.dart';
 import 'mappers/book_to_storage.dart';
 
@@ -154,24 +155,48 @@ class BookRepository {
     }
   }
 
-  /// Deletes the book and every dependent row in a single transaction —
-  /// highlights, flashcards, dictionary entries the user saved while
-  /// reading, and the review-scheduler state for each of those.
-  /// Without this cascade the children would linger in the DB and keep
-  /// surfacing in `dueItems()` / `getHighlightsBySource()` queries even
-  /// though the parent book is gone.
+  /// Deletes the book in a single transaction. The fate of dependent
+  /// rows (highlights, flashcards, dictionary entries, FSRS review state)
+  /// is decided by [scope]:
+  ///
+  ///   * [BookDeletionScope.keepLearningData] (default) — only the book
+  ///     row, its highlights and the highlight FSRS state are purged.
+  ///     Saved flashcards keep their dead `deckId` (Practice surfaces
+  ///     them by id, not by deck) and dictionary entries are detached
+  ///     from the book by nulling their `sourceId`. The user keeps
+  ///     everything they explicitly added to learn.
+  ///   * [BookDeletionScope.deleteEverything] — full cascade: every
+  ///     row that referenced this book id is removed alongside the book.
   ///
   /// File cleanup of the per-book directory is best-effort and runs
   /// after the DB transaction commits, so a filesystem error can't roll
   /// back the row deletes (orphaned directories are recoverable; a
   /// half-deleted DB state is not).
-  Future<void> deleteBook(String id) async {
+  Future<void> deleteBook(
+    String id, {
+    BookDeletionScope scope = BookDeletionScope.keepLearningData,
+  }) async {
     try {
       await _db.transaction(() async {
-        await _db.reviewItemsDao.deleteItemsBySource(id);
-        await _db.highlightsDao.deleteHighlightsBySource(id);
-        await _db.flashcardsDao.deleteFlashcardsByDeck(id);
-        await _db.dictionaryDao.deleteEntriesBySource(id);
+        switch (scope) {
+          case BookDeletionScope.keepLearningData:
+            // Highlights are anchored to text positions inside this book
+            // file — they have no meaning once the file is gone. Carry
+            // their FSRS rows with them.
+            await _db.reviewItemsDao.deleteItemsBySourceAndType(
+              id,
+              ReviewableType.highlight.name,
+            );
+            await _db.highlightsDao.deleteHighlightsBySource(id);
+            // Detach saved words from the source so the user still sees
+            // them in Dictionary without dangling FK-style references.
+            await _db.dictionaryDao.clearSourceForEntries(id);
+          case BookDeletionScope.deleteEverything:
+            await _db.reviewItemsDao.deleteItemsBySource(id);
+            await _db.highlightsDao.deleteHighlightsBySource(id);
+            await _db.flashcardsDao.deleteFlashcardsByDeck(id);
+            await _db.dictionaryDao.deleteEntriesBySource(id);
+        }
         await _dao.deleteBook(id);
       });
     } catch (e, st) {

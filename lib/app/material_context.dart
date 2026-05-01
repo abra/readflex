@@ -13,6 +13,7 @@ import 'package:preferences_service/preferences_service.dart';
 import 'package:reader_server/reader_server.dart';
 import 'package:readflex/app/dependency_scope.dart';
 import 'package:readflex/app/routing.dart';
+import 'package:toast_service/toast_service.dart';
 
 /// Entry point for the application that creates [MaterialApp.router].
 class MaterialContext extends StatefulWidget {
@@ -78,18 +79,20 @@ class _MaterialContextState extends State<MaterialContext>
   Widget build(BuildContext context) {
     final themeMode = PreferencesScope.themeModeOf(context);
 
-    return MaterialApp.router(
-      debugShowCheckedModeBanner: false,
-      themeMode: themeMode,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      routerConfig: _router,
-      builder: (context, child) {
-        return KeyedSubtree(
-          key: _globalKey,
-          child: _MediaQueryRootOverride(child: child!),
-        );
-      },
+    return ToastWrapper(
+      child: MaterialApp.router(
+        debugShowCheckedModeBanner: false,
+        themeMode: themeMode,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        routerConfig: _router,
+        builder: (context, child) {
+          return KeyedSubtree(
+            key: _globalKey,
+            child: _MediaQueryRootOverride(child: child!),
+          );
+        },
+      ),
     );
   }
 }

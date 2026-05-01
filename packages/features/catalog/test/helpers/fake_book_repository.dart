@@ -19,7 +19,10 @@ class FakeBookRepository implements BookRepository {
   }
 
   @override
-  Future<void> deleteBook(String id) async {
+  Future<void> deleteBook(
+    String id, {
+    BookDeletionScope scope = BookDeletionScope.keepLearningData,
+  }) async {
     if (shouldThrow) throw StorageException(cause: 'fake error');
     _books.removeWhere((b) => b.id == id);
   }

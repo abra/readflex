@@ -4,19 +4,23 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fsrs_repository/fsrs_repository.dart';
+import 'package:toast_service/toast_service.dart';
 
+import 'confirm_dictionary_deletion_sheet.dart';
 import 'dictionary_add_word_sheet.dart';
 import 'dictionary_bloc.dart';
 import 'dictionary_detail_sheet.dart';
+import 'dictionary_selection_cubit.dart';
 
 /// Dictionary tab root screen (route `/dictionary`).
 ///
 /// Browses saved words and phrases as a compact divided list. Each row
 /// shows a mastery dot, the serif word, italic part-of-speech kicker,
 /// and a one-line translation. Tapping a row opens
-/// [DictionaryDetailSheet] with the full entry detail. The FAB opens
-/// [DictionaryAddWordSheet] to add a new entry. Owns the
-/// [DictionaryBloc] for its subtree.
+/// [DictionaryDetailSheet] with the full entry detail. Long-pressing
+/// a row enters multi-select mode; the FAB swaps from add to trash and
+/// confirms before bulk-deleting. A right-to-left swipe on a single row
+/// triggers the same confirmation flow.
 class DictionaryScreen extends StatelessWidget {
   const DictionaryScreen({
     required this.dictionaryRepository,
@@ -37,65 +41,188 @@ class DictionaryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     debugLogScreenBuild('DictionaryScreen');
 
-    return BlocProvider(
-      create: (_) => DictionaryBloc(
-        dictionaryRepository: dictionaryRepository,
-        fsrsRepository: fsrsRepository,
-      )..add(const DictionaryLoadRequested()),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => DictionaryBloc(
+            dictionaryRepository: dictionaryRepository,
+            fsrsRepository: fsrsRepository,
+          )..add(const DictionaryLoadRequested()),
+        ),
+        BlocProvider(create: (_) => DictionarySelectionCubit()),
+      ],
       child: _DictionaryView(onPracticePressed: onPracticePressed),
     );
   }
 }
 
-class _DictionaryView extends StatelessWidget {
+class _DictionaryView extends StatefulWidget {
   const _DictionaryView({this.onPracticePressed});
 
   final VoidCallback? onPracticePressed;
 
   @override
+  State<_DictionaryView> createState() => _DictionaryViewState();
+}
+
+class _DictionaryViewState extends State<_DictionaryView> {
+  /// Number of entries we expect the next [DictionaryBloc] emission to
+  /// confirm (or fail) the deletion of. Set right before dispatching a
+  /// delete event; consumed in the [BlocListener] to choose between a
+  /// success/failure toast and reset.
+  int? _pendingDeleteCount;
+
+  /// Word captured at delete-dispatch time for the singular case so the
+  /// success toast can name it (e.g. `"serendipity" deleted`). Null for
+  /// bulk deletes (≥2) where the toast just reports the count.
+  String? _pendingSingleWord;
+
+  Future<void> _handleDeleteSelected(BuildContext context) async {
+    final selection = context.read<DictionarySelectionCubit>();
+    final ids = selection.state.selectedIds;
+    if (ids.isEmpty) return;
+    final confirmed = await showConfirmDictionaryDeletionSheet(
+      context,
+      count: ids.length,
+    );
+    if (confirmed != true || !context.mounted) return;
+    final bloc = context.read<DictionaryBloc>();
+    _pendingDeleteCount = ids.length;
+    _pendingSingleWord = ids.length == 1
+        ? _wordOf(bloc.state.entries, ids.first)
+        : null;
+    bloc.add(DictionaryEntriesDeleted(ids));
+    selection.clear();
+  }
+
+  Future<bool> _confirmAndDispatchSwipe(
+    BuildContext context,
+    DictionaryEntry entry,
+  ) async {
+    final confirmed = await showConfirmDictionaryDeletionSheet(
+      context,
+      count: 1,
+    );
+    if (confirmed != true || !context.mounted) return false;
+    _pendingDeleteCount = 1;
+    _pendingSingleWord = entry.word;
+    context.read<DictionaryBloc>().add(DictionaryEntryDeleted(entry.id));
+    return true;
+  }
+
+  /// Used by the detail-sheet delete button. The detail sheet itself
+  /// is the user's confirmation, so we skip the bottom sheet here and
+  /// just queue up a toast on success/failure.
+  void _handleDetailDelete(BuildContext context, DictionaryEntry entry) {
+    _pendingDeleteCount = 1;
+    _pendingSingleWord = entry.word;
+    context.read<DictionaryBloc>().add(DictionaryEntryDeleted(entry.id));
+  }
+
+  /// Locates an entry by id and returns its word, or null if the row is
+  /// gone (race between dispatch and a state update).
+  static String? _wordOf(List<DictionaryEntry> entries, String id) {
+    for (final entry in entries) {
+      if (entry.id == id) return entry.word;
+    }
+    return null;
+  }
+
+  void _onDictionaryStateForToast(
+    BuildContext context,
+    DictionaryState state,
+  ) {
+    final pending = _pendingDeleteCount;
+    if (pending == null) return;
+    final word = _pendingSingleWord;
+    if (state.status == DictionaryStatus.success) {
+      _pendingDeleteCount = null;
+      _pendingSingleWord = null;
+      if (pending == 1 && word != null) {
+        showToast(
+          context,
+          type: NotificationType.success,
+          message: '"$word"',
+          messageSuffix: ' deleted',
+        );
+      } else {
+        showToast(
+          context,
+          type: NotificationType.success,
+          message: pending == 1 ? 'Word deleted' : '$pending words deleted',
+        );
+      }
+    } else if (state.status == DictionaryStatus.failure) {
+      _pendingDeleteCount = null;
+      _pendingSingleWord = null;
+      showToast(
+        context,
+        type: NotificationType.error,
+        message: pending == 1
+            ? 'Failed to delete the word'
+            : 'Failed to delete the words',
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final cs = context.colors;
+    return BlocListener<DictionaryBloc, DictionaryState>(
+      listener: _onDictionaryStateForToast,
+      child: BlocBuilder<DictionarySelectionCubit, DictionarySelectionState>(
+        builder: (context, selection) {
+          return PopScope(
+            // Cancel selection mode on the system back gesture instead
+            // of leaving the tab.
+            canPop: !selection.isActive,
+            onPopInvokedWithResult: (didPop, _) {
+              if (didPop) return;
+              context.read<DictionarySelectionCubit>().clear();
+            },
+            child: Scaffold(
+              floatingActionButton: _DictionaryFab(
+                selectionActive: selection.isActive,
+                onAddPressed: () => _openAddWordSheet(context),
+                onDeletePressed: () => _handleDeleteSelected(context),
+              ),
+              body: BlocBuilder<DictionaryBloc, DictionaryState>(
+                builder: (context, state) {
+                  final filtered = state.filteredEntries;
 
-    return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openAddWordSheet(context),
-        backgroundColor: cs.primary.withValues(alpha: 0.9),
-        foregroundColor: cs.onPrimary,
-        shape: const CircleBorder(),
-        elevation: 3,
-        // See `catalog_screen.dart` — tab branches stay alive, so two
-        // FABs with the default Hero tag clash during route transitions.
-        heroTag: null,
-        child: const Icon(AppIcons.add, size: 24),
-      ),
-      body: BlocBuilder<DictionaryBloc, DictionaryState>(
-        builder: (context, state) {
-          final filtered = state.filteredEntries;
-
-          return switch (state.status) {
-            DictionaryStatus.initial || DictionaryStatus.loading =>
-              const CenteredCircularProgressIndicator(),
-            DictionaryStatus.failure => ErrorState(
-              message: 'Failed to load dictionary',
-              retryLabel: 'Retry',
-              onRetry: () => context.read<DictionaryBloc>().add(
-                const DictionaryLoadRequested(),
+                  return switch (state.status) {
+                    DictionaryStatus.initial || DictionaryStatus.loading =>
+                      const CenteredCircularProgressIndicator(),
+                    DictionaryStatus.failure => ErrorState(
+                      message: 'Failed to load dictionary',
+                      retryLabel: 'Retry',
+                      onRetry: () => context.read<DictionaryBloc>().add(
+                        const DictionaryLoadRequested(),
+                      ),
+                    ),
+                    DictionaryStatus.success => SafeArea(
+                      bottom: false,
+                      child: _SuccessBody(
+                        state: state,
+                        filtered: filtered,
+                        selection: selection,
+                        onPracticePressed: widget.onPracticePressed,
+                        onTapEntry: (entry) => _openDetailSheet(
+                          context,
+                          entry: entry,
+                          mastered: state.isMastered(entry.id),
+                        ),
+                        onLongPressEntry: (entry) => context
+                            .read<DictionarySelectionCubit>()
+                            .toggle(entry.id),
+                        onConfirmSwipeDelete: (entry) =>
+                            _confirmAndDispatchSwipe(context, entry),
+                      ),
+                    ),
+                  };
+                },
               ),
             ),
-            DictionaryStatus.success => SafeArea(
-              bottom: false,
-              child: _SuccessBody(
-                state: state,
-                filtered: filtered,
-                onPracticePressed: onPracticePressed,
-                onTapEntry: (entry) => _openDetailSheet(
-                  context,
-                  entry: entry,
-                  mastered: state.isMastered(entry.id),
-                ),
-              ),
-            ),
-          };
+          );
         },
       ),
     );
@@ -123,14 +250,49 @@ class _DictionaryView extends StatelessWidget {
     required DictionaryEntry entry,
     required bool mastered,
   }) {
-    final bloc = context.read<DictionaryBloc>();
     showAppBottomSheet<void>(
       context,
       builder: (_) => DictionaryDetailSheet(
         entry: entry,
         mastered: mastered,
-        onPractice: onPracticePressed,
-        onDelete: () => bloc.add(DictionaryEntryDeleted(entry.id)),
+        onPractice: widget.onPracticePressed,
+        onDelete: () => _handleDetailDelete(context, entry),
+      ),
+    );
+  }
+}
+
+/// Swaps the FAB icon based on whether a multi-select is active. Add
+/// (`+`) when idle, trash when ≥1 entry is selected. Mirror of the
+/// Catalog FAB so the UX feels uniform across tabs.
+class _DictionaryFab extends StatelessWidget {
+  const _DictionaryFab({
+    required this.selectionActive,
+    required this.onAddPressed,
+    required this.onDeletePressed,
+  });
+
+  final bool selectionActive;
+  final VoidCallback onAddPressed;
+  final VoidCallback onDeletePressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return FloatingActionButton(
+      onPressed: selectionActive ? onDeletePressed : onAddPressed,
+      backgroundColor: selectionActive
+          ? cs.error
+          : cs.primary.withValues(alpha: 0.9),
+      foregroundColor: selectionActive ? cs.onError : cs.onPrimary,
+      shape: const CircleBorder(),
+      elevation: 3,
+      // Tab branches stay alive in StatefulShellRoute, so two FABs
+      // would otherwise share the default Hero tag and clash.
+      heroTag: null,
+      child: Icon(
+        selectionActive ? AppIcons.delete : AppIcons.add,
+        size: 24,
       ),
     );
   }
@@ -142,14 +304,20 @@ class _SuccessBody extends StatelessWidget {
   const _SuccessBody({
     required this.state,
     required this.filtered,
+    required this.selection,
     required this.onPracticePressed,
     required this.onTapEntry,
+    required this.onLongPressEntry,
+    required this.onConfirmSwipeDelete,
   });
 
   final DictionaryState state;
   final List<DictionaryEntry> filtered;
+  final DictionarySelectionState selection;
   final VoidCallback? onPracticePressed;
   final ValueChanged<DictionaryEntry> onTapEntry;
+  final ValueChanged<DictionaryEntry> onLongPressEntry;
+  final Future<bool> Function(DictionaryEntry) onConfirmSwipeDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -236,11 +404,30 @@ class _SuccessBody extends StatelessWidget {
                     itemBuilder: (_, i) {
                       final entry = filtered[i];
                       final mastered = state.isMastered(entry.id);
-                      return _DictionaryListRow(
+                      final row = _DictionaryListRow(
                         key: ValueKey(entry.id),
                         entry: entry,
                         mastered: mastered,
-                        onTap: () => onTapEntry(entry),
+                        isSelected: selection.contains(entry.id),
+                        onTap: () {
+                          if (selection.isActive) {
+                            onLongPressEntry(entry);
+                          } else {
+                            onTapEntry(entry);
+                          }
+                        },
+                        onLongPress: () => onLongPressEntry(entry),
+                      );
+                      // Swipe-to-delete is suppressed during multi-select
+                      // so two destructive paths don't compete for the
+                      // same gesture.
+                      if (selection.isActive) return row;
+                      return Dismissible(
+                        key: ValueKey('dict-row-${entry.id}'),
+                        direction: DismissDirection.endToStart,
+                        background: const _SwipeDeleteBackground(),
+                        confirmDismiss: (_) => onConfirmSwipeDelete(entry),
+                        child: row,
                       );
                     },
                   ),
@@ -251,21 +438,42 @@ class _SuccessBody extends StatelessWidget {
   }
 }
 
+class _SwipeDeleteBackground extends StatelessWidget {
+  const _SwipeDeleteBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      color: cs.error,
+      child: Icon(AppIcons.delete, color: cs.onError),
+    );
+  }
+}
+
 /// Compact divided-list row for a single [DictionaryEntry].
 ///
 /// Layout: mastery dot → (serif word + italic part-of-speech) over
-/// (one-line translation). Tap target spans the whole row.
+/// (one-line translation). Tap target spans the whole row. When
+/// [isSelected], the row paints a tinted background and the mastery
+/// dot is replaced by a primary-colored check.
 class _DictionaryListRow extends StatelessWidget {
   const _DictionaryListRow({
     required this.entry,
     required this.mastered,
     required this.onTap,
+    required this.onLongPress,
+    this.isSelected = false,
     super.key,
   });
 
   final DictionaryEntry entry;
   final bool mastered;
+  final bool isSelected;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -274,73 +482,82 @@ class _DictionaryListRow extends StatelessWidget {
     final appColors = context.appColors;
     final muted = cs.onSurface.withValues(alpha: 0.55);
 
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          10,
-          AppSpacing.lg,
-          10,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: mastered
-                    ? appColors.successForeground
-                    : cs.onSurface.withValues(alpha: 0.30),
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          entry.word,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: text.titleSmall.copyWith(
-                            fontFamily: AppTypography.fontFamilySerif,
-                            fontWeight: FontWeight.w600,
-                            color: cs.onSurface,
+    return Material(
+      color: isSelected
+          ? cs.primary.withValues(alpha: 0.10)
+          : Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            10,
+            AppSpacing.lg,
+            10,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (isSelected)
+                Icon(AppIcons.check, size: 14, color: cs.primary)
+              else
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: mastered
+                        ? appColors.successForeground
+                        : cs.onSurface.withValues(alpha: 0.30),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            entry.word,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: text.titleSmall.copyWith(
+                              fontFamily: AppTypography.fontFamilySerif,
+                              fontWeight: FontWeight.w600,
+                              color: cs.onSurface,
+                            ),
                           ),
                         ),
-                      ),
-                      if (entry.partOfSpeech != null) ...[
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(
-                          entry.partOfSpeech!,
-                          style: text.labelSmall.copyWith(
-                            fontStyle: FontStyle.italic,
-                            color: muted,
+                        if (entry.partOfSpeech != null) ...[
+                          const SizedBox(width: AppSpacing.sm),
+                          Text(
+                            entry.partOfSpeech!,
+                            style: text.labelSmall.copyWith(
+                              fontStyle: FontStyle.italic,
+                              color: muted,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    entry.translation,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: text.bodySmall.copyWith(color: muted),
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      entry.translation,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.bodySmall.copyWith(color: muted),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

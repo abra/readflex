@@ -42,6 +42,7 @@ run "notification_service"         "flutter test test/" "$SCRIPT_DIR/packages/no
 run "preferences_service"         "flutter test test/" "$SCRIPT_DIR/packages/preferences_service"
 run "reader_server"               "flutter test test/" "$SCRIPT_DIR/packages/reader_server"
 run "reader_webview"              "flutter test test/" "$SCRIPT_DIR/packages/reader_webview"
+run "toast_service"               "flutter test test/" "$SCRIPT_DIR/packages/toast_service"
 run "catalog"              "flutter test test/" "$SCRIPT_DIR/packages/features/catalog"
 run "import_flow"                  "flutter test test/" "$SCRIPT_DIR/packages/features/import_flow"
 run "home"                         "flutter test test/" "$SCRIPT_DIR/packages/features/home"

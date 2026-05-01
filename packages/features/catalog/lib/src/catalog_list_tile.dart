@@ -17,12 +17,16 @@ class BookLibraryListTile extends StatelessWidget {
     required this.book,
     required this.showDivider,
     required this.onTap,
+    this.onLongPress,
+    this.isSelected = false,
     super.key,
   });
 
   final Book book;
   final bool showDivider;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +42,9 @@ class BookLibraryListTile extends StatelessWidget {
       title: book.title,
       subtitle: book.author,
       showDivider: showDivider,
+      isSelected: isSelected,
       onTap: onTap,
+      onLongPress: onLongPress,
       metaBuilder: (context, mutedColor) => [
         // Material analogue for demo's LucideIcons.bookOpen. No sub-sm
         // icon size token exists, so we bypass AppIconSize and use the
@@ -79,6 +85,8 @@ class _ListRowShell extends StatelessWidget {
     required this.metaBuilder,
     required this.showDivider,
     required this.onTap,
+    this.onLongPress,
+    this.isSelected = false,
   });
 
   final Widget cover;
@@ -87,7 +95,9 @@ class _ListRowShell extends StatelessWidget {
   final List<Widget> Function(BuildContext context, Color mutedColor)
   metaBuilder;
   final bool showDivider;
+  final bool isSelected;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -99,10 +109,16 @@ class _ListRowShell extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+        padding: const EdgeInsets.symmetric(
+          vertical: AppSpacing.md,
+          horizontal: AppSpacing.xs,
+        ),
         decoration: BoxDecoration(
+          color: isSelected ? colors.primary.withValues(alpha: 0.10) : null,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
           border: showDivider
               // Project exposes a semantic divider hairline via
               // AppColorsExt (gray250 light / darkGray700 dark) —

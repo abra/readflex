@@ -22,6 +22,8 @@ dependencies:
     path: ../../fsrs_repository
   component_library:
     path: ../../component_library
+  toast_service:
+    path: ../../toast_service
 
 dev_dependencies:
   flutter_test:

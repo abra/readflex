@@ -7,6 +7,7 @@ import 'catalog_bloc.dart';
 import 'catalog_grid_view.dart';
 import 'catalog_layout_cubit.dart';
 import 'catalog_list_view.dart';
+import 'catalog_selection_cubit.dart';
 
 /// Scrollable body of the catalog: renders the right layout (list / grid)
 /// for the current user preference, or one of two empty states if there's
@@ -22,13 +23,19 @@ import 'catalog_list_view.dart';
 class CatalogBody extends StatelessWidget {
   const CatalogBody({
     required this.state,
+    required this.selection,
     required this.onBookPressed,
+    required this.onBookLongPressed,
+    required this.onConfirmSwipeDelete,
     required this.onRefresh,
     super.key,
   });
 
   final CatalogState state;
+  final CatalogSelectionState selection;
   final void Function(Book book) onBookPressed;
+  final void Function(Book book) onBookLongPressed;
+  final Future<bool> Function(Book book) onConfirmSwipeDelete;
   final Future<void> Function() onRefresh;
 
   @override
@@ -65,11 +72,16 @@ class CatalogBody extends StatelessWidget {
           return switch (layoutMode) {
             CatalogLayoutMode.list => CatalogListView(
               books: visibleItems,
+              selection: selection,
               onBookPressed: onBookPressed,
+              onBookLongPressed: onBookLongPressed,
+              onConfirmSwipeDelete: onConfirmSwipeDelete,
             ),
             CatalogLayoutMode.grid => CatalogGridView(
               books: visibleItems,
+              selection: selection,
               onBookPressed: onBookPressed,
+              onBookLongPressed: onBookLongPressed,
             ),
           };
         },

@@ -16,11 +16,15 @@ class BookLibraryGridTile extends StatelessWidget {
   const BookLibraryGridTile({
     required this.book,
     required this.onTap,
+    this.onLongPress,
+    this.isSelected = false,
     super.key,
   });
 
   final Book book;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +38,9 @@ class BookLibraryGridTile extends StatelessWidget {
       isFinished: book.isFinished,
       progress: book.readingProgress,
       formatLabel: book.format.name.toUpperCase(),
+      isSelected: isSelected,
       onTap: onTap,
+      onLongPress: onLongPress,
     );
   }
 }
@@ -46,89 +52,121 @@ class _GridTileShell extends StatelessWidget {
     required this.cover,
     required this.isFinished,
     required this.progress,
+    required this.isSelected,
     required this.onTap,
+    this.onLongPress,
     this.formatLabel,
   });
 
   final Widget cover;
   final bool isFinished;
   final double progress;
+  final bool isSelected;
   final String? formatLabel;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       behavior: HitTestBehavior.opaque,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            cover,
-            if (formatLabel != null)
-              Positioned(
-                top: AppSpacing.xs,
-                left: AppSpacing.xs,
-                child: _FormatBadge(label: formatLabel!),
-              ),
-            if (isFinished)
-              const Positioned(
-                top: AppSpacing.xs,
-                right: AppSpacing.xs,
-                child: _FinishedBadge(),
-              ),
-            if (progress > 0 && !isFinished) ...[
-              const Positioned(
-                left: 2,
-                right: 2,
-                top: 2,
-                bottom: 2,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(AppRadius.sm - 2),
-                      bottomRight: Radius.circular(AppRadius.sm - 2),
-                    ),
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      stops: [0.0, 0.30],
-                      colors: [Color(0x8C1B1F30), Color(0x001B1F30)],
+      child: AnimatedScale(
+        // Subtle press-in cue when selected — same idea as iOS Photos
+        // multi-select: tile shrinks slightly so the unselected siblings
+        // visually "stay in place" when a checkmark appears.
+        scale: isSelected ? 0.92 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              cover,
+              if (formatLabel != null)
+                Positioned(
+                  top: AppSpacing.xs,
+                  left: AppSpacing.xs,
+                  child: _FormatBadge(label: formatLabel!),
+                ),
+              if (isFinished)
+                const Positioned(
+                  top: AppSpacing.xs,
+                  right: AppSpacing.xs,
+                  child: _FinishedBadge(),
+                ),
+              if (isSelected)
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      border: Border.all(color: colors.primary, width: 3),
+                      color: colors.primary.withValues(alpha: 0.15),
                     ),
                   ),
                 ),
-              ),
-              Positioned(
-                left: 8,
-                right: 8,
-                bottom: 8,
-                child: LayoutBuilder(
-                  builder: (_, constraints) => ClipRRect(
-                    borderRadius: BorderRadius.circular(AppRadius.full),
-                    child: SizedBox(
-                      height: 3,
-                      child: Stack(
-                        children: [
-                          Positioned.fill(
-                            child: ColoredBox(
-                              color: Colors.white.withValues(alpha: 0.35),
-                            ),
-                          ),
-                          Container(
-                            width:
-                                constraints.maxWidth * progress.clamp(0.0, 1.0),
-                            color: Colors.white.withValues(alpha: 0.9),
-                          ),
-                        ],
+              if (isSelected)
+                Positioned(
+                  top: AppSpacing.xs,
+                  right: AppSpacing.xs,
+                  child: _SelectionCheck(color: colors.primary),
+                ),
+              if (progress > 0 && !isFinished) ...[
+                const Positioned(
+                  left: 2,
+                  right: 2,
+                  top: 2,
+                  bottom: 2,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(AppRadius.sm - 2),
+                        bottomRight: Radius.circular(AppRadius.sm - 2),
+                      ),
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        stops: [0.0, 0.30],
+                        colors: [Color(0x8C1B1F30), Color(0x001B1F30)],
                       ),
                     ),
                   ),
                 ),
-              ),
+                Positioned(
+                  left: 8,
+                  right: 8,
+                  bottom: 8,
+                  child: LayoutBuilder(
+                    builder: (_, constraints) => ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadius.full),
+                      child: SizedBox(
+                        height: 3,
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: ColoredBox(
+                                color: Colors.white.withValues(alpha: 0.35),
+                              ),
+                            ),
+                            Container(
+                              width:
+                                  constraints.maxWidth *
+                                  progress.clamp(0.0, 1.0),
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -162,6 +200,25 @@ class _FormatBadge extends StatelessWidget {
           letterSpacing: 0.5,
         ),
       ),
+    );
+  }
+}
+
+/// Filled circle with a checkmark, sitting in the top-right corner of a
+/// selected grid tile. Same 20×20 footprint as [_FinishedBadge] so a
+/// selection state replaces the finished badge in the same slot.
+class _SelectionCheck extends StatelessWidget {
+  const _SelectionCheck({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 20,
+      height: 20,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      child: const Icon(AppIcons.check, size: 11, color: Colors.white),
     );
   }
 }

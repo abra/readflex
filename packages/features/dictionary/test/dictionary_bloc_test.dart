@@ -150,6 +150,26 @@ void main() {
     );
 
     blocTest<DictionaryBloc, DictionaryState>(
+      'bulk delete removes every id and reloads once',
+      setUp: () => repository.seed([_entry1, _entry2, _entry3]),
+      build: () => DictionaryBloc(
+        dictionaryRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
+      seed: () => DictionaryState(
+        status: DictionaryStatus.success,
+        entries: [_entry1, _entry2, _entry3],
+      ),
+      act: (bloc) => bloc.add(
+        DictionaryEntriesDeleted({_entry1.id, _entry3.id}),
+      ),
+      verify: (bloc) {
+        expect(bloc.state.status, DictionaryStatus.success);
+        expect(bloc.state.entries.map((e) => e.id), [_entry2.id]);
+      },
+    );
+
+    blocTest<DictionaryBloc, DictionaryState>(
       'filter changed emits new filter state',
       build: () => DictionaryBloc(
         dictionaryRepository: repository,

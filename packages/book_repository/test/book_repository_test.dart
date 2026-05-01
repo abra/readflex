@@ -196,8 +196,8 @@ void main() {
       expect(bookDir.existsSync(), isFalse);
     });
 
-    test('deleteBook cascades to highlights, flashcards, dictionary,'
-        ' and review items', () async {
+    test('deleteBook (deleteEverything) cascades to highlights, flashcards, '
+        'dictionary, and review items', () async {
       final created = await repo.addBook(
         sourceFile: await createTempBookFile(),
         title: 'Cascade source',
@@ -263,7 +263,10 @@ void main() {
         ),
       );
 
-      await repo.deleteBook(created.id);
+      await repo.deleteBook(
+        created.id,
+        scope: BookDeletionScope.deleteEverything,
+      );
 
       expect(
         await db.highlightsDao.highlightsBySource(created.id),
@@ -286,6 +289,90 @@ void main() {
       );
       expect(await db.reviewItemsDao.byItemId('h-keep'), isNotNull);
     });
+
+    test(
+      'deleteBook (keepLearningData) drops highlights but preserves '
+      'flashcards and detaches dictionary entries',
+      () async {
+        final created = await repo.addBook(
+          sourceFile: await createTempBookFile(),
+          title: 'Keep cards source',
+          format: BookFormat.epub,
+        );
+
+        // Highlight + its FSRS — should be removed with the book.
+        await db.highlightsDao.insertHighlight(
+          HighlightsTableCompanion.insert(
+            id: 'h-1',
+            sourceId: created.id,
+            sourceType: 'book',
+            highlightText: 'foo',
+            createdAt: DateTime.now().toIso8601String(),
+          ),
+        );
+        await db.reviewItemsDao.insertItem(
+          ReviewItemsTableCompanion.insert(
+            itemId: 'h-1',
+            itemType: 'highlight',
+            sourceId: Value(created.id),
+          ),
+        );
+        // Flashcard + its FSRS — must survive (user's "I learned this"
+        // material is independent of the source book lifecycle).
+        await db.flashcardsDao.insertFlashcard(
+          FlashcardsTableCompanion.insert(
+            id: 'f-1',
+            deckId: created.id,
+            front: 'Q',
+            back: 'A',
+            createdAt: DateTime.now().toIso8601String(),
+          ),
+        );
+        await db.reviewItemsDao.insertItem(
+          ReviewItemsTableCompanion.insert(
+            itemId: 'f-1',
+            itemType: 'flashcard',
+            sourceId: Value(created.id),
+          ),
+        );
+        // Dictionary entry + its FSRS — must survive but lose its
+        // sourceId tie to the now-missing book.
+        await db.dictionaryDao.insertEntry(
+          DictionaryTableCompanion.insert(
+            id: 'd-1',
+            word: 'word',
+            translation: 'слово',
+            addedAt: DateTime.now().toIso8601String(),
+            sourceId: Value(created.id),
+          ),
+        );
+        await db.reviewItemsDao.insertItem(
+          ReviewItemsTableCompanion.insert(
+            itemId: 'd-1',
+            itemType: 'dictionary',
+            sourceId: Value(created.id),
+          ),
+        );
+
+        await repo.deleteBook(created.id);
+
+        // Highlight gone.
+        expect(
+          await db.highlightsDao.highlightsBySource(created.id),
+          isEmpty,
+        );
+        expect(await db.reviewItemsDao.byItemId('h-1'), isNull);
+        // Flashcard preserved with its FSRS row intact.
+        final flashcards = await db.flashcardsDao.flashcardsByDeck(created.id);
+        expect(flashcards, hasLength(1));
+        expect(await db.reviewItemsDao.byItemId('f-1'), isNotNull);
+        // Dictionary entry preserved; sourceId nulled.
+        final entry = await db.dictionaryDao.entryById('d-1');
+        expect(entry, isNotNull);
+        expect(entry!.sourceId, isNull);
+        expect(await db.reviewItemsDao.byItemId('d-1'), isNotNull);
+      },
+    );
 
     test('deleteBook handles missing directory gracefully', () async {
       final created = await repo.addBook(

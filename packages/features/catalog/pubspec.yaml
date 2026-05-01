@@ -22,6 +22,8 @@ dependencies:
     path: ../../component_library
   preferences_service:
     path: ../../preferences_service
+  toast_service:
+    path: ../../toast_service
 
 dev_dependencies:
   flutter_test:

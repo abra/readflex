@@ -51,6 +51,8 @@ dependencies:
     path: packages/reader_server
   reader_webview:
     path: packages/reader_webview
+  toast_service:
+    path: packages/toast_service
 
   # Feature packages
   catalog:
