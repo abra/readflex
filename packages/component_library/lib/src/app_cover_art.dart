@@ -32,6 +32,7 @@ class AppCoverArt extends StatelessWidget {
     this.centerText = false,
     this.bottomReserve = 0,
     this.progress,
+    this.showMatte = true,
     super.key,
   });
 
@@ -88,6 +89,13 @@ class AppCoverArt extends StatelessWidget {
   /// to pass a value or `null` — the widget does not filter.
   final double? progress;
 
+  /// Whether to draw the 2dp scaffold-colored matte border around the
+  /// cover edges. Defaults to true (the demo's framed-card look). The
+  /// library grid tile suppresses it so the Apple-Books-style spine
+  /// strip can sit at the actual cover edge instead of being framed
+  /// in by the matte.
+  final bool showMatte;
+
   final double height;
   final double? width;
 
@@ -140,13 +148,15 @@ class AppCoverArt extends StatelessWidget {
           colors: [gradient.$1, gradient.$2],
         ),
       ),
-      foregroundDecoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          width: 2,
-        ),
-      ),
+      foregroundDecoration: showMatte
+          ? BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              border: Border.all(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                width: 2,
+              ),
+            )
+          : null,
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [

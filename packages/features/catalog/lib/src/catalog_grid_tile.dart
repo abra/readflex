@@ -2,6 +2,7 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 
+import 'book_cover_plate.dart';
 import 'catalog_tile_cover.dart';
 
 /// Alpha for the format badge background (dark overlay on cover art).
@@ -34,6 +35,10 @@ class BookLibraryGridTile extends StatelessWidget {
         showTitle: false,
         showAuthor: false,
         showProgress: false,
+        // Apple Books covers run edge-to-edge — no white matte frame
+        // around them. The matte fights with the binding strip the
+        // shell paints over the left edge, so we suppress it here.
+        showMatte: false,
       ),
       isFinished: book.isFinished,
       progress: book.readingProgress,
@@ -81,92 +86,87 @@ class _GridTileShell extends StatelessWidget {
         scale: isSelected ? 0.92 : 1.0,
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOut,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              cover,
-              if (formatLabel != null)
-                Positioned(
-                  top: AppSpacing.xs,
-                  left: AppSpacing.xs,
-                  child: _FormatBadge(label: formatLabel!),
+        child: BookCoverPlate(
+          cover: cover,
+          overlays: [
+            if (formatLabel != null)
+              Positioned(
+                top: AppSpacing.xs,
+                left: AppSpacing.xs,
+                child: _FormatBadge(label: formatLabel!),
+              ),
+            if (isFinished)
+              const Positioned(
+                top: AppSpacing.xs,
+                right: AppSpacing.xs,
+                child: _FinishedBadge(),
+              ),
+            if (isSelected)
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                    border: Border.all(color: colors.primary, width: 3),
+                    color: colors.primary.withValues(alpha: 0.15),
+                  ),
                 ),
-              if (isFinished)
-                const Positioned(
-                  top: AppSpacing.xs,
-                  right: AppSpacing.xs,
-                  child: _FinishedBadge(),
-                ),
-              if (isSelected)
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                      border: Border.all(color: colors.primary, width: 3),
-                      color: colors.primary.withValues(alpha: 0.15),
+              ),
+            if (isSelected)
+              Positioned(
+                top: AppSpacing.xs,
+                right: AppSpacing.xs,
+                child: _SelectionCheck(color: colors.primary),
+              ),
+            if (progress > 0 && !isFinished) ...[
+              const Positioned(
+                left: 2,
+                right: 2,
+                top: 2,
+                bottom: 2,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(AppRadius.sm - 2),
+                      bottomRight: Radius.circular(AppRadius.sm - 2),
+                    ),
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      stops: [0.0, 0.30],
+                      colors: [Color(0x8C1B1F30), Color(0x001B1F30)],
                     ),
                   ),
                 ),
-              if (isSelected)
-                Positioned(
-                  top: AppSpacing.xs,
-                  right: AppSpacing.xs,
-                  child: _SelectionCheck(color: colors.primary),
-                ),
-              if (progress > 0 && !isFinished) ...[
-                const Positioned(
-                  left: 2,
-                  right: 2,
-                  top: 2,
-                  bottom: 2,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(AppRadius.sm - 2),
-                        bottomRight: Radius.circular(AppRadius.sm - 2),
-                      ),
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        stops: [0.0, 0.30],
-                        colors: [Color(0x8C1B1F30), Color(0x001B1F30)],
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 8,
-                  right: 8,
-                  bottom: 8,
-                  child: LayoutBuilder(
-                    builder: (_, constraints) => ClipRRect(
-                      borderRadius: BorderRadius.circular(AppRadius.full),
-                      child: SizedBox(
-                        height: 3,
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                              child: ColoredBox(
-                                color: Colors.white.withValues(alpha: 0.35),
-                              ),
+              ),
+              Positioned(
+                left: 8,
+                right: 8,
+                bottom: 8,
+                child: LayoutBuilder(
+                  builder: (_, constraints) => ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                    child: SizedBox(
+                      height: 3,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: ColoredBox(
+                              color: Colors.white.withValues(alpha: 0.35),
                             ),
-                            Container(
-                              width:
-                                  constraints.maxWidth *
-                                  progress.clamp(0.0, 1.0),
-                              color: Colors.white.withValues(alpha: 0.9),
-                            ),
-                          ],
-                        ),
+                          ),
+                          Container(
+                            width:
+                                constraints.maxWidth * progress.clamp(0.0, 1.0),
+                            color: Colors.white.withValues(alpha: 0.9),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
-              ],
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );

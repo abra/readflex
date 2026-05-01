@@ -17,6 +17,7 @@ class BookTileCover extends StatelessWidget {
     this.showAuthor = true,
     this.showTitle = true,
     this.showProgress = true,
+    this.showMatte = true,
     super.key,
   });
 
@@ -24,6 +25,11 @@ class BookTileCover extends StatelessWidget {
   final bool showAuthor;
   final bool showTitle;
   final bool showProgress;
+
+  /// Whether to draw the 2dp scaffold-colored matte border around the
+  /// cover. Defaults to true. Disabled in the library grid tile so the
+  /// Apple-Books-style spine strip can sit at the cover edge.
+  final bool showMatte;
 
   @override
   Widget build(BuildContext context) {
@@ -38,11 +44,23 @@ class BookTileCover extends StatelessWidget {
               : null,
           showAuthor: showAuthor,
           showTitle: showTitle,
+          showMatte: showMatte,
           height: constraints.maxHeight,
           width: constraints.maxWidth,
         );
 
         if (book.coverImagePath case final path? when path.isNotEmpty) {
+          final image = ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            child: Image.file(
+              File(path),
+              fit: BoxFit.fill,
+              width: constraints.maxWidth,
+              height: constraints.maxHeight,
+              errorBuilder: (_, _, _) => fallback,
+            ),
+          );
+          if (!showMatte) return image;
           return DecoratedBox(
             position: DecorationPosition.foreground,
             decoration: BoxDecoration(
@@ -52,16 +70,7 @@ class BookTileCover extends StatelessWidget {
                 width: 2,
               ),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-              child: Image.file(
-                File(path),
-                fit: BoxFit.fill,
-                width: constraints.maxWidth,
-                height: constraints.maxHeight,
-                errorBuilder: (_, _, _) => fallback,
-              ),
-            ),
+            child: image,
           );
         }
 

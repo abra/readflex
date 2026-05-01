@@ -2,6 +2,7 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 
+import 'book_cover_plate.dart';
 import 'catalog_tile_cover.dart';
 
 /// Alpha applied to muted metadata (secondary text, icons) in list rows.
@@ -33,11 +34,17 @@ class BookLibraryListTile extends StatelessWidget {
     final progress = (book.readingProgress * 100).round();
 
     return _ListRowShell(
-      cover: BookTileCover(
-        book: book,
-        showAuthor: false,
-        showTitle: false,
-        showProgress: false,
+      cover: BookCoverPlate(
+        cover: BookTileCover(
+          book: book,
+          showAuthor: false,
+          showTitle: false,
+          showProgress: false,
+          // Suppress the matte so the plate's binding shade can sit
+          // at the actual cover edge — same Apple Books treatment as
+          // the grid tile.
+          showMatte: false,
+        ),
       ),
       title: book.title,
       subtitle: book.author,
