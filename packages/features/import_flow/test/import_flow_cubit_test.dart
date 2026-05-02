@@ -76,6 +76,35 @@ void main() {
       act: (cubit) => cubit.backToMenu(),
       expect: () => [const ImportFlowMenu()],
     );
+
+    // "Try again" on the failure screen wires straight to
+    // pickAndImportBook (no detour through the menu). From an
+    // ImportFlowFailure seed we expect the same uploading→done sequence
+    // a fresh pick would produce.
+    blocTest<ImportFlowCubit, ImportFlowState>(
+      'pickAndImportBook from failure re-runs the import',
+      build: () => _buildCubit(
+        pickBookFile: () async => File('/tmp/retry.epub'),
+        importBook: (file, {onProgress}) async => _fakeBook(),
+      ),
+      seed: () => const ImportFlowFailure(message: 'Failed to import the book'),
+      act: (cubit) => cubit.pickAndImportBook(),
+      expect: () => [
+        const ImportFlowBookUploading(filename: 'retry.epub'),
+        const ImportFlowBookDone(filename: 'retry.epub'),
+      ],
+    );
+
+    // If the user opens the picker from the failure screen and cancels,
+    // the cubit should stay on the failure view — not silently bounce
+    // back to the menu.
+    blocTest<ImportFlowCubit, ImportFlowState>(
+      'pickAndImportBook from failure stays on failure when picker cancels',
+      build: () => _buildCubit(pickBookFile: () async => null),
+      seed: () => const ImportFlowFailure(message: 'Failed to import the book'),
+      act: (cubit) => cubit.pickAndImportBook(),
+      expect: () => <ImportFlowState>[],
+    );
   });
 }
 

@@ -188,4 +188,18 @@ void main() {
       expect(metadata.coverMimeType, isNull);
     });
   });
+
+  group('BookImportException', () {
+    test('exposes the JS-side message', () {
+      const exception = BookImportException('File type not supported');
+
+      expect(exception.message, 'File type not supported');
+    });
+
+    test('toString includes the message', () {
+      const exception = BookImportException('boom');
+
+      expect(exception.toString(), contains('boom'));
+    });
+  });
 }
