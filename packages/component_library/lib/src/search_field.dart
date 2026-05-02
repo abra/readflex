@@ -42,16 +42,41 @@ class SearchField extends StatelessWidget {
                 valueListenable: controller!,
                 builder: (context, value, _) {
                   if (value.text.isEmpty) return const SizedBox.shrink();
-                  return IconButton(
-                    icon: const Icon(AppIcons.close, size: AppIconSize.xs),
-                    onPressed: () {
-                      controller!.clear();
-                      onChanged?.call('');
-                    },
+                  // Plain GestureDetector instead of IconButton:
+                  // the app's IconButtonTheme paints a filled
+                  // secondary background that visually overlaps
+                  // the input fill here.
+                  return Semantics(
+                    label: 'Clear search',
+                    button: true,
+                    child: GestureDetector(
+                      onTap: () {
+                        controller!.clear();
+                        onChanged?.call('');
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.sm,
+                          0,
+                          AppSpacing.md,
+                          0,
+                        ),
+                        child: Icon(
+                          AppIcons.close,
+                          size: AppIconSize.xs,
+                          color: colors.onSurface.withValues(alpha: 0.55),
+                        ),
+                      ),
+                    ),
                   );
                 },
               )
             : null,
+        suffixIconConstraints: const BoxConstraints(
+          minWidth: 32,
+          minHeight: 32,
+        ),
         isDense: true,
         filled: true,
         fillColor: colors.surfaceContainerHighest,
