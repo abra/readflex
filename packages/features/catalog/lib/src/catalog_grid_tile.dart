@@ -118,30 +118,29 @@ class _GridTileShell extends StatelessWidget {
                 child: _SelectionCheck(color: colors.primary),
               ),
             if (progress > 0 && !isFinished) ...[
-              const Positioned(
-                left: 2,
-                right: 2,
-                top: 2,
-                bottom: 2,
+              // Edge-to-edge gradient: the BookCoverPlate's ClipRRect
+              // already trims the bottom corners to AppRadius.sm, so
+              // we don't need an inset here. (We did when the cover
+              // was framed by AppCoverArt's 2dp matte, but the grid
+              // tile suppresses the matte for the Apple-Books look —
+              // a stale 2dp inset would otherwise paint a white kerf
+              // around light covers.)
+              const Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(AppRadius.sm - 2),
-                      bottomRight: Radius.circular(AppRadius.sm - 2),
-                    ),
                     gradient: LinearGradient(
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
-                      stops: [0.0, 0.30],
-                      colors: [Color(0x8C1B1F30), Color(0x001B1F30)],
+                      stops: [0.0, 0.15],
+                      colors: [Color(0x4D1B1F30), Color(0x001B1F30)],
                     ),
                   ),
                 ),
               ),
               Positioned(
-                left: 8,
-                right: 8,
-                bottom: 8,
+                left: 6,
+                right: 6,
+                bottom: 4,
                 child: LayoutBuilder(
                   builder: (_, constraints) => ClipRRect(
                     borderRadius: BorderRadius.circular(AppRadius.full),
