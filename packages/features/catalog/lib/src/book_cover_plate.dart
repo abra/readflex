@@ -34,16 +34,17 @@ class BookCoverPlate extends StatelessWidget {
         // Two-layer Apple-Books shadow: a tight contact layer (so the
         // bottom edge looks pressed onto the surface) plus a longer
         // directional layer that gives the lift. Conservative alphas
-        // keep it grounded in both light and dark themes.
+        // keep it grounded in both light and dark themes — softer than
+        // a Material elevation shadow on purpose.
         boxShadow: const [
           BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 1,
+            color: Color(0x14000000),
+            blurRadius: 2,
             offset: Offset(0, 1),
           ),
           BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 8,
+            color: Color(0x1F000000),
+            blurRadius: 14,
             offset: Offset(2, 4),
           ),
         ],
@@ -72,6 +73,9 @@ class BookCoverPlate extends StatelessWidget {
 /// 3dp gradient on the very left edge of the cover, fading from a
 /// soft dark to transparent. Reads as the spine seen edge-on without
 /// being a bezel or a separator line — Apple Books does the same.
+///
+/// Alpha kept low (≈15%) so it stays a subtle directional hint rather
+/// than a hard dark stripe along the cover's left edge.
 class _BindingShade extends StatelessWidget {
   const _BindingShade();
 
@@ -83,7 +87,7 @@ class _BindingShade extends StatelessWidget {
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
           colors: [
-            Color(0x4D000000),
+            Color(0x26000000),
             Color(0x00000000),
           ],
         ),
