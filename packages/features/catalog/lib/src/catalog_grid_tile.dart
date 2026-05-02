@@ -32,7 +32,12 @@ class BookLibraryGridTile extends StatelessWidget {
     return _GridTileShell(
       cover: BookTileCover(
         book: book,
-        showTitle: false,
+        // Show the title on the fallback cover art so .txt and any
+        // other format that doesn't ship an embedded cover stays
+        // identifiable by name. BookTileCover only honours this on
+        // the fallback path — when a real cover image is present,
+        // the image takes over and the title stays off.
+        showTitle: true,
         showAuthor: false,
         showProgress: false,
         // Apple Books covers run edge-to-edge — no white matte frame

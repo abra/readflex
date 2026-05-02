@@ -6,8 +6,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:reader_webview/reader_webview.dart';
 
-/// Supported book file extensions for the file picker.
-const bookExtensions = ['epub', 'fb2', 'mobi', 'pdf', 'azw3', 'cbz', 'txt'];
+/// Supported book file extensions for the file picker. .txt is not
+/// in the list because foliate-js (the in-app reader) has no plain
+/// text renderer — accepting a .txt would let the user import a file
+/// that can never actually open.
+const bookExtensions = ['epub', 'fb2', 'mobi', 'pdf', 'azw3', 'cbz'];
 
 /// Opens the platform file picker filtered to [bookExtensions]. Returns
 /// the selected [File] or `null` when the user cancels (or picks a file

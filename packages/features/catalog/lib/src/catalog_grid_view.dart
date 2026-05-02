@@ -29,7 +29,9 @@ class CatalogGridView extends StatelessWidget {
         AppSpacing.lg,
         AppSpacing.xxl,
       ),
-      physics: const AlwaysScrollableScrollPhysics(),
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
         mainAxisSpacing: AppSpacing.md,

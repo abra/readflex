@@ -79,7 +79,7 @@ class _MenuView extends StatelessWidget {
           _MenuOption(
             icon: AppIcons.uploadFile,
             title: 'Upload Book',
-            subtitle: 'EPUB, PDF, MOBI, CBZ, …',
+            subtitle: 'EPUB, FB2, MOBI, PDF, AZW3, CBZ',
             onTap: cubit.pickAndImportBook,
           ),
           const SizedBox(height: AppSpacing.lg),

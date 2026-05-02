@@ -46,7 +46,9 @@ class CatalogBody extends StatelessWidget {
       return RefreshIndicator(
         onRefresh: onRefresh,
         child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
           child: SizedBox(
             height: MediaQuery.of(context).size.height * 0.6,
             child: state.isEmpty

@@ -24,12 +24,13 @@ class ScrollEdgeFadeStack extends StatefulWidget {
 }
 
 class _ScrollEdgeFadeStackState extends State<ScrollEdgeFadeStack> {
-  // Top hairline starts hidden — viewport is at offset 0 on first build.
+  // Both fades start hidden. We rely on [ScrollMetricsNotification]
+  // (fired on the first layout and on every resize, no gesture
+  // needed) to flip them on for long lists. Defaulting to `true`
+  // would leave a permanent bottom shadow on lists that fit the
+  // viewport — they never produce a ScrollNotification.
   bool _showTop = false;
-  // Bottom hairline starts visible: assume the list is taller than the
-  // viewport. The first vertical scroll notification will correct it
-  // (extentAfter == 0 → fade out) for short lists.
-  bool _showBottom = true;
+  bool _showBottom = false;
 
   bool _onNotification(ScrollNotification notification) {
     if (notification.metrics.axis != Axis.vertical) return false;

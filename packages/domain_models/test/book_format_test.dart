@@ -10,7 +10,12 @@ void main() {
       expect(BookFormat.from('pdf'), BookFormat.pdf);
       expect(BookFormat.from('azw3'), BookFormat.azw3);
       expect(BookFormat.from('cbz'), BookFormat.cbz);
-      expect(BookFormat.from('txt'), BookFormat.txt);
+    });
+
+    test('returns epub for unsupported strings (e.g. txt)', () {
+      // .txt isn't in the supported set — foliate-js can't render it,
+      // and `from` falls back to epub for anything unknown.
+      expect(BookFormat.from('txt'), BookFormat.epub);
     });
 
     test('returns epub for unknown string', () {
@@ -30,7 +35,10 @@ void main() {
       expect(BookFormat.fromExtension('.pdf'), BookFormat.pdf);
       expect(BookFormat.fromExtension('.azw3'), BookFormat.azw3);
       expect(BookFormat.fromExtension('.cbz'), BookFormat.cbz);
-      expect(BookFormat.fromExtension('.txt'), BookFormat.txt);
+    });
+
+    test('returns null for unsupported extensions like .txt', () {
+      expect(BookFormat.fromExtension('.txt'), isNull);
     });
 
     test('is case-insensitive', () {

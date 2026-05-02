@@ -43,7 +43,12 @@ class CatalogListView extends StatelessWidget {
         AppSpacing.lg,
         AppSpacing.xxl,
       ),
-      physics: const AlwaysScrollableScrollPhysics(),
+      // Bouncing parent guarantees the elastic snap-back even on
+      // short lists where ClampingScrollPhysics (the Android default)
+      // would silently absorb the drag without returning.
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
       itemCount: books.length,
       itemBuilder: (context, index) {
         final book = books[index];
