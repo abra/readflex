@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart'
+    show debugPrint, kDebugMode, visibleForTesting;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:path/path.dart' as p;
 
@@ -100,8 +101,14 @@ class BookMetadataExtractor {
           );
         },
         onConsoleMessage: (controller, message) {
-          // ignore: avoid_print
-          print('BookMetadataExtractor JS: ${message.message}');
+          // foliate-js fires console.log routinely during import
+          // (loader bring-up, pdf.js, zip.js). Pipe to debugPrint
+          // gated on kDebugMode so the noise stays out of release
+          // builds; release-time errors come back through
+          // onImportError instead.
+          if (kDebugMode) {
+            debugPrint('BookMetadataExtractor JS: ${message.message}');
+          }
         },
       );
 

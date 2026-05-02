@@ -62,13 +62,13 @@ class _FirstImportScreenState extends State<FirstImportScreen> {
               ),
               const SizedBox(height: AppSpacing.xl),
               Text(
-                'Add your first book or article',
+                'Add your first book',
                 style: context.text.headlineSmall,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
-                'Import a book file or paste an article link to get started.',
+                'Import a book file to get started.',
                 style: context.text.bodyMedium,
                 textAlign: TextAlign.center,
               ),

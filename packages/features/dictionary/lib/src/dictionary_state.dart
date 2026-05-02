@@ -30,6 +30,7 @@ class DictionaryState extends Equatable {
     this.searchQuery = '',
     this.filter = DictionaryFilter.all,
     this.masteredIds = const {},
+    this.deletionVersion = 0,
   });
 
   final DictionaryStatus status;
@@ -39,6 +40,13 @@ class DictionaryState extends Equatable {
 
   /// IDs of entries that have reached FSRS "review" state (mastered).
   final Set<String> masteredIds;
+
+  /// Monotonic counter bumped exactly once per dispatched delete event
+  /// (success OR failure). The screen pairs each delete with a queued
+  /// descriptor and pops one off the queue every time the version
+  /// changes; without this the screen-local "pending word" can be
+  /// overwritten by a second swipe before the first finishes.
+  final int deletionVersion;
 
   bool get isEmpty => entries.isEmpty;
 
@@ -95,12 +103,14 @@ class DictionaryState extends Equatable {
     String? searchQuery,
     DictionaryFilter? filter,
     Set<String>? masteredIds,
+    int? deletionVersion,
   }) => DictionaryState(
     status: status ?? this.status,
     entries: entries ?? this.entries,
     searchQuery: searchQuery ?? this.searchQuery,
     filter: filter ?? this.filter,
     masteredIds: masteredIds ?? this.masteredIds,
+    deletionVersion: deletionVersion ?? this.deletionVersion,
   );
 
   @override
@@ -110,5 +120,6 @@ class DictionaryState extends Equatable {
     searchQuery,
     filter,
     masteredIds,
+    deletionVersion,
   ];
 }

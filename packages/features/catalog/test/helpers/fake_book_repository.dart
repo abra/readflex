@@ -8,6 +8,11 @@ class FakeBookRepository implements BookRepository {
   final List<Book> _books = [];
   bool shouldThrow = false;
 
+  /// Specific ids whose `deleteBook` throws a [StorageException]. Used
+  /// to simulate partial-failure bulk deletes without affecting other
+  /// ids in the same batch.
+  Set<String> failOnIds = const {};
+
   void seedBooks(List<Book> books) => _books
     ..clear()
     ..addAll(books);
@@ -23,7 +28,9 @@ class FakeBookRepository implements BookRepository {
     String id, {
     BookDeletionScope scope = BookDeletionScope.keepLearningData,
   }) async {
-    if (shouldThrow) throw StorageException(cause: 'fake error');
+    if (shouldThrow || failOnIds.contains(id)) {
+      throw StorageException(cause: 'fake error');
+    }
     _books.removeWhere((b) => b.id == id);
   }
 }

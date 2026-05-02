@@ -11,12 +11,14 @@ import 'theme/tokens/app_spacing.dart';
 ///
 /// By default the sheet is fully dismissible — the wrapper draws a
 /// drag handle at the top, and the user can also dismiss by dragging
-/// the sheet down or tapping the scrim. The visible close-X lives
-/// per-feature in [BottomSheetHeader] (Material 3 inline pattern: X
-/// on the right of the title row), which closes via Navigator.pop
-/// by default. Pass `dismissible: false` to disable the drag handle,
-/// drag-down, and scrim tap at once — use for sheets the user must
-/// complete instead of cancel.
+/// the sheet down or tapping the scrim. There's no per-feature
+/// close-X: closing is owned entirely by this wrapper, and feature
+/// content uses [BottomSheetHeader] only for the title.
+///
+/// Pass `dismissible: false` to disable the drag handle, drag-down,
+/// and scrim tap at once. Note the system back gesture still pops
+/// the sheet — wrap the body in `PopScope(canPop: false, ...)` if
+/// you want a truly must-complete flow.
 Future<T?> showAppBottomSheet<T>(
   BuildContext context, {
   required WidgetBuilder builder,

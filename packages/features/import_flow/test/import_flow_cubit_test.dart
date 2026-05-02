@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:import_flow/import_flow.dart';
+import 'package:reader_webview/reader_webview.dart';
 
 /// Cubit tests. Fakes record callback invocations so we assert state
 /// transitions without touching the real file picker or repository.
@@ -96,6 +98,27 @@ void main() {
       ],
     );
 
+    // BookImportException carries the JS-side reason ("File type not
+    // supported", etc.) — the failure UI should surface that instead of
+    // the generic "Failed to import the book" string.
+    blocTest<ImportFlowCubit, ImportFlowState>(
+      'book import surfaces BookImportException.message in failure state',
+      build: () => _buildCubit(
+        pickBookFile: () async => File('/tmp/junk.epub'),
+        importBook: (file, {onProgress}) async {
+          throw const BookImportException('File type not supported');
+        },
+      ),
+      act: (cubit) => cubit.pickAndImportBook(),
+      expect: () => [
+        const ImportFlowBookUploading(filename: 'junk.epub'),
+        const ImportFlowFailure(
+          message: 'File type not supported',
+          filename: 'junk.epub',
+        ),
+      ],
+    );
+
     blocTest<ImportFlowCubit, ImportFlowState>(
       'backToMenu resets from any state',
       build: _buildCubit,
@@ -135,6 +158,66 @@ void main() {
       act: (cubit) => cubit.pickAndImportBook(),
       expect: () => <ImportFlowState>[],
     );
+
+    // The user can dismiss the bottom sheet (drag-down, scrim tap,
+    // back gesture) at any time during a long byte-copy import. The
+    // sheet's BlocProvider closes the cubit, but the in-flight future
+    // resumes and tries to emit. Without isClosed guards we'd throw
+    // "Cannot emit new states after calling close()" — once for each
+    // onProgress callback and once for the final done/failure emit.
+    test('emit calls after close() do not throw', () async {
+      final importCompleter = Completer<Book?>();
+      final progressFromCubit = <double>[];
+      late void Function(double) capturedOnProgress;
+
+      final cubit = ImportFlowCubit(
+        onPickBookFile: () async => File('/tmp/in_progress.epub'),
+        onImportBook: (file, {onProgress}) {
+          capturedOnProgress = onProgress!;
+          return importCompleter.future;
+        },
+      );
+
+      // Kick off the import; it'll park awaiting the completer.
+      final pendingPick = cubit.pickAndImportBook();
+      // Yield so the cubit reaches the await on _onImportBook.
+      await Future<void>.delayed(Duration.zero);
+
+      // User dismisses the sheet — BlocProvider closes the cubit.
+      await cubit.close();
+
+      // Now simulate two things that would have raced before the fix:
+      //   1. an onProgress callback firing through a chunk write
+      //   2. the import resolving (success path)
+      // Both used to call emit on a closed cubit and throw StateError.
+      expect(
+        () => capturedOnProgress(0.5),
+        returnsNormally,
+        reason: 'onProgress emit must be guarded by isClosed',
+      );
+      progressFromCubit.add(0.5);
+      importCompleter.complete(_fakeBook());
+      await pendingPick;
+      // pickAndImportBook returns Future<void>; if anything threw,
+      // awaiting it would propagate. Reaching this line means the
+      // post-close emits no-op'd cleanly.
+      expect(progressFromCubit, [0.5]);
+    });
+
+    test('emit calls after close() on the failure path do not throw', () async {
+      final importCompleter = Completer<Book?>();
+      final cubit = ImportFlowCubit(
+        onPickBookFile: () async => File('/tmp/will_fail.epub'),
+        onImportBook: (file, {onProgress}) => importCompleter.future,
+      );
+      final pending = cubit.pickAndImportBook();
+      await Future<void>.delayed(Duration.zero);
+      await cubit.close();
+      // Resolve the import as a failure (returns null).
+      importCompleter.complete(null);
+      // Awaiting the original call should not propagate StateError.
+      await expectLater(pending, completes);
+    });
   });
 }
 

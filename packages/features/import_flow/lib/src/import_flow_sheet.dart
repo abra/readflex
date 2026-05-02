@@ -46,10 +46,11 @@ class _ImportFlowSheet extends StatelessWidget {
       builder: (context, state) {
         // Hard-pin all four states to the same body height so the
         // sheet never resizes between menu / uploading / done /
-        // failure. Content sits at the top of this box; any unused
-        // space appears as natural padding at the bottom — none of
-        // the inner Columns use Spacer, so buttons stay where they
-        // belong relative to their own content.
+        // failure. Each inner view uses a `Column.max` with one or
+        // more `Spacer`s to anchor the action button(s) to the
+        // bottom of this 200dp box, so buttons stay at a stable
+        // distance from the bottom regardless of which state is
+        // active.
         return SizedBox(
           height: 200,
           child: AnimatedSwitcher(

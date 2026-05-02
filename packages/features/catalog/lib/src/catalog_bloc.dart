@@ -65,10 +65,15 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
   ) async {
     try {
       await _bookRepository.deleteBook(event.bookId, scope: event.scope);
-      await _loadItems(emit);
+      await _loadItems(emit, fromDeletion: true);
     } catch (e, st) {
       addError(e, st);
-      emit(state.copyWith(status: CatalogStatus.failure));
+      emit(
+        state.copyWith(
+          status: CatalogStatus.failure,
+          deletionVersion: state.deletionVersion + 1,
+        ),
+      );
     }
   }
 
@@ -76,24 +81,72 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
     CatalogBooksDeleted event,
     Emitter<CatalogState> emit,
   ) async {
-    try {
-      for (final id in event.bookIds) {
+    // Loop deliberately continues on per-id failure: if id #2 throws we
+    // still try ids #3..N. Stopping early would leave the user with a
+    // partial deletion they have no way to learn about — half the
+    // selection gone, the other half still in the list, and a generic
+    // failure toast that says nothing about the split.
+    var anyFailed = false;
+    for (final id in event.bookIds) {
+      try {
         await _bookRepository.deleteBook(id, scope: event.scope);
+      } catch (e, st) {
+        anyFailed = true;
+        addError(e, st);
       }
-      await _loadItems(emit);
-    } catch (e, st) {
-      addError(e, st);
-      emit(state.copyWith(status: CatalogStatus.failure));
     }
+    if (anyFailed) {
+      // Re-pull the list so the rows that DID delete fall away from the
+      // grid even though we're emitting the failure status.
+      try {
+        final books = await _bookRepository.getBooks();
+        emit(
+          state.copyWith(
+            status: CatalogStatus.failure,
+            books: books,
+            deletionVersion: state.deletionVersion + 1,
+          ),
+        );
+      } catch (e, st) {
+        addError(e, st);
+        emit(
+          state.copyWith(
+            status: CatalogStatus.failure,
+            deletionVersion: state.deletionVersion + 1,
+          ),
+        );
+      }
+      return;
+    }
+    await _loadItems(emit, fromDeletion: true);
   }
 
-  Future<void> _loadItems(Emitter<CatalogState> emit) async {
+  /// Pulls the latest book list and emits a `success` (or `failure`)
+  /// state. Pass [fromDeletion] when this load is the post-delete
+  /// refresh — that bumps `deletionVersion` so the screen's toast
+  /// listener fires exactly once per delete dispatch, regardless of
+  /// any other state changes that landed first.
+  Future<void> _loadItems(
+    Emitter<CatalogState> emit, {
+    bool fromDeletion = false,
+  }) async {
     try {
       final books = await _bookRepository.getBooks();
-      emit(state.copyWith(status: CatalogStatus.success, books: books));
+      emit(
+        state.copyWith(
+          status: CatalogStatus.success,
+          books: books,
+          deletionVersion: fromDeletion ? state.deletionVersion + 1 : null,
+        ),
+      );
     } catch (e, st) {
       addError(e, st);
-      emit(state.copyWith(status: CatalogStatus.failure));
+      emit(
+        state.copyWith(
+          status: CatalogStatus.failure,
+          deletionVersion: fromDeletion ? state.deletionVersion + 1 : null,
+        ),
+      );
     }
   }
 }

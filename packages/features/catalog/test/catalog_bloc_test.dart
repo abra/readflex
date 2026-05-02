@@ -66,7 +66,7 @@ void main() {
         CatalogBookDeleted(_book.id, scope: BookDeletionScope.keepLearningData),
       ),
       expect: () => [
-        const CatalogState(status: CatalogStatus.success),
+        const CatalogState(status: CatalogStatus.success, deletionVersion: 1),
       ],
     );
 
@@ -97,6 +97,96 @@ void main() {
         expect(bloc.state.status, CatalogStatus.success);
         expect(bloc.state.books, isEmpty);
       },
+    );
+
+    // The screen pairs each dispatched delete with a screen-local
+    // descriptor and pops it off a queue when the bloc emits a state
+    // with a fresh `deletionVersion`. Without the version bump on
+    // failure, the screen would never pop the failed batch's
+    // descriptor and the next successful delete's toast would describe
+    // a stale batch.
+    blocTest<CatalogBloc, CatalogState>(
+      'CatalogBookDeleted bumps deletionVersion on success',
+      setUp: () => repository.seedBooks([_book]),
+      build: () => CatalogBloc(bookRepository: repository),
+      seed: () => CatalogState(status: CatalogStatus.success, books: [_book]),
+      act: (bloc) => bloc.add(
+        CatalogBookDeleted(_book.id, scope: BookDeletionScope.keepLearningData),
+      ),
+      verify: (bloc) => expect(bloc.state.deletionVersion, 1),
+    );
+
+    // The bulk-delete handler is now resilient to per-id failure — if
+    // one of the ids throws we still attempt the rest, then re-pull
+    // the list and emit `failure` so the screen can show a recovery
+    // toast and the rows that DID delete fall out of view.
+    blocTest<CatalogBloc, CatalogState>(
+      'CatalogBooksDeleted continues on per-id failure and refetches',
+      setUp: () {
+        final second = Book(
+          id: '2',
+          title: 'Second',
+          filePath: '/two.epub',
+          format: BookFormat.epub,
+          addedAt: DateTime(2026, 1, 2),
+        );
+        repository.seedBooks([_book, second]);
+        repository.failOnIds = const {'1'};
+      },
+      build: () => CatalogBloc(bookRepository: repository),
+      seed: () => CatalogState(
+        status: CatalogStatus.success,
+        books: [_book],
+      ),
+      act: (bloc) => bloc.add(
+        const CatalogBooksDeleted(
+          {'1', '2'},
+          scope: BookDeletionScope.keepLearningData,
+        ),
+      ),
+      errors: () => [isA<Object>()],
+      verify: (bloc) {
+        expect(bloc.state.status, CatalogStatus.failure);
+        expect(bloc.state.deletionVersion, 1);
+        // Id '2' was deleted even though id '1' failed.
+        expect(bloc.state.books.map((b) => b.id), isNot(contains('2')));
+      },
+    );
+
+    blocTest<CatalogBloc, CatalogState>(
+      'CatalogBookDeleted bumps deletionVersion on failure',
+      setUp: () {
+        repository.seedBooks([_book]);
+        repository.shouldThrow = true;
+      },
+      build: () => CatalogBloc(bookRepository: repository),
+      seed: () => CatalogState(status: CatalogStatus.success, books: [_book]),
+      act: (bloc) => bloc.add(
+        CatalogBookDeleted(_book.id, scope: BookDeletionScope.keepLearningData),
+      ),
+      errors: () => [isA<Object>()],
+      verify: (bloc) {
+        expect(bloc.state.status, CatalogStatus.failure);
+        expect(bloc.state.deletionVersion, 1);
+      },
+    );
+
+    blocTest<CatalogBloc, CatalogState>(
+      'CatalogLoadRequested does NOT bump deletionVersion',
+      setUp: () => repository.seedBooks([_book]),
+      build: () => CatalogBloc(bookRepository: repository),
+      seed: () => const CatalogState(deletionVersion: 5),
+      act: (bloc) => bloc.add(const CatalogLoadRequested()),
+      verify: (bloc) => expect(bloc.state.deletionVersion, 5),
+    );
+
+    blocTest<CatalogBloc, CatalogState>(
+      'CatalogRefreshRequested does NOT bump deletionVersion',
+      setUp: () => repository.seedBooks([_book]),
+      build: () => CatalogBloc(bookRepository: repository),
+      seed: () => const CatalogState(deletionVersion: 7),
+      act: (bloc) => bloc.add(const CatalogRefreshRequested()),
+      verify: (bloc) => expect(bloc.state.deletionVersion, 7),
     );
 
     blocTest<CatalogBloc, CatalogState>(

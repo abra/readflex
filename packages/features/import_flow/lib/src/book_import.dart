@@ -6,10 +6,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:reader_webview/reader_webview.dart';
 
-/// Supported book file extensions for the file picker. .txt is not
-/// in the list because foliate-js (the in-app reader) has no plain
-/// text renderer — accepting a .txt would let the user import a file
-/// that can never actually open.
+/// Supported book file extensions for the file picker. Mirrors the
+/// formats foliate-js (the in-app reader) can actually render — the
+/// list and `BookFormat` must stay in sync, otherwise the picker
+/// would let the user import a file that can never actually open.
 const bookExtensions = ['epub', 'fb2', 'mobi', 'pdf', 'azw3', 'cbz'];
 
 /// Opens the platform file picker filtered to [bookExtensions]. Returns
@@ -56,28 +56,14 @@ Future<Book?> importBookFile({
       coverMimeType: metadata.coverMimeType,
       onProgress: onProgress,
     );
+  } on BookImportException catch (e, st) {
+    // Bubble up the typed exception so callers can use its `message`
+    // (the JS-side reason from foliate-js) in the failure UI. Still
+    // log it so the warning shows up alongside other warnings.
+    logger.warn('Book import failed', error: e, stackTrace: st);
+    rethrow;
   } catch (e, st) {
     logger.warn('Book import failed', error: e, stackTrace: st);
     return null;
   }
-}
-
-/// Backwards-compatible single-call helper for callers that don't need
-/// progress tracking. Picks a file, imports it, and returns whether a
-/// book was successfully added. Newer callers should prefer
-/// [pickBookFile] + [importBookFile] so they can show progress.
-Future<bool> importBook({
-  required BookRepository bookRepository,
-  required int readerServerPort,
-  required Logger logger,
-}) async {
-  final file = await pickBookFile();
-  if (file == null) return false;
-  final book = await importBookFile(
-    sourceFile: file,
-    bookRepository: bookRepository,
-    readerServerPort: readerServerPort,
-    logger: logger,
-  );
-  return book != null;
 }

@@ -209,6 +209,33 @@ void main() {
         expect: () => <ReaderState>[],
         errors: () => [isA<Exception>()],
       );
+
+      // The reader screen subscribes to `state.highlights` via
+      // `context.select` and relies on default `List` reference equality
+      // to detect changes — `copyWith` must hand back a fresh list
+      // instance, otherwise the selector won't fire and newly created
+      // highlights stay invisible until the reader is reopened.
+      blocTest<ReaderBloc, ReaderState>(
+        'emits a fresh highlights list reference (selector contract)',
+        setUp: () {
+          highlightRepository.seedHighlights('book-1', [testHighlight]);
+        },
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          book: testBook,
+          highlights: const [],
+        ),
+        act: (bloc) => bloc.add(const ReaderHighlightsRefreshed()),
+        verify: (bloc) {
+          // Sanity: state actually contains the seeded highlight.
+          expect(bloc.state.highlights, hasLength(1));
+          // The contract: post-refresh list must NOT be `identical` to
+          // the seed's `const []` — context.select compares by `==`,
+          // which for List is reference equality.
+          expect(identical(bloc.state.highlights, const []), isFalse);
+        },
+      );
     });
 
     group('ReaderState computed', () {

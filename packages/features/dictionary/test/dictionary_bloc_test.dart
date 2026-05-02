@@ -145,6 +145,7 @@ void main() {
         DictionaryState(
           status: DictionaryStatus.success,
           entries: [_entry2],
+          deletionVersion: 1,
         ),
       ],
     );
@@ -260,8 +261,39 @@ void main() {
         DictionaryState(
           status: DictionaryStatus.failure,
           entries: [_entry1],
+          deletionVersion: 1,
         ),
       ],
+    );
+
+    // Same toast-discriminator contract as the catalog: every dispatched
+    // delete must bump deletionVersion exactly once, success or fail —
+    // otherwise overlapping deletes can mis-attribute the toast.
+    blocTest<DictionaryBloc, DictionaryState>(
+      'delete entry bumps deletionVersion on success',
+      setUp: () => repository.seed([_entry1]),
+      build: () => DictionaryBloc(
+        dictionaryRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
+      seed: () => DictionaryState(
+        status: DictionaryStatus.success,
+        entries: [_entry1],
+      ),
+      act: (bloc) => bloc.add(DictionaryEntryDeleted(_entry1.id)),
+      verify: (bloc) => expect(bloc.state.deletionVersion, 1),
+    );
+
+    blocTest<DictionaryBloc, DictionaryState>(
+      'DictionaryLoadRequested does NOT bump deletionVersion',
+      setUp: () => repository.seed([_entry1]),
+      build: () => DictionaryBloc(
+        dictionaryRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
+      seed: () => const DictionaryState(deletionVersion: 5),
+      act: (bloc) => bloc.add(const DictionaryLoadRequested()),
+      verify: (bloc) => expect(bloc.state.deletionVersion, 5),
     );
   });
 

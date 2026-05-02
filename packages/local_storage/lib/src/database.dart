@@ -52,7 +52,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -306,12 +306,6 @@ class AppDatabase extends _$AppDatabase {
           'ALTER TABLE articles_table ADD COLUMN reading_progress REAL NOT NULL DEFAULT 0.0',
         );
       }
-      if (from < 10) {
-        await _createIndexes();
-      }
-      if (from < 11) {
-        await _createIndexes();
-      }
       if (from < 9) {
         // Reverse v8. `reading_progress` turned out to be a duplicate of
         // the existing `current_scroll_offset` — for articles the reader
@@ -331,6 +325,15 @@ class AppDatabase extends _$AppDatabase {
           'ALTER TABLE articles_table DROP COLUMN reading_progress',
         );
       }
+      if (from < 11) {
+        // Single index-creation pass. Earlier the same call lived under
+        // both `<10` and `<11` guards, so any user upgrading from <10
+        // ran it twice. Statements are CREATE INDEX IF NOT EXISTS so
+        // the duplicate was idempotent, but the doubled DDL roundtrip
+        // and the inverted ordering (the `<9` block sat between the
+        // two `_createIndexes` calls) were maintenance landmines.
+        await _createIndexes();
+      }
       if (from < 12) {
         // Articles used to render through foliate-js with a CFI restore
         // column. Obsolete in v13 but kept here so that upgrades from
@@ -344,6 +347,16 @@ class AppDatabase extends _$AppDatabase {
         // skip if the user never had article data (e.g. clean install
         // that goes through onCreate instead).
         await customStatement('DROP TABLE IF EXISTS articles_table');
+      }
+      if (from < 14) {
+        // The `txt` format was dropped from BookFormat (foliate-js
+        // can't render plain text). Any pre-existing rows with that
+        // value would be silently mapped to `epub` by BookFormat.from
+        // on read and then fail to open. Drop them so the user sees
+        // a clean library instead of a broken row they can't delete.
+        await customStatement(
+          "DELETE FROM books_table WHERE format = 'txt'",
+        );
       }
     },
   );

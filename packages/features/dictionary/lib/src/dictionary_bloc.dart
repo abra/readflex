@@ -91,10 +91,15 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
     try {
       await _repository.deleteEntry(event.entryId);
       await _fsrsRepository.deleteReviewItem(event.entryId);
-      await _loadEntries(emit);
+      await _loadEntries(emit, fromDeletion: true);
     } catch (e, st) {
       addError(e, st);
-      emit(state.copyWith(status: DictionaryStatus.failure));
+      emit(
+        state.copyWith(
+          status: DictionaryStatus.failure,
+          deletionVersion: state.deletionVersion + 1,
+        ),
+      );
     }
   }
 
@@ -102,19 +107,56 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
     DictionaryEntriesDeleted event,
     Emitter<DictionaryState> emit,
   ) async {
-    try {
-      for (final id in event.entryIds) {
+    // Continue the loop on per-id failure so a single broken row
+    // doesn't abandon the rest of the selection in a partially-deleted
+    // limbo with no toast feedback to the user.
+    var anyFailed = false;
+    for (final id in event.entryIds) {
+      try {
         await _repository.deleteEntry(id);
         await _fsrsRepository.deleteReviewItem(id);
+      } catch (e, st) {
+        anyFailed = true;
+        addError(e, st);
       }
-      await _loadEntries(emit);
-    } catch (e, st) {
-      addError(e, st);
-      emit(state.copyWith(status: DictionaryStatus.failure));
     }
+    if (anyFailed) {
+      try {
+        final entries = await _repository.getEntries();
+        final masteredIds = await _fsrsRepository.getMasteredItemIds(
+          type: ReviewableType.dictionary,
+        );
+        emit(
+          state.copyWith(
+            status: DictionaryStatus.failure,
+            entries: entries,
+            masteredIds: masteredIds,
+            deletionVersion: state.deletionVersion + 1,
+          ),
+        );
+      } catch (e, st) {
+        addError(e, st);
+        emit(
+          state.copyWith(
+            status: DictionaryStatus.failure,
+            deletionVersion: state.deletionVersion + 1,
+          ),
+        );
+      }
+      return;
+    }
+    await _loadEntries(emit, fromDeletion: true);
   }
 
-  Future<void> _loadEntries(Emitter<DictionaryState> emit) async {
+  /// Pulls entries + mastered ids and emits success/failure. Pass
+  /// [fromDeletion] when this is the post-delete refresh — that bumps
+  /// `deletionVersion` so the screen's toast listener fires exactly
+  /// once per dispatched delete (no matter what other state changes
+  /// landed first).
+  Future<void> _loadEntries(
+    Emitter<DictionaryState> emit, {
+    bool fromDeletion = false,
+  }) async {
     try {
       final entries = await _repository.getEntries();
       final masteredIds = await _fsrsRepository.getMasteredItemIds(
@@ -125,11 +167,17 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
           status: DictionaryStatus.success,
           entries: entries,
           masteredIds: masteredIds,
+          deletionVersion: fromDeletion ? state.deletionVersion + 1 : null,
         ),
       );
     } catch (e, st) {
       addError(e, st);
-      emit(state.copyWith(status: DictionaryStatus.failure));
+      emit(
+        state.copyWith(
+          status: DictionaryStatus.failure,
+          deletionVersion: fromDeletion ? state.deletionVersion + 1 : null,
+        ),
+      );
     }
   }
 }

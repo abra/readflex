@@ -362,9 +362,12 @@ class _ReadyContentBody extends StatelessWidget {
 
     return Stack(
       children: [
-        // WebView body — reads BLoC state once, not subscribed to changes.
-        // Only rebuilds on theme change (PreferencesScope), never on
-        // selection or reminder state changes.
+        // WebView body — subscribes to `state.highlights` only (via
+        // context.select inside the body). Other reader state (book,
+        // sourceId, theme/font/layout) is read once and stays stable
+        // for the session, so non-highlight emits don't rebuild the
+        // WebView. Highlight changes have to flow through so
+        // BookReaderWebView.didUpdateWidget can fan them to JS.
         ColoredBox(
           color: readerTheme.backgroundColor,
           child: _ReaderWebViewBody(
@@ -530,8 +533,16 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     final bloc = context.read<ReaderBloc>();
     final chromeCubit = context.read<ReaderChromeCubit>();
     final selectionCubit = context.read<ReaderSelectionCubit>();
+    // Subscribe specifically to the highlights list so the build runs
+    // when a TextAction adds/removes one. `state.highlights` is a fresh
+    // list instance only on `ReaderHighlightsRefreshed` emits — page
+    // turns and other state changes preserve the same reference, so
+    // those don't trigger a rebuild.
+    final highlightsState = context.select<ReaderBloc, List<Highlight>>(
+      (b) => b.state.highlights,
+    );
     final state = bloc.state;
-    final highlights = state.highlights
+    final highlights = highlightsState
         .map(
           (h) => ReaderHighlight(
             id: h.id,

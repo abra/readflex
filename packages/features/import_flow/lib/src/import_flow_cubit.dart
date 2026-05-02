@@ -4,6 +4,7 @@ import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:path/path.dart' as p;
+import 'package:reader_webview/reader_webview.dart';
 
 part 'import_flow_state.dart';
 
@@ -46,7 +47,7 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
   /// uploading → done. No-op when the picker is dismissed.
   Future<void> pickAndImportBook() async {
     final file = await _onPickBookFile();
-    if (file == null) return;
+    if (file == null || isClosed) return;
 
     final filename = p.basename(file.path);
     // Indeterminate phase: metadata parse is in flight, no bytes yet.
@@ -58,7 +59,12 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
         file,
         onProgress: (progress) {
           // Switching from indeterminate to determinate happens on the
-          // first onProgress call from the repository.
+          // first onProgress call from the repository. Guarded by
+          // isClosed because the user can dismiss the sheet (which
+          // closes the cubit) mid-copy — the repository's chunked
+          // writer keeps firing onProgress until it hits the next
+          // await point.
+          if (isClosed) return;
           if (state case ImportFlowBookUploading(:final filename)) {
             emit(
               ImportFlowBookUploading(
@@ -69,7 +75,15 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
           }
         },
       );
+    } on BookImportException catch (e) {
+      if (isClosed) return;
+      // Surface the JS-side reason ("File type not supported", etc.)
+      // rather than the generic fallback below — the whole reason
+      // BookImportException exists is to carry that detail to the UI.
+      emit(ImportFlowFailure(message: e.message, filename: filename));
+      return;
     } catch (_) {
+      if (isClosed) return;
       emit(
         ImportFlowFailure(
           message: 'Failed to import the book',
@@ -79,6 +93,7 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
       return;
     }
 
+    if (isClosed) return;
     if (book == null) {
       emit(
         ImportFlowFailure(

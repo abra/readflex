@@ -239,7 +239,11 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
         path: AppRoutes.firstImport,
         builder: (context, state) => FirstImportScreen(
           onAddPressed: () async {
-            await showImportFlowSheet(
+            // Trust the sheet's own result instead of probing the
+            // library afterwards — `bookImported` is the canonical
+            // signal that an import succeeded, and `getBooks()` would
+            // have to scan every row to answer the same question.
+            final result = await showImportFlowSheet(
               context,
               onPickBookFile: pickBookFile,
               onImportBook: (file, {onProgress}) => importBookFile(
@@ -250,13 +254,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                 onProgress: onProgress,
               ),
             );
-
-            try {
-              final books = await deps.bookRepository.getBooks();
-              return books.isNotEmpty;
-            } catch (_) {
-              return false;
-            }
+            return result == ImportFlowResult.bookImported;
           },
           onContentAdded: () {
             deps.preferencesService.update(

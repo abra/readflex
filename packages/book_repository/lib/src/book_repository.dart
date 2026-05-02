@@ -80,12 +80,12 @@ class BookRepository {
     String? coverMimeType,
     void Function(double progress)? onProgress,
   }) async {
+    final id = _uuid.v4();
+    final bookDir = Directory(p.join(_booksDir.path, id));
     try {
-      final id = _uuid.v4();
       final now = DateTime.now();
 
       // Create per-book directory.
-      final bookDir = Directory(p.join(_booksDir.path, id));
       await bookDir.create(recursive: true);
 
       // Copy book file.
@@ -138,6 +138,15 @@ class BookRepository {
       onProgress?.call(1.0);
       return _resolve(book);
     } catch (e, st) {
+      // Best-effort cleanup of the partially-written directory so a
+      // long sequence of failed imports doesn't accumulate orphan
+      // bytes on disk. Swallowed if the directory isn't there or
+      // can't be removed; the original exception still propagates.
+      try {
+        if (await bookDir.exists()) {
+          await bookDir.delete(recursive: true);
+        }
+      } catch (_) {}
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }
   }

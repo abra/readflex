@@ -100,6 +100,34 @@ void main() {
       expect(book.filePath, endsWith('book.fb2'));
     });
 
+    test(
+      'addBook cleans up the per-book directory when the copy step fails',
+      () async {
+        // Source file path that doesn't exist on disk → openRead /
+        // copy throws partway through addBook, AFTER bookDir.create()
+        // has already succeeded. Without the cleanup branch the
+        // partially-written subdirectory would leak indefinitely.
+        final missingSource = File(p.join(tempDir.path, 'does_not_exist.epub'));
+
+        await expectLater(
+          repo.addBook(
+            sourceFile: missingSource,
+            title: 'Will fail',
+            format: BookFormat.epub,
+          ),
+          throwsA(isA<StorageException>()),
+        );
+
+        // No per-book uuid subdirectory should remain.
+        final entries = booksDir.listSync();
+        expect(
+          entries,
+          isEmpty,
+          reason: 'orphan per-book directory must be cleaned up on failure',
+        );
+      },
+    );
+
     test('getBooks returns all added books with resolved paths', () async {
       await repo.addBook(
         sourceFile: await createTempBookFile(name: '1.epub'),

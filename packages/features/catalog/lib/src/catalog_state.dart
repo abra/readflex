@@ -13,6 +13,7 @@ class CatalogState extends Equatable {
     this.books = const [],
     this.filter = CatalogFilter.all,
     this.searchQuery = '',
+    this.deletionVersion = 0,
   });
 
   final CatalogStatus status;
@@ -20,6 +21,14 @@ class CatalogState extends Equatable {
 
   final CatalogFilter filter;
   final String searchQuery;
+
+  /// Monotonic counter bumped exactly once per dispatched delete event
+  /// (success OR failure). The screen pairs each delete with a queued
+  /// descriptor and pops one off the queue every time the version
+  /// changes; this is what stops cross-batch toast races (delete A
+  /// dispatched, delete B dispatched, A finishes but the screen-local
+  /// "pending title" had already been overwritten by B).
+  final int deletionVersion;
 
   bool get isEmpty => books.isEmpty;
 
@@ -57,13 +66,21 @@ class CatalogState extends Equatable {
     List<Book>? books,
     CatalogFilter? filter,
     String? searchQuery,
+    int? deletionVersion,
   }) => CatalogState(
     status: status ?? this.status,
     books: books ?? this.books,
     filter: filter ?? this.filter,
     searchQuery: searchQuery ?? this.searchQuery,
+    deletionVersion: deletionVersion ?? this.deletionVersion,
   );
 
   @override
-  List<Object?> get props => [status, books, filter, searchQuery];
+  List<Object?> get props => [
+    status,
+    books,
+    filter,
+    searchQuery,
+    deletionVersion,
+  ];
 }
