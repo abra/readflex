@@ -218,11 +218,9 @@ class _BookUploadingView extends StatelessWidget {
       padding: _kStatusViewPadding,
       child: Column(
         mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: AppSpacing.md),
-          Center(child: _IconDisc(child: _Spinner())),
-          const SizedBox(height: AppSpacing.md),
           Text(
             'Uploading book...',
             textAlign: TextAlign.center,
@@ -239,7 +237,7 @@ class _BookUploadingView extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: text.labelSmall.copyWith(color: muted),
           ),
-          const Spacer(),
+          const SizedBox(height: AppSpacing.md),
           ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.full),
             child: LinearProgressIndicator(
@@ -440,21 +438,6 @@ class _IconDisc extends StatelessWidget {
       decoration: BoxDecoration(color: fill, shape: BoxShape.circle),
       alignment: Alignment.center,
       child: child,
-    );
-  }
-}
-
-/// Inline spinner sized to fit inside [_IconDisc].
-class _Spinner extends StatelessWidget {
-  const _Spinner();
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.colors;
-    return SizedBox(
-      width: 24,
-      height: 24,
-      child: CircularProgressIndicator(strokeWidth: 2.5, color: cs.primary),
     );
   }
 }
