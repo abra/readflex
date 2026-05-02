@@ -210,13 +210,15 @@ void main() {
         errors: () => [isA<Exception>()],
       );
 
-      // The reader screen subscribes to `state.highlights` via
-      // `context.select` and relies on default `List` reference equality
-      // to detect changes — `copyWith` must hand back a fresh list
-      // instance, otherwise the selector won't fire and newly created
-      // highlights stay invisible until the reader is reopened.
+      // Pinned invariant for any future approach that subscribes to
+      // highlights changes (context.select / BlocListener with
+      // !identical / etc.) — `copyWith` must hand back a fresh list
+      // reference on highlight refresh, otherwise the subscriber
+      // won't fire. Currently the reader doesn't subscribe (causing
+      // newly created highlights to only appear on reader reopen),
+      // but the contract still matters.
       blocTest<ReaderBloc, ReaderState>(
-        'emits a fresh highlights list reference (selector contract)',
+        'emits a fresh highlights list reference on refresh',
         setUp: () {
           highlightRepository.seedHighlights('book-1', [testHighlight]);
         },

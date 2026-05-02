@@ -24,7 +24,13 @@ class AppButtonThemes {
         textStyle: textTheme.labelLarge,
         elevation: 0,
         shadowColor: Colors.transparent,
-        minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
+        // `Size(0, h)`, NOT `Size.fromHeight(h)`. The latter is
+        // `Size(double.infinity, h)`, which makes minimumSize.width
+        // infinite — fine when the parent gives a bounded width
+        // (full-width buttons in sheets), but inside a Row without an
+        // Expanded wrapper around the button it forces the layout
+        // into "infinite width" and the frame fails.
+        minimumSize: const Size(0, AppSizes.buttonHeight),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
@@ -42,7 +48,13 @@ class AppButtonThemes {
       style: OutlinedButton.styleFrom(
         foregroundColor: palette.foreground,
         textStyle: textTheme.labelLarge,
-        minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
+        // `Size(0, h)`, NOT `Size.fromHeight(h)`. The latter is
+        // `Size(double.infinity, h)`, which makes minimumSize.width
+        // infinite — fine when the parent gives a bounded width
+        // (full-width buttons in sheets), but inside a Row without an
+        // Expanded wrapper around the button it forces the layout
+        // into "infinite width" and the frame fails.
+        minimumSize: const Size(0, AppSizes.buttonHeight),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
@@ -62,7 +74,13 @@ class AppButtonThemes {
       style: TextButton.styleFrom(
         foregroundColor: palette.primary,
         textStyle: textTheme.labelLarge,
-        minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
+        // `Size(0, h)`, NOT `Size.fromHeight(h)`. The latter is
+        // `Size(double.infinity, h)`, which makes minimumSize.width
+        // infinite — fine when the parent gives a bounded width
+        // (full-width buttons in sheets), but inside a Row without an
+        // Expanded wrapper around the button it forces the layout
+        // into "infinite width" and the frame fails.
+        minimumSize: const Size(0, AppSizes.buttonHeight),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.sm,

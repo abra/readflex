@@ -362,12 +362,10 @@ class _ReadyContentBody extends StatelessWidget {
 
     return Stack(
       children: [
-        // WebView body — subscribes to `state.highlights` only (via
-        // context.select inside the body). Other reader state (book,
-        // sourceId, theme/font/layout) is read once and stays stable
-        // for the session, so non-highlight emits don't rebuild the
-        // WebView. Highlight changes have to flow through so
-        // BookReaderWebView.didUpdateWidget can fan them to JS.
+        // WebView body — subscribes to `state.highlights` via
+        // `context.select` so a TextAction (Highlight, Flashcard, ...)
+        // that adds/removes one fans through to the WebView via
+        // didUpdateWidget without forcing a reader reopen.
         ColoredBox(
           color: readerTheme.backgroundColor,
           child: _ReaderWebViewBody(
@@ -533,11 +531,10 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     final bloc = context.read<ReaderBloc>();
     final chromeCubit = context.read<ReaderChromeCubit>();
     final selectionCubit = context.read<ReaderSelectionCubit>();
-    // Subscribe specifically to the highlights list so the build runs
-    // when a TextAction adds/removes one. `state.highlights` is a fresh
-    // list instance only on `ReaderHighlightsRefreshed` emits — page
-    // turns and other state changes preserve the same reference, so
-    // those don't trigger a rebuild.
+    // Subscribe specifically to the highlights list. `state.highlights`
+    // is a fresh list instance only on `ReaderHighlightsRefreshed`
+    // emits — page turns and other state changes preserve the same
+    // reference, so those don't trigger a rebuild.
     final highlightsState = context.select<ReaderBloc, List<Highlight>>(
       (b) => b.state.highlights,
     );

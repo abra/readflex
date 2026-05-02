@@ -68,10 +68,10 @@ class BookReaderWebView extends StatefulWidget {
   final void Function(double x, double y)? onTapped;
 
   @override
-  State<BookReaderWebView> createState() => _BookReaderWebViewState();
+  State<BookReaderWebView> createState() => BookReaderWebViewState();
 }
 
-class _BookReaderWebViewState extends State<BookReaderWebView> {
+class BookReaderWebViewState extends State<BookReaderWebView> {
   InAppWebViewController? _controller;
   bool _isReady = false;
 
@@ -86,6 +86,22 @@ class _BookReaderWebViewState extends State<BookReaderWebView> {
     }
 
     _syncAnnotations(oldWidget.highlights, widget.highlights);
+  }
+
+  /// Push a highlight diff into the WebView without rebuilding the
+  /// widget tree. Caller computes the old/new lists; this method only
+  /// fires `addAnnotation` / `removeAnnotation` evaluateJavascript
+  /// calls for the differences. Used by reader callers that hold a
+  /// [GlobalKey] on this state and react to bloc emits via
+  /// `BlocListener` instead of `context.select` — that route avoids
+  /// rebuilding the platform-view subtree mid-frame, which can race
+  /// with `flushSemantics` and trip a `parentDataDirty` assertion.
+  void syncAnnotations(
+    List<ReaderHighlight> oldList,
+    List<ReaderHighlight> newList,
+  ) {
+    if (!_isReady) return;
+    _syncAnnotations(oldList, newList);
   }
 
   void _syncAnnotations(
