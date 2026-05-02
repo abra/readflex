@@ -1692,4 +1692,15 @@ import('./remote_file.js')
     new RemoteFile(url, { name }).open(),
   )
   .then(file => open(file, initialCfi))
-  .catch(e => console.error(e))
+  .catch(e => {
+    console.error(e)
+    // Surface import errors back to Dart immediately. Without this the
+    // Dart side has no way to know the JS pipeline failed and falls
+    // back to its 30-second extraction timeout, leaving the user
+    // staring at a "Uploading…" spinner long after foliate-js has
+    // already given up. Only sent during import so it can't interfere
+    // with reader-mode error reporting.
+    if (importing) {
+      callFlutter('onImportError', { message: String(e && e.message || e) })
+    }
+  })

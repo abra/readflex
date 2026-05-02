@@ -6,6 +6,18 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:path/path.dart' as p;
 
+/// Thrown when foliate-js rejects a book during import (e.g. unsupported
+/// format, corrupted archive). Carries the JS-side error message so logs
+/// and the failure UI can show it.
+class BookImportException implements Exception {
+  const BookImportException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'BookImportException: $message';
+}
+
 /// Title / author / description / cover image extracted from a book file
 /// by foliate-js. Produced by [BookMetadataExtractor] during import and
 /// stored on the [Book] domain model.
@@ -71,6 +83,19 @@ class BookMetadataExtractor {
               if (completer.isCompleted) return;
               final data = args.first as Map<String, dynamic>;
               completer.complete(parseMetadata(data));
+            },
+          );
+          // foliate-js posts here when its open() pipeline rejects (most
+          // commonly "File type not supported" for junk files renamed to
+          // .epub). Without it the Dart side waits the full extraction
+          // timeout — even though JS has already failed.
+          controller.addJavaScriptHandler(
+            handlerName: 'onImportError',
+            callback: (args) {
+              if (completer.isCompleted) return;
+              final data = args.first as Map<String, dynamic>?;
+              final message = (data?['message'] as String?) ?? 'Import failed';
+              completer.completeError(BookImportException(message));
             },
           );
         },

@@ -291,8 +291,8 @@ class _BookDoneView extends StatelessWidget {
   }
 }
 
-/// Terminal failure screen for the book path. "Try again" goes back to
-/// the menu; the user can also dismiss the sheet to exit entirely.
+/// Terminal failure screen for the book path. "Try again" re-opens the
+/// file picker; the user can also dismiss the sheet to exit entirely.
 class _FailureView extends StatelessWidget {
   const _FailureView({required this.state});
 
@@ -337,7 +337,11 @@ class _FailureView extends StatelessWidget {
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: FilledButton(
-                  onPressed: cubit.backToMenu,
+                  // Re-open the file picker directly. Going back to the
+                  // menu would force the user to tap "Upload Book"
+                  // again — the failure context already implies that's
+                  // what they want to retry.
+                  onPressed: cubit.pickAndImportBook,
                   child: const Text('Try again'),
                 ),
               ),

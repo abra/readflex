@@ -118,76 +118,127 @@ class _ListRowShell extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
       behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          vertical: AppSpacing.md,
-          horizontal: AppSpacing.xs,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected ? colors.primary.withValues(alpha: 0.10) : null,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          border: showDivider
-              // Project exposes a semantic divider hairline via
-              // AppColorsExt (gray250 light / darkGray700 dark) —
-              // that's the direct analogue of demo's `ext.divider`.
-              // `ColorScheme.outlineVariant` is NOT the same role
-              // here and falls back to a near-black default.
-              ? Border(bottom: BorderSide(color: context.appColors.divider))
-              : null,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            // Fixed 60x90 cover slot (2:3 book aspect). AppCoverArt clips
-            // its own corners (Container.clipBehavior), so no outer
-            // ClipRRect needed.
-            SizedBox(width: 60, height: 90, child: cover),
-            // Demo uses 14dp cover-to-text gap — sits between our
-            // md(12) and lg(16) tokens. `md + xxs` = 14 exactly and
-            // composes from real tokens, so we don't add a new one.
-            const SizedBox(width: AppSpacing.md + AppSpacing.xxs),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: colors.onSurface,
-                      height: 1.25,
-                    ),
-                  ),
-                  // Demo uses 6dp title-to-meta gap (between xs=4 and
-                  // sm=8). Composed from xs + xxs to stay token-based.
-                  const SizedBox(height: AppSpacing.xs + AppSpacing.xxs),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.md,
+              horizontal: AppSpacing.xs,
+            ),
+            decoration: BoxDecoration(
+              color: isSelected ? colors.primary.withValues(alpha: 0.18) : null,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Fixed 60x90 cover slot (2:3 book aspect). AppCoverArt clips
+                // its own corners (Container.clipBehavior), so no outer
+                // ClipRRect needed.
+                SizedBox(
+                  width: 60,
+                  height: 90,
+                  child: Stack(
                     children: [
-                      if (hasSubtitle) ...[
-                        Flexible(
-                          child: Text(
-                            subtitle!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: _metaStyle(mutedColor),
+                      Positioned.fill(child: cover),
+                      if (isSelected) ...[
+                        Positioned.fill(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(AppRadius.xs),
+                              border: Border.all(
+                                color: colors.primary,
+                                width: 2,
+                              ),
+                              color: colors.primary.withValues(alpha: 0.15),
+                            ),
                           ),
                         ),
-                        _MetaDot(mutedColor: mutedColor),
+                        Positioned(
+                          top: 2,
+                          right: 2,
+                          child: _SelectionCheck(color: colors.primary),
+                        ),
                       ],
-                      ...metaSegments,
                     ],
                   ),
-                ],
-              ),
+                ),
+                // Demo uses 14dp cover-to-text gap — sits between our
+                // md(12) and lg(16) tokens. `md + xxs` = 14 exactly and
+                // composes from real tokens, so we don't add a new one.
+                const SizedBox(width: AppSpacing.md + AppSpacing.xxs),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: colors.onSurface,
+                          height: 1.25,
+                        ),
+                      ),
+                      // Demo uses 6dp title-to-meta gap (between xs=4 and
+                      // sm=8). Composed from xs + xxs to stay token-based.
+                      const SizedBox(height: AppSpacing.xs + AppSpacing.xxs),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (hasSubtitle) ...[
+                            Flexible(
+                              child: Text(
+                                subtitle!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: _metaStyle(mutedColor),
+                              ),
+                            ),
+                            _MetaDot(mutedColor: mutedColor),
+                          ],
+                          ...metaSegments,
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          if (showDivider)
+            // Flat 1-px hairline rendered as a sibling of the row,
+            // not as part of the row's BoxDecoration. A bottom
+            // BorderSide combined with the row's borderRadius would
+            // taper the line at both ends; a separate ColoredBox
+            // keeps the divider full-width with square ends.
+            Container(height: 1, color: context.appColors.divider),
+        ],
       ),
+    );
+  }
+}
+
+/// Filled primary-colored circle with a white check icon, sitting in the
+/// top-right corner of the cover when the row is selected. Same visual
+/// vocabulary as the grid tile's selection check so list/grid selection
+/// reads identically.
+class _SelectionCheck extends StatelessWidget {
+  const _SelectionCheck({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 18,
+      height: 18,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      child: const Icon(AppIcons.check, size: 10, color: Colors.white),
     );
   }
 }
