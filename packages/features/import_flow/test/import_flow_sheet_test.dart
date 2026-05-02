@@ -96,6 +96,29 @@ void main() {
     expect(find.text('Done'), findsOneWidget);
   });
 
+  testWidgets('successful comic import shows Comic added!', (tester) async {
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => File('/tmp/Strip.cbz'),
+          onImportBook: (file, {onProgress}) async => _fakeBook(
+            format: BookFormat.cbz,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Upload Book'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Comic added!'), findsOneWidget);
+    expect(find.text('Book added!'), findsNothing);
+    expect(find.text('Strip.cbz'), findsOneWidget);
+  });
+
   testWidgets('book import failure shows Try again button', (tester) async {
     await tester.pumpWidget(
       _TestHost(
@@ -117,11 +140,11 @@ void main() {
   });
 }
 
-Book _fakeBook() => Book(
+Book _fakeBook({BookFormat format = BookFormat.epub}) => Book(
   id: 'book-1',
   title: 'Test',
   filePath: 'book.epub',
-  format: BookFormat.epub,
+  format: format,
   addedAt: DateTime(2026),
 );
 

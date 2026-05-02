@@ -39,7 +39,28 @@ void main() {
         const ImportFlowBookUploading(filename: 'My Book.epub', progress: 0.0),
         const ImportFlowBookUploading(filename: 'My Book.epub', progress: 0.5),
         const ImportFlowBookUploading(filename: 'My Book.epub', progress: 1.0),
-        const ImportFlowBookDone(filename: 'My Book.epub'),
+        const ImportFlowBookDone(
+          filename: 'My Book.epub',
+          format: BookFormat.epub,
+        ),
+      ],
+    );
+
+    blocTest<ImportFlowCubit, ImportFlowState>(
+      'comic import propagates cbz format into the done state',
+      build: () => _buildCubit(
+        pickBookFile: () async => File('/tmp/Strip.cbz'),
+        importBook: (file, {onProgress}) async => _fakeBook(
+          format: BookFormat.cbz,
+        ),
+      ),
+      act: (cubit) => cubit.pickAndImportBook(),
+      expect: () => [
+        const ImportFlowBookUploading(filename: 'Strip.cbz'),
+        const ImportFlowBookDone(
+          filename: 'Strip.cbz',
+          format: BookFormat.cbz,
+        ),
       ],
     );
 
@@ -91,7 +112,10 @@ void main() {
       act: (cubit) => cubit.pickAndImportBook(),
       expect: () => [
         const ImportFlowBookUploading(filename: 'retry.epub'),
-        const ImportFlowBookDone(filename: 'retry.epub'),
+        const ImportFlowBookDone(
+          filename: 'retry.epub',
+          format: BookFormat.epub,
+        ),
       ],
     );
 
@@ -118,10 +142,10 @@ ImportFlowCubit _buildCubit({
   );
 }
 
-Book _fakeBook() => Book(
+Book _fakeBook({BookFormat format = BookFormat.epub}) => Book(
   id: 'book-1',
   title: 'Test',
   filePath: 'book.epub',
-  format: BookFormat.epub,
+  format: format,
   addedAt: DateTime(2026),
 );

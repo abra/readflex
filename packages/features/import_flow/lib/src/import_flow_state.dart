@@ -33,15 +33,24 @@ class ImportFlowBookUploading extends ImportFlowState {
 
 /// Book import succeeded.
 class ImportFlowBookDone extends ImportFlowState {
-  const ImportFlowBookDone({required this.filename, this.estimate});
+  const ImportFlowBookDone({
+    required this.filename,
+    required this.format,
+    this.estimate,
+  });
 
   final String filename;
+
+  /// Format of the imported file. Lets the success view pick a
+  /// noun-correct title (CBZ → "Comic added!", others → "Book added!")
+  /// without the UI re-deriving it from the filename.
+  final BookFormat format;
 
   /// "~5h estimated"-style read-time string. Hidden when null.
   final String? estimate;
 
   @override
-  List<Object?> get props => [filename, estimate];
+  List<Object?> get props => [filename, format, estimate];
 }
 
 /// Terminal failure screen for the book path. Tap "Try again" returns

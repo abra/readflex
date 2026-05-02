@@ -1,4 +1,5 @@
 import 'package:component_library/component_library.dart';
+import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -282,8 +283,11 @@ class _BookDoneView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // CBZ is the only comic format the picker accepts; everything else
+    // (epub/mobi/pdf/fb2/azw3) reads as a regular book.
+    final isComic = state.format == BookFormat.cbz;
     return _SuccessLayout(
-      title: 'Book added!',
+      title: isComic ? 'Comic added!' : 'Book added!',
       detail: state.filename,
       subtitle: state.estimate,
       onDone: () => Navigator.of(context).pop(ImportFlowResult.bookImported),

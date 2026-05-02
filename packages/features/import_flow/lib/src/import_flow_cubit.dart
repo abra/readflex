@@ -78,7 +78,7 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
       emit(const ImportFlowFailure(message: 'Failed to import the book'));
       return;
     }
-    emit(ImportFlowBookDone(filename: filename));
+    emit(ImportFlowBookDone(filename: filename, format: book.format));
   }
 
   /// Reset to the menu — used by the failure-screen "Try again" button.
