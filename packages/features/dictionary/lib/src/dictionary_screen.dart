@@ -499,19 +499,28 @@ class _DictionaryListRow extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              if (isSelected)
-                Icon(AppIcons.check, size: 14, color: cs.primary)
-              else
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: mastered
-                        ? appColors.successForeground
-                        : cs.onSurface.withValues(alpha: 0.30),
-                    shape: BoxShape.circle,
-                  ),
+              // Fixed leading slot — both the mastery dot (6dp) and the
+              // selection check (14dp) sit inside the same square so the
+              // text column doesn't jump horizontally when the user
+              // long-presses to start selection.
+              SizedBox(
+                width: 14,
+                height: 14,
+                child: Center(
+                  child: isSelected
+                      ? Icon(AppIcons.check, size: 14, color: cs.primary)
+                      : Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: mastered
+                                ? appColors.successForeground
+                                : cs.onSurface.withValues(alpha: 0.30),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
                 ),
+              ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
