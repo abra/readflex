@@ -73,7 +73,6 @@ class _HighlightSheetView extends StatelessWidget {
 
         return ActionBottomSheetLayout(
           title: 'Highlight',
-          onClose: () => Navigator.of(context).pop(),
           headerSpacing: AppSpacing.sm,
           bodyPadding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.xl,

@@ -78,7 +78,6 @@ class _MiniReviewSheetView extends StatelessWidget {
       builder: (context, state) {
         return ActionBottomSheetLayout(
           title: 'Mini Review',
-          onClose: () => Navigator.of(context).pop(),
           headerSpacing: AppSpacing.sm,
           bodyPadding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.xl,

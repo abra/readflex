@@ -41,41 +41,23 @@ class _ImportFlowSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xl,
-            AppSpacing.lg,
-            AppSpacing.xl,
-            AppSpacing.lg,
-          ),
-          child: BlocBuilder<ImportFlowCubit, ImportFlowState>(
-            builder: (context, state) {
-              return AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                switchInCurve: Curves.easeOut,
-                switchOutCurve: Curves.easeIn,
-                child: KeyedSubtree(
-                  key: ValueKey(state.runtimeType),
-                  child: switch (state) {
-                    ImportFlowMenu() => const _MenuView(),
-                    ImportFlowBookUploading() => _BookUploadingView(
-                      state: state,
-                    ),
-                    ImportFlowBookDone() => _BookDoneView(state: state),
-                    ImportFlowFailure() => _FailureView(state: state),
-                  },
-                ),
-              );
+    return BlocBuilder<ImportFlowCubit, ImportFlowState>(
+      builder: (context, state) {
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          switchInCurve: Curves.easeOut,
+          switchOutCurve: Curves.easeIn,
+          child: KeyedSubtree(
+            key: ValueKey(state.runtimeType),
+            child: switch (state) {
+              ImportFlowMenu() => const _MenuView(),
+              ImportFlowBookUploading() => _BookUploadingView(state: state),
+              ImportFlowBookDone() => _BookDoneView(state: state),
+              ImportFlowFailure() => _FailureView(state: state),
             },
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -86,31 +68,27 @@ class _MenuView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.colors;
-    final text = context.text;
     final cubit = context.read<ImportFlowCubit>();
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'Add to Library',
-          style: text.titleLarge.copyWith(color: cs.onSurface),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        _MenuOption(
-          icon: AppIcons.uploadFile,
-          title: 'Upload Book',
-          subtitle: 'EPUB, PDF, MOBI, CBZ, …',
-          onTap: cubit.pickAndImportBook,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        _PlainTextButton(
-          label: 'Cancel',
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ],
+    return ActionBottomSheetLayout(
+      title: 'Add to Library',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _MenuOption(
+            icon: AppIcons.uploadFile,
+            title: 'Upload Book',
+            subtitle: 'EPUB, PDF, MOBI, CBZ, …',
+            onTap: cubit.pickAndImportBook,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          _PlainTextButton(
+            label: 'Cancel',
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -186,8 +164,9 @@ class _MenuOption extends StatelessWidget {
   }
 }
 
-/// Full-width text-style button used for Cancel and other secondary
-/// actions inside the sheet.
+/// Full-width outlined button for Cancel and other secondary actions
+/// inside the sheet. Matches the Cancel in the delete-confirmation
+/// sheet so the two destructive entry points feel like one app.
 class _PlainTextButton extends StatelessWidget {
   const _PlainTextButton({required this.label, required this.onPressed});
 
@@ -196,23 +175,7 @@ class _PlainTextButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.colors;
-    final text = context.text;
-
-    return TextButton(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-        minimumSize: const Size.fromHeight(44),
-      ),
-      child: Text(
-        label,
-        style: text.bodyMedium.copyWith(
-          fontWeight: FontWeight.w500,
-          color: cs.onSurface.withValues(alpha: 0.6),
-        ),
-      ),
-    );
+    return OutlinedButton(onPressed: onPressed, child: Text(label));
   }
 }
 
@@ -231,55 +194,68 @@ class _BookUploadingView extends StatelessWidget {
     final muted = cs.onSurface.withValues(alpha: 0.55);
     final progress = state.progress;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: AppSpacing.md),
-        Center(child: _IconDisc(child: _Spinner())),
-        const SizedBox(height: AppSpacing.md),
-        Text(
-          'Uploading book...',
-          textAlign: TextAlign.center,
-          style: text.bodyMedium.copyWith(
-            fontWeight: FontWeight.w500,
-            color: cs.onSurface,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          state.filename,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: text.labelSmall.copyWith(color: muted),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.full),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 6,
-            backgroundColor: cs.surfaceContainerHighest,
-            color: cs.primary,
-          ),
-        ),
-        if (progress != null) ...[
-          const SizedBox(height: AppSpacing.xs),
+    return Padding(
+      padding: _kStatusViewPadding,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: AppSpacing.md),
+          Center(child: _IconDisc(child: _Spinner())),
+          const SizedBox(height: AppSpacing.md),
           Text(
-            '${(progress * 100).clamp(0, 100).toInt()}%',
+            'Uploading book...',
             textAlign: TextAlign.center,
-            style: text.labelSmall.copyWith(
-              fontFeatures: const [FontFeature.tabularFigures()],
-              color: muted,
+            style: text.bodyMedium.copyWith(
+              fontWeight: FontWeight.w500,
+              color: cs.onSurface,
             ),
           ),
+          const SizedBox(height: 2),
+          Text(
+            state.filename,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: text.labelSmall.copyWith(color: muted),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.full),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 6,
+              backgroundColor: cs.surfaceContainerHighest,
+              color: cs.primary,
+            ),
+          ),
+          if (progress != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              '${(progress * 100).clamp(0, 100).toInt()}%',
+              textAlign: TextAlign.center,
+              style: text.labelSmall.copyWith(
+                fontFeatures: const [FontFeature.tabularFigures()],
+                color: muted,
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
         ],
-        const SizedBox(height: AppSpacing.md),
-      ],
+      ),
     );
   }
 }
+
+/// Insets used by the title-less status views (uploading, done,
+/// failure) so they line up with the [_MenuView]'s ActionBottomSheet
+/// gutter.
+const _kStatusViewPadding = EdgeInsets.fromLTRB(
+  AppSpacing.xl,
+  0,
+  AppSpacing.xl,
+  AppSpacing.lg,
+);
 
 /// Book import succeeded — checkmark, filename, optional estimate, Done.
 class _BookDoneView extends StatelessWidget {
@@ -311,40 +287,37 @@ class _FailureView extends StatelessWidget {
     final text = context.text;
     final cubit = context.read<ImportFlowCubit>();
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: AppSpacing.md),
-        Center(
-          child: _IconDisc(
-            tint: cs.error,
-            child: Icon(AppIcons.error, color: cs.error, size: 22),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Text(
-          state.message,
-          textAlign: TextAlign.center,
-          style: text.bodyMedium.copyWith(color: cs.onSurface),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        FilledButton(
-          onPressed: cubit.backToMenu,
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(44),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
+    return Padding(
+      padding: _kStatusViewPadding,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: AppSpacing.md),
+          Center(
+            child: _IconDisc(
+              tint: cs.error,
+              child: Icon(AppIcons.error, color: cs.error, size: 22),
             ),
           ),
-          child: const Text('Try again'),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        _PlainTextButton(
-          label: 'Cancel',
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ],
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            state.message,
+            textAlign: TextAlign.center,
+            style: text.bodyMedium.copyWith(color: cs.onSurface),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          FilledButton(
+            onPressed: cubit.backToMenu,
+            child: const Text('Try again'),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          _PlainTextButton(
+            label: 'Cancel',
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -370,53 +343,47 @@ class _SuccessLayout extends StatelessWidget {
     final text = context.text;
     final muted = cs.onSurface.withValues(alpha: 0.55);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: AppSpacing.md),
-        Center(
-          child: _IconDisc(
-            child: Icon(AppIcons.check, color: cs.primary, size: 24),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Text(
-          title,
-          textAlign: TextAlign.center,
-          style: text.bodyMedium.copyWith(
-            fontWeight: FontWeight.w500,
-            color: cs.onSurface,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          detail,
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: text.labelSmall.copyWith(color: muted),
-        ),
-        if (subtitle != null) ...[
-          const SizedBox(height: 2),
-          Text(
-            subtitle!,
-            textAlign: TextAlign.center,
-            style: text.labelSmall.copyWith(color: muted),
-          ),
-        ],
-        const SizedBox(height: AppSpacing.lg),
-        FilledButton(
-          onPressed: onDone,
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(44),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
+    return Padding(
+      padding: _kStatusViewPadding,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: AppSpacing.md),
+          Center(
+            child: _IconDisc(
+              child: Icon(AppIcons.check, color: cs.primary, size: 24),
             ),
           ),
-          child: const Text('Done'),
-        ),
-      ],
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: text.bodyMedium.copyWith(
+              fontWeight: FontWeight.w500,
+              color: cs.onSurface,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            detail,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: text.labelSmall.copyWith(color: muted),
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              subtitle!,
+              textAlign: TextAlign.center,
+              style: text.labelSmall.copyWith(color: muted),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.lg),
+          FilledButton(onPressed: onDone, child: const Text('Done')),
+        ],
+      ),
     );
   }
 }

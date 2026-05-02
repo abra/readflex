@@ -10,8 +10,6 @@ const List<double> _lineHeightPresets = [1.2, 1.4, 1.6, 1.8, 2.0];
 const double _lineHeightMatchTolerance = 0.05;
 
 // Sheet chrome.
-const double _dragHandleWidth = 40;
-const double _dragHandleHeight = 4;
 const double _sizeButtonSize = 36;
 
 class _FontSheet extends StatelessWidget {
@@ -19,37 +17,12 @@ class _FontSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.colors;
-    final text = context.text;
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        AppSpacing.md,
-        AppSpacing.xl,
-        AppSpacing.xl + bottomPadding,
-      ),
+    return ActionBottomSheetLayout(
+      title: 'Font & Text Size',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(
-            child: Container(
-              width: _dragHandleWidth,
-              height: _dragHandleHeight,
-              decoration: BoxDecoration(
-                color: cs.onSurface.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(AppRadius.full),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Text(
-            'Font & Text Size',
-            style: text.titleLarge.copyWith(color: cs.onSurface),
-          ),
-          const SizedBox(height: AppSpacing.lg),
           SectionLabel(label: 'FONT'),
           const SizedBox(height: AppSpacing.sm),
           const _FontRow(),

@@ -11,7 +11,6 @@ void main() {
         home: Scaffold(
           body: ActionBottomSheetLayout(
             title: 'Sheet',
-            onClose: _noop,
             child: Text('Body'),
           ),
         ),
@@ -217,25 +216,16 @@ void main() {
     expect(find.text('Read time'), findsOneWidget);
     expect(find.byType(Card), findsNothing);
   });
-  testWidgets('BottomSheetHeader renders title and close button', (
-    tester,
-  ) async {
-    var closeTapped = false;
-
+  testWidgets('BottomSheetHeader renders title', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
+      const MaterialApp(
         home: Scaffold(
-          body: BottomSheetHeader(
-            title: 'Title',
-            onClose: () => closeTapped = true,
-          ),
+          body: BottomSheetHeader(title: 'Title'),
         ),
       ),
     );
 
     expect(find.text('Title'), findsOneWidget);
-    await tester.tap(find.byType(IconButton));
-    expect(closeTapped, isTrue);
   });
 
   testWidgets('CenteredCircularProgressIndicator renders indicator', (

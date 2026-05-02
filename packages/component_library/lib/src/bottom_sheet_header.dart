@@ -1,33 +1,22 @@
 import 'package:flutter/material.dart';
 
-import 'app_icons.dart';
 import 'theme/extensions/build_context_ext.dart';
-import 'theme/tokens/app_spacing.dart';
 
+/// Title row for a bottom sheet — just the heading. Closing is owned
+/// entirely by [showAppBottomSheet] (drag handle, drag-down, scrim
+/// tap), so this widget no longer renders a close button.
 class BottomSheetHeader extends StatelessWidget {
-  const BottomSheetHeader({
-    required this.title,
-    required this.onClose,
-    super.key,
-  });
+  const BottomSheetHeader({required this.title, super.key});
 
   final String title;
-  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(title, style: context.text.titleLarge),
-        Transform.translate(
-          offset: const Offset(AppSpacing.sm, 0),
-          child: IconButton(
-            icon: const Icon(AppIcons.close),
-            onPressed: onClose,
-          ),
-        ),
-      ],
+    return Text(
+      title,
+      style: context.text.titleLarge,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }

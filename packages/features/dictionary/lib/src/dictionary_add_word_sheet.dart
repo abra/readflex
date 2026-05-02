@@ -75,7 +75,6 @@ class _DictionaryAddWordSheetState extends State<DictionaryAddWordSheet> {
   Widget build(BuildContext context) {
     return ActionBottomSheetLayout(
       title: 'Add word',
-      onClose: () => Navigator.of(context).pop(),
       bodyPadding: const EdgeInsets.fromLTRB(
         AppSpacing.xl,
         AppSpacing.md,

@@ -72,7 +72,6 @@ class _FlashcardSheetView extends StatelessWidget {
 
         return ActionBottomSheetLayout(
           title: 'Create Flashcard',
-          onClose: () => Navigator.of(context).pop(),
           headerSpacing: AppSpacing.sm,
           bodyPadding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.xl,

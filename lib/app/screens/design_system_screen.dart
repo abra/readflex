@@ -638,7 +638,7 @@ class _DesignSystemScreenState extends State<DesignSystemScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      BottomSheetHeader(title: 'Add Highlight', onClose: () {}),
+                      const BottomSheetHeader(title: 'Add Highlight'),
                       const Divider(height: AppSpacing.xl),
                       const SelectionPreviewCard(
                         text:

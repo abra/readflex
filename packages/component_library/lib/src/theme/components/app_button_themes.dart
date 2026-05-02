@@ -62,6 +62,7 @@ class AppButtonThemes {
       style: TextButton.styleFrom(
         foregroundColor: palette.primary,
         textStyle: textTheme.labelLarge,
+        minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.sm,

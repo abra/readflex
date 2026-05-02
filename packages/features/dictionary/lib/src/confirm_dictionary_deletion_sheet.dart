@@ -37,7 +37,6 @@ class _ConfirmDictionaryDeletionSheet extends StatelessWidget {
 
     return ActionBottomSheetLayout(
       title: title,
-      onClose: () => Navigator.of(context).pop(),
       bodyPadding: const EdgeInsets.fromLTRB(
         AppSpacing.xl,
         AppSpacing.md,

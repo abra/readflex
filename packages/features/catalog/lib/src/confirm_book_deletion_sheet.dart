@@ -50,7 +50,6 @@ class _ConfirmBookDeletionSheetState extends State<_ConfirmBookDeletionSheet> {
 
     return ActionBottomSheetLayout(
       title: title,
-      onClose: () => Navigator.of(context).pop(),
       bodyPadding: const EdgeInsets.fromLTRB(
         AppSpacing.xl,
         AppSpacing.md,
