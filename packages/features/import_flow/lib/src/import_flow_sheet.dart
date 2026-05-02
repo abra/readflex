@@ -43,18 +43,27 @@ class _ImportFlowSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<ImportFlowCubit, ImportFlowState>(
       builder: (context, state) {
-        return AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
-          switchInCurve: Curves.easeOut,
-          switchOutCurve: Curves.easeIn,
-          child: KeyedSubtree(
-            key: ValueKey(state.runtimeType),
-            child: switch (state) {
-              ImportFlowMenu() => const _MenuView(),
-              ImportFlowBookUploading() => _BookUploadingView(state: state),
-              ImportFlowBookDone() => _BookDoneView(state: state),
-              ImportFlowFailure() => _FailureView(state: state),
-            },
+        // Hard-pin all four states to the same body height so the
+        // sheet never resizes between menu / uploading / done /
+        // failure. Content sits at the top of this box; any unused
+        // space appears as natural padding at the bottom — none of
+        // the inner Columns use Spacer, so buttons stay where they
+        // belong relative to their own content.
+        return SizedBox(
+          height: 200,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            child: KeyedSubtree(
+              key: ValueKey(state.runtimeType),
+              child: switch (state) {
+                ImportFlowMenu() => const _MenuView(),
+                ImportFlowBookUploading() => _BookUploadingView(state: state),
+                ImportFlowBookDone() => _BookDoneView(state: state),
+                ImportFlowFailure() => _FailureView(state: state),
+              },
+            ),
           ),
         );
       },
@@ -62,7 +71,8 @@ class _ImportFlowSheet extends StatelessWidget {
   }
 }
 
-/// Initial picker — single Upload Book tile + Cancel.
+/// Initial picker — title + Upload Book tile at the top, Cancel
+/// anchored to the bottom of the fixed sheet body.
 class _MenuView extends StatelessWidget {
   const _MenuView();
 
@@ -70,19 +80,21 @@ class _MenuView extends StatelessWidget {
   Widget build(BuildContext context) {
     final cubit = context.read<ImportFlowCubit>();
 
-    return ActionBottomSheetLayout(
-      title: 'Add to Library',
+    return Padding(
+      padding: _kStatusViewPadding,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const BottomSheetHeader(title: 'Add to Library'),
+          const SizedBox(height: AppSpacing.lg),
           _MenuOption(
             icon: AppIcons.uploadFile,
             title: 'Upload Book',
             subtitle: 'EPUB, FB2, MOBI, PDF, AZW3, CBZ',
             onTap: cubit.pickAndImportBook,
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const Spacer(),
           _PlainTextButton(
             label: 'Cancel',
             onPressed: () => Navigator.of(context).pop(),
@@ -122,7 +134,15 @@ class _MenuOption extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.md),
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          // Heavier vertical padding makes the menu state's Upload
+          // Book card tall enough that the Cancel button below it
+          // sits at the same y-position as the Done button in the
+          // book-imported state. Without this, the action button
+          // visibly shifts when the sheet transitions states.
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.lg,
+          ),
           child: Row(
             children: [
               Container(
@@ -197,7 +217,7 @@ class _BookUploadingView extends StatelessWidget {
     return Padding(
       padding: _kStatusViewPadding,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: AppSpacing.md),
@@ -219,7 +239,7 @@ class _BookUploadingView extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: text.labelSmall.copyWith(color: muted),
           ),
-          const SizedBox(height: AppSpacing.md),
+          const Spacer(),
           ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.full),
             child: LinearProgressIndicator(
@@ -240,7 +260,6 @@ class _BookUploadingView extends StatelessWidget {
               ),
             ),
           ],
-          const SizedBox(height: AppSpacing.md),
         ],
       ),
     );
@@ -290,7 +309,7 @@ class _FailureView extends StatelessWidget {
     return Padding(
       padding: _kStatusViewPadding,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: AppSpacing.md),
@@ -306,15 +325,25 @@ class _FailureView extends StatelessWidget {
             textAlign: TextAlign.center,
             style: text.bodyMedium.copyWith(color: cs.onSurface),
           ),
-          const SizedBox(height: AppSpacing.lg),
-          FilledButton(
-            onPressed: cubit.backToMenu,
-            child: const Text('Try again'),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          _PlainTextButton(
-            label: 'Cancel',
-            onPressed: () => Navigator.of(context).pop(),
+          const Spacer(),
+          // Side-by-side buttons (instead of stacked) so failure
+          // collapses to roughly the menu state's height.
+          Row(
+            children: [
+              Expanded(
+                child: _PlainTextButton(
+                  label: 'Cancel',
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: FilledButton(
+                  onPressed: cubit.backToMenu,
+                  child: const Text('Try again'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -346,7 +375,7 @@ class _SuccessLayout extends StatelessWidget {
     return Padding(
       padding: _kStatusViewPadding,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: AppSpacing.md),
@@ -368,7 +397,7 @@ class _SuccessLayout extends StatelessWidget {
           Text(
             detail,
             textAlign: TextAlign.center,
-            maxLines: 2,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: text.labelSmall.copyWith(color: muted),
           ),
@@ -380,7 +409,7 @@ class _SuccessLayout extends StatelessWidget {
               style: text.labelSmall.copyWith(color: muted),
             ),
           ],
-          const SizedBox(height: AppSpacing.lg),
+          const Spacer(),
           FilledButton(onPressed: onDone, child: const Text('Done')),
         ],
       ),
