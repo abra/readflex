@@ -73,7 +73,10 @@ void main() {
       act: (cubit) => cubit.pickAndImportBook(),
       expect: () => [
         const ImportFlowBookUploading(filename: 'x.epub'),
-        const ImportFlowFailure(message: 'Failed to import the book'),
+        const ImportFlowFailure(
+          message: 'Failed to import the book',
+          filename: 'x.epub',
+        ),
       ],
     );
 
@@ -86,7 +89,10 @@ void main() {
       act: (cubit) => cubit.pickAndImportBook(),
       expect: () => [
         const ImportFlowBookUploading(filename: 'x.epub'),
-        const ImportFlowFailure(message: 'Failed to import the book'),
+        const ImportFlowFailure(
+          message: 'Failed to import the book',
+          filename: 'x.epub',
+        ),
       ],
     );
 

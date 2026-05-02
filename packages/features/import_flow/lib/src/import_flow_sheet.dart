@@ -318,7 +318,19 @@ class _FailureView extends StatelessWidget {
           Center(
             child: _IconDisc(
               tint: cs.error,
-              child: Icon(AppIcons.error, color: cs.error, size: 22),
+              // Bare exclamation glyph — Lucide ships no plain "!" icon
+              // and AppIcons.error (alertCircle) double-stacks with the
+              // disc's own circle. Text keeps the disc as the only ring
+              // around the mark, mirroring the success view's bare check.
+              child: Text(
+                '!',
+                style: TextStyle(
+                  fontSize: 22,
+                  height: 1.0,
+                  fontWeight: FontWeight.w700,
+                  color: cs.error,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -327,6 +339,21 @@ class _FailureView extends StatelessWidget {
             textAlign: TextAlign.center,
             style: text.bodyMedium.copyWith(color: cs.onSurface),
           ),
+          if (state.filename != null) ...[
+            // Same 2dp gap + muted labelSmall styling as the success
+            // view's detail line, so failure and success read as
+            // siblings.
+            const SizedBox(height: 2),
+            Text(
+              state.filename!,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: text.labelSmall.copyWith(
+                color: cs.onSurface.withValues(alpha: 0.55),
+              ),
+            ),
+          ],
           const Spacer(),
           // Side-by-side buttons (instead of stacked) so failure
           // collapses to roughly the menu state's height.

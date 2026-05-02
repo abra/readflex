@@ -53,13 +53,18 @@ class ImportFlowBookDone extends ImportFlowState {
   List<Object?> get props => [filename, format, estimate];
 }
 
-/// Terminal failure screen for the book path. Tap "Try again" returns
-/// to the menu via [ImportFlowCubit.backToMenu].
+/// Terminal failure screen for the book path. Tap "Try again" re-opens
+/// the file picker.
 class ImportFlowFailure extends ImportFlowState {
-  const ImportFlowFailure({required this.message});
+  const ImportFlowFailure({required this.message, this.filename});
 
   final String message;
 
+  /// Basename of the file the user picked, when known. Surfacing it on
+  /// the failure screen mirrors the success view's filename line so the
+  /// user can tell which item failed.
+  final String? filename;
+
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, filename];
 }

@@ -70,12 +70,22 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
         },
       );
     } catch (_) {
-      emit(const ImportFlowFailure(message: 'Failed to import the book'));
+      emit(
+        ImportFlowFailure(
+          message: 'Failed to import the book',
+          filename: filename,
+        ),
+      );
       return;
     }
 
     if (book == null) {
-      emit(const ImportFlowFailure(message: 'Failed to import the book'));
+      emit(
+        ImportFlowFailure(
+          message: 'Failed to import the book',
+          filename: filename,
+        ),
+      );
       return;
     }
     emit(ImportFlowBookDone(filename: filename, format: book.format));

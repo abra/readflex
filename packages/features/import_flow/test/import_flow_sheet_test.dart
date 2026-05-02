@@ -136,6 +136,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Failed to import the book'), findsOneWidget);
+    expect(find.text('Bad.epub'), findsOneWidget);
     expect(find.text('Try again'), findsOneWidget);
   });
 }
