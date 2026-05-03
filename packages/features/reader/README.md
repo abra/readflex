@@ -1,9 +1,9 @@
 # reader
 
-Book and article reader. Single full-screen route (`/reader/:sourceId`) above
-the shell, hosts the WebView-based reading surface, top/bottom chrome, a
-text-selection context panel populated by pluggable `TextAction`s, and an
-inline review-reminder banner.
+Book reader. Single full-screen route (`/reader/:sourceId`) above the shell,
+hosts the WebView-based reading surface, top/bottom chrome, a text-selection
+context panel populated by pluggable `TextAction`s, and an inline
+review-reminder banner.
 
 ## Public API
 
@@ -13,7 +13,6 @@ class ReaderScreen extends StatelessWidget {
     required String sourceId,
     required int serverPort,                       // local reader_server port
     required BookRepository bookRepository,
-    required ArticleRepository articleRepository,
     required HighlightRepository highlightRepository,
     required List<TextAction> textActions,         // plug-in actions
     Future<int> Function(String sourceId)? onCheckDueItems,
@@ -22,8 +21,7 @@ class ReaderScreen extends StatelessWidget {
 }
 ```
 
-`sourceId` resolves to either a `Book` or an `Article`; the bloc figures out
-which and switches WebView widgets accordingly.
+`sourceId` resolves to a `Book` via `BookRepository.getBookById`.
 
 ## TextAction plugin system
 
@@ -46,9 +44,9 @@ abstract class TextAction {
 
 | Unit                          | Responsibility                                                             |
 |-------------------------------|----------------------------------------------------------------------------|
-| `ReaderBloc`                  | Content: load book/article + highlights, debounced position save (2s)      |
+| `ReaderBloc`                  | Content: load book + highlights, debounced position save (500ms)           |
 | `ReaderChromeCubit`           | Top AppBar / bottom progress bar visibility                                |
-| `ReaderSelectionCubit`        | Current text selection (text + `cfiRange` for books / `scrollOffset` for articles) |
+| `ReaderSelectionCubit`        | Current text selection (text + `cfiRange`)                                 |
 | `ReaderReviewReminderCubit`   | Periodic timer; flips `showReminder` when `onCheckDueItems` returns > 0    |
 
 `ReaderBloc.reportError(e, st)` is a public facade over the protected
@@ -66,9 +64,8 @@ through the bloc's error pipeline without emitting state themselves.
   ready values into dumb leaf widgets (`_ReaderTopChrome`,
   `_ReaderBottomChrome`, `_ContextPanel`, `_ReviewReminderBanner`). All
   BLoC/Cubit interaction lives in drivers.
-- **`_ReaderWebViewBody`** switches between `BookReaderWebView` (foliate-js)
-  and `ArticleReaderWebView` from `reader_webview`, keyed on source id so
-  swapping sources rebuilds the WebView cleanly.
+- **`_ReaderWebViewBody`** hosts a `BookReaderWebView` (foliate-js) keyed on
+  source id so swapping sources rebuilds the WebView cleanly.
 - Reader theme (`ReaderThemeData`, font preset, layout preset) is resolved
   from `PreferencesScope` and passed as CSS / URL params to the WebView; the
   `_ReaderWebViewBody` itself is rebuilt only on preference changes, never
@@ -89,14 +86,13 @@ composition root.
 
 ## Dependencies
 
-- `book_repository`, `article_repository`, `highlight_repository` — content
-  and highlight persistence
+- `book_repository`, `highlight_repository` — content and highlight
+  persistence
 - `preferences_service` — `PreferencesScope` for `ReaderAppearance` (theme,
   font, layout presets)
-- `reader_webview` — `BookReaderWebView`, `ArticleReaderWebView`,
-  `FoliateStyle`, `ReaderStyle`, `ReaderHighlight`
+- `reader_webview` — `BookReaderWebView`, `FoliateStyle`, `ReaderHighlight`
 - `shared` — `TextAction`, `TextSelectionContext`
-- `domain_models` — `Book`, `Article`, `SourceType`
+- `domain_models` — `Book`, `SourceType`
 - `component_library` — `ReaderThemePreset`, `AppIcons`, `AppSpacing`,
   `AppIconSize`
 - `flutter_bloc`, `equatable`, `stream_transform`

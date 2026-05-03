@@ -8,9 +8,7 @@ import 'package:path/path.dart' as p;
 ///
 /// Route families:
 ///   - `GET /book/<url-encoded-absolute-path>` — streams a book file
-///     (epub, pdf, fb2, mobi) from disk. Articles are packaged as
-///     single-chapter EPUBs at import time and served through this same
-///     route, so there is no article-specific route family.
+///     (epub, pdf, fb2, mobi, azw3, cbz) from disk.
 ///   - `GET /assets/<path>` — serves static files (foliate-js, CSS, JS)
 ///     from [_assetsDir].
 ///
@@ -233,12 +231,19 @@ class ReaderServer {
       ..contentType = contentType
       ..set(HttpHeaders.acceptRangesHeader, 'bytes');
 
-    // Cache static assets (foliate-js sources, fonts) for a day so
-    // each new section iframe doesn't re-fetch the variable font and
-    // FOUT-reflow ("text straightens out") on every chapter cross.
+    // Cache static assets so each new section iframe doesn't re-fetch
+    // them and FOUT-reflow ("text straightens out") on every chapter
+    // cross. Fonts get a year (their bytes never change once shipped);
+    // foliate-js JS/CSS get a day so an app upgrade that re-extracts
+    // assets isn't shadowed by a stale WebView HTTP cache.
     // Books are ranged-streamed differently and live at /book/ — no
     // caching for those, content can change between sessions.
-    if (path.startsWith('/assets/')) {
+    if (path.startsWith('/assets/fonts/')) {
+      response.headers.set(
+        HttpHeaders.cacheControlHeader,
+        'public, max-age=31536000, immutable',
+      );
+    } else if (path.startsWith('/assets/')) {
       response.headers.set(
         HttpHeaders.cacheControlHeader,
         'public, max-age=86400',

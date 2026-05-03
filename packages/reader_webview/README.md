@@ -2,9 +2,7 @@
 
 WebView widget and utilities for the reader. Thin wrapper over
 `flutter_inappwebview` that talks to bundled foliate-js running inside the
-WebView. Articles are packaged as single-chapter EPUBs at import time
-(`article_repository.EpubBuilder`) so they render through the same
-foliate-js code path as books.
+WebView.
 
 foliate-js assets are bundled with this package under `assets/foliate-js/`.
 At runtime they are extracted to a writable directory where `reader_server`
@@ -14,7 +12,7 @@ can serve them over localhost.
 
 | Symbol                   | Kind      | Purpose                                                              |
 |--------------------------|-----------|----------------------------------------------------------------------|
-| `BookReaderWebView`      | Widget    | Loads foliate-js `index.html`, which fetches the book/article EPUB from `/book/<path>`. Emits position, selection, and highlight-tap events; accepts imperative calls (goToCfi, nextPage, changeStyle, addAnnotation). |
+| `BookReaderWebView`      | Widget    | Loads foliate-js `index.html`, which fetches the book file from `/book/<path>`. Emits position, selection, and highlight-tap events; accepts imperative calls (goToCfi, nextPage, changeStyle, addAnnotation). |
 | `AssetExtractor`         | Utility   | Copies bundled foliate-js assets from rootBundle to a target directory. Version-gated via an `.asset_version` sentinel: unchanged version skips, changed version re-writes everything. |
 | `BookMetadataExtractor`  | Utility   | Spawns a `HeadlessInAppWebView` running foliate-js in import mode to extract `{title, author, description, coverData, coverMimeType}` from any supported format. Used by the import flow. |
 | Bridge types             | Models    | `BookPosition`, `ReaderSelection`, `ReaderHighlight`, `FoliateStyle` — DTOs exchanged with JS. |

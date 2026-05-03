@@ -16,7 +16,6 @@ Barrel exports `AppDatabase` and every DAO:
 |-------------------|------------|--------------------------------------------------------|
 | `AppDatabase`     | class      | The single Drift database (`@DriftDatabase`)           |
 | `BooksDao`        | DAO        | CRUD for books                                         |
-| `ArticlesDao`     | DAO        | CRUD for articles                                      |
 | `HighlightsDao`   | DAO        | CRUD for highlights                                    |
 | `FlashcardsDao`   | DAO        | CRUD for flashcards                                    |
 | `DictionaryDao`   | DAO        | CRUD for dictionary entries                            |
@@ -30,9 +29,8 @@ and companions are also reachable through the DAO exports.
 ## Tables
 
 ```
-books_table              articles_table          highlights_table
-flashcards_table         dictionary_table        review_items_table
-review_logs_table
+books_table              highlights_table        flashcards_table
+dictionary_table         review_items_table      review_logs_table
 ```
 
 All FSRS state (stability, difficulty, due date, reps, lapses) is
@@ -40,6 +38,10 @@ centralized in `review_items_table`, keyed by `(item_id, item_type)`.
 Entity tables (flashcards/highlights/dictionary) hold only domain
 fields; nothing reviewable is duplicated across tables. This was the
 v3→v4 migration — see the comment in `database.dart`.
+
+`articles_table` existed in earlier schemas but was dropped in v13 when the
+article reader was removed. Migrations v5–v12 still touch it for upgrade
+fidelity from old installs; the table is gone after v13 runs.
 
 ## Migrations
 
@@ -80,7 +82,7 @@ repository:
 final database = AppDatabase();
 return DependenciesContainer(
   bookRepository: BookRepository(database: database),
-  articleRepository: ArticleRepository(database: database),
+  highlightRepository: HighlightRepository(database: database),
   // ...
 );
 ```
@@ -112,7 +114,7 @@ in-memory executor.
 local_storage → drift, sqlite3_flutter_libs, path_provider, path
         ▲
         │
-        ├── book_repository, article_repository, highlight_repository
+        ├── book_repository, highlight_repository
         ├── flashcard_repository, dictionary_repository
         └── fsrs_repository
 ```

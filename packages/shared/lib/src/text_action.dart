@@ -2,9 +2,13 @@ import 'package:domain_models/domain_models.dart' show SourceType;
 import 'package:flutter/widgets.dart';
 
 /// Payload delivered to a [TextAction] when the user selects text in the
-/// reader — the selected string plus enough positional metadata
-/// (CFI range / scroll offset / page number) for the action to save an
-/// anchor back to the source.
+/// reader — the selected string plus an EPUB CFI range for the action to
+/// save an anchor back to the source.
+///
+/// [pageNumber] and [scrollOffset] are vestigial from the removed article
+/// reader; they are always `null` for current sources. [sourceType] is
+/// likewise legacy — `SourceType` only has `book` since articles were
+/// dropped.
 class TextSelectionContext {
   const TextSelectionContext({
     required this.selectedText,
@@ -18,19 +22,19 @@ class TextSelectionContext {
   /// The text the user selected.
   final String selectedText;
 
-  /// ID of the book or article being read.
+  /// ID of the book being read.
   final String sourceId;
 
-  /// Source type (book or article).
+  /// Always [SourceType.book] — kept for the existing API shape.
   final SourceType sourceType;
 
-  /// CFI range for epub books.
+  /// CFI range for the EPUB selection.
   final String? cfiRange;
 
-  /// Page number (if available).
+  /// Vestigial — was used by the removed article reader.
   final int? pageNumber;
 
-  /// Scroll offset for articles.
+  /// Vestigial — was used by the removed article reader.
   final double? scrollOffset;
 }
 

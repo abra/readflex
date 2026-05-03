@@ -3,8 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Current in-WebView text selection, mirrored into Flutter so the context
 /// panel can drive its show/hide animation and pass position metadata to
-/// TextAction handlers. Exactly one of [cfiRange] (book) or [scrollOffset]
-/// (article) is populated while [hasSelection] is true.
+/// TextAction handlers. [cfiRange] is populated whenever [hasSelection] is
+/// true; [pageNumber] and [scrollOffset] are vestigial from the removed
+/// article reader and stay `null`.
 class ReaderSelectionState extends Equatable {
   const ReaderSelectionState({
     this.selectedText = '',
@@ -16,13 +17,13 @@ class ReaderSelectionState extends Equatable {
 
   final String selectedText;
 
-  /// Book-specific: CFI range of the selected text.
+  /// CFI range of the selected text.
   final String? cfiRange;
 
-  /// Book-specific: page number of the selection.
+  /// Vestigial — was used by the removed article reader.
   final int? pageNumber;
 
-  /// Article-specific: scroll fraction at the time of selection.
+  /// Vestigial — was used by the removed article reader.
   final double? scrollOffset;
 
   final bool hasSelection;

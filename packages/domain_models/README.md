@@ -15,8 +15,7 @@ from Dart names) a `toStorageString()` helper.
 | Model             | Represents                                                |
 |-------------------|-----------------------------------------------------------|
 | `Book`            | A book in the library (file path, reading progress, CFI)  |
-| `Article`         | A saved article (content path, scroll offset, metadata)   |
-| `Highlight`       | Text highlight attached to a book or article              |
+| `Highlight`       | Text highlight attached to a book                         |
 | `Flashcard`       | Flashcard with front/back and creation source             |
 | `DictionaryEntry` | Saved word or phrase with translation and usage examples  |
 | `ReviewItem`      | FSRS state for a reviewable item (flashcard/highlight/…)  |
@@ -27,8 +26,8 @@ from Dart names) a `toStorageString()` helper.
 
 | Enum             | Values                                       |
 |------------------|----------------------------------------------|
-| `SourceType`     | `book`, `article`                            |
-| `BookFormat`     | `epub`, `fb2`, `mobi`, `pdf`, `azw3`, `cbz`, `txt` |
+| `SourceType`     | `book` (single value — `article` was removed) |
+| `BookFormat`     | `epub`, `fb2`, `mobi`, `pdf`, `azw3`, `cbz`  |
 | `HighlightColor` | `yellow`, `green`, `blue`, `pink`, `purple`  |
 | `ReviewableType` | `flashcard`, `highlight`, `dictionary`       |
 | `FsrsState`      | `newCard`, `learning`, `review`, `relearning` |

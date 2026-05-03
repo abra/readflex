@@ -75,6 +75,58 @@ void main() {
         },
       );
 
+      // Catalog uses `lastOpenedAt` to decide between the "New"
+      // label and a progress %. The bumped value must propagate
+      // into [ReaderState.book] — otherwise the next position
+      // event will copyWith on a stale book and overwrite the
+      // just-persisted timestamp back to null.
+      blocTest<ReaderBloc, ReaderState>(
+        'state.book carries the bumped lastOpenedAt',
+        setUp: () {
+          bookRepository.seedBook(
+            testBook.copyWith(),
+            // lastOpenedAt stays null so we can detect the bump.
+          );
+        },
+        build: buildBloc,
+        act: (bloc) =>
+            bloc.add(const ReaderSourceLoadRequested(sourceId: 'book-1')),
+        verify: (bloc) {
+          expect(bloc.state.book, isNotNull);
+          expect(bloc.state.book!.lastOpenedAt, isNotNull);
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'a position update preserves lastOpenedAt instead of '
+        'reverting it',
+        setUp: () => bookRepository.seedBook(testBook),
+        build: buildBloc,
+        act: (bloc) async {
+          bloc.add(const ReaderSourceLoadRequested(sourceId: 'book-1'));
+          // Wait for state.book to land before dispatching the
+          // position update (otherwise the position event finds
+          // state.book == null and no-ops).
+          await bloc.stream.firstWhere(
+            (s) => s.status == ReaderStatus.ready,
+          );
+          bloc.add(
+            const ReaderBookPositionUpdated(
+              cfi: 'epubcfi(/6/2)',
+              progress: 0.05,
+            ),
+          );
+        },
+        wait: const Duration(seconds: 3),
+        verify: (bloc) {
+          // The persisted book after the position update must still
+          // carry the lastOpenedAt timestamp set on open.
+          expect(bookRepository.updatedBook!.lastOpenedAt, isNotNull);
+          // And state.book reflects the same.
+          expect(bloc.state.book?.lastOpenedAt, isNotNull);
+        },
+      );
+
       blocTest<ReaderBloc, ReaderState>(
         'emits failure when source not found',
         build: buildBloc,
@@ -169,6 +221,101 @@ void main() {
         wait: const Duration(seconds: 3),
         verify: (_) {
           expect(bookRepository.updatedBook, isNull);
+        },
+      );
+
+      // foliate-js's paginator allows navigation onto two blank
+      // trailing columns past the actual content (`atEnd: page >=
+      // pages - 2`). On those it emits `progress=0` /
+      // `bookCurrentPage=0` — not because we're at the start, but
+      // because there's no real content under the viewport. Use
+      // the paginator-reported `atEnd` flag to override those
+      // bogus numbers with "100% / last page" — same trick readest
+      // uses. Without the override the slider would snap to 0%
+      // and the page counter would clear at the end of every book.
+      blocTest<ReaderBloc, ReaderState>(
+        'atEnd phantom: overrides progress=0 with 1.0 and pins page to last',
+        setUp: () =>
+            bookRepository.seedBook(testBook.copyWith(readingProgress: 0.99)),
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          title: testBook.title,
+          book: testBook.copyWith(readingProgress: 0.99),
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(blank-trailing-column)',
+            progress: 0.0,
+            bookCurrentPage: 0,
+            bookTotalPages: 200,
+            atEnd: true,
+          ),
+        ),
+        wait: const Duration(seconds: 3),
+        verify: (bloc) {
+          expect(bloc.state.book?.readingProgress, 1.0);
+          expect(bloc.state.bookCurrentPage, 199);
+          expect(bloc.state.bookTotalPages, 200);
+        },
+      );
+
+      // A legitimate position update that happens to start near
+      // zero (book just reopened from the beginning, or user
+      // dragged the slider to the start) carries `atEnd=false`,
+      // so progress passes through unmodified.
+      blocTest<ReaderBloc, ReaderState>(
+        'atEnd=false: progress passes through unmodified',
+        setUp: () =>
+            bookRepository.seedBook(testBook.copyWith(readingProgress: 1.0)),
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          title: testBook.title,
+          book: testBook.copyWith(readingProgress: 1.0),
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/2)',
+            progress: 0.0,
+            bookCurrentPage: 1,
+            bookTotalPages: 200,
+            atEnd: false,
+          ),
+        ),
+        wait: const Duration(seconds: 3),
+        verify: (bloc) {
+          // Real seek from end to start: state updates to 0.0 / page 1.
+          expect(bloc.state.book?.readingProgress, 0.0);
+          expect(bloc.state.bookCurrentPage, 1);
+        },
+      );
+
+      // Defensive: if foliate-js reports atEnd but bookTotalPages is
+      // null (very early in the load before pagination settles), we
+      // can't compute "last page", so the override must NOT engage —
+      // the event passes through as-is.
+      blocTest<ReaderBloc, ReaderState>(
+        'atEnd with null bookTotalPages does not engage override',
+        setUp: () =>
+            bookRepository.seedBook(testBook.copyWith(readingProgress: 0.5)),
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          title: testBook.title,
+          book: testBook.copyWith(readingProgress: 0.5),
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/2)',
+            progress: 0.3,
+            atEnd: true,
+          ),
+        ),
+        wait: const Duration(seconds: 3),
+        verify: (bloc) {
+          expect(bloc.state.book?.readingProgress, 0.3);
+          expect(bloc.state.bookCurrentPage, isNull);
         },
       );
 

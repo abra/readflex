@@ -12,7 +12,7 @@ wrapped into `StorageException` (from `domain_models`) before surfacing.
 | Method                                      | Purpose                                       |
 |---------------------------------------------|-----------------------------------------------|
 | `getEntries()`                              | All entries ordered by added date             |
-| `getEntriesBySource(sourceId)`              | Entries belonging to a book or article        |
+| `getEntriesBySource(sourceId)`              | Entries belonging to a book                   |
 | `getEntryById(id)`                          | Lookup by id                                  |
 | `getEntriesByIds(ids)`                      | Batch lookup                                  |
 | `addEntry({word, translation, pronunciation, partOfSpeech, context, sourceId, sourceType, usageExamples})` | Create entry |

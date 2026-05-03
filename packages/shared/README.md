@@ -32,11 +32,11 @@ abstract class TextAction {
 | Field          | Type         | Notes                                |
 |----------------|--------------|--------------------------------------|
 | `selectedText` | `String`     | Text the user highlighted            |
-| `sourceId`     | `String`     | Book or article ID                   |
-| `sourceType`   | `SourceType` | `book` or `article`                  |
-| `cfiRange`     | `String?`    | EPUB CFI range (books only)          |
-| `pageNumber`   | `int?`       | Page number if the reader exposed it |
-| `scrollOffset` | `double?`    | Scroll offset for articles           |
+| `sourceId`     | `String`     | Book ID                              |
+| `sourceType`   | `SourceType` | Always `book` — legacy enum          |
+| `cfiRange`     | `String?`    | EPUB CFI range                       |
+| `pageNumber`   | `int?`       | Vestigial — was used for articles    |
+| `scrollOffset` | `double?`    | Vestigial — was used for articles    |
 
 ---
 

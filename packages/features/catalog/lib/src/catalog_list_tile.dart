@@ -64,15 +64,19 @@ class BookLibraryListTile extends StatelessWidget {
         _MetaDot(mutedColor: mutedColor),
         if (book.isFinished)
           ..._doneBadge(context)
-        else if (progress > 0)
+        else if (book.lastOpenedAt == null)
+          Text('New', style: _metaStyle(mutedColor))
+        else
+          // Once the user has opened the book, show the progress %
+          // even if it's 0 — they may have navigated back to the
+          // cover. Showing "New" again would lie about the book
+          // never having been read.
           Text(
             '$progress%',
             style: _metaStyle(context.colors.onSurface).copyWith(
               fontWeight: FontWeight.w500,
             ),
-          )
-        else
-          Text('New', style: _metaStyle(mutedColor)),
+          ),
       ],
     );
   }

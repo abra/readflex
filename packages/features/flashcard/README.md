@@ -37,7 +37,7 @@ Single `FlashcardCubit` (state in `flashcard_state.dart`, `part of`).
   non-empty `front` and `back`; the save button stays disabled until both
   fields are filled.
 - On `save()` the cubit calls `FlashcardRepository.addFlashcard(...)` with
-  `deckId = selection.sourceId` (each book/article acts as its own deck),
+  `deckId = selection.sourceId` (each book acts as its own deck),
   then registers the new card in `FsrsRepository.createReviewItem(...)`.
   The FSRS call is wrapped in its own try/catch and treated as non-fatal:
   the flashcard is already saved, a missing FSRS row just means the card

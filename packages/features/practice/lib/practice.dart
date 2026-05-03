@@ -4,7 +4,7 @@
 /// Two entry points:
 ///   * `PracticeScreen` — the Practice tab, a full session over all due items.
 ///   * `showMiniReviewSheet` — a per-source bottom sheet used by the reader
-///     to review only items from the book/article currently being read.
+///     to review only items from the book currently being read.
 library;
 
 export 'src/mini_review_sheet.dart' show showMiniReviewSheet;

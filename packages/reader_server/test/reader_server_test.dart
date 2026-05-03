@@ -162,7 +162,7 @@ void main() {
     // section iframes — without it each new chapter re-fetches the
     // variable font and the text reflows from fallback to target
     // ("выпрямление текста" effect).
-    test('asset responses carry Cache-Control header', () async {
+    test('non-font asset responses carry a 1-day Cache-Control', () async {
       await File('${assetsDir.path}/style.css').writeAsString('p {}');
       final response = await client.get(
         Uri.parse(url('/assets/style.css')),
@@ -170,9 +170,29 @@ void main() {
       expect(response.statusCode, 200);
       expect(
         response.headers['cache-control'],
-        contains('max-age='),
+        contains('max-age=86400'),
       );
     });
+
+    // Fonts get a year + immutable: their bytes never change once
+    // shipped, so the WebView can keep them across chapters and
+    // sessions without re-validating.
+    test(
+      'font asset responses carry a 1-year immutable Cache-Control',
+      () async {
+        Directory('${assetsDir.path}/fonts').createSync(recursive: true);
+        await File(
+          '${assetsDir.path}/fonts/SourceSerif4-Variable.ttf',
+        ).writeAsBytes([0, 1, 2]);
+        final response = await client.get(
+          Uri.parse(url('/assets/fonts/SourceSerif4-Variable.ttf')),
+        );
+        expect(response.statusCode, 200);
+        final cacheControl = response.headers['cache-control']!;
+        expect(cacheControl, contains('max-age=31536000'));
+        expect(cacheControl, contains('immutable'));
+      },
+    );
 
     test('book responses do NOT carry Cache-Control', () async {
       final bookFile = File('${tempDir.path}/test.epub');

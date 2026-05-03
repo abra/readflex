@@ -1,5 +1,5 @@
 name: reader_server
-description: "Local HTTP server for serving book files and article HTML to the reader WebView."
+description: "Local HTTP server for serving book files and reader assets to the reader WebView."
 publish_to: none
 version: 0.1.0
 

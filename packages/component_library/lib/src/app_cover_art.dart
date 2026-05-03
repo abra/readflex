@@ -3,15 +3,20 @@ import 'package:flutter/material.dart';
 import 'app_icons.dart';
 import 'theme/tokens/app_radius.dart';
 
-/// Stylised cover placeholder used when a book or article has no real
-/// cover image of its own.
+/// Stylised cover placeholder used when a book has no real cover image of
+/// its own.
 ///
 /// Ported from `readwell_demo`'s `ReadwellCoverArt` — every clamp,
 /// reserve, stripe, and font ratio is kept 1:1 so a library grid here
 /// reads the same as the demo. The only semantic deviation is how the
 /// gradient is picked: the demo stores a curated `(color1, color2)` pair
 /// per item in its data layer, whereas we pick deterministically from a
-/// shared palette keyed by [seed] (usually the book / article id).
+/// shared palette keyed by [seed] (usually the book id).
+///
+/// The [isArticle] / [source] inputs and the article badge / icon helpers
+/// below are leftovers from the removed article reader. They are kept
+/// because the design-system demo still exercises them; once the demo is
+/// pruned, the article path can be deleted entirely.
 ///
 /// Must be hosted inside a bounded box (grid cell, SizedBox, LayoutBuilder).
 /// Caller passes the exact [height] / [width] — the widget does not

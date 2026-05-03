@@ -41,7 +41,7 @@ class FlashcardsDao extends DatabaseAccessor<AppDatabase>
       (delete(flashcardsTable)..where((t) => t.id.equals(id))).go();
 
   /// Bulk-removes every flashcard tied to [deckId]. Used when the parent
-  /// book/article is deleted so cards don't outlive their deck.
+  /// book is deleted so cards don't outlive their deck.
   Future<void> deleteFlashcardsByDeck(String deckId) =>
       (delete(flashcardsTable)..where((t) => t.deckId.equals(deckId))).go();
 }

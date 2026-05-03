@@ -12,6 +12,8 @@ void main() {
         'chapterTotalPages': 20,
         'bookCurrentPage': 84,
         'bookTotalPages': 200,
+        'atEnd': false,
+        'atStart': false,
       });
 
       expect(position.cfi, 'epubcfi(/6/4!/4/2)');
@@ -21,6 +23,8 @@ void main() {
       expect(position.chapterTotalPages, 20);
       expect(position.bookCurrentPage, 84);
       expect(position.bookTotalPages, 200);
+      expect(position.atEnd, isFalse);
+      expect(position.atStart, isFalse);
     });
 
     test('fromMap handles missing optional fields', () {
@@ -36,6 +40,28 @@ void main() {
       expect(position.chapterTotalPages, isNull);
       expect(position.bookCurrentPage, isNull);
       expect(position.bookTotalPages, isNull);
+      // atEnd / atStart default to false so old payloads (or fixtures
+      // that haven't added the field) keep working without coercion.
+      expect(position.atEnd, isFalse);
+      expect(position.atStart, isFalse);
+    });
+
+    test('fromMap parses atEnd=true', () {
+      final position = BookPosition.fromMap({
+        'cfi': 'epubcfi(/6/4)',
+        'percentage': 0.0,
+        'bookCurrentPage': 0,
+        'bookTotalPages': 200,
+        'atEnd': true,
+      });
+
+      // Note: foliate-js reports fraction=0 / current=0 when atEnd is
+      // true (we are on the trailing blank buffer past content). The
+      // bridge is a passive transport — the bloc is what overrides
+      // these to "100% / last page".
+      expect(position.atEnd, isTrue);
+      expect(position.fraction, 0.0);
+      expect(position.bookCurrentPage, 0);
     });
 
     test('fromMap handles integer percentage', () {

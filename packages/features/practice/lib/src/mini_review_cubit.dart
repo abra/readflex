@@ -11,8 +11,7 @@ import 'practice_item_resolver.dart';
 
 part 'mini_review_state.dart';
 
-/// Short in-reader review session scoped to a single source (book or
-/// article).
+/// Short in-reader review session scoped to a single source (book).
 ///
 /// Mirrors [PracticeBloc]'s flow (load → reveal → rate → advance) but talks
 /// to `fsrs_repository.getDueItemsBySource(sourceId)` so it only surfaces

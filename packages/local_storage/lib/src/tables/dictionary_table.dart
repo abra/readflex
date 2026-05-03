@@ -1,9 +1,9 @@
 import 'package:drift/drift.dart';
 
 /// Drift schema for saved dictionary entries (words / phrases / idioms).
-/// Optional [sourceId] + [sourceType] link the entry back to the book or
-/// article it was captured from; [usageExamples] is a JSON-encoded list of
-/// strings. FSRS review state lives separately in `review_items_table`.
+/// Optional [sourceId] + [sourceType] link the entry back to the book it
+/// was captured from; [usageExamples] is a JSON-encoded list of strings.
+/// FSRS review state lives separately in `review_items_table`.
 class DictionaryTable extends Table {
   TextColumn get id => text()();
 
@@ -19,7 +19,7 @@ class DictionaryTable extends Table {
 
   TextColumn get sourceId => text().nullable()();
 
-  TextColumn get sourceType => text().nullable()(); // book | article
+  TextColumn get sourceType => text().nullable()(); // 'book' or null (legacy SourceType column)
   TextColumn get usageExamples => text().nullable()(); // JSON-encoded list
   TextColumn get addedAt => text()(); // ISO 8601
 

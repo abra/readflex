@@ -27,7 +27,7 @@ Props (all repositories, passed from the DI container):
 ```dart
 void showMiniReviewSheet(
   BuildContext context, {
-  required String sourceId, // book or article ID
+  required String sourceId, // book ID
   required FsrsRepository fsrsRepository,
   required FlashcardRepository flashcardRepository,
   required HighlightRepository highlightRepository,

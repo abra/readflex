@@ -16,6 +16,8 @@ class BookPosition {
     this.chapterTotalPages,
     this.bookCurrentPage,
     this.bookTotalPages,
+    this.atEnd = false,
+    this.atStart = false,
   });
 
   /// EPUB Canonical Fragment Identifier — exact position in the book.
@@ -33,6 +35,18 @@ class BookPosition {
   final int? bookCurrentPage;
   final int? bookTotalPages;
 
+  /// `true` when the paginator reports we are on its trailing "blank
+  /// buffer" pages past the actual content. foliate-js still emits
+  /// onRelocated with `fraction=0` / `bookCurrentPage=0` on those
+  /// pages, so consumers should pin progress to 100% when this is set
+  /// instead of trusting the bogus numbers.
+  final bool atEnd;
+
+  /// `true` when the paginator reports we are at (or before) the very
+  /// first readable page. The complement of [atEnd]; surfaced for
+  /// symmetry, currently unused.
+  final bool atStart;
+
   factory BookPosition.fromMap(Map<String, dynamic> map) {
     return BookPosition(
       cfi: map['cfi'] as String,
@@ -42,13 +56,15 @@ class BookPosition {
       chapterTotalPages: (map['chapterTotalPages'] as num?)?.toInt(),
       bookCurrentPage: (map['bookCurrentPage'] as num?)?.toInt(),
       bookTotalPages: (map['bookTotalPages'] as num?)?.toInt(),
+      atEnd: map['atEnd'] as bool? ?? false,
+      atStart: map['atStart'] as bool? ?? false,
     );
   }
 }
 
-/// User text selection surfaced from the reader WebView. Books carry a
-/// CFI range, articles carry a scroll fraction — either is enough to
-/// restore the anchor later (e.g. for a highlight).
+/// User text selection surfaced from the reader WebView. The CFI range is
+/// the anchor used to restore highlights later. [scrollOffset] is
+/// vestigial from the removed article reader.
 class ReaderSelection {
   const ReaderSelection({
     required this.text,
@@ -58,10 +74,10 @@ class ReaderSelection {
 
   final String text;
 
-  /// For books: CFI range of the selection.
+  /// CFI range of the selection.
   final String? cfiRange;
 
-  /// For articles: scroll fraction at time of selection.
+  /// Vestigial — was emitted by the removed article reader.
   final double? scrollOffset;
 
   factory ReaderSelection.fromMap(Map<String, dynamic> map) {
@@ -185,9 +201,9 @@ class FoliateStyle {
   };
 }
 
-/// A highlight annotation the WebView should render. For books the
-/// [cfiRange] pins the annotation to exact text; articles match by
-/// [text]. [color] overrides the default yellow when set.
+/// A highlight annotation the WebView should render. The [cfiRange] pins
+/// the annotation to exact text in the EPUB. [color] overrides the
+/// default yellow when set.
 class ReaderHighlight {
   const ReaderHighlight({
     required this.id,

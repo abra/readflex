@@ -1,6 +1,6 @@
 // Full-screen setup screen shown once after onboarding.
 //
-// Prompts the user to add their first book or article.
+// Prompts the user to add their first book.
 // The actual import flow is orchestrated by the caller.
 
 import 'package:component_library/component_library.dart';

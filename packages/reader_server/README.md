@@ -1,8 +1,8 @@
 # reader_server
 
-Local HTTP server that serves book files (including article EPUBs) and
-static reader assets to the reader WebView. Bound to `127.0.0.1` on a
-system-assigned port — **localhost-only**, never exposed to the network.
+Local HTTP server that serves book files and static reader assets to the
+reader WebView. Bound to `127.0.0.1` on a system-assigned port —
+**localhost-only**, never exposed to the network.
 
 `flutter_inappwebview` cannot read files bundled via Flutter's rootBundle
 or arbitrary paths outside its sandbox directly. Instead, the reader loads
@@ -15,7 +15,7 @@ app launch and stopped on dispose.
 
 | Route                                         | Served from                                    |
 |-----------------------------------------------|------------------------------------------------|
-| `GET /book/<url-encoded-absolute-path>`       | Any path on disk — streams the raw file. Used for books AND article EPUBs (articles are packaged as single-chapter EPUBs at import time). |
+| `GET /book/<url-encoded-absolute-path>`       | Any path on disk — streams the raw file (epub, pdf, fb2, mobi, azw3, cbz). |
 | `GET /assets/<path>`                          | `<assetsDirectory>/<path>` (foliate-js etc.)   |
 
 All other methods return `405`, unknown routes return `404`. Asset paths

@@ -952,6 +952,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
             chapterTitle: position.chapterTitle,
             bookCurrentPage: position.bookCurrentPage,
             bookTotalPages: position.bookTotalPages,
+            atEnd: position.atEnd,
           ),
         );
       },

@@ -1419,6 +1419,13 @@ const onRelocated = (currentInfo) => {
   const bookCurrentPage = currentInfo.location.current
   const cfi = currentInfo.cfi
   const percentage = currentInfo.fraction
+  // foliate-js's paginator considers the last two trailing columns
+  // "blank buffer" (atEnd: page >= pages - 2). On those pages it
+  // reports fraction=0 / current=0 even though the user is at the
+  // END of the book. Surfacing atEnd lets Dart override the bogus
+  // numbers instead of trying to filter the event by heuristics.
+  const atEnd = reader.view.renderer.atEnd ?? false
+  const atStart = reader.view.renderer.atStart ?? false
 
   callFlutter('onRelocated', {
     chapterTitle,
@@ -1429,6 +1436,8 @@ const onRelocated = (currentInfo) => {
     bookCurrentPage,
     cfi,
     percentage,
+    atEnd,
+    atStart,
     bookmark: currentInfo.bookmark,
     writingMode: reader.view.renderer.writingMode,
   })

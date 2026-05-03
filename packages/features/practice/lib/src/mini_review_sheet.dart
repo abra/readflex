@@ -14,7 +14,7 @@ import 'review_card_views.dart';
 ///
 /// Used by the reader's inline review reminder — the user taps "Review"
 /// on the reminder banner and this sheet surfaces only items due for the
-/// book or article currently being read.
+/// book currently being read.
 void showMiniReviewSheet(
   BuildContext context, {
   required String sourceId,

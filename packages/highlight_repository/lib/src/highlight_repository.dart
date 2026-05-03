@@ -105,8 +105,8 @@ class HighlightRepository {
   }
 
   /// Bulk-deletes every highlight attached to [sourceId]. Called when the
-  /// parent book or article is removed so the highlights table doesn't
-  /// accumulate orphans.
+  /// parent book is removed so the highlights table doesn't accumulate
+  /// orphans.
   Future<void> deleteHighlightsBySource(String sourceId) async {
     try {
       await _dao.deleteHighlightsBySource(sourceId);

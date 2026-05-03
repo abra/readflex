@@ -37,7 +37,7 @@ reviews it. Items that are never reviewed take zero rows in the review table.
 | `getReviewStates(itemIds)`                                    | Batch FSRS state lookup                          |
 | `getMasteredItemIds({type, limit, offset})`                   | IDs of items that reached the `review` phase     |
 | `getDueItems({type, limit, offset})`                          | All items due now, mixed across types            |
-| `getDueItemsBySource(sourceId, {type, limit, offset})`        | Due items from one book/article                  |
+| `getDueItemsBySource(sourceId, {type, limit, offset})`        | Due items from one book                          |
 | `recordReview({itemId, itemType, rating, sourceId, reviewDurationMs})` | Apply a rating; returns updated FSRS state |
 
 Follows the standard repository pattern: receives `AppDatabase` via its

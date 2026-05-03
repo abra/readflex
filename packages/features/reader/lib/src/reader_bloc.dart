@@ -77,14 +77,20 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       ).wait;
 
       if (book != null) {
-        await _bookRepository.updateBook(
-          book.copyWith(lastOpenedAt: DateTime.now()),
-        );
+        // Bump `lastOpenedAt` in BOTH the persisted row AND the
+        // in-memory state. Earlier the emit kept the pre-bump
+        // `book`, so the very first `_onBookPositionUpdated`
+        // dispatched after open would copyWith on a stale
+        // lastOpenedAt and overwrite the freshly-written value
+        // back to its previous (often null) state — leaving the
+        // book labelled "New" in the catalog forever.
+        final updatedBook = book.copyWith(lastOpenedAt: DateTime.now());
+        await _bookRepository.updateBook(updatedBook);
         emit(
           state.copyWith(
             status: ReaderStatus.ready,
-            title: book.title,
-            book: book,
+            title: updatedBook.title,
+            book: updatedBook,
             highlights: highlights,
           ),
         );
@@ -109,7 +115,19 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     Emitter<ReaderState> emit,
   ) async {
     if (state.book == null) return;
-    final progress = event.progress.clamp(0.0, 1.0);
+
+    // foliate-js's paginator allows navigation onto two blank trailing
+    // columns past the actual content (`atEnd: page >= pages - 2`).
+    // On those pages it reports `progress=0` / `bookCurrentPage=0` —
+    // not because we're at the start, but because there's no real
+    // content under the viewport. Use the paginator-reported `atEnd`
+    // signal to override the bogus numbers with the canonical
+    // "we're at the very end" values, the same trick readest uses.
+    final total = event.bookTotalPages;
+    final isPhantomEnd = event.atEnd && total != null && total > 0;
+    final progress = isPhantomEnd ? 1.0 : event.progress.clamp(0.0, 1.0);
+    final bookCurrentPage = isPhantomEnd ? total - 1 : event.bookCurrentPage;
+
     final updated = state.book!.copyWith(
       currentCfi: event.cfi,
       readingProgress: progress,
@@ -119,7 +137,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       state.copyWith(
         book: updated,
         chapterTitle: event.chapterTitle,
-        bookCurrentPage: event.bookCurrentPage,
+        bookCurrentPage: bookCurrentPage,
         bookTotalPages: event.bookTotalPages,
       ),
     );

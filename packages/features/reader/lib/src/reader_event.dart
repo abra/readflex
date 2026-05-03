@@ -21,6 +21,11 @@ final class ReaderSourceLoadRequested extends ReaderEvent {
 /// foliate-js reports a new reading position. Persisted to the book's
 /// `currentCfi` + `readingProgress`. Optional chapter/page fields are
 /// only stored on the in-memory state (chrome UI), not persisted.
+///
+/// [atEnd] is `true` when foliate-js's paginator reports we're on its
+/// trailing blank-buffer pages past the actual content. On those pages
+/// foliate-js still emits `progress=0` / `bookCurrentPage=0`; the bloc
+/// uses [atEnd] to override those bogus numbers with "100% / last page".
 final class ReaderBookPositionUpdated extends ReaderEvent {
   const ReaderBookPositionUpdated({
     required this.cfi,
@@ -28,6 +33,7 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
     this.chapterTitle,
     this.bookCurrentPage,
     this.bookTotalPages,
+    this.atEnd = false,
   });
 
   final String cfi;
@@ -35,6 +41,7 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
   final String? chapterTitle;
   final int? bookCurrentPage;
   final int? bookTotalPages;
+  final bool atEnd;
 
   @override
   List<Object?> get props => [
@@ -43,6 +50,7 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
     chapterTitle,
     bookCurrentPage,
     bookTotalPages,
+    atEnd,
   ];
 }
 
