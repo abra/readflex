@@ -32,16 +32,25 @@ class _ScrollEdgeFadeStackState extends State<ScrollEdgeFadeStack> {
   bool _showTop = false;
   bool _showBottom = false;
 
-  bool _onNotification(ScrollNotification notification) {
-    if (notification.metrics.axis != Axis.vertical) return false;
-    final showTop = notification.metrics.extentBefore > 0;
-    final showBottom = notification.metrics.extentAfter > 0;
+  void _updateFromMetrics(ScrollMetrics metrics) {
+    if (metrics.axis != Axis.vertical) return;
+    final showTop = metrics.extentBefore > 0;
+    final showBottom = metrics.extentAfter > 0;
     if ((showTop != _showTop || showBottom != _showBottom) && mounted) {
       setState(() {
         _showTop = showTop;
         _showBottom = showBottom;
       });
     }
+  }
+
+  bool _onScroll(ScrollNotification notification) {
+    _updateFromMetrics(notification.metrics);
+    return false;
+  }
+
+  bool _onMetrics(ScrollMetricsNotification notification) {
+    _updateFromMetrics(notification.metrics);
     return false;
   }
 
@@ -49,9 +58,20 @@ class _ScrollEdgeFadeStackState extends State<ScrollEdgeFadeStack> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        NotificationListener<ScrollNotification>(
-          onNotification: _onNotification,
-          child: widget.child,
+        // Two listeners: ScrollMetricsNotification (fires on first
+        // layout / resize / content-size change without a gesture)
+        // and ScrollNotification (fires on scroll events). The
+        // metrics one is what flips the bottom fade on when the
+        // user switches grid → list and the new list overflows;
+        // without it the fade only appears after a manual scroll.
+        // ScrollMetricsNotification is NOT a ScrollNotification
+        // subclass, so a single listener can't catch both.
+        NotificationListener<ScrollMetricsNotification>(
+          onNotification: _onMetrics,
+          child: NotificationListener<ScrollNotification>(
+            onNotification: _onScroll,
+            child: widget.child,
+          ),
         ),
         Positioned(
           top: 0,
