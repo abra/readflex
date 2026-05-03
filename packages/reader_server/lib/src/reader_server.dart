@@ -233,6 +233,18 @@ class ReaderServer {
       ..contentType = contentType
       ..set(HttpHeaders.acceptRangesHeader, 'bytes');
 
+    // Cache static assets (foliate-js sources, fonts) for a day so
+    // each new section iframe doesn't re-fetch the variable font and
+    // FOUT-reflow ("text straightens out") on every chapter cross.
+    // Books are ranged-streamed differently and live at /book/ — no
+    // caching for those, content can change between sessions.
+    if (path.startsWith('/assets/')) {
+      response.headers.set(
+        HttpHeaders.cacheControlHeader,
+        'public, max-age=86400',
+      );
+    }
+
     if (rangeHeader == null) {
       response
         ..statusCode = HttpStatus.ok

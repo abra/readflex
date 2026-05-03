@@ -157,6 +157,35 @@ void main() {
       expect(response.headers['content-type'], contains('text/css'));
     });
 
+    // Asset responses should carry a long Cache-Control so the
+    // WebView caches static foliate-js sources and fonts across
+    // section iframes — without it each new chapter re-fetches the
+    // variable font and the text reflows from fallback to target
+    // ("выпрямление текста" effect).
+    test('asset responses carry Cache-Control header', () async {
+      await File('${assetsDir.path}/style.css').writeAsString('p {}');
+      final response = await client.get(
+        Uri.parse(url('/assets/style.css')),
+      );
+      expect(response.statusCode, 200);
+      expect(
+        response.headers['cache-control'],
+        contains('max-age='),
+      );
+    });
+
+    test('book responses do NOT carry Cache-Control', () async {
+      final bookFile = File('${tempDir.path}/test.epub');
+      await bookFile.writeAsBytes([1, 2, 3]);
+      final response = await client.get(
+        Uri.parse(
+          url('/book/${Uri.encodeComponent(bookFile.path)}'),
+        ),
+      );
+      expect(response.statusCode, 200);
+      expect(response.headers.containsKey('cache-control'), isFalse);
+    });
+
     test('returns 404 for missing asset', () async {
       final response = await client.get(
         Uri.parse(url('/assets/nonexistent.js')),

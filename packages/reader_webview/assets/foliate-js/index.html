@@ -2,6 +2,23 @@
 <meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport">
 <title>Readflex Reader</title>
+<!--
+  Preload the variable fonts the reader bundles. Each new chapter
+  loads in its own iframe; without preloading, the iframe's fresh
+  @font-face rule fetches the font cold and the text reflows from
+  fallback to target ("the text straightens out" effect on chapter
+  crosses). Preloading here primes the WebView's HTTP cache before
+  any iframe is created, so the iframe's later fetch hits the
+  cache and the font swap is invisible. Combined with the
+  Cache-Control header from ReaderServer, subsequent chapters
+  re-use the cached font without a network roundtrip.
+-->
+<link rel="preload" href="/assets/fonts/SourceSerif4-Variable.ttf"
+      as="font" type="font/ttf" crossorigin>
+<link rel="preload" href="/assets/fonts/SourceSerif4-Italic-Variable.ttf"
+      as="font" type="font/ttf" crossorigin>
+<link rel="preload" href="/assets/fonts/Geist-Variable.ttf"
+      as="font" type="font/ttf" crossorigin>
 <style>
     html {
       height: 100vh;
