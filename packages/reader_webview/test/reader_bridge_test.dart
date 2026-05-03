@@ -10,6 +10,8 @@ void main() {
         'chapterTitle': 'Chapter 1',
         'chapterCurrentPage': 5,
         'chapterTotalPages': 20,
+        'bookCurrentPage': 84,
+        'bookTotalPages': 200,
       });
 
       expect(position.cfi, 'epubcfi(/6/4!/4/2)');
@@ -17,6 +19,8 @@ void main() {
       expect(position.chapterTitle, 'Chapter 1');
       expect(position.chapterCurrentPage, 5);
       expect(position.chapterTotalPages, 20);
+      expect(position.bookCurrentPage, 84);
+      expect(position.bookTotalPages, 200);
     });
 
     test('fromMap handles missing optional fields', () {
@@ -30,6 +34,8 @@ void main() {
       expect(position.chapterTitle, isNull);
       expect(position.chapterCurrentPage, isNull);
       expect(position.chapterTotalPages, isNull);
+      expect(position.bookCurrentPage, isNull);
+      expect(position.bookTotalPages, isNull);
     });
 
     test('fromMap handles integer percentage', () {

@@ -11,6 +11,11 @@ class FakeBookRepository implements BookRepository {
 
   Book? updatedBook;
 
+  /// Number of times [updateBook] has been called. Used by debounce
+  /// tests to verify rapid position updates collapse into a single
+  /// trailing write.
+  int updateCallCount = 0;
+
   void seedBook(Book book) => books.add(book);
 
   @override
@@ -23,6 +28,7 @@ class FakeBookRepository implements BookRepository {
   Future<Book> updateBook(Book book) async {
     if (shouldThrow) throw Exception('updateBook failed');
     updatedBook = book;
+    updateCallCount += 1;
     return book;
   }
 }

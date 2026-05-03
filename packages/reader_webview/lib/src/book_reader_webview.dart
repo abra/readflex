@@ -236,6 +236,14 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     _controller?.evaluateJavascript(source: 'goToCfi($escaped);');
   }
 
+  /// Navigate to a fraction `[0, 1]` of the whole book. Used by the
+  /// bottom-chrome slider's drag-to-seek; foliate-js's
+  /// `window.goToPercent` does the actual chapter+offset resolution.
+  void goToFraction(double fraction) {
+    final clamped = fraction.clamp(0.0, 1.0);
+    _controller?.evaluateJavascript(source: 'goToPercent($clamped);');
+  }
+
   /// Go to the next page.
   void nextPage() {
     _controller?.evaluateJavascript(source: 'nextPage();');

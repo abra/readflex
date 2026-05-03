@@ -19,18 +19,31 @@ final class ReaderSourceLoadRequested extends ReaderEvent {
 }
 
 /// foliate-js reports a new reading position. Persisted to the book's
-/// `currentCfi` + `readingProgress`.
+/// `currentCfi` + `readingProgress`. Optional chapter/page fields are
+/// only stored on the in-memory state (chrome UI), not persisted.
 final class ReaderBookPositionUpdated extends ReaderEvent {
   const ReaderBookPositionUpdated({
     required this.cfi,
     required this.progress,
+    this.chapterTitle,
+    this.bookCurrentPage,
+    this.bookTotalPages,
   });
 
   final String cfi;
   final double progress;
+  final String? chapterTitle;
+  final int? bookCurrentPage;
+  final int? bookTotalPages;
 
   @override
-  List<Object?> get props => [cfi, progress];
+  List<Object?> get props => [
+    cfi,
+    progress,
+    chapterTitle,
+    bookCurrentPage,
+    bookTotalPages,
+  ];
 }
 
 /// Reloads the highlight list from storage after a TextAction

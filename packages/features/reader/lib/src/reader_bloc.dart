@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:book_repository/book_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
@@ -27,16 +29,40 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
        _highlightRepository = highlightRepository,
        super(const ReaderState()) {
     on<ReaderSourceLoadRequested>(_onSourceLoadRequested);
-    // No debounce here on purpose: the bottom chrome reads progress out of
-    // [ReaderState], so it has to update on every page turn. Each handler
-    // run does one indexed `updateBook` write; SQLite handles that volume
-    // comfortably for typical reading speeds.
     on<ReaderBookPositionUpdated>(_onBookPositionUpdated);
     on<ReaderHighlightsRefreshed>(_onHighlightsRefreshed);
   }
 
   final BookRepository _bookRepository;
   final HighlightRepository _highlightRepository;
+
+  /// Pending Book to persist to the repository. The bottom chrome's
+  /// drag-to-seek fires `ReaderBookPositionUpdated` ~10×/sec while
+  /// foliate-js navigates under the finger; we debounce the actual
+  /// `updateBook` write so SQLite isn't taking a hit on every onRelocated.
+  /// State is still emitted on every event so the chrome stays in sync.
+  Book? _pendingPersist;
+  Timer? _persistTimer;
+  static const _persistDebounce = Duration(milliseconds: 500);
+
+  @override
+  Future<void> close() async {
+    _persistTimer?.cancel();
+    _persistTimer = null;
+    // Flush whatever's pending so closing the reader (or hot
+    // restart) doesn't drop the latest position. Awaited so the
+    // write actually completes before the bloc's stream closes.
+    final pending = _pendingPersist;
+    _pendingPersist = null;
+    if (pending != null) {
+      try {
+        await _bookRepository.updateBook(pending);
+      } catch (e, st) {
+        addError(e, st);
+      }
+    }
+    return super.close();
+  }
 
   Future<void> _onSourceLoadRequested(
     ReaderSourceLoadRequested event,
@@ -82,16 +108,37 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     ReaderBookPositionUpdated event,
     Emitter<ReaderState> emit,
   ) async {
+    if (state.book == null) return;
     final progress = event.progress.clamp(0.0, 1.0);
+    final updated = state.book!.copyWith(
+      currentCfi: event.cfi,
+      readingProgress: progress,
+    );
+    // Emit immediately so chrome stays in sync with the WebView.
+    emit(
+      state.copyWith(
+        book: updated,
+        chapterTitle: event.chapterTitle,
+        bookCurrentPage: event.bookCurrentPage,
+        bookTotalPages: event.bookTotalPages,
+      ),
+    );
+    // Persist with a trailing debounce — successive emits within the
+    // window only update [_pendingPersist], so a 5-second drag that
+    // fires ~50 onRelocated events still results in one write at the
+    // end. The latest pending value is always the one persisted.
+    _pendingPersist = updated;
+    _persistTimer?.cancel();
+    _persistTimer = Timer(_persistDebounce, _flushPersist);
+  }
+
+  Future<void> _flushPersist() async {
+    _persistTimer = null;
+    final pending = _pendingPersist;
+    if (pending == null) return;
+    _pendingPersist = null;
     try {
-      if (state.book != null) {
-        final updated = state.book!.copyWith(
-          currentCfi: event.cfi,
-          readingProgress: progress,
-        );
-        await _bookRepository.updateBook(updated);
-        emit(state.copyWith(book: updated));
-      }
+      await _bookRepository.updateBook(pending);
     } catch (e, st) {
       addError(e, st);
     }

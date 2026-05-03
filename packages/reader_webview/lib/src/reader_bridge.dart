@@ -14,6 +14,8 @@ class BookPosition {
     this.chapterTitle,
     this.chapterCurrentPage,
     this.chapterTotalPages,
+    this.bookCurrentPage,
+    this.bookTotalPages,
   });
 
   /// EPUB Canonical Fragment Identifier — exact position in the book.
@@ -26,6 +28,11 @@ class BookPosition {
   final int? chapterCurrentPage;
   final int? chapterTotalPages;
 
+  /// Page number across the whole book (1-based). Surfaced by foliate-js
+  /// alongside the chapter-scoped count for "page 84 of 200" UIs.
+  final int? bookCurrentPage;
+  final int? bookTotalPages;
+
   factory BookPosition.fromMap(Map<String, dynamic> map) {
     return BookPosition(
       cfi: map['cfi'] as String,
@@ -33,6 +40,8 @@ class BookPosition {
       chapterTitle: map['chapterTitle'] as String?,
       chapterCurrentPage: (map['chapterCurrentPage'] as num?)?.toInt(),
       chapterTotalPages: (map['chapterTotalPages'] as num?)?.toInt(),
+      bookCurrentPage: (map['bookCurrentPage'] as num?)?.toInt(),
+      bookTotalPages: (map['bookTotalPages'] as num?)?.toInt(),
     );
   }
 }

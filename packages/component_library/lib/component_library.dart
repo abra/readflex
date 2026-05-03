@@ -34,6 +34,7 @@ export 'src/theme/tokens/app_colors.dart';
 export 'src/theme/tokens/app_elevation.dart';
 export 'src/theme/tokens/app_icon_size.dart';
 export 'src/theme/tokens/app_radius.dart';
+export 'src/theme/tokens/app_shadows.dart';
 export 'src/theme/tokens/app_sizes.dart';
 export 'src/theme/tokens/app_spacing.dart';
 export 'src/scroll_edge_fade_stack.dart';

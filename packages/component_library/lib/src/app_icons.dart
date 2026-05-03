@@ -39,6 +39,10 @@ abstract final class AppIcons {
   // ── Reader ────────────────────────────────────────────────
   static const IconData translate = LucideIcons.languages;
   static const IconData volumeUp = LucideIcons.volume2;
+  static const IconData back = LucideIcons.arrowLeft;
+  static const IconData toc = LucideIcons.list;
+  static const IconData font = LucideIcons.type;
+  static const IconData share = LucideIcons.share2;
 
   // ── Layout ────────────────────────────────────────────────
   static const IconData viewList = LucideIcons.list;

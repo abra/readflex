@@ -171,6 +171,102 @@ void main() {
           expect(bookRepository.updatedBook, isNull);
         },
       );
+
+      // Bottom chrome reads chapterTitle / bookCurrentPage from
+      // ReaderState. The bloc must surface the optional fields from
+      // the event into state — they're transient (not persisted),
+      // so they have no representation on Book and must travel
+      // through copyWith.
+      blocTest<ReaderBloc, ReaderState>(
+        'surfaces chapterTitle and page metrics into state',
+        setUp: () => bookRepository.seedBook(testBook),
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          title: testBook.title,
+          book: testBook,
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/4!/4/2)',
+            progress: 0.2,
+            chapterTitle: 'Book IV',
+            bookCurrentPage: 84,
+            bookTotalPages: 200,
+          ),
+        ),
+        wait: const Duration(seconds: 3),
+        verify: (bloc) {
+          expect(bloc.state.chapterTitle, 'Book IV');
+          expect(bloc.state.bookCurrentPage, 84);
+          expect(bloc.state.bookTotalPages, 200);
+        },
+      );
+
+      // Drag-to-seek can fire ~10 ReaderBookPositionUpdated per
+      // second. We must NOT do a DB write per event — debounce to a
+      // single trailing write 500ms after the last event, holding
+      // the latest value.
+      blocTest<ReaderBloc, ReaderState>(
+        'debounces persist: rapid position events collapse into one '
+        'updateBook with the last value',
+        setUp: () => bookRepository.seedBook(testBook),
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          title: testBook.title,
+          book: testBook,
+        ),
+        act: (bloc) {
+          for (var i = 1; i <= 5; i++) {
+            bloc.add(
+              ReaderBookPositionUpdated(
+                cfi: 'epubcfi($i)',
+                progress: i * 0.1,
+              ),
+            );
+          }
+        },
+        wait: const Duration(milliseconds: 700),
+        verify: (_) {
+          expect(bookRepository.updateCallCount, 1);
+          expect(bookRepository.updatedBook!.currentCfi, 'epubcfi(5)');
+          expect(bookRepository.updatedBook!.readingProgress, 0.5);
+        },
+      );
+
+      // Closing the bloc before the debounce window elapses must
+      // still flush the pending write — otherwise navigating away
+      // mid-drag (e.g. tap-to-go-home) drops the latest position.
+      test('close() flushes pending persist before completing', () async {
+        bookRepository.seedBook(testBook);
+        final bloc = buildBloc();
+        bloc.emit(
+          ReaderState(
+            status: ReaderStatus.ready,
+            title: testBook.title,
+            book: testBook,
+          ),
+        );
+        bloc.add(
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(end)',
+            progress: 0.9,
+          ),
+        );
+        // Let the event handler run (state emits, persist is queued)
+        // but DON'T wait for the 500ms debounce.
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        expect(
+          bookRepository.updateCallCount,
+          0,
+          reason: 'persist should be debounced, not yet written',
+        );
+        await bloc.close();
+        expect(bookRepository.updateCallCount, 1);
+        expect(bookRepository.updatedBook!.currentCfi, 'epubcfi(end)');
+        expect(bookRepository.updatedBook!.readingProgress, 0.9);
+      });
     });
 
     group('ReaderHighlightsRefreshed', () {
@@ -251,6 +347,28 @@ void main() {
         final copy = state.copyWith(highlights: []);
         expect(copy.title, 'T');
         expect(copy.book, testBook);
+      });
+
+      test(
+        'copyWith preserves nullable chrome fields when not explicitly passed',
+        () {
+          final state = ReaderState(
+            book: testBook,
+            chapterTitle: 'Book IV',
+            bookCurrentPage: 84,
+            bookTotalPages: 200,
+          );
+          final copy = state.copyWith(highlights: const []);
+          expect(copy.chapterTitle, 'Book IV');
+          expect(copy.bookCurrentPage, 84);
+          expect(copy.bookTotalPages, 200);
+        },
+      );
+
+      test('copyWith can clear chapterTitle by passing null explicitly', () {
+        final state = ReaderState(book: testBook, chapterTitle: 'Book IV');
+        final copy = state.copyWith(chapterTitle: null);
+        expect(copy.chapterTitle, isNull);
       });
     });
   });
