@@ -401,13 +401,22 @@ class _SuccessBody extends StatelessWidget {
                     subtitle: 'Try a different search term',
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.only(bottom: 80),
+                    // Horizontal padding lives on the list (not on each
+                    // row) so the swipe-to-delete background is inset
+                    // from the screen edges — same shape as the
+                    // catalog list. Keeping `lg` on rows would make
+                    // the Dismissible reach the screen edge while
+                    // catalog's stays inset.
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      0,
+                      AppSpacing.lg,
+                      80,
+                    ),
                     itemCount: filtered.length,
                     separatorBuilder: (_, _) => Divider(
                       color: appColors.divider.withValues(alpha: 0.4),
                       height: 1,
-                      indent: AppSpacing.lg,
-                      endIndent: AppSpacing.lg,
                     ),
                     itemBuilder: (_, i) {
                       final entry = filtered[i];
@@ -497,12 +506,15 @@ class _DictionaryListRow extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
+        // Horizontal `lg` lives on the parent ListView so the
+        // swipe-delete background insets itself naturally; the row
+        // adds a small `xs` inset of its own so the leading mastery
+        // dot doesn't sit flush against the tile's left edge —
+        // matches the catalog list-tile spacing.
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            10,
-            AppSpacing.lg,
-            10,
+          padding: const EdgeInsets.symmetric(
+            vertical: 10,
+            horizontal: AppSpacing.xs,
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
