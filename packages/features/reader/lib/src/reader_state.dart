@@ -13,6 +13,8 @@ class ReaderState extends Equatable {
     this.chapterTitle,
     this.bookCurrentPage,
     this.bookTotalPages,
+    this.chapterCurrentPage,
+    this.chapterTotalPages,
     this.sizeTotal,
   });
 
@@ -27,6 +29,14 @@ class ReaderState extends Equatable {
   final String? chapterTitle;
   final int? bookCurrentPage;
   final int? bookTotalPages;
+
+  /// Position inside the current section — visual page within the active
+  /// chapter for EPUB, comic page within the whole archive for CBZ
+  /// (each image is its own section). For CBZ this is the only counter
+  /// that meaningfully advances per page-turn; [bookCurrentPage] collapses
+  /// comics into a handful of byte locations and is useless there.
+  final int? chapterCurrentPage;
+  final int? chapterTotalPages;
 
   /// Byte length of all linear sections in the open book — same quantity
   /// foliate-js uses to compute [bookCurrentPage] / [bookTotalPages].
@@ -47,6 +57,8 @@ class ReaderState extends Equatable {
     Object? chapterTitle = _absent,
     Object? bookCurrentPage = _absent,
     Object? bookTotalPages = _absent,
+    Object? chapterCurrentPage = _absent,
+    Object? chapterTotalPages = _absent,
     Object? sizeTotal = _absent,
   }) => ReaderState(
     status: status ?? this.status,
@@ -62,6 +74,12 @@ class ReaderState extends Equatable {
     bookTotalPages: bookTotalPages == _absent
         ? this.bookTotalPages
         : bookTotalPages as int?,
+    chapterCurrentPage: chapterCurrentPage == _absent
+        ? this.chapterCurrentPage
+        : chapterCurrentPage as int?,
+    chapterTotalPages: chapterTotalPages == _absent
+        ? this.chapterTotalPages
+        : chapterTotalPages as int?,
     sizeTotal: sizeTotal == _absent ? this.sizeTotal : sizeTotal as int?,
   );
 
@@ -74,6 +92,8 @@ class ReaderState extends Equatable {
     chapterTitle,
     bookCurrentPage,
     bookTotalPages,
+    chapterCurrentPage,
+    chapterTotalPages,
     sizeTotal,
   ];
 }

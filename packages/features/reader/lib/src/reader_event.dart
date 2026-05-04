@@ -33,6 +33,8 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
     this.chapterTitle,
     this.bookCurrentPage,
     this.bookTotalPages,
+    this.chapterCurrentPage,
+    this.chapterTotalPages,
     this.sizeTotal,
     this.atEnd = false,
   });
@@ -42,6 +44,14 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
   final String? chapterTitle;
   final int? bookCurrentPage;
   final int? bookTotalPages;
+
+  /// Page index / total within the current section (0-indexed). For EPUB
+  /// these are visual columns inside the active chapter; for CBZ each
+  /// comic page is its own section, so the pair becomes "comic page X /
+  /// total comic pages" — the only useful counter for that format since
+  /// `bookCurrentPage` collapses comics into 1–4 byte locations.
+  final int? chapterCurrentPage;
+  final int? chapterTotalPages;
 
   /// Total byte size of all linear sections, surfaced so the bottom-chrome
   /// slider can predict `bookCurrentPage` exactly during drag. See
@@ -56,6 +66,8 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
     chapterTitle,
     bookCurrentPage,
     bookTotalPages,
+    chapterCurrentPage,
+    chapterTotalPages,
     sizeTotal,
     atEnd,
   ];

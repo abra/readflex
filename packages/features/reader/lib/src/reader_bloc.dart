@@ -143,6 +143,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         chapterTitle: event.chapterTitle,
         bookCurrentPage: bookCurrentPage,
         bookTotalPages: event.bookTotalPages,
+        chapterCurrentPage: event.chapterCurrentPage,
+        chapterTotalPages: event.chapterTotalPages,
         sizeTotal: event.sizeTotal ?? state.sizeTotal,
       ),
     );

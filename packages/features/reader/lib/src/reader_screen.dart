@@ -397,7 +397,10 @@ class _ReaderBottomChrome extends StatefulWidget {
     required this.chapterTitle,
     required this.bookCurrentPage,
     required this.bookTotalPages,
+    required this.chapterCurrentPage,
+    required this.chapterTotalPages,
     required this.sizeTotal,
+    required this.format,
     required this.panelColor,
     required this.textColor,
     required this.accentColor,
@@ -411,6 +414,13 @@ class _ReaderBottomChrome extends StatefulWidget {
   final int? bookCurrentPage;
   final int? bookTotalPages;
 
+  /// Position inside the current section. For CBZ each image is its
+  /// own section so this counter advances per page-turn — the only
+  /// useful one for comics. For EPUB it is the visual page within the
+  /// active chapter, ignored here in favour of [bookCurrentPage].
+  final int? chapterCurrentPage;
+  final int? chapterTotalPages;
+
   /// When non-null, the slider's drag-time page estimate uses
   /// `floor(fraction × sizeTotal / 1500)` — the exact arithmetic
   /// foliate-js will use on release, so the displayed number lands on
@@ -418,6 +428,13 @@ class _ReaderBottomChrome extends StatefulWidget {
   /// `onRelocated` lands; in that window the slider falls back to
   /// `floor(fraction × bookTotalPages)`, off by at most 1.
   final int? sizeTotal;
+
+  /// Selects the displayed counter:
+  ///   * CBZ → `chapterCurrentPage / chapterTotalPages` (comic page X / Y)
+  ///   * everything else → `bookCurrentPage` (Kindle-style location)
+  ///
+  /// Null while the bloc is still loading the book.
+  final BookFormat? format;
   final Color panelColor;
   final Color textColor;
   final Color accentColor;
@@ -482,46 +499,66 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
     final sliderValue = (_dragValue ?? clamped).clamp(0.0, 1.0);
     final mutedText = widget.textColor.withValues(alpha: 0.7);
 
-    // Resolve the 0-indexed location number to display. When
-    // `_dragValue` is set, `widget.bookCurrentPage` is stale — foliate-js
-    // hasn't paginated to the new position yet. This covers both the
-    // active drag (no JS seek issued at all) and the post-release
-    // window where `goToPercent` is in flight (~50–200ms from
-    // `onChangeEnd` until `onRelocated` lands). Mirror the slider thumb
-    // override (`sliderValue = _dragValue ?? clamped`): trust the local
-    // prediction whenever we have one. Without this gate the displayed
-    // number flashes back to the pre-drag page on release before
-    // snapping to the new one.
+    // Pick which counter the chrome shows. CBZ packs each comic page
+    // into its own foliate-js section, so `bookCurrentPage` (byte
+    // locations of 1500 bytes each) collapses the whole comic into 1–4
+    // values — useless. `chapterCurrentPage / chapterTotalPages` for
+    // CBZ becomes "comic page X out of Y" because each section IS one
+    // comic page. EPUB & friends keep the byte-location counter that
+    // already works as a global progress number.
+    final isComic = widget.format == BookFormat.cbz;
+    final int? rawCurrent;
+    final int? totalForMode;
+    if (isComic) {
+      rawCurrent = widget.chapterCurrentPage;
+      totalForMode = widget.chapterTotalPages;
+    } else {
+      rawCurrent = widget.bookCurrentPage;
+      totalForMode = widget.bookTotalPages;
+    }
+
+    // Resolve the 0-indexed location to display. When `_dragValue` is
+    // set, the bloc-supplied current is stale — foliate-js hasn't
+    // paginated yet. This covers both the active drag (no JS seek
+    // issued) and the post-release window where `goToPercent` is in
+    // flight. Mirror `sliderValue = _dragValue ?? clamped`: trust the
+    // local prediction whenever we have one. Without this gate the
+    // displayed number flashes back to the pre-drag page on release.
     //
-    // Prediction reproduces foliate-js's own arithmetic — it computes
-    // `bookCurrentPage = floor(fraction × sizeTotal / 1500)`. When
-    // sizeTotal is cached (after the first onRelocated lands) the
-    // prediction is exact modulo page-snap; before that we approximate
-    // via bookTotalPages, which is `ceil(sizeTotal / 1500)` — losing up
-    // to 1499 bytes to the ceiling, so the drag-time number can be off
-    // by 1. Page-snap on release adds another ±1 in unlucky cases —
-    // column boundaries aren't known on the Dart side.
-    //
-    // The result is a 0-indexed location number; `_toDisplayPage`
-    // shifts it to the 1-indexed value users actually expect.
+    // For non-comic books with sizeTotal cached we reproduce
+    // foliate-js's own arithmetic (`floor(fraction × sizeTotal / 1500)`)
+    // so the prediction matches the value the bloc reports back. For
+    // CBZ — and for any book before the first onRelocated — we fall
+    // back to a linear estimate over `totalForMode`, off by at most 1.
     final dragValue = _dragValue;
-    final totalPages = widget.bookTotalPages;
     final sizeTotal = widget.sizeTotal;
     final int? rawLocation;
     if (dragValue != null) {
-      if (sizeTotal != null && sizeTotal > 0) {
+      if (!isComic && sizeTotal != null && sizeTotal > 0) {
         rawLocation = (dragValue * sizeTotal / _foliateSizePerLoc).floor();
-      } else if (totalPages != null && totalPages > 0) {
-        rawLocation = (dragValue * totalPages).floor();
+      } else if (totalForMode != null && totalForMode > 0) {
+        rawLocation = (dragValue * totalForMode).floor();
       } else {
         rawLocation = null;
       }
     } else {
-      rawLocation = widget.bookCurrentPage;
+      rawLocation = rawCurrent;
     }
-    final displayedPage = rawLocation != null
-        ? _toDisplayPage(rawLocation, totalPages)
-        : null;
+
+    // Display formatting. Comics show `X / Y` because the total is
+    // small and informative; EPUB shows just `X` to match the existing
+    // single-number convention for its (much larger) location counter.
+    // `_toDisplayPage` shifts foliate-js's 0-indexed location into the
+    // 1-indexed value users expect.
+    final String displayedText;
+    if (rawLocation == null) {
+      displayedText = '';
+    } else if (isComic && totalForMode != null && totalForMode > 0) {
+      final oneIndexed = _toDisplayPage(rawLocation, totalForMode);
+      displayedText = '$oneIndexed / $totalForMode';
+    } else {
+      displayedText = _toDisplayPage(rawLocation, totalForMode).toString();
+    }
 
     return Positioned(
       left: 0,
@@ -579,7 +616,7 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                               ),
                               const SizedBox(width: AppSpacing.sm),
                               Text(
-                                displayedPage?.toString() ?? '',
+                                displayedText,
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: mutedText,
@@ -789,12 +826,26 @@ class _BottomChromeDriver extends StatelessWidget {
     final bookTotalPages = context.select<ReaderBloc, int?>(
       (b) => b.state.bookTotalPages,
     );
+    final chapterCurrentPage = context.select<ReaderBloc, int?>(
+      (b) => b.state.chapterCurrentPage,
+    );
+    final chapterTotalPages = context.select<ReaderBloc, int?>(
+      (b) => b.state.chapterTotalPages,
+    );
     // sizeTotal is the byte length of all linear sections; the slider
     // uses it to predict bookCurrentPage exactly during drag instead of
     // approximating through `bookTotalPages` (which loses up to 1499
     // bytes to the ceil that defines it).
     final sizeTotal = context.select<ReaderBloc, int?>(
       (b) => b.state.sizeTotal,
+    );
+    // Format drives which counter the chrome shows. CBZ packs each
+    // image into its own foliate-js section, so byte-locations collapse
+    // into 1–4 across the whole comic — `chapterCurrentPage / total` is
+    // the only useful pair there. EPUB & friends keep the byte-location
+    // counter that already feels global.
+    final format = context.select<ReaderBloc, BookFormat?>(
+      (b) => b.state.book?.format,
     );
 
     return _ReaderBottomChrome(
@@ -803,7 +854,10 @@ class _BottomChromeDriver extends StatelessWidget {
       chapterTitle: chapterTitle,
       bookCurrentPage: bookCurrentPage,
       bookTotalPages: bookTotalPages,
+      chapterCurrentPage: chapterCurrentPage,
+      chapterTotalPages: chapterTotalPages,
       sizeTotal: sizeTotal,
+      format: format,
       panelColor: readerTheme.panelColor,
       textColor: readerTheme.secondaryTextColor,
       accentColor: readerTheme.accentColor,
@@ -1020,6 +1074,8 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
             chapterTitle: position.chapterTitle,
             bookCurrentPage: position.bookCurrentPage,
             bookTotalPages: position.bookTotalPages,
+            chapterCurrentPage: position.chapterCurrentPage,
+            chapterTotalPages: position.chapterTotalPages,
             sizeTotal: position.sizeTotal,
             atEnd: position.atEnd,
           ),
