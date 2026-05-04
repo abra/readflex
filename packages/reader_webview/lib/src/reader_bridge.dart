@@ -16,6 +16,7 @@ class BookPosition {
     this.chapterTotalPages,
     this.bookCurrentPage,
     this.bookTotalPages,
+    this.sizeTotal,
     this.atEnd = false,
     this.atStart = false,
   });
@@ -34,6 +35,13 @@ class BookPosition {
   /// alongside the chapter-scoped count for "page 84 of 200" UIs.
   final int? bookCurrentPage;
   final int? bookTotalPages;
+
+  /// Total byte size of all linear sections — the same quantity foliate-js
+  /// uses internally when computing [bookCurrentPage] and [bookTotalPages].
+  /// The Dart side keeps a copy so the slider can reproduce
+  /// `floor(fraction × sizeTotal / 1500)` exactly while the user drags.
+  /// Constant per book; reported on every relocate for simplicity.
+  final int? sizeTotal;
 
   /// `true` when the paginator reports we are on its trailing "blank
   /// buffer" pages past the actual content. foliate-js still emits
@@ -56,6 +64,7 @@ class BookPosition {
       chapterTotalPages: (map['chapterTotalPages'] as num?)?.toInt(),
       bookCurrentPage: (map['bookCurrentPage'] as num?)?.toInt(),
       bookTotalPages: (map['bookTotalPages'] as num?)?.toInt(),
+      sizeTotal: (map['sizeTotal'] as num?)?.toInt(),
       atEnd: map['atEnd'] as bool? ?? false,
       atStart: map['atStart'] as bool? ?? false,
     );

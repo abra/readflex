@@ -1427,6 +1427,14 @@ const onRelocated = (currentInfo) => {
   const atEnd = reader.view.renderer.atEnd ?? false
   const atStart = reader.view.renderer.atStart ?? false
 
+  // sizeTotal is the byte length of all linear sections, i.e. what
+  // foliate-js itself uses to compute `bookCurrentPage` and
+  // `bookTotalPages`. Surfacing it lets Dart reproduce the exact
+  // `floor(fraction × sizeTotal / sizePerLoc)` arithmetic for the
+  // drag-time slider preview, without the ±1 rounding error that
+  // comes from approximating sizeTotal back from bookTotalPages.
+  const sizeTotal = reader.view.sizeTotal
+
   callFlutter('onRelocated', {
     chapterTitle,
     chapterHref,
@@ -1434,6 +1442,7 @@ const onRelocated = (currentInfo) => {
     chapterCurrentPage,
     bookTotalPages,
     bookCurrentPage,
+    sizeTotal,
     cfi,
     percentage,
     atEnd,

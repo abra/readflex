@@ -13,6 +13,7 @@ class ReaderState extends Equatable {
     this.chapterTitle,
     this.bookCurrentPage,
     this.bookTotalPages,
+    this.sizeTotal,
   });
 
   final ReaderStatus status;
@@ -27,6 +28,13 @@ class ReaderState extends Equatable {
   final int? bookCurrentPage;
   final int? bookTotalPages;
 
+  /// Byte length of all linear sections in the open book — same quantity
+  /// foliate-js uses to compute [bookCurrentPage] / [bookTotalPages].
+  /// Cached here so the bottom-chrome slider can reproduce that
+  /// arithmetic exactly while the user drags. Constant per book — first
+  /// `onRelocated` after open populates it.
+  final int? sizeTotal;
+
   String? get sourceId => book?.id;
 
   static const _absent = Object();
@@ -39,6 +47,7 @@ class ReaderState extends Equatable {
     Object? chapterTitle = _absent,
     Object? bookCurrentPage = _absent,
     Object? bookTotalPages = _absent,
+    Object? sizeTotal = _absent,
   }) => ReaderState(
     status: status ?? this.status,
     title: title ?? this.title,
@@ -53,6 +62,7 @@ class ReaderState extends Equatable {
     bookTotalPages: bookTotalPages == _absent
         ? this.bookTotalPages
         : bookTotalPages as int?,
+    sizeTotal: sizeTotal == _absent ? this.sizeTotal : sizeTotal as int?,
   );
 
   @override
@@ -64,5 +74,6 @@ class ReaderState extends Equatable {
     chapterTitle,
     bookCurrentPage,
     bookTotalPages,
+    sizeTotal,
   ];
 }

@@ -466,6 +466,14 @@ export class View extends HTMLElement {
         index
       }))
   }
+  // Total HTML byte size of all linear sections (the same number used
+  // internally for `bookCurrentPage = floor(currentBytes / sizePerLoc)`
+  // computations). Exposed so the Dart side can reproduce the exact
+  // arithmetic without round-tripping through `bookTotalPages`, which
+  // is `ceil(sizeTotal / sizePerLoc)` and loses up to 1499 bytes.
+  get sizeTotal() {
+    return this.#sectionProgress?.sizeTotal ?? 0
+  }
   getProgressOf(index, range) {
     const tocItem = this.#tocProgress?.getProgress(index, range)
     const pageItem = this.#pageProgress?.getProgress(index, range)

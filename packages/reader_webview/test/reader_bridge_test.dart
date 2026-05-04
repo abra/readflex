@@ -12,6 +12,7 @@ void main() {
         'chapterTotalPages': 20,
         'bookCurrentPage': 84,
         'bookTotalPages': 200,
+        'sizeTotal': 480000,
         'atEnd': false,
         'atStart': false,
       });
@@ -23,6 +24,7 @@ void main() {
       expect(position.chapterTotalPages, 20);
       expect(position.bookCurrentPage, 84);
       expect(position.bookTotalPages, 200);
+      expect(position.sizeTotal, 480000);
       expect(position.atEnd, isFalse);
       expect(position.atStart, isFalse);
     });
@@ -40,10 +42,24 @@ void main() {
       expect(position.chapterTotalPages, isNull);
       expect(position.bookCurrentPage, isNull);
       expect(position.bookTotalPages, isNull);
+      expect(position.sizeTotal, isNull);
       // atEnd / atStart default to false so old payloads (or fixtures
       // that haven't added the field) keep working without coercion.
       expect(position.atEnd, isFalse);
       expect(position.atStart, isFalse);
+    });
+
+    test('fromMap coerces sizeTotal from num to int', () {
+      // foliate-js's sizeTotal is typed as number — large books may
+      // surface it as a JSON double (e.g. 1.5e6) rather than int. The
+      // bridge must coerce so callers always see int.
+      final position = BookPosition.fromMap({
+        'cfi': 'epubcfi(/6/4)',
+        'percentage': 0.5,
+        'sizeTotal': 1500000.0,
+      });
+      expect(position.sizeTotal, 1500000);
+      expect(position.sizeTotal, isA<int>());
     });
 
     test('fromMap parses atEnd=true', () {

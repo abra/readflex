@@ -224,6 +224,87 @@ void main() {
         },
       );
 
+      // sizeTotal is a per-book constant the slider needs to predict the
+      // page number while the user drags. The first onRelocated after
+      // open carries it; we cache it in state so the bottom-chrome
+      // driver can read it through `context.select`.
+      blocTest<ReaderBloc, ReaderState>(
+        'caches sizeTotal in state when present in event',
+        setUp: () => bookRepository.seedBook(testBook),
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          title: testBook.title,
+          book: testBook,
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/4!/4/2)',
+            progress: 0.2,
+            sizeTotal: 480000,
+          ),
+        ),
+        wait: const Duration(seconds: 3),
+        verify: (bloc) {
+          expect(bloc.state.sizeTotal, 480000);
+        },
+      );
+
+      // A position event that arrives without sizeTotal must not wipe
+      // the cache — sizeTotal is constant per book, but we don't want
+      // a subtle bug somewhere in the JS bridge (e.g. an early relocate
+      // that races SectionProgress construction) to drop it back to null
+      // and force the slider into the approximate `bookTotalPages`
+      // formula for the rest of the session.
+      blocTest<ReaderBloc, ReaderState>(
+        'preserves cached sizeTotal when event omits it',
+        setUp: () => bookRepository.seedBook(testBook),
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          title: testBook.title,
+          book: testBook,
+          sizeTotal: 480000,
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/4!/4/4)',
+            progress: 0.3,
+            // sizeTotal intentionally absent.
+          ),
+        ),
+        wait: const Duration(seconds: 3),
+        verify: (bloc) {
+          expect(bloc.state.sizeTotal, 480000);
+        },
+      );
+
+      // When the JS bridge does send a fresh sizeTotal value (e.g. on a
+      // legitimate re-open of the same book in a different session),
+      // the cache should follow it rather than ignore it.
+      blocTest<ReaderBloc, ReaderState>(
+        'overwrites cached sizeTotal when event provides a new one',
+        setUp: () => bookRepository.seedBook(testBook),
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          title: testBook.title,
+          book: testBook,
+          sizeTotal: 480000,
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/4!/4/4)',
+            progress: 0.3,
+            sizeTotal: 500000,
+          ),
+        ),
+        wait: const Duration(seconds: 3),
+        verify: (bloc) {
+          expect(bloc.state.sizeTotal, 500000);
+        },
+      );
+
       // foliate-js's paginator allows navigation onto two blank
       // trailing columns past the actual content (`atEnd: page >=
       // pages - 2`). On those it emits `progress=0` /

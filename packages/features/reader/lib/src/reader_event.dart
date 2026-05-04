@@ -33,6 +33,7 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
     this.chapterTitle,
     this.bookCurrentPage,
     this.bookTotalPages,
+    this.sizeTotal,
     this.atEnd = false,
   });
 
@@ -41,6 +42,11 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
   final String? chapterTitle;
   final int? bookCurrentPage;
   final int? bookTotalPages;
+
+  /// Total byte size of all linear sections, surfaced so the bottom-chrome
+  /// slider can predict `bookCurrentPage` exactly during drag. See
+  /// [BookPosition.sizeTotal] for the full rationale.
+  final int? sizeTotal;
   final bool atEnd;
 
   @override
@@ -50,6 +56,7 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
     chapterTitle,
     bookCurrentPage,
     bookTotalPages,
+    sizeTotal,
     atEnd,
   ];
 }

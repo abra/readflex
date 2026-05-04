@@ -133,12 +133,17 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       readingProgress: progress,
     );
     // Emit immediately so chrome stays in sync with the WebView.
+    // `sizeTotal` is constant per book; we cache the first non-null value
+    // and never overwrite it back to null on subsequent emits (a stray
+    // event without sizeTotal shouldn't drop the cache and force the
+    // slider back to the approximate `bookTotalPages` formula).
     emit(
       state.copyWith(
         book: updated,
         chapterTitle: event.chapterTitle,
         bookCurrentPage: bookCurrentPage,
         bookTotalPages: event.bookTotalPages,
+        sizeTotal: event.sizeTotal ?? state.sizeTotal,
       ),
     );
     // Persist with a trailing debounce — successive emits within the

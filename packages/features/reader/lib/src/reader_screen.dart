@@ -24,6 +24,30 @@ const _kContextPanelHeight = 80.0;
 const _kChromeAnimDuration = Duration(milliseconds: 200);
 const _kChromeAnimCurve = Curves.easeOutCubic;
 
+/// foliate-js's "location" granularity in bytes — the divisor it uses for
+/// `bookCurrentPage = floor(currentBytes / sizePerLoc)`. Hard-coded in
+/// `view.js` (`new SectionProgress(book.sections, 1500, 1600)`); mirror
+/// it here so the slider can predict the page number during drag.
+const _foliateSizePerLoc = 1500;
+
+/// Converts foliate-js's 0-indexed location number into the 1-indexed
+/// page count the reader actually shows ("page 1" instead of "page 0"
+/// for the start of the book). Clamps to `[1, totalPages]` when we have
+/// the total so a glitchy raw value past the end of the book — or a
+/// drag-time overshoot from `floor(f × totalPages)` at f=1 — can't
+/// surface as `totalPages + 1`.
+///
+/// Bloc/state keep the raw 0-indexed value so they stay aligned with
+/// foliate-js's own arithmetic; this conversion lives in the display
+/// layer only.
+int _toDisplayPage(int locationIndex, int? totalPages) {
+  final oneIndexed = locationIndex + 1;
+  if (totalPages != null && totalPages > 0) {
+    return oneIndexed.clamp(1, totalPages);
+  }
+  return oneIndexed;
+}
+
 /// Carries the optional review-reminder and mini-review callbacks down the
 /// reader widget tree, eliminating prop drilling through 4+ layers.
 class _ReaderCallbacksScope extends InheritedWidget {
@@ -373,6 +397,7 @@ class _ReaderBottomChrome extends StatefulWidget {
     required this.chapterTitle,
     required this.bookCurrentPage,
     required this.bookTotalPages,
+    required this.sizeTotal,
     required this.panelColor,
     required this.textColor,
     required this.accentColor,
@@ -385,6 +410,14 @@ class _ReaderBottomChrome extends StatefulWidget {
   final String? chapterTitle;
   final int? bookCurrentPage;
   final int? bookTotalPages;
+
+  /// When non-null, the slider's drag-time page estimate uses
+  /// `floor(fraction × sizeTotal / 1500)` — the exact arithmetic
+  /// foliate-js will use on release, so the displayed number lands on
+  /// the same value the bloc reports back. Null until the first
+  /// `onRelocated` lands; in that window the slider falls back to
+  /// `floor(fraction × bookTotalPages)`, off by at most 1.
+  final int? sizeTotal;
   final Color panelColor;
   final Color textColor;
   final Color accentColor;
@@ -449,19 +482,46 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
     final sliderValue = (_dragValue ?? clamped).clamp(0.0, 1.0);
     final mutedText = widget.textColor.withValues(alpha: 0.7);
 
-    // While dragging we don't actually seek — foliate-js stays on the
-    // pre-drag page until release — so `widget.bookCurrentPage` is
-    // stale. Show a linear `(fraction × total)` estimate during drag,
-    // and the real page from the bloc when not dragging. The estimate
-    // is intentionally simple: foliate-js's byte-pagination is
-    // non-uniform, so even readest accepts that the drag-time number
-    // is approximate.
+    // Resolve the 0-indexed location number to display. When
+    // `_dragValue` is set, `widget.bookCurrentPage` is stale — foliate-js
+    // hasn't paginated to the new position yet. This covers both the
+    // active drag (no JS seek issued at all) and the post-release
+    // window where `goToPercent` is in flight (~50–200ms from
+    // `onChangeEnd` until `onRelocated` lands). Mirror the slider thumb
+    // override (`sliderValue = _dragValue ?? clamped`): trust the local
+    // prediction whenever we have one. Without this gate the displayed
+    // number flashes back to the pre-drag page on release before
+    // snapping to the new one.
+    //
+    // Prediction reproduces foliate-js's own arithmetic — it computes
+    // `bookCurrentPage = floor(fraction × sizeTotal / 1500)`. When
+    // sizeTotal is cached (after the first onRelocated lands) the
+    // prediction is exact modulo page-snap; before that we approximate
+    // via bookTotalPages, which is `ceil(sizeTotal / 1500)` — losing up
+    // to 1499 bytes to the ceiling, so the drag-time number can be off
+    // by 1. Page-snap on release adds another ±1 in unlucky cases —
+    // column boundaries aren't known on the Dart side.
+    //
+    // The result is a 0-indexed location number; `_toDisplayPage`
+    // shifts it to the 1-indexed value users actually expect.
     final dragValue = _dragValue;
     final totalPages = widget.bookTotalPages;
-    final displayedPage =
-        (_isDragging && dragValue != null && totalPages != null)
-        ? (dragValue * totalPages).round().clamp(1, totalPages)
-        : widget.bookCurrentPage;
+    final sizeTotal = widget.sizeTotal;
+    final int? rawLocation;
+    if (dragValue != null) {
+      if (sizeTotal != null && sizeTotal > 0) {
+        rawLocation = (dragValue * sizeTotal / _foliateSizePerLoc).floor();
+      } else if (totalPages != null && totalPages > 0) {
+        rawLocation = (dragValue * totalPages).floor();
+      } else {
+        rawLocation = null;
+      }
+    } else {
+      rawLocation = widget.bookCurrentPage;
+    }
+    final displayedPage = rawLocation != null
+        ? _toDisplayPage(rawLocation, totalPages)
+        : null;
 
     return Positioned(
       left: 0,
@@ -729,6 +789,13 @@ class _BottomChromeDriver extends StatelessWidget {
     final bookTotalPages = context.select<ReaderBloc, int?>(
       (b) => b.state.bookTotalPages,
     );
+    // sizeTotal is the byte length of all linear sections; the slider
+    // uses it to predict bookCurrentPage exactly during drag instead of
+    // approximating through `bookTotalPages` (which loses up to 1499
+    // bytes to the ceil that defines it).
+    final sizeTotal = context.select<ReaderBloc, int?>(
+      (b) => b.state.sizeTotal,
+    );
 
     return _ReaderBottomChrome(
       visible: chromeVisible && !hasSelection,
@@ -736,6 +803,7 @@ class _BottomChromeDriver extends StatelessWidget {
       chapterTitle: chapterTitle,
       bookCurrentPage: bookCurrentPage,
       bookTotalPages: bookTotalPages,
+      sizeTotal: sizeTotal,
       panelColor: readerTheme.panelColor,
       textColor: readerTheme.secondaryTextColor,
       accentColor: readerTheme.accentColor,
@@ -952,6 +1020,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
             chapterTitle: position.chapterTitle,
             bookCurrentPage: position.bookCurrentPage,
             bookTotalPages: position.bookTotalPages,
+            sizeTotal: position.sizeTotal,
             atEnd: position.atEnd,
           ),
         );
