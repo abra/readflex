@@ -1075,7 +1075,7 @@ class _ComicProgressOverlay extends StatelessWidget {
         // Slightly translucent so the comic page peeks through —
         // overlay reads as "info chrome" rather than a solid panel.
         color: panelColor.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppRadius.full),
         border: Border.all(color: dividerColor),
       ),
       child: Stack(

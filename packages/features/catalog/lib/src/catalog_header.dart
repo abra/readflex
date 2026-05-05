@@ -84,10 +84,9 @@ class CatalogHeader extends StatelessWidget {
   }
 }
 
-/// Horizontally scrolling strip of filter pills (`All / Books / Comics /
-/// Saved / Finished`). Active pill is drawn in inverse colours; the rest
-/// use the secondary surface. Scroll is deliberate — on narrow screens the
-/// trailing pills can be reached with a swipe.
+/// Horizontally scrolling strip of filter chips
+/// (`All / Books / Comics / Saved / Finished`). Built on the shared
+/// [AppFilterChip] so Catalog and Dictionary look the same.
 class _FilterSegments extends StatelessWidget {
   const _FilterSegments({required this.active, required this.onChanged});
 
@@ -96,11 +95,6 @@ class _FilterSegments extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-
-    // Demo: 40px pill height (matches AppSizes.iconButtonSize), separator
-    // 6 (→ xs=4), padding H14 (→ md=12), radius 16 (→ AppRadius.lg).
-    // Active pill uses onSurface/surface, inactive uses secondary/onSecondary.
     return SizedBox(
       height: AppSizes.chipHeight,
       child: ListView.separated(
@@ -109,40 +103,10 @@ class _FilterSegments extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.xs),
         itemBuilder: (_, i) {
           final filter = CatalogFilter.values[i];
-          final selected = filter == active;
-
-          return Material(
-            color: Colors.transparent,
-            child: Ink(
-              decoration: BoxDecoration(
-                color: selected ? colors.onSurface : colors.secondary,
-                borderRadius: BorderRadius.circular(AppRadius.full),
-              ),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(AppRadius.full),
-                onTap: () => onChanged(filter),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minHeight: AppSizes.chipHeight,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                    ),
-                    child: Center(
-                      child: Text(
-                        _labelFor(filter),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: selected ? colors.surface : colors.onSecondary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          return AppFilterChip(
+            label: _labelFor(filter),
+            selected: filter == active,
+            onTap: () => onChanged(filter),
           );
         },
       ),

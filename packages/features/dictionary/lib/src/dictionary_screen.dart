@@ -345,28 +345,27 @@ class _SuccessBody extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Dictionary',
-                style: text.headlineMedium.copyWith(color: cs.onSurface),
-              ),
-              const SizedBox(height: AppSpacing.xs),
+              // Compact title row mirrors `CatalogHeader`: title on the
+              // left, count + trailing affordance on the right. The
+              // mastered/learning counts live inside the filter chips
+              // below, so the old standalone "saved words" / "mastered"
+              // indicator row is gone.
               Row(
                 children: [
                   Text(
-                    '${state.entries.length} saved words',
-                    style: text.labelSmall.copyWith(
-                      fontWeight: FontWeight.w400,
+                    'Dictionary',
+                    style: text.headlineMedium.copyWith(color: cs.onSurface),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${state.entries.length} words',
+                    style: TextStyle(
+                      fontSize: 12,
                       color: cs.onSurface.withValues(alpha: 0.55),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
-                  AppBadge(
-                    label: '${state.masteredCount} mastered',
-                    foreground: appColors.successForeground,
-                    background: appColors.success.withValues(alpha: 0.12),
-                  ),
                   if (onPracticePressed != null) ...[
-                    const Spacer(),
+                    const SizedBox(width: AppSpacing.sm),
                     _PracticeButton(onPressed: onPracticePressed!),
                   ],
                 ],
@@ -378,12 +377,9 @@ class _SuccessBody extends StatelessWidget {
                   DictionarySearchChanged(query),
                 ),
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.lg),
               _FilterChipsBar(
                 active: state.filter,
-                totalCount: state.entries.length,
-                masteredCount: state.masteredCount,
-                learningCount: state.learningCount,
                 onSelected: (filter) => context.read<DictionaryBloc>().add(
                   DictionaryFilterChanged(filter),
                 ),
@@ -593,8 +589,9 @@ class _DictionaryListRow extends StatelessWidget {
   }
 }
 
-/// Compact text button with a dumbbell icon shown in the header — quick
-/// jump to the Practice tab.
+/// Icon-only header action — quick jump to the Practice tab. Sized to
+/// match Catalog's `_LayoutToggleButton` (40×40 with sm radius) so the
+/// header affordance reads consistently across the two screens.
 class _PracticeButton extends StatelessWidget {
   const _PracticeButton({required this.onPressed});
 
@@ -603,21 +600,27 @@ class _PracticeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.colors;
-    final text = context.text;
-
-    return TextButton.icon(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
-      icon: Icon(AppIcons.practice, size: 14, color: cs.primary),
-      label: Text(
-        'Practice',
-        style: text.labelSmall.copyWith(
-          fontWeight: FontWeight.w500,
-          color: cs.primary,
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(
+          color: cs.secondary,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: SizedBox(
+            width: AppSizes.chipHeight,
+            height: AppSizes.chipHeight,
+            child: Center(
+              child: Icon(
+                AppIcons.practice,
+                size: AppIconSize.xs,
+                color: cs.primary,
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -625,32 +628,19 @@ class _PracticeButton extends StatelessWidget {
 }
 
 /// Horizontal scrollable bar of filter chips above the dictionary list.
-///
-/// "Recent" is intentionally count-less — its limit is fixed (5), not
-/// derived from the data, so showing a static "5" next to the chip
-/// would be misleading when the user has fewer than 5 entries total.
 class _FilterChipsBar extends StatelessWidget {
-  const _FilterChipsBar({
-    required this.active,
-    required this.totalCount,
-    required this.masteredCount,
-    required this.learningCount,
-    required this.onSelected,
-  });
+  const _FilterChipsBar({required this.active, required this.onSelected});
 
   final DictionaryFilter active;
-  final int totalCount;
-  final int masteredCount;
-  final int learningCount;
   final ValueChanged<DictionaryFilter> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    final entries = <(DictionaryFilter, String, int?)>[
-      (DictionaryFilter.all, 'All', totalCount),
-      (DictionaryFilter.mastered, 'Mastered', masteredCount),
-      (DictionaryFilter.learning, 'Learning', learningCount),
-      (DictionaryFilter.recent, 'Recent', null),
+    const entries = <(DictionaryFilter, String)>[
+      (DictionaryFilter.all, 'All'),
+      (DictionaryFilter.mastered, 'Mastered'),
+      (DictionaryFilter.learning, 'Learning'),
+      (DictionaryFilter.recent, 'Recent'),
     ];
 
     return SingleChildScrollView(
@@ -658,82 +648,15 @@ class _FilterChipsBar extends StatelessWidget {
       physics: const BouncingScrollPhysics(),
       child: Row(
         children: [
-          for (final (filter, label, count) in entries) ...[
-            _FilterChip(
+          for (final (filter, label) in entries) ...[
+            AppFilterChip(
               label: label,
-              count: count,
               selected: active == filter,
               onTap: () => onSelected(filter),
             ),
             if (filter != entries.last.$1) const SizedBox(width: AppSpacing.xs),
           ],
         ],
-      ),
-    );
-  }
-}
-
-/// A single pill-shaped filter chip. Active state inverts foreground
-/// and background to call attention to the current selection.
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    this.count,
-  });
-
-  final String label;
-  final int? count;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.colors;
-    final text = context.text;
-    final foreground = selected
-        ? cs.surface
-        : cs.onSurface.withValues(alpha: 0.6);
-    final background = selected
-        ? cs.onSurface
-        : cs.surfaceContainerHighest.withValues(alpha: 0.5);
-
-    return Material(
-      color: background,
-      borderRadius: BorderRadius.circular(AppRadius.sm),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.xs,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: text.labelSmall.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: foreground,
-                ),
-              ),
-              if (count != null) ...[
-                const SizedBox(width: AppSpacing.xxs),
-                Text(
-                  '$count',
-                  style: text.labelSmall.copyWith(
-                    fontWeight: FontWeight.w500,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                    color: foreground.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
       ),
     );
   }

@@ -63,7 +63,7 @@ void main() {
     expect(find.text('Try a different search term'), findsOneWidget);
   });
 
-  testWidgets('shows Dictionary header and saved words count', (
+  testWidgets('shows Dictionary header and total words count', (
     tester,
   ) async {
     dictionaryRepository.seed([_entry, _entry2]);
@@ -72,17 +72,23 @@ void main() {
     await tester.pump();
 
     expect(find.text('Dictionary'), findsOneWidget);
-    expect(find.text('2 saved words'), findsOneWidget);
+    // Header now mirrors Catalog's "N items" — the per-state counts
+    // (mastered / learning) live in the filter chips below instead
+    // of a separate indicator row.
+    expect(find.text('2 words'), findsOneWidget);
   });
 
-  testWidgets('shows mastered count badge', (tester) async {
+  testWidgets('mastered count surfaces via the filter chip', (tester) async {
     dictionaryRepository.seed([_entry, _entry2]);
     fsrsRepository.masteredIds = {'de-1'};
 
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    expect(find.text('1 mastered'), findsOneWidget);
+    // No more standalone "N mastered" badge — the mastered chip in
+    // the filter row carries the label and count is rendered in a
+    // separate Text widget next to it.
+    expect(find.text('Mastered'), findsOneWidget);
   });
 
   testWidgets('list row shows word, part of speech and translation', (
@@ -168,9 +174,6 @@ void main() {
     expect(find.text('Mastered'), findsOneWidget);
     expect(find.text('Learning'), findsOneWidget);
     expect(find.text('Recent'), findsOneWidget);
-    // Counts: 2 total, 1 mastered, 1 learning. "Recent" has no count.
-    expect(find.text('2'), findsOneWidget);
-    expect(find.text('1'), findsNWidgets(2));
   });
 
   testWidgets('tapping Mastered filter narrows the list', (tester) async {
@@ -196,7 +199,10 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    expect(find.text('Practice'), findsNothing);
+    // Header now uses an icon-only button — find it by the practice
+    // icon so the assertion isn't tied to a label that no longer
+    // exists.
+    expect(find.byIcon(AppIcons.practice), findsNothing);
   });
 
   testWidgets('Practice button visible and fires callback', (tester) async {
@@ -206,8 +212,8 @@ void main() {
     await tester.pumpWidget(buildSubject(onPracticePressed: () => fired++));
     await tester.pump();
 
-    expect(find.text('Practice'), findsOneWidget);
-    await tester.tap(find.text('Practice'));
+    expect(find.byIcon(AppIcons.practice), findsOneWidget);
+    await tester.tap(find.byIcon(AppIcons.practice));
     expect(fired, 1);
   });
 

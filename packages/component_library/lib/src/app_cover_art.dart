@@ -466,7 +466,7 @@ class _ProgressPill extends StatelessWidget {
       right: contentPadding,
       bottom: progressBottomInset,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppRadius.full),
         child: LayoutBuilder(
           builder: (context, constraints) => SizedBox(
             height: progressBarHeight,
