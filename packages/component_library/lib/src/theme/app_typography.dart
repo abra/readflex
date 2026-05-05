@@ -33,17 +33,25 @@ abstract final class AppTypography {
       height: 1.08,
       fontWeight: FontWeight.w600,
     ),
+    // Screen titles (Library, Dictionary, Profile, etc.) use these
+    // roles. Serif fits a content-first reader app — same family as
+    // book covers / chapter titles in Apple Books, Libby, Kobo. Sans
+    // is reserved for `title*` (smaller in-screen section headers)
+    // and `body*` / `label*` where density wins over character.
     headlineLarge: TextStyle(
+      fontFamily: fontFamilySerif,
       fontSize: 32,
       height: 1.12,
       fontWeight: FontWeight.w600,
     ),
     headlineMedium: TextStyle(
+      fontFamily: fontFamilySerif,
       fontSize: 28,
       height: 1.16,
       fontWeight: FontWeight.w600,
     ),
     headlineSmall: TextStyle(
+      fontFamily: fontFamilySerif,
       fontSize: 24,
       height: 1.2,
       fontWeight: FontWeight.w600,
