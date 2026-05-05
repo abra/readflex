@@ -85,7 +85,7 @@ class CatalogHeader extends StatelessWidget {
 }
 
 /// Horizontally scrolling strip of filter chips
-/// (`All / Books / Comics / Saved / Finished`). Built on the shared
+/// (`All / Books / Comics / New / Finished`). Built on the shared
 /// [AppFilterChip] so Catalog and Dictionary look the same.
 class _FilterSegments extends StatelessWidget {
   const _FilterSegments({required this.active, required this.onChanged});
@@ -117,7 +117,7 @@ class _FilterSegments extends StatelessWidget {
     CatalogFilter.all => 'All',
     CatalogFilter.books => 'Books',
     CatalogFilter.comics => 'Comics',
-    CatalogFilter.saved => 'Saved',
+    CatalogFilter.unread => 'New',
     CatalogFilter.finished => 'Finished',
   };
 }

@@ -5,7 +5,7 @@ enum CatalogStatus { initial, loading, success, failure }
 /// Filter segments mirrored from the readwell_demo Library screen. Kept
 /// as an enum (not a string) so switches are exhaustive and renames are
 /// refactor-safe.
-enum CatalogFilter { all, books, comics, saved, finished }
+enum CatalogFilter { all, books, comics, unread, finished }
 
 class CatalogState extends Equatable {
   // Non-const because [visibleItems] is a `late final` derived field —
@@ -69,7 +69,7 @@ class CatalogState extends Equatable {
         CatalogFilter.all => true,
         CatalogFilter.books => book.format != BookFormat.cbz,
         CatalogFilter.comics => book.format == BookFormat.cbz,
-        CatalogFilter.saved => !book.isFinished,
+        CatalogFilter.unread => book.readingProgress == 0,
         CatalogFilter.finished => book.isFinished,
       };
       if (!matchesFilter) return false;
