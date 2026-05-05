@@ -72,32 +72,34 @@ const _lightColorsExt = AppColorsExt(
 ThemeData _buildLight() {
   const palette = lightPalette;
 
-  final colorScheme = ColorScheme.light(
-    primary: palette.primary,
-    onPrimary: palette.onPrimary,
-    secondary: palette.secondary,
-    onSecondary: palette.onSecondary,
-    surface: palette.background,
-    onSurface: palette.foreground,
-    error: palette.error,
-    onError: palette.onError,
-    outline: palette.border,
-    // outlineVariant must be set explicitly. In Flutter 3.41 the
-    // ColorScheme getter falls back to `onBackground` when
-    // outlineVariant is omitted (`Color get outlineVariant =>
-    // _outlineVariant ?? onBackground;`), and `onBackground` is the
-    // light-mode foreground (≈ near-black) — so any consumer reading
-    // `colorScheme.outlineVariant` (chrome dividers, slider inactive
-    // track) ended up rendering solid black hairlines on a light app.
-    // Pin it to the same divider colour the legacy DividerTheme uses.
-    outlineVariant: palette.border,
-    surfaceContainerLowest: palette.surfaceElevated,
-    surfaceContainerLow: palette.card,
-    surfaceContainer: palette.secondary,
-    surfaceContainerHigh: palette.muted,
-    surfaceContainerHighest: palette.muted,
-    surfaceTint: Colors.transparent,
-  );
+  // Material 3 idiom: build the full scheme from a seed (so every M3
+  // role gets a tonally-harmonious value out of the box — no holes
+  // for `outlineVariant`, `inversePrimary`, `surfaceTint`, etc. to
+  // fall back to broken framework defaults), then `.copyWith` the
+  // brand-specific overrides we own. Anything we don't override is
+  // kept at the seed-derived value, which is already correct M3.
+  final colorScheme =
+      ColorScheme.fromSeed(
+        seedColor: palette.primary,
+        brightness: Brightness.light,
+      ).copyWith(
+        primary: palette.primary,
+        onPrimary: palette.onPrimary,
+        secondary: palette.secondary,
+        onSecondary: palette.onSecondary,
+        surface: palette.background,
+        onSurface: palette.foreground,
+        error: palette.error,
+        onError: palette.onError,
+        outline: palette.border,
+        outlineVariant: palette.border,
+        surfaceContainerLowest: palette.surfaceElevated,
+        surfaceContainerLow: palette.card,
+        surfaceContainer: palette.secondary,
+        surfaceContainerHigh: palette.muted,
+        surfaceContainerHighest: palette.muted,
+        surfaceTint: Colors.transparent,
+      );
 
   // NOTE: do NOT pass fontFamily to .apply() — it unconditionally
   // overwrites fontFamily on every TextStyle in the theme, wiping out
@@ -145,29 +147,34 @@ const _darkColorsExt = AppColorsExt(
 ThemeData _buildDark() {
   const palette = darkPalette;
 
-  final colorScheme = ColorScheme.dark(
-    primary: palette.primary,
-    onPrimary: palette.onPrimary,
-    secondary: palette.secondary,
-    onSecondary: palette.onSecondary,
-    surface: palette.background,
-    onSurface: palette.foreground,
-    error: palette.error,
-    onError: palette.onError,
-    outline: palette.border,
-    // Same `_outlineVariant ?? onBackground` fallback as in light mode
-    // — see _buildLight for the full rationale. In dark mode the
-    // missed default is the light foreground tint, which would blast
-    // bright hairlines across dark chrome; pin it to the dark
-    // palette's border colour instead.
-    outlineVariant: palette.border,
-    surfaceContainerLowest: palette.surfaceElevated,
-    surfaceContainerLow: palette.card,
-    surfaceContainer: palette.secondary,
-    surfaceContainerHigh: palette.muted,
-    surfaceContainerHighest: palette.muted,
-    surfaceTint: Colors.transparent,
-  );
+  // Same M3-idiomatic recipe as `_buildLight`: seed the full scheme
+  // from the brand primary, then `.copyWith` only the roles we own.
+  // The seed handles every M3 role (outlineVariant, inversePrimary,
+  // scrim, etc.) with values tonally derived from the brand colour,
+  // so unspecified roles can never collapse to a broken Flutter
+  // default again.
+  final colorScheme =
+      ColorScheme.fromSeed(
+        seedColor: palette.primary,
+        brightness: Brightness.dark,
+      ).copyWith(
+        primary: palette.primary,
+        onPrimary: palette.onPrimary,
+        secondary: palette.secondary,
+        onSecondary: palette.onSecondary,
+        surface: palette.background,
+        onSurface: palette.foreground,
+        error: palette.error,
+        onError: palette.onError,
+        outline: palette.border,
+        outlineVariant: palette.border,
+        surfaceContainerLowest: palette.surfaceElevated,
+        surfaceContainerLow: palette.card,
+        surfaceContainer: palette.secondary,
+        surfaceContainerHigh: palette.muted,
+        surfaceContainerHighest: palette.muted,
+        surfaceTint: Colors.transparent,
+      );
 
   // NOTE: do NOT pass fontFamily to .apply() — it unconditionally
   // overwrites fontFamily on every TextStyle in the theme, wiping out
