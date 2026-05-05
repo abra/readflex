@@ -56,6 +56,10 @@ class FlashcardCubit extends Cubit<FlashcardState> {
         hint: state.hint.isEmpty ? null : state.hint,
         sourceHighlightId: sourceHighlightId,
       );
+      // Sheet may be dismissed mid-save; the cubit is then closed and
+      // emit would throw StateError. Bail instead — the card itself
+      // is already persisted.
+      if (isClosed) return;
       try {
         await _fsrsRepository.createReviewItem(
           itemId: flashcard.id,
@@ -65,10 +69,12 @@ class FlashcardCubit extends Cubit<FlashcardState> {
       } catch (e, st) {
         // Non-fatal: flashcard is saved; missing FSRS row just means it
         // won't appear in review queue until next manual registration.
-        addError(e, st);
+        if (!isClosed) addError(e, st);
       }
+      if (isClosed) return;
       emit(state.copyWith(status: FlashcardStatus.success));
     } catch (e, st) {
+      if (isClosed) return;
       addError(e, st);
       emit(state.copyWith(status: FlashcardStatus.failure));
     }

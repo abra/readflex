@@ -36,6 +36,10 @@ class ProfileCubit extends Cubit<ProfileState> {
     emit(state.copyWith(isLoading: true));
     try {
       await _authService.signOut();
+      // Sign-out kicks off a route change (back to auth gate) that can
+      // tear down the profile scope before this future resolves, closing
+      // the cubit. Bail out instead of throwing on emit-after-close.
+      if (isClosed) return;
       emit(
         state.copyWith(
           authStatus: AuthStatus.unauthenticated,
@@ -45,6 +49,7 @@ class ProfileCubit extends Cubit<ProfileState> {
         ),
       );
     } catch (e, st) {
+      if (isClosed) return;
       // Route through BlocBase.addError → AppBlocObserver.onError → logger.
       // Sign-out failure is non-fatal for app state (user stays authenticated),
       // but must be visible in logs to debug production auth issues.

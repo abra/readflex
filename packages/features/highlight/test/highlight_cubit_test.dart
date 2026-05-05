@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -208,6 +210,42 @@ void main() {
         expect(h.cfiRange, 'epubcfi(/6/4)');
         expect(h.pageNumber, 42);
         expect(h.scrollOffset, 0.75);
+      },
+    );
+
+    // Race-protection: user can dismiss the sheet while addHighlight
+    // is in flight; cubit closes and the post-await emit would throw
+    // StateError. Guard makes save() a no-op past close — but the
+    // highlight itself is already persisted by then, which is fine.
+    test(
+      'save: post-await emit is skipped when cubit closes mid-call',
+      () async {
+        repository.awaitGate = Completer<void>();
+        final cubit = HighlightCubit(
+          highlightRepository: repository,
+          fsrsRepository: fsrsRepository,
+        );
+
+        unawaited(
+          cubit.save(
+            text: 'hello',
+            sourceId: 'src',
+            sourceType: SourceType.book,
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
+        expect(cubit.state.status, HighlightSheetStatus.saving);
+
+        await cubit.close();
+        repository.awaitGate!.complete();
+        await Future<void>.delayed(Duration.zero);
+
+        // Reaching here without StateError is the assertion. The highlight
+        // still gets persisted (verified separately) — only the post-await
+        // emit is skipped.
+        expect(cubit.isClosed, isTrue);
+        expect(cubit.state.status, HighlightSheetStatus.saving);
+        expect(repository.highlights, hasLength(1));
       },
     );
   });

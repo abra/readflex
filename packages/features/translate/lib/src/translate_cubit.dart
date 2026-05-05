@@ -43,6 +43,10 @@ class TranslateCubit extends Cubit<TranslateState> {
         fromLang: fromLang,
         toLang: toLang,
       );
+      // Sheet may be dismissed while the network call is in flight; the
+      // cubit is then closed and emit would throw StateError. Bail out
+      // silently — the user already left.
+      if (isClosed) return;
       emit(
         state.copyWith(
           status: TranslateStatus.translated,
@@ -52,6 +56,7 @@ class TranslateCubit extends Cubit<TranslateState> {
         ),
       );
     } catch (e, st) {
+      if (isClosed) return;
       addError(e, st);
       emit(
         state.copyWith(
@@ -79,6 +84,10 @@ class TranslateCubit extends Cubit<TranslateState> {
         sourceType: sourceType,
         usageExamples: state.usageExamples,
       );
+      // Same isClosed-after-await guard as in `translate`: the user can
+      // dismiss the sheet between addEntry and the FSRS register, which
+      // closes the cubit. Don't continue past that point.
+      if (isClosed) return;
       try {
         await _fsrsRepository.createReviewItem(
           itemId: entry.id,
@@ -88,10 +97,12 @@ class TranslateCubit extends Cubit<TranslateState> {
       } catch (e, st) {
         // Non-fatal: entry is saved; missing FSRS row just means it won't
         // appear in review queue until next manual registration.
-        addError(e, st);
+        if (!isClosed) addError(e, st);
       }
+      if (isClosed) return;
       emit(state.copyWith(status: TranslateStatus.saved));
     } catch (e, st) {
+      if (isClosed) return;
       addError(e, st);
       emit(
         state.copyWith(

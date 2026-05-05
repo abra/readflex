@@ -10,7 +10,7 @@ part 'catalog_state.dart';
 class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
   CatalogBloc({required BookRepository bookRepository})
     : _bookRepository = bookRepository,
-      super(const CatalogState()) {
+      super(CatalogState()) {
     on<CatalogLoadRequested>(_onLoadRequested);
     on<CatalogBookDeleted>(_onBookDeleted);
     on<CatalogBooksDeleted>(_onBooksDeleted);

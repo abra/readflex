@@ -38,9 +38,17 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     emit(state.copyWith(status: HomeStatus.loading));
 
     try {
-      final books = await _bookRepository.getBooks(limit: 20);
-      final highlights = await _highlightRepository.getHighlights();
-      final dueCards = await _fsrsRepository.getDueItems();
+      // The three reads are independent — they hit different DAOs
+      // and do not depend on each other's results — so dispatch them
+      // in parallel via Dart 3's record `.wait`. Earlier this was
+      // three sequential awaits; on a cold dashboard load that
+      // serialised three SQLite queries that could have run together.
+      // Same idiom is used in `ReaderBloc._onSourceLoadRequested`.
+      final (books, highlights, dueCards) = await (
+        _bookRepository.getBooks(limit: 20),
+        _highlightRepository.getHighlights(),
+        _fsrsRepository.getDueItems(),
+      ).wait;
 
       emit(
         state.copyWith(

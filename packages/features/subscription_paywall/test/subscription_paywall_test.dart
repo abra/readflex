@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subscription_paywall/src/subscription_paywall_cubit.dart';
@@ -90,6 +92,35 @@ void main() {
           status: SubscriptionPaywallStatus.failure,
         ),
       ],
+    );
+
+    // Race-protection: the user can dismiss the paywall (gesture-down,
+    // back button, navigation) while the platform purchase / refresh
+    // call is still in flight. Without an `isClosed` guard, the post-
+    // await emit would throw StateError ("Cannot emit new states after
+    // calling close"). The guard makes purchase a no-op past close.
+    test(
+      'purchase: post-await emit is skipped when cubit closes mid-call',
+      () async {
+        subscriptionService.awaitGate = Completer<void>();
+        final cubit = SubscriptionPaywallCubit(
+          subscriptionService: subscriptionService,
+        );
+
+        unawaited(cubit.purchase());
+        await Future<void>.delayed(Duration.zero);
+        expect(cubit.state.status, SubscriptionPaywallStatus.purchasing);
+
+        await cubit.close();
+        subscriptionService.awaitGate!.complete();
+        await Future<void>.delayed(Duration.zero);
+
+        // Reaching this without StateError is the assertion: state
+        // stayed at the pre-close `purchasing` because the post-await
+        // emit was intercepted.
+        expect(cubit.isClosed, isTrue);
+        expect(cubit.state.status, SubscriptionPaywallStatus.purchasing);
+      },
     );
   });
 }

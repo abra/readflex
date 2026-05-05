@@ -25,6 +25,10 @@ class SubscriptionPaywallCubit extends Cubit<SubscriptionPaywallState> {
       // In a real implementation, this would trigger the platform purchase flow.
       // For now, refresh status to check if the user has become premium.
       await _subscriptionService.refresh();
+      // User can dismiss the paywall while the purchase flow is in
+      // flight; the cubit is then closed and the post-await emit would
+      // throw StateError. Bail out — the UI is already gone.
+      if (isClosed) return;
       final isPremium = _subscriptionService.isPremium;
       emit(
         state.copyWith(
@@ -35,6 +39,7 @@ class SubscriptionPaywallCubit extends Cubit<SubscriptionPaywallState> {
         ),
       );
     } catch (e, st) {
+      if (isClosed) return;
       addError(e, st);
       emit(state.copyWith(status: SubscriptionPaywallStatus.failure));
     }

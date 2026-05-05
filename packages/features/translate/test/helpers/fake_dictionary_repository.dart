@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
 
@@ -6,6 +8,11 @@ class FakeDictionaryRepository implements DictionaryRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 
   bool shouldThrow = false;
+
+  /// When set, `addEntry` blocks on this completer's future before
+  /// resolving. Tests that need to simulate "user dismissed mid-save"
+  /// complete it after closing the cubit.
+  Completer<void>? awaitGate;
 
   final List<DictionaryEntry> entries = [];
 
@@ -21,6 +28,7 @@ class FakeDictionaryRepository implements DictionaryRepository {
     List<String> usageExamples = const [],
     DateTime? addedAt,
   }) async {
+    if (awaitGate != null) await awaitGate!.future;
     if (shouldThrow) throw Exception('addEntry failed');
 
     final entry = DictionaryEntry(

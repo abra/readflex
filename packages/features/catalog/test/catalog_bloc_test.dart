@@ -28,7 +28,7 @@ void main() {
       build: () => CatalogBloc(bookRepository: repository),
       act: (bloc) => bloc.add(const CatalogLoadRequested()),
       expect: () => [
-        const CatalogState(status: CatalogStatus.loading),
+        CatalogState(status: CatalogStatus.loading),
         CatalogState(status: CatalogStatus.success, books: [_book]),
       ],
     );
@@ -38,8 +38,8 @@ void main() {
       build: () => CatalogBloc(bookRepository: repository),
       act: (bloc) => bloc.add(const CatalogLoadRequested()),
       expect: () => [
-        const CatalogState(status: CatalogStatus.loading),
-        const CatalogState(status: CatalogStatus.success),
+        CatalogState(status: CatalogStatus.loading),
+        CatalogState(status: CatalogStatus.success),
       ],
     );
 
@@ -49,8 +49,8 @@ void main() {
       build: () => CatalogBloc(bookRepository: repository),
       act: (bloc) => bloc.add(const CatalogLoadRequested()),
       expect: () => [
-        const CatalogState(status: CatalogStatus.loading),
-        const CatalogState(status: CatalogStatus.failure),
+        CatalogState(status: CatalogStatus.loading),
+        CatalogState(status: CatalogStatus.failure),
       ],
     );
 
@@ -66,7 +66,7 @@ void main() {
         CatalogBookDeleted(_book.id, scope: BookDeletionScope.keepLearningData),
       ),
       expect: () => [
-        const CatalogState(status: CatalogStatus.success, deletionVersion: 1),
+        CatalogState(status: CatalogStatus.success, deletionVersion: 1),
       ],
     );
 
@@ -175,7 +175,7 @@ void main() {
       'CatalogLoadRequested does NOT bump deletionVersion',
       setUp: () => repository.seedBooks([_book]),
       build: () => CatalogBloc(bookRepository: repository),
-      seed: () => const CatalogState(deletionVersion: 5),
+      seed: () => CatalogState(deletionVersion: 5),
       act: (bloc) => bloc.add(const CatalogLoadRequested()),
       verify: (bloc) => expect(bloc.state.deletionVersion, 5),
     );
@@ -184,7 +184,7 @@ void main() {
       'CatalogRefreshRequested does NOT bump deletionVersion',
       setUp: () => repository.seedBooks([_book]),
       build: () => CatalogBloc(bookRepository: repository),
-      seed: () => const CatalogState(deletionVersion: 7),
+      seed: () => CatalogState(deletionVersion: 7),
       act: (bloc) => bloc.add(const CatalogRefreshRequested()),
       verify: (bloc) => expect(bloc.state.deletionVersion, 7),
     );
@@ -242,8 +242,31 @@ void main() {
       expect(state.visibleItems, [newer, older]);
     });
 
+    // Earlier `visibleItems` was a getter that re-ran filter + lowercase
+    // + sort on every call. BlocBuilder reads it on each rebuild, so
+    // the same list was being computed dozens of times for one state.
+    // The `late final` cache means the second read returns the exact
+    // same `List` instance the first read produced.
+    test('visibleItems is cached across reads of one state instance', () {
+      final book = Book(
+        id: 'b',
+        title: 'Cached',
+        filePath: '/c.epub',
+        format: BookFormat.epub,
+        addedAt: DateTime(2026, 1, 1),
+      );
+      final state = CatalogState(
+        status: CatalogStatus.success,
+        books: [book],
+      );
+
+      final firstRead = state.visibleItems;
+      final secondRead = state.visibleItems;
+      expect(identical(firstRead, secondRead), isTrue);
+    });
+
     test('isEmpty is true when no books', () {
-      const state = CatalogState(status: CatalogStatus.success);
+      final state = CatalogState(status: CatalogStatus.success);
       expect(state.isEmpty, isTrue);
     });
   });

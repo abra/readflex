@@ -218,6 +218,46 @@ void main() {
       // Awaiting the original call should not propagate StateError.
       await expectLater(pending, completes);
     });
+
+    // Re-entry guard: double-tapping the menu's "Upload Book" tile
+    // (or the failure screen's "Try again" button) used to launch two
+    // platform pickers concurrently and race on cubit state when both
+    // resolved. The flag in `pickAndImportBook` makes the second call
+    // a no-op while the first picker is still open.
+    test(
+      'pickAndImportBook ignores re-entry while picker is in flight',
+      () async {
+        final pickerCompleter = Completer<File?>();
+        var pickCount = 0;
+
+        final cubit = _buildCubit(
+          pickBookFile: () async {
+            pickCount++;
+            return pickerCompleter.future;
+          },
+        );
+
+        // Fire two calls without awaiting between them.
+        final first = cubit.pickAndImportBook();
+        final second = cubit.pickAndImportBook();
+
+        // Pump microtasks so the first call has actually entered
+        // `_onPickBookFile`. Without this, both awaited futures could
+        // synchronously bypass our flag.
+        await Future<void>.delayed(Duration.zero);
+
+        // Only one picker was opened — the second tap was rejected.
+        expect(pickCount, 1);
+
+        // User cancels (returns null). Both Futures should complete; the
+        // cubit stays on the menu since nothing was selected.
+        pickerCompleter.complete(null);
+        await first;
+        await second;
+        expect(cubit.state, isA<ImportFlowMenu>());
+        await cubit.close();
+      },
+    );
   });
 }
 

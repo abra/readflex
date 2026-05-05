@@ -8,7 +8,11 @@ enum CatalogStatus { initial, loading, success, failure }
 enum CatalogFilter { all, books, comics, saved, finished }
 
 class CatalogState extends Equatable {
-  const CatalogState({
+  // Non-const because [visibleItems] is a `late final` derived field —
+  // const objects can't have late initializers. The trade-off is the
+  // 8 `const CatalogState(...)` literals in tests/bloc-init lose their
+  // compile-time canonical form, which is irrelevant at runtime.
+  CatalogState({
     this.status = CatalogStatus.initial,
     this.books = const [],
     this.filter = CatalogFilter.all,
@@ -38,7 +42,26 @@ class CatalogState extends Equatable {
 
   /// Books after applying the current [filter] and [searchQuery],
   /// sorted by most-recently-added first.
-  List<Book> get visibleItems {
+  ///
+  /// Cached: `late final` evaluates [_computeVisibleItems] once per
+  /// state instance and reuses the result. Earlier this was a getter
+  /// that re-ran filter + lowercase + sort on every read — `BlocBuilder`
+  /// reads it on every rebuild, so the same list was being computed
+  /// dozens of times for the same state.
+  ///
+  /// Not in [props]: derived from already-compared fields, so two
+  /// states with equal raw inputs already produce the same list.
+  late final List<Book> visibleItems = _computeVisibleItems(
+    books: books,
+    filter: filter,
+    searchQuery: searchQuery,
+  );
+
+  static List<Book> _computeVisibleItems({
+    required List<Book> books,
+    required CatalogFilter filter,
+    required String searchQuery,
+  }) {
     final trimmedQuery = searchQuery.trim().toLowerCase();
 
     final filtered = books.where((book) {

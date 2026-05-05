@@ -22,7 +22,7 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
     required FsrsRepository fsrsRepository,
   }) : _repository = dictionaryRepository,
        _fsrsRepository = fsrsRepository,
-       super(const DictionaryState()) {
+       super(DictionaryState()) {
     on<DictionaryLoadRequested>(_onLoadRequested);
     on<DictionarySearchChanged>(
       _onSearchChanged,

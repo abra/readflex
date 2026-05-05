@@ -87,7 +87,13 @@ class _CatalogViewState extends State<_CatalogView> {
   /// and owning a controller lets us clear the field from the clear button.
   final _searchController = TextEditingController();
 
-  /// Guards the FAB against re-entry while an import sheet is being pushed.
+  /// Guards the FAB against re-entry while an import sheet is being
+  /// pushed. Mutated through `setState` so the FAB also visually
+  /// disables for the duration of the call — that's both correct UX
+  /// (one tap = one sheet, the user shouldn't be able to queue
+  /// another) and removes the silent-flag fragility flagged in audit:
+  /// any future build-time read of this field will now see fresh
+  /// values via the rebuild cycle.
   bool _addInFlight = false;
 
   /// FIFO queue of pending delete descriptors. One entry is pushed per
@@ -115,13 +121,15 @@ class _CatalogViewState extends State<_CatalogView> {
 
   Future<void> _handleAdd(BuildContext context) async {
     if (_addInFlight) return;
-    _addInFlight = true;
+    setState(() => _addInFlight = true);
     try {
       await widget.onAddPressed();
       if (!context.mounted) return;
       context.read<CatalogBloc>().add(const CatalogRefreshRequested());
     } finally {
-      _addInFlight = false;
+      // mounted check: the screen may have been popped while
+      // onAddPressed awaited. setState on an unmounted State throws.
+      if (mounted) setState(() => _addInFlight = false);
     }
   }
 
@@ -249,7 +257,12 @@ class _CatalogViewState extends State<_CatalogView> {
             child: Scaffold(
               floatingActionButton: _CatalogFab(
                 selectionActive: selection.isActive,
-                onAddPressed: () => _handleAdd(context),
+                // null while an import sheet is in-flight — Flutter's
+                // FilledButton/FAB renders disabled (greyed) when
+                // onPressed is null, which matches the actual state:
+                // a second tap would have been ignored anyway. Keeps
+                // the visual and behavioural guards in lockstep.
+                onAddPressed: _addInFlight ? null : () => _handleAdd(context),
                 onDeletePressed: () => _handleDeleteSelected(context),
               ),
               body: SafeArea(
@@ -325,7 +338,11 @@ class _CatalogFab extends StatelessWidget {
   });
 
   final bool selectionActive;
-  final VoidCallback onAddPressed;
+
+  /// Nullable so the parent can render the FAB as disabled while an
+  /// import is in-flight. `FloatingActionButton` greys itself out when
+  /// `onPressed` is null.
+  final VoidCallback? onAddPressed;
   final VoidCallback onDeletePressed;
 
   @override

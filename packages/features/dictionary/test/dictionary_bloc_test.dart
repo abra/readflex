@@ -46,7 +46,7 @@ void main() {
       ),
       act: (bloc) => bloc.add(const DictionaryLoadRequested()),
       expect: () => [
-        const DictionaryState(status: DictionaryStatus.loading),
+        DictionaryState(status: DictionaryStatus.loading),
         DictionaryState(
           status: DictionaryStatus.success,
           entries: [_entry1, _entry2],
@@ -62,8 +62,8 @@ void main() {
       ),
       act: (bloc) => bloc.add(const DictionaryLoadRequested()),
       expect: () => [
-        const DictionaryState(status: DictionaryStatus.loading),
-        const DictionaryState(status: DictionaryStatus.success),
+        DictionaryState(status: DictionaryStatus.loading),
+        DictionaryState(status: DictionaryStatus.success),
       ],
     );
 
@@ -76,8 +76,8 @@ void main() {
       ),
       act: (bloc) => bloc.add(const DictionaryLoadRequested()),
       expect: () => [
-        const DictionaryState(status: DictionaryStatus.loading),
-        const DictionaryState(status: DictionaryStatus.failure),
+        DictionaryState(status: DictionaryStatus.loading),
+        DictionaryState(status: DictionaryStatus.failure),
       ],
     );
 
@@ -198,7 +198,7 @@ void main() {
         dictionaryRepository: repository,
         fsrsRepository: fsrsRepository,
       ),
-      seed: () => const DictionaryState(status: DictionaryStatus.success),
+      seed: () => DictionaryState(status: DictionaryStatus.success),
       act: (bloc) => bloc.add(
         const DictionaryEntryAdded(word: 'gusto', translation: 'удовольствие'),
       ),
@@ -217,12 +217,12 @@ void main() {
         dictionaryRepository: repository,
         fsrsRepository: fsrsRepository,
       ),
-      seed: () => const DictionaryState(status: DictionaryStatus.success),
+      seed: () => DictionaryState(status: DictionaryStatus.success),
       act: (bloc) => bloc.add(
         const DictionaryEntryAdded(word: 'gusto', translation: 'удовольствие'),
       ),
       expect: () => [
-        const DictionaryState(status: DictionaryStatus.failure),
+        DictionaryState(status: DictionaryStatus.failure),
       ],
     );
 
@@ -232,7 +232,7 @@ void main() {
         dictionaryRepository: repository,
         fsrsRepository: fsrsRepository,
       ),
-      seed: () => const DictionaryState(
+      seed: () => DictionaryState(
         status: DictionaryStatus.success,
         filter: DictionaryFilter.recent,
       ),
@@ -291,7 +291,7 @@ void main() {
         dictionaryRepository: repository,
         fsrsRepository: fsrsRepository,
       ),
-      seed: () => const DictionaryState(deletionVersion: 5),
+      seed: () => DictionaryState(deletionVersion: 5),
       act: (bloc) => bloc.add(const DictionaryLoadRequested()),
       verify: (bloc) => expect(bloc.state.deletionVersion, 5),
     );
@@ -299,8 +299,19 @@ void main() {
 
   group('DictionaryState', () {
     test('isEmpty is true when no entries', () {
-      const state = DictionaryState();
+      final state = DictionaryState();
       expect(state.isEmpty, isTrue);
+    });
+
+    // Mirrors the catalog cache test: `late final` should evaluate
+    // _compute once per state instance and reuse the same `List`
+    // reference across reads. Earlier the getter ran filter +
+    // lowercase-search on every BlocBuilder rebuild.
+    test('filteredEntries is cached across reads of one state instance', () {
+      final state = DictionaryState(entries: [_entry1, _entry2]);
+      final firstRead = state.filteredEntries;
+      final secondRead = state.filteredEntries;
+      expect(identical(firstRead, secondRead), isTrue);
     });
 
     test('filteredEntries returns all when query is empty', () {

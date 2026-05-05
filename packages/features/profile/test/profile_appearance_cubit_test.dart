@@ -106,12 +106,23 @@ void main() {
     );
 
     blocTest<ProfileAppearanceCubit, ProfileAppearanceState>(
-      'commitTextScale persists without emitting',
+      // Commit-without-preview: setter persists, the broadcast stream
+      // pushes the new prefs back, and the subscription emits the
+      // synced state. Earlier the cubit ignored its own persistence
+      // and the textScale shown by Profile drifted away from what was
+      // saved; the new subscription closes that gap.
+      'commitTextScale persists and reflects change via stream',
       build: () => ProfileAppearanceCubit(
         preferencesService: preferencesService,
       ),
       act: (cubit) => cubit.commitTextScale(1.3),
-      expect: () => <ProfileAppearanceState>[],
+      expect: () => [
+        isA<ProfileAppearanceState>().having(
+          (s) => s.readerAppearance.textScale,
+          'textScale',
+          1.3,
+        ),
+      ],
       verify: (_) {
         expect(preferencesService.current.readerTextScale, 1.3);
       },
@@ -136,15 +147,68 @@ void main() {
     );
 
     blocTest<ProfileAppearanceCubit, ProfileAppearanceState>(
-      'commitLineHeight persists without emitting',
+      // Mirror of `commitTextScale persists and reflects change via
+      // stream` — same machinery, different field.
+      'commitLineHeight persists and reflects change via stream',
       build: () => ProfileAppearanceCubit(
         preferencesService: preferencesService,
       ),
       act: (cubit) => cubit.commitLineHeight(1.8),
-      expect: () => <ProfileAppearanceState>[],
+      expect: () => [
+        isA<ProfileAppearanceState>().having(
+          (s) => s.readerAppearance.lineHeight,
+          'lineHeight',
+          1.8,
+        ),
+      ],
       verify: (_) {
         expect(preferencesService.current.readerLineHeight, 1.8);
       },
+    );
+
+    // External-update reflection: when another surface (e.g. the reader's
+    // font picker) writes through PreferencesService, the broadcast
+    // stream pushes the new snapshot here. Without the subscription
+    // the cubit's state stayed frozen at construction-time and the
+    // Profile screen drifted out of sync with the reader.
+    blocTest<ProfileAppearanceCubit, ProfileAppearanceState>(
+      'reflects external preference updates from the broadcast stream',
+      build: () => ProfileAppearanceCubit(
+        preferencesService: preferencesService,
+      ),
+      act: (_) async {
+        await preferencesService.update(
+          (prefs) => prefs.copyWith(readerFontId: 'geist'),
+        );
+      },
+      expect: () => [
+        isA<ProfileAppearanceState>().having(
+          (s) => s.readerAppearance.fontId,
+          'fontId',
+          'geist',
+        ),
+      ],
+    );
+
+    // De-duplication: a setter's optimistic emit followed by the
+    // stream-echo from `_preferencesService.update` shouldn't surface
+    // as two emits — the second snapshot equals the state we already
+    // have, so `_onPrefs` skips it. (If de-dup broke, the existing
+    // `setThemeMode emits new state and persists` test would already
+    // fail with two emits instead of one. This test guards explicitly.)
+    blocTest<ProfileAppearanceCubit, ProfileAppearanceState>(
+      'optimistic emit and stream echo collapse to a single emit',
+      build: () => ProfileAppearanceCubit(
+        preferencesService: preferencesService,
+      ),
+      act: (cubit) => cubit.setReaderFont('geist'),
+      expect: () => [
+        isA<ProfileAppearanceState>().having(
+          (s) => s.readerAppearance.fontId,
+          'fontId',
+          'geist',
+        ),
+      ],
     );
   });
 }

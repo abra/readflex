@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flashcard/src/flashcard_cubit.dart';
@@ -243,6 +245,37 @@ void main() {
           status: FlashcardStatus.failure,
         ),
       ],
+    );
+
+    // Race-protection: user dismisses the sheet mid-save; cubit closes
+    // and the post-await emit would throw StateError. Guard makes
+    // save() a no-op past close — the card itself is already persisted.
+    test(
+      'save: post-await emit is skipped when cubit closes mid-call',
+      () async {
+        repository.awaitGate = Completer<void>();
+        final cubit =
+            FlashcardCubit(
+                flashcardRepository: repository,
+                fsrsRepository: fsrsRepository,
+              )
+              ..setFront('Q')
+              ..setBack('A');
+
+        unawaited(
+          cubit.save(sourceId: 'src', sourceType: SourceType.book),
+        );
+        await Future<void>.delayed(Duration.zero);
+        expect(cubit.state.status, FlashcardStatus.saving);
+
+        await cubit.close();
+        repository.awaitGate!.complete();
+        await Future<void>.delayed(Duration.zero);
+
+        expect(cubit.isClosed, isTrue);
+        expect(cubit.state.status, FlashcardStatus.saving);
+        expect(repository.flashcards, hasLength(1));
+      },
     );
   });
 }

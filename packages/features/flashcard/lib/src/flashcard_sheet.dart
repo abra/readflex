@@ -61,12 +61,25 @@ class _FlashcardSheetView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Three TextFields (front / back / hint) push every keystroke into
+    // the cubit. Without `buildWhen` the entire sheet rebuilds three
+    // times per typed character — once per setter — re-mounting the
+    // SelectionPreviewCard, all three TextFields, and the FilledButton.
+    // That causes IME / cursor jitter on long inputs.
+    //
+    // The UI only needs to react to two things: the saving / failure /
+    // success status (button label, disabled flag, error line) and the
+    // `canSave` toggle (button enabled/disabled). `canSave` flips at
+    // most twice per session — when front+back transition empty↔non-
+    // empty — so most keystrokes don't trigger any rebuild at all.
     return BlocConsumer<FlashcardCubit, FlashcardState>(
       listener: (context, state) {
         if (state.status == FlashcardStatus.success) {
           Navigator.of(context).pop();
         }
       },
+      buildWhen: (prev, curr) =>
+          prev.status != curr.status || prev.canSave != curr.canSave,
       builder: (context, state) {
         final isSaving = state.status == FlashcardStatus.saving;
 

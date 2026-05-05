@@ -43,10 +43,30 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
   final PickBookFile _onPickBookFile;
   final ImportBookFile _onImportBook;
 
+  /// Re-entry guard for [pickAndImportBook]. Without it a double-tap
+  /// on the menu's "Upload Book" tile (or the failure screen's "Try
+  /// again" button) opens two platform pickers concurrently. The
+  /// second resolves into a second `ImportFlowBookUploading` while the
+  /// first is still running, racing on cubit state.
+  ///
+  /// Kept as a private flag instead of a new `ImportFlowPicking` state
+  /// because the picker is a platform-rendered UI we don't draw — the
+  /// sealed state hierarchy describes screens we paint. Process-control
+  /// belongs in the cubit's private fields.
+  bool _isPickingFile = false;
+
   /// Open the platform file picker, then drive book import through
-  /// uploading → done. No-op when the picker is dismissed.
+  /// uploading → done. No-op when the picker is dismissed or a pick
+  /// is already in flight.
   Future<void> pickAndImportBook() async {
-    final file = await _onPickBookFile();
+    if (_isPickingFile) return;
+    _isPickingFile = true;
+    final File? file;
+    try {
+      file = await _onPickBookFile();
+    } finally {
+      _isPickingFile = false;
+    }
     if (file == null || isClosed) return;
 
     final filename = p.basename(file.path);

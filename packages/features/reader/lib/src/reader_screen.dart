@@ -985,6 +985,34 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
   /// scrim so the user gets feedback that the tap registered.
   bool _foliateReady = false;
 
+  /// Memoization for the domain → bridge highlight mapping. This widget
+  /// rebuilds for many reasons unrelated to highlights (theme tap,
+  /// font/layout change in PreferencesScope, the loading-scrim flip,
+  /// etc.); without a cache the `.map(...).toList()` re-allocates the
+  /// `ReaderHighlight` list every time.
+  ///
+  /// Cache lives on the widget state (not on `ReaderState`) on purpose.
+  /// `ReaderState` instances churn on every page-turn via `copyWith`,
+  /// which would invalidate a `late final` cache on each tick. The
+  /// underlying `state.highlights` reference, in contrast, only
+  /// changes on `ReaderHighlightsRefreshed` — so widget-state cache
+  /// keyed on `identical(...)` of that reference hits on every
+  /// non-highlights rebuild.
+  List<Highlight>? _lastHighlightsRef;
+  List<ReaderHighlight>? _cachedReaderHighlights;
+
+  List<ReaderHighlight> _readerHighlightsFor(List<Highlight> source) {
+    final cached = _cachedReaderHighlights;
+    if (cached != null && identical(source, _lastHighlightsRef)) {
+      return cached;
+    }
+    _lastHighlightsRef = source;
+    return _cachedReaderHighlights = [
+      for (final h in source)
+        ReaderHighlight(id: h.id, text: h.text, cfiRange: h.cfiRange),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<ReaderBloc>();
@@ -998,15 +1026,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       (b) => b.state.highlights,
     );
     final state = bloc.state;
-    final highlights = highlightsState
-        .map(
-          (h) => ReaderHighlight(
-            id: h.id,
-            text: h.text,
-            cfiRange: h.cfiRange,
-          ),
-        )
-        .toList();
+    final highlights = _readerHighlightsFor(highlightsState);
 
     void onTapped(double x, double y) => chromeCubit.toggle();
 

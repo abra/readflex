@@ -144,4 +144,56 @@ void main() {
     gate.complete();
     await tester.pumpAndSettle();
   });
+
+  // Visual counterpart to the guard test above. The behavioural guard
+  // alone (re-entry check inside the handler) made the second tap a
+  // silent no-op, but the FAB stayed visually enabled — confusing UX
+  // and the fragility flagged by audit ("if UI ever depends on the
+  // flag, it would silently desync"). Now `_addInFlight` is mutated
+  // through setState and passed down as a nullable onPressed, so
+  // FloatingActionButton renders greyed-out for the duration of the
+  // import.
+  testWidgets('FAB renders disabled while import is in-flight', (tester) async {
+    final gate = Completer<void>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: CatalogScreen(
+          bookRepository: bookRepository,
+          preferencesService: preferencesService,
+          onBookPressed: (_) async {},
+          onAddPressed: () async {
+            await gate.future;
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // Before the tap: FAB is enabled.
+    final initialFab = tester.widget<FloatingActionButton>(
+      find.byType(FloatingActionButton),
+    );
+    expect(initialFab.onPressed, isNotNull);
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pump();
+
+    // While the awaited onAddPressed parks on the gate, the FAB's
+    // onPressed must be null — Material renders that state as disabled.
+    final inFlightFab = tester.widget<FloatingActionButton>(
+      find.byType(FloatingActionButton),
+    );
+    expect(inFlightFab.onPressed, isNull);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+
+    // After the import resolves the FAB returns to its enabled state.
+    final settledFab = tester.widget<FloatingActionButton>(
+      find.byType(FloatingActionButton),
+    );
+    expect(settledFab.onPressed, isNotNull);
+  });
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -240,6 +242,77 @@ void main() {
           errorMessage: 'Failed to save to dictionary',
         ),
       ],
+    );
+
+    // Race-protection: the user can dismiss the bottom sheet while the
+    // network call is still in flight. Without an `isClosed` guard, the
+    // post-await `emit` would throw StateError (Cubit is closed) and
+    // crash the bloc framework with "Bad state: Cannot emit new states
+    // after calling close".
+    test(
+      'translate: post-await emit is skipped when cubit closes mid-call',
+      () async {
+        translationService.awaitGate = Completer<void>();
+        final cubit = TranslateCubit(
+          translationService: translationService,
+          dictionaryRepository: dictionaryRepository,
+          fsrsRepository: fsrsRepository,
+        );
+
+        // Kick off translate without awaiting — fake service is now
+        // blocked on the gate.
+        unawaited(
+          cubit.translate(text: 'hello', fromLang: 'en', toLang: 'ru'),
+        );
+        // Pump microtasks so the synchronous "emit translating" lands.
+        await Future<void>.delayed(Duration.zero);
+        expect(cubit.state.status, TranslateStatus.translating);
+
+        // Tear the cubit down while translate awaits. Then release the
+        // gate so the await resolves AFTER close.
+        await cubit.close();
+        translationService.awaitGate!.complete();
+        await Future<void>.delayed(Duration.zero);
+
+        // Reaching this line without StateError is the assertion: the
+        // guard intercepted the post-await emit. State is the last one
+        // we observed — close() doesn't roll it back.
+        expect(cubit.isClosed, isTrue);
+        expect(cubit.state.status, TranslateStatus.translating);
+      },
+    );
+
+    test(
+      'saveToDictionary: post-await emit is skipped when cubit closes mid-call',
+      () async {
+        final cubit = TranslateCubit(
+          translationService: translationService,
+          dictionaryRepository: dictionaryRepository,
+          fsrsRepository: fsrsRepository,
+        );
+        // Drive a successful translate first so saveToDictionary has
+        // non-empty translatedText to work with.
+        await cubit.translate(
+          text: 'hello',
+          fromLang: 'en',
+          toLang: 'ru',
+        );
+        expect(cubit.state.translatedText, isNotEmpty);
+
+        // Now gate the dictionary write, fire saveToDictionary, close
+        // the cubit while it awaits, release the gate.
+        dictionaryRepository.awaitGate = Completer<void>();
+        unawaited(cubit.saveToDictionary(word: 'hello'));
+        await Future<void>.delayed(Duration.zero);
+        expect(cubit.state.status, TranslateStatus.saving);
+
+        await cubit.close();
+        dictionaryRepository.awaitGate!.complete();
+        await Future<void>.delayed(Duration.zero);
+
+        expect(cubit.isClosed, isTrue);
+        expect(cubit.state.status, TranslateStatus.saving);
+      },
     );
   });
 }

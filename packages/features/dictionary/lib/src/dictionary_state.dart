@@ -24,7 +24,11 @@ enum DictionaryFilter {
 /// active filter chip, and the ids of entries the FSRS scheduler treats
 /// as mastered. The derived [filteredEntries] powers the list.
 class DictionaryState extends Equatable {
-  const DictionaryState({
+  // Non-const because [filteredEntries] is a `late final` derived field
+  // — const objects can't have late initializers. The trade-off is the
+  // few `const DictionaryState(...)` literals in tests/bloc-init lose
+  // their compile-time canonical form, which is irrelevant at runtime.
+  DictionaryState({
     this.status = DictionaryStatus.initial,
     this.entries = const [],
     this.searchQuery = '',
@@ -60,14 +64,32 @@ class DictionaryState extends Equatable {
   static const int recentLimit = 5;
 
   /// Filtered results derived from [entries], [filter], and [searchQuery].
-  /// Kept as a getter so the bloc doesn't need to recompute on every state
-  /// transition. Callers should cache the result in a local variable to
-  /// avoid repeated list allocation.
   ///
-  /// Filter is applied first, search second — that way "Recent" stays the
-  /// newest matching entries even when the user types a query.
-  List<DictionaryEntry> get filteredEntries {
-    final byFilter = _applyFilter(entries);
+  /// Cached: `late final` evaluates [_compute] once per state instance
+  /// and reuses the result. Earlier this was a getter that re-ran the
+  /// filter + lowercase-search on every read — `BlocBuilder` reads it
+  /// on every rebuild, so the same list was being computed dozens of
+  /// times for one state.
+  ///
+  /// Filter is applied first, search second — that way "Recent" stays
+  /// the newest matching entries even when the user types a query.
+  ///
+  /// Not in [props]: derived from already-compared fields, so two
+  /// states with equal raw inputs already produce the same list.
+  late final List<DictionaryEntry> filteredEntries = _compute(
+    entries: entries,
+    filter: filter,
+    searchQuery: searchQuery,
+    masteredIds: masteredIds,
+  );
+
+  static List<DictionaryEntry> _compute({
+    required List<DictionaryEntry> entries,
+    required DictionaryFilter filter,
+    required String searchQuery,
+    required Set<String> masteredIds,
+  }) {
+    final byFilter = _applyFilter(entries, filter, masteredIds);
     if (searchQuery.isEmpty) return byFilter;
     final q = searchQuery.toLowerCase();
     return [
@@ -78,7 +100,11 @@ class DictionaryState extends Equatable {
     ];
   }
 
-  List<DictionaryEntry> _applyFilter(List<DictionaryEntry> source) {
+  static List<DictionaryEntry> _applyFilter(
+    List<DictionaryEntry> source,
+    DictionaryFilter filter,
+    Set<String> masteredIds,
+  ) {
     return switch (filter) {
       DictionaryFilter.all => source,
       DictionaryFilter.mastered => [
