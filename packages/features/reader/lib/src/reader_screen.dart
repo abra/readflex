@@ -224,7 +224,7 @@ class _TopChromeDriver extends StatelessWidget {
     // UI — it follows the app theme, not the reader's per-page preset.
     // Reader theme keeps driving the *book page* itself (WebView
     // background, foliate-js customCSS).
-    final colors = Theme.of(context).colorScheme;
+    final colors = context.colors;
 
     return _ReaderTopChrome(
       visible: status != ReaderStatus.ready || chromeVisible,
@@ -849,7 +849,7 @@ class _BottomChromeDriver extends StatelessWidget {
       (b) => b.state.book?.format,
     );
 
-    final colors = Theme.of(context).colorScheme;
+    final colors = context.colors;
 
     return _ReaderBottomChrome(
       visible: chromeVisible && !hasSelection,
@@ -891,7 +891,7 @@ class _ContextPanelDriver extends StatelessWidget {
     }
 
     final bloc = context.read<ReaderBloc>();
-    final colors = Theme.of(context).colorScheme;
+    final colors = context.colors;
 
     return Positioned(
       left: 0,
@@ -1006,7 +1006,7 @@ class _ComicProgressOverlayDriver extends StatelessWidget {
     }
 
     final displayed = _toDisplayPage(current, total);
-    final colors = Theme.of(context).colorScheme;
+    final colors = context.colors;
     return Positioned(
       left: 0,
       right: 0,
