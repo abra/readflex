@@ -1,4 +1,5 @@
 import 'package:domain_models/domain_models.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:highlight_repository/highlight_repository.dart';
@@ -98,6 +99,33 @@ void main() {
       expect(highlights, isEmpty);
     });
 
+    // Co-deletion: deleting a highlight must also remove its
+    // `review_items_table` row in the same transaction. Without this,
+    // the highlight disappears from the UI but the FSRS row keeps
+    // surfacing in `getDueItems()` forever, since the DAO only checks
+    // `next_review_at` and doesn't join back to the highlights table.
+    test('deleteHighlight also removes FSRS review row', () async {
+      final created = await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.book,
+        text: 'With FSRS',
+      );
+      // Seed an FSRS row so we can prove it gets purged.
+      await db.reviewItemsDao.upsertItem(
+        ReviewItemsTableCompanion.insert(
+          itemId: created.id,
+          itemType: ReviewableType.highlight.name,
+          sourceId: const Value('s1'),
+        ),
+      );
+      expect(await db.reviewItemsDao.byItemId(created.id), isNotNull);
+
+      await repo.deleteHighlight(created.id);
+
+      expect(await db.reviewItemsDao.byItemId(created.id), isNull);
+      expect(await repo.getHighlights(), isEmpty);
+    });
+
     test('deleteHighlightsBySource removes all for source', () async {
       await repo.addHighlight(
         sourceId: 's1',
@@ -119,6 +147,45 @@ void main() {
       expect(all, hasLength(1));
       expect(all.first.text, 'Keep');
     });
+
+    // Bulk delete must also purge `review_items_table` rows tied to
+    // the same source — otherwise the FSRS queue keeps surfacing
+    // ghost reviews for the deleted highlights.
+    test(
+      'deleteHighlightsBySource also purges FSRS rows of that source',
+      () async {
+        final h1 = await repo.addHighlight(
+          sourceId: 's1',
+          sourceType: SourceType.book,
+          text: 'H1',
+        );
+        final h2 = await repo.addHighlight(
+          sourceId: 's1',
+          sourceType: SourceType.book,
+          text: 'H2',
+        );
+        final hKeep = await repo.addHighlight(
+          sourceId: 's2',
+          sourceType: SourceType.book,
+          text: 'Keep',
+        );
+        for (final h in [h1, h2, hKeep]) {
+          await db.reviewItemsDao.upsertItem(
+            ReviewItemsTableCompanion.insert(
+              itemId: h.id,
+              itemType: ReviewableType.highlight.name,
+              sourceId: Value(h.sourceId),
+            ),
+          );
+        }
+
+        await repo.deleteHighlightsBySource('s1');
+
+        expect(await db.reviewItemsDao.byItemId(h1.id), isNull);
+        expect(await db.reviewItemsDao.byItemId(h2.id), isNull);
+        expect(await db.reviewItemsDao.byItemId(hKeep.id), isNotNull);
+      },
+    );
 
     test('addHighlight with custom color', () async {
       final h = await repo.addHighlight(

@@ -19,7 +19,8 @@ class DictionaryTable extends Table {
 
   TextColumn get sourceId => text().nullable()();
 
-  TextColumn get sourceType => text().nullable()(); // 'book' or null (legacy SourceType column)
+  TextColumn get sourceType =>
+      text().nullable()(); // 'book' or null (legacy SourceType column)
   TextColumn get usageExamples => text().nullable()(); // JSON-encoded list
   TextColumn get addedAt => text()(); // ISO 8601
 

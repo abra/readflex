@@ -1,3 +1,5 @@
+import 'package:domain_models/domain_models.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -78,6 +80,31 @@ void main() {
       await repo.deleteFlashcard(created.id);
       final cards = await repo.getFlashcards();
       expect(cards, isEmpty);
+    });
+
+    // Co-deletion: deleting a flashcard must also remove its
+    // `review_items_table` row in the same transaction. Without this
+    // the FSRS queue keeps surfacing ghost reviews for cards the user
+    // has already deleted.
+    test('deleteFlashcard also removes FSRS review row', () async {
+      final created = await repo.addFlashcard(
+        deckId: 'd1',
+        front: 'With FSRS',
+        back: 'A',
+      );
+      await db.reviewItemsDao.upsertItem(
+        ReviewItemsTableCompanion.insert(
+          itemId: created.id,
+          itemType: ReviewableType.flashcard.name,
+          sourceId: const Value('d1'),
+        ),
+      );
+      expect(await db.reviewItemsDao.byItemId(created.id), isNotNull);
+
+      await repo.deleteFlashcard(created.id);
+
+      expect(await db.reviewItemsDao.byItemId(created.id), isNull);
+      expect(await repo.getFlashcards(), isEmpty);
     });
   });
 }

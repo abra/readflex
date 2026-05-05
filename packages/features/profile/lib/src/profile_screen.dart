@@ -146,11 +146,23 @@ class _ProfileViewState extends State<_ProfileView> {
                   const SizedBox(height: AppSpacing.md),
                   SettingsGroup(
                     children: [
-                      SettingsRow(
-                        icon: AppIcons.textFields,
-                        label: 'Font & Text Size',
-                        detail: _currentFontLabel(context),
-                        onTap: () => _showFontSheet(context),
+                      // Font label subscribes to the appearance cubit so
+                      // it tracks picks made inside the bottom sheet —
+                      // earlier we read `cubit.state` synchronously here
+                      // (no subscribe), which left the label stale until
+                      // an unrelated rebuild forced a refresh.
+                      BlocSelector<
+                        ProfileAppearanceCubit,
+                        ProfileAppearanceState,
+                        String
+                      >(
+                        selector: (s) => s.readerAppearance.fontId,
+                        builder: (context, fontId) => SettingsRow(
+                          icon: AppIcons.textFields,
+                          label: 'Font & Text Size',
+                          detail: ReaderFontPreset.fromId(fontId).label,
+                          onTap: () => _showFontSheet(context),
+                        ),
                       ),
                       SettingsRow(
                         icon: AppIcons.language,
@@ -255,12 +267,6 @@ class _ProfileViewState extends State<_ProfileView> {
         ],
       ),
     );
-  }
-
-  String _currentFontLabel(BuildContext context) {
-    final state = context.read<ProfileAppearanceCubit>().state;
-    final font = ReaderFontPreset.fromId(state.readerAppearance.fontId);
-    return font.label;
   }
 
   void _showFontSheet(BuildContext context) {

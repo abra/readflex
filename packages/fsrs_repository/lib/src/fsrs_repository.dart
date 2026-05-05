@@ -18,9 +18,11 @@ class FsrsRepository {
   FsrsRepository({
     required AppDatabase database,
     ReviewScheduler? reviewScheduler,
-  }) : _dao = database.reviewItemsDao,
+  }) : _db = database,
+       _dao = database.reviewItemsDao,
        _reviewScheduler = reviewScheduler ?? ReviewScheduler();
 
+  final AppDatabase _db;
   final ReviewItemsDao _dao;
   final ReviewScheduler _reviewScheduler;
 
@@ -157,33 +159,42 @@ class FsrsRepository {
     int? reviewDurationMs,
   }) async {
     try {
-      // Default to a blank FsrsCardData when the item has never been reviewed —
-      // this is the "implicit creation" path (see doc above).
-      final row = await _dao.byItemId(itemId);
-      final currentFsrs = row?.toDomainModel().fsrs ?? const FsrsCardData();
+      // Read → compute → upsert + log all live inside one transaction
+      // so two concurrent `recordReview` calls on the same itemId don't
+      // observe each other's mid-write state. Without it, the second
+      // call could read the pre-first-write FSRS row, recompute on
+      // stale data, and overwrite the first call's update — losing a
+      // review along with its log.
+      return await _db.transaction(() async {
+        // Default to a blank FsrsCardData when the item has never
+        // been reviewed — this is the "implicit creation" path (see
+        // doc above).
+        final row = await _dao.byItemId(itemId);
+        final currentFsrs = row?.toDomainModel().fsrs ?? const FsrsCardData();
 
-      final result = _reviewScheduler.computeReview(
-        itemId: itemId,
-        itemType: itemType,
-        currentFsrs: currentFsrs,
-        rating: rating,
-        reviewDurationMs: reviewDurationMs,
-      );
+        final result = _reviewScheduler.computeReview(
+          itemId: itemId,
+          itemType: itemType,
+          currentFsrs: currentFsrs,
+          rating: rating,
+          reviewDurationMs: reviewDurationMs,
+        );
 
-      // Prefer a caller-supplied sourceId on implicit creation; keep the
-      // existing one on subsequent reviews so passing null doesn't wipe it.
-      final updated = ReviewItem(
-        itemId: itemId,
-        itemType: itemType,
-        sourceId: row?.sourceId ?? sourceId,
-        fsrs: result.fsrs,
-      );
-      await _dao.upsertItem(updated.toStorageModel());
+        // Prefer a caller-supplied sourceId on implicit creation; keep
+        // the existing one on subsequent reviews so passing null doesn't
+        // wipe it.
+        final updated = ReviewItem(
+          itemId: itemId,
+          itemType: itemType,
+          sourceId: row?.sourceId ?? sourceId,
+          fsrs: result.fsrs,
+        );
+        await _dao.upsertItem(updated.toStorageModel());
 
-      // Persist review log.
-      await _dao.insertReviewLog(result.log.toStorageModel());
+        await _dao.insertReviewLog(result.log.toStorageModel());
 
-      return result.fsrs;
+        return result.fsrs;
+      });
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }

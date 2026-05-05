@@ -39,6 +39,17 @@ class ProfileAppearanceCubit extends Cubit<ProfileAppearanceState> {
   final PreferencesService _preferencesService;
   late final StreamSubscription<Preferences> _prefsSub;
 
+  /// Trailing-debounce window for `commit*Scale` / `commit*LineHeight`.
+  /// Slider drag-end fires once; `+`/`-` size buttons can fire many
+  /// times in a row, and previously each one issued its own
+  /// `_preferencesService.update`. Coalescing them to a single write
+  /// also avoids racing optimistic updates against each other.
+  static const _commitDebounce = Duration(milliseconds: 200);
+  Timer? _textScaleCommitTimer;
+  double? _pendingTextScale;
+  Timer? _lineHeightCommitTimer;
+  double? _pendingLineHeight;
+
   void _onPrefs(Preferences prefs) {
     if (isClosed) return;
     final next = ProfileAppearanceState(
@@ -50,8 +61,14 @@ class ProfileAppearanceCubit extends Cubit<ProfileAppearanceState> {
   }
 
   @override
-  Future<void> close() {
+  Future<void> close() async {
     _prefsSub.cancel();
+    // Flush pending debounced commits before tearing down. Skipping
+    // them would silently drop the user's last slider/button value.
+    _textScaleCommitTimer?.cancel();
+    _lineHeightCommitTimer?.cancel();
+    await _flushTextScale();
+    await _flushLineHeight();
     return super.close();
   }
 
@@ -121,7 +138,20 @@ class ProfileAppearanceCubit extends Cubit<ProfileAppearanceState> {
     );
   }
 
-  Future<void> commitTextScale(double value) async {
+  /// Persist a new text scale. Coalesces rapid calls (e.g. tapping
+  /// `+` repeatedly) into a single `_preferencesService.update` after
+  /// [_commitDebounce]. The latest pending value wins.
+  void commitTextScale(double value) {
+    _pendingTextScale = value;
+    _textScaleCommitTimer?.cancel();
+    _textScaleCommitTimer = Timer(_commitDebounce, _flushTextScale);
+  }
+
+  Future<void> _flushTextScale() async {
+    _textScaleCommitTimer = null;
+    final value = _pendingTextScale;
+    if (value == null) return;
+    _pendingTextScale = null;
     try {
       await _preferencesService.update(
         (prefs) => prefs.copyWith(readerTextScale: value),
@@ -141,7 +171,18 @@ class ProfileAppearanceCubit extends Cubit<ProfileAppearanceState> {
     );
   }
 
-  Future<void> commitLineHeight(double value) async {
+  /// Mirror of [commitTextScale] for line height.
+  void commitLineHeight(double value) {
+    _pendingLineHeight = value;
+    _lineHeightCommitTimer?.cancel();
+    _lineHeightCommitTimer = Timer(_commitDebounce, _flushLineHeight);
+  }
+
+  Future<void> _flushLineHeight() async {
+    _lineHeightCommitTimer = null;
+    final value = _pendingLineHeight;
+    if (value == null) return;
+    _pendingLineHeight = null;
     try {
       await _preferencesService.update(
         (prefs) => prefs.copyWith(readerLineHeight: value),

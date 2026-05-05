@@ -13,12 +13,16 @@ const _uuid = Uuid();
 /// Domain repository for flashcards.
 ///
 /// Wraps [FlashcardsDao] from `local_storage` and turns low-level DB errors
-/// into [StorageException]. FSRS review state is not stored here — that
-/// lives in `FsrsRepository` and is joined by `itemId`.
+/// into [StorageException]. The matching FSRS review row in
+/// `review_items_table` is owned by `FsrsRepository` but co-deleted from
+/// here in the same transaction so a deleted card never leaves an orphan
+/// FSRS entry behind (which `getDueItems()` would surface forever).
 class FlashcardRepository {
   FlashcardRepository({required AppDatabase database})
-    : _dao = database.flashcardsDao;
+    : _db = database,
+      _dao = database.flashcardsDao;
 
+  final AppDatabase _db;
   final FlashcardsDao _dao;
 
   // ─── CRUD ───
@@ -95,9 +99,16 @@ class FlashcardRepository {
     }
   }
 
+  /// Deletes the card and its FSRS review row in one transaction.
+  /// Without the FSRS purge a deleted card stays in the review queue
+  /// forever (the DAO returns any row whose `next_review_at` is due,
+  /// regardless of whether the underlying entity still exists).
   Future<void> deleteFlashcard(String id) async {
     try {
-      await _dao.deleteFlashcard(id);
+      await _db.transaction(() async {
+        await _db.reviewItemsDao.deleteItemsByIds([id]);
+        await _dao.deleteFlashcard(id);
+      });
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }

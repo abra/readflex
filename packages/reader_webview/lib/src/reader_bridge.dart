@@ -208,6 +208,73 @@ class FoliateStyle {
     'overrideColor': overrideColor,
     'useBookLayout': useBookLayout,
   };
+
+  // Value equality so `BookReaderWebView.didUpdateWidget` can decide
+  // whether to push a `changeStyle(...)` JS call by comparing
+  // `oldWidget.foliateStyle != widget.foliateStyle` directly. Earlier
+  // it was diffing through `jsonEncode(toMap())` on both sides — two
+  // heavy encodes on every parent rebuild (highlight add/remove,
+  // PreferencesScope notify, etc.).
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FoliateStyle &&
+          fontSize == other.fontSize &&
+          fontName == other.fontName &&
+          fontPath == other.fontPath &&
+          fontWeight == other.fontWeight &&
+          letterSpacing == other.letterSpacing &&
+          spacing == other.spacing &&
+          paragraphSpacing == other.paragraphSpacing &&
+          textIndent == other.textIndent &&
+          fontColor == other.fontColor &&
+          backgroundColor == other.backgroundColor &&
+          topMargin == other.topMargin &&
+          bottomMargin == other.bottomMargin &&
+          sideMargin == other.sideMargin &&
+          justify == other.justify &&
+          hyphenate == other.hyphenate &&
+          textAlign == other.textAlign &&
+          pageTurnStyle == other.pageTurnStyle &&
+          maxColumnCount == other.maxColumnCount &&
+          writingMode == other.writingMode &&
+          backgroundImage == other.backgroundImage &&
+          allowScript == other.allowScript &&
+          customCSS == other.customCSS &&
+          customCSSEnabled == other.customCSSEnabled &&
+          overrideFont == other.overrideFont &&
+          overrideColor == other.overrideColor &&
+          useBookLayout == other.useBookLayout;
+
+  @override
+  int get hashCode => Object.hashAll([
+    fontSize,
+    fontName,
+    fontPath,
+    fontWeight,
+    letterSpacing,
+    spacing,
+    paragraphSpacing,
+    textIndent,
+    fontColor,
+    backgroundColor,
+    topMargin,
+    bottomMargin,
+    sideMargin,
+    justify,
+    hyphenate,
+    textAlign,
+    pageTurnStyle,
+    maxColumnCount,
+    writingMode,
+    backgroundImage,
+    allowScript,
+    customCSS,
+    customCSSEnabled,
+    overrideFont,
+    overrideColor,
+    useBookLayout,
+  ]);
 }
 
 /// A highlight annotation the WebView should render. The [cfiRange] pins

@@ -10,12 +10,16 @@ const _uuid = Uuid();
 /// Domain repository for text highlights.
 ///
 /// Wraps [HighlightsDao] from `local_storage` and turns low-level DB errors
-/// into [StorageException]. Does not own FSRS review state — that lives in
-/// `FsrsRepository` and is joined by `itemId`.
+/// into [StorageException]. The matching FSRS review row in
+/// `review_items_table` is owned by `FsrsRepository` but co-deleted from
+/// here in the same transaction so a deleted highlight never leaves an
+/// orphan FSRS entry behind (which `getDueItems()` would surface forever).
 class HighlightRepository {
   HighlightRepository({required AppDatabase database})
-    : _dao = database.highlightsDao;
+    : _db = database,
+      _dao = database.highlightsDao;
 
+  final AppDatabase _db;
   final HighlightsDao _dao;
 
   // ─── CRUD ───
@@ -96,20 +100,34 @@ class HighlightRepository {
     }
   }
 
+  /// Deletes the highlight and its FSRS review row in one transaction.
+  /// Without the FSRS purge a deleted highlight stays in the review queue
+  /// forever (DAO returns a row for any `next_review_at` already due,
+  /// regardless of whether the underlying entity still exists).
   Future<void> deleteHighlight(String id) async {
     try {
-      await _dao.deleteHighlight(id);
+      await _db.transaction(() async {
+        await _db.reviewItemsDao.deleteItemsByIds([id]);
+        await _dao.deleteHighlight(id);
+      });
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }
   }
 
-  /// Bulk-deletes every highlight attached to [sourceId]. Called when the
-  /// parent book is removed so the highlights table doesn't accumulate
+  /// Bulk-deletes every highlight attached to [sourceId] together with
+  /// their FSRS review rows. Called when the parent book is removed so
+  /// neither the highlights table nor `review_items_table` accumulates
   /// orphans.
   Future<void> deleteHighlightsBySource(String sourceId) async {
     try {
-      await _dao.deleteHighlightsBySource(sourceId);
+      await _db.transaction(() async {
+        await _db.reviewItemsDao.deleteItemsBySourceAndType(
+          sourceId,
+          ReviewableType.highlight.name,
+        );
+        await _dao.deleteHighlightsBySource(sourceId);
+      });
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }

@@ -1149,6 +1149,31 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     ];
   }
 
+  /// Memoization for `buildBookCustomCSS`. The CSS string only depends on
+  /// the reader theme and the dark-mode image-inversion toggle; both are
+  /// value-equatable, so we cache the latest pair and reuse the string
+  /// across rebuilds triggered by chrome/highlight/scrim emits — those
+  /// don't change either input but used to re-run the (~80-line)
+  /// StringBuffer build every frame.
+  String? _cachedCustomCSS;
+  ReaderThemeData? _lastCssTheme;
+  bool? _lastCssInvertImages;
+
+  String _customCSSFor(ReaderThemeData theme, bool invertImagesInDark) {
+    final cached = _cachedCustomCSS;
+    if (cached != null &&
+        _lastCssTheme == theme &&
+        _lastCssInvertImages == invertImagesInDark) {
+      return cached;
+    }
+    _lastCssTheme = theme;
+    _lastCssInvertImages = invertImagesInDark;
+    return _cachedCustomCSS = buildBookCustomCSS(
+      theme: theme,
+      invertImagesInDark: invertImagesInDark,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<ReaderBloc>();
@@ -1169,9 +1194,9 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     final appearance = PreferencesScope.readerAppearanceOf(context);
     final fontPreset = ReaderFontPreset.fromId(appearance.fontId);
     final layout = BookLayoutPreset.fromId(appearance.layoutId).data;
-    final customCSS = buildBookCustomCSS(
-      theme: widget.readerTheme,
-      invertImagesInDark: appearance.invertImagesInDark,
+    final customCSS = _customCSSFor(
+      widget.readerTheme,
+      appearance.invertImagesInDark,
     );
 
     final readerSurface = BookReaderWebView(

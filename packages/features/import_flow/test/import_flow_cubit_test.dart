@@ -258,6 +258,40 @@ void main() {
         await cubit.close();
       },
     );
+
+    // Chunked byte-copy on a large book can fire `onProgress` hundreds
+    // of times per second; each emit re-renders the uploading view.
+    // The cubit coalesces sub-1%-delta updates so the emit frequency
+    // is bounded by visible progress, not by writer cadence.
+    blocTest<ImportFlowCubit, ImportFlowState>(
+      'coalesces sub-1% onProgress emits',
+      build: () => _buildCubit(
+        pickBookFile: () async => File('/tmp/big.epub'),
+        importBook: (file, {onProgress}) async {
+          // Fire 50 micro-progress steps in the [0.50, 0.504] band —
+          // each step is 0.0001, well below the 1% threshold. Without
+          // coalescing this floods 50+ emits.
+          for (var i = 0; i <= 50; i++) {
+            onProgress?.call(0.50 + i * 0.0001);
+          }
+          // End-of-copy 1.0 always passes through.
+          onProgress?.call(1.0);
+          return _fakeBook();
+        },
+      ),
+      act: (cubit) => cubit.pickAndImportBook(),
+      verify: (cubit) {
+        expect(cubit.state, isA<ImportFlowBookDone>());
+      },
+      // Bound on emit count: 1 indeterminate uploading + a couple of
+      // bucketed progress emits + done. Asserting ≤6 leaves room for
+      // legitimate state changes but catches regressions where the 50-
+      // step storm passes through unfiltered.
+      expect: () => predicate<List<ImportFlowState>>(
+        (states) => states.length <= 6,
+        'emits ≤ 6 states (coalesces 50 sub-1% progress steps)',
+      ),
+    );
   });
 }
 

@@ -73,6 +73,16 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
     // Indeterminate phase: metadata parse is in flight, no bytes yet.
     emit(ImportFlowBookUploading(filename: filename));
 
+    // Coalesce onProgress emits below a 1% delta. Chunked file writers
+    // can fire onProgress hundreds of times per second on large books
+    // (each fragment of the byte-copy emits), and re-rendering the
+    // indeterminate→determinate uploading view that often is wasteful
+    // and visually no-op — the bar can't move sub-1% per pixel anyway.
+    // The closure-local `lastEmitted` resets implicitly when this
+    // import finishes, so the next import starts fresh.
+    const progressEpsilon = 0.01;
+    double? lastEmittedProgress;
+
     final Book? book;
     try {
       book = await _onImportBook(
@@ -85,11 +95,22 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
           // writer keeps firing onProgress until it hits the next
           // await point.
           if (isClosed) return;
+          final clamped = progress.clamp(0.0, 1.0);
+          // Always let through the very first emit (transitions
+          // indeterminate→determinate) and the final 1.0 (so the bar
+          // hits its end before success). In between, coalesce.
+          final last = lastEmittedProgress;
+          if (last != null &&
+              clamped < 1.0 &&
+              (clamped - last).abs() < progressEpsilon) {
+            return;
+          }
+          lastEmittedProgress = clamped;
           if (state case ImportFlowBookUploading(:final filename)) {
             emit(
               ImportFlowBookUploading(
                 filename: filename,
-                progress: progress.clamp(0.0, 1.0),
+                progress: clamped,
               ),
             );
           }

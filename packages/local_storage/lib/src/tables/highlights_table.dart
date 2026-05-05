@@ -14,7 +14,8 @@ class HighlightsTable extends Table {
 
   TextColumn get sourceId => text()();
 
-  TextColumn get sourceType => text()(); // always 'book' (legacy SourceType column)
+  TextColumn get sourceType =>
+      text()(); // always 'book' (legacy SourceType column)
   TextColumn get highlightText => text()();
 
   TextColumn get note => text().nullable()();

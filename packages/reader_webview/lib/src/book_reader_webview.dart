@@ -80,8 +80,9 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     super.didUpdateWidget(oldWidget);
     if (!_isReady) return;
 
-    if (jsonEncode(oldWidget.foliateStyle.toMap()) !=
-        jsonEncode(widget.foliateStyle.toMap())) {
+    // Value-compare via FoliateStyle's `==` instead of double-encoding
+    // both sides through jsonEncode on every parent rebuild.
+    if (oldWidget.foliateStyle != widget.foliateStyle) {
       changeStyle(widget.foliateStyle);
     }
 

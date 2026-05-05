@@ -166,18 +166,53 @@ class RatingButtons extends StatelessWidget {
     final ext = context.appColors;
     return Row(
       children: [
-        _button(Rating.again, 'Again', ext.ratingAgain),
+        _RatingButton(
+          rating: Rating.again,
+          label: 'Again',
+          color: ext.ratingAgain,
+          onRate: onRate,
+        ),
         const SizedBox(width: AppSpacing.sm),
-        _button(Rating.hard, 'Hard', ext.ratingHard),
+        _RatingButton(
+          rating: Rating.hard,
+          label: 'Hard',
+          color: ext.ratingHard,
+          onRate: onRate,
+        ),
         const SizedBox(width: AppSpacing.sm),
-        _button(Rating.good, 'Good', ext.ratingGood),
+        _RatingButton(
+          rating: Rating.good,
+          label: 'Good',
+          color: ext.ratingGood,
+          onRate: onRate,
+        ),
         const SizedBox(width: AppSpacing.sm),
-        _button(Rating.easy, 'Easy', ext.ratingEasy),
+        _RatingButton(
+          rating: Rating.easy,
+          label: 'Easy',
+          color: ext.ratingEasy,
+          onRate: onRate,
+        ),
       ],
     );
   }
+}
 
-  Widget _button(Rating rating, String label, Color color) {
+class _RatingButton extends StatelessWidget {
+  const _RatingButton({
+    required this.rating,
+    required this.label,
+    required this.color,
+    required this.onRate,
+  });
+
+  final Rating rating;
+  final String label;
+  final Color color;
+  final ValueChanged<Rating> onRate;
+
+  @override
+  Widget build(BuildContext context) {
     return Expanded(
       child: FilledButton(
         style: FilledButton.styleFrom(backgroundColor: color),

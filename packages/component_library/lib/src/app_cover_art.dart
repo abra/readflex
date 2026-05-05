@@ -165,9 +165,15 @@ class AppCoverArt extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
-          _buildStripeTexture(),
+          const _StripeTexture(),
           if (showTitle)
-            _buildTextColumn(
+            _CoverTextColumn(
+              title: title,
+              author: author,
+              source: source,
+              showAuthor: showAuthor,
+              isArticle: isArticle,
+              centerText: centerText,
               contentPadding: contentPadding,
               progressReservedSpace: progressReservedSpace,
               topInset: topInset,
@@ -179,9 +185,9 @@ class AppCoverArt extends StatelessWidget {
               showExtendedMeta: showExtendedMeta,
             ),
           if (isArticle && showExtendedMeta)
-            _buildArticleBadge(articleIconSize),
+            _ArticleBadge(iconSize: articleIconSize),
           if (showProgress)
-            _buildProgressPill(
+            _ProgressPill(
               contentPadding: contentPadding,
               progressBarHeight: progressBarHeight,
               progressBottomInset: progressBottomInset,
@@ -224,144 +230,6 @@ class AppCoverArt extends StatelessWidget {
     final fittingLines =
         (availableTitleHeight / (titleFontSize * titleLineHeight)).floor();
     return fittingLines.clamp(1, isArticle ? 10 : 5).toInt();
-  }
-
-  Widget _buildStripeTexture() {
-    // Opacity(0.1) on top of a stroke painted at alpha 0.05 gives an
-    // effective alpha ≈ 0.005 — "texture, not decoration".
-    return const Positioned.fill(
-      child: Opacity(
-        opacity: 0.1,
-        child: CustomPaint(painter: _DiagonalStripesPainter()),
-      ),
-    );
-  }
-
-  Widget _buildTextColumn({
-    required double contentPadding,
-    required double progressReservedSpace,
-    required double topInset,
-    required double bottomReserve,
-    required double titleFontSize,
-    required int titleMaxLines,
-    required double authorFontSize,
-    required double sourceFontSize,
-    required bool showExtendedMeta,
-  }) {
-    final textColumn = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          title,
-          maxLines: titleMaxLines,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: titleFontSize,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-            height: 1.2,
-          ),
-        ),
-        if (showAuthor && author != null && showExtendedMeta) ...[
-          const SizedBox(height: 4),
-          Text(
-            author!.toUpperCase(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: authorFontSize,
-              color: Colors.white.withValues(alpha: 0.5),
-              letterSpacing: 1,
-            ),
-          ),
-        ],
-        if (isArticle && source != null && showExtendedMeta) ...[
-          const SizedBox(height: 4),
-          Text(
-            source!.toUpperCase(),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: sourceFontSize,
-              color: Colors.white.withValues(alpha: 0.7),
-              letterSpacing: 1,
-            ),
-          ),
-        ],
-      ],
-    );
-
-    if (centerText) {
-      // Bound the column between the icon (top) and the bar reserve
-      // (bottom) so a worst-case wrapped source plus a long ellipsised
-      // title can never paint into the external progress-bar zone.
-      // `Align(topLeft)` keeps the column anchored at the icon edge
-      // when its intrinsic height is shorter than the bounded box.
-      return Positioned(
-        left: contentPadding,
-        right: contentPadding,
-        top: topInset,
-        bottom: bottomReserve,
-        child: Align(
-          alignment: Alignment.topLeft,
-          child: textColumn,
-        ),
-      );
-    }
-
-    return Positioned(
-      left: contentPadding,
-      right: contentPadding,
-      bottom: contentPadding + progressReservedSpace,
-      child: textColumn,
-    );
-  }
-
-  Widget _buildArticleBadge(double iconSize) {
-    return Positioned(
-      top: 8,
-      left: 8,
-      child: Icon(
-        AppIcons.language,
-        size: iconSize,
-        color: Colors.white.withValues(alpha: 0.7),
-      ),
-    );
-  }
-
-  Widget _buildProgressPill({
-    required double contentPadding,
-    required double progressBarHeight,
-    required double progressBottomInset,
-    required double clampedProgress,
-  }) {
-    return Positioned(
-      left: contentPadding,
-      right: contentPadding,
-      bottom: progressBottomInset,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(999),
-        child: LayoutBuilder(
-          builder: (context, constraints) => SizedBox(
-            height: progressBarHeight,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: ColoredBox(
-                    color: Colors.white.withValues(alpha: 0.18),
-                  ),
-                ),
-                Container(
-                  width: constraints.maxWidth * clampedProgress,
-                  color: Colors.white.withValues(alpha: 0.92),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   // Palette seeded from readwell_demo/demo_data.dart — the demo hand-picks
@@ -422,4 +290,202 @@ class _DiagonalStripesPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Diagonal-stripe texture layer for [AppCoverArt]. `Opacity(0.1)` on
+/// top of a stroke painted at alpha 0.05 gives an effective alpha
+/// ≈ 0.005 — "texture, not decoration".
+class _StripeTexture extends StatelessWidget {
+  const _StripeTexture();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Positioned.fill(
+      child: Opacity(
+        opacity: 0.1,
+        child: CustomPaint(painter: _DiagonalStripesPainter()),
+      ),
+    );
+  }
+}
+
+/// Title (+ optional author / source) text column for [AppCoverArt].
+/// Layout switches between bottom-anchored (default) and bounded
+/// `Align(topLeft)` (article tiles where a progress bar is overlaid
+/// outside the cover).
+class _CoverTextColumn extends StatelessWidget {
+  const _CoverTextColumn({
+    required this.title,
+    required this.author,
+    required this.source,
+    required this.showAuthor,
+    required this.isArticle,
+    required this.centerText,
+    required this.contentPadding,
+    required this.progressReservedSpace,
+    required this.topInset,
+    required this.bottomReserve,
+    required this.titleFontSize,
+    required this.titleMaxLines,
+    required this.authorFontSize,
+    required this.sourceFontSize,
+    required this.showExtendedMeta,
+  });
+
+  final String title;
+  final String? author;
+  final String? source;
+  final bool showAuthor;
+  final bool isArticle;
+  final bool centerText;
+  final double contentPadding;
+  final double progressReservedSpace;
+  final double topInset;
+  final double bottomReserve;
+  final double titleFontSize;
+  final int titleMaxLines;
+  final double authorFontSize;
+  final double sourceFontSize;
+  final bool showExtendedMeta;
+
+  @override
+  Widget build(BuildContext context) {
+    final textColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          title,
+          maxLines: titleMaxLines,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: titleFontSize,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+            height: 1.2,
+          ),
+        ),
+        if (showAuthor && author != null && showExtendedMeta) ...[
+          const SizedBox(height: 4),
+          Text(
+            author!.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: authorFontSize,
+              color: Colors.white.withValues(alpha: 0.5),
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+        if (isArticle && source != null && showExtendedMeta) ...[
+          const SizedBox(height: 4),
+          Text(
+            source!.toUpperCase(),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: sourceFontSize,
+              color: Colors.white.withValues(alpha: 0.7),
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+      ],
+    );
+
+    if (centerText) {
+      // Bound the column between the icon (top) and the bar reserve
+      // (bottom) so a worst-case wrapped source plus a long
+      // ellipsised title can never paint into the external
+      // progress-bar zone. `Align(topLeft)` keeps the column anchored
+      // at the icon edge when its intrinsic height is shorter than
+      // the bounded box.
+      return Positioned(
+        left: contentPadding,
+        right: contentPadding,
+        top: topInset,
+        bottom: bottomReserve,
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: textColumn,
+        ),
+      );
+    }
+
+    return Positioned(
+      left: contentPadding,
+      right: contentPadding,
+      bottom: contentPadding + progressReservedSpace,
+      child: textColumn,
+    );
+  }
+}
+
+/// Small newspaper-style icon shown in the top-left corner of an
+/// article-flavoured cover.
+class _ArticleBadge extends StatelessWidget {
+  const _ArticleBadge({required this.iconSize});
+
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 8,
+      left: 8,
+      child: Icon(
+        AppIcons.language,
+        size: iconSize,
+        color: Colors.white.withValues(alpha: 0.7),
+      ),
+    );
+  }
+}
+
+/// Bottom-anchored progress pill rendered when [AppCoverArt.progress]
+/// is non-null. Translucent track + nearly-opaque fill so it reads on
+/// top of any gradient.
+class _ProgressPill extends StatelessWidget {
+  const _ProgressPill({
+    required this.contentPadding,
+    required this.progressBarHeight,
+    required this.progressBottomInset,
+    required this.clampedProgress,
+  });
+
+  final double contentPadding;
+  final double progressBarHeight;
+  final double progressBottomInset;
+  final double clampedProgress;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: contentPadding,
+      right: contentPadding,
+      bottom: progressBottomInset,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(999),
+        child: LayoutBuilder(
+          builder: (context, constraints) => SizedBox(
+            height: progressBarHeight,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: ColoredBox(
+                    color: Colors.white.withValues(alpha: 0.18),
+                  ),
+                ),
+                Container(
+                  width: constraints.maxWidth * clampedProgress,
+                  color: Colors.white.withValues(alpha: 0.92),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

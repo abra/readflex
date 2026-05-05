@@ -106,16 +106,17 @@ void main() {
     );
 
     blocTest<ProfileAppearanceCubit, ProfileAppearanceState>(
-      // Commit-without-preview: setter persists, the broadcast stream
-      // pushes the new prefs back, and the subscription emits the
-      // synced state. Earlier the cubit ignored its own persistence
-      // and the textScale shown by Profile drifted away from what was
-      // saved; the new subscription closes that gap.
+      // Commit-without-preview: setter schedules a debounced persist;
+      // after the timer fires the broadcast stream pushes the new
+      // prefs back and the subscription emits the synced state.
+      // Wait covers the 200 ms debounce + the SharedPreferences
+      // round-trip.
       'commitTextScale persists and reflects change via stream',
       build: () => ProfileAppearanceCubit(
         preferencesService: preferencesService,
       ),
       act: (cubit) => cubit.commitTextScale(1.3),
+      wait: const Duration(milliseconds: 300),
       expect: () => [
         isA<ProfileAppearanceState>().having(
           (s) => s.readerAppearance.textScale,
@@ -124,6 +125,28 @@ void main() {
         ),
       ],
       verify: (_) {
+        expect(preferencesService.current.readerTextScale, 1.3);
+      },
+    );
+
+    // Rapid +/- taps used to issue one `_preferencesService.update`
+    // per call. The debounce coalesces them into a single persist
+    // with the last value. Test counts updates by writing through a
+    // wrapping observer that records every `current.readerTextScale`
+    // change emitted on the broadcast stream.
+    blocTest<ProfileAppearanceCubit, ProfileAppearanceState>(
+      'commitTextScale coalesces rapid calls into a single persist',
+      build: () => ProfileAppearanceCubit(
+        preferencesService: preferencesService,
+      ),
+      act: (cubit) {
+        cubit.commitTextScale(1.1);
+        cubit.commitTextScale(1.2);
+        cubit.commitTextScale(1.3);
+      },
+      wait: const Duration(milliseconds: 300),
+      verify: (_) {
+        // Only the last value should have made it through.
         expect(preferencesService.current.readerTextScale, 1.3);
       },
     );
@@ -148,12 +171,13 @@ void main() {
 
     blocTest<ProfileAppearanceCubit, ProfileAppearanceState>(
       // Mirror of `commitTextScale persists and reflects change via
-      // stream` — same machinery, different field.
+      // stream` — same debounced machinery, different field.
       'commitLineHeight persists and reflects change via stream',
       build: () => ProfileAppearanceCubit(
         preferencesService: preferencesService,
       ),
       act: (cubit) => cubit.commitLineHeight(1.8),
+      wait: const Duration(milliseconds: 300),
       expect: () => [
         isA<ProfileAppearanceState>().having(
           (s) => s.readerAppearance.lineHeight,
@@ -161,6 +185,22 @@ void main() {
           1.8,
         ),
       ],
+      verify: (_) {
+        expect(preferencesService.current.readerLineHeight, 1.8);
+      },
+    );
+
+    blocTest<ProfileAppearanceCubit, ProfileAppearanceState>(
+      'commitLineHeight coalesces rapid calls into a single persist',
+      build: () => ProfileAppearanceCubit(
+        preferencesService: preferencesService,
+      ),
+      act: (cubit) {
+        cubit.commitLineHeight(1.5);
+        cubit.commitLineHeight(1.6);
+        cubit.commitLineHeight(1.8);
+      },
+      wait: const Duration(milliseconds: 300),
       verify: (_) {
         expect(preferencesService.current.readerLineHeight, 1.8);
       },
