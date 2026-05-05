@@ -82,6 +82,15 @@ ThemeData _buildLight() {
     error: palette.error,
     onError: palette.onError,
     outline: palette.border,
+    // outlineVariant must be set explicitly. In Flutter 3.41 the
+    // ColorScheme getter falls back to `onBackground` when
+    // outlineVariant is omitted (`Color get outlineVariant =>
+    // _outlineVariant ?? onBackground;`), and `onBackground` is the
+    // light-mode foreground (≈ near-black) — so any consumer reading
+    // `colorScheme.outlineVariant` (chrome dividers, slider inactive
+    // track) ended up rendering solid black hairlines on a light app.
+    // Pin it to the same divider colour the legacy DividerTheme uses.
+    outlineVariant: palette.border,
     surfaceContainerLowest: palette.surfaceElevated,
     surfaceContainerLow: palette.card,
     surfaceContainer: palette.secondary,
@@ -146,6 +155,12 @@ ThemeData _buildDark() {
     error: palette.error,
     onError: palette.onError,
     outline: palette.border,
+    // Same `_outlineVariant ?? onBackground` fallback as in light mode
+    // — see _buildLight for the full rationale. In dark mode the
+    // missed default is the light foreground tint, which would blast
+    // bright hairlines across dark chrome; pin it to the dark
+    // palette's border colour instead.
+    outlineVariant: palette.border,
     surfaceContainerLowest: palette.surfaceElevated,
     surfaceContainerLow: palette.card,
     surfaceContainer: palette.secondary,

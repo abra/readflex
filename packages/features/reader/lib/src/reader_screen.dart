@@ -220,18 +220,18 @@ class _TopChromeDriver extends StatelessWidget {
     final chromeVisible = context.select<ReaderChromeCubit, bool>(
       (c) => c.state.chromeVisible,
     );
-    // Pull the reader theme so the top chrome panel matches the
-    // page background (sepia / dark / light) rather than defaulting
-    // to the app's Material surface color.
-    final appearance = PreferencesScope.readerAppearanceOf(context);
-    final readerTheme = ReaderThemePreset.fromId(appearance.themeId).data;
+    // Chrome (top/bottom panels, context panel, comic overlay) is app
+    // UI — it follows the app theme, not the reader's per-page preset.
+    // Reader theme keeps driving the *book page* itself (WebView
+    // background, foliate-js customCSS).
+    final colors = Theme.of(context).colorScheme;
 
     return _ReaderTopChrome(
       visible: status != ReaderStatus.ready || chromeVisible,
       title: title,
-      panelColor: readerTheme.panelColor,
-      foregroundColor: readerTheme.primaryTextColor,
-      dividerColor: readerTheme.dividerColor,
+      panelColor: colors.surface,
+      foregroundColor: colors.onSurface,
+      dividerColor: colors.outlineVariant,
       onBack: () => Navigator.of(context).maybePop(),
       // Explicit nulls to silence unused-parameter analyzer warnings
       // and to document that these slots will be wired as the
@@ -768,6 +768,10 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   @override
   Widget build(BuildContext context) {
     final appearance = PreferencesScope.readerAppearanceOf(context);
+    // Reader theme drives the book *page* — WebView background and
+    // foliate-js customCSS. Chrome (passed-through Stack siblings)
+    // pulls colours from the app theme themselves; they don't take
+    // a `readerTheme` prop any more.
     final readerTheme = ReaderThemePreset.fromId(appearance.themeId).data;
 
     return Stack(
@@ -784,15 +788,9 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
             webViewKey: _webViewKey,
           ),
         ),
-        _BottomChromeDriver(
-          readerTheme: readerTheme,
-          onSeekFraction: _seekFraction,
-        ),
-        _ComicProgressOverlayDriver(readerTheme: readerTheme),
-        _ContextPanelDriver(
-          readerTheme: readerTheme,
-          textActions: widget.textActions,
-        ),
+        _BottomChromeDriver(onSeekFraction: _seekFraction),
+        const _ComicProgressOverlayDriver(),
+        _ContextPanelDriver(textActions: widget.textActions),
         const _ReviewReminderDriver(),
       ],
     );
@@ -802,12 +800,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
 /// Combines chrome visibility from [ReaderChromeCubit], selection state from
 /// [ReaderSelectionCubit], and reading progress from [ReaderBloc].
 class _BottomChromeDriver extends StatelessWidget {
-  const _BottomChromeDriver({
-    required this.readerTheme,
-    required this.onSeekFraction,
-  });
-
-  final ReaderThemeData readerTheme;
+  const _BottomChromeDriver({required this.onSeekFraction});
 
   /// Forwarded to the slider's drag-end handler. Skips the bloc
   /// entirely — the WebView's `goToFraction` triggers `onRelocated`
@@ -856,6 +849,8 @@ class _BottomChromeDriver extends StatelessWidget {
       (b) => b.state.book?.format,
     );
 
+    final colors = Theme.of(context).colorScheme;
+
     return _ReaderBottomChrome(
       visible: chromeVisible && !hasSelection,
       progress: progress,
@@ -866,10 +861,10 @@ class _BottomChromeDriver extends StatelessWidget {
       chapterTotalPages: chapterTotalPages,
       sizeTotal: sizeTotal,
       format: format,
-      panelColor: readerTheme.panelColor,
-      textColor: readerTheme.secondaryTextColor,
-      accentColor: readerTheme.accentColor,
-      dividerColor: readerTheme.dividerColor,
+      panelColor: colors.surface,
+      textColor: colors.onSurfaceVariant,
+      accentColor: colors.primary,
+      dividerColor: colors.outlineVariant,
       onSeekFraction: onSeekFraction,
     );
   }
@@ -878,12 +873,8 @@ class _BottomChromeDriver extends StatelessWidget {
 /// Reads selection from [ReaderSelectionCubit] and source info from
 /// [ReaderBloc] to show/hide the text-action context panel.
 class _ContextPanelDriver extends StatelessWidget {
-  const _ContextPanelDriver({
-    required this.readerTheme,
-    required this.textActions,
-  });
+  const _ContextPanelDriver({required this.textActions});
 
-  final ReaderThemeData readerTheme;
   final List<TextAction> textActions;
 
   @override
@@ -900,6 +891,7 @@ class _ContextPanelDriver extends StatelessWidget {
     }
 
     final bloc = context.read<ReaderBloc>();
+    final colors = Theme.of(context).colorScheme;
 
     return Positioned(
       left: 0,
@@ -912,9 +904,9 @@ class _ContextPanelDriver extends StatelessWidget {
         selectionPageNumber: sel.pageNumber,
         selectionScrollOffset: sel.scrollOffset,
         textActions: textActions,
-        panelColor: readerTheme.panelColor,
-        iconColor: readerTheme.primaryTextColor,
-        dividerColor: readerTheme.dividerColor,
+        panelColor: colors.surface,
+        iconColor: colors.onSurface,
+        dividerColor: colors.outlineVariant,
         onActionCompleted: () {
           if (!bloc.isClosed) bloc.add(const ReaderHighlightsRefreshed());
         },
@@ -986,9 +978,7 @@ class _ReviewReminderDriver extends StatelessWidget {
 /// above the bottom edge, so when the user does tap to surface the
 /// chrome the overlay sits "just above" the panel that slides in.
 class _ComicProgressOverlayDriver extends StatelessWidget {
-  const _ComicProgressOverlayDriver({required this.readerTheme});
-
-  final ReaderThemeData readerTheme;
+  const _ComicProgressOverlayDriver();
 
   @override
   Widget build(BuildContext context) {
@@ -1016,6 +1006,7 @@ class _ComicProgressOverlayDriver extends StatelessWidget {
     }
 
     final displayed = _toDisplayPage(current, total);
+    final colors = Theme.of(context).colorScheme;
     return Positioned(
       left: 0,
       right: 0,
@@ -1028,9 +1019,9 @@ class _ComicProgressOverlayDriver extends StatelessWidget {
           // page. We hand it down so the overlay can reserve the
           // right amount of space up front.
           maxText: '$total / $total',
-          panelColor: readerTheme.panelColor,
-          textColor: readerTheme.secondaryTextColor,
-          dividerColor: readerTheme.dividerColor,
+          panelColor: colors.surface,
+          textColor: colors.onSurfaceVariant,
+          dividerColor: colors.outlineVariant,
         ),
       ),
     );
