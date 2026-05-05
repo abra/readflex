@@ -30,6 +30,13 @@ const _kChromeAnimCurve = Curves.easeOutCubic;
 /// it here so the slider can predict the page number during drag.
 const _foliateSizePerLoc = 1500;
 
+/// Approximate vertical footprint of the bottom reader chrome (icon
+/// row + slider + safe area), used to anchor the comic progress
+/// overlay just above the chrome's top edge. Slightly higher than the
+/// real chrome height so the overlay reads as "above where the panel
+/// surfaces" without measuring the chrome at runtime.
+const _kBottomChromeApproxHeight = 88.0;
+
 /// Converts foliate-js's 0-indexed location number into the 1-indexed
 /// page count the reader actually shows ("page 1" instead of "page 0"
 /// for the start of the book). Clamps to `[1, totalPages]` when we have
@@ -781,6 +788,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
           readerTheme: readerTheme,
           onSeekFraction: _seekFraction,
         ),
+        _ComicProgressOverlayDriver(readerTheme: readerTheme),
         _ContextPanelDriver(
           readerTheme: readerTheme,
           textActions: widget.textActions,
@@ -954,6 +962,143 @@ class _ReviewReminderDriver extends StatelessWidget {
           }
         },
         onDismiss: reminderCubit.dismiss,
+      ),
+    );
+  }
+}
+
+/// Always-on "page X / Y" indicator for comics — CBZ readers expect a
+/// constant pager hint, since the bottom chrome is hidden by default
+/// and tapping it for every page-turn is friction.
+///
+/// Subscribes only to the chapter-page pair (which for CBZ maps 1:1
+/// to comic page index / total) and a couple of visibility gates.
+/// Renders nothing when:
+///   * the format isn't CBZ — books and PDFs already get the
+///     byte-location number in the bottom chrome,
+///   * the chrome panel is visible — same info would be duplicated,
+///   * a text selection is active — the context panel takes the
+///     bottom of the screen and the overlay would clutter it,
+///   * page metrics haven't arrived yet (first `onRelocated` not
+///     fired).
+///
+/// Position: anchored at [_kBottomChromeApproxHeight] + small gap
+/// above the bottom edge, so when the user does tap to surface the
+/// chrome the overlay sits "just above" the panel that slides in.
+class _ComicProgressOverlayDriver extends StatelessWidget {
+  const _ComicProgressOverlayDriver({required this.readerTheme});
+
+  final ReaderThemeData readerTheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final format = context.select<ReaderBloc, BookFormat?>(
+      (b) => b.state.book?.format,
+    );
+    if (format != BookFormat.cbz) return const SizedBox.shrink();
+
+    final chromeVisible = context.select<ReaderChromeCubit, bool>(
+      (c) => c.state.chromeVisible,
+    );
+    final hasSelection = context.select<ReaderSelectionCubit, bool>(
+      (c) => c.state.hasSelection,
+    );
+    if (chromeVisible || hasSelection) return const SizedBox.shrink();
+
+    final current = context.select<ReaderBloc, int?>(
+      (b) => b.state.chapterCurrentPage,
+    );
+    final total = context.select<ReaderBloc, int?>(
+      (b) => b.state.chapterTotalPages,
+    );
+    if (current == null || total == null || total <= 0) {
+      return const SizedBox.shrink();
+    }
+
+    final displayed = _toDisplayPage(current, total);
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: _kBottomChromeApproxHeight + AppSpacing.sm,
+      child: Center(
+        child: _ComicProgressOverlay(
+          text: '$displayed / $total',
+          // Worst-case width: when current reaches the last page the
+          // string is "total / total" — wider than any earlier
+          // page. We hand it down so the overlay can reserve the
+          // right amount of space up front.
+          maxText: '$total / $total',
+          panelColor: readerTheme.panelColor,
+          textColor: readerTheme.secondaryTextColor,
+          dividerColor: readerTheme.dividerColor,
+        ),
+      ),
+    );
+  }
+}
+
+/// Pill-shaped read-only "X / Y" badge for the comic-progress overlay.
+/// Themed off the reader's panel/divider colours so it sits naturally
+/// against any of the page backgrounds (sepia, dark, paper).
+///
+/// Width is reserved for the worst-case content (`maxText`, e.g. "30 /
+/// 30") via an invisible placeholder layered behind the live text.
+/// Tabular figures alone aren't enough — they equalise digit widths but
+/// not digit *counts*, so "1 / 30" is one glyph narrower than "30 /
+/// 30" and the pill would visibly grow as the user moves through the
+/// comic. Placeholder + `Stack` is the Flutter-idiomatic "size to max
+/// content" pattern: width comes from real text measurement, not from
+/// a hand-picked SizedBox value that would drift out of sync with the
+/// font.
+class _ComicProgressOverlay extends StatelessWidget {
+  const _ComicProgressOverlay({
+    required this.text,
+    required this.maxText,
+    required this.panelColor,
+    required this.textColor,
+    required this.dividerColor,
+  });
+
+  final String text;
+  final String maxText;
+  final Color panelColor;
+  final Color textColor;
+  final Color dividerColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextStyle(
+      fontSize: 13,
+      color: textColor,
+      // Tabular figures so digit-to-digit ticks (e.g. "9 / 30" → "10
+      // / 30") don't shift sub-pixel inside the reserved width.
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        // Slightly translucent so the comic page peeks through —
+        // overlay reads as "info chrome" rather than a solid panel.
+        color: panelColor.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: dividerColor),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Invisible width-reservation. `Visibility.maintain*` would
+          // also work but Opacity is the lighter option here since we
+          // never want it to participate in semantics or hit-testing.
+          Opacity(
+            opacity: 0,
+            child: ExcludeSemantics(child: Text(maxText, style: style)),
+          ),
+          Text(text, style: style),
+        ],
       ),
     );
   }
