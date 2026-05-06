@@ -60,13 +60,13 @@ class AssetExtractor {
   /// Reading-typography fonts copied from `component_library` so foliate-js
   /// can load them via `@font-face` over the local HTTP server. Flutter's
   /// own font registry is invisible to the WebView — without these on disk,
-  /// `font-family: SourceSerif4 / Geist` falls back to the platform default
+  /// `font-family: Literata / Geist` falls back to the platform default
   /// (Times on iOS, Roboto on Android), making the reader font preset a
   /// no-op.
   static const _fontBundleKeys = [
     'packages/component_library/fonts/Geist-Variable.ttf',
-    'packages/component_library/fonts/SourceSerif4-Variable.ttf',
-    'packages/component_library/fonts/SourceSerif4-Italic-Variable.ttf',
+    'packages/component_library/fonts/Literata-Variable.ttf',
+    'packages/component_library/fonts/Literata-Italic-Variable.ttf',
   ];
 
   /// Extracts all reader assets to [targetDirectory].

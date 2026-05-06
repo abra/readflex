@@ -130,6 +130,58 @@ void main() {
     });
 
     test(
+      'load() v1→v2 migration: forces readerFontId to serif when stored '
+      'JSON has no _schemaVersion key',
+      () async {
+        final storage = PreferencesStorage();
+        await storage.setString(
+          _key,
+          jsonEncode(<String, Object?>{
+            // No _schemaVersion → treated as v1.
+            'readerFontId': 'sans',
+            'readerThemeId': 'paper',
+          }),
+        );
+
+        final repo = PreferencesRepository(storage);
+        final prefs = await repo.load(_supportedCodes);
+
+        expect(prefs.readerFontId, 'serif');
+      },
+    );
+
+    test(
+      'load() leaves readerFontId alone when stored JSON already has '
+      '_schemaVersion >= 2 (post-migration writes must not be reset)',
+      () async {
+        final storage = PreferencesStorage();
+        await storage.setString(
+          _key,
+          jsonEncode(<String, Object?>{
+            '_schemaVersion': 2,
+            'readerFontId': 'geist',
+          }),
+        );
+
+        final repo = PreferencesRepository(storage);
+        final prefs = await repo.load(_supportedCodes);
+
+        expect(prefs.readerFontId, 'geist');
+      },
+    );
+
+    test('save() writes _schemaVersion key alongside the data', () async {
+      final storage = PreferencesStorage();
+      final repo = PreferencesRepository(storage);
+
+      await repo.save(const Preferences());
+      final raw = await storage.getString(_key);
+      final map = jsonDecode(raw!) as Map<String, Object?>;
+
+      expect(map['_schemaVersion'], 2);
+    });
+
+    test(
       'load() resolves unsupported locale to platform-default fallback',
       () async {
         final storage = PreferencesStorage();

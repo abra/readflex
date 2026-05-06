@@ -27,6 +27,20 @@ class PreferencesService {
   }) async {
     final repository = PreferencesRepository(PreferencesStorage());
     final current = await repository.load(supportedCodes);
+    // Normalise the JSON blob on disk after each load: ensures a one-shot
+    // schema migration applied inside [load] (e.g. v1→v2 fontId reset)
+    // is persisted so it does not re-run on every launch. Save failures
+    // are swallowed for the same reason as in [update].
+    try {
+      await repository.save(current);
+    } catch (e, st) {
+      developer.log(
+        'Failed to persist normalised preferences after load',
+        error: e,
+        stackTrace: st,
+        name: 'PreferencesService',
+      );
+    }
     return PreferencesService._(repository, current);
   }
 

@@ -12,7 +12,7 @@ import 'package:flutter/material.dart';
 /// Use [sans] for UI elements (Geist).
 abstract final class AppTypography {
   static const String fontFamilySans = 'Geist';
-  static const String fontFamilySerif = 'SourceSerif4';
+  static const String fontFamilySerif = 'Literata';
 
   static const TextTheme textTheme = TextTheme(
     displayLarge: TextStyle(

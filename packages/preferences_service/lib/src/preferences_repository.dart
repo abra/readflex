@@ -16,6 +16,18 @@ class PreferencesRepository {
 
   static const _key = 'app_preferences';
 
+  /// Bumped when a stored-prefs default needs to be forced for existing
+  /// installs whose JSON predates the change. Each migration step happens
+  /// at most once per device (the new version is persisted on next save).
+  ///
+  /// History:
+  ///   1: initial schema (implicit; no version key in JSON).
+  ///   2: force `readerFontId = 'serif'` once. Earlier builds shipped
+  ///      with the user accidentally landing on Sans/Geist; the default
+  ///      for new installs has always been serif, but stored prefs from
+  ///      those sessions kept the wrong value.
+  static const _currentSchemaVersion = 2;
+
   final PreferencesStorage _storage;
 
   Future<Preferences> load(List<String> supportedCodes) async {
@@ -25,6 +37,12 @@ class PreferencesRepository {
     }
     try {
       final map = jsonDecode(json) as Map<String, Object?>;
+      final storedVersion = (map['_schemaVersion'] as int?) ?? 1;
+      final fontIdRaw = map['readerFontId'] as String?;
+      // Migration v1 → v2: reset readerFontId to default. After load
+      // returns, the service's first save() persists `_schemaVersion: 2`
+      // so this only runs once per device.
+      final fontId = storedVersion < 2 ? 'serif' : (fontIdRaw ?? 'serif');
       return Preferences(
         themeMode: ThemeMode.values.byName(
           map['themeMode'] as String? ?? 'system',
@@ -32,7 +50,7 @@ class PreferencesRepository {
         locale: _resolveLocale(map['locale'] as String?, supportedCodes),
         catalogLayoutMode: map['catalogLayoutMode'] as String? ?? 'grid',
         readerThemeId: map['readerThemeId'] as String? ?? 'paper',
-        readerFontId: map['readerFontId'] as String? ?? 'serif',
+        readerFontId: fontId,
         readerLayoutId: map['readerLayoutId'] as String? ?? 'standard',
         readerTextScale: (map['readerTextScale'] as num?)?.toDouble() ?? 1.0,
         readerLineHeight: (map['readerLineHeight'] as num?)?.toDouble() ?? 1.55,
@@ -59,6 +77,7 @@ class PreferencesRepository {
 
   Future<void> save(Preferences prefs) async {
     final map = <String, Object?>{
+      '_schemaVersion': _currentSchemaVersion,
       'themeMode': prefs.themeMode.name,
       'locale': prefs.locale.languageCode,
       'catalogLayoutMode': prefs.catalogLayoutMode,

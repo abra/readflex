@@ -548,6 +548,24 @@ const getCSS = ({ fontSize,
         padding: 0;
     }
 
+    /* Readflex patch: many EPUBs wrap content in <body><div class="container"
+       style="padding: 5%">...</div></body> or <body><section>...</section></body>
+       with publisher-defined inline padding. Body itself is locked to padding:0
+       in paginator's columnize(), but inner wrappers add a second layer of edge
+       spacing — visibly wider text margins on those books than on others.
+       Reset only the horizontal padding/margin (inline-axis); vertical (block)
+       is preserved because publishers use it intentionally for chapter headers
+       and section breaks. */
+    body > div,
+    body > section,
+    body > article,
+    body > main {
+        padding-inline-start: 0 !important;
+        padding-inline-end: 0 !important;
+        margin-inline-start: 0 !important;
+        margin-inline-end: 0 !important;
+    }
+
     body > div:only-of-type,
     body > div:only-of-type > div:only-of-type {
         overflow: visible !important;
@@ -564,8 +582,26 @@ const getCSS = ({ fontSize,
         font-size: ${fontSize}em !important;
     }
 
-    * {
+    /* Readflex Level-2 typography reset: beat publisher CSS like
+       "body { font-family: ... !important }" by listing element-level
+       selectors with the same specificity (0,0,0,1) — our rules come
+       last in source order so they win on ties. */
+    html, body,
+    p, li, blockquote, dd, dt, dl, div, span, font, section, article,
+    h1, h2, h3, h4, h5, h6,
+    td, th, caption, ol, ul {
         ${fontFamilyDecl}
+    }
+
+    /* Anchor font-size on the structural baseline so publisher rules
+       like "body { font-size: 0.85em }" or "p { font-size: 14px !important }"
+       can't shrink/grow text away from the user-selected size on <html>.
+       Excluded: html — the user-controlled fontSize lives there.
+       Excluded: code/pre/kbd/samp — customCSS keeps those at 0.85-0.9em.
+       Excluded: h1-h6 — customCSS sets explicit em sizes for headings. */
+    body,
+    p, li, blockquote, dd {
+        font-size: 1em !important;
     }
 
     h1, h2, h3, h4, h5, h6 {
@@ -1187,6 +1223,11 @@ class Reader {
 
   #onTouchEnd = ({ detail: e }) => {
     if (this.#ignoreTouch()) return;
+    // Readflex patch: paginator's `doctouchend` may dispatch with
+    // `touchState: null` if the gesture was cancelled / vertical-locked
+    // before lift. Without this guard the bookmark/swipe handler below
+    // throws `Cannot read properties of null (reading 'direction')`.
+    if (!e?.touchState) return;
 
     const mainView = this.view.shadowRoot.children[0]
     if (e.touchState.direction === 'vertical') {

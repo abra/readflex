@@ -17,10 +17,12 @@ String buildBookCustomCSS({
   final isDark = theme.backgroundColor.computeLuminance() < 0.5;
 
   final buffer = StringBuffer();
-  buffer.writeln('html { text-rendering: optimizeLegibility !important; }');
+  // No `text-rendering: optimizeLegibility` — it re-measures kerning when
+  // web fonts finish loading, which on Android Chromium feeds back into
+  // foliate-js's paginator ResizeObserver and traps layout in a loop.
+  // Default `auto` already enables ligatures/kerning at body sizes.
   buffer.writeln(
     'body, p, li, td, th, code, pre, kbd, samp { '
-    'word-break: break-word !important; '
     'overflow-wrap: anywhere !important; }',
   );
   buffer.writeln(
@@ -41,7 +43,7 @@ String buildBookCustomCSS({
     'code { background: $panel !important; border: 1px solid $divider; '
     'padding: 0.1em 0.35em; border-radius: 4px; '
     'font-family: ui-monospace, Menlo, monospace !important; '
-    'font-size: 0.9em; letter-spacing: -0.01em; }',
+    'font-size: 0.9em !important; letter-spacing: -0.01em; }',
   );
   // <samp> = sample program output. Same shape as inline code but without
   // a border so it reads as "what the program said" rather than "source
@@ -50,7 +52,7 @@ String buildBookCustomCSS({
     'samp { background: $panel !important; '
     'padding: 0.15em 0.35em; border-radius: 4px; '
     'font-family: ui-monospace, Menlo, monospace !important; '
-    'font-size: 0.9em; }',
+    'font-size: 0.9em !important; }',
   );
   // <kbd> = key cap. Inset bottom shadow gives a subtle raised feel so
   // a sequence like "press Cmd+K" reads as physical keys, distinct from
@@ -60,7 +62,7 @@ String buildBookCustomCSS({
     'box-shadow: inset 0 -1px 0 $divider; '
     'padding: 0.1em 0.4em; border-radius: 4px; '
     'font-family: ui-monospace, Menlo, monospace !important; '
-    'font-size: 0.85em; font-weight: 600; }',
+    'font-size: 0.85em !important; font-weight: 600; }',
   );
   // Code block: smaller font + tighter line-height than prose (mono looks
   // dense and refined that way), plus a contour bordered card. Custom
@@ -71,7 +73,7 @@ String buildBookCustomCSS({
     'padding: 0.85em 1em !important; border-radius: 6px; '
     'overflow-x: auto; '
     'font-family: ui-monospace, Menlo, monospace !important; '
-    'font-size: 0.875em; line-height: 1.45; }',
+    'font-size: 0.875em !important; line-height: 1.45; }',
   );
   buffer.writeln(
     'pre::-webkit-scrollbar { height: 6px; } '

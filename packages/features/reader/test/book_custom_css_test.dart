@@ -121,5 +121,25 @@ void main() {
       );
       expect('!important'.allMatches(css).length, greaterThan(5));
     });
+
+    test(
+      'does not emit optimizeLegibility (traps Android Chromium in a '
+      'paginator ResizeObserver loop on web-font load)',
+      () {
+        final css = buildBookCustomCSS(
+          theme: lightTheme,
+          invertImagesInDark: true,
+        );
+        expect(css, isNot(contains('optimizeLegibility')));
+      },
+    );
+
+    test('does not emit deprecated word-break: break-word alias', () {
+      final css = buildBookCustomCSS(
+        theme: lightTheme,
+        invertImagesInDark: true,
+      );
+      expect(css, isNot(contains('word-break')));
+    });
   });
 }

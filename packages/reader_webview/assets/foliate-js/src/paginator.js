@@ -154,7 +154,22 @@ const setStylesImportant = (el, styles) => {
 }
 
 class View {
-  #observer = new ResizeObserver(() => this.expand())
+  // Readflex patch: coalesce ResizeObserver callbacks via rAF. expand()
+  // mutates the iframe size that this observer watches — on slower
+  // Android Chromium (Adreno-Vulkan) this trips an unbounded layout
+  // feedback loop ("ResizeObserver loop completed with undelivered
+  // notifications" spam, page never settles, blank screen). One
+  // expand per frame is enough to converge. expand() itself null-guards
+  // `this.document` so a deferred call after iframe-unload is safe.
+  #expandPending = false
+  #observer = new ResizeObserver(() => {
+    if (this.#expandPending) return
+    this.#expandPending = true
+    requestAnimationFrame(() => {
+      this.#expandPending = false
+      this.expand()
+    })
+  })
   #element = document.createElement('div')
   #iframe = document.createElement('iframe')
   #contentRange = document.createRange()
@@ -233,7 +248,10 @@ class View {
     })
   }
   render(layout) {
-    if (!layout) return
+    // Readflex patch (ported from readest/foliate-js): also guard for
+    // an unloaded iframe document — render() can be called from the
+    // rAF-coalesced ResizeObserver one frame after a chapter swap.
+    if (!layout || !this.document?.documentElement) return
     this.#column = layout.flow !== 'scrolled'
     this.#layout = layout
     if (this.#column) this.columnize(layout)
@@ -289,6 +307,20 @@ class View {
       'max-height': 'none',
       'max-width': 'none',
       'margin': '0',
+      // Readflex patch: zero body padding too, otherwise EPUBs that
+      // ship `body { padding: 2em !important }` add a second layer
+      // of edge spacing on top of the side/top margins we already
+      // applied to <html>. Result: some books visibly have wider
+      // text margins than others. With this, the only source of
+      // edge spacing is reader-controlled.
+      'padding': '0',
+      // Readflex patch (ported from readest/foliate-js): prevent
+      // `position: absolute/fixed` on the publisher's body from
+      // coupling its computed size to the iframe — on Android
+      // Chromium that coupling makes expand() diverge into an
+      // infinite ResizeObserver feedback loop, page never settles
+      // (e.g. Khononov DDD EPUB hits this exact path).
+      'position': 'static',
     })
     this.setImageSize()
     this.expand()
@@ -315,6 +347,11 @@ class View {
     }
   }
   expand() {
+    // Readflex patch: bail when iframe is mid-transition. With our rAF
+    // coalescing on the ResizeObserver below, expand() can fire one
+    // frame after the iframe was unloaded for chapter swap, at which
+    // point `this.document` is null and the destructure throws.
+    if (!this.document) return
     const { documentElement } = this.document
     if (this.#column) {
       const side = this.#vertical ? 'height' : 'width'
@@ -386,7 +423,16 @@ export class Paginator extends HTMLElement {
     'max-inline-size', 'max-block-size', 'max-column-count',
   ]
   #root = this.attachShadow({ mode: 'open' })
-  #observer = new ResizeObserver(() => this.render())
+  // Readflex patch: same rAF coalescing as View#observer above.
+  #renderPending = false
+  #observer = new ResizeObserver(() => {
+    if (this.#renderPending) return
+    this.#renderPending = true
+    requestAnimationFrame(() => {
+      this.#renderPending = false
+      this.render()
+    })
+  })
   #top
   #background
   #container
@@ -790,15 +836,19 @@ export class Paginator extends HTMLElement {
     }
     // Readflex patch: foliate-js sizes the section container as
     // `expandedSize + size * 2` and treats indices 0 and `pages - 1` as
-    // swipe-overshoot buffers for chapter transitions. On a single-chapter
-    // EPUB (every imported article is one) those buffers have nowhere to
-    // go and the user just lands on a blank page. Clamp navigation away
-    // from a buffer when its corresponding adjacent section is absent —
-    // books with multiple chapters keep using the buffer in the direction
-    // they actually have a neighbour.
-    const minPage = this.#adjacentIndex(-1) == null ? 1 : 0
-    const maxPage = this.#adjacentIndex(1) == null ? pages - 2 : pages - 1
-    page = Math.max(minPage, Math.min(maxPage, page))
+    // swipe-overshoot buffers for chapter transitions. On a *single-section*
+    // EPUB (e.g. articles converted to EPUB) those buffers have nowhere to
+    // go and a swipe-snap onto them lands on a blank page. Clamp them away
+    // only in that case. For multi-section books, even the first/last
+    // chapter must keep a buffer-edge reachable — that's how foliate-js
+    // detects "snap landed past content, advance section" via the
+    // post-snap `page >= pages - 1` check.
+    const linearSections = this.sections.filter(s => s.linear !== 'no').length
+    if (linearSections <= 1) {
+      page = Math.max(1, Math.min(pages - 2, page))
+    } else {
+      page = Math.max(0, Math.min(pages - 1, page))
+    }
     const targetOffset = page * size
     const distance = Math.abs(targetOffset - signedOffset)
     const baseDuration = 450
@@ -1263,6 +1313,12 @@ export class Paginator extends HTMLElement {
     return index >= 0 && index <= this.sections.length - 1
   }
   async #goTo({ index, anchor, select }) {
+    // Readflex patch: callers (snap post-callback, next/prev) compute
+    // `index` from `#adjacentIndex(dir)`, which returns undefined when
+    // there is no linear neighbour. Without this guard, `sections[undefined].load()`
+    // below throws "Cannot read properties of undefined (reading 'load')"
+    // and the paginator stops accepting further navigation.
+    if (index == null || !this.sections[index]) return
     if (index === this.#index) await this.#display({ index, anchor, select })
     else {
       const oldIndex = this.#index

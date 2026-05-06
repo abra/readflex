@@ -16,10 +16,10 @@ flutter:
     - family: Geist
       fonts:
         - asset: fonts/Geist-Variable.ttf
-    - family: SourceSerif4
+    - family: Literata
       fonts:
-        - asset: fonts/SourceSerif4-Variable.ttf
-        - asset: fonts/SourceSerif4-Italic-Variable.ttf
+        - asset: fonts/Literata-Variable.ttf
+        - asset: fonts/Literata-Italic-Variable.ttf
           style: italic
 
 dev_dependencies:

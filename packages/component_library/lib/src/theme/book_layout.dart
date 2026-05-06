@@ -108,7 +108,7 @@ extension BookLayoutPresetX on BookLayoutPreset {
       hyphenate: false,
     ),
     BookLayoutPreset.standard => const BookLayoutData(
-      fontSize: 1.15,
+      fontSize: 1.0,
       lineHeight: 1.6,
       paragraphSpacing: 0.5,
       textIndent: 1.5,

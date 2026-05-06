@@ -107,14 +107,14 @@ flutter:
   # be declared here at the APP level to be bundled into the built app and
   # reachable by their short family name. Flutter does not auto-bundle fonts
   # declared only in a package's pubspec.yaml — without this section every
-  # `fontFamily: 'SourceSerif4'` / `'Geist'` silently falls back to the
+  # `fontFamily: 'Literata'` / `'Geist'` silently falls back to the
   # system font, which on iOS is SF Pro (looks like a generic sans).
   fonts:
     - family: Geist
       fonts:
         - asset: packages/component_library/fonts/Geist-Variable.ttf
-    - family: SourceSerif4
+    - family: Literata
       fonts:
-        - asset: packages/component_library/fonts/SourceSerif4-Variable.ttf
-        - asset: packages/component_library/fonts/SourceSerif4-Italic-Variable.ttf
+        - asset: packages/component_library/fonts/Literata-Variable.ttf
+        - asset: packages/component_library/fonts/Literata-Italic-Variable.ttf
           style: italic

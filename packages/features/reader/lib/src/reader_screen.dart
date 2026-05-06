@@ -1214,7 +1214,12 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         fontPath:
             'http://127.0.0.1:${widget.serverPort}'
             '/assets/fonts/${fontPreset.fontFile}',
-        fontSize: layout.fontSize,
+        // Layout preset gives the baseline em-size (compact/standard/
+        // comfortable); textScale is the user's per-step zoom on top
+        // (slider in Profile → Font & Text Size). Multiply so both
+        // controls actually take effect — earlier the slider wrote to
+        // prefs but never reached the WebView.
+        fontSize: layout.fontSize * appearance.textScale,
         fontWeight: layout.fontWeight,
         letterSpacing: layout.letterSpacing,
         spacing: layout.lineHeight,

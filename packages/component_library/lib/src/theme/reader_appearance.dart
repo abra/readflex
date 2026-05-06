@@ -60,7 +60,7 @@ enum ReaderFontPreset {
   /// font — Flutter's bundled fonts are invisible to the WebView, so the
   /// reader has to serve them itself.
   String get fontFile => switch (this) {
-    serif => 'SourceSerif4-Variable.ttf',
+    serif => 'Literata-Variable.ttf',
     sans => 'Geist-Variable.ttf',
     geist => 'Geist-Variable.ttf',
   };

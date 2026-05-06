@@ -182,10 +182,10 @@ void main() {
       () async {
         Directory('${assetsDir.path}/fonts').createSync(recursive: true);
         await File(
-          '${assetsDir.path}/fonts/SourceSerif4-Variable.ttf',
+          '${assetsDir.path}/fonts/Literata-Variable.ttf',
         ).writeAsBytes([0, 1, 2]);
         final response = await client.get(
-          Uri.parse(url('/assets/fonts/SourceSerif4-Variable.ttf')),
+          Uri.parse(url('/assets/fonts/Literata-Variable.ttf')),
         );
         expect(response.statusCode, 200);
         final cacheControl = response.headers['cache-control']!;
