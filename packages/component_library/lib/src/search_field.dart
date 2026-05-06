@@ -56,11 +56,8 @@ class SearchField extends StatelessWidget {
                       },
                       behavior: HitTestBehavior.opaque,
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.sm,
-                          0,
-                          AppSpacing.md,
-                          0,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
                         ),
                         child: Icon(
                           AppIcons.close,
@@ -74,8 +71,8 @@ class SearchField extends StatelessWidget {
               )
             : null,
         suffixIconConstraints: const BoxConstraints(
-          minWidth: 32,
-          minHeight: 32,
+          minWidth: 44,
+          minHeight: 44,
         ),
         isDense: true,
         filled: true,

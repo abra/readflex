@@ -109,13 +109,20 @@ class _HighlightSheetView extends StatelessWidget {
                   final isSelected = state.selectedColor == color;
                   return GestureDetector(
                     onTap: () => context.read<HighlightCubit>().setColor(color),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: _colorForHighlight(context, color),
-                        shape: BoxShape.circle,
-                        border: isSelected ? Border.all(width: 3) : null,
+                    behavior: HitTestBehavior.opaque,
+                    child: SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: Center(
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: _colorForHighlight(context, color),
+                            shape: BoxShape.circle,
+                            border: isSelected ? Border.all(width: 3) : null,
+                          ),
+                        ),
                       ),
                     ),
                   );

@@ -96,7 +96,7 @@ class _FilterSegments extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: AppSizes.chipHeight,
+      height: AppSizes.chipTapTarget,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: CatalogFilter.values.length,

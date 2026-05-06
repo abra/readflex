@@ -384,6 +384,91 @@ void main() {
     await tester.pumpAndSettle();
     expect(tapped, isTrue);
   });
+
+  testWidgets('AppFilterChip exposes a 48dp tap target around 32dp body', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: Center(
+            child: AppFilterChip(
+              label: 'All',
+              selected: true,
+              onTap: _noop,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final tapBoxSize = tester.getSize(find.byType(AppFilterChip));
+    expect(tapBoxSize.height, AppSizes.chipTapTarget);
+
+    final visibleBodySize = tester.getSize(
+      find.descendant(
+        of: find.byType(AppFilterChip),
+        matching: find.byType(Material).last,
+      ),
+    );
+    expect(visibleBodySize.height, AppSizes.chipHeight);
+  });
+
+  testWidgets('AppFilterChip onTap fires from the padding above the body', (
+    tester,
+  ) async {
+    var taps = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: Center(
+            child: AppFilterChip(
+              label: 'All',
+              selected: false,
+              onTap: () => taps++,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Tap 4dp from the top of the 48dp tap box — squarely inside the
+    // 8dp invisible pad, outside the visible 32dp chip body.
+    final topLeft = tester.getTopLeft(find.byType(AppFilterChip));
+    final size = tester.getSize(find.byType(AppFilterChip));
+    await tester.tapAt(Offset(topLeft.dx + size.width / 2, topLeft.dy + 4));
+    expect(taps, 1);
+  });
+
+  testWidgets('SearchField clear button hit area is >= 44 wide', (
+    tester,
+  ) async {
+    final controller = TextEditingController(text: 'query');
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: SearchField(
+            hintText: 'Search...',
+            controller: controller,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final clearIcon = find.byIcon(AppIcons.close);
+    expect(clearIcon, findsOneWidget);
+    final hitArea = tester.getSize(
+      find.ancestor(of: clearIcon, matching: find.byType(GestureDetector)),
+    );
+    expect(hitArea.width, greaterThanOrEqualTo(44));
+    expect(hitArea.height, greaterThanOrEqualTo(44));
+  });
 }
 
 void _noop() {}
