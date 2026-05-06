@@ -836,19 +836,20 @@ export class Paginator extends HTMLElement {
     }
     // Readflex patch: foliate-js sizes the section container as
     // `expandedSize + size * 2` and treats indices 0 and `pages - 1` as
-    // swipe-overshoot buffers for chapter transitions. On a *single-section*
-    // EPUB (e.g. articles converted to EPUB) those buffers have nowhere to
-    // go and a swipe-snap onto them lands on a blank page. Clamp them away
-    // only in that case. For multi-section books, even the first/last
-    // chapter must keep a buffer-edge reachable — that's how foliate-js
-    // detects "snap landed past content, advance section" via the
-    // post-snap `page >= pages - 1` check.
-    const linearSections = this.sections.filter(s => s.linear !== 'no').length
-    if (linearSections <= 1) {
-      page = Math.max(1, Math.min(pages - 2, page))
-    } else {
-      page = Math.max(0, Math.min(pages - 1, page))
-    }
+    // swipe-overshoot buffers used to trigger the chapter transition.
+    // Each buffer is only meaningful if there is a section to advance
+    // INTO on that side — on the very first chapter, the prev-side
+    // buffer leads nowhere and a swipe past page 1 just lands on a
+    // blank page. Same with the next-side buffer on the last chapter,
+    // and both buffers on a single-section EPUB (article → EPUB).
+    // Suppress snap-target into a buffer when the matching neighbour
+    // is absent; keep it reachable otherwise so the post-snap
+    // `page >= pages - 1` check can still fire chapter advance.
+    const noPrevNeighbour = this.#adjacentIndex(-1) == null
+    const noNextNeighbour = this.#adjacentIndex(1) == null
+    const minPage = noPrevNeighbour ? 1 : 0
+    const maxPage = noNextNeighbour ? pages - 2 : pages - 1
+    page = Math.max(minPage, Math.min(maxPage, page))
     const targetOffset = page * size
     const distance = Math.abs(targetOffset - signedOffset)
     const baseDuration = 450
