@@ -104,7 +104,7 @@ extension BookLayoutPresetX on BookLayoutPreset {
       sideMargin: 5,
       letterSpacing: 0,
       fontWeight: 400,
-      justify: true,
+      justify: false,
       hyphenate: false,
     ),
     BookLayoutPreset.standard => const BookLayoutData(
@@ -117,7 +117,7 @@ extension BookLayoutPresetX on BookLayoutPreset {
       sideMargin: 6,
       letterSpacing: 0,
       fontWeight: 400,
-      justify: true,
+      justify: false,
       hyphenate: false,
     ),
     BookLayoutPreset.comfortable => const BookLayoutData(

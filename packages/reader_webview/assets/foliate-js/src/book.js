@@ -593,16 +593,14 @@ const getCSS = ({ fontSize,
         ${fontFamilyDecl}
     }
 
-    /* Anchor font-size on the structural baseline so publisher rules
-       like "body { font-size: 0.85em }" or "p { font-size: 14px !important }"
-       can't shrink/grow text away from the user-selected size on <html>.
-       Excluded: html — the user-controlled fontSize lives there.
-       Excluded: code/pre/kbd/samp — customCSS keeps those at 0.85-0.9em.
-       Excluded: h1-h6 — customCSS sets explicit em sizes for headings. */
-    body,
-    p, li, blockquote, dd {
-        font-size: 1em !important;
-    }
+    /* Note: we deliberately do NOT anchor body/p font-size to 1em.
+       That would force-shrink books that legitimately set bigger
+       paragraph sizes (e.g. Calibre-converted EPUBs commonly use
+       ".calibre3 { font-size: 1.33em }"). The user-controlled scale
+       on <html> applies as the cascade root; publisher CSS layers
+       on top. Trade-off: a small minority of EPUBs that set
+       "body { font-size: 0.85em }" will render slightly smaller than
+       the rest, but that is their authored intent. */
 
     h1, h2, h3, h4, h5, h6 {
         ${headingLineHeightDecl}
@@ -611,7 +609,11 @@ const getCSS = ({ fontSize,
     p, li, blockquote, dd, div:not(:has(*:not(b, a, em, i, strong, u, span))), font {
         ${paraColorDecl}
         ${paraFontWeightDecl}
-        text-align: ${textAlign === 'auto' ? (justify ? 'justify' : 'start') : textAlign};
+        /* !important so publisher rules like "p { text-align: left !important }"
+           do not override the user-selected justify. The [align="..."] rules
+           below are also bumped to !important so old-school
+           "p align=center" chapter titles still center over justify. */
+        text-align: ${textAlign === 'auto' ? (justify ? 'justify' : 'start') : textAlign} !important;
         ${paraLayoutDecl}
     }
 
@@ -645,11 +647,13 @@ const getCSS = ({ fontSize,
         text-indent: 0 !important;
     }
         
-    /* prevent the above from overriding the align attribute */
-    [align="left"] { text-align: left; }
-    [align="right"] { text-align: right; }
-    [align="center"] { text-align: center; }
-    [align="justify"] { text-align: justify; }
+    /* Preserve old-school HTML "align" attribute (centered chapter
+       titles, dedications). !important so it wins over our paragraph-
+       level justify rule above. */
+    [align="left"] { text-align: left !important; }
+    [align="right"] { text-align: right !important; }
+    [align="center"] { text-align: center !important; }
+    [align="justify"] { text-align: justify !important; }
 
     pre {
         white-space: pre-wrap !important;
