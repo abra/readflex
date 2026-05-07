@@ -593,14 +593,17 @@ const getCSS = ({ fontSize,
         ${fontFamilyDecl}
     }
 
-    /* Note: we deliberately do NOT anchor body/p font-size to 1em.
-       That would force-shrink books that legitimately set bigger
-       paragraph sizes (e.g. Calibre-converted EPUBs commonly use
-       ".calibre3 { font-size: 1.33em }"). The user-controlled scale
-       on <html> applies as the cascade root; publisher CSS layers
-       on top. Trade-off: a small minority of EPUBs that set
-       "body { font-size: 0.85em }" will render slightly smaller than
-       the rest, but that is their authored intent. */
+    /* Anchor only the body font-size, not paragraph elements.
+       Some Calibre conversions wrap content in a body class like
+       ".calibre1 { font-size: 0.75em }" which shrinks the whole
+       book. Other Calibre conversions instead use ".calibre3" on
+       block-level paragraphs to enlarge text — those should keep
+       working, which is why this rule is body-only. The user-
+       controlled scale lives as inline style on html and wins by
+       specificity, so we only need to neutralise the body layer. */
+    body {
+        font-size: 1em !important;
+    }
 
     h1, h2, h3, h4, h5, h6 {
         ${headingLineHeightDecl}
