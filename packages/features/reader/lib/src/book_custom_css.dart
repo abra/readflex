@@ -88,6 +88,16 @@ String buildBookCustomCSS({
     'border: 0 !important; box-shadow: none !important; '
     'padding: 0 !important; font-size: inherit !important; }',
   );
+  // Wide tables: cap to column width and allow horizontal scroll.
+  // We deliberately omit the Readest pattern of
+  // "table:has(> colgroup) { table-layout: fixed; }" because that combo
+  // (the :has() selector + a forced table-layout switch) crashes
+  // WKWebView's multi-column line layout (TextOnlySimpleLineBuilder
+  // RELEASE_ASSERT) when foliate-js is paginating. Bisect on iOS 18.7
+  // sim isolated this exact rule as the trigger.
+  buffer.writeln(
+    'table { max-width: 100%; overflow: auto; display: table !important; }',
+  );
   buffer.writeln('h1 { font-size: 1.8em !important; }');
   buffer.writeln('h2 { font-size: 1.5em !important; }');
   buffer.writeln('h3 { font-size: 1.3em !important; }');
