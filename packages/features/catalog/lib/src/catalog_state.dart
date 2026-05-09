@@ -41,7 +41,7 @@ class CatalogState extends Equatable {
   int get totalCount => books.length;
 
   /// Books after applying the current [filter] and [searchQuery],
-  /// sorted by most-recently-added first.
+  /// sorted by most-recently-opened first, then by newest added.
   ///
   /// Cached: `late final` evaluates [_computeVisibleItems] once per
   /// state instance and reuses the result. Earlier this was a getter
@@ -80,7 +80,18 @@ class CatalogState extends Equatable {
       return title.contains(trimmedQuery) || author.contains(trimmedQuery);
     }).toList();
 
-    filtered.sort((a, b) => b.addedAt.compareTo(a.addedAt));
+    filtered.sort((a, b) {
+      final recencyA = a.lastOpenedAt ?? a.addedAt;
+      final recencyB = b.lastOpenedAt ?? b.addedAt;
+
+      final byRecency = recencyB.compareTo(recencyA);
+      if (byRecency != 0) return byRecency;
+
+      final byAddedAt = b.addedAt.compareTo(a.addedAt);
+      if (byAddedAt != 0) return byAddedAt;
+
+      return a.title.compareTo(b.title);
+    });
     return filtered;
   }
 

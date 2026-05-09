@@ -218,29 +218,43 @@ void main() {
   });
 
   group('CatalogState', () {
-    test('visibleItems are sorted by addedAt descending', () {
-      final older = Book(
-        id: '1',
-        title: 'Older',
-        filePath: '/a.epub',
-        format: BookFormat.epub,
-        addedAt: DateTime(2026, 1, 1),
-      );
-      final newer = Book(
-        id: '2',
-        title: 'Newer',
-        filePath: '/b.epub',
-        format: BookFormat.epub,
-        addedAt: DateTime(2026, 6, 1),
-      );
+    test(
+      'visibleItems are sorted by lastOpenedAt descending with addedAt fallback',
+      () {
+        final recentlyOpened = Book(
+          id: '1',
+          title: 'Recently opened',
+          filePath: '/a.epub',
+          format: BookFormat.epub,
+          addedAt: DateTime(2026, 1, 1),
+          lastOpenedAt: DateTime(2026, 6, 2),
+        );
+        final neverOpenedNewest = Book(
+          id: '2',
+          title: 'Never opened newest',
+          filePath: '/b.epub',
+          format: BookFormat.epub,
+          addedAt: DateTime(2026, 6, 1),
+        );
+        final neverOpenedOlder = Book(
+          id: '3',
+          title: 'Never opened older',
+          filePath: '/c.epub',
+          format: BookFormat.epub,
+          addedAt: DateTime(2026, 3, 1),
+        );
 
-      final state = CatalogState(
-        status: CatalogStatus.success,
-        books: [older, newer],
-      );
+        final state = CatalogState(
+          status: CatalogStatus.success,
+          books: [neverOpenedOlder, neverOpenedNewest, recentlyOpened],
+        );
 
-      expect(state.visibleItems, [newer, older]);
-    });
+        expect(
+          state.visibleItems,
+          [recentlyOpened, neverOpenedNewest, neverOpenedOlder],
+        );
+      },
+    );
 
     // Earlier `visibleItems` was a getter that re-ran filter + lowercase
     // + sort on every call. BlocBuilder reads it on each rebuild, so
