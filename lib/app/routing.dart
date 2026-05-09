@@ -15,6 +15,7 @@ import 'package:readflex/app/screens/first_import_screen.dart';
 import 'package:readflex/app/screens/onboarding_screen.dart';
 import 'package:readflex/app/screens/splash_screen.dart';
 import 'package:readflex/app/screens/tab_container_screen.dart';
+import 'package:source_details/source_details.dart';
 import 'package:subscription_paywall/subscription_paywall.dart';
 import 'package:translate/translate.dart';
 
@@ -29,8 +30,10 @@ abstract final class AppRoutes {
   static const onboarding = '/onboarding';
   static const firstImport = '/first-import';
   static const designSystem = '/design-system';
+  static const sourceDetailsPath = '/source/:sourceId';
   static const readerPath = '/reader/:sourceId';
 
+  static String sourceDetails(String sourceId) => '/source/$sourceId';
   static String reader(String sourceId) => '/reader/$sourceId';
 }
 
@@ -84,7 +87,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                   highlightRepository: deps.highlightRepository,
                   fsrsRepository: deps.fsrsRepository,
                   onBookPressed: (book) => context.push(
-                    AppRoutes.reader(book.id),
+                    AppRoutes.sourceDetails(book.id),
                   ),
                   onPracticePressed: () => context.go(
                     AppRoutes.practice,
@@ -101,7 +104,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                   bookRepository: deps.bookRepository,
                   preferencesService: deps.preferencesService,
                   onBookPressed: (book) => context.push(
-                    AppRoutes.reader(book.id),
+                    AppRoutes.sourceDetails(book.id),
                   ),
                   onAddPressed: () async {
                     await showImportFlowSheet(
@@ -167,6 +170,19 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: AppRoutes.sourceDetailsPath,
+        builder: (context, state) {
+          final sourceId = state.pathParameters['sourceId']!;
+          return SourceDetailsScreen(
+            sourceId: sourceId,
+            bookRepository: deps.bookRepository,
+            onReadPressed: (source) async {
+              await context.push(AppRoutes.reader(source.id));
+            },
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.readerPath,

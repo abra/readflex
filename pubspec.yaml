@@ -77,6 +77,8 @@ dependencies:
     path: packages/features/subscription_paywall
   reader:
     path: packages/features/reader
+  source_details:
+    path: packages/features/source_details
 
   # External packages
   cupertino_icons: ^1.0.8
