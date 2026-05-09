@@ -461,14 +461,16 @@ const getView = async file => {
   return view
 }
 
-// Three override flags let callers decide whether reader preferences beat
-// publisher CSS:
-//   overrideFont   — force font-family and font-weight
-//   overrideColor  — force text color (accent links live in customCSS instead)
-//   useBookLayout  — force line-height, text-indent, hyphenation, margins
-// When a flag is false, the corresponding rules are omitted and the book's
-// own CSS wins. Defaults preserve the historical "override everything" behavior.
-const getCSS = ({ fontSize,
+const escapeCSSString = value => value
+  .replaceAll('\\', '\\\\')
+  .replaceAll('"', '\\"')
+
+const quoteFontFamily = value => `"${escapeCSSString(value)}"`
+
+const getFontFamilyToken = fontName =>
+  fontName === 'system' ? 'system-ui' : quoteFontFamily(fontName)
+
+const getReaderStylePrelude = ({ fontSize,
   fontName,
   fontPath,
   fontWeight,
@@ -490,10 +492,57 @@ const getCSS = ({ fontSize,
   overrideColor = true,
   useBookLayout = true,
 }) => {
+  const fontFaceDecl =
+    !fontName || fontName === 'book' || fontName === 'system' || !fontPath
+      ? ''
+      : `
+    @font-face {
+      font-family: ${quoteFontFamily(fontName)};
+      src: url('${fontPath}');
+      font-display: swap;
+    }`
 
+  const fontFamilyVarDecl = !overrideFont || fontName === 'book'
+    ? ''
+    : `--readflex-font-family: ${getFontFamilyToken(fontName)};`
+
+  return `
+    ${fontFaceDecl}
+    :root {
+      ${fontFamilyVarDecl}
+      --readflex-font-size: ${fontSize}em;
+      --readflex-letter-spacing: ${letterSpacing}px;
+      --readflex-line-height: ${spacing};
+      --readflex-text-indent: ${textIndent}em;
+      --readflex-paragraph-spacing: ${paragraphSpacing / 2}em;
+      --readflex-font-color: ${fontColor};
+      --readflex-font-weight: ${fontWeight};
+      --readflex-text-align: ${textAlign === 'auto' ? (justify ? 'justify' : 'start') : textAlign};
+      --readflex-hyphens: ${hyphenate ? 'auto' : 'manual'};
+    }`
+}
+
+// Three override flags let callers decide whether reader preferences beat
+// publisher CSS:
+//   overrideFont   — force font-family and font-weight
+//   overrideColor  — force text color (accent links live in customCSS instead)
+//   useBookLayout  — force line-height, text-indent, hyphenation, margins
+// When a flag is false, the corresponding rules are omitted and the book's
+// own CSS wins. Defaults preserve the historical "override everything" behavior.
+const getCSS = style => {
+  const {
+    fontName,
+    backgroundImage,
+    flow,
+    customCSS,
+    customCSSEnabled,
+    overrideFont = true,
+    overrideColor = true,
+    useBookLayout = true,
+    writingMode,
+  } = style
   const fontFamilyDecl = !overrideFont || fontName === 'book' ? '' :
-    fontName === 'system' ? 'font-family: system-ui !important;' :
-      `font-family: ${fontName} !important;`
+    'font-family: var(--readflex-font-family) !important;'
 
   const writingModeDecl = writingMode === 'auto' ? '' : `writing-mode: ${writingMode} !important;`
 
@@ -505,39 +554,34 @@ const getCSS = ({ fontSize,
     background-position: center center !important;
     background-clip: content-box !important;`
 
-  const htmlColorDecl = overrideColor ? `color: ${fontColor} !important;` : ''
-  const paraColorDecl = overrideColor ? `color: ${fontColor} !important;` : ''
-  const paraFontWeightDecl = overrideFont ? `font-weight: ${fontWeight} !important;` : ''
-  const headingLineHeightDecl = useBookLayout ? `line-height: ${spacing} !important;` : ''
+  const htmlColorDecl = overrideColor ? 'color: var(--readflex-font-color) !important;' : ''
+  const paraColorDecl = overrideColor ? 'color: var(--readflex-font-color) !important;' : ''
+  const paraFontWeightDecl = overrideFont ? 'font-weight: var(--readflex-font-weight) !important;' : ''
+  const headingLineHeightDecl = useBookLayout ? 'line-height: var(--readflex-line-height) !important;' : ''
   const paraLayoutDecl = useBookLayout ? `
-        line-height: ${spacing} !important;
-        ${textIndent < 0 ? '' : 'text-indent: ' + textIndent + 'em !important;'}
-        -webkit-hyphens: ${hyphenate ? 'auto' : 'manual'};
-        hyphens: ${hyphenate ? 'auto' : 'manual'};
+        line-height: var(--readflex-line-height) !important;
+        text-indent: var(--readflex-text-indent) !important;
+        -webkit-hyphens: var(--readflex-hyphens);
+        hyphens: var(--readflex-hyphens);
         -webkit-hyphenate-limit-before: 3;
         -webkit-hyphenate-limit-after: 2;
         -webkit-hyphenate-limit-lines: 2;
         hanging-punctuation: allow-end last;
         widows: 2;
-        margin-block-start: ${paragraphSpacing / 2}em !important;
-        margin-block-end: ${paragraphSpacing / 2}em !important;` : ''
+        margin-block-start: var(--readflex-paragraph-spacing) !important;
+        margin-block-end: var(--readflex-paragraph-spacing) !important;` : ''
 
   // Some CSS selectors are inspired by https://github.com/readest/foliate-js
-  return `
+  return [getReaderStylePrelude(style), `
     @namespace epub "http://www.idpf.org/2007/ops";
-    @font-face {
-      font-family: ${fontName};
-      src: url('${fontPath}');
-      font-display: swap;
-    }
 
     html {
         ${writingModeDecl}
         ${htmlColorDecl}
         ${backgroundImageDecl}
         background-color: transparent !important;
-        letter-spacing: ${letterSpacing}px;
-        font-size: ${fontSize}em;
+        letter-spacing: var(--readflex-letter-spacing);
+        font-size: var(--readflex-font-size);
         orphans: 1;
         widows: 1;
     }
@@ -579,7 +623,7 @@ const getCSS = ({ fontSize,
     }
 
     a > img {
-        font-size: ${fontSize}em !important;
+        font-size: var(--readflex-font-size) !important;
     }
 
     /* Readflex Level-2 typography reset: beat publisher CSS like
@@ -616,7 +660,7 @@ const getCSS = ({ fontSize,
            do not override the user-selected justify. The [align="..."] rules
            below are also bumped to !important so old-school
            "p align=center" chapter titles still center over justify. */
-        text-align: ${textAlign === 'auto' ? (justify ? 'justify' : 'start') : textAlign} !important;
+        text-align: var(--readflex-text-align) !important;
         ${paraLayoutDecl}
     }
 
@@ -669,7 +713,8 @@ const getCSS = ({ fontSize,
     }
     
     ${customCSSEnabled && customCSS ? customCSS : ''}
-`}
+`]
+}
 
 const convertChineseHandler = (mode, doc) => {
   console.log('convertChinese', mode)
