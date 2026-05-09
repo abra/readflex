@@ -75,6 +75,16 @@ const getSelectionRange = (selection) => {
   return range.collapsed ? null : range;
 };
 
+const wrapWideTables = doc => {
+  for (const table of doc.querySelectorAll('table')) {
+    if (table.closest('.readflex-wide-table')) continue
+    const wrapper = doc.createElement('div')
+    wrapper.className = 'readflex-wide-table'
+    table.before(wrapper)
+    wrapper.append(table)
+  }
+}
+
 const CONTEXT_WINDOW_CHARS = 120;
 const MAX_CONTEXT_CHARS = 600;
 
@@ -615,11 +625,20 @@ const getCSS = style => {
         overflow: visible !important;
     }
 
-    img, svg {
+    img, svg, canvas, video {
+        max-inline-size: 100% !important;
+        max-block-size: 100% !important;
+        inline-size: auto;
+        block-size: auto;
         object-fit: contain !important;
         break-inside: avoid !important;
         box-sizing: border-box !important;
         font-size: initial !important;
+    }
+
+    iframe, object, embed {
+        max-inline-size: 100% !important;
+        box-sizing: border-box !important;
     }
 
     a > img {
@@ -1108,6 +1127,7 @@ class Reader {
     // them regardless of which renderer (paginator / fixed-layout) loaded
     // the iframe.
     readflexAttachGestures(doc)
+    wrapWideTables(doc)
 
     // if (!this.#originalContent) {
     // console.log('Saving original content', doc);

@@ -41,9 +41,11 @@ void main() {
       );
       expect(css, contains('blockquote'));
       expect(css, contains('#d9cab4'));
+      expect(css, contains('text-indent: 0 !important'));
+      expect(css, contains('text-align: start !important'));
     });
 
-    test('emits code/pre rules with panel color', () {
+    test('emits semantic code/pre rules with panel color', () {
       final css = buildBookCustomCSS(
         theme: lightTheme,
         invertImagesInDark: true,
@@ -53,6 +55,32 @@ void main() {
       expect(css, contains('samp {'));
       expect(css, contains('pre {'));
       expect(css, contains('#f0e7d8'));
+      expect(css, contains('white-space: pre-wrap !important'));
+      expect(css, contains('line-height: 1.45 !important'));
+      expect(css, contains('-webkit-overflow-scrolling: touch'));
+      expect(css, contains('overscroll-behavior-inline: contain'));
+    });
+
+    test('emits table and figure rules outside prose layout', () {
+      final css = buildBookCustomCSS(
+        theme: lightTheme,
+        invertImagesInDark: true,
+      );
+      expect(css, contains('table {'));
+      expect(css, contains('.readflex-wide-table'));
+      expect(css, contains('figure {'));
+      expect(css, contains('figcaption {'));
+      expect(css, contains('break-inside: avoid'));
+    });
+
+    test('emits wide math/media containment rules', () {
+      final css = buildBookCustomCSS(
+        theme: lightTheme,
+        invertImagesInDark: true,
+      );
+      expect(css, contains('table img, table svg, table canvas'));
+      expect(css, contains('math, mjx-container'));
+      expect(css, contains('overflow-x: auto'));
     });
 
     test('emits heading size rules', () {

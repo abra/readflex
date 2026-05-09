@@ -33,6 +33,8 @@ String buildBookCustomCSS({
   buffer.writeln(
     'blockquote { border-inline-start: 3px solid $divider !important; '
     'padding-inline-start: 1em !important; margin-inline: 0 !important; '
+    'text-indent: 0 !important; text-align: start !important; '
+    'line-height: var(--readflex-line-height) !important; '
     'font-style: italic; }',
   );
   // Inline code: thin bordered pill, slightly smaller than prose so the
@@ -42,6 +44,7 @@ String buildBookCustomCSS({
   buffer.writeln(
     'code { background: $panel !important; border: 1px solid $divider; '
     'padding: 0.1em 0.35em; border-radius: 4px; '
+    'text-indent: 0 !important; line-height: inherit !important; '
     'font-family: ui-monospace, Menlo, monospace !important; '
     'font-size: 0.9em !important; letter-spacing: -0.01em; }',
   );
@@ -71,9 +74,12 @@ String buildBookCustomCSS({
   buffer.writeln(
     'pre { background: $panel !important; border: 1px solid $divider; '
     'padding: 0.85em 1em !important; border-radius: 6px; '
-    'overflow-x: auto; '
+    'box-sizing: border-box; max-width: 100%; overflow-x: auto; '
+    '-webkit-overflow-scrolling: touch; overscroll-behavior-inline: contain; '
+    'break-inside: avoid; text-indent: 0 !important; '
+    'text-align: start !important; white-space: pre-wrap !important; '
     'font-family: ui-monospace, Menlo, monospace !important; '
-    'font-size: 0.875em !important; line-height: 1.45; }',
+    'font-size: 0.875em !important; line-height: 1.45 !important; }',
   );
   buffer.writeln(
     'pre::-webkit-scrollbar { height: 6px; } '
@@ -88,7 +94,16 @@ String buildBookCustomCSS({
     'border: 0 !important; box-shadow: none !important; '
     'padding: 0 !important; font-size: inherit !important; }',
   );
-  // Wide tables: cap to column width and allow horizontal scroll.
+  // Wide tables: the JS reader wraps every table in this div on section load.
+  // `overflow` on the table itself is unreliable in CSS table layout,
+  // especially inside paginated WebKit columns, so the wrapper owns scroll.
+  buffer.writeln(
+    '.readflex-wide-table { max-width: 100%; overflow-x: auto; '
+    'overflow-y: hidden; -webkit-overflow-scrolling: touch; '
+    'overscroll-behavior-inline: contain; box-sizing: border-box; '
+    'break-inside: avoid; }',
+  );
+  // Keep the table intrinsic width inside the scroll wrapper.
   // We deliberately omit the Readest pattern of
   // "table:has(> colgroup) { table-layout: fixed; }" because that combo
   // (the :has() selector + a forced table-layout switch) crashes
@@ -96,7 +111,23 @@ String buildBookCustomCSS({
   // RELEASE_ASSERT) when foliate-js is paginating. Bisect on iOS 18.7
   // sim isolated this exact rule as the trigger.
   buffer.writeln(
-    'table { max-width: 100%; overflow: auto; display: table !important; }',
+    'table { width: max-content; max-width: none; display: table !important; '
+    'text-indent: 0 !important; text-align: start !important; '
+    'font-size: 0.95em; }',
+  );
+  buffer.writeln(
+    'table img, table svg, table canvas { max-inline-size: 100% !important; '
+    'block-size: auto !important; }',
+  );
+  buffer.writeln(
+    'figure { margin-inline: 0 !important; break-inside: avoid; } '
+    'figcaption { font-size: 0.9em; opacity: 0.75; '
+    'text-align: center !important; text-indent: 0 !important; }',
+  );
+  buffer.writeln(
+    'math, mjx-container { max-inline-size: 100%; overflow-x: auto; '
+    'overflow-y: hidden; -webkit-overflow-scrolling: touch; '
+    'box-sizing: border-box; }',
   );
   buffer.writeln('h1 { font-size: 1.8em !important; }');
   buffer.writeln('h2 { font-size: 1.5em !important; }');
