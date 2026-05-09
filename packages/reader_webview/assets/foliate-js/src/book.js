@@ -851,7 +851,7 @@ class Reader {
     })
     this.#originalContent = null
   }
-  async open(file, cfi) {
+  async open(file, cfi, progress) {
     this.view = await getView(file, cfi)
 
     if (importing) return
@@ -868,6 +868,17 @@ class Reader {
       this.view.renderer.next()
     this.setView(this.view)
     await this.view.init({ lastLocation: cfi })
+    // iOS fallback path: if restoring by deep CFI crashed the WebContent
+    // process, Flutter reloads this page with `cfi=null` but preserves the
+    // last known progress fraction. Jump there after init so the book reopens
+    // near the saved spot instead of from the cover.
+    if (!cfi && Number.isFinite(progress) && progress > 0 && progress <= 1) {
+      try {
+        await this.view.goToFraction(progress)
+      } catch (e) {
+        console.warn('goToFraction fallback failed', e)
+      }
+    }
 
     // set html bg color to grey 
     document.documentElement.style.backgroundColor = 'grey'
@@ -1360,10 +1371,10 @@ class Reader {
 }
 
 
-const open = async (file, cfi) => {
+const open = async (file, cfi, progress) => {
   const reader = new Reader()
   globalThis.reader = reader
-  await reader.open(file, cfi)
+  await reader.open(file, cfi, progress)
   if (!importing) {
     callFlutter('onLoadEnd')
     onSetToc()
@@ -1741,6 +1752,7 @@ var urlParams = new URLSearchParams(window.location.search)
 var importing = JSON.parse(urlParams.get('importing'))
 var url = JSON.parse(urlParams.get('url'))
 var initialCfi = JSON.parse(urlParams.get('initialCfi'))
+var initialProgress = JSON.parse(urlParams.get('initialProgress'))
 var style = JSON.parse(urlParams.get('style'))
 var readingRules = JSON.parse(urlParams.get('readingRules'))
 // Optional caller-supplied display name. Used by formats with no embedded
@@ -1757,7 +1769,7 @@ import('./remote_file.js')
   .then(({ RemoteFile }) =>
     new RemoteFile(url, { name }).open(),
   )
-  .then(file => open(file, initialCfi))
+  .then(file => open(file, initialCfi, initialProgress))
   .catch(e => {
     console.error(e)
     // Surface import errors back to Dart immediately. Without this the

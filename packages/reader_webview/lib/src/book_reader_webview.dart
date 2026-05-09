@@ -6,6 +6,42 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'reader_bridge.dart';
 import 'reader_common_handlers.dart';
 
+/// Exact CFI is the preferred restore path. When it is missing — or when the
+/// WebView is retrying after the known iOS deep-CFI crash — fall back to the
+/// persisted progress fraction so the reader reopens near the last spot
+/// instead of at the cover.
+@visibleForTesting
+ReaderInitialLocation resolveInitialReaderLocation({
+  required String? initialCfi,
+  required double? initialProgress,
+  required bool recoveringFromCrash,
+}) {
+  final cfi = switch (initialCfi) {
+    final String value when value.isNotEmpty => value,
+    _ => null,
+  };
+  final progress = switch (initialProgress) {
+    final double value when value > 0 && value <= 1 => value,
+    _ => null,
+  };
+
+  if (recoveringFromCrash) {
+    return ReaderInitialLocation(cfi: null, progress: progress);
+  }
+  if (cfi != null) {
+    return ReaderInitialLocation(cfi: cfi, progress: null);
+  }
+  return ReaderInitialLocation(cfi: null, progress: progress);
+}
+
+@visibleForTesting
+final class ReaderInitialLocation {
+  const ReaderInitialLocation({required this.cfi, required this.progress});
+
+  final String? cfi;
+  final double? progress;
+}
+
 /// WebView-based book reader backed by foliate-js.
 ///
 /// Loads foliate-js `index.html` from the local server's `/assets/foliate-js/`
@@ -22,6 +58,7 @@ class BookReaderWebView extends StatefulWidget {
     required this.serverPort,
     required this.bookFilePath,
     this.initialCfi,
+    this.initialProgress,
     this.foliateStyle = const FoliateStyle(),
     this.highlights = const [],
     this.onReady,
@@ -41,6 +78,10 @@ class BookReaderWebView extends StatefulWidget {
 
   /// CFI position to restore on load.
   final String? initialCfi;
+
+  /// Fractional fallback used when exact CFI restore is unavailable or when
+  /// the iOS crash-recovery path intentionally drops the saved CFI.
+  final double? initialProgress;
 
   /// Book reader appearance passed to foliate-js via URL params.
   final FoliateStyle foliateStyle;
@@ -74,6 +115,16 @@ class BookReaderWebView extends StatefulWidget {
 class BookReaderWebViewState extends State<BookReaderWebView> {
   InAppWebViewController? _controller;
   bool _isReady = false;
+
+  // TEMP WORKAROUND — remove once the WKWebView deep-CFI restore crash is
+  // fixed properly (see memory: project_wkwebview_cfi_crash_root_cause.md).
+  // When the WebKit WebContent process dies during initial pagination
+  // (TextOnlySimpleLineBuilder RELEASE_ASSERT triggered by goTo on a
+  // saved deep CFI), we self-recover by reloading the index with no CFI
+  // so the book at least opens from chapter 1 instead of staying blank.
+  // This flag overrides the URL-built initialCfi during the recovery
+  // reload, then clears itself once the reload signals onLoadEnd.
+  bool _recoveringFromCrash = false;
 
   @override
   void didUpdateWidget(covariant BookReaderWebView oldWidget) {
@@ -160,9 +211,15 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   String get _indexUrl {
     final base =
         'http://127.0.0.1:${widget.serverPort}/assets/foliate-js/index.html';
+    final initialLocation = resolveInitialReaderLocation(
+      initialCfi: widget.initialCfi,
+      initialProgress: widget.initialProgress,
+      recoveringFromCrash: _recoveringFromCrash,
+    );
     final params = {
       'url': jsonEncode(_bookUrl),
-      'initialCfi': jsonEncode(widget.initialCfi),
+      'initialCfi': jsonEncode(initialLocation.cfi),
+      'initialProgress': jsonEncode(initialLocation.progress),
       'style': jsonEncode(widget.foliateStyle.toMap()),
       'readingRules': jsonEncode(_defaultReadingRules),
     };
@@ -178,7 +235,35 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       initialUrlRequest: URLRequest(url: WebUri(_indexUrl)),
       initialSettings: baseReaderSettings(),
       onWebViewCreated: _onWebViewCreated,
+      // TEMP — see _recoveringFromCrash field doc for context.
+      onWebContentProcessDidTerminate: _onContentProcessTerminated,
     );
+  }
+
+  /// TEMP WORKAROUND for the WKWebView deep-CFI restore crash.
+  /// Remove this handler (and the [_recoveringFromCrash] state field plus
+  /// its branch in [_indexUrl]) once foliate-js / our integration handles
+  /// deep-CFI restoration without crashing the WebContent process.
+  void _onContentProcessTerminated(InAppWebViewController controller) {
+    // Avoid re-entering recovery if a second crash arrives before the
+    // first reload finishes. If we hit this twice, something else is
+    // wrong and reloading again will only spin.
+    if (_recoveringFromCrash) {
+      debugPrint(
+        '[reader-recovery] second WebContent crash before first reload '
+        'finished — skipping to avoid loop',
+      );
+      return;
+    }
+    debugPrint(
+      '[reader-recovery] WebContent process died (cfi=${widget.initialCfi}), '
+      'reloading with cfi=null',
+    );
+    setState(() {
+      _recoveringFromCrash = true;
+      _isReady = false;
+    });
+    controller.loadUrl(urlRequest: URLRequest(url: WebUri(_indexUrl)));
   }
 
   void _onWebViewCreated(InAppWebViewController controller) {
@@ -191,8 +276,47 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       handlerName: 'onLoadEnd',
       callback: (_) {
         _isReady = true;
+        // TEMP — clear the crash-recovery flag once the post-crash
+        // reload finishes. Remove with the rest of the workaround.
+        if (_recoveringFromCrash) {
+          final progress = widget.initialProgress;
+          final recoveredAt = progress != null && progress > 0
+              ? ' at progress=${progress.toStringAsFixed(4)}'
+              : ' at chapter 1';
+          debugPrint(
+            '[reader-recovery] post-crash reload completed; book is open'
+            '$recoveredAt (saved deep CFI was discarded)',
+          );
+          _recoveringFromCrash = false;
+        }
         _renderAnnotations();
         widget.onReady?.call();
+      },
+    );
+
+    // Capture uncaught JS errors and unhandled promise rejections from
+    // the reader iframe. The matching JS-side hook lives at the top of
+    // index.html's bootstrap IIFE.
+    controller.addJavaScriptHandler(
+      handlerName: 'onJsError',
+      callback: (args) {
+        if (args.isEmpty) return;
+        final raw = args.first;
+        if (raw is! Map) {
+          debugPrint('[reader-js-error] $raw');
+          return;
+        }
+        final kind = raw['kind'] ?? 'error';
+        final msg = raw['msg'] ?? '<no message>';
+        final src = raw['src'];
+        final line = raw['line'];
+        final col = raw['col'];
+        final stack = raw['stack'];
+        final location = (src != null && line != null)
+            ? ' at $src:$line${col != null ? ':$col' : ''}'
+            : '';
+        debugPrint('[reader-js-$kind] $msg$location');
+        if (stack != null) debugPrint('[reader-js-stack]\n$stack');
       },
     );
 

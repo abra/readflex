@@ -72,6 +72,39 @@
 </div>
 <script>
     (function () {
+      // Global JS error capture. Forwards uncaught exceptions and
+      // unhandled promise rejections to Dart via the same callHandler
+      // bridge book.js uses. Without this, silent JS errors disappear
+      // (foliate-js try/catch swallow what they care about, the rest
+      // ends up in the WebKit console which is invisible to Flutter
+      // logs unless Safari Inspector is attached).
+      const reportJsError = (payload) => {
+        try {
+          if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+            window.flutter_inappwebview.callHandler('onJsError', payload);
+          }
+        } catch (e) { /* bridge not ready; nothing we can do */ }
+      };
+      window.onerror = function (msg, src, line, col, err) {
+        reportJsError({
+          kind: 'error',
+          msg: String(msg),
+          src: src ? String(src) : null,
+          line: Number.isFinite(line) ? line : null,
+          col: Number.isFinite(col) ? col : null,
+          stack: err && err.stack ? String(err.stack) : null,
+        });
+        return false; // let default handler run too
+      };
+      window.onunhandledrejection = function (e) {
+        const reason = e && e.reason;
+        reportJsError({
+          kind: 'unhandledrejection',
+          msg: reason ? String(reason && reason.message ? reason.message : reason) : 'unhandled rejection',
+          stack: reason && reason.stack ? String(reason.stack) : null,
+        });
+      };
+
       const ua = navigator.userAgent || '';
       const platform = navigator.platform || '';
       console.log('ReadflexUA', ua);

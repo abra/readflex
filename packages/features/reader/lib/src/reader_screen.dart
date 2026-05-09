@@ -1209,6 +1209,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       serverPort: widget.serverPort,
       bookFilePath: state.book!.filePath,
       initialCfi: state.book?.currentCfi,
+      initialProgress: state.book?.readingProgress,
       foliateStyle: FoliateStyle(
         fontName: fontPreset.fontFamily,
         fontPath:
