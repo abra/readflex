@@ -123,20 +123,14 @@ class ReaderScreen extends StatelessWidget {
           BlocProvider(create: (_) => ReaderChromeCubit()),
           BlocProvider(create: (_) => ReaderSelectionCubit()),
         ],
-        child: _ReaderView(
-          serverPort: serverPort,
-          textActions: textActions,
-        ),
+        child: _ReaderView(serverPort: serverPort, textActions: textActions),
       ),
     );
   }
 }
 
 class _ReaderView extends StatelessWidget {
-  const _ReaderView({
-    required this.serverPort,
-    required this.textActions,
-  });
+  const _ReaderView({required this.serverPort, required this.textActions});
 
   final int serverPort;
   final List<TextAction> textActions;
@@ -179,9 +173,8 @@ class _ReaderBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (status) {
-      ReaderStatus.initial || ReaderStatus.loading => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      ReaderStatus.initial ||
+      ReaderStatus.loading => const Center(child: CircularProgressIndicator()),
       ReaderStatus.failure => Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -231,7 +224,6 @@ class _TopChromeDriver extends StatelessWidget {
       title: title,
       panelColor: colors.surface,
       foregroundColor: colors.onSurface,
-      dividerColor: colors.outlineVariant,
       onBack: () => Navigator.of(context).maybePop(),
       // Explicit nulls to silence unused-parameter analyzer warnings
       // and to document that these slots will be wired as the
@@ -257,7 +249,6 @@ class _ReaderTopChrome extends StatelessWidget {
     required this.title,
     required this.panelColor,
     required this.foregroundColor,
-    required this.dividerColor,
     this.onBack,
     this.onTocPressed,
     this.onFontPressed,
@@ -269,7 +260,6 @@ class _ReaderTopChrome extends StatelessWidget {
   final String title;
   final Color panelColor;
   final Color foregroundColor;
-  final Color dividerColor;
   final VoidCallback? onBack;
   final VoidCallback? onTocPressed;
   final VoidCallback? onFontPressed;
@@ -292,21 +282,20 @@ class _ReaderTopChrome extends StatelessWidget {
             opacity: visible ? 1 : 0,
             duration: _kChromeAnimDuration,
             curve: _kChromeAnimCurve,
-            child: DecoratedBox(
-              // Shadow drops downward onto the content beneath the
-              // panel. Sits outside Material so the shadow paints
-              // along the panel's outer rect (hairline divider stays
-              // inside as the inner separator).
-              decoration: const BoxDecoration(boxShadow: AppShadows.panelDown),
-              child: Material(
-                color: panelColor,
-                elevation: 0,
-                child: SafeArea(
-                  bottom: false,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      border: Border(bottom: BorderSide(color: dividerColor)),
-                    ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: -18,
+                  child: const ScrollEdgeFade(visible: true),
+                ),
+                Material(
+                  color: panelColor,
+                  elevation: 0,
+                  child: SafeArea(
+                    bottom: false,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.xs,
@@ -350,7 +339,7 @@ class _ReaderTopChrome extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
@@ -581,22 +570,23 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
             opacity: widget.visible ? 1 : 0,
             duration: _kChromeAnimDuration,
             curve: _kChromeAnimCurve,
-            child: DecoratedBox(
-              // Shadow lifts upward over the page content. Mirror of
-              // the top chrome's downward shadow — same color/blur,
-              // negative Y offset.
-              decoration: const BoxDecoration(boxShadow: AppShadows.panelUp),
-              child: Material(
-                color: widget.panelColor,
-                elevation: 0,
-                child: SafeArea(
-                  top: false,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      border: Border(
-                        top: BorderSide(color: widget.dividerColor),
-                      ),
-                    ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: -18,
+                  child: const ScrollEdgeFade(
+                    visible: true,
+                    edge: ScrollFadeEdge.bottom,
+                  ),
+                ),
+                Material(
+                  color: widget.panelColor,
+                  elevation: 0,
+                  child: SafeArea(
+                    top: false,
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(
                         AppSpacing.lg,
@@ -704,7 +694,7 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
