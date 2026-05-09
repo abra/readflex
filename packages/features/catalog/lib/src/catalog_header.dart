@@ -171,7 +171,7 @@ class _LayoutToggleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     // Demo button: 40x40 (→ AppSizes.iconButtonSize), radius 10 (→ sm=8,
-    // −2), icon 16 (→ AppIconSize.xs). Active surface is `cs.secondary`,
+    // −2), icon 20 (→ AppIconSize.sm). Active surface is `cs.secondary`,
     // active icon uses full onSurface, inactive uses onSurface @ 55%.
     return Material(
       color: Colors.transparent,
@@ -189,7 +189,7 @@ class _LayoutToggleButton extends StatelessWidget {
             child: Center(
               child: Icon(
                 icon,
-                size: AppIconSize.xs,
+                size: AppIconSize.sm,
                 color: active
                     ? colors.onSurface
                     : colors.onSurface.withValues(alpha: _kMutedAlpha),

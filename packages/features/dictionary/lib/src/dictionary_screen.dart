@@ -616,7 +616,7 @@ class _PracticeButton extends StatelessWidget {
             child: Center(
               child: Icon(
                 AppIcons.practice,
-                size: AppIconSize.xs,
+                size: AppIconSize.sm,
                 color: cs.primary,
               ),
             ),

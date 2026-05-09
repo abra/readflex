@@ -220,19 +220,19 @@ class _TopChromeDriver extends StatelessWidget {
       onBack: () => Navigator.of(context).maybePop(),
       // Explicit nulls to silence unused-parameter analyzer warnings
       // and to document that these slots will be wired as the
-      // corresponding features (TOC / font / bookmark / share)
+      // corresponding features (TOC / font / bookmark / search)
       // land. Passing null keeps the icon greyed-out as intended.
       onTocPressed: null,
       onFontPressed: null,
       onBookmarkPressed: null,
-      onSharePressed: null,
+      onSearchPressed: null,
     );
   }
 }
 
 /// Top reader chrome: 5-slot icon bar (back · TOC · font · bookmark
-/// · share). Slides down from the top when `chromeVisible` is true.
-/// TOC / bookmark / share are placeholder slots until those features
+/// · search). Slides down from the top when `chromeVisible` is true.
+/// TOC / bookmark / search are placeholder slots until those features
 /// land — they show as disabled icons so the layout matches the
 /// design now and lights up automatically as each callback is wired
 /// in [ReaderScreen].
@@ -246,7 +246,7 @@ class _ReaderTopChrome extends StatelessWidget {
     this.onTocPressed,
     this.onFontPressed,
     this.onBookmarkPressed,
-    this.onSharePressed,
+    this.onSearchPressed,
   });
 
   final bool visible;
@@ -257,7 +257,7 @@ class _ReaderTopChrome extends StatelessWidget {
   final VoidCallback? onTocPressed;
   final VoidCallback? onFontPressed;
   final VoidCallback? onBookmarkPressed;
-  final VoidCallback? onSharePressed;
+  final VoidCallback? onSearchPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -322,10 +322,10 @@ class _ReaderTopChrome extends StatelessWidget {
                             onPressed: onBookmarkPressed,
                           ),
                           _ReaderChromeIconButton(
-                            icon: AppIcons.share,
-                            tooltip: 'Share',
+                            icon: AppIcons.search,
+                            tooltip: 'Search',
                             foregroundColor: foregroundColor,
-                            onPressed: onSharePressed,
+                            onPressed: onSearchPressed,
                           ),
                         ],
                       ),
