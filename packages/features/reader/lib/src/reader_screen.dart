@@ -30,13 +30,6 @@ const _kChromeAnimCurve = Curves.easeOutCubic;
 /// it here so the slider can predict the page number during drag.
 const _foliateSizePerLoc = 1500;
 
-/// Approximate vertical footprint of the bottom reader chrome (icon
-/// row + slider + safe area), used to anchor the comic progress
-/// overlay just above the chrome's top edge. Slightly higher than the
-/// real chrome height so the overlay reads as "above where the panel
-/// surfaces" without measuring the chrome at runtime.
-const _kBottomChromeApproxHeight = 88.0;
-
 /// Converts foliate-js's 0-indexed location number into the 1-indexed
 /// page count the reader actually shows ("page 1" instead of "page 0"
 /// for the start of the book). Clamps to `[1, totalPages]` when we have
@@ -964,9 +957,9 @@ class _ReviewReminderDriver extends StatelessWidget {
 ///   * page metrics haven't arrived yet (first `onRelocated` not
 ///     fired).
 ///
-/// Position: anchored at [_kBottomChromeApproxHeight] + small gap
-/// above the bottom edge, so when the user does tap to surface the
-/// chrome the overlay sits "just above" the panel that slides in.
+/// Position: anchored near the bottom safe area while chrome is hidden.
+/// When chrome is shown, the overlay is hidden to avoid duplicating the
+/// page number in the bottom panel.
 class _ComicProgressOverlayDriver extends StatelessWidget {
   const _ComicProgressOverlayDriver();
 
@@ -997,10 +990,11 @@ class _ComicProgressOverlayDriver extends StatelessWidget {
 
     final displayed = _toDisplayPage(current, total);
     final colors = context.colors;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     return Positioned(
       left: 0,
       right: 0,
-      bottom: _kBottomChromeApproxHeight + AppSpacing.sm,
+      bottom: bottomInset + AppSpacing.md,
       child: Center(
         child: _ComicProgressOverlay(
           text: '$displayed / $total',
