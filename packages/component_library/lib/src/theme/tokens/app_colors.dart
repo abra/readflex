@@ -59,7 +59,7 @@ const darkPalette = AppColorPalette(
   background: PrimitiveColors.darkGray900,
   foreground: PrimitiveColors.darkGray50,
   primary: PrimitiveColors.wine400,
-  onPrimary: PrimitiveColors.darkGray900,
+  onPrimary: PrimitiveColors.white,
   secondary: PrimitiveColors.darkGray700,
   onSecondary: PrimitiveColors.darkGray200,
   muted: PrimitiveColors.darkGray600,
