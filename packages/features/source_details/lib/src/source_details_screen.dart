@@ -14,8 +14,6 @@ const _coverMinWidth = 150.0;
 const _coverScreenWidthFactor = 0.46;
 const _titleMaxLines = 3;
 const _authorMaxLines = 2;
-const _statValueMaxLines = 1;
-const _statSurfaceAlpha = 0.6;
 const _coverShadow = [
   BoxShadow(
     color: Color(0x14000000),
@@ -94,7 +92,6 @@ class SourceDetailsView extends StatelessWidget {
               ),
               SourceDetailsStatus.success => _SourceDetailsContent(
                 source: state.source!,
-                fileSizeBytes: state.fileSizeBytes,
                 onReadPressed: onReadPressed,
               ),
             };
@@ -108,12 +105,10 @@ class SourceDetailsView extends StatelessWidget {
 class _SourceDetailsContent extends StatelessWidget {
   const _SourceDetailsContent({
     required this.source,
-    required this.fileSizeBytes,
     required this.onReadPressed,
   });
 
   final Book source;
-  final int? fileSizeBytes;
   final Future<void> Function(Book source) onReadPressed;
 
   @override
@@ -133,16 +128,6 @@ class _SourceDetailsContent extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xs,
-                  vertical: AppSpacing.xs,
-                ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: _BackButton(colors: colors),
-                ),
-              ),
-              Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.lg,
                   AppSpacing.md,
@@ -156,21 +141,10 @@ class _SourceDetailsContent extends StatelessWidget {
                       source: source,
                       coverWidth: coverWidth,
                     ),
-                    const SizedBox(height: AppSpacing.lg),
-                    _SourceStats(
-                      source: source,
-                      fileSizeBytes: fileSizeBytes,
-                    ),
                     const SizedBox(height: AppSpacing.xl),
-                    FilledButton(
-                      onPressed: () async {
-                        await onReadPressed(source);
-                        if (!context.mounted) return;
-                        context.read<SourceDetailsBloc>().add(
-                          SourceDetailsLoadRequested(source.id),
-                        );
-                      },
-                      child: Text(_readButtonLabel(source)),
+                    _ReadingActions(
+                      source: source,
+                      onReadPressed: onReadPressed,
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     Text(
@@ -194,21 +168,52 @@ class _SourceDetailsContent extends StatelessWidget {
   }
 }
 
-class _BackButton extends StatelessWidget {
-  const _BackButton({required this.colors});
+class _ReadingActions extends StatelessWidget {
+  const _ReadingActions({
+    required this.source,
+    required this.onReadPressed,
+  });
 
-  final ColorScheme colors;
+  final Book source;
+  final Future<void> Function(Book source) onReadPressed;
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: 'Back',
-      onPressed: () => Navigator.of(context).maybePop(),
-      style: IconButton.styleFrom(
-        backgroundColor: Colors.transparent,
-        foregroundColor: colors.onSurface,
-      ),
-      icon: Icon(AppIcons.back, size: AppIconSize.md, color: colors.onSurface),
+    final colors = context.colors;
+    final backBackground = colors.onSurface;
+    final backForeground = colors.surface;
+
+    return Row(
+      children: [
+        SizedBox.square(
+          dimension: AppSizes.buttonHeight,
+          child: IconButton(
+            tooltip: 'Back',
+            onPressed: () => Navigator.of(context).maybePop(),
+            style: IconButton.styleFrom(
+              backgroundColor: backBackground,
+              foregroundColor: backForeground,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+            ),
+            icon: const Icon(AppIcons.back, size: AppIconSize.md),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: FilledButton(
+            onPressed: () async {
+              await onReadPressed(source);
+              if (!context.mounted) return;
+              context.read<SourceDetailsBloc>().add(
+                SourceDetailsLoadRequested(source.id),
+              );
+            },
+            child: Text(_readButtonLabel(source)),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -269,7 +274,7 @@ class _SourceCover extends StatelessWidget {
     required this.height,
   });
 
-  static const aspectRatio = 190.0 / 128.0;
+  static const aspectRatio = 3.0 / 2.0;
 
   final Book source;
   final double width;
@@ -310,84 +315,6 @@ class _SourceCover extends StatelessWidget {
   }
 }
 
-class _SourceStats extends StatelessWidget {
-  const _SourceStats({required this.source, required this.fileSizeBytes});
-
-  final Book source;
-  final int? fileSizeBytes;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _SourceStat(
-            icon: AppIcons.bookmark,
-            value: 'Saved',
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: _SourceStat(
-            icon: AppIcons.book,
-            value: _formatLength(source),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: _SourceStat(
-            icon: AppIcons.article,
-            value: _formatFileSize(fileSizeBytes),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SourceStat extends StatelessWidget {
-  const _SourceStat({
-    required this.icon,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final text = context.text;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerHighest.withValues(
-          alpha: _statSurfaceAlpha,
-        ),
-        borderRadius: BorderRadius.circular(AppRadius.md),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.md,
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: AppIconSize.sm, color: colors.primary),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              value,
-              maxLines: _statValueMaxLines,
-              overflow: TextOverflow.ellipsis,
-              style: text.labelMedium.copyWith(color: colors.onSurface),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _ReviewActions extends StatelessWidget {
   const _ReviewActions();
 
@@ -420,34 +347,7 @@ class _ReviewActions extends StatelessWidget {
   }
 }
 
-String _formatLabel(BookFormat format) => switch (format) {
-  BookFormat.epub => 'Book',
-  BookFormat.cbz => 'Comic',
-  BookFormat.pdf => 'PDF',
-  BookFormat.fb2 => 'FB2',
-  BookFormat.mobi => 'MOBI',
-  BookFormat.azw3 => 'AZW3',
-};
-
 String _readButtonLabel(Book source) =>
     source.readingProgress > 0 || source.lastOpenedAt != null
     ? 'Continue reading'
     : 'Start reading';
-
-String _formatLength(Book source) {
-  if (source.totalLocations > 0) return '${source.totalLocations} locs';
-  return _formatLabel(source.format);
-}
-
-String _formatFileSize(int? bytes) {
-  if (bytes == null || bytes <= 0) return 'Unknown';
-  const units = ['B', 'KB', 'MB', 'GB'];
-  var value = bytes.toDouble();
-  var unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit++;
-  }
-  final precision = value >= 10 || unit == 0 ? 0 : 1;
-  return '${value.toStringAsFixed(precision)} ${units[unit]}';
-}
