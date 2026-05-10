@@ -9,9 +9,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'source_details_bloc.dart';
 
-const _coverMaxWidth = 192.0;
-const _coverMinWidth = 150.0;
-const _coverScreenWidthFactor = 0.46;
+const _coverMaxWidth = 220.0;
+const _coverMinWidth = 168.0;
+const _coverScreenWidthFactor = 0.54;
 const _titleMaxLines = 3;
 const _authorMaxLines = 2;
 const _coverShadow = [
