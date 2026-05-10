@@ -33,7 +33,11 @@ abstract final class PrimitiveColors {
   static const Color darkGray800 = Color(0xFF1A1D23);
   static const Color darkGray900 = Color(0xFF111318);
 
-  // ── Orange / Primary accent ────────────────────────────────
+  // ── Wine / Primary accent ──────────────────────────────────
+  static const Color wine500 = Color(0xFF7A1F2B);
+  static const Color wine400 = Color(0xFFD88491);
+
+  // ── Orange / Legacy accent ─────────────────────────────────
   static const Color orange500 = Color(0xFFC46C31);
   static const Color orange400 = Color(0xFFC68153);
 

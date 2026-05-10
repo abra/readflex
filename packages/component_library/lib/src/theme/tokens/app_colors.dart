@@ -42,7 +42,7 @@ class AppColorPalette {
 const lightPalette = AppColorPalette(
   background: PrimitiveColors.gray50,
   foreground: PrimitiveColors.gray900,
-  primary: PrimitiveColors.orange500,
+  primary: PrimitiveColors.wine500,
   onPrimary: PrimitiveColors.white,
   secondary: PrimitiveColors.gray200,
   onSecondary: PrimitiveColors.gray700,
@@ -58,8 +58,8 @@ const lightPalette = AppColorPalette(
 const darkPalette = AppColorPalette(
   background: PrimitiveColors.darkGray900,
   foreground: PrimitiveColors.darkGray50,
-  primary: PrimitiveColors.orange400,
-  onPrimary: PrimitiveColors.white,
+  primary: PrimitiveColors.wine400,
+  onPrimary: PrimitiveColors.darkGray900,
   secondary: PrimitiveColors.darkGray700,
   onSecondary: PrimitiveColors.darkGray200,
   muted: PrimitiveColors.darkGray600,
