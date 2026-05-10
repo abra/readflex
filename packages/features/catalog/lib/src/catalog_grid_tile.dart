@@ -3,7 +3,6 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 
 import 'book_cover_plate.dart';
-import 'catalog_tile_cover.dart';
 
 /// Alpha for the format badge background (dark overlay on cover art).
 const double _kBadgeBackgroundAlpha = 0.55;
@@ -33,12 +32,16 @@ class BookLibraryGridTile extends StatelessWidget {
       cover: Hero(
         tag: sourceCoverHeroTag(book.id),
         transitionOnUserGestures: true,
-        child: BookTileCover(
-          book: book,
+        child: AppSourceCover(
+          title: book.title,
+          author: book.author,
+          seed: book.id,
+          coverImagePath: book.coverImagePath,
+          progress: book.readingProgress > 0 ? book.readingProgress : null,
           // Show the title on the fallback cover art so any format
           // that doesn't ship an embedded cover (a CBZ without a
           // cover image, an EPUB stripped to text-only, etc.) stays
-          // identifiable by name. BookTileCover only honours this on
+          // identifiable by name. AppSourceCover only honours this on
           // the fallback path — when a real cover image is present,
           // the image takes over and the title stays off.
           showTitle: true,

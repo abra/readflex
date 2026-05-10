@@ -1,47 +1,46 @@
 import 'dart:io';
 
-import 'package:component_library/component_library.dart';
-import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 
-/// Renders the cover area for a book tile — either the imported cover image
-/// or, when no cover was extracted on import, a deterministic stylised
-/// fallback produced by [AppCoverArt].
-///
-/// Used by both grid- and list-mode tiles; each passes its own toggles to
-/// hide portions of the fallback text that would duplicate what the
-/// surrounding row already shows.
-class BookTileCover extends StatelessWidget {
-  const BookTileCover({
-    required this.book,
+import 'app_cover_art.dart';
+import 'theme/tokens/app_radius.dart';
+
+/// Shared renderer for imported source covers and deterministic fallback art.
+class AppSourceCover extends StatelessWidget {
+  const AppSourceCover({
+    required this.title,
+    required this.seed,
+    this.author,
+    this.coverImagePath,
+    this.progress,
     this.showAuthor = true,
     this.showTitle = true,
     this.showProgress = true,
     this.showMatte = true,
+    this.fit = BoxFit.fill,
     super.key,
   });
 
-  final Book book;
+  final String title;
+  final String seed;
+  final String? author;
+  final String? coverImagePath;
+  final double? progress;
   final bool showAuthor;
   final bool showTitle;
   final bool showProgress;
-
-  /// Whether to draw the 2dp scaffold-colored matte border around the
-  /// cover. Defaults to true. Disabled in the library grid tile so the
-  /// Apple-Books-style spine strip can sit at the cover edge.
   final bool showMatte;
+  final BoxFit fit;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final fallback = AppCoverArt(
-          title: book.title,
-          author: book.author,
-          seed: book.id,
-          progress: showProgress && book.readingProgress > 0
-              ? book.readingProgress
-              : null,
+          title: title,
+          author: author,
+          seed: seed,
+          progress: showProgress ? progress : null,
           showAuthor: showAuthor,
           showTitle: showTitle,
           showMatte: showMatte,
@@ -49,12 +48,12 @@ class BookTileCover extends StatelessWidget {
           width: constraints.maxWidth,
         );
 
-        if (book.coverImagePath case final path? when path.isNotEmpty) {
+        if (coverImagePath case final path? when path.isNotEmpty) {
           final image = ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.sm),
             child: Image.file(
               File(path),
-              fit: BoxFit.fill,
+              fit: fit,
               width: constraints.maxWidth,
               height: constraints.maxHeight,
               errorBuilder: (_, _, _) => fallback,

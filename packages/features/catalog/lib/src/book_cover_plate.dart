@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 /// Adds the directional drop shadow and the soft left-edge binding
 /// shade that together give the cover its physical "real book" feel.
 /// The cover itself is passed in as [cover] (typically a
-/// [BookTileCover]); call sites that need extra badges or selection
+/// [AppSourceCover]); call sites that need extra badges or selection
 /// overlays on top of the cover stack them via [overlays].
 ///
 /// Used by both the grid and the list tiles so the cover treatment

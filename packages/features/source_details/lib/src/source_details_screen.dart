@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:book_repository/book_repository.dart';
@@ -282,33 +281,24 @@ class _SourceCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fallback = AppCoverArt(
-      title: source.title,
-      author: source.author,
-      seed: source.id,
-      progress: source.readingProgress > 0 ? source.readingProgress : null,
-      showMatte: false,
-      height: height,
-      width: width,
-    );
-
-    final coverPath = source.coverImagePath;
-    final cover = coverPath != null && coverPath.isNotEmpty
-        ? Image.file(
-            File(coverPath),
-            fit: BoxFit.fill,
-            errorBuilder: (_, _, _) => fallback,
-          )
-        : fallback;
-
     return DecoratedBox(
       decoration: const BoxDecoration(boxShadow: _coverShadow),
       child: Hero(
         tag: sourceCoverHeroTag(source.id),
         transitionOnUserGestures: true,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          child: cover,
+        child: SizedBox(
+          width: width,
+          height: height,
+          child: AppSourceCover(
+            title: source.title,
+            author: source.author,
+            seed: source.id,
+            coverImagePath: source.coverImagePath,
+            progress: source.readingProgress > 0
+                ? source.readingProgress
+                : null,
+            showMatte: false,
+          ),
         ),
       ),
     );

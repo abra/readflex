@@ -3,7 +3,6 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 
 import 'book_cover_plate.dart';
-import 'catalog_tile_cover.dart';
 
 /// Alpha applied to muted metadata (secondary text, icons) in list rows.
 const double _kMutedAlpha = 0.55;
@@ -38,8 +37,12 @@ class BookLibraryListTile extends StatelessWidget {
         cover: Hero(
           tag: sourceCoverHeroTag(book.id),
           transitionOnUserGestures: true,
-          child: BookTileCover(
-            book: book,
+          child: AppSourceCover(
+            title: book.title,
+            author: book.author,
+            seed: book.id,
+            coverImagePath: book.coverImagePath,
+            progress: book.readingProgress > 0 ? book.readingProgress : null,
             showAuthor: false,
             showTitle: false,
             showProgress: false,
