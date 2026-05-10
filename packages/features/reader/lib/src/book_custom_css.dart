@@ -22,8 +22,20 @@ String buildBookCustomCSS({
   // foliate-js's paginator ResizeObserver and traps layout in a loop.
   // Default `auto` already enables ligatures/kerning at body sizes.
   buffer.writeln(
-    'body, p, li, td, th, code, pre, kbd, samp { '
-    'overflow-wrap: anywhere !important; }',
+    'html, body { -webkit-text-size-adjust: 100% !important; '
+    'text-size-adjust: 100% !important; }',
+  );
+  buffer.writeln(
+    'body, p, li, blockquote, figcaption, div:not(.readflex-wide-table) { '
+    'white-space: normal !important; overflow-wrap: anywhere !important; '
+    'word-break: break-word !important; min-width: 0 !important; '
+    'max-width: 100% !important; }',
+  );
+  buffer.writeln(
+    'a, code, kbd, samp, td, th { '
+    'white-space: normal !important; overflow-wrap: anywhere !important; '
+    'word-break: break-word !important; min-width: 0 !important; '
+    'max-width: 100% !important; }',
   );
   buffer.writeln(
     'p:empty, span:empty, div:empty:not([class]):not([id]) { '
@@ -78,6 +90,7 @@ String buildBookCustomCSS({
     '-webkit-overflow-scrolling: touch; overscroll-behavior-inline: contain; '
     'break-inside: avoid; text-indent: 0 !important; '
     'text-align: start !important; white-space: pre-wrap !important; '
+    'overflow-wrap: normal !important; word-break: normal !important; '
     'font-family: ui-monospace, Menlo, monospace !important; '
     'font-size: 0.875em !important; line-height: 1.45 !important; }',
   );
@@ -92,7 +105,10 @@ String buildBookCustomCSS({
   buffer.writeln(
     'pre code, pre kbd, pre samp { background: transparent !important; '
     'border: 0 !important; box-shadow: none !important; '
-    'padding: 0 !important; font-size: inherit !important; }',
+    'padding: 0 !important; font-size: inherit !important; '
+    'white-space: inherit !important; overflow-wrap: normal !important; '
+    'word-break: normal !important; min-width: auto !important; '
+    'max-width: none !important; }',
   );
   // Wide tables: the JS reader wraps every table in this div on section load.
   // `overflow` on the table itself is unreliable in CSS table layout,

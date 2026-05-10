@@ -61,6 +61,25 @@ void main() {
       expect(css, contains('overscroll-behavior-inline: contain'));
     });
 
+    test(
+      'emits safe word wrapping without forcing pre blocks to wrap tokens',
+      () {
+        final css = buildBookCustomCSS(
+          theme: lightTheme,
+          invertImagesInDark: true,
+        );
+        expect(css, contains('-webkit-text-size-adjust: 100% !important'));
+        expect(css, contains('body, p, li, blockquote, figcaption'));
+        expect(css, contains('white-space: normal !important'));
+        expect(css, contains('overflow-wrap: anywhere !important'));
+        expect(css, contains('word-break: break-word !important'));
+        expect(css, contains('min-width: 0 !important'));
+        expect(css, contains('a, code, kbd, samp, td, th'));
+        expect(css, contains('overflow-wrap: normal !important'));
+        expect(css, contains('white-space: inherit !important'));
+      },
+    );
+
     test('emits table and figure rules outside prose layout', () {
       final css = buildBookCustomCSS(
         theme: lightTheme,
@@ -162,12 +181,13 @@ void main() {
       },
     );
 
-    test('does not emit deprecated word-break: break-word alias', () {
+    test('keeps word-break reset for pre descendants', () {
       final css = buildBookCustomCSS(
         theme: lightTheme,
         invertImagesInDark: true,
       );
-      expect(css, isNot(contains('word-break')));
+      expect(css, contains('pre code, pre kbd, pre samp'));
+      expect(css, contains('word-break: normal !important'));
     });
   });
 }
