@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:book_repository/book_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
@@ -37,12 +39,27 @@ class SourceDetailsBloc extends Bloc<SourceDetailsEvent, SourceDetailsState> {
         emit(const SourceDetailsState(status: SourceDetailsStatus.notFound));
         return;
       }
+      final fileSizeBytes = await _fileSizeBytes(source.filePath);
       emit(
-        SourceDetailsState(status: SourceDetailsStatus.success, source: source),
+        SourceDetailsState(
+          status: SourceDetailsStatus.success,
+          source: source,
+          fileSizeBytes: fileSizeBytes,
+        ),
       );
     } catch (error, stackTrace) {
       addError(error, stackTrace);
       emit(const SourceDetailsState(status: SourceDetailsStatus.failure));
     }
+  }
+}
+
+Future<int?> _fileSizeBytes(String path) async {
+  try {
+    final file = File(path);
+    if (!await file.exists()) return null;
+    return file.length();
+  } catch (_) {
+    return null;
   }
 }

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
@@ -7,6 +8,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'source_details_bloc.dart';
+
+const _coverMaxWidth = 192.0;
+const _coverMinWidth = 150.0;
+const _coverScreenWidthFactor = 0.46;
+const _titleMaxLines = 3;
+const _authorMaxLines = 2;
+const _statValueMaxLines = 1;
+const _statSurfaceAlpha = 0.6;
+const _coverShadow = [
+  BoxShadow(
+    color: Color(0x14000000),
+    blurRadius: 2,
+    offset: Offset(0, 1),
+  ),
+  BoxShadow(
+    color: Color(0x1F000000),
+    blurRadius: 18,
+    offset: Offset(2, 6),
+  ),
+];
 
 class SourceDetailsScreen extends StatelessWidget {
   const SourceDetailsScreen({
@@ -73,6 +94,7 @@ class SourceDetailsView extends StatelessWidget {
               ),
               SourceDetailsStatus.success => _SourceDetailsContent(
                 source: state.source!,
+                fileSizeBytes: state.fileSizeBytes,
                 onReadPressed: onReadPressed,
               ),
             };
@@ -86,18 +108,23 @@ class SourceDetailsView extends StatelessWidget {
 class _SourceDetailsContent extends StatelessWidget {
   const _SourceDetailsContent({
     required this.source,
+    required this.fileSizeBytes,
     required this.onReadPressed,
   });
 
   final Book source;
+  final int? fileSizeBytes;
   final Future<void> Function(Book source) onReadPressed;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final progressPercent = (source.readingProgress * 100)
-        .clamp(0, 100)
-        .round();
+    final text = context.text;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final coverWidth = math.min(
+      _coverMaxWidth,
+      math.max(_coverMinWidth, screenWidth * _coverScreenWidthFactor),
+    );
 
     return CustomScrollView(
       slivers: [
@@ -127,7 +154,12 @@ class _SourceDetailsContent extends StatelessWidget {
                   children: [
                     _HeroSection(
                       source: source,
-                      progressPercent: progressPercent,
+                      coverWidth: coverWidth,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    _SourceStats(
+                      source: source,
+                      fileSizeBytes: fileSizeBytes,
                     ),
                     const SizedBox(height: AppSpacing.xl),
                     FilledButton(
@@ -141,12 +173,15 @@ class _SourceDetailsContent extends StatelessWidget {
                       child: Text(_readButtonLabel(source)),
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    _ProgressCard(
-                      progress: source.readingProgress,
-                      progressPercent: progressPercent,
+                    Text(
+                      'Review',
+                      style: text.titleSmall.copyWith(
+                        color: colors.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                    _MetadataGrid(source: source),
+                    const SizedBox(height: AppSpacing.sm),
+                    const _ReviewActions(),
                     const SizedBox(height: AppSpacing.xxl),
                   ],
                 ),
@@ -179,66 +214,66 @@ class _BackButton extends StatelessWidget {
 }
 
 class _HeroSection extends StatelessWidget {
-  const _HeroSection({required this.source, required this.progressPercent});
+  const _HeroSection({
+    required this.source,
+    required this.coverWidth,
+  });
 
   final Book source;
-  final int progressPercent;
+  final double coverWidth;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.text;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         SizedBox(
-          width: 128,
-          height: 190,
-          child: _SourceCover(source: source),
-        ),
-        const SizedBox(width: AppSpacing.lg),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                source.title,
-                maxLines: 5,
-                overflow: TextOverflow.ellipsis,
-                style: text.titleMedium.copyWith(color: colors.onSurface),
-              ),
-              if (source.author case final author? when author.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  author,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: text.bodyMedium.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-              ],
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                progressPercent > 0 ? '$progressPercent% read' : 'Not started',
-                style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
-              ),
-            ],
+          width: coverWidth,
+          height: coverWidth * _SourceCover.aspectRatio,
+          child: _SourceCover(
+            source: source,
+            width: coverWidth,
+            height: coverWidth * _SourceCover.aspectRatio,
           ),
         ),
+        const SizedBox(height: AppSpacing.lg),
+        Text(
+          source.title,
+          textAlign: TextAlign.center,
+          maxLines: _titleMaxLines,
+          overflow: TextOverflow.ellipsis,
+          style: text.titleMedium.copyWith(color: colors.onSurface),
+        ),
+        if (source.author case final author? when author.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            author,
+            textAlign: TextAlign.center,
+            maxLines: _authorMaxLines,
+            overflow: TextOverflow.ellipsis,
+            style: text.bodyMedium.copyWith(color: colors.onSurfaceVariant),
+          ),
+        ],
       ],
     );
   }
 }
 
 class _SourceCover extends StatelessWidget {
-  const _SourceCover({required this.source});
+  const _SourceCover({
+    required this.source,
+    required this.width,
+    required this.height,
+  });
 
-  static const _width = 128.0;
-  static const _height = 190.0;
+  static const aspectRatio = 190.0 / 128.0;
 
   final Book source;
+  final double width;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -248,8 +283,8 @@ class _SourceCover extends StatelessWidget {
       seed: source.id,
       progress: source.readingProgress > 0 ? source.readingProgress : null,
       showMatte: false,
-      height: _height,
-      width: _width,
+      height: height,
+      width: width,
     );
 
     final coverPath = source.coverImagePath;
@@ -262,20 +297,7 @@ class _SourceCover extends StatelessWidget {
         : fallback;
 
     return DecoratedBox(
-      decoration: const BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-          ),
-          BoxShadow(
-            color: Color(0x1F000000),
-            blurRadius: 18,
-            offset: Offset(2, 6),
-          ),
-        ],
-      ),
+      decoration: const BoxDecoration(boxShadow: _coverShadow),
       child: Hero(
         tag: sourceCoverHeroTag(source.id),
         transitionOnUserGestures: true,
@@ -288,51 +310,76 @@ class _SourceCover extends StatelessWidget {
   }
 }
 
-class _ProgressCard extends StatelessWidget {
-  const _ProgressCard({
-    required this.progress,
-    required this.progressPercent,
+class _SourceStats extends StatelessWidget {
+  const _SourceStats({required this.source, required this.fileSizeBytes});
+
+  final Book source;
+  final int? fileSizeBytes;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _SourceStat(
+            icon: AppIcons.bookmark,
+            value: 'Saved',
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: _SourceStat(
+            icon: AppIcons.book,
+            value: _formatLength(source),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: _SourceStat(
+            icon: AppIcons.article,
+            value: _formatFileSize(fileSizeBytes),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SourceStat extends StatelessWidget {
+  const _SourceStat({
+    required this.icon,
+    required this.value,
   });
 
-  final double progress;
-  final int progressPercent;
+  final IconData icon;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final text = context.text;
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colors.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        color: colors.surfaceContainerHighest.withValues(
+          alpha: _statSurfaceAlpha,
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.md,
+        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Icon(icon, size: AppIconSize.sm, color: colors.primary),
+            const SizedBox(height: AppSpacing.xs),
             Text(
-              'Reading progress',
-              style: context.text.titleMedium.copyWith(color: colors.onSurface),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.full),
-              child: LinearProgressIndicator(
-                value: progress.clamp(0, 1),
-                minHeight: 8,
-                backgroundColor: colors.surface,
-                color: colors.primary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              progressPercent > 0
-                  ? '$progressPercent% complete'
-                  : 'Ready to start',
-              style: context.text.bodySmall.copyWith(
-                color: colors.onSurfaceVariant,
-              ),
+              value,
+              maxLines: _statValueMaxLines,
+              overflow: TextOverflow.ellipsis,
+              style: text.labelMedium.copyWith(color: colors.onSurface),
             ),
           ],
         ),
@@ -341,74 +388,48 @@ class _ProgressCard extends StatelessWidget {
   }
 }
 
-class _MetadataGrid extends StatelessWidget {
-  const _MetadataGrid({required this.source});
-
-  final Book source;
+class _ReviewActions extends StatelessWidget {
+  const _ReviewActions();
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: AppSpacing.md,
-      runSpacing: AppSpacing.md,
+    return Column(
       children: [
-        _MetadataTile(label: 'Format', value: _formatLabel(source.format)),
-        _MetadataTile(label: 'Added', value: _formatDate(source.addedAt)),
-        _MetadataTile(
-          label: 'Last opened',
-          value: source.lastOpenedAt != null
-              ? _formatDate(source.lastOpenedAt!)
-              : 'Never',
+        AppActionCard(
+          icon: AppIcons.highlight,
+          title: 'Highlights',
+          subtitle: 'Review saved passages from this source',
+          trailing: const _SoonBadge(),
         ),
-        _MetadataTile(
-          label: 'Status',
-          value: source.isFinished ? 'Finished' : 'In progress',
+        const SizedBox(height: AppSpacing.sm),
+        AppActionCard(
+          icon: AppIcons.flashcard,
+          title: 'Flashcards',
+          subtitle: 'Practice cards connected to this source',
+          trailing: const _SoonBadge(),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        AppActionCard(
+          icon: AppIcons.dictionary,
+          title: 'Dictionary',
+          subtitle: 'Review saved words from this source',
+          trailing: const _SoonBadge(),
         ),
       ],
     );
   }
 }
 
-class _MetadataTile extends StatelessWidget {
-  const _MetadataTile({required this.label, required this.value});
-
-  final String label;
-  final String value;
+class _SoonBadge extends StatelessWidget {
+  const _SoonBadge();
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-
-    return SizedBox(
-      width: 150,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colors.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: context.text.labelSmall.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                value,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: context.text.bodyMedium.copyWith(
-                  color: colors.onSurface,
-                ),
-              ),
-            ],
-          ),
-        ),
+    return Text(
+      'Soon',
+      style: context.text.labelSmall.copyWith(
+        color: colors.onSurfaceVariant,
       ),
     );
   }
@@ -428,8 +449,20 @@ String _readButtonLabel(Book source) =>
     ? 'Continue reading'
     : 'Start reading';
 
-String _formatDate(DateTime date) {
-  final month = date.month.toString().padLeft(2, '0');
-  final day = date.day.toString().padLeft(2, '0');
-  return '${date.year}.$month.$day';
+String _formatLength(Book source) {
+  if (source.totalLocations > 0) return '${source.totalLocations} locs';
+  return _formatLabel(source.format);
+}
+
+String _formatFileSize(int? bytes) {
+  if (bytes == null || bytes <= 0) return 'Unknown';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  var value = bytes.toDouble();
+  var unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  final precision = value >= 10 || unit == 0 ? 0 : 1;
+  return '${value.toStringAsFixed(precision)} ${units[unit]}';
 }

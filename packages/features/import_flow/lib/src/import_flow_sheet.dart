@@ -90,7 +90,7 @@ class _MenuView extends StatelessWidget {
         children: [
           const BottomSheetHeader(title: 'Add to Library'),
           const SizedBox(height: AppSpacing.lg),
-          _MenuOption(
+          AppActionCard(
             icon: AppIcons.uploadFile,
             title: 'Upload Book',
             subtitle: 'EPUB, FB2, MOBI, PDF, AZW3, CBZ',
@@ -102,85 +102,6 @@ class _MenuView extends StatelessWidget {
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Card-style menu button: rounded `surfaceContainerHighest @ 0.6`
-/// background, 40×40 primary-tinted icon disc on the left, two-line
-/// label on the right.
-class _MenuOption extends StatelessWidget {
-  const _MenuOption({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.colors;
-    final text = context.text;
-    final muted = cs.onSurface.withValues(alpha: 0.55);
-
-    return Material(
-      color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: Padding(
-          // Heavier vertical padding makes the menu state's Upload
-          // Book card tall enough that the Cancel button below it
-          // sits at the same y-position as the Done button in the
-          // book-imported state. Without this, the action button
-          // visibly shifts when the sheet transitions states.
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.lg,
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: cs.primary.withValues(alpha: 0.10),
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Icon(icon, size: 18, color: cs.primary),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      style: text.bodyMedium.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: cs.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: text.labelSmall.copyWith(color: muted),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
