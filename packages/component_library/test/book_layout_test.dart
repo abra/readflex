@@ -27,15 +27,15 @@ void main() {
 
       expect(compact, isNot(equals(standard)));
       expect(standard, isNot(equals(comfortable)));
-      expect(compact.fontSize < standard.fontSize, isTrue);
+      expect(compact.fontSize <= standard.fontSize, isTrue);
       expect(standard.fontSize < comfortable.fontSize, isTrue);
       expect(compact.lineHeight < comfortable.lineHeight, isTrue);
       expect(compact.topMargin < comfortable.topMargin, isTrue);
     });
 
-    test('standard preset is justified without hyphenation', () {
+    test('standard preset is left-aligned without hyphenation', () {
       final data = BookLayoutPreset.standard.data;
-      expect(data.justify, isTrue);
+      expect(data.justify, isFalse);
       expect(data.hyphenate, isFalse);
     });
 

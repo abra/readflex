@@ -13,21 +13,24 @@ class SourceDetailsScreen extends StatelessWidget {
     required this.sourceId,
     required this.bookRepository,
     required this.onReadPressed,
+    this.initialSource,
     super.key,
   });
 
   final String sourceId;
   final BookRepository bookRepository;
   final Future<void> Function(Book source) onReadPressed;
+  final Book? initialSource;
 
   @override
   Widget build(BuildContext context) {
     debugLogScreenBuild('SourceDetailsScreen(sourceId: $sourceId)');
 
     return BlocProvider(
-      create: (_) =>
-          SourceDetailsBloc(bookRepository: bookRepository)
-            ..add(SourceDetailsLoadRequested(sourceId)),
+      create: (_) => SourceDetailsBloc(
+        bookRepository: bookRepository,
+        initialSource: initialSource,
+      )..add(SourceDetailsLoadRequested(sourceId)),
       child: SourceDetailsView(
         sourceId: sourceId,
         onReadPressed: onReadPressed,
@@ -200,18 +203,10 @@ class _HeroSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                _formatLabel(source.format),
-                style: text.labelMedium.copyWith(
-                  color: colors.primary,
-                  letterSpacing: 0.4,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
                 source.title,
                 maxLines: 5,
                 overflow: TextOverflow.ellipsis,
-                style: text.headlineSmall.copyWith(color: colors.onSurface),
+                style: text.titleMedium.copyWith(color: colors.onSurface),
               ),
               if (source.author case final author? when author.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.sm),
@@ -281,9 +276,13 @@ class _SourceCover extends StatelessWidget {
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        child: cover,
+      child: Hero(
+        tag: sourceCoverHeroTag(source.id),
+        transitionOnUserGestures: true,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: cover,
+        ),
       ),
     );
   }

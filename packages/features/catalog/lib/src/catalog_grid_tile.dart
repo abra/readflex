@@ -30,21 +30,25 @@ class BookLibraryGridTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _GridTileShell(
-      cover: BookTileCover(
-        book: book,
-        // Show the title on the fallback cover art so any format
-        // that doesn't ship an embedded cover (a CBZ without a
-        // cover image, an EPUB stripped to text-only, etc.) stays
-        // identifiable by name. BookTileCover only honours this on
-        // the fallback path — when a real cover image is present,
-        // the image takes over and the title stays off.
-        showTitle: true,
-        showAuthor: false,
-        showProgress: false,
-        // Apple Books covers run edge-to-edge — no white matte frame
-        // around them. The matte fights with the binding strip the
-        // shell paints over the left edge, so we suppress it here.
-        showMatte: false,
+      cover: Hero(
+        tag: sourceCoverHeroTag(book.id),
+        transitionOnUserGestures: true,
+        child: BookTileCover(
+          book: book,
+          // Show the title on the fallback cover art so any format
+          // that doesn't ship an embedded cover (a CBZ without a
+          // cover image, an EPUB stripped to text-only, etc.) stays
+          // identifiable by name. BookTileCover only honours this on
+          // the fallback path — when a real cover image is present,
+          // the image takes over and the title stays off.
+          showTitle: true,
+          showAuthor: false,
+          showProgress: false,
+          // Apple Books covers run edge-to-edge — no white matte frame
+          // around them. The matte fights with the binding strip the
+          // shell paints over the left edge, so we suppress it here.
+          showMatte: false,
+        ),
       ),
       isFinished: book.isFinished,
       progress: book.readingProgress,

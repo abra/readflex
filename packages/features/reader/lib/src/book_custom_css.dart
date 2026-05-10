@@ -80,19 +80,25 @@ String buildBookCustomCSS({
     'font-size: 0.85em !important; font-weight: 600; }',
   );
   // Code block: smaller font + tighter line-height than prose (mono looks
-  // dense and refined that way), plus a contour bordered card. Custom
-  // webkit scrollbar so the horizontal-scroll affordance on long lines
-  // matches the theme instead of showing the platform default chrome.
+  // dense and refined that way), plus a contour bordered card. Springer
+  // EPUBs often encode listings as div.ProgramCode/div.FixedLine tables;
+  // table layout in paginated WebKit columns can paint long lines into
+  // the next page, so those publisher classes share this block treatment.
   buffer.writeln(
-    'pre { background: $panel !important; border: 1px solid $divider; '
+    'pre, .readflex-code-block, .ProgramCode, .ParaTypeProgramcode { '
+    'background: $panel !important; border: 1px solid $divider; '
     'padding: 0.85em 1em !important; border-radius: 6px; '
-    'box-sizing: border-box; max-width: 100%; overflow-x: auto; '
-    '-webkit-overflow-scrolling: touch; overscroll-behavior-inline: contain; '
-    'break-inside: avoid; text-indent: 0 !important; '
-    'text-align: start !important; white-space: pre-wrap !important; '
-    'overflow-wrap: normal !important; word-break: normal !important; '
+    'display: block !important; box-sizing: border-box; max-width: 100%; '
+    'overflow-x: hidden; overflow-y: visible; '
+    'break-inside: auto !important; text-indent: 0 !important; '
+    'text-align: start !important; '
+    'overflow-wrap: anywhere !important; word-break: break-word !important; '
     'font-family: ui-monospace, Menlo, monospace !important; '
     'font-size: 0.875em !important; line-height: 1.45 !important; }',
+  );
+  buffer.writeln(
+    'pre, .readflex-code-block, .ParaTypeProgramcode { white-space: pre-wrap !important; } '
+    '.ProgramCode { white-space: normal !important; }',
   );
   buffer.writeln(
     'pre::-webkit-scrollbar { height: 6px; } '
@@ -106,9 +112,32 @@ String buildBookCustomCSS({
     'pre code, pre kbd, pre samp { background: transparent !important; '
     'border: 0 !important; box-shadow: none !important; '
     'padding: 0 !important; font-size: inherit !important; '
-    'white-space: inherit !important; overflow-wrap: normal !important; '
-    'word-break: normal !important; min-width: auto !important; '
+    'white-space: inherit !important; overflow-wrap: inherit !important; '
+    'word-break: inherit !important; min-width: auto !important; '
     'max-width: none !important; }',
+  );
+  buffer.writeln(
+    '.readflex-code-block * { font-family: inherit !important; '
+    'font-size: inherit !important; line-height: inherit !important; }',
+  );
+  buffer.writeln(
+    '.readflex-code-block .LineGroup, .readflex-code-block .FixedLineContainer, '
+    '.ProgramCode .LineGroup, .ProgramCode .FixedLineContainer { '
+    'display: block !important; max-width: 100% !important; min-width: 0 !important; '
+    'margin: 0 !important; white-space: normal !important; '
+    'font-family: inherit !important; font-size: inherit !important; '
+    'line-height: inherit !important; }',
+  );
+  buffer.writeln(
+    '.readflex-code-block .FixedLine, .ProgramCode .FixedLine { display: block !important; '
+    'max-width: 100% !important; min-width: 0 !important; margin: 0 !important; '
+    'white-space: pre-wrap !important; overflow-wrap: anywhere !important; '
+    'word-break: break-word !important; font-family: inherit !important; '
+    'font-size: inherit !important; line-height: inherit !important; }',
+  );
+  buffer.writeln(
+    '.readflex-code-block .LineGroup + .LineGroup, '
+    '.ProgramCode .LineGroup + .LineGroup { margin-top: 0 !important; }',
   );
   // Wide tables: the JS reader wraps every table in this div on section load.
   // `overflow` on the table itself is unreliable in CSS table layout,

@@ -53,32 +53,45 @@ void main() {
       expect(css, contains('code {'));
       expect(css, contains('kbd {'));
       expect(css, contains('samp {'));
-      expect(css, contains('pre {'));
+      expect(
+        css,
+        contains(
+          'pre, .readflex-code-block, .ProgramCode, .ParaTypeProgramcode',
+        ),
+      );
       expect(css, contains('#f0e7d8'));
+      expect(css, contains('display: block !important'));
       expect(css, contains('white-space: pre-wrap !important'));
+      expect(css, contains('.readflex-code-block'));
+      expect(css, contains('.ProgramCode { white-space: normal !important; }'));
+      expect(css, contains('overflow-wrap: anywhere !important'));
+      expect(css, contains('word-break: break-word !important'));
       expect(css, contains('line-height: 1.45 !important'));
-      expect(css, contains('-webkit-overflow-scrolling: touch'));
-      expect(css, contains('overscroll-behavior-inline: contain'));
+      expect(css, contains('break-inside: auto !important'));
+      expect(css, contains('.readflex-code-block *'));
+      expect(css, contains('.ProgramCode .FixedLine'));
+      expect(css, contains('white-space: normal !important'));
+      expect(css, contains('font-size: inherit !important'));
+      expect(css, contains('margin: 0 !important'));
+      expect(css, contains('.readflex-code-block .LineGroup + .LineGroup'));
     });
 
-    test(
-      'emits safe word wrapping without forcing pre blocks to wrap tokens',
-      () {
-        final css = buildBookCustomCSS(
-          theme: lightTheme,
-          invertImagesInDark: true,
-        );
-        expect(css, contains('-webkit-text-size-adjust: 100% !important'));
-        expect(css, contains('body, p, li, blockquote, figcaption'));
-        expect(css, contains('white-space: normal !important'));
-        expect(css, contains('overflow-wrap: anywhere !important'));
-        expect(css, contains('word-break: break-word !important'));
-        expect(css, contains('min-width: 0 !important'));
-        expect(css, contains('a, code, kbd, samp, td, th'));
-        expect(css, contains('overflow-wrap: normal !important'));
-        expect(css, contains('white-space: inherit !important'));
-      },
-    );
+    test('emits safe word wrapping and wraps code blocks inside columns', () {
+      final css = buildBookCustomCSS(
+        theme: lightTheme,
+        invertImagesInDark: true,
+      );
+      expect(css, contains('-webkit-text-size-adjust: 100% !important'));
+      expect(css, contains('body, p, li, blockquote, figcaption'));
+      expect(css, contains('white-space: normal !important'));
+      expect(css, contains('overflow-wrap: anywhere !important'));
+      expect(css, contains('word-break: break-word !important'));
+      expect(css, contains('min-width: 0 !important'));
+      expect(css, contains('a, code, kbd, samp, td, th'));
+      expect(css, contains('white-space: inherit !important'));
+      expect(css, contains('overflow-wrap: inherit !important'));
+      expect(css, contains('word-break: inherit !important'));
+    });
 
     test('emits table and figure rules outside prose layout', () {
       final css = buildBookCustomCSS(
@@ -156,7 +169,7 @@ void main() {
         expect(css, contains('code {'));
         expect(css, contains('kbd {'));
         expect(css, contains('samp {'));
-        expect(css, contains('pre {'));
+        expect(css, contains('pre, .readflex-code-block'));
         expect(css, contains('h1 { font-size'));
       }
     });
@@ -181,13 +194,13 @@ void main() {
       },
     );
 
-    test('keeps word-break reset for pre descendants', () {
+    test('keeps code block wrapping for pre descendants', () {
       final css = buildBookCustomCSS(
         theme: lightTheme,
         invertImagesInDark: true,
       );
       expect(css, contains('pre code, pre kbd, pre samp'));
-      expect(css, contains('word-break: normal !important'));
+      expect(css, contains('word-break: inherit !important'));
     });
   });
 }

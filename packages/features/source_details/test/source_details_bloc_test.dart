@@ -35,6 +35,22 @@ void main() {
     );
 
     blocTest<SourceDetailsBloc, SourceDetailsState>(
+      'refreshes initial source without returning to loading',
+      setUp: () => repository.source = _source.copyWith(readingProgress: 0.4),
+      build: () => SourceDetailsBloc(
+        bookRepository: repository,
+        initialSource: _source,
+      ),
+      act: (bloc) => bloc.add(const SourceDetailsLoadRequested('source-1')),
+      expect: () => [
+        SourceDetailsState(
+          status: SourceDetailsStatus.success,
+          source: _source.copyWith(readingProgress: 0.4),
+        ),
+      ],
+    );
+
+    blocTest<SourceDetailsBloc, SourceDetailsState>(
       'emits notFound when source is missing',
       build: () => SourceDetailsBloc(bookRepository: repository),
       act: (bloc) => bloc.add(const SourceDetailsLoadRequested('missing')),

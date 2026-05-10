@@ -35,15 +35,19 @@ class BookLibraryListTile extends StatelessWidget {
 
     return _ListRowShell(
       cover: BookCoverPlate(
-        cover: BookTileCover(
-          book: book,
-          showAuthor: false,
-          showTitle: false,
-          showProgress: false,
-          // Suppress the matte so the plate's binding shade can sit
-          // at the actual cover edge — same Apple Books treatment as
-          // the grid tile.
-          showMatte: false,
+        cover: Hero(
+          tag: sourceCoverHeroTag(book.id),
+          transitionOnUserGestures: true,
+          child: BookTileCover(
+            book: book,
+            showAuthor: false,
+            showTitle: false,
+            showProgress: false,
+            // Suppress the matte so the plate's binding shade can sit
+            // at the actual cover edge — same Apple Books treatment as
+            // the grid tile.
+            showMatte: false,
+          ),
         ),
       ),
       title: book.title,

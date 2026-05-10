@@ -1,5 +1,6 @@
 import 'package:catalog/catalog.dart';
 import 'package:dictionary/dictionary.dart';
+import 'package:domain_models/domain_models.dart';
 import 'package:flashcard/flashcard.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -88,6 +89,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                   fsrsRepository: deps.fsrsRepository,
                   onBookPressed: (book) => context.push(
                     AppRoutes.sourceDetails(book.id),
+                    extra: book,
                   ),
                   onPracticePressed: () => context.go(
                     AppRoutes.practice,
@@ -105,6 +107,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                   preferencesService: deps.preferencesService,
                   onBookPressed: (book) => context.push(
                     AppRoutes.sourceDetails(book.id),
+                    extra: book,
                   ),
                   onAddPressed: () async {
                     await showImportFlowSheet(
@@ -175,8 +178,13 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
         path: AppRoutes.sourceDetailsPath,
         builder: (context, state) {
           final sourceId = state.pathParameters['sourceId']!;
+          final extraSource = state.extra is Book ? state.extra! as Book : null;
+          final initialSource = extraSource?.id == sourceId
+              ? extraSource
+              : null;
           return SourceDetailsScreen(
             sourceId: sourceId,
+            initialSource: initialSource,
             bookRepository: deps.bookRepository,
             onReadPressed: (source) async {
               await context.push(AppRoutes.reader(source.id));

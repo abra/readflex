@@ -7,9 +7,18 @@ part 'source_details_event.dart';
 part 'source_details_state.dart';
 
 class SourceDetailsBloc extends Bloc<SourceDetailsEvent, SourceDetailsState> {
-  SourceDetailsBloc({required BookRepository bookRepository})
-    : _bookRepository = bookRepository,
-      super(const SourceDetailsState()) {
+  SourceDetailsBloc({
+    required BookRepository bookRepository,
+    Book? initialSource,
+  }) : _bookRepository = bookRepository,
+       super(
+         initialSource == null
+             ? const SourceDetailsState()
+             : SourceDetailsState(
+                 status: SourceDetailsStatus.success,
+                 source: initialSource,
+               ),
+       ) {
     on<SourceDetailsLoadRequested>(_onLoadRequested);
   }
 
@@ -19,7 +28,9 @@ class SourceDetailsBloc extends Bloc<SourceDetailsEvent, SourceDetailsState> {
     SourceDetailsLoadRequested event,
     Emitter<SourceDetailsState> emit,
   ) async {
-    emit(state.copyWith(status: SourceDetailsStatus.loading));
+    if (state.source?.id != event.sourceId) {
+      emit(state.copyWith(status: SourceDetailsStatus.loading));
+    }
     try {
       final source = await _bookRepository.getBookById(event.sourceId);
       if (source == null) {

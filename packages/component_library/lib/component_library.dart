@@ -20,6 +20,7 @@ export 'src/selection_preview_card.dart';
 export 'src/settings_group.dart';
 export 'src/settings_row.dart';
 export 'src/show_app_bottom_sheet.dart';
+export 'src/source_cover_hero.dart';
 export 'src/stat_card.dart';
 // Theme
 export 'src/theme/app_text_theme.dart';
