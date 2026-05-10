@@ -393,44 +393,29 @@ class _ReviewActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
       children: [
-        AppActionCard(
-          icon: AppIcons.highlight,
-          title: 'Highlights',
-          subtitle: 'Review saved passages from this source',
-          trailing: const _SoonBadge(),
+        Expanded(
+          child: AppActionTile(
+            icon: AppIcons.highlight,
+            title: 'Highlights',
+          ),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        AppActionCard(
-          icon: AppIcons.flashcard,
-          title: 'Flashcards',
-          subtitle: 'Practice cards connected to this source',
-          trailing: const _SoonBadge(),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: AppActionTile(
+            icon: AppIcons.flashcard,
+            title: 'Flashcards',
+          ),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        AppActionCard(
-          icon: AppIcons.dictionary,
-          title: 'Dictionary',
-          subtitle: 'Review saved words from this source',
-          trailing: const _SoonBadge(),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: AppActionTile(
+            icon: AppIcons.dictionary,
+            title: 'Dictionary',
+          ),
         ),
       ],
-    );
-  }
-}
-
-class _SoonBadge extends StatelessWidget {
-  const _SoonBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Text(
-      'Soon',
-      style: context.text.labelSmall.copyWith(
-        color: colors.onSurfaceVariant,
-      ),
     );
   }
 }
