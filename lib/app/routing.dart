@@ -178,10 +178,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
         path: AppRoutes.sourceDetailsPath,
         builder: (context, state) {
           final sourceId = state.pathParameters['sourceId']!;
-          final extraSource = state.extra is Book ? state.extra! as Book : null;
-          final initialSource = extraSource?.id == sourceId
-              ? extraSource
-              : null;
+          final initialSource = _initialSourceFromRoute(state);
           return SourceDetailsScreen(
             sourceId: sourceId,
             initialSource: initialSource,
@@ -201,10 +198,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
         // pop the reader instead of turning the page.
         pageBuilder: (context, state) {
           final sourceId = state.pathParameters['sourceId']!;
-          final extraSource = state.extra is Book ? state.extra! as Book : null;
-          final initialSource = extraSource?.id == sourceId
-              ? extraSource
-              : null;
+          final initialSource = _initialSourceFromRoute(state);
           return MaterialPage(
             key: state.pageKey,
             fullscreenDialog: true,
@@ -306,6 +300,15 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
       ),
     ],
   );
+}
+
+Book? _initialSourceFromRoute(GoRouterState state) {
+  final sourceId = state.pathParameters['sourceId'];
+  final extra = state.extra;
+  if (sourceId == null || extra is! Book || extra.id != sourceId) {
+    return null;
+  }
+  return extra;
 }
 
 Future<String> _resolveEntryRoute(DependenciesContainer deps) async {
