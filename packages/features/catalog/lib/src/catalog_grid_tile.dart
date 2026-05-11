@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +30,11 @@ class BookLibraryGridTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final coverImage = switch (book.coverImagePath) {
+      final path? when path.isNotEmpty => FileImage(File(path)),
+      _ => null,
+    };
+
     return _GridTileShell(
       cover: Hero(
         tag: sourceCoverHeroTag(book.id),
@@ -36,7 +43,7 @@ class BookLibraryGridTile extends StatelessWidget {
           title: book.title,
           author: book.author,
           seed: book.id,
-          coverImagePath: book.coverImagePath,
+          coverImage: coverImage,
           progress: book.readingProgress > 0 ? book.readingProgress : null,
           // Show the title on the fallback cover art so any format
           // that doesn't ship an embedded cover (a CBZ without a

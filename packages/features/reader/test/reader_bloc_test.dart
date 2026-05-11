@@ -40,6 +40,12 @@ void main() {
     highlightRepository: highlightRepository,
   );
 
+  ReaderBloc buildBlocWithInitialSource(Book source) => ReaderBloc(
+    bookRepository: bookRepository,
+    highlightRepository: highlightRepository,
+    initialSource: source,
+  );
+
   group('ReaderBloc', () {
     blocTest<ReaderBloc, ReaderState>(
       'initial state has initial status',
@@ -48,6 +54,16 @@ void main() {
         expect(bloc.state.status, ReaderStatus.initial);
         expect(bloc.state.title, '');
         expect(bloc.state.book, isNull);
+      },
+    );
+
+    blocTest<ReaderBloc, ReaderState>(
+      'initial source starts ready before repository refresh',
+      build: () => buildBlocWithInitialSource(testBook),
+      verify: (bloc) {
+        expect(bloc.state.status, ReaderStatus.ready);
+        expect(bloc.state.title, testBook.title);
+        expect(bloc.state.book, testBook);
       },
     );
 
@@ -67,6 +83,28 @@ void main() {
               .having((s) => s.status, 'status', ReaderStatus.ready)
               .having((s) => s.title, 'title', 'Test Book')
               .having((s) => s.book, 'book', isNotNull)
+              .having((s) => s.highlights, 'highlights', hasLength(1)),
+        ],
+        verify: (_) {
+          expect(bookRepository.updatedBook, isNotNull);
+          expect(bookRepository.updatedBook!.lastOpenedAt, isNotNull);
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'refreshes initial source without returning to loading',
+        setUp: () {
+          bookRepository.seedBook(testBook.copyWith(readingProgress: 0.4));
+          highlightRepository.seedHighlights('book-1', [testHighlight]);
+        },
+        build: () => buildBlocWithInitialSource(testBook),
+        act: (bloc) =>
+            bloc.add(const ReaderSourceLoadRequested(sourceId: 'book-1')),
+        expect: () => [
+          isA<ReaderState>()
+              .having((s) => s.status, 'status', ReaderStatus.ready)
+              .having((s) => s.book?.readingProgress, 'readingProgress', 0.4)
+              .having((s) => s.book?.lastOpenedAt, 'lastOpenedAt', isNotNull)
               .having((s) => s.highlights, 'highlights', hasLength(1)),
         ],
         verify: (_) {

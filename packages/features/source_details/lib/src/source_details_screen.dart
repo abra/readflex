@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:book_repository/book_repository.dart';
@@ -281,6 +282,11 @@ class _SourceCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final coverImage = switch (source.coverImagePath) {
+      final path? when path.isNotEmpty => FileImage(File(path)),
+      _ => null,
+    };
+
     return DecoratedBox(
       decoration: const BoxDecoration(boxShadow: _coverShadow),
       child: Hero(
@@ -293,7 +299,7 @@ class _SourceCover extends StatelessWidget {
             title: source.title,
             author: source.author,
             seed: source.id,
-            coverImagePath: source.coverImagePath,
+            coverImage: coverImage,
             progress: source.readingProgress > 0
                 ? source.readingProgress
                 : null,

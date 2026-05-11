@@ -85,6 +85,7 @@ class ReaderScreen extends StatelessWidget {
     required this.bookRepository,
     required this.highlightRepository,
     required this.textActions,
+    this.initialSource,
     this.onCheckDueItems,
     this.onStartMiniReview,
     super.key,
@@ -95,6 +96,7 @@ class ReaderScreen extends StatelessWidget {
   final BookRepository bookRepository;
   final HighlightRepository highlightRepository;
   final List<TextAction> textActions;
+  final Book? initialSource;
   final Future<int> Function(String sourceId)? onCheckDueItems;
   final void Function(BuildContext context, String sourceId)? onStartMiniReview;
 
@@ -111,6 +113,9 @@ class ReaderScreen extends StatelessWidget {
             create: (_) => ReaderBloc(
               bookRepository: bookRepository,
               highlightRepository: highlightRepository,
+              initialSource: initialSource?.id == sourceId
+                  ? initialSource
+                  : null,
             )..add(ReaderSourceLoadRequested(sourceId: sourceId)),
           ),
           BlocProvider(create: (_) => ReaderChromeCubit()),

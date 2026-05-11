@@ -187,7 +187,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
             initialSource: initialSource,
             bookRepository: deps.bookRepository,
             onReadPressed: (source) async {
-              await context.push(AppRoutes.reader(source.id));
+              await context.push(AppRoutes.reader(source.id), extra: source);
             },
           );
         },
@@ -201,11 +201,16 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
         // pop the reader instead of turning the page.
         pageBuilder: (context, state) {
           final sourceId = state.pathParameters['sourceId']!;
+          final extraSource = state.extra is Book ? state.extra! as Book : null;
+          final initialSource = extraSource?.id == sourceId
+              ? extraSource
+              : null;
           return MaterialPage(
             key: state.pageKey,
             fullscreenDialog: true,
             child: ReaderScreen(
               sourceId: sourceId,
+              initialSource: initialSource,
               serverPort: deps.readerServer.port,
               bookRepository: deps.bookRepository,
               highlightRepository: deps.highlightRepository,

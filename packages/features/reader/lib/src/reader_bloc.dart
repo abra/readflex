@@ -25,9 +25,18 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   ReaderBloc({
     required BookRepository bookRepository,
     required HighlightRepository highlightRepository,
+    Book? initialSource,
   }) : _bookRepository = bookRepository,
        _highlightRepository = highlightRepository,
-       super(const ReaderState()) {
+       super(
+         initialSource == null
+             ? const ReaderState()
+             : ReaderState(
+                 status: ReaderStatus.ready,
+                 title: initialSource.title,
+                 book: initialSource,
+               ),
+       ) {
     on<ReaderSourceLoadRequested>(_onSourceLoadRequested);
     on<ReaderBookPositionUpdated>(_onBookPositionUpdated);
     on<ReaderHighlightsRefreshed>(_onHighlightsRefreshed);
@@ -68,7 +77,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     ReaderSourceLoadRequested event,
     Emitter<ReaderState> emit,
   ) async {
-    emit(state.copyWith(status: ReaderStatus.loading));
+    final hasInitialSource = state.book?.id == event.sourceId;
+    if (!hasInitialSource) {
+      emit(state.copyWith(status: ReaderStatus.loading));
+    }
 
     try {
       final (book, highlights) = await (
@@ -100,7 +112,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       emit(state.copyWith(status: ReaderStatus.failure));
     } catch (e, st) {
       addError(e, st);
-      emit(state.copyWith(status: ReaderStatus.failure));
+      if (!hasInitialSource) {
+        emit(state.copyWith(status: ReaderStatus.failure));
+      }
     }
   }
 

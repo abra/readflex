@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import 'app_cover_art.dart';
@@ -11,7 +9,7 @@ class AppSourceCover extends StatelessWidget {
     required this.title,
     required this.seed,
     this.author,
-    this.coverImagePath,
+    this.coverImage,
     this.progress,
     this.showAuthor = true,
     this.showTitle = true,
@@ -24,7 +22,7 @@ class AppSourceCover extends StatelessWidget {
   final String title;
   final String seed;
   final String? author;
-  final String? coverImagePath;
+  final ImageProvider? coverImage;
   final double? progress;
   final bool showAuthor;
   final bool showTitle;
@@ -48,11 +46,11 @@ class AppSourceCover extends StatelessWidget {
           width: constraints.maxWidth,
         );
 
-        if (coverImagePath case final path? when path.isNotEmpty) {
+        if (coverImage case final imageProvider?) {
           final image = ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.sm),
-            child: Image.file(
-              File(path),
+            child: Image(
+              image: imageProvider,
               fit: fit,
               width: constraints.maxWidth,
               height: constraints.maxHeight,

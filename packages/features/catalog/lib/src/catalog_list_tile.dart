@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
@@ -31,6 +33,10 @@ class BookLibraryListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = (book.readingProgress * 100).round();
+    final coverImage = switch (book.coverImagePath) {
+      final path? when path.isNotEmpty => FileImage(File(path)),
+      _ => null,
+    };
 
     return _ListRowShell(
       cover: BookCoverPlate(
@@ -41,7 +47,7 @@ class BookLibraryListTile extends StatelessWidget {
             title: book.title,
             author: book.author,
             seed: book.id,
-            coverImagePath: book.coverImagePath,
+            coverImage: coverImage,
             progress: book.readingProgress > 0 ? book.readingProgress : null,
             showAuthor: false,
             showTitle: false,
