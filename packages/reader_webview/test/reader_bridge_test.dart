@@ -89,6 +89,72 @@ void main() {
     });
   });
 
+  group('ReaderTocItem', () {
+    test('fromMap parses foliate toc item', () {
+      final item = ReaderTocItem.fromMap({
+        'label': 'Chapter 7',
+        'href': 'chapter_07.xhtml',
+        'id': 12,
+        'level': 2,
+        'startPercentage': 0.42,
+        'startPage': 128,
+      });
+
+      expect(item.label, 'Chapter 7');
+      expect(item.href, 'chapter_07.xhtml');
+      expect(item.id, '12');
+      expect(item.level, 2);
+      expect(item.startPercentage, 0.42);
+      expect(item.startPage, 128);
+    });
+
+    test('fromMap tolerates missing optional fields', () {
+      final item = ReaderTocItem.fromMap({
+        'label': 'Cover',
+        'href': 'cover.xhtml',
+      });
+
+      expect(item.label, 'Cover');
+      expect(item.href, 'cover.xhtml');
+      expect(item.id, isNull);
+      expect(item.level, 1);
+      expect(item.startPercentage, isNull);
+      expect(item.startPage, isNull);
+    });
+  });
+
+  group('ReaderSearchResult', () {
+    test('fromMap parses foliate search result', () {
+      final result = ReaderSearchResult.fromMap({
+        'cfi': 'epubcfi(/6/34!/4/2)',
+        'chapterTitle': 'Chapter 9',
+        'excerpt': {
+          'pre': 'before ',
+          'match': 'needle',
+          'post': ' after',
+        },
+      });
+
+      expect(result.cfi, 'epubcfi(/6/34!/4/2)');
+      expect(result.chapterTitle, 'Chapter 9');
+      expect(result.excerpt.pre, 'before ');
+      expect(result.excerpt.match, 'needle');
+      expect(result.excerpt.post, ' after');
+    });
+
+    test('fromMap tolerates missing optional fields', () {
+      final result = ReaderSearchResult.fromMap({
+        'cfi': 'epubcfi(/6/34)',
+      });
+
+      expect(result.cfi, 'epubcfi(/6/34)');
+      expect(result.chapterTitle, isNull);
+      expect(result.excerpt.pre, '');
+      expect(result.excerpt.match, '');
+      expect(result.excerpt.post, '');
+    });
+  });
+
   group('ReaderSelection', () {
     test('fromMap parses scroll-offset-only selection', () {
       // Legacy article selections (pre-EPUB migration) carried only a

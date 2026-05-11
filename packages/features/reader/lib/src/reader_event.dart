@@ -77,3 +77,13 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
 final class ReaderHighlightsRefreshed extends ReaderEvent {
   const ReaderHighlightsRefreshed();
 }
+
+/// foliate-js parsed the book table of contents.
+final class ReaderTocUpdated extends ReaderEvent {
+  const ReaderTocUpdated({required this.items});
+
+  final List<ReaderTocItem> items;
+
+  @override
+  List<Object?> get props => [items];
+}

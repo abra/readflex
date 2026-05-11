@@ -50,9 +50,10 @@ final class ReaderInitialLocation {
 ///
 /// Communication:
 ///   JS → Flutter: `onReady`, `onRelocated`, `onSelectionEnd`,
-///                  `onSelectionCleared`, `onAnnotationClick`
-///   Flutter → JS: `goToCfi`, `nextPage`, `prevPage`, `changeStyle`,
-///                  `addAnnotation`, `removeAnnotation`
+///                  `onSelectionCleared`, `onAnnotationClick`, `onSetToc`
+///   Flutter → JS: `goToCfi`, `goToHref`, `searchBook`, `clearSearch`,
+///                  `nextPage`, `prevPage`, `changeStyle`, `addAnnotation`,
+///                  `removeAnnotation`
 class BookReaderWebView extends StatefulWidget {
   const BookReaderWebView({
     required this.serverPort,
@@ -66,6 +67,7 @@ class BookReaderWebView extends StatefulWidget {
     this.onTextSelected,
     this.onTextDeselected,
     this.onHighlightTapped,
+    this.onTocChanged,
     this.onTapped,
     super.key,
   });
@@ -103,6 +105,9 @@ class BookReaderWebView extends StatefulWidget {
 
   /// Fires when the user taps an existing highlight annotation.
   final void Function(String highlightId)? onHighlightTapped;
+
+  /// Fires when foliate-js has parsed the book's table of contents.
+  final void Function(List<ReaderTocItem> items)? onTocChanged;
 
   /// Fires when the user taps empty reader space (no selection, no link).
   /// Coordinates are normalized to [0, 1] over the viewport.
@@ -341,6 +346,20 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       },
     );
 
+    controller.addJavaScriptHandler(
+      handlerName: 'onSetToc',
+      callback: (args) {
+        if (args.isEmpty) return;
+        final rawItems = args.first as List<dynamic>? ?? const [];
+        final items = [
+          for (final raw in rawItems)
+            if (raw is Map)
+              ReaderTocItem.fromMap(Map<String, dynamic>.from(raw)),
+        ];
+        widget.onTocChanged?.call(items);
+      },
+    );
+
     registerSharedReaderHandlers(
       controller,
       onTextSelected: widget.onTextSelected,
@@ -359,6 +378,43 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   void goToCfi(String cfi) {
     final escaped = jsonEncode(cfi);
     _controller?.evaluateJavascript(source: 'goToCfi($escaped);');
+  }
+
+  /// Navigate to a TOC/book href target.
+  void goToHref(String href) {
+    final escaped = jsonEncode(href);
+    _controller?.evaluateJavascript(source: 'goToHref($escaped);');
+  }
+
+  /// Search the whole book and keep foliate-js search highlights active.
+  Future<List<ReaderSearchResult>> searchBook(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      clearSearch();
+      return const [];
+    }
+
+    final result = await _controller?.callAsyncJavaScript(
+      functionBody: 'return await searchBook(query);',
+      arguments: {'query': trimmed},
+    );
+    final error = result?.error;
+    if (error != null && error.isNotEmpty) {
+      throw StateError('Book search failed: $error');
+    }
+    final value = result?.value;
+    if (value is! List) return const [];
+
+    return [
+      for (final item in value)
+        if (item is Map)
+          ReaderSearchResult.fromMap(Map<String, dynamic>.from(item)),
+    ];
+  }
+
+  /// Clear active search annotations inside foliate-js.
+  void clearSearch() {
+    _controller?.evaluateJavascript(source: 'clearSearch();');
   }
 
   /// Navigate to a fraction `[0, 1]` of the whole book. Used by the

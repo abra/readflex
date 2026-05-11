@@ -5,6 +5,7 @@ import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:highlight_repository/highlight_repository.dart';
+import 'package:reader_webview/reader_webview.dart';
 
 part 'reader_event.dart';
 part 'reader_state.dart';
@@ -40,6 +41,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     on<ReaderSourceLoadRequested>(_onSourceLoadRequested);
     on<ReaderBookPositionUpdated>(_onBookPositionUpdated);
     on<ReaderHighlightsRefreshed>(_onHighlightsRefreshed);
+    on<ReaderTocUpdated>(_onTocUpdated);
   }
 
   final BookRepository _bookRepository;
@@ -199,5 +201,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     } catch (e, st) {
       addError(e, st);
     }
+  }
+
+  void _onTocUpdated(ReaderTocUpdated event, Emitter<ReaderState> emit) {
+    emit(state.copyWith(tocItems: event.items));
   }
 }

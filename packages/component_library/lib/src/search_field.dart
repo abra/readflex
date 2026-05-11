@@ -14,12 +14,14 @@ class SearchField extends StatelessWidget {
   const SearchField({
     required this.hintText,
     this.controller,
+    this.focusNode,
     this.onChanged,
     super.key,
   });
 
   final String hintText;
   final TextEditingController? controller;
+  final FocusNode? focusNode;
   final ValueChanged<String>? onChanged;
 
   @override
@@ -28,6 +30,7 @@ class SearchField extends StatelessWidget {
 
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       onChanged: onChanged,
       style: context.text.bodyMedium.copyWith(color: colors.onSurface),
       decoration: InputDecoration(

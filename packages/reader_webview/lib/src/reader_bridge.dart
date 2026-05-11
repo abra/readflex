@@ -71,6 +71,88 @@ class BookPosition {
   }
 }
 
+/// Table-of-contents item emitted by foliate-js.
+///
+/// [href] is the navigation target accepted by `goToHref(...)`; [level]
+/// preserves nesting depth so Flutter can render chapter hierarchy without
+/// walking a recursive tree.
+class ReaderTocItem {
+  const ReaderTocItem({
+    required this.label,
+    required this.href,
+    required this.level,
+    this.id,
+    this.startPercentage,
+    this.startPage,
+  });
+
+  final String label;
+  final String href;
+  final String? id;
+  final int level;
+  final double? startPercentage;
+  final int? startPage;
+
+  factory ReaderTocItem.fromMap(Map<String, dynamic> map) {
+    return ReaderTocItem(
+      label: map['label'] as String? ?? '',
+      href: map['href'] as String? ?? '',
+      id: map['id']?.toString(),
+      level: (map['level'] as num?)?.toInt() ?? 1,
+      startPercentage: (map['startPercentage'] as num?)?.toDouble(),
+      startPage: (map['startPage'] as num?)?.toInt(),
+    );
+  }
+}
+
+/// Search result emitted by foliate-js.
+///
+/// [cfi] is the exact target accepted by `goToCfi(...)`; [chapterTitle]
+/// is best-effort context from the TOC progress map.
+class ReaderSearchResult {
+  const ReaderSearchResult({
+    required this.cfi,
+    required this.excerpt,
+    this.chapterTitle,
+  });
+
+  final String cfi;
+  final ReaderSearchExcerpt excerpt;
+  final String? chapterTitle;
+
+  factory ReaderSearchResult.fromMap(Map<String, dynamic> map) {
+    return ReaderSearchResult(
+      cfi: map['cfi'] as String? ?? '',
+      excerpt: ReaderSearchExcerpt.fromMap(
+        Map<String, dynamic>.from(map['excerpt'] as Map? ?? const {}),
+      ),
+      chapterTitle: map['chapterTitle'] as String?,
+    );
+  }
+}
+
+/// Split text around a search match. foliate-js returns excerpts this way so
+/// Flutter can emphasize only the matched fragment.
+class ReaderSearchExcerpt {
+  const ReaderSearchExcerpt({
+    this.pre = '',
+    this.match = '',
+    this.post = '',
+  });
+
+  final String pre;
+  final String match;
+  final String post;
+
+  factory ReaderSearchExcerpt.fromMap(Map<String, dynamic> map) {
+    return ReaderSearchExcerpt(
+      pre: map['pre'] as String? ?? '',
+      match: map['match'] as String? ?? '',
+      post: map['post'] as String? ?? '',
+    );
+  }
+}
+
 /// User text selection surfaced from the reader WebView. The CFI range is
 /// the anchor used to restore highlights later. [scrollOffset] is
 /// vestigial from the removed article reader.

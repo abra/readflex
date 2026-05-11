@@ -276,9 +276,54 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   /// book open, so it's always fresh.
   final GlobalKey<BookReaderWebViewState> _webViewKey =
       GlobalKey<BookReaderWebViewState>();
+  bool _tocDrawerVisible = false;
+  bool _searchDrawerVisible = false;
 
   void _seekFraction(double fraction) {
     _webViewKey.currentState?.goToFraction(fraction);
+  }
+
+  void _openTocDrawer() {
+    if (_tocDrawerVisible) return;
+    setState(() {
+      _tocDrawerVisible = true;
+      _searchDrawerVisible = false;
+    });
+  }
+
+  void _closeTocDrawer() {
+    if (!_tocDrawerVisible) return;
+    setState(() => _tocDrawerVisible = false);
+  }
+
+  void _openSearchDrawer() {
+    if (_searchDrawerVisible) return;
+    setState(() {
+      _searchDrawerVisible = true;
+      _tocDrawerVisible = false;
+    });
+  }
+
+  void _closeSearchDrawer() {
+    if (!_searchDrawerVisible) return;
+    _webViewKey.currentState?.clearSearch();
+    setState(() => _searchDrawerVisible = false);
+  }
+
+  void _goToTocItem(ReaderTocItem item) {
+    if (item.href.isEmpty) return;
+    _webViewKey.currentState?.goToHref(item.href);
+    _closeTocDrawer();
+  }
+
+  void _goToSearchResult(ReaderSearchResult result) {
+    if (result.cfi.isEmpty) return;
+    _webViewKey.currentState?.goToCfi(result.cfi);
+    _closeSearchDrawer();
+  }
+
+  Future<List<ReaderSearchResult>> _searchBook(String query) async {
+    return _webViewKey.currentState?.searchBook(query) ?? const [];
   }
 
   @override
@@ -304,10 +349,25 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
             webViewKey: _webViewKey,
           ),
         ),
-        _ReaderBottomChromeDriver(onSeekFraction: _seekFraction),
+        _ReaderBottomChromeDriver(
+          onTocPressed: _openTocDrawer,
+          onSearchPressed: _openSearchDrawer,
+          onSeekFraction: _seekFraction,
+        ),
         const _ComicProgressOverlayDriver(),
         _ContextPanelDriver(textActions: widget.textActions),
         const _ReviewReminderDriver(),
+        _ReaderTocDrawerDriver(
+          visible: _tocDrawerVisible,
+          onClose: _closeTocDrawer,
+          onItemSelected: _goToTocItem,
+        ),
+        _ReaderSearchDrawer(
+          visible: _searchDrawerVisible,
+          onClose: _closeSearchDrawer,
+          onSearch: _searchBook,
+          onResultSelected: _goToSearchResult,
+        ),
       ],
     );
   }
@@ -316,7 +376,14 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
 /// Combines chrome visibility from [ReaderChromeCubit], selection state from
 /// [ReaderSelectionCubit], and reading progress from [ReaderBloc].
 class _ReaderBottomChromeDriver extends StatelessWidget {
-  const _ReaderBottomChromeDriver({required this.onSeekFraction});
+  const _ReaderBottomChromeDriver({
+    required this.onTocPressed,
+    required this.onSearchPressed,
+    required this.onSeekFraction,
+  });
+
+  final VoidCallback onTocPressed;
+  final VoidCallback onSearchPressed;
 
   /// Forwarded to the slider's drag-end handler. Skips the bloc entirely —
   /// the WebView's `goToFraction` triggers `onRelocated` once the new page
@@ -373,10 +440,10 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
       dividerColor: colors.outlineVariant,
       foregroundColor: colors.onSurface,
       onBack: () => Navigator.of(context).maybePop(),
-      onTocPressed: null,
+      onTocPressed: onTocPressed,
       onFontPressed: null,
       onBookmarkPressed: null,
-      onSearchPressed: null,
+      onSearchPressed: onSearchPressed,
       onSeekFraction: onSeekFraction,
     );
   }
@@ -683,6 +750,671 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReaderTocDrawerDriver extends StatelessWidget {
+  const _ReaderTocDrawerDriver({
+    required this.visible,
+    required this.onClose,
+    required this.onItemSelected,
+  });
+
+  final bool visible;
+  final VoidCallback onClose;
+  final ValueChanged<ReaderTocItem> onItemSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final tocItems = context.select<ReaderBloc, List<ReaderTocItem>>(
+      (b) => b.state.tocItems,
+    );
+    final colors = context.colors;
+
+    return _ReaderTocDrawer(
+      visible: visible,
+      tocItems: tocItems,
+      panelColor: colors.surface,
+      dividerColor: colors.outlineVariant,
+      onClose: onClose,
+      onItemSelected: onItemSelected,
+    );
+  }
+}
+
+class _ReaderTocDrawer extends StatelessWidget {
+  const _ReaderTocDrawer({
+    required this.visible,
+    required this.tocItems,
+    required this.panelColor,
+    required this.dividerColor,
+    required this.onClose,
+    required this.onItemSelected,
+  });
+
+  final bool visible;
+  final List<ReaderTocItem> tocItems;
+  final Color panelColor;
+  final Color dividerColor;
+  final VoidCallback onClose;
+  final ValueChanged<ReaderTocItem> onItemSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final drawerWidth = MediaQuery.sizeOf(context).width < 420
+        ? MediaQuery.sizeOf(context).width * 0.86
+        : 360.0;
+
+    return Positioned.fill(
+      child: IgnorePointer(
+        ignoring: !visible,
+        child: Stack(
+          children: [
+            AnimatedOpacity(
+              opacity: visible ? 1 : 0,
+              duration: _kChromeAnimDuration,
+              curve: _kChromeAnimCurve,
+              child: GestureDetector(
+                onTap: onClose,
+                behavior: HitTestBehavior.opaque,
+                child: ColoredBox(
+                  color: Colors.black.withValues(alpha: 0.28),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+            ),
+            AnimatedSlide(
+              offset: visible ? Offset.zero : const Offset(-1, 0),
+              duration: _kChromeAnimDuration,
+              curve: _kChromeAnimCurve,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: SizedBox(
+                  width: drawerWidth,
+                  child: Material(
+                    color: panelColor,
+                    elevation: 0,
+                    child: SafeArea(
+                      right: false,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            right: BorderSide(color: dividerColor),
+                          ),
+                        ),
+                        child: _ReaderTocDrawerContent(
+                          tocItems: tocItems,
+                          onClose: onClose,
+                          onItemSelected: onItemSelected,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReaderTocDrawerContent extends StatefulWidget {
+  const _ReaderTocDrawerContent({
+    required this.tocItems,
+    required this.onClose,
+    required this.onItemSelected,
+  });
+
+  final List<ReaderTocItem> tocItems;
+  final VoidCallback onClose;
+  final ValueChanged<ReaderTocItem> onItemSelected;
+
+  @override
+  State<_ReaderTocDrawerContent> createState() =>
+      _ReaderTocDrawerContentState();
+}
+
+class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
+  final _chaptersSearchController = TextEditingController();
+  final _bookmarksSearchController = TextEditingController();
+  String _chaptersQuery = '';
+  String _bookmarksQuery = '';
+
+  @override
+  void dispose() {
+    _chaptersSearchController.dispose();
+    _bookmarksSearchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.xs,
+              AppSpacing.xs,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Contents',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.text.titleLarge.copyWith(
+                      color: colors.onSurface,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(AppIcons.close, size: AppIconSize.md),
+                  tooltip: 'Close',
+                  onPressed: widget.onClose,
+                ),
+              ],
+            ),
+          ),
+          TabBar(
+            tabs: const [
+              Tab(text: 'Chapters'),
+              Tab(text: 'Bookmarks'),
+            ],
+            labelColor: colors.onSurface,
+            unselectedLabelColor: colors.onSurfaceVariant,
+            indicatorColor: colors.primary,
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _ReaderTocTab(
+                  controller: _chaptersSearchController,
+                  query: _chaptersQuery,
+                  hintText: 'Search chapters',
+                  items: widget.tocItems,
+                  onQueryChanged: (value) {
+                    setState(() => _chaptersQuery = value);
+                  },
+                  onItemSelected: widget.onItemSelected,
+                ),
+                _ReaderBookmarksTab(
+                  controller: _bookmarksSearchController,
+                  query: _bookmarksQuery,
+                  onQueryChanged: (value) {
+                    setState(() => _bookmarksQuery = value);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReaderTocTab extends StatelessWidget {
+  const _ReaderTocTab({
+    required this.controller,
+    required this.query,
+    required this.hintText,
+    required this.items,
+    required this.onQueryChanged,
+    required this.onItemSelected,
+  });
+
+  final TextEditingController controller;
+  final String query;
+  final String hintText;
+  final List<ReaderTocItem> items;
+  final ValueChanged<String> onQueryChanged;
+  final ValueChanged<ReaderTocItem> onItemSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final normalizedQuery = query.trim().toLowerCase();
+    final filteredItems = normalizedQuery.isEmpty
+        ? items
+        : [
+            for (final item in items)
+              if (item.label.toLowerCase().contains(normalizedQuery)) item,
+          ];
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: SearchField(
+            controller: controller,
+            hintText: hintText,
+            onChanged: onQueryChanged,
+          ),
+        ),
+        Expanded(
+          child: filteredItems.isEmpty
+              ? _ReaderDrawerEmptyState(
+                  message: items.isEmpty
+                      ? 'No chapters found'
+                      : 'No matching chapters',
+                )
+              : ScrollEdgeFadeStack(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                    itemCount: filteredItems.length,
+                    itemBuilder: (context, index) {
+                      final item = filteredItems[index];
+                      return _ReaderTocListTile(
+                        item: item,
+                        onTap: () => onItemSelected(item),
+                      );
+                    },
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReaderTocListTile extends StatelessWidget {
+  const _ReaderTocListTile({required this.item, required this.onTap});
+
+  final ReaderTocItem item;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final leftInset =
+        AppSpacing.md + (item.level - 1).clamp(0, 4) * AppSpacing.md;
+
+    return ListTile(
+      contentPadding: EdgeInsets.only(
+        left: leftInset.toDouble(),
+        right: AppSpacing.md,
+      ),
+      title: Text(
+        item.label.isEmpty ? 'Untitled chapter' : item.label,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: context.text.bodyMedium.copyWith(color: colors.onSurface),
+      ),
+      trailing: item.startPage == null
+          ? null
+          : Text(
+              item.startPage.toString(),
+              style: context.text.bodySmall.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+      onTap: onTap,
+    );
+  }
+}
+
+class _ReaderBookmarksTab extends StatelessWidget {
+  const _ReaderBookmarksTab({
+    required this.controller,
+    required this.query,
+    required this.onQueryChanged,
+  });
+
+  final TextEditingController controller;
+  final String query;
+  final ValueChanged<String> onQueryChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: SearchField(
+            controller: controller,
+            hintText: 'Search bookmarks',
+            onChanged: onQueryChanged,
+          ),
+        ),
+        Expanded(
+          child: _ReaderDrawerEmptyState(
+            message: query.trim().isEmpty
+                ? 'Bookmarks are not available yet'
+                : 'No matching bookmarks',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReaderSearchDrawer extends StatelessWidget {
+  const _ReaderSearchDrawer({
+    required this.visible,
+    required this.onClose,
+    required this.onSearch,
+    required this.onResultSelected,
+  });
+
+  final bool visible;
+  final VoidCallback onClose;
+  final Future<List<ReaderSearchResult>> Function(String query) onSearch;
+  final ValueChanged<ReaderSearchResult> onResultSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final drawerWidth = MediaQuery.sizeOf(context).width < 420
+        ? MediaQuery.sizeOf(context).width * 0.86
+        : 360.0;
+
+    return Positioned.fill(
+      child: IgnorePointer(
+        ignoring: !visible,
+        child: Stack(
+          children: [
+            AnimatedOpacity(
+              opacity: visible ? 1 : 0,
+              duration: _kChromeAnimDuration,
+              curve: _kChromeAnimCurve,
+              child: GestureDetector(
+                onTap: onClose,
+                behavior: HitTestBehavior.opaque,
+                child: ColoredBox(
+                  color: Colors.black.withValues(alpha: 0.28),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+            ),
+            AnimatedSlide(
+              offset: visible ? Offset.zero : const Offset(-1, 0),
+              duration: _kChromeAnimDuration,
+              curve: _kChromeAnimCurve,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: SizedBox(
+                  width: drawerWidth,
+                  child: Material(
+                    color: colors.surface,
+                    elevation: 0,
+                    child: SafeArea(
+                      right: false,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            right: BorderSide(color: colors.outlineVariant),
+                          ),
+                        ),
+                        child: _ReaderSearchDrawerContent(
+                          visible: visible,
+                          onClose: onClose,
+                          onSearch: onSearch,
+                          onResultSelected: onResultSelected,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReaderSearchDrawerContent extends StatefulWidget {
+  const _ReaderSearchDrawerContent({
+    required this.visible,
+    required this.onClose,
+    required this.onSearch,
+    required this.onResultSelected,
+  });
+
+  final bool visible;
+  final VoidCallback onClose;
+  final Future<List<ReaderSearchResult>> Function(String query) onSearch;
+  final ValueChanged<ReaderSearchResult> onResultSelected;
+
+  @override
+  State<_ReaderSearchDrawerContent> createState() =>
+      _ReaderSearchDrawerContentState();
+}
+
+class _ReaderSearchDrawerContentState
+    extends State<_ReaderSearchDrawerContent> {
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
+  Timer? _debounce;
+  List<ReaderSearchResult> _results = const [];
+  bool _isLoading = false;
+  String? _errorMessage;
+  int _requestId = 0;
+
+  @override
+  void didUpdateWidget(covariant _ReaderSearchDrawerContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.visible && !oldWidget.visible) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusNode.requestFocus();
+      });
+    } else if (!widget.visible && oldWidget.visible) {
+      _debounce?.cancel();
+      _controller.clear();
+      setState(() {
+        _results = const [];
+        _isLoading = false;
+        _errorMessage = null;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onQueryChanged(String value) {
+    _debounce?.cancel();
+    final query = value.trim();
+    if (query.isEmpty) {
+      _requestId++;
+      setState(() {
+        _results = const [];
+        _isLoading = false;
+        _errorMessage = null;
+      });
+      unawaited(widget.onSearch(''));
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      _runSearch(query);
+    });
+  }
+
+  Future<void> _runSearch(String query) async {
+    final requestId = ++_requestId;
+    try {
+      final results = await widget.onSearch(query);
+      if (!mounted || requestId != _requestId) return;
+      setState(() {
+        _results = results;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted || requestId != _requestId) return;
+      setState(() {
+        _results = const [];
+        _isLoading = false;
+        _errorMessage = 'Search failed';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final hasQuery = _controller.text.trim().isNotEmpty;
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.xs,
+            AppSpacing.xs,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Search',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.text.titleLarge.copyWith(
+                    color: colors.onSurface,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(AppIcons.close, size: AppIconSize.md),
+                tooltip: 'Close',
+                onPressed: widget.onClose,
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: SearchField(
+            controller: _controller,
+            focusNode: _focusNode,
+            hintText: 'Search in book',
+            onChanged: _onQueryChanged,
+          ),
+        ),
+        if (_isLoading) const LinearProgressIndicator(minHeight: 2),
+        Expanded(
+          child: _errorMessage != null
+              ? _ReaderDrawerEmptyState(message: _errorMessage!)
+              : !hasQuery
+              ? const _ReaderDrawerEmptyState(
+                  message: 'Type to search book contents',
+                )
+              : _results.isEmpty && !_isLoading
+              ? const _ReaderDrawerEmptyState(message: 'No results found')
+              : ScrollEdgeFadeStack(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                    itemCount: _results.length,
+                    itemBuilder: (context, index) {
+                      final result = _results[index];
+                      return _ReaderSearchResultTile(
+                        result: result,
+                        onTap: () => widget.onResultSelected(result),
+                      );
+                    },
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReaderSearchResultTile extends StatelessWidget {
+  const _ReaderSearchResultTile({
+    required this.result,
+    required this.onTap,
+  });
+
+  final ReaderSearchResult result;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final chapterTitle = result.chapterTitle;
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xs,
+      ),
+      title: Text(
+        chapterTitle == null || chapterTitle.isEmpty
+            ? 'Search result'
+            : chapterTitle,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: context.text.bodySmall.copyWith(
+          color: colors.onSurfaceVariant,
+        ),
+      ),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.xs),
+        child: RichText(
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          text: TextSpan(
+            style: context.text.bodyMedium.copyWith(color: colors.onSurface),
+            children: [
+              TextSpan(text: result.excerpt.pre),
+              TextSpan(
+                text: result.excerpt.match,
+                style: TextStyle(
+                  color: colors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              TextSpan(text: result.excerpt.post),
+            ],
+          ),
+        ),
+      ),
+      onTap: onTap,
+    );
+  }
+}
+
+class _ReaderDrawerEmptyState extends StatelessWidget {
+  const _ReaderDrawerEmptyState({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: context.text.bodyMedium.copyWith(
+            color: colors.onSurfaceVariant,
           ),
         ),
       ),
@@ -1085,6 +1817,9 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
             atEnd: position.atEnd,
           ),
         );
+      },
+      onTocChanged: (items) {
+        bloc.add(ReaderTocUpdated(items: items));
       },
       onTextSelected: (selection) {
         chromeCubit.hide();

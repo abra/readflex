@@ -1777,6 +1777,45 @@ window.ttsPrepare = () => reader.view.tts.prepare()
 
 window.clearSearch = () => reader.view.clearSearch()
 
+window.searchBook = async (text, opts = {}) => {
+  opts = {
+    'scope': 'book',
+    'matchCase': false,
+    'matchDiacritics': false,
+    'matchWholeWords': false,
+    ...opts,
+  }
+  const query = `${text ?? ''}`.trim()
+  if (!query) {
+    reader.view.clearSearch()
+    return []
+  }
+
+  const index = opts.scope === 'section' ? reader.index : null
+  const items = []
+
+  for await (const result of reader.view.search({ ...opts, query, index })) {
+    if (result === 'done' || 'progress' in result) continue
+    if ('subitems' in result) {
+      for (const item of result.subitems)
+        items.push({
+          cfi: item.cfi,
+          excerpt: item.excerpt,
+          chapterTitle: result.label ?? '',
+        })
+    }
+    else if (result.cfi) {
+      items.push({
+        cfi: result.cfi,
+        excerpt: result.excerpt,
+        chapterTitle: '',
+      })
+    }
+  }
+
+  return items
+}
+
 window.search = async (text, opts) => {
   opts == null && (opts = {
     'scope': 'book',
