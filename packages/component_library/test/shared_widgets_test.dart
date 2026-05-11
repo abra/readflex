@@ -102,6 +102,53 @@ void main() {
     expect(find.text('Body'), findsOneWidget);
   });
 
+  testWidgets('AppBottomActionBar renders provided actions', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          bottomNavigationBar: AppBottomActionBar(
+            children: [
+              IconButton(
+                icon: const Icon(AppIcons.back),
+                onPressed: () {},
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(AppIcons.bookmark),
+                onPressed: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(AppBottomActionBar), findsOneWidget);
+    expect(find.byIcon(AppIcons.back), findsOneWidget);
+    expect(find.byIcon(AppIcons.bookmark), findsOneWidget);
+    expect(
+      tester.getSize(find.byType(AppBottomActionBar)).height,
+      AppSizes.navBarHeight,
+    );
+
+    final decoration =
+        tester
+                .widget<DecoratedBox>(
+                  find
+                      .descendant(
+                        of: find.byType(AppBottomActionBar),
+                        matching: find.byType(DecoratedBox),
+                      )
+                      .first,
+                )
+                .decoration
+            as BoxDecoration;
+
+    expect(decoration.boxShadow, isNull);
+    expect(decoration.border, isA<Border>());
+  });
+
   testWidgets('SelectionPreviewCard renders selected text', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(

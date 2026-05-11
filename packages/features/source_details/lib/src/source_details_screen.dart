@@ -22,6 +22,8 @@ class SourceDetailsScreen extends StatelessWidget {
     required this.bookRepository,
     required this.onReadPressed,
     this.initialSource,
+    this.onBookmarkPressed,
+    this.onMorePressed,
     super.key,
   });
 
@@ -29,6 +31,8 @@ class SourceDetailsScreen extends StatelessWidget {
   final BookRepository bookRepository;
   final Future<void> Function(Book source) onReadPressed;
   final Book? initialSource;
+  final VoidCallback? onBookmarkPressed;
+  final VoidCallback? onMorePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +46,8 @@ class SourceDetailsScreen extends StatelessWidget {
       child: SourceDetailsView(
         sourceId: sourceId,
         onReadPressed: onReadPressed,
+        onBookmarkPressed: onBookmarkPressed,
+        onMorePressed: onMorePressed,
       ),
     );
   }
@@ -51,20 +57,24 @@ class SourceDetailsView extends StatelessWidget {
   const SourceDetailsView({
     required this.sourceId,
     required this.onReadPressed,
+    this.onBookmarkPressed,
+    this.onMorePressed,
     super.key,
   });
 
   final String sourceId;
   final Future<void> Function(Book source) onReadPressed;
+  final VoidCallback? onBookmarkPressed;
+  final VoidCallback? onMorePressed;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: BlocBuilder<SourceDetailsBloc, SourceDetailsState>(
-          builder: (context, state) {
-            return switch (state.status) {
+      body: BlocBuilder<SourceDetailsBloc, SourceDetailsState>(
+        builder: (context, state) {
+          return SafeArea(
+            bottom: false,
+            child: switch (state.status) {
               SourceDetailsStatus.initial || SourceDetailsStatus.loading =>
                 const CenteredCircularProgressIndicator(),
               SourceDetailsStatus.notFound => ErrorState(
@@ -83,10 +93,70 @@ class SourceDetailsView extends StatelessWidget {
                 source: state.source!,
                 onReadPressed: onReadPressed,
               ),
-            };
-          },
-        ),
+            },
+          );
+        },
       ),
+      bottomNavigationBar: BlocBuilder<SourceDetailsBloc, SourceDetailsState>(
+        buildWhen: (previous, current) => previous.status != current.status,
+        builder: (context, state) {
+          if (state.status != SourceDetailsStatus.success) {
+            return const SizedBox.shrink();
+          }
+          return _SourceDetailsBottomBar(
+            onBookmarkPressed: onBookmarkPressed,
+            onMorePressed: onMorePressed,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _SourceDetailsBottomBar extends StatelessWidget {
+  const _SourceDetailsBottomBar({
+    this.onBookmarkPressed,
+    this.onMorePressed,
+  });
+
+  final VoidCallback? onBookmarkPressed;
+  final VoidCallback? onMorePressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = _plainIconButtonStyle(context);
+
+    return AppBottomActionBar(
+      children: [
+        SizedBox.square(
+          dimension: AppSizes.buttonHeight,
+          child: IconButton(
+            tooltip: 'Back',
+            onPressed: () => Navigator.of(context).maybePop(),
+            style: style,
+            icon: const Icon(AppIcons.back, size: AppIconSize.md),
+          ),
+        ),
+        const Spacer(),
+        SizedBox.square(
+          dimension: AppSizes.buttonHeight,
+          child: IconButton(
+            tooltip: 'Bookmark',
+            onPressed: onBookmarkPressed,
+            style: style,
+            icon: const Icon(AppIcons.bookmark, size: AppIconSize.sm),
+          ),
+        ),
+        SizedBox.square(
+          dimension: AppSizes.buttonHeight,
+          child: IconButton(
+            tooltip: 'More',
+            onPressed: onMorePressed,
+            style: style,
+            icon: const Icon(AppIcons.moreHorizontal, size: AppIconSize.sm),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -104,11 +174,12 @@ class _SourceDetailsContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.text;
-    final screenWidth = MediaQuery.sizeOf(context).width;
+    final screenSize = MediaQuery.sizeOf(context);
     final coverWidth = math.min(
       _coverMaxWidth,
-      math.max(_coverMinWidth, screenWidth * _coverScreenWidthFactor),
+      math.max(_coverMinWidth, screenSize.width * _coverScreenWidthFactor),
     );
+    final topSpacer = math.max(AppSpacing.xxl, screenSize.height * 0.12);
 
     return CustomScrollView(
       slivers: [
@@ -116,10 +187,11 @@ class _SourceDetailsContent extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              SizedBox(height: topSpacer),
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.lg,
-                  AppSpacing.md,
+                  AppSpacing.xl,
                   AppSpacing.lg,
                   AppSpacing.xl,
                 ),
@@ -129,11 +201,6 @@ class _SourceDetailsContent extends StatelessWidget {
                     _HeroSection(
                       source: source,
                       coverWidth: coverWidth,
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    _ReadingActions(
-                      source: source,
-                      onReadPressed: onReadPressed,
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     Text(
@@ -145,7 +212,18 @@ class _SourceDetailsContent extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     const _ReviewActions(),
-                    const SizedBox(height: AppSpacing.xxl),
+                    const SizedBox(height: AppSpacing.lg),
+                    FilledButton(
+                      onPressed: () async {
+                        await onReadPressed(source);
+                        if (!context.mounted) return;
+                        context.read<SourceDetailsBloc>().add(
+                          SourceDetailsLoadRequested(source.id),
+                        );
+                      },
+                      child: Text(_readButtonLabel(source)),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
                   ],
                 ),
               ),
@@ -157,54 +235,20 @@ class _SourceDetailsContent extends StatelessWidget {
   }
 }
 
-class _ReadingActions extends StatelessWidget {
-  const _ReadingActions({
-    required this.source,
-    required this.onReadPressed,
-  });
+ButtonStyle _plainIconButtonStyle(BuildContext context) {
+  final colors = context.colors;
 
-  final Book source;
-  final Future<void> Function(Book source) onReadPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final backBackground = colors.onSurface;
-    final backForeground = colors.surface;
-
-    return Row(
-      children: [
-        SizedBox.square(
-          dimension: AppSizes.buttonHeight,
-          child: IconButton(
-            tooltip: 'Back',
-            onPressed: () => Navigator.of(context).maybePop(),
-            style: IconButton.styleFrom(
-              backgroundColor: backBackground,
-              foregroundColor: backForeground,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.md),
-              ),
-            ),
-            icon: const Icon(AppIcons.back, size: AppIconSize.md),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: FilledButton(
-            onPressed: () async {
-              await onReadPressed(source);
-              if (!context.mounted) return;
-              context.read<SourceDetailsBloc>().add(
-                SourceDetailsLoadRequested(source.id),
-              );
-            },
-            child: Text(_readButtonLabel(source)),
-          ),
-        ),
-      ],
-    );
-  }
+  return ButtonStyle(
+    backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
+    foregroundColor: WidgetStatePropertyAll(colors.onSurface),
+    overlayColor: WidgetStatePropertyAll(
+      colors.onSurface.withValues(alpha: 0.08),
+    ),
+    minimumSize: const WidgetStatePropertyAll(
+      Size.square(AppSizes.iconButtonSize),
+    ),
+    padding: const WidgetStatePropertyAll(EdgeInsets.all(AppSpacing.sm)),
+  );
 }
 
 class _HeroSection extends StatelessWidget {

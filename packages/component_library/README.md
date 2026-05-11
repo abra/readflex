@@ -120,6 +120,7 @@ Reusable presentation-only widgets used across features:
 
 | Widget                              | Purpose                                        |
 |-------------------------------------|------------------------------------------------|
+| `AppBottomActionBar`                | Thumb-friendly route-level action bar          |
 | `ActionBottomSheetLayout`           | Bottom sheet shell with header and content     |
 | `BottomSheetHeader`                 | Bottom sheet title row                         |
 | `ButtonLoadingIndicator`            | Compact circular progress for buttons          |

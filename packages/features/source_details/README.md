@@ -21,6 +21,8 @@ model is `Book`: EPUB/FB2/PDF/AZW3 are books, while CBZ is treated as a comic.
 | `bookRepository` | `BookRepository` | Loads the source |
 | `onReadPressed` | `Future<void> Function(Book)` | Opens the reader |
 | `initialSource` | `Book?` | Optional route extra to avoid a loading flash |
+| `onBookmarkPressed` | `VoidCallback?` | Optional secondary bottom-bar action |
+| `onMorePressed` | `VoidCallback?` | Optional overflow bottom-bar action |
 
 ## Architecture
 
@@ -29,6 +31,8 @@ model is `Book`: EPUB/FB2/PDF/AZW3 are books, while CBZ is treated as a comic.
 - `SourceDetailsView` renders only bloc state and UI callbacks.
 - On return from reader, the screen reloads the source so the button label and
   reading metadata reflect the latest `Book` row.
+- The read/continue action lives in the details content under the review
+  actions; route-level navigation and secondary actions stay in the bottom bar.
 - Cover rendering uses the shared cover frame/Hero primitives from
   `component_library` so Library and details endpoints keep compatible Hero
   geometry.

@@ -33,6 +33,10 @@ void main() {
       expect(find.text('Flutter Design Patterns'), findsWidgets);
       expect(find.text('Daria Orlova'), findsOneWidget);
       expect(find.text('Start reading'), findsOneWidget);
+      expect(find.byIcon(AppIcons.back), findsOneWidget);
+      expect(find.byType(AppBottomActionBar), findsOneWidget);
+      expect(find.byIcon(AppIcons.bookmark), findsOneWidget);
+      expect(find.byIcon(AppIcons.moreHorizontal), findsOneWidget);
       expect(find.byType(Hero), findsOneWidget);
       expect(find.text('Review'), findsOneWidget);
       expect(find.text('Highlights'), findsOneWidget);
@@ -57,6 +61,8 @@ void main() {
           onReadPressed: (source) async => selectedSource = source,
         );
 
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -220));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Continue reading'));
         await tester.pump();
 
@@ -77,6 +83,26 @@ void main() {
       expect(heroSize.width, 220);
       expect(heroSize.height, 330);
     });
+
+    testWidgets('invokes bottom secondary action callbacks when provided', (
+      tester,
+    ) async {
+      var bookmarkCalls = 0;
+      var moreCalls = 0;
+
+      await tester.pumpSourceDetails(
+        repository: repository,
+        initialSource: _newSource,
+        onBookmarkPressed: () => bookmarkCalls++,
+        onMorePressed: () => moreCalls++,
+      );
+
+      await tester.tap(find.byIcon(AppIcons.bookmark));
+      await tester.tap(find.byIcon(AppIcons.moreHorizontal));
+
+      expect(bookmarkCalls, 1);
+      expect(moreCalls, 1);
+    });
   });
 }
 
@@ -85,6 +111,8 @@ extension on WidgetTester {
     required BookRepository repository,
     Book? initialSource,
     Future<void> Function(Book source)? onReadPressed,
+    VoidCallback? onBookmarkPressed,
+    VoidCallback? onMorePressed,
   }) async {
     await pumpWidget(
       MaterialApp(
@@ -94,6 +122,8 @@ extension on WidgetTester {
           bookRepository: repository,
           initialSource: initialSource,
           onReadPressed: onReadPressed ?? (_) async {},
+          onBookmarkPressed: onBookmarkPressed,
+          onMorePressed: onMorePressed,
         ),
       ),
     );
