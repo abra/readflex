@@ -45,11 +45,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   final BookRepository _bookRepository;
   final HighlightRepository _highlightRepository;
 
-  /// Pending Book to persist to the repository. The bottom chrome's
-  /// drag-to-seek fires `ReaderBookPositionUpdated` ~10×/sec while
-  /// foliate-js navigates under the finger; we debounce the actual
-  /// `updateBook` write so SQLite isn't taking a hit on every onRelocated.
-  /// State is still emitted on every event so the chrome stays in sync.
+  /// Pending Book to persist to the repository. foliate-js can emit frequent
+  /// `ReaderBookPositionUpdated` events during navigation, so the actual
+  /// `updateBook` write is debounced and SQLite is not hit on every
+  /// `onRelocated`. State is still emitted on every event so UI stays in sync.
   Book? _pendingPersist;
   Timer? _persistTimer;
   static const _persistDebounce = Duration(milliseconds: 500);
@@ -147,10 +146,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       readingProgress: progress,
     );
     // Emit immediately so chrome stays in sync with the WebView.
-    // `sizeTotal` is constant per book; we cache the first non-null value
-    // and never overwrite it back to null on subsequent emits (a stray
-    // event without sizeTotal shouldn't drop the cache and force the
-    // slider back to the approximate `bookTotalPages` formula).
+    // `sizeTotal` is constant per book; cache the first non-null value and
+    // never overwrite it back to null on subsequent emits.
     emit(
       state.copyWith(
         book: updated,

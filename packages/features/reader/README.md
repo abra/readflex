@@ -1,7 +1,7 @@
 # reader
 
 Book reader. Single full-screen route (`/reader/:sourceId`) above the shell,
-hosts the WebView-based reading surface, top/bottom chrome, a text-selection
+hosts the WebView-based reading surface, bottom action chrome, a text-selection
 context panel populated by pluggable `TextAction`s, and an inline
 review-reminder banner.
 
@@ -46,7 +46,7 @@ abstract class TextAction {
 | Unit                          | Responsibility                                                             |
 |-------------------------------|----------------------------------------------------------------------------|
 | `ReaderBloc`                  | Content: load book + highlights, debounced position save (500ms)           |
-| `ReaderChromeCubit`           | Top AppBar / bottom progress bar visibility                                |
+| `ReaderChromeCubit`           | Bottom reader action chrome visibility                                     |
 | `ReaderSelectionCubit`        | Current text selection (text + `cfiRange`)                                 |
 | `ReaderReviewReminderCubit`   | Periodic timer; flips `showReminder` when `onCheckDueItems` returns > 0    |
 
@@ -59,11 +59,11 @@ through the bloc's error pipeline without emitting state themselves.
 - **`_ReaderCallbacksScope`** — `InheritedWidget` that carries
   `onCheckDueItems` and `onStartMiniReview` down through 4+ levels without
   prop drilling. Created at the top of `ReaderScreen.build`.
-- **Driver pattern** — stateless widgets (`_TopChromeDriver`,
-  `_BottomChromeDriver`, `_ContextPanelDriver`, `_ReviewReminderDriver`)
+- **Driver pattern** — stateless widgets (`_ReaderActionChromeDriver`,
+  `_ContextPanelDriver`, `_ReviewReminderDriver`)
   subscribe to multiple BLoC/Cubit sources via `context.select` and feed
-  ready values into dumb leaf widgets (`_ReaderTopChrome`,
-  `_ReaderBottomChrome`, `_ContextPanel`, `_ReviewReminderBanner`). All
+  ready values into dumb leaf widgets (`_ReaderActionChrome`,
+  `_ContextPanel`, `_ReviewReminderBanner`). All
   BLoC/Cubit interaction lives in drivers.
 - **`_ReaderWebViewBody`** hosts a `BookReaderWebView` (foliate-js) keyed on
   source id / recovery token so source swaps and WebContent recovery rebuild

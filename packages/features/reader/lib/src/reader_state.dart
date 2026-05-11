@@ -24,8 +24,7 @@ class ReaderState extends Equatable {
   final List<Highlight> highlights;
 
   /// Live chapter / page metrics surfaced by foliate-js on every page
-  /// turn. Used by the bottom chrome ("Book IV  ·  84") and not
-  /// persisted — they're recomputed on every reader open.
+  /// turn. Not persisted — they're recomputed on every reader open.
   final String? chapterTitle;
   final int? bookCurrentPage;
   final int? bookTotalPages;
@@ -40,9 +39,7 @@ class ReaderState extends Equatable {
 
   /// Byte length of all linear sections in the open book — same quantity
   /// foliate-js uses to compute [bookCurrentPage] / [bookTotalPages].
-  /// Cached here so the bottom-chrome slider can reproduce that
-  /// arithmetic exactly while the user drags. Constant per book — first
-  /// `onRelocated` after open populates it.
+  /// Constant per book; first `onRelocated` after open populates it.
   final int? sizeTotal;
 
   String? get sourceId => book?.id;

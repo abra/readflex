@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
@@ -20,15 +18,9 @@ import 'reader_selection_cubit.dart';
 /// Approximate height of the context panel, used to offset the review banner.
 const _kContextPanelHeight = 80.0;
 
-/// Duration and curve for the top/bottom chrome slide animation.
+/// Duration and curve for the reader chrome slide animation.
 const _kChromeAnimDuration = Duration(milliseconds: 200);
 const _kChromeAnimCurve = Curves.easeOutCubic;
-
-/// foliate-js's "location" granularity in bytes — the divisor it uses for
-/// `bookCurrentPage = floor(currentBytes / sizePerLoc)`. Hard-coded in
-/// `view.js` (`new SectionProgress(book.sections, 1500, 1600)`); mirror
-/// it here so the slider can predict the page number during drag.
-const _foliateSizePerLoc = 1500;
 
 /// Converts foliate-js's 0-indexed location number into the 1-indexed
 /// page count the reader actually shows ("page 1" instead of "page 0"
@@ -150,7 +142,7 @@ class _ReaderView extends StatelessWidget {
               ),
             ),
           ),
-          const _TopChromeDriver(),
+          const _ReaderActionChromeDriver(),
         ],
       ),
     );
@@ -197,19 +189,21 @@ class _ReaderBody extends StatelessWidget {
   }
 }
 
-/// Combines status/title/highlights from [ReaderBloc] with chrome visibility
-/// from [ReaderChromeCubit] to drive the top icon-bar overlay.
-class _TopChromeDriver extends StatelessWidget {
-  const _TopChromeDriver();
+/// Combines reader status, chrome visibility and selection state to drive
+/// the thumb-friendly bottom action bar.
+class _ReaderActionChromeDriver extends StatelessWidget {
+  const _ReaderActionChromeDriver();
 
   @override
   Widget build(BuildContext context) {
     final status = context.select<ReaderBloc, ReaderStatus>(
       (b) => b.state.status,
     );
-    final title = context.select<ReaderBloc, String>((b) => b.state.title);
     final chromeVisible = context.select<ReaderChromeCubit, bool>(
       (c) => c.state.chromeVisible,
+    );
+    final hasSelection = context.select<ReaderSelectionCubit, bool>(
+      (c) => c.state.hasSelection,
     );
     // Chrome (top/bottom panels, context panel, comic overlay) is app
     // UI — it follows the app theme, not the reader's per-page preset.
@@ -217,10 +211,8 @@ class _TopChromeDriver extends StatelessWidget {
     // background, foliate-js customCSS).
     final colors = context.colors;
 
-    return _ReaderTopChrome(
-      visible: status != ReaderStatus.ready || chromeVisible,
-      title: title,
-      panelColor: colors.surface,
+    return _ReaderActionChrome(
+      visible: (status != ReaderStatus.ready || chromeVisible) && !hasSelection,
       foregroundColor: colors.onSurface,
       onBack: () => Navigator.of(context).maybePop(),
       // Explicit nulls to silence unused-parameter analyzer warnings
@@ -235,17 +227,15 @@ class _TopChromeDriver extends StatelessWidget {
   }
 }
 
-/// Top reader chrome: 5-slot icon bar (back · TOC · font · bookmark
-/// · search). Slides down from the top when `chromeVisible` is true.
+/// Bottom reader action chrome: 5-slot icon bar (back · TOC · font · bookmark
+/// · search). Slides up from the bottom when `chromeVisible` is true.
 /// TOC / bookmark / search are placeholder slots until those features
 /// land — they show as disabled icons so the layout matches the
 /// design now and lights up automatically as each callback is wired
 /// in [ReaderScreen].
-class _ReaderTopChrome extends StatelessWidget {
-  const _ReaderTopChrome({
+class _ReaderActionChrome extends StatelessWidget {
+  const _ReaderActionChrome({
     required this.visible,
-    required this.title,
-    required this.panelColor,
     required this.foregroundColor,
     this.onBack,
     this.onTocPressed,
@@ -255,8 +245,6 @@ class _ReaderTopChrome extends StatelessWidget {
   });
 
   final bool visible;
-  final String title;
-  final Color panelColor;
   final Color foregroundColor;
   final VoidCallback? onBack;
   final VoidCallback? onTocPressed;
@@ -267,75 +255,52 @@ class _ReaderTopChrome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      top: 0,
       left: 0,
       right: 0,
+      bottom: 0,
       child: IgnorePointer(
         ignoring: !visible,
         child: AnimatedSlide(
-          offset: visible ? Offset.zero : const Offset(0, -1),
+          offset: visible ? Offset.zero : const Offset(0, 1),
           duration: _kChromeAnimDuration,
           curve: _kChromeAnimCurve,
           child: AnimatedOpacity(
             opacity: visible ? 1 : 0,
             duration: _kChromeAnimDuration,
             curve: _kChromeAnimCurve,
-            child: Stack(
-              clipBehavior: Clip.none,
+            child: AppBottomActionBar(
+              showShadow: true,
               children: [
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: -18,
-                  child: const ScrollEdgeFade(visible: true),
+                _ReaderChromeIconButton(
+                  icon: AppIcons.back,
+                  tooltip: 'Back',
+                  foregroundColor: foregroundColor,
+                  onPressed: onBack,
                 ),
-                Material(
-                  color: panelColor,
-                  elevation: 0,
-                  child: SafeArea(
-                    bottom: false,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.xs,
-                        vertical: AppSpacing.xs,
-                      ),
-                      child: Row(
-                        children: [
-                          _ReaderChromeIconButton(
-                            icon: AppIcons.back,
-                            tooltip: 'Back',
-                            foregroundColor: foregroundColor,
-                            onPressed: onBack,
-                          ),
-                          _ReaderChromeIconButton(
-                            icon: AppIcons.toc,
-                            tooltip: 'Contents',
-                            foregroundColor: foregroundColor,
-                            onPressed: onTocPressed,
-                          ),
-                          const Spacer(),
-                          _ReaderChromeIconButton(
-                            icon: AppIcons.font,
-                            tooltip: 'Font',
-                            foregroundColor: foregroundColor,
-                            onPressed: onFontPressed,
-                          ),
-                          _ReaderChromeIconButton(
-                            icon: AppIcons.bookmark,
-                            tooltip: 'Bookmark',
-                            foregroundColor: foregroundColor,
-                            onPressed: onBookmarkPressed,
-                          ),
-                          _ReaderChromeIconButton(
-                            icon: AppIcons.search,
-                            tooltip: 'Search',
-                            foregroundColor: foregroundColor,
-                            onPressed: onSearchPressed,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                _ReaderChromeIconButton(
+                  icon: AppIcons.toc,
+                  tooltip: 'Contents',
+                  foregroundColor: foregroundColor,
+                  onPressed: onTocPressed,
+                ),
+                const Spacer(),
+                _ReaderChromeIconButton(
+                  icon: AppIcons.font,
+                  tooltip: 'Font',
+                  foregroundColor: foregroundColor,
+                  onPressed: onFontPressed,
+                ),
+                _ReaderChromeIconButton(
+                  icon: AppIcons.bookmark,
+                  tooltip: 'Bookmark',
+                  foregroundColor: foregroundColor,
+                  onPressed: onBookmarkPressed,
+                ),
+                _ReaderChromeIconButton(
+                  icon: AppIcons.search,
+                  tooltip: 'Search',
+                  foregroundColor: foregroundColor,
+                  onPressed: onSearchPressed,
                 ),
               ],
             ),
@@ -346,11 +311,9 @@ class _ReaderTopChrome extends StatelessWidget {
   }
 }
 
-/// Plain icon button used in the reader's top chrome — no background,
+/// Plain icon button used in the reader action chrome — no background,
 /// no theme-injected `secondary` fill. Greys out automatically when
-/// `onPressed` is null so unfinished slots read as disabled. Pulls
-/// its tint from the reader theme (passed in by [_TopChromeDriver])
-/// rather than the app theme so it matches the page color.
+/// `onPressed` is null so unfinished slots read as disabled.
 class _ReaderChromeIconButton extends StatelessWidget {
   const _ReaderChromeIconButton({
     required this.icon,
@@ -376,326 +339,6 @@ class _ReaderChromeIconButton extends StatelessWidget {
         foregroundColor: disabled
             ? foregroundColor.withValues(alpha: 0.35)
             : foregroundColor,
-      ),
-    );
-  }
-}
-
-/// Bottom reader chrome: chapter title (left), book page number
-/// (right), thin orange progress slider underneath. Slides up from
-/// the bottom along with the rest of the chrome.
-class _ReaderBottomChrome extends StatefulWidget {
-  const _ReaderBottomChrome({
-    required this.visible,
-    required this.progress,
-    required this.chapterTitle,
-    required this.bookCurrentPage,
-    required this.bookTotalPages,
-    required this.chapterCurrentPage,
-    required this.chapterTotalPages,
-    required this.sizeTotal,
-    required this.format,
-    required this.panelColor,
-    required this.textColor,
-    required this.accentColor,
-    required this.dividerColor,
-    required this.onSeekFraction,
-  });
-
-  final bool visible;
-  final double progress;
-  final String? chapterTitle;
-  final int? bookCurrentPage;
-  final int? bookTotalPages;
-
-  /// Position inside the current section. For CBZ each image is its
-  /// own section so this counter advances per page-turn — the only
-  /// useful one for comics. For EPUB it is the visual page within the
-  /// active chapter, ignored here in favour of [bookCurrentPage].
-  final int? chapterCurrentPage;
-  final int? chapterTotalPages;
-
-  /// When non-null, the slider's drag-time page estimate uses
-  /// `floor(fraction × sizeTotal / 1500)` — the exact arithmetic
-  /// foliate-js will use on release, so the displayed number lands on
-  /// the same value the bloc reports back. Null until the first
-  /// `onRelocated` lands; in that window the slider falls back to
-  /// `floor(fraction × bookTotalPages)`, off by at most 1.
-  final int? sizeTotal;
-
-  /// Selects the displayed counter:
-  ///   * CBZ → `chapterCurrentPage / chapterTotalPages` (comic page X / Y)
-  ///   * everything else → `bookCurrentPage` (Kindle-style location)
-  ///
-  /// Null while the bloc is still loading the book.
-  final BookFormat? format;
-  final Color panelColor;
-  final Color textColor;
-  final Color accentColor;
-  final Color dividerColor;
-  final ValueChanged<double> onSeekFraction;
-
-  @override
-  State<_ReaderBottomChrome> createState() => _ReaderBottomChromeState();
-}
-
-class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
-  /// Local override for the slider's thumb position. Set while the
-  /// user drags so the thumb tracks the finger smoothly; kept set
-  /// after release until `widget.progress` catches up, so the thumb
-  /// doesn't briefly snap to the pre-seek position before the
-  /// post-seek `onRelocate` lands.
-  double? _dragValue;
-
-  /// True between `onChangeStart` and `onChangeEnd`. Used to gate
-  /// the catchup-clear in [didUpdateWidget]: while the finger is
-  /// still on the slider we keep the local override even if the
-  /// bloc emits, so navigation triggered by other means doesn't
-  /// fight the active drag.
-  bool _isDragging = false;
-
-  /// Hard ceiling on how long `_dragValue` can pin the slider after
-  /// drag-end. The catchup-on-epsilon path in [didUpdateWidget] is
-  /// fast when foliate-js lands within the epsilon of where we
-  /// asked, but can miss for end-of-book snapping or when the user
-  /// navigates by other means (link tap, manual page turn).
-  Timer? _dragReleaseTimer;
-  static const Duration _dragReleaseTimeout = Duration(milliseconds: 600);
-
-  /// Closeness threshold for "the bloc caught up to where we
-  /// dragged" — foliate-js's reported fraction can land slightly off
-  /// from the requested seek (page snapping at chapter boundaries),
-  /// so an exact compare would leave the slider visually stuck.
-  static const double _dragSettleEpsilon = 0.005;
-
-  @override
-  void dispose() {
-    _dragReleaseTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  void didUpdateWidget(_ReaderBottomChrome oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (_isDragging) return;
-    final dragValue = _dragValue;
-    if (dragValue == null) return;
-    if ((widget.progress - dragValue).abs() <= _dragSettleEpsilon) {
-      _dragReleaseTimer?.cancel();
-      _dragReleaseTimer = null;
-      setState(() => _dragValue = null);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final clamped = widget.progress.clamp(0.0, 1.0);
-    final sliderValue = (_dragValue ?? clamped).clamp(0.0, 1.0);
-    final mutedText = widget.textColor.withValues(alpha: 0.7);
-
-    // Pick which counter the chrome shows. CBZ packs each comic page
-    // into its own foliate-js section, so `bookCurrentPage` (byte
-    // locations of 1500 bytes each) collapses the whole comic into 1–4
-    // values — useless. `chapterCurrentPage / chapterTotalPages` for
-    // CBZ becomes "comic page X out of Y" because each section IS one
-    // comic page. EPUB & friends keep the byte-location counter that
-    // already works as a global progress number.
-    final isComic = widget.format == BookFormat.cbz;
-    final int? rawCurrent;
-    final int? totalForMode;
-    if (isComic) {
-      rawCurrent = widget.chapterCurrentPage;
-      totalForMode = widget.chapterTotalPages;
-    } else {
-      rawCurrent = widget.bookCurrentPage;
-      totalForMode = widget.bookTotalPages;
-    }
-
-    // Resolve the 0-indexed location to display. When `_dragValue` is
-    // set, the bloc-supplied current is stale — foliate-js hasn't
-    // paginated yet. This covers both the active drag (no JS seek
-    // issued) and the post-release window where `goToPercent` is in
-    // flight. Mirror `sliderValue = _dragValue ?? clamped`: trust the
-    // local prediction whenever we have one. Without this gate the
-    // displayed number flashes back to the pre-drag page on release.
-    //
-    // For non-comic books with sizeTotal cached we reproduce
-    // foliate-js's own arithmetic (`floor(fraction × sizeTotal / 1500)`)
-    // so the prediction matches the value the bloc reports back. For
-    // CBZ — and for any book before the first onRelocated — we fall
-    // back to a linear estimate over `totalForMode`, off by at most 1.
-    final dragValue = _dragValue;
-    final sizeTotal = widget.sizeTotal;
-    final int? rawLocation;
-    if (dragValue != null) {
-      if (!isComic && sizeTotal != null && sizeTotal > 0) {
-        rawLocation = (dragValue * sizeTotal / _foliateSizePerLoc).floor();
-      } else if (totalForMode != null && totalForMode > 0) {
-        rawLocation = (dragValue * totalForMode).floor();
-      } else {
-        rawLocation = null;
-      }
-    } else {
-      rawLocation = rawCurrent;
-    }
-
-    // Display formatting. Comics show `X / Y` because the total is
-    // small and informative; EPUB shows just `X` to match the existing
-    // single-number convention for its (much larger) location counter.
-    // `_toDisplayPage` shifts foliate-js's 0-indexed location into the
-    // 1-indexed value users expect.
-    final String displayedText;
-    if (rawLocation == null) {
-      displayedText = '';
-    } else if (isComic && totalForMode != null && totalForMode > 0) {
-      final oneIndexed = _toDisplayPage(rawLocation, totalForMode);
-      displayedText = '$oneIndexed / $totalForMode';
-    } else {
-      displayedText = _toDisplayPage(rawLocation, totalForMode).toString();
-    }
-
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
-      child: IgnorePointer(
-        ignoring: !widget.visible,
-        child: AnimatedSlide(
-          offset: widget.visible ? Offset.zero : const Offset(0, 1),
-          duration: _kChromeAnimDuration,
-          curve: _kChromeAnimCurve,
-          child: AnimatedOpacity(
-            opacity: widget.visible ? 1 : 0,
-            duration: _kChromeAnimDuration,
-            curve: _kChromeAnimCurve,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: -18,
-                  child: const ScrollEdgeFade(
-                    visible: true,
-                    edge: ScrollFadeEdge.bottom,
-                  ),
-                ),
-                Material(
-                  color: widget.panelColor,
-                  elevation: 0,
-                  child: SafeArea(
-                    top: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.lg,
-                        AppSpacing.sm,
-                        AppSpacing.lg,
-                        AppSpacing.xs,
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  widget.chapterTitle ?? '',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: mutedText,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              Text(
-                                displayedText,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: mutedText,
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          // Slider, not LinearProgressIndicator: the
-                          // user can drag the thumb to seek through
-                          // the book. Theme is collapsed (zero track
-                          // height padding, small thumb) so it reads
-                          // as a thin progress bar with a handle, not
-                          // a full Material slider control.
-                          SliderTheme(
-                            data: SliderThemeData(
-                              trackHeight: 4,
-                              activeTrackColor: widget.accentColor,
-                              inactiveTrackColor: widget.dividerColor,
-                              thumbColor: widget.accentColor,
-                              overlayColor: widget.accentColor.withValues(
-                                alpha: 0.16,
-                              ),
-                              thumbShape: const RoundSliderThumbShape(
-                                enabledThumbRadius: 7,
-                              ),
-                              overlayShape: const RoundSliderOverlayShape(
-                                overlayRadius: 16,
-                              ),
-                              trackShape: const RoundedRectSliderTrackShape(),
-                            ),
-                            child: Slider(
-                              value: sliderValue,
-                              onChangeStart: (v) {
-                                setState(() {
-                                  _isDragging = true;
-                                  _dragValue = v;
-                                });
-                              },
-                              onChanged: (v) {
-                                // No JS seek during drag. The thumb
-                                // tracks the finger via `_dragValue`;
-                                // foliate-js stays on the pre-drag
-                                // page until release.
-                                setState(() => _dragValue = v);
-                              },
-                              onChangeEnd: (v) {
-                                // Single seek on release. `_dragValue`
-                                // stays set so `didUpdateWidget` can
-                                // release it once `widget.progress`
-                                // catches up; `_dragReleaseTimer` is
-                                // the hard ceiling for cases the
-                                // bloc doesn't converge (end-of-book
-                                // snap, link tap, manual page turn).
-                                widget.onSeekFraction(v);
-                                _dragReleaseTimer?.cancel();
-                                _dragReleaseTimer = Timer(
-                                  _dragReleaseTimeout,
-                                  () {
-                                    if (!mounted) return;
-                                    _dragReleaseTimer = null;
-                                    if (_dragValue != null) {
-                                      setState(() => _dragValue = null);
-                                    }
-                                  },
-                                );
-                                setState(() {
-                                  _isDragging = false;
-                                  _dragValue = v;
-                                });
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -728,7 +371,7 @@ class _ReadyContent extends StatelessWidget {
   }
 }
 
-class _ReadyContentBody extends StatefulWidget {
+class _ReadyContentBody extends StatelessWidget {
   const _ReadyContentBody({
     required this.serverPort,
     required this.textActions,
@@ -736,22 +379,6 @@ class _ReadyContentBody extends StatefulWidget {
 
   final int serverPort;
   final List<TextAction> textActions;
-
-  @override
-  State<_ReadyContentBody> createState() => _ReadyContentBodyState();
-}
-
-class _ReadyContentBodyState extends State<_ReadyContentBody> {
-  /// Imperative handle on the WebView so the bottom-chrome slider can
-  /// call `goToFraction(...)` directly on drag-end without bouncing
-  /// through the bloc. Per-route key — the reader screen is recreated
-  /// for each book open, so it's always fresh.
-  final GlobalKey<BookReaderWebViewState> _webViewKey =
-      GlobalKey<BookReaderWebViewState>();
-
-  void _seekFraction(double fraction) {
-    _webViewKey.currentState?.goToFraction(fraction);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -771,89 +398,14 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
         ColoredBox(
           color: readerTheme.backgroundColor,
           child: _ReaderWebViewBody(
-            serverPort: widget.serverPort,
+            serverPort: serverPort,
             readerTheme: readerTheme,
-            webViewKey: _webViewKey,
           ),
         ),
-        _BottomChromeDriver(onSeekFraction: _seekFraction),
         const _ComicProgressOverlayDriver(),
-        _ContextPanelDriver(textActions: widget.textActions),
+        _ContextPanelDriver(textActions: textActions),
         const _ReviewReminderDriver(),
       ],
-    );
-  }
-}
-
-/// Combines chrome visibility from [ReaderChromeCubit], selection state from
-/// [ReaderSelectionCubit], and reading progress from [ReaderBloc].
-class _BottomChromeDriver extends StatelessWidget {
-  const _BottomChromeDriver({required this.onSeekFraction});
-
-  /// Forwarded to the slider's drag-end handler. Skips the bloc
-  /// entirely — the WebView's `goToFraction` triggers `onRelocated`
-  /// once the new page lands and the bloc updates from there.
-  final ValueChanged<double> onSeekFraction;
-
-  @override
-  Widget build(BuildContext context) {
-    final chromeVisible = context.select<ReaderChromeCubit, bool>(
-      (c) => c.state.chromeVisible,
-    );
-    final hasSelection = context.select<ReaderSelectionCubit, bool>(
-      (c) => c.state.hasSelection,
-    );
-    final progress = context.select<ReaderBloc, double>(
-      (b) => b.state.book?.readingProgress ?? 0,
-    );
-    final chapterTitle = context.select<ReaderBloc, String?>(
-      (b) => b.state.chapterTitle,
-    );
-    final bookCurrentPage = context.select<ReaderBloc, int?>(
-      (b) => b.state.bookCurrentPage,
-    );
-    final bookTotalPages = context.select<ReaderBloc, int?>(
-      (b) => b.state.bookTotalPages,
-    );
-    final chapterCurrentPage = context.select<ReaderBloc, int?>(
-      (b) => b.state.chapterCurrentPage,
-    );
-    final chapterTotalPages = context.select<ReaderBloc, int?>(
-      (b) => b.state.chapterTotalPages,
-    );
-    // sizeTotal is the byte length of all linear sections; the slider
-    // uses it to predict bookCurrentPage exactly during drag instead of
-    // approximating through `bookTotalPages` (which loses up to 1499
-    // bytes to the ceil that defines it).
-    final sizeTotal = context.select<ReaderBloc, int?>(
-      (b) => b.state.sizeTotal,
-    );
-    // Format drives which counter the chrome shows. CBZ packs each
-    // image into its own foliate-js section, so byte-locations collapse
-    // into 1–4 across the whole comic — `chapterCurrentPage / total` is
-    // the only useful pair there. EPUB & friends keep the byte-location
-    // counter that already feels global.
-    final format = context.select<ReaderBloc, BookFormat?>(
-      (b) => b.state.book?.format,
-    );
-
-    final colors = context.colors;
-
-    return _ReaderBottomChrome(
-      visible: chromeVisible && !hasSelection,
-      progress: progress,
-      chapterTitle: chapterTitle,
-      bookCurrentPage: bookCurrentPage,
-      bookTotalPages: bookTotalPages,
-      chapterCurrentPage: chapterCurrentPage,
-      chapterTotalPages: chapterTotalPages,
-      sizeTotal: sizeTotal,
-      format: format,
-      panelColor: colors.surface,
-      textColor: colors.onSurfaceVariant,
-      accentColor: colors.primary,
-      dividerColor: colors.outlineVariant,
-      onSeekFraction: onSeekFraction,
     );
   }
 }
@@ -948,23 +500,23 @@ class _ReviewReminderDriver extends StatelessWidget {
 }
 
 /// Always-on "page X / Y" indicator for comics — CBZ readers expect a
-/// constant pager hint, since the bottom chrome is hidden by default
-/// and tapping it for every page-turn is friction.
+/// constant pager hint, and tapping chrome for every page-turn is friction.
 ///
 /// Subscribes only to the chapter-page pair (which for CBZ maps 1:1
 /// to comic page index / total) and a couple of visibility gates.
 /// Renders nothing when:
-///   * the format isn't CBZ — books and PDFs already get the
-///     byte-location number in the bottom chrome,
-///   * the chrome panel is visible — same info would be duplicated,
+///   * the format isn't CBZ — books and PDFs do not need the comic page
+///     counter,
+///   * the chrome panel is visible — the action bar should own the bottom
+///     visual area,
 ///   * a text selection is active — the context panel takes the
 ///     bottom of the screen and the overlay would clutter it,
 ///   * page metrics haven't arrived yet (first `onRelocated` not
 ///     fired).
 ///
 /// Position: anchored near the bottom safe area while chrome is hidden.
-/// When chrome is shown, the overlay is hidden to avoid duplicating the
-/// page number in the bottom panel.
+/// When chrome is shown, the overlay is hidden so it does not compete with
+/// the bottom action bar.
 class _ComicProgressOverlayDriver extends StatelessWidget {
   const _ComicProgressOverlayDriver();
 
@@ -1088,16 +640,10 @@ class _ReaderWebViewBody extends StatefulWidget {
   const _ReaderWebViewBody({
     required this.serverPort,
     required this.readerTheme,
-    this.webViewKey,
   });
 
   final int serverPort;
   final ReaderThemeData readerTheme;
-
-  /// Optional GlobalKey — the parent state holds it so other chrome
-  /// (the bottom-chrome slider) can reach into [BookReaderWebViewState]
-  /// for imperative actions like `goToFraction`.
-  final GlobalKey<BookReaderWebViewState>? webViewKey;
 
   @override
   State<_ReaderWebViewBody> createState() => _ReaderWebViewBodyState();
@@ -1189,12 +735,9 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     );
 
     final readerSurface = BookReaderWebView(
-      // Parent's GlobalKey when provided (lets bottom chrome seek
-      // imperatively). Falls back to source-id ValueKey for forced
-      // remount on book change. The reader route is recreated for
-      // each book open, so the key choice only matters within a
-      // single session.
-      key: widget.webViewKey ?? ValueKey(state.sourceId),
+      // Source-id key forces a clean WebView mount when the reader
+      // is rebuilt for a different book.
+      key: ValueKey(state.sourceId),
       serverPort: widget.serverPort,
       bookFilePath: state.book!.filePath,
       initialCfi: state.book?.currentCfi,

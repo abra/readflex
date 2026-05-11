@@ -20,7 +20,7 @@ final class ReaderSourceLoadRequested extends ReaderEvent {
 
 /// foliate-js reports a new reading position. Persisted to the book's
 /// `currentCfi` + `readingProgress`. Optional chapter/page fields are
-/// only stored on the in-memory state (chrome UI), not persisted.
+/// only stored on the in-memory state for overlays/debug UI, not persisted.
 ///
 /// [atEnd] is `true` when foliate-js's paginator reports we're on its
 /// trailing blank-buffer pages past the actual content. On those pages
@@ -53,9 +53,8 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
   final int? chapterCurrentPage;
   final int? chapterTotalPages;
 
-  /// Total byte size of all linear sections, surfaced so the bottom-chrome
-  /// slider can predict `bookCurrentPage` exactly during drag. See
-  /// [BookPosition.sizeTotal] for the full rationale.
+  /// Total byte size of all linear sections. See [BookPosition.sizeTotal]
+  /// for the full rationale.
   final int? sizeTotal;
   final bool atEnd;
 

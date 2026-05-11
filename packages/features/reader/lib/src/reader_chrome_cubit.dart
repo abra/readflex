@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// Whether the reader's top/bottom chrome (AppBar + progress bar) is shown.
+/// Whether the reader's bottom action chrome is shown.
 class ReaderChromeState extends Equatable {
   const ReaderChromeState({this.chromeVisible = false});
 
