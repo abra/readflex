@@ -818,60 +818,25 @@ class _ReaderTocDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final drawerWidth = MediaQuery.sizeOf(context).width < 420
-        ? MediaQuery.sizeOf(context).width * 0.86
-        : 360.0;
-
     return Positioned.fill(
       child: IgnorePointer(
         ignoring: !visible,
-        child: Stack(
-          children: [
-            AnimatedOpacity(
-              opacity: visible ? 1 : 0,
-              duration: _kChromeAnimDuration,
-              curve: _kChromeAnimCurve,
-              child: GestureDetector(
-                onTap: onClose,
-                behavior: HitTestBehavior.opaque,
-                child: ColoredBox(
-                  color: Colors.black.withValues(alpha: 0.28),
-                  child: const SizedBox.expand(),
-                ),
+        child: AnimatedSlide(
+          offset: visible ? Offset.zero : const Offset(-1, 0),
+          duration: _kChromeAnimDuration,
+          curve: _kChromeAnimCurve,
+          child: Material(
+            color: panelColor,
+            elevation: 0,
+            child: SafeArea(
+              bottom: false,
+              child: _ReaderTocDrawerContent(
+                tocItems: tocItems,
+                onClose: onClose,
+                onItemSelected: onItemSelected,
               ),
             ),
-            AnimatedSlide(
-              offset: visible ? Offset.zero : const Offset(-1, 0),
-              duration: _kChromeAnimDuration,
-              curve: _kChromeAnimCurve,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: SizedBox(
-                  width: drawerWidth,
-                  child: Material(
-                    color: panelColor,
-                    elevation: 0,
-                    child: SafeArea(
-                      right: false,
-                      bottom: false,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          border: Border(
-                            right: BorderSide(color: dividerColor),
-                          ),
-                        ),
-                        child: _ReaderTocDrawerContent(
-                          tocItems: tocItems,
-                          onClose: onClose,
-                          onItemSelected: onItemSelected,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1067,7 +1032,10 @@ class _ReaderTocListTile extends StatelessWidget {
       contentPadding: EdgeInsets.only(
         left: leftInset.toDouble(),
         right: AppSpacing.md,
+        top: AppSpacing.xxs,
+        bottom: AppSpacing.xxs,
       ),
+      minVerticalPadding: AppSpacing.xs,
       title: Text(
         item.label.isEmpty ? 'Untitled chapter' : item.label,
         maxLines: 2,
@@ -1130,61 +1098,27 @@ class _ReaderSearchDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final drawerWidth = MediaQuery.sizeOf(context).width < 420
-        ? MediaQuery.sizeOf(context).width * 0.86
-        : 360.0;
 
     return Positioned.fill(
       child: IgnorePointer(
         ignoring: !visible,
-        child: Stack(
-          children: [
-            AnimatedOpacity(
-              opacity: visible ? 1 : 0,
-              duration: _kChromeAnimDuration,
-              curve: _kChromeAnimCurve,
-              child: GestureDetector(
-                onTap: onClose,
-                behavior: HitTestBehavior.opaque,
-                child: ColoredBox(
-                  color: Colors.black.withValues(alpha: 0.28),
-                  child: const SizedBox.expand(),
-                ),
+        child: AnimatedSlide(
+          offset: visible ? Offset.zero : const Offset(-1, 0),
+          duration: _kChromeAnimDuration,
+          curve: _kChromeAnimCurve,
+          child: Material(
+            color: colors.surface,
+            elevation: 0,
+            child: SafeArea(
+              bottom: false,
+              child: _ReaderSearchDrawerContent(
+                visible: visible,
+                onClose: onClose,
+                onSearch: onSearch,
+                onResultSelected: onResultSelected,
               ),
             ),
-            AnimatedSlide(
-              offset: visible ? Offset.zero : const Offset(-1, 0),
-              duration: _kChromeAnimDuration,
-              curve: _kChromeAnimCurve,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: SizedBox(
-                  width: drawerWidth,
-                  child: Material(
-                    color: colors.surface,
-                    elevation: 0,
-                    child: SafeArea(
-                      right: false,
-                      bottom: false,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          border: Border(
-                            right: BorderSide(color: colors.outlineVariant),
-                          ),
-                        ),
-                        child: _ReaderSearchDrawerContent(
-                          visible: visible,
-                          onClose: onClose,
-                          onSearch: onSearch,
-                          onResultSelected: onResultSelected,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1382,8 +1316,9 @@ class _ReaderSearchResultTile extends StatelessWidget {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
+        vertical: AppSpacing.xxs,
       ),
+      minVerticalPadding: AppSpacing.xs,
       title: Text(
         chapterTitle == null || chapterTitle.isEmpty
             ? 'Search result'
