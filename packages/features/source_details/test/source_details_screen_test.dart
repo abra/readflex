@@ -33,6 +33,7 @@ void main() {
       expect(find.text('Flutter Design Patterns'), findsWidgets);
       expect(find.text('Daria Orlova'), findsOneWidget);
       expect(find.text('Start reading'), findsOneWidget);
+      expect(find.byType(Hero), findsOneWidget);
       expect(find.byType(AppImageAspectRatio), findsOneWidget);
       expect(find.text('Review'), findsOneWidget);
       expect(find.text('Highlights'), findsOneWidget);
@@ -63,6 +64,20 @@ void main() {
         expect(selectedSource, openedSource);
       },
     );
+
+    testWidgets('keeps source cover Hero bounds at stable 2:3 ratio', (
+      tester,
+    ) async {
+      await tester.pumpSourceDetails(
+        repository: repository,
+        initialSource: _newSource,
+      );
+
+      final heroSize = tester.getSize(find.byType(Hero));
+
+      expect(heroSize.width, 220);
+      expect(heroSize.height, 330);
+    });
   });
 }
 

@@ -227,12 +227,19 @@ class _HeroSection extends StatelessWidget {
       children: [
         SizedBox(
           width: coverWidth,
-          child: AppImageAspectRatio(
-            image: coverImage,
-            fallbackAspectRatio: _fallbackCoverAspectRatio,
-            child: _SourceCover(
-              source: source,
-              coverImage: coverImage,
+          height: coverWidth / _fallbackCoverAspectRatio,
+          child: Hero(
+            tag: sourceCoverHeroTag(source.id),
+            transitionOnUserGestures: true,
+            child: Align(
+              child: AppImageAspectRatio(
+                image: coverImage,
+                fallbackAspectRatio: _fallbackCoverAspectRatio,
+                child: _SourceCover(
+                  source: source,
+                  coverImage: coverImage,
+                ),
+              ),
             ),
           ),
         ),
@@ -270,18 +277,14 @@ class _SourceCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Hero(
-      tag: sourceCoverHeroTag(source.id),
-      transitionOnUserGestures: true,
-      child: AppSourceCoverFrame(
-        cover: AppSourceCover(
-          title: source.title,
-          author: source.author,
-          seed: source.id,
-          coverImage: coverImage,
-          progress: source.readingProgress > 0 ? source.readingProgress : null,
-          showMatte: false,
-        ),
+    return AppSourceCoverFrame(
+      cover: AppSourceCover(
+        title: source.title,
+        author: source.author,
+        seed: source.id,
+        coverImage: coverImage,
+        progress: source.readingProgress > 0 ? source.readingProgress : null,
+        showMatte: false,
       ),
     );
   }
