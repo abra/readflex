@@ -32,6 +32,7 @@ void main() {
       expect(prefs.readerOverrideFont, isTrue);
       expect(prefs.readerOverrideColor, isTrue);
       expect(prefs.readerUseBookLayout, isTrue);
+      expect(prefs.readerSearchHistory, isEmpty);
       expect(prefs.onboardingCompleted, isFalse);
       expect(prefs.hasCompletedSetup, isFalse);
     });
@@ -42,12 +43,14 @@ void main() {
         themeMode: ThemeMode.dark,
         locale: const Locale('ru'),
         catalogLayoutMode: 'list',
+        readerSearchHistory: const ['design patterns', 'bloc'],
         onboardingCompleted: true,
       );
 
       expect(updated.themeMode, ThemeMode.dark);
       expect(updated.locale, const Locale('ru'));
       expect(updated.catalogLayoutMode, 'list');
+      expect(updated.readerSearchHistory, ['design patterns', 'bloc']);
       expect(updated.onboardingCompleted, isTrue);
       // Unchanged fields preserved
       expect(updated.readerThemeId, 'paper');
@@ -57,6 +60,13 @@ void main() {
     test('equality', () {
       const a = Preferences();
       const b = Preferences();
+      expect(a, equals(b));
+      expect(a.hashCode, b.hashCode);
+    });
+
+    test('equality compares readerSearchHistory by value', () {
+      const a = Preferences(readerSearchHistory: ['flutter', 'bloc']);
+      const b = Preferences(readerSearchHistory: ['flutter', 'bloc']);
       expect(a, equals(b));
       expect(a.hashCode, b.hashCode);
     });

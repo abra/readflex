@@ -32,6 +32,7 @@ void main() {
       expect(prefs.readerOverrideFont, isTrue);
       expect(prefs.readerOverrideColor, isTrue);
       expect(prefs.readerUseBookLayout, isTrue);
+      expect(prefs.readerSearchHistory, isEmpty);
       expect(prefs.onboardingCompleted, isFalse);
       expect(prefs.hasCompletedSetup, isFalse);
     });
@@ -51,6 +52,7 @@ void main() {
         readerOverrideFont: false,
         readerOverrideColor: false,
         readerUseBookLayout: false,
+        readerSearchHistory: ['design patterns', 'bloc'],
         onboardingCompleted: true,
         hasCompletedSetup: true,
       );
@@ -81,6 +83,7 @@ void main() {
       expect(map['readerOverrideFont'], isFalse);
       expect(map['readerOverrideColor'], isFalse);
       expect(map['readerUseBookLayout'], isFalse);
+      expect(map['readerSearchHistory'], isEmpty);
       expect(map['readerThemeId'], 'paper');
       expect(map['readerFontId'], 'serif');
       expect(map['readerTextScale'], 1.0);
@@ -116,8 +119,25 @@ void main() {
         expect(prefs.readerOverrideFont, isTrue);
         expect(prefs.readerOverrideColor, isTrue);
         expect(prefs.readerUseBookLayout, isTrue);
+        expect(prefs.readerSearchHistory, isEmpty);
       },
     );
+
+    test('load() ignores non-string readerSearchHistory entries', () async {
+      final storage = PreferencesStorage();
+      await storage.setString(
+        _key,
+        jsonEncode(<String, Object?>{
+          '_schemaVersion': 2,
+          'readerSearchHistory': ['flutter', 42, null, 'bloc'],
+        }),
+      );
+
+      final repo = PreferencesRepository(storage);
+      final prefs = await repo.load(_supportedCodes);
+
+      expect(prefs.readerSearchHistory, ['flutter', 'bloc']);
+    });
 
     test('load() falls back to defaults on corrupt JSON', () async {
       final storage = PreferencesStorage();

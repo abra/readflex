@@ -1,5 +1,6 @@
 import 'dart:ui' show Locale;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart' show ThemeMode;
 
 /// Reader-scoped appearance slice of [Preferences] (theme / font / layout
@@ -104,6 +105,7 @@ class Preferences {
     this.readerOverrideFont = true,
     this.readerOverrideColor = true,
     this.readerUseBookLayout = true,
+    this.readerSearchHistory = const [],
     this.onboardingCompleted = false,
     this.hasCompletedSetup = false,
   });
@@ -120,6 +122,7 @@ class Preferences {
   final bool readerOverrideFont;
   final bool readerOverrideColor;
   final bool readerUseBookLayout;
+  final List<String> readerSearchHistory;
 
   /// Whether the user has completed the onboarding flow.
   final bool onboardingCompleted;
@@ -153,6 +156,7 @@ class Preferences {
     bool? readerOverrideFont,
     bool? readerOverrideColor,
     bool? readerUseBookLayout,
+    List<String>? readerSearchHistory,
     bool? onboardingCompleted,
     bool? hasCompletedSetup,
   }) => Preferences(
@@ -169,6 +173,7 @@ class Preferences {
     readerOverrideFont: readerOverrideFont ?? this.readerOverrideFont,
     readerOverrideColor: readerOverrideColor ?? this.readerOverrideColor,
     readerUseBookLayout: readerUseBookLayout ?? this.readerUseBookLayout,
+    readerSearchHistory: readerSearchHistory ?? this.readerSearchHistory,
     onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
     hasCompletedSetup: hasCompletedSetup ?? this.hasCompletedSetup,
   );
@@ -189,6 +194,7 @@ class Preferences {
           readerOverrideFont == other.readerOverrideFont &&
           readerOverrideColor == other.readerOverrideColor &&
           readerUseBookLayout == other.readerUseBookLayout &&
+          listEquals(readerSearchHistory, other.readerSearchHistory) &&
           onboardingCompleted == other.onboardingCompleted &&
           hasCompletedSetup == other.hasCompletedSetup;
 
@@ -206,6 +212,7 @@ class Preferences {
     readerOverrideFont,
     readerOverrideColor,
     readerUseBookLayout,
+    Object.hashAll(readerSearchHistory),
     onboardingCompleted,
     hasCompletedSetup,
   ]);

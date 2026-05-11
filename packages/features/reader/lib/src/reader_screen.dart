@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:highlight_repository/highlight_repository.dart';
@@ -24,6 +25,7 @@ const _kContextPanelHeight = 80.0;
 const _kChromeAnimDuration = Duration(milliseconds: 200);
 const _kChromeAnimCurve = Curves.easeOutCubic;
 const _kBookSearchMinQueryLength = 2;
+const _kBookSearchHistoryLimit = 10;
 const _kUserRelocationReasons = {'page', 'scroll', 'snap'};
 
 final _readerDrawerCloseButtonStyle = IconButton.styleFrom(
@@ -64,11 +66,15 @@ class _ReaderCallbacksScope extends InheritedWidget {
   const _ReaderCallbacksScope({
     required this.onCheckDueItems,
     required this.onStartMiniReview,
+    required this.initialSearchHistory,
+    required this.onSearchHistoryChanged,
     required super.child,
   });
 
   final Future<int> Function(String sourceId)? onCheckDueItems;
   final void Function(BuildContext context, String sourceId)? onStartMiniReview;
+  final List<String> initialSearchHistory;
+  final ValueChanged<List<String>>? onSearchHistoryChanged;
 
   static _ReaderCallbacksScope? of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<_ReaderCallbacksScope>();
@@ -76,7 +82,9 @@ class _ReaderCallbacksScope extends InheritedWidget {
   @override
   bool updateShouldNotify(_ReaderCallbacksScope old) =>
       onCheckDueItems != old.onCheckDueItems ||
-      onStartMiniReview != old.onStartMiniReview;
+      onStartMiniReview != old.onStartMiniReview ||
+      initialSearchHistory != old.initialSearchHistory ||
+      onSearchHistoryChanged != old.onSearchHistoryChanged;
 }
 
 /// Full-screen reader for a book (route `/reader/:sourceId`).
@@ -95,7 +103,9 @@ class ReaderScreen extends StatelessWidget {
     required this.bookRepository,
     required this.highlightRepository,
     required this.textActions,
+    this.initialSearchHistory = const [],
     this.initialSource,
+    this.onSearchHistoryChanged,
     this.onCheckDueItems,
     this.onStartMiniReview,
     super.key,
@@ -106,7 +116,9 @@ class ReaderScreen extends StatelessWidget {
   final BookRepository bookRepository;
   final HighlightRepository highlightRepository;
   final List<TextAction> textActions;
+  final List<String> initialSearchHistory;
   final Book? initialSource;
+  final ValueChanged<List<String>>? onSearchHistoryChanged;
   final Future<int> Function(String sourceId)? onCheckDueItems;
   final void Function(BuildContext context, String sourceId)? onStartMiniReview;
 
@@ -117,6 +129,8 @@ class ReaderScreen extends StatelessWidget {
     return _ReaderCallbacksScope(
       onCheckDueItems: onCheckDueItems,
       onStartMiniReview: onStartMiniReview,
+      initialSearchHistory: initialSearchHistory,
+      onSearchHistoryChanged: onSearchHistoryChanged,
       child: MultiBlocProvider(
         providers: [
           BlocProvider(
@@ -376,6 +390,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   @override
   Widget build(BuildContext context) {
     final appearance = PreferencesScope.readerAppearanceOf(context);
+    final callbacks = _ReaderCallbacksScope.of(context);
     // Reader theme drives the book *page* — WebView background and
     // foliate-js customCSS. Chrome (passed-through Stack siblings)
     // pulls colours from the app theme themselves; they don't take
@@ -415,6 +430,8 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
           onClose: _closeSearchDrawer,
           onSearch: _searchBook,
           onResultSelected: _goToSearchResult,
+          initialRecentQueries: callbacks?.initialSearchHistory ?? const [],
+          onRecentQueriesChanged: callbacks?.onSearchHistoryChanged,
         ),
       ],
     );
@@ -1123,12 +1140,16 @@ class _ReaderSearchDrawer extends StatelessWidget {
     required this.onClose,
     required this.onSearch,
     required this.onResultSelected,
+    required this.initialRecentQueries,
+    required this.onRecentQueriesChanged,
   });
 
   final bool visible;
   final VoidCallback onClose;
   final Future<List<ReaderSearchResult>> Function(String query) onSearch;
   final ValueChanged<ReaderSearchResult> onResultSelected;
+  final List<String> initialRecentQueries;
+  final ValueChanged<List<String>>? onRecentQueriesChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -1151,6 +1172,8 @@ class _ReaderSearchDrawer extends StatelessWidget {
                 onClose: onClose,
                 onSearch: onSearch,
                 onResultSelected: onResultSelected,
+                initialRecentQueries: initialRecentQueries,
+                onRecentQueriesChanged: onRecentQueriesChanged,
               ),
             ),
           ),
@@ -1166,12 +1189,16 @@ class _ReaderSearchDrawerContent extends StatefulWidget {
     required this.onClose,
     required this.onSearch,
     required this.onResultSelected,
+    required this.initialRecentQueries,
+    required this.onRecentQueriesChanged,
   });
 
   final bool visible;
   final VoidCallback onClose;
   final Future<List<ReaderSearchResult>> Function(String query) onSearch;
   final ValueChanged<ReaderSearchResult> onResultSelected;
+  final List<String> initialRecentQueries;
+  final ValueChanged<List<String>>? onRecentQueriesChanged;
 
   @override
   State<_ReaderSearchDrawerContent> createState() =>
@@ -1184,13 +1211,27 @@ class _ReaderSearchDrawerContentState
   final _focusNode = FocusNode();
   Timer? _debounce;
   List<ReaderSearchResult> _results = const [];
+  late List<String> _recentQueries;
   bool _isLoading = false;
   String? _errorMessage;
   int _requestId = 0;
 
   @override
+  void initState() {
+    super.initState();
+    _recentQueries = widget.initialRecentQueries;
+  }
+
+  @override
   void didUpdateWidget(covariant _ReaderSearchDrawerContent oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!widget.visible &&
+        !listEquals(
+          widget.initialRecentQueries,
+          oldWidget.initialRecentQueries,
+        )) {
+      _recentQueries = widget.initialRecentQueries;
+    }
     if (widget.visible && !oldWidget.visible) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _focusNode.requestFocus();
@@ -1215,6 +1256,28 @@ class _ReaderSearchDrawerContentState
   }
 
   void _onQueryChanged(String value) {
+    _queueSearch(value, debounce: true);
+  }
+
+  void _selectRecentQuery(String query) {
+    _controller.value = TextEditingValue(
+      text: query,
+      selection: TextSelection.collapsed(offset: query.length),
+    );
+    _focusNode.requestFocus();
+    _queueSearch(query, debounce: false);
+  }
+
+  void _removeRecentQuery(String query) {
+    final recentQueries = [
+      for (final recent in _recentQueries)
+        if (recent != query) recent,
+    ];
+    setState(() => _recentQueries = recentQueries);
+    widget.onRecentQueriesChanged?.call(recentQueries);
+  }
+
+  void _queueSearch(String value, {required bool debounce}) {
     _debounce?.cancel();
     final query = value.trim();
     if (query.length < _kBookSearchMinQueryLength) {
@@ -1232,9 +1295,25 @@ class _ReaderSearchDrawerContentState
       _isLoading = true;
       _errorMessage = null;
     });
-    _debounce = Timer(const Duration(milliseconds: 300), () {
-      _runSearch(query);
-    });
+    if (debounce) {
+      _debounce = Timer(const Duration(milliseconds: 300), () {
+        _runSearch(query);
+      });
+    } else {
+      unawaited(_runSearch(query));
+    }
+  }
+
+  List<String> _updatedRecentQueries(String query) {
+    final normalized = query.trim();
+    if (normalized.length < _kBookSearchMinQueryLength) {
+      return _recentQueries;
+    }
+    return [
+      normalized,
+      for (final recent in _recentQueries)
+        if (recent.toLowerCase() != normalized.toLowerCase()) recent,
+    ].take(_kBookSearchHistoryLimit).toList(growable: false);
   }
 
   Future<void> _runSearch(String query) async {
@@ -1242,10 +1321,19 @@ class _ReaderSearchDrawerContentState
     try {
       final results = await widget.onSearch(query);
       if (!mounted || requestId != _requestId) return;
+      final recentQueries = _updatedRecentQueries(query);
+      final shouldPersistRecentQueries = !listEquals(
+        recentQueries,
+        _recentQueries,
+      );
       setState(() {
         _results = results;
+        _recentQueries = recentQueries;
         _isLoading = false;
       });
+      if (shouldPersistRecentQueries) {
+        widget.onRecentQueriesChanged?.call(recentQueries);
+      }
     } catch (_) {
       if (!mounted || requestId != _requestId) return;
       setState(() {
@@ -1259,8 +1347,8 @@ class _ReaderSearchDrawerContentState
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final canSearch =
-        _controller.text.trim().length >= _kBookSearchMinQueryLength;
+    final query = _controller.text.trim();
+    final canSearch = query.length >= _kBookSearchMinQueryLength;
     final listBottomPadding =
         MediaQuery.paddingOf(context).bottom + AppSpacing.lg;
 
@@ -1309,9 +1397,16 @@ class _ReaderSearchDrawerContentState
             child: _errorMessage != null
                 ? _ReaderDrawerEmptyState(message: _errorMessage!)
                 : !canSearch
-                ? const _ReaderDrawerEmptyState(
-                    message: 'Type at least 2 characters to search',
-                  )
+                ? query.isEmpty && _recentQueries.isNotEmpty
+                      ? _ReaderRecentSearchesList(
+                          queries: _recentQueries,
+                          bottomPadding: listBottomPadding,
+                          onQuerySelected: _selectRecentQuery,
+                          onQueryRemoved: _removeRecentQuery,
+                        )
+                      : const _ReaderDrawerEmptyState(
+                          message: 'Type at least 2 characters to search',
+                        )
                 : _results.isEmpty && !_isLoading
                 ? const _ReaderDrawerEmptyState(message: 'No results found')
                 : ScrollEdgeFadeStack(
@@ -1330,6 +1425,79 @@ class _ReaderSearchDrawerContentState
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ReaderRecentSearchesList extends StatelessWidget {
+  const _ReaderRecentSearchesList({
+    required this.queries,
+    required this.bottomPadding,
+    required this.onQuerySelected,
+    required this.onQueryRemoved,
+  });
+
+  final List<String> queries;
+  final double bottomPadding;
+  final ValueChanged<String> onQuerySelected;
+  final ValueChanged<String> onQueryRemoved;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    return ScrollEdgeFadeStack(
+      child: ListView.builder(
+        padding: EdgeInsets.only(bottom: bottomPadding),
+        itemCount: queries.length + 1,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                AppSpacing.xs,
+              ),
+              child: Text(
+                'Recent searches',
+                style: context.text.labelMedium.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+            );
+          }
+
+          final query = queries[index - 1];
+          return ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.xxs,
+            ),
+            minVerticalPadding: AppSpacing.xs,
+            leading: Icon(
+              AppIcons.clock,
+              size: AppIconSize.xs,
+              color: colors.onSurfaceVariant,
+            ),
+            title: Text(
+              query,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.text.bodyMedium.copyWith(
+                color: colors.onSurface,
+              ),
+            ),
+            trailing: IconButton(
+              icon: const Icon(AppIcons.close, size: AppIconSize.xs),
+              tooltip: 'Remove from history',
+              style: _readerDrawerCloseButtonStyle,
+              onPressed: () => onQueryRemoved(query),
+            ),
+            onTap: () => onQuerySelected(query),
+          );
+        },
+      ),
     );
   }
 }

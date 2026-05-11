@@ -59,6 +59,7 @@ class PreferencesRepository {
         readerOverrideFont: map['readerOverrideFont'] as bool? ?? true,
         readerOverrideColor: map['readerOverrideColor'] as bool? ?? true,
         readerUseBookLayout: map['readerUseBookLayout'] as bool? ?? true,
+        readerSearchHistory: _readStringList(map['readerSearchHistory']),
         onboardingCompleted: map['onboardingCompleted'] as bool? ?? false,
         hasCompletedSetup: map['hasCompletedSetup'] as bool? ?? false,
       );
@@ -90,6 +91,7 @@ class PreferencesRepository {
       'readerOverrideFont': prefs.readerOverrideFont,
       'readerOverrideColor': prefs.readerOverrideColor,
       'readerUseBookLayout': prefs.readerUseBookLayout,
+      'readerSearchHistory': prefs.readerSearchHistory,
       'onboardingCompleted': prefs.onboardingCompleted,
       'hasCompletedSetup': prefs.hasCompletedSetup,
     };
@@ -104,5 +106,10 @@ class PreferencesRepository {
   static Locale _resolveInitialLocale(List<String> supportedCodes) {
     final code = PlatformDispatcher.instance.locale.languageCode;
     return Locale(supportedCodes.contains(code) ? code : 'en');
+  }
+
+  static List<String> _readStringList(Object? value) {
+    if (value is! List) return const [];
+    return value.whereType<String>().toList(growable: false);
   }
 }

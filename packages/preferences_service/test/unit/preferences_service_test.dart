@@ -109,6 +109,26 @@ void main() {
       expect(service2.current.readerUseBookLayout, isFalse);
     });
 
+    test('readerSearchHistory persists across recreations', () async {
+      final service = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+      await service.update(
+        (s) => s.copyWith(
+          readerSearchHistory: ['flutter', 'design patterns'],
+        ),
+      );
+
+      final service2 = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+
+      expect(service2.current.readerSearchHistory, [
+        'flutter',
+        'design patterns',
+      ]);
+    });
+
     test('update() emits updated preferences on stream', () async {
       final service = await PreferencesService.create(
         supportedCodes: _supportedCodes,

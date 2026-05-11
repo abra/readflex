@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:catalog/catalog.dart';
 import 'package:dictionary/dictionary.dart';
 import 'package:domain_models/domain_models.dart';
@@ -208,6 +210,15 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
               serverPort: deps.readerServer.port,
               bookRepository: deps.bookRepository,
               highlightRepository: deps.highlightRepository,
+              initialSearchHistory:
+                  deps.preferencesService.current.readerSearchHistory,
+              onSearchHistoryChanged: (queries) {
+                unawaited(
+                  deps.preferencesService.update(
+                    (prefs) => prefs.copyWith(readerSearchHistory: queries),
+                  ),
+                );
+              },
               textActions: [
                 HighlightAction(
                   highlightRepository: deps.highlightRepository,
