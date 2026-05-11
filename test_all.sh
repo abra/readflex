@@ -52,7 +52,8 @@ run "practice"                     "flutter test test/" "$SCRIPT_DIR/packages/fe
 run "highlight"                    "flutter test test/" "$SCRIPT_DIR/packages/features/highlight"
 run "flashcard"                    "flutter test test/" "$SCRIPT_DIR/packages/features/flashcard"
 run "translate"                    "flutter test test/" "$SCRIPT_DIR/packages/features/translate"
-run "subscription_paywall"                      "flutter test test/" "$SCRIPT_DIR/packages/features/subscription_paywall"
+run "subscription_paywall"         "flutter test test/" "$SCRIPT_DIR/packages/features/subscription_paywall"
+run "source_details"               "flutter test test/" "$SCRIPT_DIR/packages/features/source_details"
 run "reader"                       "flutter test test/" "$SCRIPT_DIR/packages/features/reader"
 
 echo ""
