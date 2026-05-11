@@ -853,6 +853,7 @@ class _ReaderTocDrawer extends StatelessWidget {
                     elevation: 0,
                     child: SafeArea(
                       right: false,
+                      bottom: false,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           border: Border(
@@ -1000,6 +1001,8 @@ class _ReaderTocTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final normalizedQuery = query.trim().toLowerCase();
+    final listBottomPadding =
+        MediaQuery.paddingOf(context).bottom + AppSpacing.lg;
     final filteredItems = normalizedQuery.isEmpty
         ? items
         : [
@@ -1027,7 +1030,7 @@ class _ReaderTocTab extends StatelessWidget {
                   )
                 : ScrollEdgeFadeStack(
                     child: ListView.builder(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                      padding: EdgeInsets.only(bottom: listBottomPadding),
                       itemCount: filteredItems.length,
                       itemBuilder: (context, index) {
                         final item = filteredItems[index];
@@ -1162,6 +1165,7 @@ class _ReaderSearchDrawer extends StatelessWidget {
                     elevation: 0,
                     child: SafeArea(
                       right: false,
+                      bottom: false,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           border: Border(
@@ -1288,6 +1292,8 @@ class _ReaderSearchDrawerContentState
     final colors = context.colors;
     final canSearch =
         _controller.text.trim().length >= _kBookSearchMinQueryLength;
+    final listBottomPadding =
+        MediaQuery.paddingOf(context).bottom + AppSpacing.lg;
 
     return Column(
       children: [
@@ -1341,7 +1347,7 @@ class _ReaderSearchDrawerContentState
                 ? const _ReaderDrawerEmptyState(message: 'No results found')
                 : ScrollEdgeFadeStack(
                     child: ListView.builder(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                      padding: EdgeInsets.only(bottom: listBottomPadding),
                       itemCount: _results.length,
                       itemBuilder: (context, index) {
                         final result = _results[index];
