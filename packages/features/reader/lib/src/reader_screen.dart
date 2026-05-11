@@ -24,7 +24,7 @@ const _kContextPanelHeight = 80.0;
 const _kChromeAnimDuration = Duration(milliseconds: 200);
 const _kChromeAnimCurve = Curves.easeOutCubic;
 const _kBookSearchMinQueryLength = 2;
-const _kSearchHighlightDuration = Duration(seconds: 3);
+const _kSearchHighlightDuration = Duration(seconds: 5);
 
 final _readerDrawerCloseButtonStyle = IconButton.styleFrom(
   backgroundColor: Colors.transparent,
