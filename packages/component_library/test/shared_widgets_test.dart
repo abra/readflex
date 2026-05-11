@@ -3,6 +3,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('AppSourceCoverFrame renders cover and overlay content', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 120,
+            height: 180,
+            child: AppSourceCoverFrame(
+              cover: ColoredBox(color: Colors.red),
+              overlays: [
+                Center(child: Text('EPUB')),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(AppSourceCoverFrame), findsOneWidget);
+    expect(find.text('EPUB'), findsOneWidget);
+  });
+
   testWidgets('ActionBottomSheetLayout renders title and child', (
     tester,
   ) async {

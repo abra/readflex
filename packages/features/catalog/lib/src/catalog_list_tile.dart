@@ -4,8 +4,6 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 
-import 'book_cover_plate.dart';
-
 /// Alpha applied to muted metadata (secondary text, icons) in list rows.
 const double _kMutedAlpha = 0.55;
 
@@ -39,11 +37,11 @@ class BookLibraryListTile extends StatelessWidget {
     };
 
     return _ListRowShell(
-      cover: BookCoverPlate(
-        cover: Hero(
-          tag: sourceCoverHeroTag(book.id),
-          transitionOnUserGestures: true,
-          child: AppSourceCover(
+      cover: Hero(
+        tag: sourceCoverHeroTag(book.id),
+        transitionOnUserGestures: true,
+        child: AppSourceCoverFrame(
+          cover: AppSourceCover(
             title: book.title,
             author: book.author,
             seed: book.id,
@@ -52,9 +50,6 @@ class BookLibraryListTile extends StatelessWidget {
             showAuthor: false,
             showTitle: false,
             showProgress: false,
-            // Suppress the matte so the plate's binding shade can sit
-            // at the actual cover edge — same Apple Books treatment as
-            // the grid tile.
             showMatte: false,
           ),
         ),

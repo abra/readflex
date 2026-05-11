@@ -14,18 +14,6 @@ const _coverMinWidth = 168.0;
 const _coverScreenWidthFactor = 0.54;
 const _titleMaxLines = 3;
 const _authorMaxLines = 2;
-const _coverShadow = [
-  BoxShadow(
-    color: Color(0x14000000),
-    blurRadius: 2,
-    offset: Offset(0, 1),
-  ),
-  BoxShadow(
-    color: Color(0x1F000000),
-    blurRadius: 18,
-    offset: Offset(2, 6),
-  ),
-];
 
 class SourceDetailsScreen extends StatelessWidget {
   const SourceDetailsScreen({
@@ -238,11 +226,7 @@ class _HeroSection extends StatelessWidget {
         SizedBox(
           width: coverWidth,
           height: coverWidth * _SourceCover.aspectRatio,
-          child: _SourceCover(
-            source: source,
-            width: coverWidth,
-            height: coverWidth * _SourceCover.aspectRatio,
-          ),
+          child: _SourceCover(source: source),
         ),
         const SizedBox(height: AppSpacing.lg),
         Text(
@@ -268,17 +252,11 @@ class _HeroSection extends StatelessWidget {
 }
 
 class _SourceCover extends StatelessWidget {
-  const _SourceCover({
-    required this.source,
-    required this.width,
-    required this.height,
-  });
+  const _SourceCover({required this.source});
 
   static const aspectRatio = 3.0 / 2.0;
 
   final Book source;
-  final double width;
-  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -287,24 +265,17 @@ class _SourceCover extends StatelessWidget {
       _ => null,
     };
 
-    return DecoratedBox(
-      decoration: const BoxDecoration(boxShadow: _coverShadow),
-      child: Hero(
-        tag: sourceCoverHeroTag(source.id),
-        transitionOnUserGestures: true,
-        child: SizedBox(
-          width: width,
-          height: height,
-          child: AppSourceCover(
-            title: source.title,
-            author: source.author,
-            seed: source.id,
-            coverImage: coverImage,
-            progress: source.readingProgress > 0
-                ? source.readingProgress
-                : null,
-            showMatte: false,
-          ),
+    return Hero(
+      tag: sourceCoverHeroTag(source.id),
+      transitionOnUserGestures: true,
+      child: AppSourceCoverFrame(
+        cover: AppSourceCover(
+          title: source.title,
+          author: source.author,
+          seed: source.id,
+          coverImage: coverImage,
+          progress: source.readingProgress > 0 ? source.readingProgress : null,
+          showMatte: false,
         ),
       ),
     );

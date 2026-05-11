@@ -6,7 +6,7 @@ import 'package:flutter/painting.dart';
 /// renders through `Theme.shadowColor` and is M3-tinted on iOS;
 /// these constants paint a literal `BoxShadow` we control end-to-end.
 ///
-/// Not used by `BookCoverPlate` — covers run a tuned two-layer
+/// Not used by `AppSourceCoverFrame` — covers run a tuned two-layer
 /// shadow + binding shade that's specific to the Apple-Books look,
 /// and would leak its specifics into a shared token.
 abstract final class AppShadows {

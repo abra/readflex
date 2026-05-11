@@ -4,8 +4,6 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 
-import 'book_cover_plate.dart';
-
 /// Alpha for the format badge background (dark overlay on cover art).
 const double _kBadgeBackgroundAlpha = 0.55;
 
@@ -36,29 +34,25 @@ class BookLibraryGridTile extends StatelessWidget {
     };
 
     return _GridTileShell(
-      cover: Hero(
-        tag: sourceCoverHeroTag(book.id),
-        transitionOnUserGestures: true,
-        child: AppSourceCover(
-          title: book.title,
-          author: book.author,
-          seed: book.id,
-          coverImage: coverImage,
-          progress: book.readingProgress > 0 ? book.readingProgress : null,
-          // Show the title on the fallback cover art so any format
-          // that doesn't ship an embedded cover (a CBZ without a
-          // cover image, an EPUB stripped to text-only, etc.) stays
-          // identifiable by name. AppSourceCover only honours this on
-          // the fallback path — when a real cover image is present,
-          // the image takes over and the title stays off.
-          showTitle: true,
-          showAuthor: false,
-          showProgress: false,
-          // Apple Books covers run edge-to-edge — no white matte frame
-          // around them. The matte fights with the binding strip the
-          // shell paints over the left edge, so we suppress it here.
-          showMatte: false,
-        ),
+      sourceId: book.id,
+      cover: AppSourceCover(
+        title: book.title,
+        author: book.author,
+        seed: book.id,
+        coverImage: coverImage,
+        progress: book.readingProgress > 0 ? book.readingProgress : null,
+        // Show the title on the fallback cover art so any format
+        // that doesn't ship an embedded cover (a CBZ without a
+        // cover image, an EPUB stripped to text-only, etc.) stays
+        // identifiable by name. AppSourceCover only honours this on
+        // the fallback path — when a real cover image is present,
+        // the image takes over and the title stays off.
+        showTitle: true,
+        showAuthor: false,
+        showProgress: false,
+        // The shared frame paints the physical cover edge; AppSourceCover's
+        // matte would add a second border and make Hero endpoints differ.
+        showMatte: false,
       ),
       isFinished: book.isFinished,
       progress: book.readingProgress,
@@ -74,6 +68,7 @@ class BookLibraryGridTile extends StatelessWidget {
 /// cover aspect ratio, badge placement, progress overlay.
 class _GridTileShell extends StatelessWidget {
   const _GridTileShell({
+    required this.sourceId,
     required this.cover,
     required this.isFinished,
     required this.progress,
@@ -83,6 +78,7 @@ class _GridTileShell extends StatelessWidget {
     this.formatLabel,
   });
 
+  final String sourceId;
   final Widget cover;
   final bool isFinished;
   final double progress;
@@ -106,86 +102,84 @@ class _GridTileShell extends StatelessWidget {
         scale: isSelected ? 0.92 : 1.0,
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOut,
-        child: BookCoverPlate(
-          cover: cover,
-          overlays: [
-            if (formatLabel != null)
-              Positioned(
-                top: AppSpacing.xs,
-                left: AppSpacing.xs,
-                child: _FormatBadge(label: formatLabel!),
-              ),
-            if (isFinished)
-              const Positioned(
-                top: AppSpacing.xs,
-                right: AppSpacing.xs,
-                child: _FinishedBadge(),
-              ),
-            if (isSelected)
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                    border: Border.all(color: colors.primary, width: 3),
-                    color: colors.primary.withValues(alpha: 0.15),
-                  ),
+        child: Hero(
+          tag: sourceCoverHeroTag(sourceId),
+          transitionOnUserGestures: true,
+          child: AppSourceCoverFrame(
+            cover: cover,
+            overlays: [
+              if (formatLabel != null)
+                Positioned(
+                  top: AppSpacing.xs,
+                  left: AppSpacing.xs,
+                  child: _FormatBadge(label: formatLabel!),
                 ),
-              ),
-            if (isSelected)
-              Positioned(
-                top: AppSpacing.xs,
-                right: AppSpacing.xs,
-                child: _SelectionCheck(color: colors.primary),
-              ),
-            if (progress > 0 && !isFinished) ...[
-              // Edge-to-edge gradient: the BookCoverPlate's ClipRRect
-              // already trims the bottom corners to AppRadius.sm, so
-              // we don't need an inset here. (We did when the cover
-              // was framed by AppCoverArt's 2dp matte, but the grid
-              // tile suppresses the matte for the Apple-Books look —
-              // a stale 2dp inset would otherwise paint a white kerf
-              // around light covers.)
-              const Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      stops: [0.0, 0.15],
-                      colors: [Color(0x4D1B1F30), Color(0x001B1F30)],
+              if (isFinished)
+                const Positioned(
+                  top: AppSpacing.xs,
+                  right: AppSpacing.xs,
+                  child: _FinishedBadge(),
+                ),
+              if (isSelected)
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      border: Border.all(color: colors.primary, width: 3),
+                      color: colors.primary.withValues(alpha: 0.15),
                     ),
                   ),
                 ),
-              ),
-              Positioned(
-                left: 6,
-                right: 6,
-                bottom: 4,
-                child: LayoutBuilder(
-                  builder: (_, constraints) => ClipRRect(
-                    borderRadius: BorderRadius.circular(AppRadius.full),
-                    child: SizedBox(
-                      height: 3,
-                      child: Stack(
-                        children: [
-                          Positioned.fill(
-                            child: ColoredBox(
-                              color: Colors.white.withValues(alpha: 0.35),
-                            ),
-                          ),
-                          Container(
-                            width:
-                                constraints.maxWidth * progress.clamp(0.0, 1.0),
-                            color: Colors.white.withValues(alpha: 0.9),
-                          ),
-                        ],
+              if (isSelected)
+                Positioned(
+                  top: AppSpacing.xs,
+                  right: AppSpacing.xs,
+                  child: _SelectionCheck(color: colors.primary),
+                ),
+              if (progress > 0 && !isFinished) ...[
+                const Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        stops: [0.0, 0.15],
+                        colors: [Color(0x4D1B1F30), Color(0x001B1F30)],
                       ),
                     ),
                   ),
                 ),
-              ),
+                Positioned(
+                  left: 6,
+                  right: 6,
+                  bottom: 4,
+                  child: LayoutBuilder(
+                    builder: (_, constraints) => ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadius.full),
+                      child: SizedBox(
+                        height: 3,
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: ColoredBox(
+                                color: Colors.white.withValues(alpha: 0.35),
+                              ),
+                            ),
+                            Container(
+                              width:
+                                  constraints.maxWidth *
+                                  progress.clamp(0.0, 1.0),
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
