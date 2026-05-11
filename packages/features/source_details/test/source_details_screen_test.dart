@@ -34,7 +34,6 @@ void main() {
       expect(find.text('Daria Orlova'), findsOneWidget);
       expect(find.text('Start reading'), findsOneWidget);
       expect(find.byType(Hero), findsOneWidget);
-      expect(find.byType(AppImageAspectRatio), findsOneWidget);
       expect(find.text('Review'), findsOneWidget);
       expect(find.text('Highlights'), findsOneWidget);
       expect(find.text('Flashcards'), findsOneWidget);

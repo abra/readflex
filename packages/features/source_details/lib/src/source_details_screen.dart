@@ -12,7 +12,7 @@ import 'source_details_bloc.dart';
 const _coverMaxWidth = 220.0;
 const _coverMinWidth = 168.0;
 const _coverScreenWidthFactor = 0.54;
-const _fallbackCoverAspectRatio = 2 / 3;
+const _coverAspectRatio = 2 / 3;
 const _titleMaxLines = 3;
 const _authorMaxLines = 2;
 
@@ -227,19 +227,13 @@ class _HeroSection extends StatelessWidget {
       children: [
         SizedBox(
           width: coverWidth,
-          height: coverWidth / _fallbackCoverAspectRatio,
+          height: coverWidth / _coverAspectRatio,
           child: Hero(
             tag: sourceCoverHeroTag(source.id),
             transitionOnUserGestures: true,
-            child: Align(
-              child: AppImageAspectRatio(
-                image: coverImage,
-                fallbackAspectRatio: _fallbackCoverAspectRatio,
-                child: _SourceCover(
-                  source: source,
-                  coverImage: coverImage,
-                ),
-              ),
+            child: _SourceCover(
+              source: source,
+              coverImage: coverImage,
             ),
           ),
         ),
