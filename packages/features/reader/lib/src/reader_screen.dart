@@ -540,7 +540,7 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(
                         AppSpacing.lg,
-                        AppSpacing.xs,
+                        AppSpacing.sm,
                         AppSpacing.lg,
                         0,
                       ),
@@ -548,31 +548,36 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  widget.chapterTitle ?? '',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    widget.chapterTitle ?? '',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: mutedText,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                Text(
+                                  displayedText,
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: mutedText,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              Text(
-                                displayedText,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: mutedText,
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                           SizedBox(
                             height: 30,
