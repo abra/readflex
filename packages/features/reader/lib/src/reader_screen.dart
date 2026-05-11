@@ -23,6 +23,15 @@ const _kContextPanelHeight = 80.0;
 /// Duration and curve for the reader chrome slide animation.
 const _kChromeAnimDuration = Duration(milliseconds: 200);
 const _kChromeAnimCurve = Curves.easeOutCubic;
+const _kBookSearchMinQueryLength = 2;
+
+final _readerDrawerCloseButtonStyle = IconButton.styleFrom(
+  backgroundColor: Colors.transparent,
+  disabledBackgroundColor: Colors.transparent,
+  hoverColor: Colors.transparent,
+  focusColor: Colors.transparent,
+  highlightColor: Colors.transparent,
+);
 
 /// foliate-js's "location" granularity in bytes — the divisor it uses for
 /// `bookCurrentPage = floor(currentBytes / sizePerLoc)`. Hard-coded in
@@ -923,6 +932,7 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
                 IconButton(
                   icon: const Icon(AppIcons.close, size: AppIconSize.md),
                   tooltip: 'Close',
+                  style: _readerDrawerCloseButtonStyle,
                   onPressed: widget.onClose,
                 ),
               ],
@@ -1233,7 +1243,7 @@ class _ReaderSearchDrawerContentState
   void _onQueryChanged(String value) {
     _debounce?.cancel();
     final query = value.trim();
-    if (query.isEmpty) {
+    if (query.length < _kBookSearchMinQueryLength) {
       _requestId++;
       setState(() {
         _results = const [];
@@ -1275,7 +1285,8 @@ class _ReaderSearchDrawerContentState
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final hasQuery = _controller.text.trim().isNotEmpty;
+    final canSearch =
+        _controller.text.trim().length >= _kBookSearchMinQueryLength;
 
     return Column(
       children: [
@@ -1301,6 +1312,7 @@ class _ReaderSearchDrawerContentState
               IconButton(
                 icon: const Icon(AppIcons.close, size: AppIconSize.md),
                 tooltip: 'Close',
+                style: _readerDrawerCloseButtonStyle,
                 onPressed: widget.onClose,
               ),
             ],
@@ -1319,9 +1331,9 @@ class _ReaderSearchDrawerContentState
         Expanded(
           child: _errorMessage != null
               ? _ReaderDrawerEmptyState(message: _errorMessage!)
-              : !hasQuery
+              : !canSearch
               ? const _ReaderDrawerEmptyState(
-                  message: 'Type to search book contents',
+                  message: 'Type at least 2 characters to search',
                 )
               : _results.isEmpty && !_isLoading
               ? const _ReaderDrawerEmptyState(message: 'No results found')
