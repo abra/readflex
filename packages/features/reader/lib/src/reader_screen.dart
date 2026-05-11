@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
@@ -21,6 +23,12 @@ const _kContextPanelHeight = 80.0;
 /// Duration and curve for the reader chrome slide animation.
 const _kChromeAnimDuration = Duration(milliseconds: 200);
 const _kChromeAnimCurve = Curves.easeOutCubic;
+
+/// foliate-js's "location" granularity in bytes — the divisor it uses for
+/// `bookCurrentPage = floor(currentBytes / sizePerLoc)`. Hard-coded in
+/// `view.js` (`new SectionProgress(book.sections, 1500, 1600)`); mirror
+/// it here so the slider can predict the page number during drag.
+const _foliateSizePerLoc = 1500;
 
 /// Converts foliate-js's 0-indexed location number into the 1-indexed
 /// page count the reader actually shows ("page 1" instead of "page 0"
@@ -142,7 +150,6 @@ class _ReaderView extends StatelessWidget {
               ),
             ),
           ),
-          const _ReaderActionChromeDriver(),
         ],
       ),
     );
@@ -186,128 +193,6 @@ class _ReaderBody extends StatelessWidget {
         textActions: textActions,
       ),
     };
-  }
-}
-
-/// Combines reader status, chrome visibility and selection state to drive
-/// the thumb-friendly bottom action bar.
-class _ReaderActionChromeDriver extends StatelessWidget {
-  const _ReaderActionChromeDriver();
-
-  @override
-  Widget build(BuildContext context) {
-    final status = context.select<ReaderBloc, ReaderStatus>(
-      (b) => b.state.status,
-    );
-    final chromeVisible = context.select<ReaderChromeCubit, bool>(
-      (c) => c.state.chromeVisible,
-    );
-    final hasSelection = context.select<ReaderSelectionCubit, bool>(
-      (c) => c.state.hasSelection,
-    );
-    // Chrome (top/bottom panels, context panel, comic overlay) is app
-    // UI — it follows the app theme, not the reader's per-page preset.
-    // Reader theme keeps driving the *book page* itself (WebView
-    // background, foliate-js customCSS).
-    final colors = context.colors;
-
-    return _ReaderActionChrome(
-      visible: (status != ReaderStatus.ready || chromeVisible) && !hasSelection,
-      foregroundColor: colors.onSurface,
-      onBack: () => Navigator.of(context).maybePop(),
-      // Explicit nulls to silence unused-parameter analyzer warnings
-      // and to document that these slots will be wired as the
-      // corresponding features (TOC / font / bookmark / search)
-      // land. Passing null keeps the icon greyed-out as intended.
-      onTocPressed: null,
-      onFontPressed: null,
-      onBookmarkPressed: null,
-      onSearchPressed: null,
-    );
-  }
-}
-
-/// Bottom reader action chrome: 5-slot icon bar (back · TOC · font · bookmark
-/// · search). Slides up from the bottom when `chromeVisible` is true.
-/// TOC / bookmark / search are placeholder slots until those features
-/// land — they show as disabled icons so the layout matches the
-/// design now and lights up automatically as each callback is wired
-/// in [ReaderScreen].
-class _ReaderActionChrome extends StatelessWidget {
-  const _ReaderActionChrome({
-    required this.visible,
-    required this.foregroundColor,
-    this.onBack,
-    this.onTocPressed,
-    this.onFontPressed,
-    this.onBookmarkPressed,
-    this.onSearchPressed,
-  });
-
-  final bool visible;
-  final Color foregroundColor;
-  final VoidCallback? onBack;
-  final VoidCallback? onTocPressed;
-  final VoidCallback? onFontPressed;
-  final VoidCallback? onBookmarkPressed;
-  final VoidCallback? onSearchPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
-      child: IgnorePointer(
-        ignoring: !visible,
-        child: AnimatedSlide(
-          offset: visible ? Offset.zero : const Offset(0, 1),
-          duration: _kChromeAnimDuration,
-          curve: _kChromeAnimCurve,
-          child: AnimatedOpacity(
-            opacity: visible ? 1 : 0,
-            duration: _kChromeAnimDuration,
-            curve: _kChromeAnimCurve,
-            child: AppBottomActionBar(
-              showShadow: true,
-              children: [
-                _ReaderChromeIconButton(
-                  icon: AppIcons.back,
-                  tooltip: 'Back',
-                  foregroundColor: foregroundColor,
-                  onPressed: onBack,
-                ),
-                _ReaderChromeIconButton(
-                  icon: AppIcons.toc,
-                  tooltip: 'Contents',
-                  foregroundColor: foregroundColor,
-                  onPressed: onTocPressed,
-                ),
-                const Spacer(),
-                _ReaderChromeIconButton(
-                  icon: AppIcons.font,
-                  tooltip: 'Font',
-                  foregroundColor: foregroundColor,
-                  onPressed: onFontPressed,
-                ),
-                _ReaderChromeIconButton(
-                  icon: AppIcons.bookmark,
-                  tooltip: 'Bookmark',
-                  foregroundColor: foregroundColor,
-                  onPressed: onBookmarkPressed,
-                ),
-                _ReaderChromeIconButton(
-                  icon: AppIcons.search,
-                  tooltip: 'Search',
-                  foregroundColor: foregroundColor,
-                  onPressed: onSearchPressed,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
 
@@ -371,7 +256,7 @@ class _ReadyContent extends StatelessWidget {
   }
 }
 
-class _ReadyContentBody extends StatelessWidget {
+class _ReadyContentBody extends StatefulWidget {
   const _ReadyContentBody({
     required this.serverPort,
     required this.textActions,
@@ -379,6 +264,22 @@ class _ReadyContentBody extends StatelessWidget {
 
   final int serverPort;
   final List<TextAction> textActions;
+
+  @override
+  State<_ReadyContentBody> createState() => _ReadyContentBodyState();
+}
+
+class _ReadyContentBodyState extends State<_ReadyContentBody> {
+  /// Imperative handle on the WebView so the progress slider can call
+  /// `goToFraction(...)` directly on drag-end without bouncing through
+  /// the bloc. Per-route key — the reader screen is recreated for each
+  /// book open, so it's always fresh.
+  final GlobalKey<BookReaderWebViewState> _webViewKey =
+      GlobalKey<BookReaderWebViewState>();
+
+  void _seekFraction(double fraction) {
+    _webViewKey.currentState?.goToFraction(fraction);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -398,14 +299,388 @@ class _ReadyContentBody extends StatelessWidget {
         ColoredBox(
           color: readerTheme.backgroundColor,
           child: _ReaderWebViewBody(
-            serverPort: serverPort,
+            serverPort: widget.serverPort,
             readerTheme: readerTheme,
+            webViewKey: _webViewKey,
           ),
         ),
+        _ReaderBottomChromeDriver(onSeekFraction: _seekFraction),
         const _ComicProgressOverlayDriver(),
-        _ContextPanelDriver(textActions: textActions),
+        _ContextPanelDriver(textActions: widget.textActions),
         const _ReviewReminderDriver(),
       ],
+    );
+  }
+}
+
+/// Combines chrome visibility from [ReaderChromeCubit], selection state from
+/// [ReaderSelectionCubit], and reading progress from [ReaderBloc].
+class _ReaderBottomChromeDriver extends StatelessWidget {
+  const _ReaderBottomChromeDriver({required this.onSeekFraction});
+
+  /// Forwarded to the slider's drag-end handler. Skips the bloc entirely —
+  /// the WebView's `goToFraction` triggers `onRelocated` once the new page
+  /// lands and the bloc updates from there.
+  final ValueChanged<double> onSeekFraction;
+
+  @override
+  Widget build(BuildContext context) {
+    final chromeVisible = context.select<ReaderChromeCubit, bool>(
+      (c) => c.state.chromeVisible,
+    );
+    final hasSelection = context.select<ReaderSelectionCubit, bool>(
+      (c) => c.state.hasSelection,
+    );
+    final progress = context.select<ReaderBloc, double>(
+      (b) => b.state.book?.readingProgress ?? 0,
+    );
+    final chapterTitle = context.select<ReaderBloc, String?>(
+      (b) => b.state.chapterTitle,
+    );
+    final bookCurrentPage = context.select<ReaderBloc, int?>(
+      (b) => b.state.bookCurrentPage,
+    );
+    final bookTotalPages = context.select<ReaderBloc, int?>(
+      (b) => b.state.bookTotalPages,
+    );
+    final chapterCurrentPage = context.select<ReaderBloc, int?>(
+      (b) => b.state.chapterCurrentPage,
+    );
+    final chapterTotalPages = context.select<ReaderBloc, int?>(
+      (b) => b.state.chapterTotalPages,
+    );
+    final sizeTotal = context.select<ReaderBloc, int?>(
+      (b) => b.state.sizeTotal,
+    );
+    final format = context.select<ReaderBloc, BookFormat?>(
+      (b) => b.state.book?.format,
+    );
+    final colors = context.colors;
+
+    return _ReaderBottomChrome(
+      visible: chromeVisible && !hasSelection,
+      progress: progress,
+      chapterTitle: chapterTitle,
+      bookCurrentPage: bookCurrentPage,
+      bookTotalPages: bookTotalPages,
+      chapterCurrentPage: chapterCurrentPage,
+      chapterTotalPages: chapterTotalPages,
+      sizeTotal: sizeTotal,
+      format: format,
+      panelColor: colors.surface,
+      textColor: colors.onSurfaceVariant,
+      accentColor: colors.primary,
+      dividerColor: colors.outlineVariant,
+      foregroundColor: colors.onSurface,
+      onBack: () => Navigator.of(context).maybePop(),
+      onTocPressed: null,
+      onFontPressed: null,
+      onBookmarkPressed: null,
+      onSearchPressed: null,
+      onSeekFraction: onSeekFraction,
+    );
+  }
+}
+
+/// Unified bottom reader chrome: progress/seek controls above the action row.
+///
+/// It intentionally keeps seek state local: dragging the thumb does not call
+/// JS on every tick, only `onChangeEnd` calls `goToFraction(...)`.
+class _ReaderBottomChrome extends StatefulWidget {
+  const _ReaderBottomChrome({
+    required this.visible,
+    required this.progress,
+    required this.chapterTitle,
+    required this.bookCurrentPage,
+    required this.bookTotalPages,
+    required this.chapterCurrentPage,
+    required this.chapterTotalPages,
+    required this.sizeTotal,
+    required this.format,
+    required this.panelColor,
+    required this.textColor,
+    required this.accentColor,
+    required this.dividerColor,
+    required this.foregroundColor,
+    this.onBack,
+    this.onTocPressed,
+    this.onFontPressed,
+    this.onBookmarkPressed,
+    this.onSearchPressed,
+    required this.onSeekFraction,
+  });
+
+  final bool visible;
+  final double progress;
+  final String? chapterTitle;
+  final int? bookCurrentPage;
+  final int? bookTotalPages;
+  final int? chapterCurrentPage;
+  final int? chapterTotalPages;
+  final int? sizeTotal;
+  final BookFormat? format;
+  final Color panelColor;
+  final Color textColor;
+  final Color accentColor;
+  final Color dividerColor;
+  final Color foregroundColor;
+  final VoidCallback? onBack;
+  final VoidCallback? onTocPressed;
+  final VoidCallback? onFontPressed;
+  final VoidCallback? onBookmarkPressed;
+  final VoidCallback? onSearchPressed;
+  final ValueChanged<double> onSeekFraction;
+
+  @override
+  State<_ReaderBottomChrome> createState() => _ReaderBottomChromeState();
+}
+
+class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
+  /// Local override for smooth drag and for the short post-release window
+  /// before foliate-js reports the new snapped location back to the bloc.
+  double? _dragValue;
+  bool _isDragging = false;
+  Timer? _dragReleaseTimer;
+
+  static const Duration _dragReleaseTimeout = Duration(milliseconds: 600);
+  static const double _dragSettleEpsilon = 0.005;
+
+  @override
+  void dispose() {
+    _dragReleaseTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(_ReaderBottomChrome oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_isDragging) return;
+    final dragValue = _dragValue;
+    if (dragValue == null) return;
+    if ((widget.progress - dragValue).abs() <= _dragSettleEpsilon) {
+      _dragReleaseTimer?.cancel();
+      _dragReleaseTimer = null;
+      setState(() => _dragValue = null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clamped = widget.progress.clamp(0.0, 1.0);
+    final sliderValue = (_dragValue ?? clamped).clamp(0.0, 1.0);
+    final mutedText = widget.textColor.withValues(alpha: 0.7);
+    final isComic = widget.format == BookFormat.cbz;
+
+    final int? rawCurrent;
+    final int? totalForMode;
+    if (isComic) {
+      rawCurrent = widget.chapterCurrentPage;
+      totalForMode = widget.chapterTotalPages;
+    } else {
+      rawCurrent = widget.bookCurrentPage;
+      totalForMode = widget.bookTotalPages;
+    }
+
+    final dragValue = _dragValue;
+    final sizeTotal = widget.sizeTotal;
+    final int? rawLocation;
+    if (dragValue != null) {
+      if (!isComic && sizeTotal != null && sizeTotal > 0) {
+        rawLocation = (dragValue * sizeTotal / _foliateSizePerLoc).floor();
+      } else if (totalForMode != null && totalForMode > 0) {
+        rawLocation = (dragValue * totalForMode).floor();
+      } else {
+        rawLocation = null;
+      }
+    } else {
+      rawLocation = rawCurrent;
+    }
+
+    final String displayedText;
+    if (rawLocation == null) {
+      displayedText = '';
+    } else if (isComic && totalForMode != null && totalForMode > 0) {
+      final oneIndexed = _toDisplayPage(rawLocation, totalForMode);
+      displayedText = '$oneIndexed / $totalForMode';
+    } else {
+      displayedText = _toDisplayPage(rawLocation, totalForMode).toString();
+    }
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: IgnorePointer(
+        ignoring: !widget.visible,
+        child: AnimatedSlide(
+          offset: widget.visible ? Offset.zero : const Offset(0, 1),
+          duration: _kChromeAnimDuration,
+          curve: _kChromeAnimCurve,
+          child: AnimatedOpacity(
+            opacity: widget.visible ? 1 : 0,
+            duration: _kChromeAnimDuration,
+            curve: _kChromeAnimCurve,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: widget.panelColor,
+                boxShadow: AppShadows.panelUp,
+                border: Border(
+                  top: BorderSide(
+                    color: widget.dividerColor,
+                    width: 1 / MediaQuery.devicePixelRatioOf(context),
+                  ),
+                ),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        AppSpacing.xs,
+                        AppSpacing.lg,
+                        0,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  widget.chapterTitle ?? '',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: mutedText,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Text(
+                                displayedText,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: mutedText,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(
+                            height: 30,
+                            child: SliderTheme(
+                              data: SliderThemeData(
+                                trackHeight: 3,
+                                activeTrackColor: widget.accentColor,
+                                inactiveTrackColor: widget.dividerColor,
+                                thumbColor: widget.accentColor,
+                                overlayColor: widget.accentColor.withValues(
+                                  alpha: 0.16,
+                                ),
+                                thumbShape: const RoundSliderThumbShape(
+                                  enabledThumbRadius: 6,
+                                ),
+                                overlayShape: const RoundSliderOverlayShape(
+                                  overlayRadius: 14,
+                                ),
+                                trackShape: const RoundedRectSliderTrackShape(),
+                              ),
+                              child: Slider(
+                                value: sliderValue,
+                                onChangeStart: (v) {
+                                  setState(() {
+                                    _isDragging = true;
+                                    _dragValue = v;
+                                  });
+                                },
+                                onChanged: (v) {
+                                  setState(() => _dragValue = v);
+                                },
+                                onChangeEnd: (v) {
+                                  widget.onSeekFraction(v);
+                                  _dragReleaseTimer?.cancel();
+                                  _dragReleaseTimer = Timer(
+                                    _dragReleaseTimeout,
+                                    () {
+                                      if (!mounted) return;
+                                      _dragReleaseTimer = null;
+                                      if (_dragValue != null) {
+                                        setState(() => _dragValue = null);
+                                      }
+                                    },
+                                  );
+                                  setState(() {
+                                    _isDragging = false;
+                                    _dragValue = v;
+                                  });
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      height: AppSizes.navBarHeight,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                        ),
+                        child: Row(
+                          children: [
+                            _ReaderChromeIconButton(
+                              icon: AppIcons.back,
+                              tooltip: 'Back',
+                              foregroundColor: widget.foregroundColor,
+                              onPressed: widget.onBack,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            _ReaderChromeIconButton(
+                              icon: AppIcons.toc,
+                              tooltip: 'Contents',
+                              foregroundColor: widget.foregroundColor,
+                              onPressed: widget.onTocPressed,
+                            ),
+                            const Spacer(),
+                            _ReaderChromeIconButton(
+                              icon: AppIcons.font,
+                              tooltip: 'Font',
+                              foregroundColor: widget.foregroundColor,
+                              onPressed: widget.onFontPressed,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            _ReaderChromeIconButton(
+                              icon: AppIcons.bookmark,
+                              tooltip: 'Bookmark',
+                              foregroundColor: widget.foregroundColor,
+                              onPressed: widget.onBookmarkPressed,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            _ReaderChromeIconButton(
+                              icon: AppIcons.search,
+                              tooltip: 'Search',
+                              foregroundColor: widget.foregroundColor,
+                              onPressed: widget.onSearchPressed,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -640,10 +915,15 @@ class _ReaderWebViewBody extends StatefulWidget {
   const _ReaderWebViewBody({
     required this.serverPort,
     required this.readerTheme,
+    this.webViewKey,
   });
 
   final int serverPort;
   final ReaderThemeData readerTheme;
+
+  /// Optional GlobalKey — the parent state holds it so progress chrome can
+  /// reach into [BookReaderWebViewState] for `goToFraction`.
+  final GlobalKey<BookReaderWebViewState>? webViewKey;
 
   @override
   State<_ReaderWebViewBody> createState() => _ReaderWebViewBodyState();
@@ -735,9 +1015,10 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     );
 
     final readerSurface = BookReaderWebView(
-      // Source-id key forces a clean WebView mount when the reader
-      // is rebuilt for a different book.
-      key: ValueKey(state.sourceId),
+      // Parent's GlobalKey when provided (lets progress chrome seek
+      // imperatively). Falls back to source-id ValueKey for forced
+      // remount on book change.
+      key: widget.webViewKey ?? ValueKey(state.sourceId),
       serverPort: widget.serverPort,
       bookFilePath: state.book!.filePath,
       initialCfi: state.book?.currentCfi,
