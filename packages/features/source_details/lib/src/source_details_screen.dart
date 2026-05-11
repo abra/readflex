@@ -12,6 +12,7 @@ import 'source_details_bloc.dart';
 const _coverMaxWidth = 220.0;
 const _coverMinWidth = 168.0;
 const _coverScreenWidthFactor = 0.54;
+const _fallbackCoverAspectRatio = 2 / 3;
 const _titleMaxLines = 3;
 const _authorMaxLines = 2;
 
@@ -219,14 +220,21 @@ class _HeroSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.text;
+    final coverImage = _coverImageFor(source);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         SizedBox(
           width: coverWidth,
-          height: coverWidth * _SourceCover.aspectRatio,
-          child: _SourceCover(source: source),
+          child: AppImageAspectRatio(
+            image: coverImage,
+            fallbackAspectRatio: _fallbackCoverAspectRatio,
+            child: _SourceCover(
+              source: source,
+              coverImage: coverImage,
+            ),
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
         Text(
@@ -252,19 +260,16 @@ class _HeroSection extends StatelessWidget {
 }
 
 class _SourceCover extends StatelessWidget {
-  const _SourceCover({required this.source});
-
-  static const aspectRatio = 3.0 / 2.0;
+  const _SourceCover({
+    required this.source,
+    required this.coverImage,
+  });
 
   final Book source;
+  final ImageProvider? coverImage;
 
   @override
   Widget build(BuildContext context) {
-    final coverImage = switch (source.coverImagePath) {
-      final path? when path.isNotEmpty => FileImage(File(path)),
-      _ => null,
-    };
-
     return Hero(
       tag: sourceCoverHeroTag(source.id),
       transitionOnUserGestures: true,
@@ -318,3 +323,10 @@ String _readButtonLabel(Book source) =>
     source.readingProgress > 0 || source.lastOpenedAt != null
     ? 'Continue reading'
     : 'Start reading';
+
+ImageProvider? _coverImageFor(Book source) {
+  return switch (source.coverImagePath) {
+    final path? when path.isNotEmpty => FileImage(File(path)),
+    _ => null,
+  };
+}

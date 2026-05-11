@@ -1,8 +1,21 @@
+import 'dart:ui' as ui;
+
 import 'package:component_library/component_library.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  late ui.Image wideImage;
+
+  setUpAll(() async {
+    wideImage = await createTestImage(width: 40, height: 20, cache: false);
+  });
+
+  tearDownAll(() {
+    wideImage.dispose();
+  });
+
   testWidgets('AppSourceCoverFrame renders cover and overlay content', (
     tester,
   ) async {
@@ -25,6 +38,50 @@ void main() {
 
     expect(find.byType(AppSourceCoverFrame), findsOneWidget);
     expect(find.text('EPUB'), findsOneWidget);
+  });
+
+  testWidgets('AppImageAspectRatio uses fallback ratio without image', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 120,
+            child: AppImageAspectRatio(
+              fallbackAspectRatio: 2 / 3,
+              child: ColoredBox(color: Colors.red),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final aspectRatio = tester.widget<AspectRatio>(find.byType(AspectRatio));
+    expect(aspectRatio.aspectRatio, 2 / 3);
+  });
+
+  testWidgets('AppImageAspectRatio uses decoded image ratio', (tester) async {
+    final image = _TestImageProvider(wideImage);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 120,
+            child: AppImageAspectRatio(
+              image: image,
+              fallbackAspectRatio: 2 / 3,
+              child: const ColoredBox(color: Colors.red),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final aspectRatio = tester.widget<AspectRatio>(find.byType(AspectRatio));
+    expect(aspectRatio.aspectRatio, 2);
   });
 
   testWidgets('ActionBottomSheetLayout renders title and child', (
@@ -496,3 +553,24 @@ void main() {
 }
 
 void _noop() {}
+
+class _TestImageProvider extends ImageProvider<_TestImageProvider> {
+  const _TestImageProvider(this.image);
+
+  final ui.Image image;
+
+  @override
+  Future<_TestImageProvider> obtainKey(ImageConfiguration configuration) {
+    return SynchronousFuture<_TestImageProvider>(this);
+  }
+
+  @override
+  ImageStreamCompleter loadImage(
+    _TestImageProvider key,
+    ImageDecoderCallback decode,
+  ) {
+    return OneFrameImageStreamCompleter(
+      Future<ImageInfo>.value(ImageInfo(image: key.image.clone())),
+    );
+  }
+}

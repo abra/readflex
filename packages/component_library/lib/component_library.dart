@@ -6,6 +6,7 @@ export 'src/app_badge.dart';
 export 'src/app_cover_art.dart';
 export 'src/app_filter_chip.dart';
 export 'src/app_icons.dart';
+export 'src/app_image_aspect_ratio.dart';
 export 'src/app_source_cover.dart';
 export 'src/app_source_cover_frame.dart';
 export 'src/bottom_sheet_header.dart';
