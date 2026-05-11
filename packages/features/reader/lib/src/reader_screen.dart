@@ -1002,9 +1002,6 @@ class _ReaderTocTab extends StatelessWidget {
             for (final item in items)
               if (item.label.toLowerCase().contains(normalizedQuery)) item,
           ];
-    final hidePageNumbers =
-        items.isNotEmpty &&
-        items.every((item) => item.startPage != null && item.startPage == 0);
 
     return Column(
       children: [
@@ -1032,7 +1029,6 @@ class _ReaderTocTab extends StatelessWidget {
                         final item = filteredItems[index];
                         return _ReaderTocListTile(
                           item: item,
-                          showPageNumber: !hidePageNumbers,
                           onTap: () => onItemSelected(item),
                         );
                       },
@@ -1048,12 +1044,10 @@ class _ReaderTocTab extends StatelessWidget {
 class _ReaderTocListTile extends StatelessWidget {
   const _ReaderTocListTile({
     required this.item,
-    required this.showPageNumber,
     required this.onTap,
   });
 
   final ReaderTocItem item;
-  final bool showPageNumber;
   final VoidCallback onTap;
 
   @override
@@ -1073,14 +1067,6 @@ class _ReaderTocListTile extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: context.text.bodyMedium.copyWith(color: colors.onSurface),
       ),
-      trailing: !showPageNumber || item.startPage == null
-          ? null
-          : Text(
-              item.startPage.toString(),
-              style: context.text.bodySmall.copyWith(
-                color: colors.onSurfaceVariant,
-              ),
-            ),
       onTap: onTap,
     );
   }
