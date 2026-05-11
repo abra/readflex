@@ -185,7 +185,7 @@ export class View extends HTMLElement {
       total: totalPages
     }
 
-    this.lastLocation = { ...progress, tocItem, pageItem, cfi, range, chapterLocation }
+    this.lastLocation = { ...progress, tocItem, pageItem, cfi, range, chapterLocation, reason }
     if (reason === 'snap' || reason === 'page' || reason === 'scroll')
       this.history.replaceState(cfi)
 

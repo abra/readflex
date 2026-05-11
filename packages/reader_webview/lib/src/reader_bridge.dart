@@ -17,6 +17,7 @@ class BookPosition {
     this.bookCurrentPage,
     this.bookTotalPages,
     this.sizeTotal,
+    this.relocationReason,
     this.atEnd = false,
     this.atStart = false,
   });
@@ -43,6 +44,10 @@ class BookPosition {
   /// Constant per book; reported on every relocate for simplicity.
   final int? sizeTotal;
 
+  /// foliate-js relocation reason. User-driven navigation is reported as
+  /// `page`, `scroll`, or `snap`; programmatic jumps may omit it.
+  final String? relocationReason;
+
   /// `true` when the paginator reports we are on its trailing "blank
   /// buffer" pages past the actual content. foliate-js still emits
   /// onRelocated with `fraction=0` / `bookCurrentPage=0` on those
@@ -65,6 +70,7 @@ class BookPosition {
       bookCurrentPage: (map['bookCurrentPage'] as num?)?.toInt(),
       bookTotalPages: (map['bookTotalPages'] as num?)?.toInt(),
       sizeTotal: (map['sizeTotal'] as num?)?.toInt(),
+      relocationReason: map['reason'] as String?,
       atEnd: map['atEnd'] as bool? ?? false,
       atStart: map['atStart'] as bool? ?? false,
     );

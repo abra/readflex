@@ -24,7 +24,7 @@ const _kContextPanelHeight = 80.0;
 const _kChromeAnimDuration = Duration(milliseconds: 200);
 const _kChromeAnimCurve = Curves.easeOutCubic;
 const _kBookSearchMinQueryLength = 2;
-const _kSearchHighlightDuration = Duration(seconds: 5);
+const _kUserRelocationReasons = {'page', 'scroll', 'snap'};
 
 final _readerDrawerCloseButtonStyle = IconButton.styleFrom(
   backgroundColor: Colors.transparent,
@@ -286,16 +286,19 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   /// book open, so it's always fresh.
   final GlobalKey<BookReaderWebViewState> _webViewKey =
       GlobalKey<BookReaderWebViewState>();
-  Timer? _searchHighlightTimer;
+  bool _searchHighlightVisible = false;
+  bool _ignoreNextRelocateForSearchHighlight = false;
   bool _tocDrawerVisible = false;
   bool _searchDrawerVisible = false;
 
   void _seekFraction(double fraction) {
+    _clearSearchHighlight();
     _webViewKey.currentState?.goToFraction(fraction);
   }
 
   void _openTocDrawer() {
     if (_tocDrawerVisible) return;
+    _clearSearchHighlight();
     context.read<ReaderChromeCubit>().hide();
     setState(() {
       _tocDrawerVisible = true;
@@ -311,6 +314,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
 
   void _openSearchDrawer() {
     if (_searchDrawerVisible) return;
+    _clearSearchHighlight();
     context.read<ReaderChromeCubit>().hide();
     setState(() {
       _searchDrawerVisible = true;
@@ -329,17 +333,27 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   }
 
   void _clearSearchHighlight() {
-    _searchHighlightTimer?.cancel();
-    _searchHighlightTimer = null;
+    _searchHighlightVisible = false;
+    _ignoreNextRelocateForSearchHighlight = false;
     _webViewKey.currentState?.clearSearch();
   }
 
-  void _scheduleSearchHighlightClear() {
-    _searchHighlightTimer?.cancel();
-    _searchHighlightTimer = Timer(_kSearchHighlightDuration, () {
-      _searchHighlightTimer = null;
-      _webViewKey.currentState?.clearSearch();
-    });
+  void _markSearchResultHighlightActive() {
+    _searchHighlightVisible = true;
+    _ignoreNextRelocateForSearchHighlight = true;
+  }
+
+  void _handleReaderPositionChanged(BookPosition position) {
+    if (!_searchHighlightVisible) return;
+
+    if (_ignoreNextRelocateForSearchHighlight) {
+      _ignoreNextRelocateForSearchHighlight = false;
+      return;
+    }
+
+    if (_kUserRelocationReasons.contains(position.relocationReason)) {
+      _clearSearchHighlight();
+    }
   }
 
   void _goToTocItem(ReaderTocItem item) {
@@ -350,19 +364,13 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
 
   void _goToSearchResult(ReaderSearchResult result) {
     if (result.cfi.isEmpty) return;
+    _markSearchResultHighlightActive();
     _webViewKey.currentState?.goToCfi(result.cfi);
     _closeSearchDrawer(restoreChrome: false, clearSearch: false);
-    _scheduleSearchHighlightClear();
   }
 
   Future<List<ReaderSearchResult>> _searchBook(String query) async {
     return _webViewKey.currentState?.searchBook(query) ?? const [];
-  }
-
-  @override
-  void dispose() {
-    _searchHighlightTimer?.cancel();
-    super.dispose();
   }
 
   @override
@@ -386,6 +394,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
             serverPort: widget.serverPort,
             readerTheme: readerTheme,
             webViewKey: _webViewKey,
+            onPositionChanged: _handleReaderPositionChanged,
           ),
         ),
         _ReaderBottomChromeDriver(
@@ -1656,6 +1665,7 @@ class _ReaderWebViewBody extends StatefulWidget {
     required this.serverPort,
     required this.readerTheme,
     this.webViewKey,
+    this.onPositionChanged,
   });
 
   final int serverPort;
@@ -1664,6 +1674,10 @@ class _ReaderWebViewBody extends StatefulWidget {
   /// Optional GlobalKey — the parent state holds it so progress chrome can
   /// reach into [BookReaderWebViewState] for `goToFraction`.
   final GlobalKey<BookReaderWebViewState>? webViewKey;
+
+  /// Side-effect hook for UI-only reader chrome state. Bloc persistence stays
+  /// inside this widget; parent uses this to clear transient search overlays.
+  final ValueChanged<BookPosition>? onPositionChanged;
 
   @override
   State<_ReaderWebViewBody> createState() => _ReaderWebViewBodyState();
@@ -1820,6 +1834,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
             atEnd: position.atEnd,
           ),
         );
+        widget.onPositionChanged?.call(position);
       },
       onTocChanged: (items) {
         bloc.add(ReaderTocUpdated(items: items));

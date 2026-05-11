@@ -13,6 +13,7 @@ void main() {
         'bookCurrentPage': 84,
         'bookTotalPages': 200,
         'sizeTotal': 480000,
+        'reason': 'page',
         'atEnd': false,
         'atStart': false,
       });
@@ -25,6 +26,7 @@ void main() {
       expect(position.bookCurrentPage, 84);
       expect(position.bookTotalPages, 200);
       expect(position.sizeTotal, 480000);
+      expect(position.relocationReason, 'page');
       expect(position.atEnd, isFalse);
       expect(position.atStart, isFalse);
     });

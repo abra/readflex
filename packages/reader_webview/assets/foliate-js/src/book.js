@@ -1192,7 +1192,7 @@ class Reader {
   }
 
   #onRelocate({ detail }) {
-    const { cfi, fraction, location, tocItem, pageItem, chapterLocation } = detail
+    const { cfi, fraction, location, tocItem, pageItem, chapterLocation, reason } = detail
     const loc = pageItem
       ? `Page ${pageItem.label}`
       : `Loc ${location.current}`
@@ -1205,6 +1205,7 @@ class Reader {
       pageItem,
       location,
       chapterLocation,
+      reason,
       bookmark: this.#bookmarkInfo,
     })
   }
@@ -1620,6 +1621,7 @@ const onRelocated = (currentInfo) => {
     sizeTotal,
     cfi,
     percentage,
+    reason: currentInfo.reason,
     atEnd,
     atStart,
     bookmark: currentInfo.bookmark,
