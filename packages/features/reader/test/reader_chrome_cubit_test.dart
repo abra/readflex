@@ -62,6 +62,29 @@ void main() {
       );
     });
 
+    group('show', () {
+      blocTest<ReaderChromeCubit, ReaderChromeState>(
+        'shows when hidden',
+        build: buildCubit,
+        act: (c) => c.show(),
+        expect: () => [
+          isA<ReaderChromeState>().having(
+            (s) => s.chromeVisible,
+            'chromeVisible',
+            isTrue,
+          ),
+        ],
+      );
+
+      blocTest<ReaderChromeCubit, ReaderChromeState>(
+        'no-op when already visible',
+        build: buildCubit,
+        seed: () => const ReaderChromeState(chromeVisible: true),
+        act: (c) => c.show(),
+        expect: () => <ReaderChromeState>[],
+      );
+    });
+
     group('ReaderChromeState equality', () {
       test('equal states are equal', () {
         const a = ReaderChromeState(chromeVisible: true);

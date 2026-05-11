@@ -294,41 +294,45 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
 
   void _openTocDrawer() {
     if (_tocDrawerVisible) return;
+    context.read<ReaderChromeCubit>().hide();
     setState(() {
       _tocDrawerVisible = true;
       _searchDrawerVisible = false;
     });
   }
 
-  void _closeTocDrawer() {
+  void _closeTocDrawer({bool restoreChrome = true}) {
     if (!_tocDrawerVisible) return;
     setState(() => _tocDrawerVisible = false);
+    if (restoreChrome) context.read<ReaderChromeCubit>().show();
   }
 
   void _openSearchDrawer() {
     if (_searchDrawerVisible) return;
+    context.read<ReaderChromeCubit>().hide();
     setState(() {
       _searchDrawerVisible = true;
       _tocDrawerVisible = false;
     });
   }
 
-  void _closeSearchDrawer() {
+  void _closeSearchDrawer({bool restoreChrome = true}) {
     if (!_searchDrawerVisible) return;
     _webViewKey.currentState?.clearSearch();
     setState(() => _searchDrawerVisible = false);
+    if (restoreChrome) context.read<ReaderChromeCubit>().show();
   }
 
   void _goToTocItem(ReaderTocItem item) {
     if (item.href.isEmpty) return;
     _webViewKey.currentState?.goToHref(item.href);
-    _closeTocDrawer();
+    _closeTocDrawer(restoreChrome: false);
   }
 
   void _goToSearchResult(ReaderSearchResult result) {
     if (result.cfi.isEmpty) return;
     _webViewKey.currentState?.goToCfi(result.cfi);
-    _closeSearchDrawer();
+    _closeSearchDrawer(restoreChrome: false);
   }
 
   Future<List<ReaderSearchResult>> _searchBook(String query) async {
