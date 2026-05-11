@@ -24,6 +24,7 @@ const _kContextPanelHeight = 80.0;
 const _kChromeAnimDuration = Duration(milliseconds: 200);
 const _kChromeAnimCurve = Curves.easeOutCubic;
 const _kBookSearchMinQueryLength = 2;
+const _kSearchHighlightDuration = Duration(seconds: 3);
 
 final _readerDrawerCloseButtonStyle = IconButton.styleFrom(
   backgroundColor: Colors.transparent,
@@ -285,6 +286,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   /// book open, so it's always fresh.
   final GlobalKey<BookReaderWebViewState> _webViewKey =
       GlobalKey<BookReaderWebViewState>();
+  Timer? _searchHighlightTimer;
   bool _tocDrawerVisible = false;
   bool _searchDrawerVisible = false;
 
@@ -316,11 +318,28 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     });
   }
 
-  void _closeSearchDrawer({bool restoreChrome = true}) {
+  void _closeSearchDrawer({
+    bool restoreChrome = true,
+    bool clearSearch = true,
+  }) {
     if (!_searchDrawerVisible) return;
-    _webViewKey.currentState?.clearSearch();
+    if (clearSearch) _clearSearchHighlight();
     setState(() => _searchDrawerVisible = false);
     if (restoreChrome) context.read<ReaderChromeCubit>().show();
+  }
+
+  void _clearSearchHighlight() {
+    _searchHighlightTimer?.cancel();
+    _searchHighlightTimer = null;
+    _webViewKey.currentState?.clearSearch();
+  }
+
+  void _scheduleSearchHighlightClear() {
+    _searchHighlightTimer?.cancel();
+    _searchHighlightTimer = Timer(_kSearchHighlightDuration, () {
+      _searchHighlightTimer = null;
+      _webViewKey.currentState?.clearSearch();
+    });
   }
 
   void _goToTocItem(ReaderTocItem item) {
@@ -332,11 +351,18 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   void _goToSearchResult(ReaderSearchResult result) {
     if (result.cfi.isEmpty) return;
     _webViewKey.currentState?.goToCfi(result.cfi);
-    _closeSearchDrawer(restoreChrome: false);
+    _closeSearchDrawer(restoreChrome: false, clearSearch: false);
+    _scheduleSearchHighlightClear();
   }
 
   Future<List<ReaderSearchResult>> _searchBook(String query) async {
     return _webViewKey.currentState?.searchBook(query) ?? const [];
+  }
+
+  @override
+  void dispose() {
+    _searchHighlightTimer?.cancel();
+    super.dispose();
   }
 
   @override
