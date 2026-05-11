@@ -19,12 +19,13 @@ src/theme/
     primitive_spacing.dart      # Raw spacing values (s2, s4, s8, s12, etc.)
     app_colors.dart             # Semantic palette: AppColorPalette, lightPalette, darkPalette
     app_spacing.dart            # Semantic spacing: AppSpacing (xxs, xs, sm, md, lg, xl, xxl, xxxl, xxxxl)
-    app_radius.dart             # Border radius scale: AppRadius (xs, sm, md, lg, xl, pill)
+    app_radius.dart             # Border radius scale: AppRadius (xs, sm, md, lg, xl, full)
     app_sizes.dart              # Control heights: AppSizes (buttonHeight, navBarHeight, etc.)
     app_elevation.dart          # Elevation levels: AppElevation (level0..level3)
+    app_icon_size.dart          # Icon size scale
+    app_shadows.dart            # Shared shadow recipes
   extensions/
     app_colors_ext.dart         # ThemeExtension for colors beyond ColorScheme (AppColorsExt)
-    app_dimens_ext.dart         # ThemeExtension for spacing, radius, sizes (AppDimensExt)
     build_context_ext.dart      # BuildContext convenience accessors
   components/
     app_button_themes.dart      # FilledButton, OutlinedButton, TextButton, IconButton
@@ -33,7 +34,9 @@ src/theme/
     app_navigation_theme.dart   # NavigationBar, BottomSheet, Dialog
     app_selection_themes.dart   # SegmentedButton, Chip
   app_theme.dart                # Central assembly: AppTheme.light() / dark()
+  app_text_theme.dart           # TextTheme construction helpers
   app_typography.dart           # AppTypography: textTheme, fontFamilySans/Serif, serif()/sans()
+  book_layout.dart              # Reader book layout presets
   reader_appearance.dart        # Reader-specific theme presets (Paper, Warm, Mist, Night)
 ```
 
@@ -52,14 +55,10 @@ context.text.bodyLarge            // TextTheme roles
 context.text.headlineSmall        // serif headlines
 AppTypography.serif(fontSize: 18) // one-off serif style
 
-// Dimensions (ThemeExtension)
-context.dimens.spacingLg          // 16
-context.dimens.radiusMd           // 12
-context.dimens.buttonHeight       // 50
-
 // Static constants (for const contexts and component themes)
 const EdgeInsets.all(AppSpacing.lg)
 BorderRadius.circular(AppRadius.md)
+const Icon(Icons.search, size: AppIconSize.md)
 ```
 
 ### AppColorsExt Fields
@@ -76,23 +75,26 @@ Colors that go beyond `ColorScheme`, delivered via `ThemeExtension`:
 | Navigation   | `tabActive`, `tabInactive`                                                               |
 | Other        | `divider`, `aiAccent`                                                                    |
 
-### AppDimensExt Fields
+### Token Fields
 
-Spacing, radius, and control sizes delivered via `ThemeExtension`:
+Spacing, radius, icon sizes, control sizes, elevation, and shadows are exposed
+as static semantic token classes:
 
-| Group   | Fields                                                                                                                                                               |
-|---------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Spacing | `spacingXxs` (2), `spacingXs` (4), `spacingSm` (8), `spacingMd` (12), `spacingLg` (16), `spacingXl` (20), `spacingXxl` (24), `spacingXxxl` (48), `spacingXxxxl` (64) |
-| Radius  | `radiusXs` (4), `radiusSm` (8), `radiusMd` (12), `radiusLg` (16), `radiusXl` (20), `radiusXxl` (999)                                                                 |
-| Sizes   | `buttonHeight` (50), `inputHeight` (52), `iconButtonSize` (40)                                                                                                       |
+| Token class | Purpose |
+|-------------|---------|
+| `AppSpacing` | Layout gaps and insets (`xxs` … `xxxxl`) |
+| `AppRadius` | Shape scale (`xs`, `sm`, `md`, `lg`, `xl`, `full`) |
+| `AppSizes` | Control heights and tap targets |
+| `AppIconSize` | Standard icon sizes |
+| `AppElevation` / `AppShadows` | Shared depth language |
 
 ### Typography
 
 `AppTypography` is the single source of truth for text:
 
-- `AppTypography.textTheme` -- `TextTheme` with all 15 Material roles; display/headline
-  use Source Serif 4, body/title/label use Inter
-- `AppTypography.fontFamilySans` / `fontFamilySerif` -- font family constants
+- `AppTypography.textTheme` -- `TextTheme` with all 15 Material roles; display
+  and headline roles use Literata, title/body/label roles use Geist
+- `AppTypography.fontFamilySans` / `fontFamilySerif` -- `Geist` / `Literata`
 - `AppTypography.serif(...)` / `sans(...)` -- factory methods for one-off styles
 
 ### Rules
@@ -104,8 +106,8 @@ Spacing, radius, and control sizes delivered via `ThemeExtension`:
 - **Primitives feed semantics** -- `PrimitiveColors` / `PrimitiveSpacing` are raw values;
   `AppColorPalette` / `AppSpacing` assign meaning.
 - **ColorScheme** for Material-native roles (primary, surface, error, etc.).
-- **ThemeExtension** for everything else (AppColorsExt for extra colors, AppDimensExt for
-  dimensions).
+- **ThemeExtension** for extra theme colors (`AppColorsExt`). Spacing, radius,
+  sizes, icons, elevation, and shadows are static semantic tokens.
 - **Static constants** are OK for spacing/radius in `const` contexts and component theme
   assembly.
 - **Component themes** read from palette and static tokens (no BuildContext available).
@@ -119,15 +121,19 @@ Reusable presentation-only widgets used across features:
 | Widget                              | Purpose                                        |
 |-------------------------------------|------------------------------------------------|
 | `ActionBottomSheetLayout`           | Bottom sheet shell with header and content     |
-| `BottomSheetHeader`                 | Title + close button row                       |
+| `BottomSheetHeader`                 | Bottom sheet title row                         |
 | `ButtonLoadingIndicator`            | Compact circular progress for buttons          |
 | `CenteredCircularProgressIndicator` | Centered loading spinner                       |
-| `DestructiveDismissBackground`      | Red swipe-to-delete background                 |
 | `EmptyState`                        | Centered empty state message                   |
 | `ErrorState`                        | Error message with retry button                |
-| `FadeGradientOverlay`               | Bottom fade gradient for scrollable content    |
 | `MediaCollectionCard`               | Card with media area, metadata, optional badge |
+| `AppSourceCover` / `AppSourceCoverFrame` | Shared source cover rendering and frame |
+| `SourceCoverHero`                   | Stable Hero wrapper for covers                 |
+| `SearchField`                       | App search field                               |
+| `SettingsGroup` / `SettingsRow`     | Settings list primitives                       |
+| `ScrollEdgeFadeStack`               | Scroll-edge fade/scrim wrapper                 |
 | `SelectionPreviewCard`              | Compact preview of selected text               |
+| `StatCard`                          | Small metric card                              |
 
 ## What Belongs Here
 

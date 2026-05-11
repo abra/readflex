@@ -20,8 +20,9 @@ BLoC and layout cubit internally.
 
 Two independent units of state:
 
-- `CatalogBloc` — domain data. Loads books sorted by `addedAt` DESC,
-  supports `filter` (`all / books / comics / saved / finished`) and
+- `CatalogBloc` — domain data. Loads books and exposes `visibleItems` sorted
+  by `lastOpenedAt ?? addedAt` DESC, then `addedAt` DESC and title,
+  supports `filter` (`all / books / comics / unread / finished`) and
   `searchQuery` (debounced 300ms). `visibleItems` is a computed getter over
   the full list so the bloc only stores one source-of-truth list.
 - `CatalogLayoutCubit` — UI-only list-vs-grid toggle, persisted through

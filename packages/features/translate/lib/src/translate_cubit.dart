@@ -9,10 +9,11 @@ part 'translate_state.dart';
 
 /// Drives the translate bottom sheet.
 ///
-/// Triggers a translation through [TranslationService] (remote with
-/// platform fallback) and, on demand, persists the result as a
-/// [DictionaryEntry] plus a matching FSRS review row so the word enters
-/// the practice queue.
+/// Triggers a translation through [TranslationService] and, on demand,
+/// persists the result as a [DictionaryEntry] plus a matching FSRS review row
+/// so the word enters the practice queue. The currently wired production
+/// service echoes text for translation; real ML Kit / backend translation can
+/// replace it behind the same contract.
 ///
 /// FSRS registration failure is treated as non-fatal — the entry is
 /// still saved and the error is surfaced through [addError].

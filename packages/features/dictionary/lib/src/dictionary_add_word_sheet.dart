@@ -5,7 +5,7 @@ import 'dictionary_add_word_form_data.dart';
 
 /// Bottom sheet for manually adding a new dictionary entry.
 ///
-/// Manual-only path — translation services aren't wired yet, so the form
+/// Manual-only path — this sheet does not call the translation service; the form
 /// is two required fields ([word], [translation]) and two optional
 /// kicker fields ([pronunciation], [partOfSpeech]). The sheet validates
 /// inputs locally and hands the payload to [onSubmit]; persistence is

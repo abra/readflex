@@ -12,15 +12,17 @@ delegates work through callbacks.
 ```dart
 Future<ImportFlowResult?> showImportFlowSheet(
   BuildContext context, {
+  required PickBookFile onPickBookFile,
   required ImportBookFile onImportBook,
 });
 ```
 
-- `onImportBook` — called when the user taps "Import book file"; returns
-  `true` on success. The default implementation lives here as `importBook()`
-  and calls `FilePicker`, extracts metadata with `BookMetadataExtractor` from
-  `reader_webview` (foliate-js via local HTTP server), and persists via
-  `BookRepository`.
+- `onPickBookFile` — opens the platform picker and returns a selected file or
+  `null` on cancel. The default helper is `pickBookFile()`.
+- `onImportBook` — called after a file is picked; returns the persisted
+  `Book?`. The default helper is `importBookFile(...)`, which extracts
+  metadata with `BookMetadataExtractor` from `reader_webview` (foliate-js via
+  local HTTP server) and persists via `BookRepository`.
 - Sheet resolves with `ImportFlowResult.bookImported` when the user
   finishes a successful import so the caller (e.g. `catalog_screen`) can
   refresh.
@@ -30,22 +32,23 @@ Helpers exported from `import_flow.dart`:
 | Symbol                | Purpose                                  |
 |-----------------------|------------------------------------------|
 | `showImportFlowSheet` | Shows the sheet                          |
-| `importBook`          | Default book-import implementation       |
+| `pickBookFile`        | Default file-picker implementation       |
+| `importBookFile`      | Default book-import implementation       |
 | `bookExtensions`      | File-picker allowed extensions           |
 | `ImportFlowResult`    | What got imported                        |
 
 ## Architecture
 
-Multi-step animated sheet driven by `ImportFlowCubit` — picker → loading →
-success / failure. See `memory/project_import_flow_evolution.md` for the
-animated-transition design.
+Multi-step animated sheet driven by `ImportFlowCubit` — menu → uploading →
+done / failure. The body height is pinned so the sheet does not resize between
+states.
 
 ## Dependencies
 
 - `book_repository` — persistence
 - `reader_webview` — `BookMetadataExtractor` for EPUB metadata
 - `domain_models` — `BookFormat`
-- `component_library` — `ActionBottomSheetLayout`, `ButtonLoadingIndicator`,
-  `showAppBottomSheet`, `AppIcons`, `AppSpacing`
+- `component_library` — `showAppBottomSheet`, `BottomSheetHeader`,
+  `AppActionCard`, `AppIcons`, `AppSpacing`
 - `monitoring` — non-fatal logging
 - `file_picker` — file picker integration

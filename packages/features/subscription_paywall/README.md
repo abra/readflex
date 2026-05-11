@@ -1,9 +1,9 @@
 # subscription_paywall
 
-Full-screen bottom sheet that upsells Readflex Premium and triggers the
-purchase flow. Not a route — callers open it imperatively through the
-exported launcher, which is used wherever a premium feature is gated
-(lock icons, the PRO row in Profile, upsell CTAs).
+Modal bottom sheet that upsells Readflex Premium and triggers the purchase
+flow placeholder. Not a route — callers open it imperatively through the
+exported launcher, which is used wherever a premium feature is gated (lock
+icons, the PRO row in Profile, upsell CTAs).
 
 ## Public API
 

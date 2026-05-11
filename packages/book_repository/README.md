@@ -1,7 +1,8 @@
 # book_repository
 
-Domain repository for books. Wraps `BooksDao` from `local_storage` and owns
-on-disk storage of book files (epub, fb2, mobi, pdf) and cover images.
+Domain repository for reading sources. Wraps `BooksDao` from `local_storage`
+and owns on-disk storage of book/comic files (epub, fb2, mobi, pdf, azw3,
+cbz) and cover images.
 
 Follows the standard repository pattern: receives `AppDatabase` via its
 constructor and extracts `booksDao` internally. Storage exceptions are
@@ -16,7 +17,7 @@ data survives iOS Documents-UUID changes.
 
 ```
 books/<uuid>/
-  book.<ext>    — the book file (epub, fb2, mobi, pdf)
+  book.<ext>    — the source file (epub, fb2, mobi, pdf, azw3, cbz)
   cover.<ext>   — extracted cover image (if available)
 ```
 
@@ -28,11 +29,11 @@ filenames before being written to the DB.
 
 | Method                              | Purpose                                       |
 |-------------------------------------|-----------------------------------------------|
-| `getBooks({limit, offset})`         | List books ordered by added date              |
+| `getBooks({limit, offset})`         | List books ordered by most-recently opened, then added date |
 | `getBookById(id)`                   | Lookup by id, returns null if missing         |
 | `addBook({sourceFile, title, format, author, coverData, ...})` | Copy file in, save cover, insert row |
 | `updateBook(book)`                  | Update metadata + reading position            |
-| `deleteBook(id)`                    | Delete row + remove per-book directory        |
+| `deleteBook(id, {scope})`           | Delete row + remove per-book directory; optionally preserve learning data |
 
 Cover bytes (`coverData`) are typically produced upstream by
 `reader_webview`'s `BookMetadataExtractor`.

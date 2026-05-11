@@ -29,8 +29,9 @@ The reader knows nothing about highlights, flashcards, translations or
 dictionaries. Callers assemble a `List<TextAction>` (from `shared/`) in the
 composition root (`routing.dart`) and pass it in. On text selection the
 context panel renders one `IconButton` per action. Current implementations
-are supplied by the `highlight`, `flashcard`, `translate`, and `dictionary`
-features.
+are supplied by the `highlight`, `flashcard`, and `translate` features.
+Saving translated text to the dictionary happens inside the `translate`
+feature; `dictionary` is not a direct reader action.
 
 ```dart
 abstract class TextAction {
@@ -65,14 +66,12 @@ through the bloc's error pipeline without emitting state themselves.
   `_ReaderBottomChrome`, `_ContextPanel`, `_ReviewReminderBanner`). All
   BLoC/Cubit interaction lives in drivers.
 - **`_ReaderWebViewBody`** hosts a `BookReaderWebView` (foliate-js) keyed on
-  source id so swapping sources rebuilds the WebView cleanly.
+  source id / recovery token so source swaps and WebContent recovery rebuild
+  the WebView cleanly.
 - Reader theme (`ReaderThemeData`, font preset, layout preset) is resolved
   from `PreferencesScope` and passed as CSS / URL params to the WebView; the
   `_ReaderWebViewBody` itself is rebuilt only on preference changes, never
   on selection or reminder state.
-
-See `memory/project_reader_architecture.md` for the full data-flow diagram,
-file map, and architectural rules.
 
 ## Review reminder
 

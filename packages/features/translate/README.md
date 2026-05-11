@@ -46,11 +46,11 @@ Props:
 
 Requires through constructor injection:
 
-- `TranslationService` — fallback strategy (remote → platform). The sheet
-  does not know about network state; it just calls `translate()`. When
-  the remote server fails, the service silently falls back to the OS
-  translator and flags `source = platform` so the UI can hide AI-only
-  blocks like context and examples.
+- `TranslationService` — current production wiring uses
+  `BundledTranslationService`, where text translation is still a development
+  echo and pronunciation lookup is backed by bundled SQLite dictionaries. The
+  sheet does not know about network state; real ML Kit / backend translation
+  can replace the implementation behind the same contract later.
 - `DictionaryRepository` — stores the saved entry.
 - `FsrsRepository` — registers the new dictionary entry in the review
   queue (`ReviewableType.dictionary`).

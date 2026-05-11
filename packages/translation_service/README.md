@@ -1,37 +1,42 @@
 # translation_service
 
-Translation with a **remote → platform** fallback strategy. Features call
-`translate()` and never deal with network state themselves — the service
-decides where the result comes from and records that in
-`TranslationResult.source`.
+Translation contract plus bundled pronunciation lookup.
 
-## Fallback strategy
+Current production wiring uses `BundledTranslationService`: pronunciation
+lookup works from bundled SQLite dictionaries (`en` today), while arbitrary
+text translation is still a development stub that echoes input as
+`[$toLang] text`. Features call the service through the same contract now so
+ML Kit / backend translation can be added later without changing UI code.
+
+## Current behavior
 
 ```
 translate()
-  └─ try remote backend (our server → upstream provider, AI-enriched)
-       ├─ success           → TranslationResult(source: remote,  context/examples populated)
-       └─ NetworkException  → fall back to platform translator (iOS / Android built-in)
-                                ├─ success → TranslationResult(source: platform)
-                                └─ failure → throw TranslationException
+  └─ BundledTranslationService
+       └─ returns TranslationResult(
+            translatedText: '[$toLang] $text',
+            source: platform,
+          )
+
+lookupPronunciation()
+  └─ copy bundled assets/phonetic/<lang>.db to app documents on first use
+  └─ query SQLite pronunciation rows for the requested word/language
 ```
 
-The remote path may return additional AI-generated context and usage examples
-(premium). The platform path gives plain translated text only. The UI checks
-`result.source` to decide whether to render the AI-enriched blocks.
-
-This mirrors the repository-level offline policy: reading, highlights,
-flashcards, and basic translation work offline; premium AI features do not.
+Future text translation can still use `TranslationResult.source` to distinguish
+local/platform output from remote AI-enriched output.
 
 ## Public API
 
 | Symbol                      | Type           | Purpose                                             |
 |-----------------------------|----------------|-----------------------------------------------------|
-| `TranslationService`        | abstract class | Single `translate(text, fromLang, toLang)` method   |
+| `TranslationService`        | abstract class | `translate(...)`, `lookupPronunciation(...)`, `dispose()` |
+| `BundledTranslationService` | concrete       | Bundled pronunciation lookup; translation echo stub |
 | `NoopTranslationService`    | concrete       | Stub — echoes input, `source: platform`             |
 | `TranslationResult`         | data class     | `{originalText, translatedText, source, context, usageExamples}` |
 | `TranslationSource`         | enum           | `remote` / `platform`                               |
-| `TranslationException`      | exception      | Thrown when both remote and platform fail           |
+| `Pronunciation`             | data class     | Phonetic variant from a local dictionary            |
+| `TranslationException`      | exception      | Reserved for real translation failures              |
 
 ## Usage
 
@@ -48,10 +53,10 @@ try {
   // Always present
   showText(result.translatedText);
 
-  // Only populated when result.source == TranslationSource.remote
-  if (result.source == TranslationSource.remote) {
-    showAiContext(result.context, result.usageExamples);
-  }
+  final pronunciations = await translator.lookupPronunciation(
+    word: 'ubiquitous',
+    lang: 'en',
+  );
 } on TranslationException catch (e) {
   showError(e.message);
 }
@@ -61,5 +66,5 @@ try {
 
 Registered on `DependenciesContainer.translationService` in
 `lib/app/composition.dart`. Consumed by the `translate` feature (bottom
-sheet implementing `TextAction`). The fallback logic lives inside the
-service — the feature stays simple.
+sheet implementing `TextAction`). Translation/pronunciation plumbing lives
+inside the service — the feature stays simple.

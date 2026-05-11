@@ -1,4 +1,4 @@
-/// Home tab: dashboard with reading stats, progress, and recent books.
+/// Home tab package. Data bloc is wired; visual dashboard is still placeholder.
 library;
 
 export 'src/home_screen.dart';

@@ -17,14 +17,14 @@ class TranslationResult {
   final String translatedText;
   final TranslationSource source;
 
-  /// AI-enriched context (premium, remote only).
+  /// Optional contextual explanation from an enriched implementation.
   final String? context;
 
-  /// AI-generated usage examples (premium, remote only).
+  /// Optional usage examples from an enriched implementation.
   final List<String> usageExamples;
 }
 
-/// Thrown when translation fails on both remote and platform.
+/// Thrown when a translation implementation cannot produce a result.
 class TranslationException implements Exception {
   const TranslationException(this.message);
 

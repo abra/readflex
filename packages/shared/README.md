@@ -43,23 +43,32 @@ abstract class TextAction {
 ## Example: implementing a TextAction
 
 ```dart
-// packages/features/highlight/lib/src/highlight_text_action.dart
-class HighlightTextAction implements TextAction {
-  const HighlightTextAction({required this.highlightRepository});
+// packages/features/highlight/lib/src/highlight_action.dart
+class HighlightAction extends TextAction {
+  const HighlightAction({
+    required this.highlightRepository,
+    required this.fsrsRepository,
+  });
 
   final HighlightRepository highlightRepository;
+  final FsrsRepository fsrsRepository;
 
   @override
   String get label => 'Highlight';
 
   @override
-  IconData get icon => Icons.brush_outlined;
+  IconData get icon => AppIcons.highlight;
 
   @override
   Future<void> onExecute(
     BuildContext context,
     TextSelectionContext selection,
-  ) => showHighlightSheet(context, selection, highlightRepository);
+  ) => showHighlightSheet(
+    context,
+    highlightRepository: highlightRepository,
+    fsrsRepository: fsrsRepository,
+    selection: selection,
+  );
 }
 ```
 

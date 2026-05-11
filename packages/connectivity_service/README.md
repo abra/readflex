@@ -1,17 +1,19 @@
 # connectivity_service
 
-Reactive network connectivity monitor. Features subscribe to the stream to
-show an offline banner, and services use the current status to pick between
-remote and local code paths (e.g. translation fallback).
+Reactive network connectivity monitor. The app shell subscribes to the stream
+to show the offline banner. Treat the status as a UX signal only: a visible
+network interface does not guarantee that a backend request will succeed.
 
-The production implementation wraps `connectivity_plus`; in development the
-wiring uses `NoopConnectivityService` (always online).
+Production composition wires `ConnectivityPlusService.create()`, backed by
+`connectivity_plus`. `NoopConnectivityService` remains available for tests and
+isolated development surfaces.
 
 ## Public API
 
 | Symbol                      | Type           | Purpose                            |
 |-----------------------------|----------------|------------------------------------|
 | `ConnectivityService`       | abstract class | Contract: status + reactive stream |
+| `ConnectivityPlusService`   | concrete       | Production adapter over `connectivity_plus` |
 | `NoopConnectivityService`   | concrete       | Stub — always `online`             |
 | `ConnectivityStatus`        | enum           | `online` / `offline`               |
 
@@ -24,27 +26,14 @@ wiring uses `NoopConnectivityService` (always online).
 ## Usage
 
 ```dart
-final connectivity = context.dependencies.connectivityService;
-
-// One-shot check inside a service
-if (connectivity.status == ConnectivityStatus.offline) {
-  return _fallbackLocally();
-}
-
-// Reactive banner
-StreamBuilder<ConnectivityStatus>(
-  stream: connectivity.statusStream,
-  initialData: connectivity.status,
-  builder: (context, snap) => snap.data == ConnectivityStatus.offline
-      ? const OfflineBanner()
-      : const SizedBox.shrink(),
-);
+ConnectivityScope.of(context) == ConnectivityStatus.offline
+    ? const OfflineBanner()
+    : const SizedBox.shrink();
 ```
 
 ## Where it fits
 
 Registered on `DependenciesContainer.connectivityService` in
-`lib/app/composition.dart`. Passed to the container via DI — no
-`InheritedWidget` scope, per project rules (see CLAUDE.md "Cross-Cutting
-Concerns"). Swap `NoopConnectivityService` for a `connectivity_plus`-backed
-implementation when ready.
+`lib/app/composition.dart`, then mounted by `ConnectivityScope` around the app
+shell. Feature UI should consume `ConnectivityScope`; lower-level services
+should still attempt their work and handle request failures directly.

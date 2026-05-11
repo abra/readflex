@@ -18,7 +18,8 @@ abstract class ConnectivityService {
 
 /// Stub — always online.
 ///
-/// TODO: replace with real implementation wrapping connectivity_plus.
+/// Production composition uses [ConnectivityPlusService]; keep this for tests
+/// and isolated feature previews that do not need platform channels.
 class NoopConnectivityService implements ConnectivityService {
   const NoopConnectivityService();
 

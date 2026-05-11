@@ -20,8 +20,8 @@ void showSubscriptionPaywallSheet(
   );
 }
 
-/// Full-screen bottom sheet that upsells Readflex Premium and runs the
-/// purchase flow.
+/// Modal bottom sheet that upsells Readflex Premium and runs the purchase
+/// flow placeholder.
 ///
 /// Provides its own [SubscriptionPaywallCubit] and closes itself once
 /// the user becomes premium. Usually launched via

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 ///
 /// Returns:
 ///   * `true`  — user pressed Delete.
-///   * `null`  — user cancelled (close button, scrim tap, system back).
+///   * `null`  — user cancelled (Cancel button, scrim tap, system back).
 ///
 /// Wording is count-aware: `count == 1` shows the singular phrasing,
 /// `count > 1` shows the plural with the actual number.

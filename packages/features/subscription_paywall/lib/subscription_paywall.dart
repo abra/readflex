@@ -1,5 +1,5 @@
-/// Subscription paywall feature: full-screen bottom sheet that upsells
-/// Readflex Premium and triggers the purchase flow.
+/// Subscription paywall feature: modal bottom sheet that upsells Readflex
+/// Premium and triggers the purchase flow placeholder.
 ///
 /// Not wired into the router — call `showSubscriptionPaywallSheet` from any
 /// surface that gates a premium feature (e.g. the pro badge in Profile or a

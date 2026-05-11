@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 /// Confirmation bottom sheet shown before any book deletion.
 ///
 /// The sheet returns one of:
-///   * `null` — user cancelled (close button, scrim tap, system back).
+///   * `null` — user cancelled (Cancel button, scrim tap, system back).
 ///   * [BookDeletionScope.keepLearningData] — checkbox unchecked.
 ///   * [BookDeletionScope.deleteEverything] — checkbox checked.
 ///
