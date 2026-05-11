@@ -15,6 +15,7 @@ const _coverScreenWidthFactor = 0.54;
 const _coverAspectRatio = 2 / 3;
 const _titleMaxLines = 3;
 const _authorMaxLines = 2;
+const _metadataMaxLines = 1;
 
 class SourceDetailsScreen extends StatelessWidget {
   const SourceDetailsScreen({
@@ -179,7 +180,7 @@ class _SourceDetailsContent extends StatelessWidget {
       _coverMaxWidth,
       math.max(_coverMinWidth, screenSize.width * _coverScreenWidthFactor),
     );
-    final topSpacer = math.max(AppSpacing.xxl, screenSize.height * 0.12);
+    final topSpacer = math.max(AppSpacing.xl, screenSize.height * 0.06);
 
     return CustomScrollView(
       slivers: [
@@ -203,16 +204,8 @@ class _SourceDetailsContent extends StatelessWidget {
                       coverWidth: coverWidth,
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    Text(
-                      'Review',
-                      style: text.titleSmall.copyWith(
-                        color: colors.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    const _ReviewActions(),
-                    const SizedBox(height: AppSpacing.lg),
+                    _SourceMetadata(source: source),
+                    const SizedBox(height: AppSpacing.xl),
                     FilledButton(
                       onPressed: () async {
                         await onReadPressed(source);
@@ -224,6 +217,16 @@ class _SourceDetailsContent extends StatelessWidget {
                       child: Text(_readButtonLabel(source)),
                     ),
                     const SizedBox(height: AppSpacing.xl),
+                    Text(
+                      'Review',
+                      style: text.titleSmall.copyWith(
+                        color: colors.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    const _ReviewActions(),
+                    const SizedBox(height: AppSpacing.xl),
                   ],
                 ),
               ),
@@ -231,6 +234,34 @@ class _SourceDetailsContent extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _SourceMetadata extends StatelessWidget {
+  const _SourceMetadata({required this.source});
+
+  final Book source;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = context.text;
+    final items = [
+      source.format.name.toUpperCase(),
+      if (source.totalLocations > 0) '${source.totalLocations} locations',
+      _progressLabel(source),
+    ];
+
+    return Text(
+      items.join('  •  '),
+      textAlign: TextAlign.center,
+      maxLines: _metadataMaxLines,
+      overflow: TextOverflow.ellipsis,
+      style: text.labelMedium.copyWith(
+        color: colors.onSurfaceVariant,
+        fontWeight: FontWeight.w500,
+      ),
     );
   }
 }
@@ -334,28 +365,90 @@ class _ReviewActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: [
+      children: const [
         Expanded(
-          child: AppActionTile(
+          child: _ReviewActionButton(
             icon: AppIcons.highlight,
-            title: 'Highlights',
+            label: 'Highlights',
           ),
         ),
-        const SizedBox(width: AppSpacing.sm),
+        SizedBox(width: AppSpacing.sm),
         Expanded(
-          child: AppActionTile(
+          child: _ReviewActionButton(
             icon: AppIcons.flashcard,
-            title: 'Flashcards',
+            label: 'Flashcards',
           ),
         ),
-        const SizedBox(width: AppSpacing.sm),
+        SizedBox(width: AppSpacing.sm),
         Expanded(
-          child: AppActionTile(
+          child: _ReviewActionButton(
             icon: AppIcons.dictionary,
-            title: 'Dictionary',
+            label: 'Dictionary',
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ReviewActionButton extends StatelessWidget {
+  const _ReviewActionButton({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = context.text;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest.withValues(alpha: 0.34),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(
+          color: colors.outlineVariant.withValues(alpha: 0.72),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.md,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: colors.primary.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              child: SizedBox.square(
+                dimension: AppSizes.iconButtonSize,
+                child: Icon(
+                  icon,
+                  size: AppIconSize.sm,
+                  color: colors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: text.labelMedium.copyWith(
+                color: colors.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -364,6 +457,12 @@ String _readButtonLabel(Book source) =>
     source.readingProgress > 0 || source.lastOpenedAt != null
     ? 'Continue reading'
     : 'Start reading';
+
+String _progressLabel(Book source) {
+  if (source.isFinished) return 'Finished';
+  final progress = (source.readingProgress * 100).round();
+  return progress > 0 ? '$progress% read' : 'New';
+}
 
 ImageProvider? _coverImageFor(Book source) {
   return switch (source.coverImagePath) {

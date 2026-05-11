@@ -32,6 +32,7 @@ void main() {
 
       expect(find.text('Flutter Design Patterns'), findsWidgets);
       expect(find.text('Daria Orlova'), findsOneWidget);
+      expect(find.text('EPUB  •  New'), findsOneWidget);
       expect(find.text('Start reading'), findsOneWidget);
       expect(find.byIcon(AppIcons.back), findsOneWidget);
       expect(find.byType(AppBottomActionBar), findsOneWidget);
