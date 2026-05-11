@@ -1002,6 +1002,9 @@ class _ReaderTocTab extends StatelessWidget {
             for (final item in items)
               if (item.label.toLowerCase().contains(normalizedQuery)) item,
           ];
+    final hidePageNumbers =
+        items.isNotEmpty &&
+        items.every((item) => item.startPage != null && item.startPage == 0);
 
     return Column(
       children: [
@@ -1014,25 +1017,28 @@ class _ReaderTocTab extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: filteredItems.isEmpty
-              ? _ReaderDrawerEmptyState(
-                  message: items.isEmpty
-                      ? 'No chapters found'
-                      : 'No matching chapters',
-                )
-              : ScrollEdgeFadeStack(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                    itemCount: filteredItems.length,
-                    itemBuilder: (context, index) {
-                      final item = filteredItems[index];
-                      return _ReaderTocListTile(
-                        item: item,
-                        onTap: () => onItemSelected(item),
-                      );
-                    },
+          child: _ReaderDrawerContentFrame(
+            child: filteredItems.isEmpty
+                ? _ReaderDrawerEmptyState(
+                    message: items.isEmpty
+                        ? 'No chapters found'
+                        : 'No matching chapters',
+                  )
+                : ScrollEdgeFadeStack(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                      itemCount: filteredItems.length,
+                      itemBuilder: (context, index) {
+                        final item = filteredItems[index];
+                        return _ReaderTocListTile(
+                          item: item,
+                          showPageNumber: !hidePageNumbers,
+                          onTap: () => onItemSelected(item),
+                        );
+                      },
+                    ),
                   ),
-                ),
+          ),
         ),
       ],
     );
@@ -1040,9 +1046,14 @@ class _ReaderTocTab extends StatelessWidget {
 }
 
 class _ReaderTocListTile extends StatelessWidget {
-  const _ReaderTocListTile({required this.item, required this.onTap});
+  const _ReaderTocListTile({
+    required this.item,
+    required this.showPageNumber,
+    required this.onTap,
+  });
 
   final ReaderTocItem item;
+  final bool showPageNumber;
   final VoidCallback onTap;
 
   @override
@@ -1062,7 +1073,7 @@ class _ReaderTocListTile extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: context.text.bodyMedium.copyWith(color: colors.onSurface),
       ),
-      trailing: item.startPage == null
+      trailing: !showPageNumber || item.startPage == null
           ? null
           : Text(
               item.startPage.toString(),
@@ -1329,27 +1340,29 @@ class _ReaderSearchDrawerContentState
         ),
         if (_isLoading) const LinearProgressIndicator(minHeight: 2),
         Expanded(
-          child: _errorMessage != null
-              ? _ReaderDrawerEmptyState(message: _errorMessage!)
-              : !canSearch
-              ? const _ReaderDrawerEmptyState(
-                  message: 'Type at least 2 characters to search',
-                )
-              : _results.isEmpty && !_isLoading
-              ? const _ReaderDrawerEmptyState(message: 'No results found')
-              : ScrollEdgeFadeStack(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                    itemCount: _results.length,
-                    itemBuilder: (context, index) {
-                      final result = _results[index];
-                      return _ReaderSearchResultTile(
-                        result: result,
-                        onTap: () => widget.onResultSelected(result),
-                      );
-                    },
+          child: _ReaderDrawerContentFrame(
+            child: _errorMessage != null
+                ? _ReaderDrawerEmptyState(message: _errorMessage!)
+                : !canSearch
+                ? const _ReaderDrawerEmptyState(
+                    message: 'Type at least 2 characters to search',
+                  )
+                : _results.isEmpty && !_isLoading
+                ? const _ReaderDrawerEmptyState(message: 'No results found')
+                : ScrollEdgeFadeStack(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                      itemCount: _results.length,
+                      itemBuilder: (context, index) {
+                        final result = _results[index];
+                        return _ReaderSearchResultTile(
+                          result: result,
+                          onTap: () => widget.onResultSelected(result),
+                        );
+                      },
+                    ),
                   ),
-                ),
+          ),
         ),
       ],
     );
@@ -1407,6 +1420,27 @@ class _ReaderSearchResultTile extends StatelessWidget {
         ),
       ),
       onTap: onTap,
+    );
+  }
+}
+
+class _ReaderDrawerContentFrame extends StatelessWidget {
+  const _ReaderDrawerContentFrame({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: context.colors.outlineVariant,
+            width: 1 / MediaQuery.devicePixelRatioOf(context),
+          ),
+        ),
+      ),
+      child: child,
     );
   }
 }
