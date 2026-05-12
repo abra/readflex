@@ -27,14 +27,16 @@ class AppSourceCoverFrame extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.sm),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 2,
-            offset: Offset(0, 1),
+            color: Color(0x2E000000),
+            blurRadius: 8,
+            spreadRadius: -1,
+            offset: Offset(-3, 5),
           ),
           BoxShadow(
-            color: Color(0x1F000000),
-            blurRadius: 14,
-            offset: Offset(2, 4),
+            color: Color(0x33000000),
+            blurRadius: 26,
+            spreadRadius: -2,
+            offset: Offset(-8, 12),
           ),
         ],
       ),

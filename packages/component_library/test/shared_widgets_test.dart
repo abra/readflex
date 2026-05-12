@@ -38,6 +38,23 @@ void main() {
 
     expect(find.byType(AppSourceCoverFrame), findsOneWidget);
     expect(find.text('EPUB'), findsOneWidget);
+
+    final decoration =
+        tester
+                .widget<DecoratedBox>(
+                  find
+                      .descendant(
+                        of: find.byType(AppSourceCoverFrame),
+                        matching: find.byType(DecoratedBox),
+                      )
+                      .first,
+                )
+                .decoration
+            as BoxDecoration;
+    final shadows = decoration.boxShadow!;
+    expect(shadows, hasLength(2));
+    expect(shadows.every((shadow) => shadow.offset.dx < 0), isTrue);
+    expect(shadows.every((shadow) => shadow.offset.dy > 0), isTrue);
   });
 
   testWidgets('AppImageAspectRatio uses fallback ratio without image', (
