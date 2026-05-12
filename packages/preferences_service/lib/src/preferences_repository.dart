@@ -26,7 +26,8 @@ class PreferencesRepository {
   ///      with the user accidentally landing on Sans/Geist; the default
   ///      for new installs has always been serif, but stored prefs from
   ///      those sessions kept the wrong value.
-  static const _currentSchemaVersion = 2;
+  ///   3: add per-source reader appearance overrides and reader side margin.
+  static const _currentSchemaVersion = 3;
 
   final PreferencesStorage _storage;
 
@@ -54,12 +55,16 @@ class PreferencesRepository {
         readerLayoutId: map['readerLayoutId'] as String? ?? 'standard',
         readerTextScale: (map['readerTextScale'] as num?)?.toDouble() ?? 1.0,
         readerLineHeight: (map['readerLineHeight'] as num?)?.toDouble() ?? 1.55,
+        readerSideMargin: (map['readerSideMargin'] as num?)?.toDouble() ?? 6.0,
         readerInvertImagesInDark:
             map['readerInvertImagesInDark'] as bool? ?? true,
         readerOverrideFont: map['readerOverrideFont'] as bool? ?? true,
         readerOverrideColor: map['readerOverrideColor'] as bool? ?? true,
         readerUseBookLayout: map['readerUseBookLayout'] as bool? ?? true,
         readerSearchHistory: _readStringList(map['readerSearchHistory']),
+        readerAppearanceOverrides: _readReaderAppearanceOverrides(
+          map['readerAppearanceOverrides'],
+        ),
         onboardingCompleted: map['onboardingCompleted'] as bool? ?? false,
         hasCompletedSetup: map['hasCompletedSetup'] as bool? ?? false,
       );
@@ -87,11 +92,15 @@ class PreferencesRepository {
       'readerLayoutId': prefs.readerLayoutId,
       'readerTextScale': prefs.readerTextScale,
       'readerLineHeight': prefs.readerLineHeight,
+      'readerSideMargin': prefs.readerSideMargin,
       'readerInvertImagesInDark': prefs.readerInvertImagesInDark,
       'readerOverrideFont': prefs.readerOverrideFont,
       'readerOverrideColor': prefs.readerOverrideColor,
       'readerUseBookLayout': prefs.readerUseBookLayout,
       'readerSearchHistory': prefs.readerSearchHistory,
+      'readerAppearanceOverrides': _writeReaderAppearanceOverrides(
+        prefs.readerAppearanceOverrides,
+      ),
       'onboardingCompleted': prefs.onboardingCompleted,
       'hasCompletedSetup': prefs.hasCompletedSetup,
     };
@@ -111,5 +120,38 @@ class PreferencesRepository {
   static List<String> _readStringList(Object? value) {
     if (value is! List) return const [];
     return value.whereType<String>().toList(growable: false);
+  }
+
+  static Map<String, ReaderAppearanceOverride> _readReaderAppearanceOverrides(
+    Object? value,
+  ) {
+    if (value is! Map) return const {};
+
+    final overrides = <String, ReaderAppearanceOverride>{};
+    for (final entry in value.entries) {
+      final key = entry.key;
+      final rawOverride = entry.value;
+      if (key is! String || key.isEmpty || rawOverride is! Map) continue;
+
+      final override = ReaderAppearanceOverride.fromJson(
+        Map<String, Object?>.from(rawOverride),
+      );
+      if (!override.isEmpty) overrides[key] = override;
+    }
+
+    if (overrides.isEmpty) return const {};
+    return Map.unmodifiable(overrides);
+  }
+
+  static Map<String, Object?> _writeReaderAppearanceOverrides(
+    Map<String, ReaderAppearanceOverride> overrides,
+  ) {
+    if (overrides.isEmpty) return const {};
+
+    return <String, Object?>{
+      for (final entry in overrides.entries)
+        if (entry.key.isNotEmpty && !entry.value.isEmpty)
+          entry.key: entry.value.toJson(),
+    };
   }
 }

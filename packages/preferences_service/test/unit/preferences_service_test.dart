@@ -54,6 +54,7 @@ void main() {
           readerLayoutId: 'comfortable',
           readerTextScale: 1.2,
           readerLineHeight: 1.8,
+          readerSideMargin: 9,
           readerInvertImagesInDark: false,
         ),
       );
@@ -63,6 +64,7 @@ void main() {
       expect(service.current.readerLayoutId, 'comfortable');
       expect(service.current.readerTextScale, 1.2);
       expect(service.current.readerLineHeight, 1.8);
+      expect(service.current.readerSideMargin, 9);
       expect(service.current.readerInvertImagesInDark, isFalse);
     });
 
@@ -129,6 +131,48 @@ void main() {
       ]);
     });
 
+    test('reader appearance override persists across recreations', () async {
+      final service = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+      await service.setReaderAppearanceOverride(
+        'source-1',
+        const ReaderAppearanceOverride(
+          fontId: 'sans',
+          textScale: 1.2,
+          sideMargin: 9,
+        ),
+      );
+
+      final service2 = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+
+      final override = service2.readerAppearanceOverrideFor('source-1');
+      expect(override?.fontId, 'sans');
+      expect(override?.textScale, 1.2);
+      expect(override?.sideMargin, 9);
+      expect(service2.effectiveReaderAppearanceFor('source-1').fontId, 'sans');
+    });
+
+    test(
+      'clearReaderAppearanceOverride removes stored source override',
+      () async {
+        final service = await PreferencesService.create(
+          supportedCodes: _supportedCodes,
+        );
+        await service.setReaderAppearanceOverride(
+          'source-1',
+          const ReaderAppearanceOverride(fontId: 'sans'),
+        );
+
+        await service.clearReaderAppearanceOverride('source-1');
+
+        expect(service.readerAppearanceOverrideFor('source-1'), isNull);
+        expect(service.current.readerAppearanceOverrides, isEmpty);
+      },
+    );
+
     test('update() emits updated preferences on stream', () async {
       final service = await PreferencesService.create(
         supportedCodes: _supportedCodes,
@@ -159,6 +203,7 @@ void main() {
           readerThemeId: 'mist',
           readerFontId: 'sans',
           readerTextScale: 1.1,
+          readerSideMargin: 8,
         ),
       );
 
@@ -171,6 +216,7 @@ void main() {
       expect(service2.current.readerThemeId, 'mist');
       expect(service2.current.readerFontId, 'sans');
       expect(service2.current.readerTextScale, 1.1);
+      expect(service2.current.readerSideMargin, 8);
     });
 
     test('persists locale correctly', () async {

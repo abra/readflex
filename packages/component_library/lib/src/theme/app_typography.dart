@@ -8,11 +8,13 @@ import 'package:flutter/material.dart';
 /// which fits longer titles in compact surfaces (e.g. library grid
 /// covers) without losing legibility on Cyrillic and Latin.
 ///
-/// Use [serif] for literary / reading content (Literata).
-/// Use [sans] for UI elements (Geist).
+/// App chrome uses Geist for dense UI text and Literata for literary headings.
+/// Reader-specific font choices live in [ReaderFontPreset].
 abstract final class AppTypography {
   static const String fontFamilySans = 'Geist';
   static const String fontFamilySerif = 'Literata';
+  static const String fontFamilyMerriweather = 'Merriweather';
+  static const String fontFamilyOpenSans = 'Open Sans';
 
   static const TextTheme textTheme = TextTheme(
     displayLarge: TextStyle(

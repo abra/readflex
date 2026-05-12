@@ -30,11 +30,13 @@ enum ReaderThemePreset {
 /// User-selectable reader font presets.
 enum ReaderFontPreset {
   serif,
+  merriweather,
   sans,
   geist
   ;
 
   static ReaderFontPreset fromId(String? value) => switch (value) {
+    'merriweather' => merriweather,
     'sans' => sans,
     'geist' => geist,
     _ => serif,
@@ -43,14 +45,16 @@ enum ReaderFontPreset {
   String get id => name;
 
   String get label => switch (this) {
-    serif => 'Serif',
-    sans => 'Sans',
+    serif => 'Literata',
+    merriweather => 'Merriweather',
+    sans => 'Open Sans',
     geist => 'Geist',
   };
 
   String get fontFamily => switch (this) {
     serif => AppTypography.fontFamilySerif,
-    sans => AppTypography.fontFamilySans,
+    merriweather => AppTypography.fontFamilyMerriweather,
+    sans => AppTypography.fontFamilyOpenSans,
     geist => AppTypography.fontFamilySans,
   };
 
@@ -61,7 +65,8 @@ enum ReaderFontPreset {
   /// reader has to serve them itself.
   String get fontFile => switch (this) {
     serif => 'Literata-Variable.ttf',
-    sans => 'Geist-Variable.ttf',
+    merriweather => 'Merriweather-Regular.ttf',
+    sans => 'OpenSans-Variable.ttf',
     geist => 'Geist-Variable.ttf',
   };
 }

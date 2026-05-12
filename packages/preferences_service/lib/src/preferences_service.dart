@@ -52,6 +52,47 @@ class PreferencesService {
   /// Latest in-memory [Preferences] snapshot.
   Preferences get current => _current;
 
+  /// Returns the source-specific reader appearance override, if present.
+  ReaderAppearanceOverride? readerAppearanceOverrideFor(String sourceId) =>
+      _current.readerAppearanceOverrideFor(sourceId);
+
+  /// Returns global reader appearance with the source-specific override applied.
+  ReaderAppearancePreferences effectiveReaderAppearanceFor(String sourceId) =>
+      _current.effectiveReaderAppearanceFor(sourceId);
+
+  Future<void> setReaderAppearanceOverride(
+    String sourceId,
+    ReaderAppearanceOverride override,
+  ) async {
+    if (sourceId.isEmpty) return;
+    await update((prefs) {
+      final overrides = Map<String, ReaderAppearanceOverride>.of(
+        prefs.readerAppearanceOverrides,
+      );
+      if (override.isEmpty) {
+        overrides.remove(sourceId);
+      } else {
+        overrides[sourceId] = override;
+      }
+      return prefs.copyWith(
+        readerAppearanceOverrides: Map.unmodifiable(overrides),
+      );
+    });
+  }
+
+  Future<void> clearReaderAppearanceOverride(String sourceId) async {
+    if (sourceId.isEmpty) return;
+    await update((prefs) {
+      if (!prefs.readerAppearanceOverrides.containsKey(sourceId)) return prefs;
+      final overrides = Map<String, ReaderAppearanceOverride>.of(
+        prefs.readerAppearanceOverrides,
+      )..remove(sourceId);
+      return prefs.copyWith(
+        readerAppearanceOverrides: Map.unmodifiable(overrides),
+      );
+    });
+  }
+
   /// Applies [transform] to the current snapshot, saves the result, and
   /// emits it on [stream]. Persistence failures are logged, not thrown —
   /// the new value still takes effect for this session.

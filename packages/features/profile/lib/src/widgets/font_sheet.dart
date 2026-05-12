@@ -11,6 +11,7 @@ const double _lineHeightMatchTolerance = 0.05;
 
 // Sheet chrome.
 const double _sizeButtonSize = 36;
+const double _previewCardHeight = 152;
 
 class _FontSheet extends StatelessWidget {
   const _FontSheet();
@@ -283,36 +284,43 @@ class _FontPreview extends StatelessWidget {
         final readerFont = ReaderFontPreset.fromId(
           state.readerAppearance.fontId,
         );
-        return Container(
+        return SizedBox(
+          height: _previewCardHeight,
           width: double.infinity,
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: BoxDecoration(
-            color: cs.secondary.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(AppRadius.md),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'PREVIEW',
-                style: text.labelSmall.copyWith(
-                  color: cs.onSurface.withValues(alpha: 0.55),
-                  letterSpacing: 1,
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: cs.secondary.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'PREVIEW',
+                  style: text.labelSmall.copyWith(
+                    color: cs.onSurface.withValues(alpha: 0.55),
+                    letterSpacing: 1,
+                  ),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'The happiness of your life depends upon the quality of your thoughts.',
-                style: TextStyle(
-                  fontFamily: readerFont.fontFamily,
-                  fontSize:
-                      text.bodyMedium.fontSize! *
-                      state.readerAppearance.textScale,
-                  height: state.readerAppearance.lineHeight,
-                  color: cs.onSurface,
+                const SizedBox(height: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'The happiness of your life depends upon the quality of your thoughts.',
+                    maxLines: 2,
+                    overflow: TextOverflow.fade,
+                    style: TextStyle(
+                      fontFamily: readerFont.fontFamily,
+                      fontSize:
+                          text.bodyMedium.fontSize! *
+                          state.readerAppearance.textScale,
+                      height: state.readerAppearance.lineHeight,
+                      color: cs.onSurface,
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

@@ -1,7 +1,9 @@
 import 'dart:ui' show Locale;
 
-import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/foundation.dart' show listEquals, mapEquals;
 import 'package:flutter/material.dart' show ThemeMode;
+
+const _unset = Object();
 
 /// Reader-scoped appearance slice of [Preferences] (theme / font / layout
 /// IDs plus per-trait toggles). Exposed separately so widgets that only
@@ -15,6 +17,7 @@ class ReaderAppearancePreferences {
     required this.layoutId,
     required this.textScale,
     required this.lineHeight,
+    required this.sideMargin,
     required this.invertImagesInDark,
     required this.overrideFont,
     required this.overrideColor,
@@ -26,6 +29,7 @@ class ReaderAppearancePreferences {
   final String layoutId;
   final double textScale;
   final double lineHeight;
+  final double sideMargin;
   final bool invertImagesInDark;
 
   /// When `false`, publisher font-family / font-weight win over reader prefs.
@@ -43,6 +47,7 @@ class ReaderAppearancePreferences {
     String? layoutId,
     double? textScale,
     double? lineHeight,
+    double? sideMargin,
     bool? invertImagesInDark,
     bool? overrideFont,
     bool? overrideColor,
@@ -53,6 +58,7 @@ class ReaderAppearancePreferences {
     layoutId: layoutId ?? this.layoutId,
     textScale: textScale ?? this.textScale,
     lineHeight: lineHeight ?? this.lineHeight,
+    sideMargin: sideMargin ?? this.sideMargin,
     invertImagesInDark: invertImagesInDark ?? this.invertImagesInDark,
     overrideFont: overrideFont ?? this.overrideFont,
     overrideColor: overrideColor ?? this.overrideColor,
@@ -68,6 +74,7 @@ class ReaderAppearancePreferences {
           layoutId == other.layoutId &&
           textScale == other.textScale &&
           lineHeight == other.lineHeight &&
+          sideMargin == other.sideMargin &&
           invertImagesInDark == other.invertImagesInDark &&
           overrideFont == other.overrideFont &&
           overrideColor == other.overrideColor &&
@@ -80,6 +87,165 @@ class ReaderAppearancePreferences {
     layoutId,
     textScale,
     lineHeight,
+    sideMargin,
+    invertImagesInDark,
+    overrideFont,
+    overrideColor,
+    useBookLayout,
+  );
+}
+
+/// Optional per-source reader appearance overrides.
+///
+/// `null` means "inherit the global reader preference". This keeps Profile as
+/// the global default while allowing an individual book/comic to override only
+/// the fields the user changed from the in-reader `T` controls.
+class ReaderAppearanceOverride {
+  const ReaderAppearanceOverride({
+    this.themeId,
+    this.fontId,
+    this.layoutId,
+    this.textScale,
+    this.lineHeight,
+    this.sideMargin,
+    this.invertImagesInDark,
+    this.overrideFont,
+    this.overrideColor,
+    this.useBookLayout,
+  });
+
+  final String? themeId;
+  final String? fontId;
+  final String? layoutId;
+  final double? textScale;
+  final double? lineHeight;
+  final double? sideMargin;
+  final bool? invertImagesInDark;
+  final bool? overrideFont;
+  final bool? overrideColor;
+  final bool? useBookLayout;
+
+  bool get isEmpty =>
+      themeId == null &&
+      fontId == null &&
+      layoutId == null &&
+      textScale == null &&
+      lineHeight == null &&
+      sideMargin == null &&
+      invertImagesInDark == null &&
+      overrideFont == null &&
+      overrideColor == null &&
+      useBookLayout == null;
+
+  ReaderAppearancePreferences applyTo(ReaderAppearancePreferences base) =>
+      base.copyWith(
+        themeId: themeId,
+        fontId: fontId,
+        layoutId: layoutId,
+        textScale: textScale,
+        lineHeight: lineHeight,
+        sideMargin: sideMargin,
+        invertImagesInDark: invertImagesInDark,
+        overrideFont: overrideFont,
+        overrideColor: overrideColor,
+        useBookLayout: useBookLayout,
+      );
+
+  ReaderAppearanceOverride copyWith({
+    Object? themeId = _unset,
+    Object? fontId = _unset,
+    Object? layoutId = _unset,
+    Object? textScale = _unset,
+    Object? lineHeight = _unset,
+    Object? sideMargin = _unset,
+    Object? invertImagesInDark = _unset,
+    Object? overrideFont = _unset,
+    Object? overrideColor = _unset,
+    Object? useBookLayout = _unset,
+  }) => ReaderAppearanceOverride(
+    themeId: identical(themeId, _unset) ? this.themeId : themeId as String?,
+    fontId: identical(fontId, _unset) ? this.fontId : fontId as String?,
+    layoutId: identical(layoutId, _unset) ? this.layoutId : layoutId as String?,
+    textScale: _copyOptionalDouble(textScale, this.textScale),
+    lineHeight: _copyOptionalDouble(lineHeight, this.lineHeight),
+    sideMargin: _copyOptionalDouble(sideMargin, this.sideMargin),
+    invertImagesInDark: identical(invertImagesInDark, _unset)
+        ? this.invertImagesInDark
+        : invertImagesInDark as bool?,
+    overrideFont: identical(overrideFont, _unset)
+        ? this.overrideFont
+        : overrideFont as bool?,
+    overrideColor: identical(overrideColor, _unset)
+        ? this.overrideColor
+        : overrideColor as bool?,
+    useBookLayout: identical(useBookLayout, _unset)
+        ? this.useBookLayout
+        : useBookLayout as bool?,
+  );
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    if (themeId != null) 'themeId': themeId,
+    if (fontId != null) 'fontId': fontId,
+    if (layoutId != null) 'layoutId': layoutId,
+    if (textScale != null) 'textScale': textScale,
+    if (lineHeight != null) 'lineHeight': lineHeight,
+    if (sideMargin != null) 'sideMargin': sideMargin,
+    if (invertImagesInDark != null) 'invertImagesInDark': invertImagesInDark,
+    if (overrideFont != null) 'overrideFont': overrideFont,
+    if (overrideColor != null) 'overrideColor': overrideColor,
+    if (useBookLayout != null) 'useBookLayout': useBookLayout,
+  };
+
+  factory ReaderAppearanceOverride.fromJson(Map<String, Object?> json) {
+    return ReaderAppearanceOverride(
+      themeId: _readString(json['themeId']),
+      fontId: _readString(json['fontId']),
+      layoutId: _readString(json['layoutId']),
+      textScale: _readDouble(json['textScale']),
+      lineHeight: _readDouble(json['lineHeight']),
+      sideMargin: _readDouble(json['sideMargin']),
+      invertImagesInDark: _readBool(json['invertImagesInDark']),
+      overrideFont: _readBool(json['overrideFont']),
+      overrideColor: _readBool(json['overrideColor']),
+      useBookLayout: _readBool(json['useBookLayout']),
+    );
+  }
+
+  static String? _readString(Object? value) {
+    if (value is! String || value.isEmpty) return null;
+    return value;
+  }
+
+  static double? _readDouble(Object? value) {
+    if (value is! num) return null;
+    return value.toDouble();
+  }
+
+  static bool? _readBool(Object? value) => value is bool ? value : null;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ReaderAppearanceOverride &&
+          themeId == other.themeId &&
+          fontId == other.fontId &&
+          layoutId == other.layoutId &&
+          textScale == other.textScale &&
+          lineHeight == other.lineHeight &&
+          sideMargin == other.sideMargin &&
+          invertImagesInDark == other.invertImagesInDark &&
+          overrideFont == other.overrideFont &&
+          overrideColor == other.overrideColor &&
+          useBookLayout == other.useBookLayout;
+
+  @override
+  int get hashCode => Object.hash(
+    themeId,
+    fontId,
+    layoutId,
+    textScale,
+    lineHeight,
+    sideMargin,
     invertImagesInDark,
     overrideFont,
     overrideColor,
@@ -101,11 +267,13 @@ class Preferences {
     this.readerLayoutId = 'standard',
     this.readerTextScale = 1.0,
     this.readerLineHeight = 1.55,
+    this.readerSideMargin = 6.0,
     this.readerInvertImagesInDark = true,
     this.readerOverrideFont = true,
     this.readerOverrideColor = true,
     this.readerUseBookLayout = true,
     this.readerSearchHistory = const [],
+    this.readerAppearanceOverrides = const {},
     this.onboardingCompleted = false,
     this.hasCompletedSetup = false,
   });
@@ -118,11 +286,13 @@ class Preferences {
   final String readerLayoutId;
   final double readerTextScale;
   final double readerLineHeight;
+  final double readerSideMargin;
   final bool readerInvertImagesInDark;
   final bool readerOverrideFont;
   final bool readerOverrideColor;
   final bool readerUseBookLayout;
   final List<String> readerSearchHistory;
+  final Map<String, ReaderAppearanceOverride> readerAppearanceOverrides;
 
   /// Whether the user has completed the onboarding flow.
   final bool onboardingCompleted;
@@ -137,11 +307,23 @@ class Preferences {
         layoutId: readerLayoutId,
         textScale: readerTextScale,
         lineHeight: readerLineHeight,
+        sideMargin: readerSideMargin,
         invertImagesInDark: readerInvertImagesInDark,
         overrideFont: readerOverrideFont,
         overrideColor: readerOverrideColor,
         useBookLayout: readerUseBookLayout,
       );
+
+  ReaderAppearanceOverride? readerAppearanceOverrideFor(String sourceId) {
+    final override = readerAppearanceOverrides[sourceId];
+    if (override == null || override.isEmpty) return null;
+    return override;
+  }
+
+  ReaderAppearancePreferences effectiveReaderAppearanceFor(String sourceId) {
+    final override = readerAppearanceOverrideFor(sourceId);
+    return override?.applyTo(readerAppearance) ?? readerAppearance;
+  }
 
   Preferences copyWith({
     ThemeMode? themeMode,
@@ -152,11 +334,13 @@ class Preferences {
     String? readerLayoutId,
     double? readerTextScale,
     double? readerLineHeight,
+    double? readerSideMargin,
     bool? readerInvertImagesInDark,
     bool? readerOverrideFont,
     bool? readerOverrideColor,
     bool? readerUseBookLayout,
     List<String>? readerSearchHistory,
+    Map<String, ReaderAppearanceOverride>? readerAppearanceOverrides,
     bool? onboardingCompleted,
     bool? hasCompletedSetup,
   }) => Preferences(
@@ -168,12 +352,15 @@ class Preferences {
     readerLayoutId: readerLayoutId ?? this.readerLayoutId,
     readerTextScale: readerTextScale ?? this.readerTextScale,
     readerLineHeight: readerLineHeight ?? this.readerLineHeight,
+    readerSideMargin: readerSideMargin ?? this.readerSideMargin,
     readerInvertImagesInDark:
         readerInvertImagesInDark ?? this.readerInvertImagesInDark,
     readerOverrideFont: readerOverrideFont ?? this.readerOverrideFont,
     readerOverrideColor: readerOverrideColor ?? this.readerOverrideColor,
     readerUseBookLayout: readerUseBookLayout ?? this.readerUseBookLayout,
     readerSearchHistory: readerSearchHistory ?? this.readerSearchHistory,
+    readerAppearanceOverrides:
+        readerAppearanceOverrides ?? this.readerAppearanceOverrides,
     onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
     hasCompletedSetup: hasCompletedSetup ?? this.hasCompletedSetup,
   );
@@ -190,11 +377,16 @@ class Preferences {
           readerLayoutId == other.readerLayoutId &&
           readerTextScale == other.readerTextScale &&
           readerLineHeight == other.readerLineHeight &&
+          readerSideMargin == other.readerSideMargin &&
           readerInvertImagesInDark == other.readerInvertImagesInDark &&
           readerOverrideFont == other.readerOverrideFont &&
           readerOverrideColor == other.readerOverrideColor &&
           readerUseBookLayout == other.readerUseBookLayout &&
           listEquals(readerSearchHistory, other.readerSearchHistory) &&
+          mapEquals(
+            readerAppearanceOverrides,
+            other.readerAppearanceOverrides,
+          ) &&
           onboardingCompleted == other.onboardingCompleted &&
           hasCompletedSetup == other.hasCompletedSetup;
 
@@ -208,12 +400,28 @@ class Preferences {
     readerLayoutId,
     readerTextScale,
     readerLineHeight,
+    readerSideMargin,
     readerInvertImagesInDark,
     readerOverrideFont,
     readerOverrideColor,
     readerUseBookLayout,
     Object.hashAll(readerSearchHistory),
+    _hashReaderAppearanceOverrides(readerAppearanceOverrides),
     onboardingCompleted,
     hasCompletedSetup,
   ]);
+}
+
+int _hashReaderAppearanceOverrides(
+  Map<String, ReaderAppearanceOverride> overrides,
+) {
+  final entries = overrides.entries.toList()
+    ..sort((a, b) => a.key.compareTo(b.key));
+  return Object.hashAll(entries.map((e) => Object.hash(e.key, e.value)));
+}
+
+double? _copyOptionalDouble(Object? value, double? current) {
+  if (identical(value, _unset)) return current;
+  if (value == null) return null;
+  return (value as num).toDouble();
 }

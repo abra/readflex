@@ -12,9 +12,12 @@ import 'package:reader_webview/reader_webview.dart';
 import 'package:shared/shared.dart';
 
 import 'book_custom_css.dart';
+import 'reader_appearance_cubit.dart';
+import 'reader_appearance_sheet.dart';
 import 'reader_bloc.dart';
 import 'reader_chrome_cubit.dart';
 import 'reader_color_utils.dart';
+import 'reader_progress_label.dart';
 import 'reader_review_reminder_cubit.dart';
 import 'reader_selection_cubit.dart';
 
@@ -35,30 +38,6 @@ final _readerDrawerCloseButtonStyle = IconButton.styleFrom(
   focusColor: Colors.transparent,
   highlightColor: Colors.transparent,
 );
-
-/// foliate-js's "location" granularity in bytes — the divisor it uses for
-/// `bookCurrentPage = floor(currentBytes / sizePerLoc)`. Hard-coded in
-/// `view.js` (`new SectionProgress(book.sections, 1500, 1600)`); mirror
-/// it here so the slider can predict the page number during drag.
-const _foliateSizePerLoc = 1500;
-
-/// Converts foliate-js's 0-indexed location number into the 1-indexed
-/// page count the reader actually shows ("page 1" instead of "page 0"
-/// for the start of the book). Clamps to `[1, totalPages]` when we have
-/// the total so a glitchy raw value past the end of the book — or a
-/// drag-time overshoot from `floor(f × totalPages)` at f=1 — can't
-/// surface as `totalPages + 1`.
-///
-/// Bloc/state keep the raw 0-indexed value so they stay aligned with
-/// foliate-js's own arithmetic; this conversion lives in the display
-/// layer only.
-int _toDisplayPage(int locationIndex, int? totalPages) {
-  final oneIndexed = locationIndex + 1;
-  if (totalPages != null && totalPages > 0) {
-    return oneIndexed.clamp(1, totalPages);
-  }
-  return oneIndexed;
-}
 
 /// Carries the optional review-reminder and mini-review callbacks down the
 /// reader widget tree, eliminating prop drilling through 4+ layers.
@@ -102,6 +81,7 @@ class ReaderScreen extends StatelessWidget {
     required this.serverPort,
     required this.bookRepository,
     required this.highlightRepository,
+    required this.preferencesService,
     required this.textActions,
     this.initialSearchHistory = const [],
     this.initialSource,
@@ -115,6 +95,7 @@ class ReaderScreen extends StatelessWidget {
   final int serverPort;
   final BookRepository bookRepository;
   final HighlightRepository highlightRepository;
+  final PreferencesService preferencesService;
   final List<TextAction> textActions;
   final List<String> initialSearchHistory;
   final Book? initialSource;
@@ -144,6 +125,12 @@ class ReaderScreen extends StatelessWidget {
           ),
           BlocProvider(create: (_) => ReaderChromeCubit()),
           BlocProvider(create: (_) => ReaderSelectionCubit()),
+          BlocProvider(
+            create: (_) => ReaderAppearanceCubit(
+              preferencesService: preferencesService,
+              sourceId: sourceId,
+            ),
+          ),
         ],
         child: _ReaderView(serverPort: serverPort, textActions: textActions),
       ),
@@ -336,6 +323,14 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     });
   }
 
+  Future<void> _openAppearanceSheet() async {
+    _clearSearchHighlight();
+    context.read<ReaderChromeCubit>().hide();
+    await showReaderAppearanceSheet(context);
+    if (!mounted || _tocDrawerVisible || _searchDrawerVisible) return;
+    context.read<ReaderChromeCubit>().show();
+  }
+
   void _closeSearchDrawer({
     bool restoreChrome = true,
     bool clearSearch = true,
@@ -402,7 +397,10 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
 
   @override
   Widget build(BuildContext context) {
-    final appearance = PreferencesScope.readerAppearanceOf(context);
+    final appearance = context
+        .select<ReaderAppearanceCubit, ReaderAppearancePreferences>(
+          (c) => c.state.effectiveAppearance,
+        );
     final callbacks = _ReaderCallbacksScope.of(context);
     // Reader theme drives the book *page* — WebView background and
     // foliate-js customCSS. Chrome (passed-through Stack siblings)
@@ -427,6 +425,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
         ),
         _ReaderBottomChromeDriver(
           onTocPressed: _openTocDrawer,
+          onFontPressed: _openAppearanceSheet,
           onSearchPressed: _openSearchDrawer,
           onSeekFraction: _seekFraction,
         ),
@@ -457,11 +456,13 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
 class _ReaderBottomChromeDriver extends StatelessWidget {
   const _ReaderBottomChromeDriver({
     required this.onTocPressed,
+    required this.onFontPressed,
     required this.onSearchPressed,
     required this.onSeekFraction,
   });
 
   final VoidCallback onTocPressed;
+  final VoidCallback onFontPressed;
   final VoidCallback onSearchPressed;
 
   /// Forwarded to the slider's drag-end handler. Skips the bloc entirely —
@@ -483,20 +484,11 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
     final chapterTitle = context.select<ReaderBloc, String?>(
       (b) => b.state.chapterTitle,
     );
-    final bookCurrentPage = context.select<ReaderBloc, int?>(
-      (b) => b.state.bookCurrentPage,
-    );
-    final bookTotalPages = context.select<ReaderBloc, int?>(
-      (b) => b.state.bookTotalPages,
-    );
     final chapterCurrentPage = context.select<ReaderBloc, int?>(
       (b) => b.state.chapterCurrentPage,
     );
     final chapterTotalPages = context.select<ReaderBloc, int?>(
       (b) => b.state.chapterTotalPages,
-    );
-    final sizeTotal = context.select<ReaderBloc, int?>(
-      (b) => b.state.sizeTotal,
     );
     final format = context.select<ReaderBloc, BookFormat?>(
       (b) => b.state.book?.format,
@@ -507,11 +499,8 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
       visible: chromeVisible && !hasSelection,
       progress: progress,
       chapterTitle: chapterTitle,
-      bookCurrentPage: bookCurrentPage,
-      bookTotalPages: bookTotalPages,
       chapterCurrentPage: chapterCurrentPage,
       chapterTotalPages: chapterTotalPages,
-      sizeTotal: sizeTotal,
       format: format,
       panelColor: colors.surface,
       textColor: colors.onSurfaceVariant,
@@ -520,7 +509,7 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
       foregroundColor: colors.onSurface,
       onBack: () => Navigator.of(context).maybePop(),
       onTocPressed: onTocPressed,
-      onFontPressed: null,
+      onFontPressed: onFontPressed,
       onBookmarkPressed: null,
       onSearchPressed: onSearchPressed,
       onSeekFraction: onSeekFraction,
@@ -537,11 +526,8 @@ class _ReaderBottomChrome extends StatefulWidget {
     required this.visible,
     required this.progress,
     required this.chapterTitle,
-    required this.bookCurrentPage,
-    required this.bookTotalPages,
     required this.chapterCurrentPage,
     required this.chapterTotalPages,
-    required this.sizeTotal,
     required this.format,
     required this.panelColor,
     required this.textColor,
@@ -559,11 +545,8 @@ class _ReaderBottomChrome extends StatefulWidget {
   final bool visible;
   final double progress;
   final String? chapterTitle;
-  final int? bookCurrentPage;
-  final int? bookTotalPages;
   final int? chapterCurrentPage;
   final int? chapterTotalPages;
-  final int? sizeTotal;
   final BookFormat? format;
   final Color panelColor;
   final Color textColor;
@@ -615,42 +598,13 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
     final clamped = widget.progress.clamp(0.0, 1.0);
     final sliderValue = (_dragValue ?? clamped).clamp(0.0, 1.0);
     final mutedText = widget.textColor.withValues(alpha: 0.7);
-    final isComic = widget.format == BookFormat.cbz;
-
-    final int? rawCurrent;
-    final int? totalForMode;
-    if (isComic) {
-      rawCurrent = widget.chapterCurrentPage;
-      totalForMode = widget.chapterTotalPages;
-    } else {
-      rawCurrent = widget.bookCurrentPage;
-      totalForMode = widget.bookTotalPages;
-    }
-
-    final dragValue = _dragValue;
-    final sizeTotal = widget.sizeTotal;
-    final int? rawLocation;
-    if (dragValue != null) {
-      if (!isComic && sizeTotal != null && sizeTotal > 0) {
-        rawLocation = (dragValue * sizeTotal / _foliateSizePerLoc).floor();
-      } else if (totalForMode != null && totalForMode > 0) {
-        rawLocation = (dragValue * totalForMode).floor();
-      } else {
-        rawLocation = null;
-      }
-    } else {
-      rawLocation = rawCurrent;
-    }
-
-    final String displayedText;
-    if (rawLocation == null) {
-      displayedText = '';
-    } else if (isComic && totalForMode != null && totalForMode > 0) {
-      final oneIndexed = _toDisplayPage(rawLocation, totalForMode);
-      displayedText = '$oneIndexed / $totalForMode';
-    } else {
-      displayedText = _toDisplayPage(rawLocation, totalForMode).toString();
-    }
+    final displayedText = readerProgressLabel(
+      format: widget.format,
+      progress: sliderValue,
+      chapterCurrentPage: widget.chapterCurrentPage,
+      chapterTotalPages: widget.chapterTotalPages,
+      isDragging: _dragValue != null,
+    );
 
     return Positioned(
       left: 0,
@@ -1808,7 +1762,7 @@ class _ComicProgressOverlayDriver extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final displayed = _toDisplayPage(current, total);
+    final displayed = displayZeroIndexedPage(current, total);
     final colors = context.colors;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     return Positioned(
@@ -1931,7 +1885,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
 
   /// Memoization for the domain → bridge highlight mapping. This widget
   /// rebuilds for many reasons unrelated to highlights (theme tap,
-  /// font/layout change in PreferencesScope, the loading-scrim flip,
+  /// font/layout change in ReaderAppearanceCubit, the loading-scrim flip,
   /// etc.); without a cache the `.map(...).toList()` re-allocates the
   /// `ReaderHighlight` list every time.
   ///
@@ -1999,7 +1953,10 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
 
     void onTapped(double x, double y) => chromeCubit.toggle();
 
-    final appearance = PreferencesScope.readerAppearanceOf(context);
+    final appearance = context
+        .select<ReaderAppearanceCubit, ReaderAppearancePreferences>(
+          (c) => c.state.effectiveAppearance,
+        );
     final fontPreset = ReaderFontPreset.fromId(appearance.fontId);
     final layout = BookLayoutPreset.fromId(appearance.layoutId).data;
     final customCSS = _customCSSFor(
@@ -2029,12 +1986,12 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         fontSize: layout.fontSize * appearance.textScale,
         fontWeight: layout.fontWeight,
         letterSpacing: layout.letterSpacing,
-        spacing: layout.lineHeight,
+        spacing: appearance.lineHeight,
         paragraphSpacing: layout.paragraphSpacing,
         textIndent: layout.textIndent,
         topMargin: layout.topMargin,
         bottomMargin: layout.bottomMargin,
-        sideMargin: layout.sideMargin,
+        sideMargin: appearance.sideMargin,
         justify: layout.justify,
         hyphenate: layout.hyphenate,
         fontColor: colorToHex(widget.readerTheme.primaryTextColor),

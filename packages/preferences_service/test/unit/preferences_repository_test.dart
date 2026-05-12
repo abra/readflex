@@ -28,11 +28,13 @@ void main() {
       expect(prefs.readerLayoutId, 'standard');
       expect(prefs.readerTextScale, 1.0);
       expect(prefs.readerLineHeight, 1.55);
+      expect(prefs.readerSideMargin, 6.0);
       expect(prefs.readerInvertImagesInDark, isTrue);
       expect(prefs.readerOverrideFont, isTrue);
       expect(prefs.readerOverrideColor, isTrue);
       expect(prefs.readerUseBookLayout, isTrue);
       expect(prefs.readerSearchHistory, isEmpty);
+      expect(prefs.readerAppearanceOverrides, isEmpty);
       expect(prefs.onboardingCompleted, isFalse);
       expect(prefs.hasCompletedSetup, isFalse);
     });
@@ -48,11 +50,21 @@ void main() {
         readerLayoutId: 'comfortable',
         readerTextScale: 1.3,
         readerLineHeight: 1.9,
+        readerSideMargin: 10,
         readerInvertImagesInDark: false,
         readerOverrideFont: false,
         readerOverrideColor: false,
         readerUseBookLayout: false,
         readerSearchHistory: ['design patterns', 'bloc'],
+        readerAppearanceOverrides: {
+          'source-1': ReaderAppearanceOverride(
+            themeId: 'night',
+            fontId: 'sans',
+            textScale: 1.2,
+            lineHeight: 1.8,
+            sideMargin: 9,
+          ),
+        },
         onboardingCompleted: true,
         hasCompletedSetup: true,
       );
@@ -84,10 +96,12 @@ void main() {
       expect(map['readerOverrideColor'], isFalse);
       expect(map['readerUseBookLayout'], isFalse);
       expect(map['readerSearchHistory'], isEmpty);
+      expect(map['readerAppearanceOverrides'], isEmpty);
       expect(map['readerThemeId'], 'paper');
       expect(map['readerFontId'], 'serif');
       expect(map['readerTextScale'], 1.0);
       expect(map['readerLineHeight'], 1.55);
+      expect(map['readerSideMargin'], 6.0);
     });
 
     test(
@@ -115,11 +129,13 @@ void main() {
 
         expect(prefs.themeMode, ThemeMode.dark);
         expect(prefs.readerLayoutId, 'standard');
+        expect(prefs.readerSideMargin, 6.0);
         expect(prefs.readerInvertImagesInDark, isTrue);
         expect(prefs.readerOverrideFont, isTrue);
         expect(prefs.readerOverrideColor, isTrue);
         expect(prefs.readerUseBookLayout, isTrue);
         expect(prefs.readerSearchHistory, isEmpty);
+        expect(prefs.readerAppearanceOverrides, isEmpty);
       },
     );
 
@@ -137,6 +153,34 @@ void main() {
       final prefs = await repo.load(_supportedCodes);
 
       expect(prefs.readerSearchHistory, ['flutter', 'bloc']);
+    });
+
+    test('load() ignores invalid readerAppearanceOverrides entries', () async {
+      final storage = PreferencesStorage();
+      await storage.setString(
+        _key,
+        jsonEncode(<String, Object?>{
+          '_schemaVersion': 3,
+          'readerAppearanceOverrides': {
+            'source-1': {
+              'fontId': 'sans',
+              'textScale': 1.25,
+              'sideMargin': 9,
+            },
+            'empty': <String, Object?>{},
+            'invalid': 'not a map',
+            'source-2': {'textScale': 'large'},
+          },
+        }),
+      );
+
+      final repo = PreferencesRepository(storage);
+      final prefs = await repo.load(_supportedCodes);
+
+      expect(prefs.readerAppearanceOverrides.keys, ['source-1']);
+      expect(prefs.readerAppearanceOverrides['source-1']?.fontId, 'sans');
+      expect(prefs.readerAppearanceOverrides['source-1']?.textScale, 1.25);
+      expect(prefs.readerAppearanceOverrides['source-1']?.sideMargin, 9);
     });
 
     test('load() falls back to defaults on corrupt JSON', () async {
@@ -198,7 +242,7 @@ void main() {
       final raw = await storage.getString(_key);
       final map = jsonDecode(raw!) as Map<String, Object?>;
 
-      expect(map['_schemaVersion'], 2);
+      expect(map['_schemaVersion'], 3);
     });
 
     test(

@@ -210,6 +210,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
               serverPort: deps.readerServer.port,
               bookRepository: deps.bookRepository,
               highlightRepository: deps.highlightRepository,
+              preferencesService: deps.preferencesService,
               initialSearchHistory:
                   deps.preferencesService.current.readerSearchHistory,
               onSearchHistoryChanged: (queries) {

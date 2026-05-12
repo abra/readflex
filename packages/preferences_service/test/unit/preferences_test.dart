@@ -10,6 +10,7 @@ const _baseRA = ReaderAppearancePreferences(
   layoutId: 'standard',
   textScale: 1.0,
   lineHeight: 1.55,
+  sideMargin: 6.0,
   invertImagesInDark: true,
   overrideFont: true,
   overrideColor: true,
@@ -28,11 +29,13 @@ void main() {
       expect(prefs.readerLayoutId, 'standard');
       expect(prefs.readerTextScale, 1.0);
       expect(prefs.readerLineHeight, 1.55);
+      expect(prefs.readerSideMargin, 6.0);
       expect(prefs.readerInvertImagesInDark, isTrue);
       expect(prefs.readerOverrideFont, isTrue);
       expect(prefs.readerOverrideColor, isTrue);
       expect(prefs.readerUseBookLayout, isTrue);
       expect(prefs.readerSearchHistory, isEmpty);
+      expect(prefs.readerAppearanceOverrides, isEmpty);
       expect(prefs.onboardingCompleted, isFalse);
       expect(prefs.hasCompletedSetup, isFalse);
     });
@@ -44,6 +47,9 @@ void main() {
         locale: const Locale('ru'),
         catalogLayoutMode: 'list',
         readerSearchHistory: const ['design patterns', 'bloc'],
+        readerAppearanceOverrides: const {
+          'source-1': ReaderAppearanceOverride(fontId: 'sans'),
+        },
         onboardingCompleted: true,
       );
 
@@ -51,6 +57,7 @@ void main() {
       expect(updated.locale, const Locale('ru'));
       expect(updated.catalogLayoutMode, 'list');
       expect(updated.readerSearchHistory, ['design patterns', 'bloc']);
+      expect(updated.readerAppearanceOverrides['source-1']?.fontId, 'sans');
       expect(updated.onboardingCompleted, isTrue);
       // Unchanged fields preserved
       expect(updated.readerThemeId, 'paper');
@@ -71,6 +78,21 @@ void main() {
       expect(a.hashCode, b.hashCode);
     });
 
+    test('equality compares readerAppearanceOverrides by value', () {
+      const a = Preferences(
+        readerAppearanceOverrides: {
+          'source-1': ReaderAppearanceOverride(fontId: 'sans'),
+        },
+      );
+      const b = Preferences(
+        readerAppearanceOverrides: {
+          'source-1': ReaderAppearanceOverride(fontId: 'sans'),
+        },
+      );
+      expect(a, equals(b));
+      expect(a.hashCode, b.hashCode);
+    });
+
     test('different fields are not equal', () {
       const a = Preferences();
       final b = a.copyWith(themeMode: ThemeMode.dark);
@@ -84,6 +106,7 @@ void main() {
         readerLayoutId: 'comfortable',
         readerTextScale: 1.2,
         readerLineHeight: 1.8,
+        readerSideMargin: 9,
         readerInvertImagesInDark: false,
         readerOverrideFont: false,
         readerOverrideColor: false,
@@ -96,10 +119,37 @@ void main() {
       expect(ra.layoutId, 'comfortable');
       expect(ra.textScale, 1.2);
       expect(ra.lineHeight, 1.8);
+      expect(ra.sideMargin, 9);
       expect(ra.invertImagesInDark, isFalse);
       expect(ra.overrideFont, isFalse);
       expect(ra.overrideColor, isFalse);
       expect(ra.useBookLayout, isFalse);
+    });
+
+    test('effectiveReaderAppearanceFor applies source override', () {
+      const prefs = Preferences(
+        readerFontId: 'serif',
+        readerTextScale: 1.0,
+        readerLineHeight: 1.55,
+        readerAppearanceOverrides: {
+          'source-1': ReaderAppearanceOverride(
+            fontId: 'sans',
+            textScale: 1.2,
+            sideMargin: 10,
+          ),
+        },
+      );
+
+      final ra = prefs.effectiveReaderAppearanceFor('source-1');
+
+      expect(ra.fontId, 'sans');
+      expect(ra.textScale, 1.2);
+      expect(ra.lineHeight, 1.55);
+      expect(ra.sideMargin, 10);
+      expect(
+        prefs.effectiveReaderAppearanceFor('source-2'),
+        prefs.readerAppearance,
+      );
     });
   });
 
@@ -109,6 +159,7 @@ void main() {
         themeId: 'night',
         textScale: 1.3,
         layoutId: 'compact',
+        sideMargin: 8,
         invertImagesInDark: false,
         overrideFont: false,
       );
@@ -118,6 +169,7 @@ void main() {
       expect(updated.layoutId, 'compact');
       expect(updated.textScale, 1.3);
       expect(updated.lineHeight, 1.55);
+      expect(updated.sideMargin, 8);
       expect(updated.invertImagesInDark, isFalse);
       expect(updated.overrideFont, isFalse);
       expect(updated.overrideColor, isTrue);
@@ -132,6 +184,7 @@ void main() {
         layoutId: 'standard',
         textScale: 1.0,
         lineHeight: 1.55,
+        sideMargin: 6.0,
         invertImagesInDark: true,
         overrideFont: true,
         overrideColor: true,
@@ -151,9 +204,41 @@ void main() {
         _baseRA,
         isNot(equals(_baseRA.copyWith(invertImagesInDark: false))),
       );
+      expect(_baseRA, isNot(equals(_baseRA.copyWith(sideMargin: 8))));
       expect(_baseRA, isNot(equals(_baseRA.copyWith(overrideFont: false))));
       expect(_baseRA, isNot(equals(_baseRA.copyWith(overrideColor: false))));
       expect(_baseRA, isNot(equals(_baseRA.copyWith(useBookLayout: false))));
+    });
+  });
+
+  group('ReaderAppearanceOverride', () {
+    test('copyWith can set and clear nullable fields', () {
+      const source = ReaderAppearanceOverride(fontId: 'sans');
+
+      final updated = source.copyWith(
+        fontId: null,
+        textScale: 1.2,
+        sideMargin: 8,
+      );
+
+      expect(updated.fontId, isNull);
+      expect(updated.textScale, 1.2);
+      expect(updated.sideMargin, 8);
+    });
+
+    test('toJson/fromJson round-trip omits null values', () {
+      const source = ReaderAppearanceOverride(
+        fontId: 'sans',
+        textScale: 1.25,
+        sideMargin: 9,
+        overrideColor: false,
+      );
+
+      final json = source.toJson();
+      final loaded = ReaderAppearanceOverride.fromJson(json);
+
+      expect(json.containsKey('themeId'), isFalse);
+      expect(loaded, source);
     });
   });
 }

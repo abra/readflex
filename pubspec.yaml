@@ -108,9 +108,8 @@ flutter:
   # Fonts live physically inside packages/component_library/fonts/ but must
   # be declared here at the APP level to be bundled into the built app and
   # reachable by their short family name. Flutter does not auto-bundle fonts
-  # declared only in a package's pubspec.yaml — without this section every
-  # `fontFamily: 'Literata'` / `'Geist'` silently falls back to the
-  # system font, which on iOS is SF Pro (looks like a generic sans).
+  # declared only in a package's pubspec.yaml — without this section reader/UI
+  # font families silently fall back to platform defaults.
   fonts:
     - family: Geist
       fonts:
@@ -120,3 +119,9 @@ flutter:
         - asset: packages/component_library/fonts/Literata-Variable.ttf
         - asset: packages/component_library/fonts/Literata-Italic-Variable.ttf
           style: italic
+    - family: Merriweather
+      fonts:
+        - asset: packages/component_library/fonts/Merriweather-Regular.ttf
+    - family: Open Sans
+      fonts:
+        - asset: packages/component_library/fonts/OpenSans-Variable.ttf
