@@ -291,6 +291,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   bool _ignoreNextRelocateForSearchHighlight = false;
   bool _tocDrawerVisible = false;
   bool _searchDrawerVisible = false;
+  bool _appearanceSheetVisible = false;
 
   void _seekFraction(double fraction) {
     _clearSearchHighlight();
@@ -324,9 +325,21 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   }
 
   Future<void> _openAppearanceSheet() async {
+    if (_appearanceSheetVisible) return;
+    _appearanceSheetVisible = true;
     _clearSearchHighlight();
-    context.read<ReaderChromeCubit>().hide();
-    await showReaderAppearanceSheet(context);
+    final chromeCubit = context.read<ReaderChromeCubit>();
+    final wasChromeVisible = chromeCubit.state.chromeVisible;
+    chromeCubit.hide();
+    if (wasChromeVisible) {
+      await Future<void>.delayed(_kChromeAnimDuration);
+      if (!mounted) return;
+    }
+    try {
+      await showReaderAppearanceSheet(context);
+    } finally {
+      if (mounted) _appearanceSheetVisible = false;
+    }
     if (!mounted || _tocDrawerVisible || _searchDrawerVisible) return;
     context.read<ReaderChromeCubit>().show();
   }

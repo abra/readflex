@@ -22,7 +22,7 @@ enum ReaderThemePreset {
   String get label => switch (this) {
     paper => 'Paper',
     warm => 'Warm',
-    mist => 'Mist',
+    mist => 'Graphite',
     night => 'Night',
   };
 }
@@ -136,21 +136,21 @@ extension ReaderThemePresetX on ReaderThemePreset {
       accentColor: Color(0xFFC07A39),
     ),
     ReaderThemePreset.mist => const ReaderThemeData(
-      backgroundColor: Color(0xFFF3F1EC),
-      surfaceColor: Color(0xFFF9F7F3),
-      panelColor: Color(0xFFEAE5DD),
-      primaryTextColor: Color(0xFF292520),
-      secondaryTextColor: Color(0xFF72685D),
-      dividerColor: Color(0xFFDCD3C7),
-      accentColor: Color(0xFF9A7A56),
+      backgroundColor: Color(0xFF0F1115),
+      surfaceColor: Color(0xFF171A20),
+      panelColor: Color(0xFF1E222A),
+      primaryTextColor: Color(0xFFBCC1CA),
+      secondaryTextColor: Color(0xFF9299A6),
+      dividerColor: Color(0xFF2A2F38),
+      accentColor: Color(0xFF9AA4B2),
     ),
     ReaderThemePreset.night => const ReaderThemeData(
-      backgroundColor: Color(0xFF1D1916),
-      surfaceColor: Color(0xFF25201C),
-      panelColor: Color(0xFF2D2722),
-      primaryTextColor: Color(0xFFF1E7D9),
-      secondaryTextColor: Color(0xFFBAAD9B),
-      dividerColor: Color(0xFF403730),
+      backgroundColor: Color(0xFF242830),
+      surfaceColor: Color(0xFF4A5456),
+      panelColor: Color(0xFF354044),
+      primaryTextColor: Color(0xFFABB2BF),
+      secondaryTextColor: Color(0xFFB5C0C2),
+      dividerColor: Color(0xFF5A6466),
       accentColor: Color(0xFFD08A4A),
     ),
   };

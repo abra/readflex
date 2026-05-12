@@ -16,6 +16,7 @@ class ActionBottomSheetLayout extends StatelessWidget {
   const ActionBottomSheetLayout({
     required this.title,
     required this.child,
+    this.headerTrailing,
     this.headerPadding = const EdgeInsets.fromLTRB(
       AppSpacing.xl,
       0,
@@ -34,6 +35,7 @@ class ActionBottomSheetLayout extends StatelessWidget {
 
   final String title;
   final Widget child;
+  final Widget? headerTrailing;
 
   /// Insets around the title row. Default: 24 dp on each side, 0 on
   /// the top (the wrapper's drag handle already provides spacing
@@ -51,13 +53,23 @@ class ActionBottomSheetLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final header = headerTrailing == null
+        ? BottomSheetHeader(title: title)
+        : Row(
+            children: [
+              Expanded(child: BottomSheetHeader(title: title)),
+              const SizedBox(width: AppSpacing.md),
+              headerTrailing!,
+            ],
+          );
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
           padding: headerPadding,
-          child: BottomSheetHeader(title: title),
+          child: header,
         ),
         if (headerSpacing > 0) SizedBox(height: headerSpacing),
         Padding(padding: bodyPadding, child: child),

@@ -119,6 +119,26 @@ void main() {
     expect(find.text('Body'), findsOneWidget);
   });
 
+  testWidgets('ActionBottomSheetLayout renders optional header action', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: ActionBottomSheetLayout(
+            title: 'Sheet',
+            headerTrailing: Text('Reset'),
+            child: Text('Body'),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Sheet'), findsOneWidget);
+    expect(find.text('Reset'), findsOneWidget);
+    expect(find.text('Body'), findsOneWidget);
+  });
+
   testWidgets('AppBottomActionBar renders provided actions', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
