@@ -383,8 +383,21 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     _closeSearchDrawer(restoreChrome: false, clearSearch: false);
   }
 
-  Future<List<ReaderSearchResult>> _searchBook(String query) async {
-    return _webViewKey.currentState?.searchBook(query) ?? const [];
+  Stream<ReaderSearchEvent> _searchBook(String query) {
+    final webView = _webViewKey.currentState;
+    if (webView == null) {
+      return Stream.value(
+        const ReaderSearchError(
+          requestId: -1,
+          message: 'Reader is not ready',
+        ),
+      );
+    }
+    return webView.searchBookStream(query);
+  }
+
+  void _clearDrawerSearch() {
+    _clearSearchHighlight();
   }
 
   @override
@@ -429,6 +442,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
           visible: _searchDrawerVisible,
           onClose: _closeSearchDrawer,
           onSearch: _searchBook,
+          onClearSearch: _clearDrawerSearch,
           onResultSelected: _goToSearchResult,
           initialRecentQueries: callbacks?.initialSearchHistory ?? const [],
           onRecentQueriesChanged: callbacks?.onSearchHistoryChanged,
@@ -1139,6 +1153,7 @@ class _ReaderSearchDrawer extends StatelessWidget {
     required this.visible,
     required this.onClose,
     required this.onSearch,
+    required this.onClearSearch,
     required this.onResultSelected,
     required this.initialRecentQueries,
     required this.onRecentQueriesChanged,
@@ -1146,7 +1161,8 @@ class _ReaderSearchDrawer extends StatelessWidget {
 
   final bool visible;
   final VoidCallback onClose;
-  final Future<List<ReaderSearchResult>> Function(String query) onSearch;
+  final Stream<ReaderSearchEvent> Function(String query) onSearch;
+  final VoidCallback onClearSearch;
   final ValueChanged<ReaderSearchResult> onResultSelected;
   final List<String> initialRecentQueries;
   final ValueChanged<List<String>>? onRecentQueriesChanged;
@@ -1171,6 +1187,7 @@ class _ReaderSearchDrawer extends StatelessWidget {
                 visible: visible,
                 onClose: onClose,
                 onSearch: onSearch,
+                onClearSearch: onClearSearch,
                 onResultSelected: onResultSelected,
                 initialRecentQueries: initialRecentQueries,
                 onRecentQueriesChanged: onRecentQueriesChanged,
@@ -1188,6 +1205,7 @@ class _ReaderSearchDrawerContent extends StatefulWidget {
     required this.visible,
     required this.onClose,
     required this.onSearch,
+    required this.onClearSearch,
     required this.onResultSelected,
     required this.initialRecentQueries,
     required this.onRecentQueriesChanged,
@@ -1195,7 +1213,8 @@ class _ReaderSearchDrawerContent extends StatefulWidget {
 
   final bool visible;
   final VoidCallback onClose;
-  final Future<List<ReaderSearchResult>> Function(String query) onSearch;
+  final Stream<ReaderSearchEvent> Function(String query) onSearch;
+  final VoidCallback onClearSearch;
   final ValueChanged<ReaderSearchResult> onResultSelected;
   final List<String> initialRecentQueries;
   final ValueChanged<List<String>>? onRecentQueriesChanged;
@@ -1210,11 +1229,13 @@ class _ReaderSearchDrawerContentState
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
   Timer? _debounce;
-  List<ReaderSearchResult> _results = const [];
+  StreamSubscription<ReaderSearchEvent>? _searchSubscription;
+  final List<ReaderSearchResult> _results = <ReaderSearchResult>[];
   late List<String> _recentQueries;
+  double _searchProgress = 0;
   bool _isLoading = false;
   String? _errorMessage;
-  int _requestId = 0;
+  int _searchGeneration = 0;
 
   @override
   void initState() {
@@ -1238,9 +1259,12 @@ class _ReaderSearchDrawerContentState
       });
     } else if (!widget.visible && oldWidget.visible) {
       _debounce?.cancel();
+      unawaited(_searchSubscription?.cancel());
+      _searchSubscription = null;
       _controller.clear();
       setState(() {
-        _results = const [];
+        _results.clear();
+        _searchProgress = 0;
         _isLoading = false;
         _errorMessage = null;
       });
@@ -1250,6 +1274,7 @@ class _ReaderSearchDrawerContentState
   @override
   void dispose() {
     _debounce?.cancel();
+    unawaited(_searchSubscription?.cancel());
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -1280,18 +1305,26 @@ class _ReaderSearchDrawerContentState
   void _queueSearch(String value, {required bool debounce}) {
     _debounce?.cancel();
     final query = value.trim();
+    final shouldClearCurrentSearch =
+        _isLoading || _results.isNotEmpty || _errorMessage != null;
+    _searchGeneration++;
+    unawaited(_searchSubscription?.cancel());
+    _searchSubscription = null;
+    if (shouldClearCurrentSearch) widget.onClearSearch();
+
     if (query.length < _kBookSearchMinQueryLength) {
-      _requestId++;
       setState(() {
-        _results = const [];
+        _results.clear();
+        _searchProgress = 0;
         _isLoading = false;
         _errorMessage = null;
       });
-      unawaited(widget.onSearch(''));
       return;
     }
 
     setState(() {
+      _results.clear();
+      _searchProgress = 0;
       _isLoading = true;
       _errorMessage = null;
     });
@@ -1300,7 +1333,7 @@ class _ReaderSearchDrawerContentState
         _runSearch(query);
       });
     } else {
-      unawaited(_runSearch(query));
+      _runSearch(query);
     }
   }
 
@@ -1316,32 +1349,64 @@ class _ReaderSearchDrawerContentState
     ].take(_kBookSearchHistoryLimit).toList(growable: false);
   }
 
-  Future<void> _runSearch(String query) async {
-    final requestId = ++_requestId;
-    try {
-      final results = await widget.onSearch(query);
-      if (!mounted || requestId != _requestId) return;
-      final recentQueries = _updatedRecentQueries(query);
-      final shouldPersistRecentQueries = !listEquals(
-        recentQueries,
-        _recentQueries,
-      );
-      setState(() {
-        _results = results;
-        _recentQueries = recentQueries;
-        _isLoading = false;
-      });
-      if (shouldPersistRecentQueries) {
-        widget.onRecentQueriesChanged?.call(recentQueries);
-      }
-    } catch (_) {
-      if (!mounted || requestId != _requestId) return;
-      setState(() {
-        _results = const [];
-        _isLoading = false;
-        _errorMessage = 'Search failed';
-      });
-    }
+  void _runSearch(String query) {
+    final generation = ++_searchGeneration;
+    var completedWithError = false;
+    unawaited(_searchSubscription?.cancel());
+
+    _searchSubscription = widget
+        .onSearch(query)
+        .listen(
+          (event) {
+            if (!mounted || generation != _searchGeneration) return;
+            switch (event) {
+              case ReaderSearchProgress(:final progress):
+                if (progress == _searchProgress) return;
+                setState(() => _searchProgress = progress);
+              case ReaderSearchResults(:final results):
+                if (results.isEmpty) return;
+                setState(() => _results.addAll(results));
+              case ReaderSearchDone():
+                setState(() => _searchProgress = 1);
+              case ReaderSearchError(:final message):
+                completedWithError = true;
+                setState(() {
+                  _results.clear();
+                  _isLoading = false;
+                  _errorMessage = message;
+                });
+            }
+          },
+          onError: (_) {
+            if (!mounted || generation != _searchGeneration) return;
+            completedWithError = true;
+            setState(() {
+              _results.clear();
+              _isLoading = false;
+              _errorMessage = 'Search failed';
+            });
+          },
+          onDone: () {
+            if (!mounted ||
+                generation != _searchGeneration ||
+                completedWithError) {
+              return;
+            }
+            final recentQueries = _updatedRecentQueries(query);
+            final shouldPersistRecentQueries = !listEquals(
+              recentQueries,
+              _recentQueries,
+            );
+            setState(() {
+              _recentQueries = recentQueries;
+              _searchProgress = 1;
+              _isLoading = false;
+            });
+            if (shouldPersistRecentQueries) {
+              widget.onRecentQueriesChanged?.call(recentQueries);
+            }
+          },
+        );
   }
 
   @override
@@ -1391,7 +1456,13 @@ class _ReaderSearchDrawerContentState
             onChanged: _onQueryChanged,
           ),
         ),
-        if (_isLoading) const LinearProgressIndicator(minHeight: 2),
+        if (_isLoading)
+          LinearProgressIndicator(
+            minHeight: 2,
+            value: _searchProgress > 0 && _searchProgress < 1
+                ? _searchProgress
+                : null,
+          ),
         Expanded(
           child: _ReaderDrawerContentFrame(
             child: _errorMessage != null

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -50,10 +51,11 @@ final class ReaderInitialLocation {
 ///
 /// Communication:
 ///   JS → Flutter: `onReady`, `onRelocated`, `onSelectionEnd`,
-///                  `onSelectionCleared`, `onAnnotationClick`, `onSetToc`
-///   Flutter → JS: `goToCfi`, `goToHref`, `searchBook`, `clearSearch`,
-///                  `nextPage`, `prevPage`, `changeStyle`, `addAnnotation`,
-///                  `removeAnnotation`
+///                  `onSelectionCleared`, `onAnnotationClick`, `onSetToc`,
+///                  `onSearch`
+///   Flutter → JS: `goToCfi`, `goToHref`, `startSearch`, `cancelSearch`,
+///                  `searchBook`, `clearSearch`, `nextPage`, `prevPage`,
+///                  `changeStyle`, `addAnnotation`, `removeAnnotation`
 class BookReaderWebView extends StatefulWidget {
   const BookReaderWebView({
     required this.serverPort,
@@ -120,6 +122,9 @@ class BookReaderWebView extends StatefulWidget {
 class BookReaderWebViewState extends State<BookReaderWebView> {
   InAppWebViewController? _controller;
   bool _isReady = false;
+  StreamController<ReaderSearchEvent>? _searchEvents;
+  int _searchRequestSerial = 0;
+  int? _activeSearchRequestId;
 
   // TEMP WORKAROUND — remove once the WKWebView deep-CFI restore crash is
   // fixed properly (see memory: project_wkwebview_cfi_crash_root_cause.md).
@@ -130,6 +135,12 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   // This flag overrides the URL-built initialCfi during the recovery
   // reload, then clears itself once the reload signals onLoadEnd.
   bool _recoveringFromCrash = false;
+
+  @override
+  void dispose() {
+    _closeSearchEvents();
+    super.dispose();
+  }
 
   @override
   void didUpdateWidget(covariant BookReaderWebView oldWidget) {
@@ -360,6 +371,19 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       },
     );
 
+    controller.addJavaScriptHandler(
+      handlerName: 'onSearch',
+      callback: (args) {
+        if (args.isEmpty) return;
+        final raw = args.first;
+        if (raw is! Map) return;
+        final event = ReaderSearchEvent.fromMap(
+          Map<String, dynamic>.from(raw),
+        );
+        _handleSearchEvent(event);
+      },
+    );
+
     registerSharedReaderHandlers(
       controller,
       onTextSelected: widget.onTextSelected,
@@ -388,33 +412,103 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
 
   /// Search the whole book and keep foliate-js search highlights active.
   Future<List<ReaderSearchResult>> searchBook(String query) async {
+    final results = <ReaderSearchResult>[];
+    await for (final event in searchBookStream(query)) {
+      switch (event) {
+        case ReaderSearchResults(results: final batch):
+          results.addAll(batch);
+        case ReaderSearchError(:final message):
+          throw StateError(message);
+        case ReaderSearchProgress() || ReaderSearchDone():
+          break;
+      }
+    }
+    return results;
+  }
+
+  /// Start a streamed book search.
+  ///
+  /// A new search cancels the previous one. Results are emitted in batches
+  /// as foliate-js finishes scanning sections; progress is reported in
+  /// `[0, 1]`. Cancel the returned subscription to stop work early.
+  Stream<ReaderSearchEvent> searchBookStream(String query) {
     final trimmed = query.trim();
     if (trimmed.isEmpty) {
       clearSearch();
-      return const [];
+      final requestId = ++_searchRequestSerial;
+      return Stream.value(ReaderSearchDone(requestId: requestId));
     }
 
-    final result = await _controller?.callAsyncJavaScript(
-      functionBody: 'return await searchBook(query);',
-      arguments: {'query': trimmed},
+    _cancelActiveSearch();
+
+    final requestId = ++_searchRequestSerial;
+    final events = StreamController<ReaderSearchEvent>();
+    _searchEvents = events;
+    _activeSearchRequestId = requestId;
+    events.onCancel = () {
+      if (_activeSearchRequestId == requestId) _cancelActiveSearch();
+    };
+
+    final controller = _controller;
+    if (controller == null) {
+      scheduleMicrotask(() {
+        _handleSearchEvent(
+          ReaderSearchError(
+            requestId: requestId,
+            message: 'Book search failed: reader is not ready',
+          ),
+        );
+      });
+      return events.stream;
+    }
+
+    final escapedQuery = jsonEncode(trimmed);
+    unawaited(
+      controller
+          .evaluateJavascript(source: 'startSearch($requestId, $escapedQuery);')
+          .catchError((Object error) {
+            _handleSearchEvent(
+              ReaderSearchError(
+                requestId: requestId,
+                message: 'Book search failed: $error',
+              ),
+            );
+          }),
     );
-    final error = result?.error;
-    if (error != null && error.isNotEmpty) {
-      throw StateError('Book search failed: $error');
-    }
-    final value = result?.value;
-    if (value is! List) return const [];
-
-    return [
-      for (final item in value)
-        if (item is Map)
-          ReaderSearchResult.fromMap(Map<String, dynamic>.from(item)),
-    ];
+    return events.stream;
   }
 
   /// Clear active search annotations inside foliate-js.
   void clearSearch() {
+    _cancelActiveSearch();
     _controller?.evaluateJavascript(source: 'clearSearch();');
+  }
+
+  void _handleSearchEvent(ReaderSearchEvent event) {
+    if (_activeSearchRequestId != event.requestId) return;
+    final events = _searchEvents;
+    if (events == null || events.isClosed) return;
+    events.add(event);
+    if (event is ReaderSearchDone || event is ReaderSearchError) {
+      _activeSearchRequestId = null;
+      _searchEvents = null;
+      unawaited(events.close());
+    }
+  }
+
+  void _cancelActiveSearch() {
+    final requestId = _activeSearchRequestId;
+    _activeSearchRequestId = null;
+    _closeSearchEvents();
+    if (requestId != null) {
+      _controller?.evaluateJavascript(source: 'cancelSearch($requestId);');
+    }
+  }
+
+  void _closeSearchEvents() {
+    final events = _searchEvents;
+    _searchEvents = null;
+    if (events != null && !events.isClosed) unawaited(events.close());
   }
 
   /// Navigate to a fraction `[0, 1]` of the whole book. Used by the

@@ -1777,7 +1777,95 @@ window.ttsPrev = () => {
 
 window.ttsPrepare = () => reader.view.tts.prepare()
 
+let activeSearchToken = 0
+let activeSearchRequestId = null
+
 window.clearSearch = () => reader.view.clearSearch()
+
+window.cancelSearch = (requestId = null) => {
+  if (requestId != null && activeSearchRequestId !== requestId) return
+  activeSearchToken++
+  activeSearchRequestId = null
+  reader.view.clearSearch()
+}
+
+const emitSearchResults = (requestId, result) => {
+  const chapterTitle = result.label ?? ''
+  if ('subitems' in result) {
+    callFlutter('onSearch', {
+      requestId,
+      type: 'results',
+      items: result.subitems.map((item) => ({
+        cfi: item.cfi,
+        excerpt: item.excerpt,
+        chapterTitle,
+      })),
+    })
+  }
+  else if (result.cfi) {
+    callFlutter('onSearch', {
+      requestId,
+      type: 'results',
+      items: [{
+        cfi: result.cfi,
+        excerpt: result.excerpt,
+        chapterTitle,
+      }],
+    })
+  }
+}
+
+window.startSearch = async (requestId, text, opts = {}) => {
+  const token = ++activeSearchToken
+  activeSearchRequestId = requestId
+  opts = {
+    'scope': 'book',
+    'matchCase': false,
+    'matchDiacritics': false,
+    'matchWholeWords': false,
+    ...opts,
+  }
+
+  const query = `${text ?? ''}`.trim()
+  if (!query) {
+    reader.view.clearSearch()
+    activeSearchRequestId = null
+    callFlutter('onSearch', { requestId, type: 'done' })
+    return
+  }
+
+  const index = opts.scope === 'section' ? reader.index : null
+
+  try {
+    for await (const result of reader.view.search({ ...opts, query, index })) {
+      if (token !== activeSearchToken) return
+      if (result === 'done') {
+        activeSearchRequestId = null
+        callFlutter('onSearch', { requestId, type: 'done' })
+      }
+      else if ('progress' in result) {
+        callFlutter('onSearch', {
+          requestId,
+          type: 'progress',
+          progress: result.progress,
+        })
+      }
+      else {
+        emitSearchResults(requestId, result)
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    }
+  } catch (e) {
+    if (token !== activeSearchToken) return
+    activeSearchRequestId = null
+    callFlutter('onSearch', {
+      requestId,
+      type: 'error',
+      message: String(e && e.message || e),
+    })
+  }
+}
 
 window.searchBook = async (text, opts = {}) => {
   opts = {

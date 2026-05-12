@@ -157,6 +157,81 @@ void main() {
     });
   });
 
+  group('ReaderSearchEvent', () {
+    test('fromMap parses progress event', () {
+      final event = ReaderSearchEvent.fromMap({
+        'requestId': 3,
+        'type': 'progress',
+        'progress': 0.42,
+      });
+
+      expect(event, isA<ReaderSearchProgress>());
+      final progress = event as ReaderSearchProgress;
+      expect(progress.requestId, 3);
+      expect(progress.progress, 0.42);
+    });
+
+    test('fromMap parses result batch event', () {
+      final event = ReaderSearchEvent.fromMap({
+        'requestId': 7,
+        'type': 'results',
+        'items': [
+          {
+            'cfi': 'epubcfi(/6/34!/4/2)',
+            'chapterTitle': 'Chapter 9',
+            'excerpt': {
+              'pre': 'before ',
+              'match': 'needle',
+              'post': ' after',
+            },
+          },
+        ],
+      });
+
+      expect(event, isA<ReaderSearchResults>());
+      final results = event as ReaderSearchResults;
+      expect(results.requestId, 7);
+      expect(results.results, hasLength(1));
+      expect(results.results.single.cfi, 'epubcfi(/6/34!/4/2)');
+      expect(results.results.single.chapterTitle, 'Chapter 9');
+      expect(results.results.single.excerpt.match, 'needle');
+    });
+
+    test('fromMap parses foliate section-shaped result event', () {
+      final event = ReaderSearchEvent.fromMap({
+        'requestId': 8,
+        'label': 'Chapter 10',
+        'subitems': [
+          {
+            'cfi': 'epubcfi(/6/40!/4/2)',
+            'excerpt': {'match': 'needle'},
+          },
+        ],
+      });
+
+      expect(event, isA<ReaderSearchResults>());
+      final results = event as ReaderSearchResults;
+      expect(results.results.single.chapterTitle, 'Chapter 10');
+      expect(results.results.single.excerpt.match, 'needle');
+    });
+
+    test('fromMap parses terminal events', () {
+      final done = ReaderSearchEvent.fromMap({
+        'requestId': 9,
+        'type': 'done',
+      });
+      final error = ReaderSearchEvent.fromMap({
+        'requestId': 10,
+        'type': 'error',
+        'message': 'boom',
+      });
+
+      expect(done, isA<ReaderSearchDone>());
+      expect(error, isA<ReaderSearchError>());
+      expect((error as ReaderSearchError).message, 'boom');
+    });
+  });
+
   group('ReaderSelection', () {
     test('fromMap parses scroll-offset-only selection', () {
       // Legacy article selections (pre-EPUB migration) carried only a

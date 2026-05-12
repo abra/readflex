@@ -137,6 +137,113 @@ class ReaderSearchResult {
   }
 }
 
+/// Streaming search event emitted by the WebView.
+///
+/// The reader sends progress and result batches as foliate-js scans sections,
+/// so Flutter can render partial results instead of waiting for a full-book
+/// search to finish.
+sealed class ReaderSearchEvent {
+  const ReaderSearchEvent({required this.requestId});
+
+  final int requestId;
+
+  factory ReaderSearchEvent.fromMap(Map<String, dynamic> map) {
+    final requestId = (map['requestId'] as num?)?.toInt() ?? -1;
+    final type =
+        map['type'] as String? ??
+        (map.containsKey('process') || map.containsKey('progress')
+            ? 'progress'
+            : 'results');
+
+    return switch (type) {
+      'progress' => ReaderSearchProgress(
+        requestId: requestId,
+        progress: _progressFromMap(map),
+      ),
+      'done' => ReaderSearchDone(requestId: requestId),
+      'error' => ReaderSearchError(
+        requestId: requestId,
+        message: map['message'] as String? ?? 'Book search failed',
+      ),
+      _ => ReaderSearchResults(
+        requestId: requestId,
+        results: _searchResultsFromMap(map),
+      ),
+    };
+  }
+}
+
+final class ReaderSearchProgress extends ReaderSearchEvent {
+  const ReaderSearchProgress({
+    required super.requestId,
+    required this.progress,
+  });
+
+  final double progress;
+}
+
+final class ReaderSearchResults extends ReaderSearchEvent {
+  const ReaderSearchResults({
+    required super.requestId,
+    required this.results,
+  });
+
+  final List<ReaderSearchResult> results;
+}
+
+final class ReaderSearchDone extends ReaderSearchEvent {
+  const ReaderSearchDone({required super.requestId});
+}
+
+final class ReaderSearchError extends ReaderSearchEvent {
+  const ReaderSearchError({
+    required super.requestId,
+    required this.message,
+  });
+
+  final String message;
+}
+
+double _progressFromMap(Map<String, dynamic> map) {
+  final value = (map['progress'] ?? map['process']) as num?;
+  return (value?.toDouble() ?? 0).clamp(0.0, 1.0).toDouble();
+}
+
+List<ReaderSearchResult> _searchResultsFromMap(Map<String, dynamic> map) {
+  final items = map['items'];
+  if (items is List) {
+    return [
+      for (final item in items)
+        if (item is Map)
+          ReaderSearchResult.fromMap(Map<String, dynamic>.from(item)),
+    ];
+  }
+
+  final chapterTitle = (map['chapterTitle'] ?? map['label']) as String?;
+  final subitems = map['subitems'];
+  if (subitems is List) {
+    return [
+      for (final item in subitems)
+        if (item is Map)
+          ReaderSearchResult.fromMap({
+            ...Map<String, dynamic>.from(item),
+            'chapterTitle': ?chapterTitle,
+          }),
+    ];
+  }
+
+  if (map['cfi'] != null) {
+    return [
+      ReaderSearchResult.fromMap({
+        ...map,
+        'chapterTitle': ?chapterTitle,
+      }),
+    ];
+  }
+
+  return const [];
+}
+
 /// Split text around a search match. foliate-js returns excerpts this way so
 /// Flutter can emphasize only the matched fragment.
 class ReaderSearchExcerpt {
