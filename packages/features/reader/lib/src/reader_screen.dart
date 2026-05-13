@@ -336,12 +336,16 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
       if (!mounted) return;
     }
     try {
-      await showReaderAppearanceSheet(context);
+      await showReaderAppearanceSheet(
+        context,
+        onFullyHidden: () {
+          if (!mounted || _tocDrawerVisible || _searchDrawerVisible) return;
+          context.read<ReaderChromeCubit>().show();
+        },
+      );
     } finally {
       if (mounted) _appearanceSheetVisible = false;
     }
-    if (!mounted || _tocDrawerVisible || _searchDrawerVisible) return;
-    context.read<ReaderChromeCubit>().show();
   }
 
   void _closeSearchDrawer({

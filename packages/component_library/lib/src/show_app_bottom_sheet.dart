@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'theme/extensions/build_context_ext.dart';
@@ -23,13 +25,37 @@ Future<T?> showAppBottomSheet<T>(
   BuildContext context, {
   required WidgetBuilder builder,
   bool dismissible = true,
+  VoidCallback? onFullyHidden,
 }) {
-  return showModalBottomSheet<T>(
+  final navigator = Navigator.of(context, rootNavigator: true);
+  final controller = BottomSheet.createAnimationController(
+    navigator.overlay!,
+  );
+  var wasVisible = false;
+  final dismissedCompleter = Completer<void>();
+
+  void statusListener(AnimationStatus status) {
+    if (status == AnimationStatus.forward ||
+        status == AnimationStatus.completed) {
+      wasVisible = true;
+    }
+    if (wasVisible &&
+        status == AnimationStatus.dismissed &&
+        !dismissedCompleter.isCompleted) {
+      onFullyHidden?.call();
+      dismissedCompleter.complete();
+    }
+  }
+
+  controller.addStatusListener(statusListener);
+
+  final sheetFuture = showModalBottomSheet<T>(
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,
     isDismissible: dismissible,
     enableDrag: dismissible,
+    transitionAnimationController: controller,
     builder: (ctx) => Padding(
       // Lift the sheet above the keyboard. Done once here so every
       // sheet body gets it, regardless of whether it has form fields.
@@ -48,6 +74,23 @@ Future<T?> showAppBottomSheet<T>(
       ),
     ),
   );
+
+  unawaited(
+    sheetFuture.whenComplete(() async {
+      if (!dismissedCompleter.isCompleted) {
+        if (controller.status == AnimationStatus.dismissed) {
+          if (wasVisible) onFullyHidden?.call();
+          dismissedCompleter.complete();
+        } else {
+          await dismissedCompleter.future;
+        }
+      }
+      controller.removeStatusListener(statusListener);
+      controller.dispose();
+    }),
+  );
+
+  return sheetFuture;
 }
 
 /// 32×4 grab handle pill rendered at the very top of a dismissible

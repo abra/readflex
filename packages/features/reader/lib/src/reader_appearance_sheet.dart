@@ -14,10 +14,14 @@ const double _textSizeButtonHeight = 44;
 const double _textScaleEpsilon = 0.001;
 const Duration _tabIndicatorDuration = Duration(milliseconds: 180);
 
-Future<void> showReaderAppearanceSheet(BuildContext context) {
+Future<void> showReaderAppearanceSheet(
+  BuildContext context, {
+  VoidCallback? onFullyHidden,
+}) {
   final cubit = context.read<ReaderAppearanceCubit>();
   return showAppBottomSheet<void>(
     context,
+    onFullyHidden: onFullyHidden,
     builder: (_) => BlocProvider.value(
       value: cubit,
       child: const _ReaderAppearanceSheet(),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:component_library/component_library.dart';
@@ -137,6 +138,60 @@ void main() {
     expect(find.text('Sheet'), findsOneWidget);
     expect(find.text('Reset'), findsOneWidget);
     expect(find.text('Body'), findsOneWidget);
+  });
+
+  testWidgets('showAppBottomSheet calls onFullyHidden after exit animation', (
+    tester,
+  ) async {
+    var fullyHidden = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            return Scaffold(
+              body: Center(
+                child: FilledButton(
+                  onPressed: () {
+                    unawaited(
+                      showAppBottomSheet<void>(
+                        context,
+                        onFullyHidden: () => fullyHidden = true,
+                        builder: (sheetContext) {
+                          return SizedBox(
+                            height: 120,
+                            child: Center(
+                              child: TextButton(
+                                onPressed: () =>
+                                    Navigator.of(sheetContext).pop(),
+                                child: const Text('Close sheet'),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                  child: const Text('Open sheet'),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open sheet'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Close sheet'));
+    await tester.pump();
+
+    expect(fullyHidden, isFalse);
+
+    await tester.pumpAndSettle();
+
+    expect(fullyHidden, isTrue);
   });
 
   testWidgets('AppBottomActionBar renders provided actions', (tester) async {
