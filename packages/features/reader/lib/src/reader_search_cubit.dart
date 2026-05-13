@@ -100,6 +100,13 @@ class ReaderSearchCubit extends Cubit<ReaderSearchState> {
     _queueSearch(query, debounce: false, searchBook: searchBook);
   }
 
+  void resultSelected() {
+    final recentQueries = _updatedRecentQueries(state.query);
+    if (listEquals(recentQueries, state.recentQueries)) return;
+    emit(state.copyWith(recentQueries: recentQueries));
+    _onRecentQueriesChanged?.call(recentQueries);
+  }
+
   void recentQueryRemoved(String query) {
     final recentQueries = [
       for (final recent in state.recentQueries)
@@ -226,21 +233,12 @@ class ReaderSearchCubit extends Cubit<ReaderSearchState> {
         if (isClosed || generation != _searchGeneration || completedWithError) {
           return;
         }
-        final recentQueries = _updatedRecentQueries(query);
-        final shouldPersistRecentQueries = !listEquals(
-          recentQueries,
-          state.recentQueries,
-        );
         emit(
           state.copyWith(
-            recentQueries: recentQueries,
             progress: 1,
             isLoading: false,
           ),
         );
-        if (shouldPersistRecentQueries) {
-          _onRecentQueriesChanged?.call(recentQueries);
-        }
       },
     );
   }

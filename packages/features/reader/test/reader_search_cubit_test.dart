@@ -27,7 +27,7 @@ void main() {
       expect(cubit.state.results, isEmpty);
     });
 
-    test('streams results and stores successful query in history', () async {
+    test('streams results without storing query in history', () async {
       final persisted = <List<String>>[];
       final cubit = ReaderSearchCubit(
         onRecentQueriesChanged: persisted.add,
@@ -46,9 +46,31 @@ void main() {
       expect(cubit.state.isLoading, isFalse);
       expect(cubit.state.progress, 1);
       expect(cubit.state.results.single.cfi, 'cfi-1');
-      expect(cubit.state.recentQueries, ['term']);
+      expect(cubit.state.recentQueries, isEmpty);
+      expect(persisted, isEmpty);
+    });
+
+    test('resultSelected stores the current query in history', () async {
+      final persisted = <List<String>>[];
+      final cubit = ReaderSearchCubit(
+        initialRecentQueries: const ['older'],
+        onRecentQueriesChanged: persisted.add,
+      );
+
+      cubit.recentQuerySelected(
+        'term',
+        searchBook: (_) => Stream<ReaderSearchEvent>.fromIterable([
+          ReaderSearchResults(requestId: 1, results: [result('cfi-1')]),
+          const ReaderSearchDone(requestId: 1),
+        ]),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      cubit.resultSelected();
+
+      expect(cubit.state.recentQueries, ['term', 'older']);
       expect(persisted, [
-        ['term'],
+        ['term', 'older'],
       ]);
     });
 

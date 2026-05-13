@@ -331,6 +331,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
 
   void _goToSearchResult(ReaderSearchResult result) {
     if (result.cfi.isEmpty) return;
+    context.read<ReaderSearchCubit>().resultSelected();
     context.read<ReaderUiCubit>().searchResultHighlightActivated();
     _webViewKey.currentState?.goToCfi(result.cfi);
     _closeSearchDrawer(restoreChrome: false, clearSearch: false);
