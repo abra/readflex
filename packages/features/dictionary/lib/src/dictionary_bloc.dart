@@ -88,16 +88,19 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
     DictionaryEntryDeleted event,
     Emitter<DictionaryState> emit,
   ) async {
+    final deletion = _deletionDescriptorFor({event.entryId});
     try {
       await _repository.deleteEntry(event.entryId);
       await _fsrsRepository.deleteReviewItem(event.entryId);
-      await _loadEntries(emit, fromDeletion: true);
+      await _loadEntries(emit, deletion: deletion);
     } catch (e, st) {
       addError(e, st);
+      final effect = _deletionEffect(deletion, success: false);
       emit(
         state.copyWith(
           status: DictionaryStatus.failure,
-          deletionVersion: state.deletionVersion + 1,
+          deletionVersion: effect.version,
+          deletionEffect: effect,
         ),
       );
     }
@@ -107,6 +110,7 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
     DictionaryEntriesDeleted event,
     Emitter<DictionaryState> emit,
   ) async {
+    final deletion = _deletionDescriptorFor(event.entryIds);
     // Continue the loop on per-id failure so a single broken row
     // doesn't abandon the rest of the selection in a partially-deleted
     // limbo with no toast feedback to the user.
@@ -126,58 +130,106 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
         final masteredIds = await _fsrsRepository.getMasteredItemIds(
           type: ReviewableType.dictionary,
         );
+        final effect = _deletionEffect(deletion, success: false);
         emit(
           state.copyWith(
             status: DictionaryStatus.failure,
             entries: entries,
             masteredIds: masteredIds,
-            deletionVersion: state.deletionVersion + 1,
+            deletionVersion: effect.version,
+            deletionEffect: effect,
           ),
         );
       } catch (e, st) {
         addError(e, st);
+        final effect = _deletionEffect(deletion, success: false);
         emit(
           state.copyWith(
             status: DictionaryStatus.failure,
-            deletionVersion: state.deletionVersion + 1,
+            deletionVersion: effect.version,
+            deletionEffect: effect,
           ),
         );
       }
       return;
     }
-    await _loadEntries(emit, fromDeletion: true);
+    await _loadEntries(emit, deletion: deletion);
   }
 
-  /// Pulls entries + mastered ids and emits success/failure. Pass
-  /// [fromDeletion] when this is the post-delete refresh — that bumps
-  /// `deletionVersion` so the screen's toast listener fires exactly
-  /// once per dispatched delete (no matter what other state changes
-  /// landed first).
+  /// Pulls entries + mastered ids and emits success/failure. Pass [deletion]
+  /// when this is the post-delete refresh so the screen can show the correct
+  /// toast without tracking a local queue.
   Future<void> _loadEntries(
     Emitter<DictionaryState> emit, {
-    bool fromDeletion = false,
+    _DictionaryDeletionDescriptor? deletion,
   }) async {
     try {
       final entries = await _repository.getEntries();
       final masteredIds = await _fsrsRepository.getMasteredItemIds(
         type: ReviewableType.dictionary,
       );
+      final effect = deletion == null
+          ? null
+          : _deletionEffect(deletion, success: true);
       emit(
         state.copyWith(
           status: DictionaryStatus.success,
           entries: entries,
           masteredIds: masteredIds,
-          deletionVersion: fromDeletion ? state.deletionVersion + 1 : null,
+          deletionVersion: effect?.version,
+          deletionEffect: effect,
         ),
       );
     } catch (e, st) {
       addError(e, st);
+      final effect = deletion == null
+          ? null
+          : _deletionEffect(deletion, success: false);
       emit(
         state.copyWith(
           status: DictionaryStatus.failure,
-          deletionVersion: fromDeletion ? state.deletionVersion + 1 : null,
+          deletionVersion: effect?.version,
+          deletionEffect: effect,
         ),
       );
     }
   }
+
+  _DictionaryDeletionDescriptor _deletionDescriptorFor(Iterable<String> ids) {
+    final idList = ids.toList(growable: false);
+    return _DictionaryDeletionDescriptor(
+      count: idList.length,
+      singleWord: idList.length == 1 ? _wordOf(idList.first) : null,
+    );
+  }
+
+  DictionaryDeletionEffect _deletionEffect(
+    _DictionaryDeletionDescriptor deletion, {
+    required bool success,
+  }) {
+    final version = state.deletionVersion + 1;
+    return DictionaryDeletionEffect(
+      version: version,
+      success: success,
+      count: deletion.count,
+      singleWord: deletion.singleWord,
+    );
+  }
+
+  String? _wordOf(String id) {
+    for (final entry in state.entries) {
+      if (entry.id == id) return entry.word;
+    }
+    return null;
+  }
+}
+
+class _DictionaryDeletionDescriptor {
+  const _DictionaryDeletionDescriptor({
+    required this.count,
+    this.singleWord,
+  });
+
+  final int count;
+  final String? singleWord;
 }

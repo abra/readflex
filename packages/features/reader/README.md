@@ -41,12 +41,13 @@ abstract class TextAction {
 }
 ```
 
-## Architecture — four independent units of state
+## Architecture — independent units of state
 
 | Unit                          | Responsibility                                                             |
 |-------------------------------|----------------------------------------------------------------------------|
 | `ReaderBloc`                  | Content: load book + highlights, debounced position save (500ms)           |
-| `ReaderChromeCubit`           | Bottom reader action chrome visibility                                     |
+| `ReaderUiCubit`               | Chrome, drawer, appearance-sheet and search-highlight UI state             |
+| `ReaderSearchCubit`           | Book-search debounce, streamed results, progress and recent queries        |
 | `ReaderSelectionCubit`        | Current text selection (text + `cfiRange`)                                 |
 | `ReaderReviewReminderCubit`   | Periodic timer; flips `showReminder` when `onCheckDueItems` returns > 0    |
 
@@ -57,19 +58,18 @@ through the bloc's error pipeline without emitting state themselves.
 ## Widget tree highlights
 
 - **`_ReaderCallbacksScope`** — `InheritedWidget` that carries
-  `onCheckDueItems` and `onStartMiniReview` down through 4+ levels without
-  prop drilling. Created at the top of `ReaderScreen.build`.
-- **Driver pattern** — stateless widgets (`_ReaderActionChromeDriver`,
+  `onStartMiniReview` to the review banner without prop drilling.
+- **Driver pattern** — stateless widgets (`_ReaderBottomChromeDriver`,
   `_ContextPanelDriver`, `_ReviewReminderDriver`)
   subscribe to multiple BLoC/Cubit sources via `context.select` and feed
-  ready values into dumb leaf widgets (`_ReaderActionChrome`,
+  ready values into dumb leaf widgets (`_ReaderBottomChrome`,
   `_ContextPanel`, `_ReviewReminderBanner`). All
   BLoC/Cubit interaction lives in drivers.
 - **`_ReaderWebViewBody`** hosts a `BookReaderWebView` (foliate-js) keyed on
   source id / recovery token so source swaps and WebContent recovery rebuild
   the WebView cleanly.
 - Reader theme (`ReaderThemeData`, font preset, layout preset) is resolved
-  from `PreferencesScope` and passed as CSS / URL params to the WebView; the
+  from `ReaderAppearanceCubit` and passed as CSS / URL params to the WebView; the
   `_ReaderWebViewBody` itself is rebuilt only on preference changes, never
   on selection or reminder state.
 
@@ -87,7 +87,7 @@ composition root.
 
 - `book_repository`, `highlight_repository` — content and highlight
   persistence
-- `preferences_service` — `PreferencesScope` for `ReaderAppearance` (theme,
+- `preferences_service` — persisted `ReaderAppearance` preferences (theme,
   font, layout presets)
 - `reader_webview` — `BookReaderWebView`, `FoliateStyle`, `ReaderHighlight`
 - `shared` — `TextAction`, `TextSelectionContext`

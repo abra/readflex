@@ -20,6 +20,23 @@ enum DictionaryFilter {
   recent,
 }
 
+class DictionaryDeletionEffect extends Equatable {
+  const DictionaryDeletionEffect({
+    required this.version,
+    required this.success,
+    required this.count,
+    this.singleWord,
+  });
+
+  final int version;
+  final bool success;
+  final int count;
+  final String? singleWord;
+
+  @override
+  List<Object?> get props => [version, success, count, singleWord];
+}
+
 /// State of the Dictionary tab: all saved entries, current search query,
 /// active filter chip, and the ids of entries the FSRS scheduler treats
 /// as mastered. The derived [filteredEntries] powers the list.
@@ -35,6 +52,7 @@ class DictionaryState extends Equatable {
     this.filter = DictionaryFilter.all,
     this.masteredIds = const {},
     this.deletionVersion = 0,
+    this.deletionEffect,
   });
 
   final DictionaryStatus status;
@@ -46,11 +64,13 @@ class DictionaryState extends Equatable {
   final Set<String> masteredIds;
 
   /// Monotonic counter bumped exactly once per dispatched delete event
-  /// (success OR failure). The screen pairs each delete with a queued
-  /// descriptor and pops one off the queue every time the version
-  /// changes; without this the screen-local "pending word" can be
-  /// overwritten by a second swipe before the first finishes.
+  /// (success OR failure). Used as the identity of [deletionEffect] so
+  /// listeners can distinguish consecutive delete completions.
   final int deletionVersion;
+
+  /// One-shot UI effect emitted after a delete finishes. The screen listens
+  /// for changes and renders the toast; it no longer owns delete queues.
+  final DictionaryDeletionEffect? deletionEffect;
 
   bool get isEmpty => entries.isEmpty;
 
@@ -130,6 +150,7 @@ class DictionaryState extends Equatable {
     DictionaryFilter? filter,
     Set<String>? masteredIds,
     int? deletionVersion,
+    DictionaryDeletionEffect? deletionEffect,
   }) => DictionaryState(
     status: status ?? this.status,
     entries: entries ?? this.entries,
@@ -137,6 +158,7 @@ class DictionaryState extends Equatable {
     filter: filter ?? this.filter,
     masteredIds: masteredIds ?? this.masteredIds,
     deletionVersion: deletionVersion ?? this.deletionVersion,
+    deletionEffect: deletionEffect ?? this.deletionEffect,
   );
 
   @override
@@ -147,5 +169,6 @@ class DictionaryState extends Equatable {
     filter,
     masteredIds,
     deletionVersion,
+    deletionEffect,
   ];
 }

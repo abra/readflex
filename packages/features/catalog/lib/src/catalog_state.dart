@@ -7,6 +7,23 @@ enum CatalogStatus { initial, loading, success, failure }
 /// refactor-safe.
 enum CatalogFilter { all, books, comics, unread, finished }
 
+class CatalogDeletionEffect extends Equatable {
+  const CatalogDeletionEffect({
+    required this.version,
+    required this.success,
+    required this.count,
+    this.singleTitle,
+  });
+
+  final int version;
+  final bool success;
+  final int count;
+  final String? singleTitle;
+
+  @override
+  List<Object?> get props => [version, success, count, singleTitle];
+}
+
 class CatalogState extends Equatable {
   // Non-const because [visibleItems] is a `late final` derived field —
   // const objects can't have late initializers. The trade-off is the
@@ -18,6 +35,7 @@ class CatalogState extends Equatable {
     this.filter = CatalogFilter.all,
     this.searchQuery = '',
     this.deletionVersion = 0,
+    this.deletionEffect,
   });
 
   final CatalogStatus status;
@@ -27,12 +45,13 @@ class CatalogState extends Equatable {
   final String searchQuery;
 
   /// Monotonic counter bumped exactly once per dispatched delete event
-  /// (success OR failure). The screen pairs each delete with a queued
-  /// descriptor and pops one off the queue every time the version
-  /// changes; this is what stops cross-batch toast races (delete A
-  /// dispatched, delete B dispatched, A finishes but the screen-local
-  /// "pending title" had already been overwritten by B).
+  /// (success OR failure). Used as the identity of [deletionEffect] so
+  /// listeners can distinguish consecutive delete completions.
   final int deletionVersion;
+
+  /// One-shot UI effect emitted after a delete finishes. The screen listens
+  /// for changes and renders the toast; it no longer owns delete queues.
+  final CatalogDeletionEffect? deletionEffect;
 
   bool get isEmpty => books.isEmpty;
 
@@ -101,12 +120,14 @@ class CatalogState extends Equatable {
     CatalogFilter? filter,
     String? searchQuery,
     int? deletionVersion,
+    CatalogDeletionEffect? deletionEffect,
   }) => CatalogState(
     status: status ?? this.status,
     books: books ?? this.books,
     filter: filter ?? this.filter,
     searchQuery: searchQuery ?? this.searchQuery,
     deletionVersion: deletionVersion ?? this.deletionVersion,
+    deletionEffect: deletionEffect ?? this.deletionEffect,
   );
 
   @override
@@ -116,5 +137,6 @@ class CatalogState extends Equatable {
     filter,
     searchQuery,
     deletionVersion,
+    deletionEffect,
   ];
 }

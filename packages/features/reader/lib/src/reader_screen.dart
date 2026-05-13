@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:highlight_repository/highlight_repository.dart';
@@ -15,11 +14,12 @@ import 'book_custom_css.dart';
 import 'reader_appearance_cubit.dart';
 import 'reader_appearance_sheet.dart';
 import 'reader_bloc.dart';
-import 'reader_chrome_cubit.dart';
 import 'reader_color_utils.dart';
 import 'reader_progress_label.dart';
 import 'reader_review_reminder_cubit.dart';
+import 'reader_search_cubit.dart';
 import 'reader_selection_cubit.dart';
+import 'reader_ui_cubit.dart';
 
 /// Approximate height of the context panel, used to offset the review banner.
 const _kContextPanelHeight = 80.0;
@@ -27,9 +27,6 @@ const _kContextPanelHeight = 80.0;
 /// Duration and curve for the reader chrome slide animation.
 const _kChromeAnimDuration = Duration(milliseconds: 200);
 const _kChromeAnimCurve = Curves.easeOutCubic;
-const _kBookSearchMinQueryLength = 2;
-const _kBookSearchHistoryLimit = 10;
-const _kUserRelocationReasons = {'page', 'scroll', 'snap'};
 
 final _readerDrawerCloseButtonStyle = IconButton.styleFrom(
   backgroundColor: Colors.transparent,
@@ -39,41 +36,30 @@ final _readerDrawerCloseButtonStyle = IconButton.styleFrom(
   highlightColor: Colors.transparent,
 );
 
-/// Carries the optional review-reminder and mini-review callbacks down the
-/// reader widget tree, eliminating prop drilling through 4+ layers.
+/// Carries the optional mini-review callback down the reader widget tree.
 class _ReaderCallbacksScope extends InheritedWidget {
   const _ReaderCallbacksScope({
-    required this.onCheckDueItems,
     required this.onStartMiniReview,
-    required this.initialSearchHistory,
-    required this.onSearchHistoryChanged,
     required super.child,
   });
 
-  final Future<int> Function(String sourceId)? onCheckDueItems;
   final void Function(BuildContext context, String sourceId)? onStartMiniReview;
-  final List<String> initialSearchHistory;
-  final ValueChanged<List<String>>? onSearchHistoryChanged;
 
   static _ReaderCallbacksScope? of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<_ReaderCallbacksScope>();
 
   @override
   bool updateShouldNotify(_ReaderCallbacksScope old) =>
-      onCheckDueItems != old.onCheckDueItems ||
-      onStartMiniReview != old.onStartMiniReview ||
-      initialSearchHistory != old.initialSearchHistory ||
-      onSearchHistoryChanged != old.onSearchHistoryChanged;
+      onStartMiniReview != old.onStartMiniReview;
 }
 
 /// Full-screen reader for a book (route `/reader/:sourceId`).
 ///
 /// Composition only: wires [ReaderBloc] (source + highlights + position
-/// persistence), [ReaderChromeCubit] (chrome visibility) and
-/// [ReaderSelectionCubit] (text selection) around an internal
-/// [_ReaderView], and exposes optional review-reminder callbacks via an
-/// [InheritedWidget] instead of prop-drilling. [textActions] follow the
-/// plugin contract from `package:shared` — features like Highlight /
+/// persistence), [ReaderUiCubit] (chrome/drawer/search-highlight state),
+/// [ReaderSearchCubit] (book-search state), and [ReaderSelectionCubit]
+/// (text selection) around an internal [_ReaderView]. [textActions] follow
+/// the plugin contract from `package:shared` — features like Highlight /
 /// Flashcard / Translate are wired in the composition root.
 class ReaderScreen extends StatelessWidget {
   const ReaderScreen({
@@ -108,10 +94,7 @@ class ReaderScreen extends StatelessWidget {
     debugLogScreenBuild('ReaderScreen(sourceId: $sourceId)');
 
     return _ReaderCallbacksScope(
-      onCheckDueItems: onCheckDueItems,
       onStartMiniReview: onStartMiniReview,
-      initialSearchHistory: initialSearchHistory,
-      onSearchHistoryChanged: onSearchHistoryChanged,
       child: MultiBlocProvider(
         providers: [
           BlocProvider(
@@ -123,12 +106,24 @@ class ReaderScreen extends StatelessWidget {
                   : null,
             )..add(ReaderSourceLoadRequested(sourceId: sourceId)),
           ),
-          BlocProvider(create: (_) => ReaderChromeCubit()),
+          BlocProvider(create: (_) => ReaderUiCubit()),
+          BlocProvider(
+            create: (_) => ReaderSearchCubit(
+              initialRecentQueries: initialSearchHistory,
+              onRecentQueriesChanged: onSearchHistoryChanged,
+            ),
+          ),
           BlocProvider(create: (_) => ReaderSelectionCubit()),
           BlocProvider(
             create: (_) => ReaderAppearanceCubit(
               preferencesService: preferencesService,
               sourceId: sourceId,
+            ),
+          ),
+          BlocProvider(
+            create: (_) => ReaderReviewReminderCubit(
+              sourceId: sourceId,
+              onCheckDueItems: onCheckDueItems,
             ),
           ),
         ],
@@ -199,7 +194,6 @@ class _ReaderBody extends StatelessWidget {
         ),
       ),
       ReaderStatus.ready => _ReadyContent(
-        sourceId: context.read<ReaderBloc>().state.sourceId!,
         serverPort: serverPort,
         textActions: textActions,
       ),
@@ -242,27 +236,18 @@ class _ReaderChromeIconButton extends StatelessWidget {
 
 class _ReadyContent extends StatelessWidget {
   const _ReadyContent({
-    required this.sourceId,
     required this.serverPort,
     required this.textActions,
   });
 
-  final String sourceId;
   final int serverPort;
   final List<TextAction> textActions;
 
   @override
   Widget build(BuildContext context) {
-    final callbacks = _ReaderCallbacksScope.of(context);
-    return BlocProvider(
-      create: (_) => ReaderReviewReminderCubit(
-        sourceId: sourceId,
-        onCheckDueItems: callbacks?.onCheckDueItems,
-      ),
-      child: _ReadyContentBody(
-        serverPort: serverPort,
-        textActions: textActions,
-      ),
+    return _ReadyContentBody(
+      serverPort: serverPort,
+      textActions: textActions,
     );
   }
 }
@@ -287,99 +272,55 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   /// book open, so it's always fresh.
   final GlobalKey<BookReaderWebViewState> _webViewKey =
       GlobalKey<BookReaderWebViewState>();
-  bool _searchHighlightVisible = false;
-  bool _ignoreNextRelocateForSearchHighlight = false;
-  bool _tocDrawerVisible = false;
-  bool _searchDrawerVisible = false;
-  bool _appearanceSheetVisible = false;
 
   void _seekFraction(double fraction) {
-    _clearSearchHighlight();
+    context.read<ReaderUiCubit>().clearReaderSearch();
     _webViewKey.currentState?.goToFraction(fraction);
   }
 
   void _openTocDrawer() {
-    if (_tocDrawerVisible) return;
-    _clearSearchHighlight();
-    context.read<ReaderChromeCubit>().hide();
-    setState(() {
-      _tocDrawerVisible = true;
-      _searchDrawerVisible = false;
-    });
+    context.read<ReaderUiCubit>().openTocDrawer();
   }
 
   void _closeTocDrawer({bool restoreChrome = true}) {
-    if (!_tocDrawerVisible) return;
-    setState(() => _tocDrawerVisible = false);
-    if (restoreChrome) context.read<ReaderChromeCubit>().show();
+    context.read<ReaderUiCubit>().closeTocDrawer(restoreChrome: restoreChrome);
   }
 
   void _openSearchDrawer() {
-    if (_searchDrawerVisible) return;
-    _clearSearchHighlight();
-    context.read<ReaderChromeCubit>().hide();
-    setState(() {
-      _searchDrawerVisible = true;
-      _tocDrawerVisible = false;
-    });
+    context.read<ReaderUiCubit>().openSearchDrawer();
   }
 
   Future<void> _openAppearanceSheet() async {
-    if (_appearanceSheetVisible) return;
-    _appearanceSheetVisible = true;
-    _clearSearchHighlight();
-    final chromeCubit = context.read<ReaderChromeCubit>();
-    final wasChromeVisible = chromeCubit.state.chromeVisible;
-    chromeCubit.hide();
+    final uiCubit = context.read<ReaderUiCubit>();
+    final wasChromeVisible = uiCubit.state.chromeVisible;
+    if (!uiCubit.beginAppearanceSheet()) return;
     if (wasChromeVisible) {
       await Future<void>.delayed(_kChromeAnimDuration);
       if (!mounted) return;
     }
-    try {
-      await showReaderAppearanceSheet(
-        context,
-        onFullyHidden: () {
-          if (!mounted || _tocDrawerVisible || _searchDrawerVisible) return;
-          context.read<ReaderChromeCubit>().show();
-        },
-      );
-    } finally {
-      if (mounted) _appearanceSheetVisible = false;
-    }
+    await showReaderAppearanceSheet(
+      context,
+      onFullyHidden: () {
+        if (!mounted) return;
+        context.read<ReaderUiCubit>().appearanceSheetHidden();
+      },
+    );
   }
 
   void _closeSearchDrawer({
     bool restoreChrome = true,
     bool clearSearch = true,
   }) {
-    if (!_searchDrawerVisible) return;
-    if (clearSearch) _clearSearchHighlight();
-    setState(() => _searchDrawerVisible = false);
-    if (restoreChrome) context.read<ReaderChromeCubit>().show();
-  }
-
-  void _clearSearchHighlight() {
-    _searchHighlightVisible = false;
-    _ignoreNextRelocateForSearchHighlight = false;
-    _webViewKey.currentState?.clearSearch();
-  }
-
-  void _markSearchResultHighlightActive() {
-    _searchHighlightVisible = true;
-    _ignoreNextRelocateForSearchHighlight = true;
+    context.read<ReaderUiCubit>().closeSearchDrawer(
+      restoreChrome: restoreChrome,
+      clearSearch: clearSearch,
+    );
   }
 
   void _handleReaderPositionChanged(BookPosition position) {
-    if (!_searchHighlightVisible) return;
-
-    if (_ignoreNextRelocateForSearchHighlight) {
-      _ignoreNextRelocateForSearchHighlight = false;
-      return;
-    }
-
-    if (_kUserRelocationReasons.contains(position.relocationReason)) {
-      _clearSearchHighlight();
-    }
+    context.read<ReaderUiCubit>().readerPositionChanged(
+      relocationReason: position.relocationReason,
+    );
   }
 
   void _goToTocItem(ReaderTocItem item) {
@@ -390,7 +331,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
 
   void _goToSearchResult(ReaderSearchResult result) {
     if (result.cfi.isEmpty) return;
-    _markSearchResultHighlightActive();
+    context.read<ReaderUiCubit>().searchResultHighlightActivated();
     _webViewKey.currentState?.goToCfi(result.cfi);
     _closeSearchDrawer(restoreChrome: false, clearSearch: false);
   }
@@ -409,7 +350,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   }
 
   void _clearDrawerSearch() {
-    _clearSearchHighlight();
+    context.read<ReaderUiCubit>().clearReaderSearch();
   }
 
   @override
@@ -418,57 +359,62 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
         .select<ReaderAppearanceCubit, ReaderAppearancePreferences>(
           (c) => c.state.effectiveAppearance,
         );
-    final callbacks = _ReaderCallbacksScope.of(context);
+    final uiState = context.select<ReaderUiCubit, ReaderUiState>(
+      (c) => c.state,
+    );
     // Reader theme drives the book *page* — WebView background and
     // foliate-js customCSS. Chrome (passed-through Stack siblings)
     // pulls colours from the app theme themselves; they don't take
     // a `readerTheme` prop any more.
     final readerTheme = ReaderThemePreset.fromId(appearance.themeId).data;
 
-    return Stack(
-      children: [
-        // WebView body — subscribes to `state.highlights` via
-        // `context.select` so a TextAction (Highlight, Flashcard, ...)
-        // that adds/removes one fans through to the WebView via
-        // didUpdateWidget without forcing a reader reopen.
-        ColoredBox(
-          color: readerTheme.backgroundColor,
-          child: _ReaderWebViewBody(
-            serverPort: widget.serverPort,
-            readerTheme: readerTheme,
-            webViewKey: _webViewKey,
-            onPositionChanged: _handleReaderPositionChanged,
+    return BlocListener<ReaderUiCubit, ReaderUiState>(
+      listenWhen: (previous, current) =>
+          previous.clearSearchToken != current.clearSearchToken,
+      listener: (_, _) => _webViewKey.currentState?.clearSearch(),
+      child: Stack(
+        children: [
+          // WebView body — subscribes to `state.highlights` via
+          // `context.select` so a TextAction (Highlight, Flashcard, ...)
+          // that adds/removes one fans through to the WebView via
+          // didUpdateWidget without forcing a reader reopen.
+          ColoredBox(
+            color: readerTheme.backgroundColor,
+            child: _ReaderWebViewBody(
+              serverPort: widget.serverPort,
+              readerTheme: readerTheme,
+              webViewKey: _webViewKey,
+              onPositionChanged: _handleReaderPositionChanged,
+            ),
           ),
-        ),
-        _ReaderBottomChromeDriver(
-          onTocPressed: _openTocDrawer,
-          onFontPressed: _openAppearanceSheet,
-          onSearchPressed: _openSearchDrawer,
-          onSeekFraction: _seekFraction,
-        ),
-        const _ComicProgressOverlayDriver(),
-        _ContextPanelDriver(textActions: widget.textActions),
-        const _ReviewReminderDriver(),
-        _ReaderTocDrawerDriver(
-          visible: _tocDrawerVisible,
-          onClose: _closeTocDrawer,
-          onItemSelected: _goToTocItem,
-        ),
-        _ReaderSearchDrawer(
-          visible: _searchDrawerVisible,
-          onClose: _closeSearchDrawer,
-          onSearch: _searchBook,
-          onClearSearch: _clearDrawerSearch,
-          onResultSelected: _goToSearchResult,
-          initialRecentQueries: callbacks?.initialSearchHistory ?? const [],
-          onRecentQueriesChanged: callbacks?.onSearchHistoryChanged,
-        ),
-      ],
+          _ReaderBottomChromeDriver(
+            onTocPressed: _openTocDrawer,
+            onFontPressed: _openAppearanceSheet,
+            onSearchPressed: _openSearchDrawer,
+            onSeekFraction: _seekFraction,
+          ),
+          const _ComicProgressOverlayDriver(),
+          _ContextPanelDriver(textActions: widget.textActions),
+          const _ReviewReminderDriver(),
+          _ReaderTocDrawerDriver(
+            visible: uiState.tocDrawerVisible,
+            onClose: _closeTocDrawer,
+            onItemSelected: _goToTocItem,
+          ),
+          _ReaderSearchDrawer(
+            visible: uiState.searchDrawerVisible,
+            onClose: _closeSearchDrawer,
+            onSearch: _searchBook,
+            onClearSearch: _clearDrawerSearch,
+            onResultSelected: _goToSearchResult,
+          ),
+        ],
+      ),
     );
   }
 }
 
-/// Combines chrome visibility from [ReaderChromeCubit], selection state from
+/// Combines chrome visibility from [ReaderUiCubit], selection state from
 /// [ReaderSelectionCubit], and reading progress from [ReaderBloc].
 class _ReaderBottomChromeDriver extends StatelessWidget {
   const _ReaderBottomChromeDriver({
@@ -489,7 +435,7 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final chromeVisible = context.select<ReaderChromeCubit, bool>(
+    final chromeVisible = context.select<ReaderUiCubit, bool>(
       (c) => c.state.chromeVisible,
     );
     final hasSelection = context.select<ReaderSelectionCubit, bool>(
@@ -1126,8 +1072,6 @@ class _ReaderSearchDrawer extends StatelessWidget {
     required this.onSearch,
     required this.onClearSearch,
     required this.onResultSelected,
-    required this.initialRecentQueries,
-    required this.onRecentQueriesChanged,
   });
 
   final bool visible;
@@ -1135,8 +1079,6 @@ class _ReaderSearchDrawer extends StatelessWidget {
   final Stream<ReaderSearchEvent> Function(String query) onSearch;
   final VoidCallback onClearSearch;
   final ValueChanged<ReaderSearchResult> onResultSelected;
-  final List<String> initialRecentQueries;
-  final ValueChanged<List<String>>? onRecentQueriesChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -1160,8 +1102,6 @@ class _ReaderSearchDrawer extends StatelessWidget {
                 onSearch: onSearch,
                 onClearSearch: onClearSearch,
                 onResultSelected: onResultSelected,
-                initialRecentQueries: initialRecentQueries,
-                onRecentQueriesChanged: onRecentQueriesChanged,
               ),
             ),
           ),
@@ -1178,8 +1118,6 @@ class _ReaderSearchDrawerContent extends StatefulWidget {
     required this.onSearch,
     required this.onClearSearch,
     required this.onResultSelected,
-    required this.initialRecentQueries,
-    required this.onRecentQueriesChanged,
   });
 
   final bool visible;
@@ -1187,8 +1125,6 @@ class _ReaderSearchDrawerContent extends StatefulWidget {
   final Stream<ReaderSearchEvent> Function(String query) onSearch;
   final VoidCallback onClearSearch;
   final ValueChanged<ReaderSearchResult> onResultSelected;
-  final List<String> initialRecentQueries;
-  final ValueChanged<List<String>>? onRecentQueriesChanged;
 
   @override
   State<_ReaderSearchDrawerContent> createState() =>
@@ -1199,60 +1135,32 @@ class _ReaderSearchDrawerContentState
     extends State<_ReaderSearchDrawerContent> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
-  Timer? _debounce;
-  StreamSubscription<ReaderSearchEvent>? _searchSubscription;
-  final List<ReaderSearchResult> _results = <ReaderSearchResult>[];
-  late List<String> _recentQueries;
-  double _searchProgress = 0;
-  bool _isLoading = false;
-  String? _errorMessage;
-  int _searchGeneration = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _recentQueries = widget.initialRecentQueries;
-  }
 
   @override
   void didUpdateWidget(covariant _ReaderSearchDrawerContent oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!widget.visible &&
-        !listEquals(
-          widget.initialRecentQueries,
-          oldWidget.initialRecentQueries,
-        )) {
-      _recentQueries = widget.initialRecentQueries;
-    }
     if (widget.visible && !oldWidget.visible) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _focusNode.requestFocus();
       });
     } else if (!widget.visible && oldWidget.visible) {
-      _debounce?.cancel();
-      unawaited(_searchSubscription?.cancel());
-      _searchSubscription = null;
       _controller.clear();
-      setState(() {
-        _results.clear();
-        _searchProgress = 0;
-        _isLoading = false;
-        _errorMessage = null;
-      });
+      context.read<ReaderSearchCubit>().reset();
     }
   }
 
   @override
   void dispose() {
-    _debounce?.cancel();
-    unawaited(_searchSubscription?.cancel());
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
   void _onQueryChanged(String value) {
-    _queueSearch(value, debounce: true);
+    context.read<ReaderSearchCubit>().queryChanged(
+      value,
+      searchBook: widget.onSearch,
+    );
   }
 
   void _selectRecentQuery(String query) {
@@ -1261,212 +1169,117 @@ class _ReaderSearchDrawerContentState
       selection: TextSelection.collapsed(offset: query.length),
     );
     _focusNode.requestFocus();
-    _queueSearch(query, debounce: false);
+    context.read<ReaderSearchCubit>().recentQuerySelected(
+      query,
+      searchBook: widget.onSearch,
+    );
   }
 
   void _removeRecentQuery(String query) {
-    final recentQueries = [
-      for (final recent in _recentQueries)
-        if (recent != query) recent,
-    ];
-    setState(() => _recentQueries = recentQueries);
-    widget.onRecentQueriesChanged?.call(recentQueries);
-  }
-
-  void _queueSearch(String value, {required bool debounce}) {
-    _debounce?.cancel();
-    final query = value.trim();
-    final shouldClearCurrentSearch =
-        _isLoading || _results.isNotEmpty || _errorMessage != null;
-    _searchGeneration++;
-    unawaited(_searchSubscription?.cancel());
-    _searchSubscription = null;
-    if (shouldClearCurrentSearch) widget.onClearSearch();
-
-    if (query.length < _kBookSearchMinQueryLength) {
-      setState(() {
-        _results.clear();
-        _searchProgress = 0;
-        _isLoading = false;
-        _errorMessage = null;
-      });
-      return;
-    }
-
-    setState(() {
-      _results.clear();
-      _searchProgress = 0;
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    if (debounce) {
-      _debounce = Timer(const Duration(milliseconds: 300), () {
-        _runSearch(query);
-      });
-    } else {
-      _runSearch(query);
-    }
-  }
-
-  List<String> _updatedRecentQueries(String query) {
-    final normalized = query.trim();
-    if (normalized.length < _kBookSearchMinQueryLength) {
-      return _recentQueries;
-    }
-    return [
-      normalized,
-      for (final recent in _recentQueries)
-        if (recent.toLowerCase() != normalized.toLowerCase()) recent,
-    ].take(_kBookSearchHistoryLimit).toList(growable: false);
-  }
-
-  void _runSearch(String query) {
-    final generation = ++_searchGeneration;
-    var completedWithError = false;
-    unawaited(_searchSubscription?.cancel());
-
-    _searchSubscription = widget
-        .onSearch(query)
-        .listen(
-          (event) {
-            if (!mounted || generation != _searchGeneration) return;
-            switch (event) {
-              case ReaderSearchProgress(:final progress):
-                if (progress == _searchProgress) return;
-                setState(() => _searchProgress = progress);
-              case ReaderSearchResults(:final results):
-                if (results.isEmpty) return;
-                setState(() => _results.addAll(results));
-              case ReaderSearchDone():
-                setState(() => _searchProgress = 1);
-              case ReaderSearchError(:final message):
-                completedWithError = true;
-                setState(() {
-                  _results.clear();
-                  _isLoading = false;
-                  _errorMessage = message;
-                });
-            }
-          },
-          onError: (_) {
-            if (!mounted || generation != _searchGeneration) return;
-            completedWithError = true;
-            setState(() {
-              _results.clear();
-              _isLoading = false;
-              _errorMessage = 'Search failed';
-            });
-          },
-          onDone: () {
-            if (!mounted ||
-                generation != _searchGeneration ||
-                completedWithError) {
-              return;
-            }
-            final recentQueries = _updatedRecentQueries(query);
-            final shouldPersistRecentQueries = !listEquals(
-              recentQueries,
-              _recentQueries,
-            );
-            setState(() {
-              _recentQueries = recentQueries;
-              _searchProgress = 1;
-              _isLoading = false;
-            });
-            if (shouldPersistRecentQueries) {
-              widget.onRecentQueriesChanged?.call(recentQueries);
-            }
-          },
-        );
+    context.read<ReaderSearchCubit>().recentQueryRemoved(query);
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final query = _controller.text.trim();
-    final canSearch = query.length >= _kBookSearchMinQueryLength;
     final listBottomPadding =
         MediaQuery.paddingOf(context).bottom + AppSpacing.lg;
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.sm,
-            AppSpacing.xs,
-            AppSpacing.xs,
-          ),
-          child: Row(
+    return BlocListener<ReaderSearchCubit, ReaderSearchState>(
+      listenWhen: (previous, current) =>
+          previous.clearSearchToken != current.clearSearchToken,
+      listener: (_, _) => widget.onClearSearch(),
+      child: BlocBuilder<ReaderSearchCubit, ReaderSearchState>(
+        builder: (context, state) {
+          final query = state.query.trim();
+          final canSearch = query.length >= ReaderSearchCubit.minQueryLength;
+
+          return Column(
             children: [
-              Expanded(
-                child: Text(
-                  'Search',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.text.titleLarge.copyWith(
-                    color: colors.onSurface,
-                  ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                  AppSpacing.xs,
+                  AppSpacing.xs,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Search',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.text.titleLarge.copyWith(
+                          color: colors.onSurface,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(AppIcons.close, size: AppIconSize.md),
+                      tooltip: 'Close',
+                      style: _readerDrawerCloseButtonStyle,
+                      onPressed: widget.onClose,
+                    ),
+                  ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(AppIcons.close, size: AppIconSize.md),
-                tooltip: 'Close',
-                style: _readerDrawerCloseButtonStyle,
-                onPressed: widget.onClose,
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: SearchField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  hintText: 'Search in book',
+                  onChanged: _onQueryChanged,
+                ),
+              ),
+              if (state.isLoading)
+                LinearProgressIndicator(
+                  minHeight: 2,
+                  value: state.progress > 0 && state.progress < 1
+                      ? state.progress
+                      : null,
+                ),
+              Expanded(
+                child: _ReaderDrawerContentFrame(
+                  child: state.errorMessage != null
+                      ? _ReaderDrawerEmptyState(message: state.errorMessage!)
+                      : !canSearch
+                      ? query.isEmpty && state.recentQueries.isNotEmpty
+                            ? _ReaderRecentSearchesList(
+                                queries: state.recentQueries,
+                                bottomPadding: listBottomPadding,
+                                onQuerySelected: _selectRecentQuery,
+                                onQueryRemoved: _removeRecentQuery,
+                              )
+                            : const _ReaderDrawerEmptyState(
+                                message: 'Type at least 2 characters to search',
+                              )
+                      : state.results.isEmpty && !state.isLoading
+                      ? const _ReaderDrawerEmptyState(
+                          message: 'No results found',
+                        )
+                      : ScrollEdgeFadeStack(
+                          child: ListView.builder(
+                            padding: EdgeInsets.only(
+                              bottom: listBottomPadding,
+                            ),
+                            itemCount: state.results.length,
+                            itemBuilder: (context, index) {
+                              final result = state.results[index];
+                              return _ReaderSearchResultTile(
+                                result: result,
+                                onTap: () => widget.onResultSelected(result),
+                              );
+                            },
+                          ),
+                        ),
+                ),
               ),
             ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: SearchField(
-            controller: _controller,
-            focusNode: _focusNode,
-            hintText: 'Search in book',
-            onChanged: _onQueryChanged,
-          ),
-        ),
-        if (_isLoading)
-          LinearProgressIndicator(
-            minHeight: 2,
-            value: _searchProgress > 0 && _searchProgress < 1
-                ? _searchProgress
-                : null,
-          ),
-        Expanded(
-          child: _ReaderDrawerContentFrame(
-            child: _errorMessage != null
-                ? _ReaderDrawerEmptyState(message: _errorMessage!)
-                : !canSearch
-                ? query.isEmpty && _recentQueries.isNotEmpty
-                      ? _ReaderRecentSearchesList(
-                          queries: _recentQueries,
-                          bottomPadding: listBottomPadding,
-                          onQuerySelected: _selectRecentQuery,
-                          onQueryRemoved: _removeRecentQuery,
-                        )
-                      : const _ReaderDrawerEmptyState(
-                          message: 'Type at least 2 characters to search',
-                        )
-                : _results.isEmpty && !_isLoading
-                ? const _ReaderDrawerEmptyState(message: 'No results found')
-                : ScrollEdgeFadeStack(
-                    child: ListView.builder(
-                      padding: EdgeInsets.only(bottom: listBottomPadding),
-                      itemCount: _results.length,
-                      itemBuilder: (context, index) {
-                        final result = _results[index];
-                        return _ReaderSearchResultTile(
-                          result: result,
-                          onTap: () => widget.onResultSelected(result),
-                        );
-                      },
-                    ),
-                  ),
-          ),
-        ),
-      ],
+          );
+        },
+      ),
     );
   }
 }
@@ -1761,7 +1574,7 @@ class _ComicProgressOverlayDriver extends StatelessWidget {
     );
     if (format != BookFormat.cbz) return const SizedBox.shrink();
 
-    final chromeVisible = context.select<ReaderChromeCubit, bool>(
+    final chromeVisible = context.select<ReaderUiCubit, bool>(
       (c) => c.state.chromeVisible,
     );
     final hasSelection = context.select<ReaderSelectionCubit, bool>(
@@ -1956,7 +1769,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<ReaderBloc>();
-    final chromeCubit = context.read<ReaderChromeCubit>();
+    final uiCubit = context.read<ReaderUiCubit>();
     final selectionCubit = context.read<ReaderSelectionCubit>();
     // Subscribe specifically to the highlights list. `state.highlights`
     // is a fresh list instance only on `ReaderHighlightsRefreshed`
@@ -1968,7 +1781,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     final state = bloc.state;
     final highlights = _readerHighlightsFor(highlightsState);
 
-    void onTapped(double x, double y) => chromeCubit.toggle();
+    void onTapped(double x, double y) => uiCubit.toggleChrome();
 
     final appearance = context
         .select<ReaderAppearanceCubit, ReaderAppearancePreferences>(
@@ -2053,7 +1866,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         bloc.add(ReaderTocUpdated(items: items));
       },
       onTextSelected: (selection) {
-        chromeCubit.hide();
+        uiCubit.hideChrome();
         selectionCubit.select(
           text: selection.text,
           cfiRange: selection.cfiRange,

@@ -66,19 +66,6 @@ class _DictionaryView extends StatefulWidget {
 }
 
 class _DictionaryViewState extends State<_DictionaryView> {
-  /// FIFO queue of pending delete descriptors. One entry pushed per
-  /// dispatched [DictionaryEntryDeleted] / [DictionaryEntriesDeleted]
-  /// event, popped each time the bloc emits a state with a fresh
-  /// `deletionVersion`. Replaces the older single-field design that
-  /// got overwritten when a second swipe arrived before the first
-  /// finished, mis-attributing the success toast.
-  final List<_PendingDeletion> _pendingDeletions = [];
-
-  /// Last `deletionVersion` we've already shown a toast for. Used by
-  /// [BlocListener.listenWhen] so the listener fires exactly once per
-  /// dispatched delete.
-  int _consumedDeletionVersion = 0;
-
   Future<void> _handleDeleteSelected(BuildContext context) async {
     final selection = context.read<DictionarySelectionCubit>();
     final ids = selection.state.selectedIds;
@@ -88,16 +75,7 @@ class _DictionaryViewState extends State<_DictionaryView> {
       count: ids.length,
     );
     if (confirmed != true || !context.mounted) return;
-    final bloc = context.read<DictionaryBloc>();
-    _pendingDeletions.add(
-      _PendingDeletion(
-        count: ids.length,
-        singleWord: ids.length == 1
-            ? _wordOf(bloc.state.entries, ids.first)
-            : null,
-      ),
-    );
-    bloc.add(DictionaryEntriesDeleted(ids));
+    context.read<DictionaryBloc>().add(DictionaryEntriesDeleted(ids));
     selection.clear();
   }
 
@@ -110,57 +88,44 @@ class _DictionaryViewState extends State<_DictionaryView> {
       count: 1,
     );
     if (confirmed != true || !context.mounted) return false;
-    _pendingDeletions.add(_PendingDeletion(count: 1, singleWord: entry.word));
     context.read<DictionaryBloc>().add(DictionaryEntryDeleted(entry.id));
     return true;
   }
 
   /// Used by the detail-sheet delete button. The detail sheet itself
-  /// is the user's confirmation, so we skip the bottom sheet here and
-  /// just queue up a toast on success/failure.
+  /// is the user's confirmation, so we skip the bottom sheet here.
   void _handleDetailDelete(BuildContext context, DictionaryEntry entry) {
-    _pendingDeletions.add(_PendingDeletion(count: 1, singleWord: entry.word));
     context.read<DictionaryBloc>().add(DictionaryEntryDeleted(entry.id));
-  }
-
-  /// Locates an entry by id and returns its word, or null if the row is
-  /// gone (race between dispatch and a state update).
-  static String? _wordOf(List<DictionaryEntry> entries, String id) {
-    for (final entry in entries) {
-      if (entry.id == id) return entry.word;
-    }
-    return null;
   }
 
   void _onDictionaryStateForToast(
     BuildContext context,
     DictionaryState state,
   ) {
-    if (_pendingDeletions.isEmpty) return;
-    _consumedDeletionVersion = state.deletionVersion;
-    final pending = _pendingDeletions.removeAt(0);
-    if (state.status == DictionaryStatus.success) {
-      if (pending.count == 1 && pending.singleWord != null) {
+    final effect = state.deletionEffect;
+    if (effect == null) return;
+    if (effect.success) {
+      if (effect.count == 1 && effect.singleWord != null) {
         showToast(
           context,
           type: NotificationType.success,
-          message: '"${pending.singleWord}"',
+          message: '"${effect.singleWord}"',
           messageSuffix: ' deleted',
         );
       } else {
         showToast(
           context,
           type: NotificationType.success,
-          message: pending.count == 1
+          message: effect.count == 1
               ? 'Word deleted'
-              : '${pending.count} words deleted',
+              : '${effect.count} words deleted',
         );
       }
-    } else if (state.status == DictionaryStatus.failure) {
+    } else {
       showToast(
         context,
         type: NotificationType.error,
-        message: pending.count == 1
+        message: effect.count == 1
             ? 'Failed to delete the word'
             : 'Failed to delete the words',
       );
@@ -170,12 +135,9 @@ class _DictionaryViewState extends State<_DictionaryView> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<DictionaryBloc, DictionaryState>(
-      // Fires once per dispatched delete (success OR failure) using the
-      // `deletionVersion` discriminator — that's what tells a
-      // post-delete success apart from any other success emit
-      // (load/refresh) that happens while a delete is in flight.
       listenWhen: (prev, curr) =>
-          curr.deletionVersion != _consumedDeletionVersion,
+          prev.deletionEffect != curr.deletionEffect &&
+          curr.deletionEffect != null,
       listener: _onDictionaryStateForToast,
       child: BlocBuilder<DictionarySelectionCubit, DictionarySelectionState>(
         builder: (context, selection) {
@@ -660,14 +622,4 @@ class _FilterChipsBar extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Display-side metadata captured at delete-dispatch time so the
-/// post-delete toast can reference the correct word / count even if
-/// other deletes overlap or land first.
-class _PendingDeletion {
-  const _PendingDeletion({required this.count, this.singleWord});
-
-  final int count;
-  final String? singleWord;
 }

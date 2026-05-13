@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:reader/src/reader_appearance_cubit.dart';
 import 'package:reader/src/reader_appearance_sheet.dart';
+import 'package:reader/src/reader_ui_cubit.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
@@ -79,6 +80,61 @@ void main() {
 
     expect(preferencesService.readerAppearanceOverrideFor(_sourceId), isNull);
     expect(cubit.state.hasOverride, isFalse);
+  });
+
+  testWidgets('restores reader chrome after appearance sheet is fully hidden', (
+    tester,
+  ) async {
+    final uiCubit = ReaderUiCubit()..showChrome();
+    addTearDown(uiCubit.close);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: MultiBlocProvider(
+          providers: [
+            BlocProvider.value(value: cubit),
+            BlocProvider.value(value: uiCubit),
+          ],
+          child: Builder(
+            builder: (context) {
+              return Scaffold(
+                body: Center(
+                  child: FilledButton(
+                    onPressed: () {
+                      final readerUiCubit = context.read<ReaderUiCubit>();
+                      readerUiCubit.beginAppearanceSheet();
+                      showReaderAppearanceSheet(
+                        context,
+                        onFullyHidden: readerUiCubit.appearanceSheetHidden,
+                      );
+                    },
+                    child: const Text('Open'),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    expect(uiCubit.state.chromeVisible, isFalse);
+    expect(uiCubit.state.appearanceSheetVisible, isTrue);
+
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pump();
+
+    expect(uiCubit.state.chromeVisible, isFalse);
+    expect(uiCubit.state.appearanceSheetVisible, isTrue);
+
+    await tester.pumpAndSettle();
+
+    expect(uiCubit.state.chromeVisible, isTrue);
+    expect(uiCubit.state.overlay, ReaderOverlay.none);
   });
 }
 

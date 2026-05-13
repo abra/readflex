@@ -8,6 +8,7 @@ import 'package:highlight_repository/highlight_repository.dart';
 import 'package:reader_webview/reader_webview.dart';
 
 part 'reader_event.dart';
+
 part 'reader_state.dart';
 
 /// Owns the loaded book and its highlights for the reader screen.
@@ -19,9 +20,9 @@ part 'reader_state.dart';
 ///     WebView back to the repository;
 ///   * refresh highlights when a TextAction (e.g. "Highlight") completes.
 ///
-/// UI-only concerns (chrome visibility, selection, review-reminder banner)
-/// live in separate cubits — see [ReaderChromeCubit], [ReaderSelectionCubit],
-/// [ReaderReviewReminderCubit].
+/// UI-only concerns (chrome/drawer state, search drawer state, selection,
+/// review-reminder banner) live in separate cubits — see [ReaderUiCubit],
+/// [ReaderSearchCubit], [ReaderSelectionCubit], [ReaderReviewReminderCubit].
 class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   ReaderBloc({
     required BookRepository bookRepository,

@@ -66,7 +66,16 @@ void main() {
         CatalogBookDeleted(_book.id, scope: BookDeletionScope.keepLearningData),
       ),
       expect: () => [
-        CatalogState(status: CatalogStatus.success, deletionVersion: 1),
+        CatalogState(
+          status: CatalogStatus.success,
+          deletionVersion: 1,
+          deletionEffect: const CatalogDeletionEffect(
+            version: 1,
+            success: true,
+            count: 1,
+            singleTitle: 'Test Book',
+          ),
+        ),
       ],
     );
 
@@ -96,24 +105,39 @@ void main() {
       verify: (bloc) {
         expect(bloc.state.status, CatalogStatus.success);
         expect(bloc.state.books, isEmpty);
+        expect(
+          bloc.state.deletionEffect,
+          const CatalogDeletionEffect(
+            version: 1,
+            success: true,
+            count: 2,
+          ),
+        );
       },
     );
 
-    // The screen pairs each dispatched delete with a screen-local
-    // descriptor and pops it off a queue when the bloc emits a state
-    // with a fresh `deletionVersion`. Without the version bump on
-    // failure, the screen would never pop the failed batch's
-    // descriptor and the next successful delete's toast would describe
-    // a stale batch.
+    // Delete completion metadata is emitted by the bloc so the screen does
+    // not need a local queue to attribute toasts to overlapping deletes.
     blocTest<CatalogBloc, CatalogState>(
-      'CatalogBookDeleted bumps deletionVersion on success',
+      'CatalogBookDeleted emits a success deletion effect',
       setUp: () => repository.seedBooks([_book]),
       build: () => CatalogBloc(bookRepository: repository),
       seed: () => CatalogState(status: CatalogStatus.success, books: [_book]),
       act: (bloc) => bloc.add(
         CatalogBookDeleted(_book.id, scope: BookDeletionScope.keepLearningData),
       ),
-      verify: (bloc) => expect(bloc.state.deletionVersion, 1),
+      verify: (bloc) {
+        expect(bloc.state.deletionVersion, 1);
+        expect(
+          bloc.state.deletionEffect,
+          const CatalogDeletionEffect(
+            version: 1,
+            success: true,
+            count: 1,
+            singleTitle: 'Test Book',
+          ),
+        );
+      },
     );
 
     // The bulk-delete handler is now resilient to per-id failure — if
@@ -148,6 +172,14 @@ void main() {
       verify: (bloc) {
         expect(bloc.state.status, CatalogStatus.failure);
         expect(bloc.state.deletionVersion, 1);
+        expect(
+          bloc.state.deletionEffect,
+          const CatalogDeletionEffect(
+            version: 1,
+            success: false,
+            count: 2,
+          ),
+        );
         // Id '2' was deleted even though id '1' failed.
         expect(bloc.state.books.map((b) => b.id), isNot(contains('2')));
       },
@@ -168,6 +200,15 @@ void main() {
       verify: (bloc) {
         expect(bloc.state.status, CatalogStatus.failure);
         expect(bloc.state.deletionVersion, 1);
+        expect(
+          bloc.state.deletionEffect,
+          const CatalogDeletionEffect(
+            version: 1,
+            success: false,
+            count: 1,
+            singleTitle: 'Test Book',
+          ),
+        );
       },
     );
 

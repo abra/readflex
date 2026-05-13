@@ -96,23 +96,6 @@ class _CatalogViewState extends State<_CatalogView> {
   /// values via the rebuild cycle.
   bool _addInFlight = false;
 
-  /// FIFO queue of pending delete descriptors. One entry is pushed per
-  /// dispatched [CatalogBookDeleted] / [CatalogBooksDeleted] event,
-  /// and one is popped each time the bloc emits a state with a fresh
-  /// `deletionVersion`. Sequential bloc transformer guarantees one
-  /// terminal emit per dispatch, so push-order matches pop-order.
-  ///
-  /// Replaces the earlier single-field design (`_pendingDeleteCount`
-  /// + `_pendingSingleTitle`) which silently overwrote itself when a
-  /// second delete was dispatched while the first was still in
-  /// flight, causing the success toast to describe the wrong batch.
-  final List<_PendingDeletion> _pendingDeletions = [];
-
-  /// Last `deletionVersion` we've already shown a toast for. Compared
-  /// against the current state's value in [BlocListener.listenWhen]
-  /// so the listener fires exactly once per dispatched delete.
-  int _consumedDeletionVersion = 0;
-
   @override
   void dispose() {
     _searchController.dispose();
@@ -157,28 +140,8 @@ class _CatalogViewState extends State<_CatalogView> {
       count: ids.length,
     );
     if (scope == null || !context.mounted) return;
-    final bloc = context.read<CatalogBloc>();
-    _pendingDeletions.add(
-      _PendingDeletion(
-        count: ids.length,
-        singleTitle: ids.length == 1
-            ? _titleOf(bloc.state.books, ids.first)
-            : null,
-      ),
-    );
-    bloc.add(CatalogBooksDeleted(ids, scope: scope));
+    context.read<CatalogBloc>().add(CatalogBooksDeleted(ids, scope: scope));
     selection.clear();
-  }
-
-  /// Locates a book in [books] by id and returns its title, or null if
-  /// the row is gone (race between dispatch and the bloc emitting an
-  /// already-deleted state). Caller treats null as "fall back to the
-  /// generic 'Book deleted' wording".
-  static String? _titleOf(List<Book> books, String id) {
-    for (final book in books) {
-      if (book.id == id) return book.title;
-    }
-    return null;
   }
 
   /// Confirms the swipe-to-delete via the same bottom sheet. Returns
@@ -191,7 +154,6 @@ class _CatalogViewState extends State<_CatalogView> {
   ) async {
     final scope = await showConfirmBookDeletionSheet(context, count: 1);
     if (scope == null || !context.mounted) return false;
-    _pendingDeletions.add(_PendingDeletion(count: 1, singleTitle: book.title));
     context.read<CatalogBloc>().add(
       CatalogBookDeleted(book.id, scope: scope),
     );
@@ -199,33 +161,32 @@ class _CatalogViewState extends State<_CatalogView> {
   }
 
   void _onCatalogStateForToast(BuildContext context, CatalogState state) {
-    if (_pendingDeletions.isEmpty) return;
-    _consumedDeletionVersion = state.deletionVersion;
-    final pending = _pendingDeletions.removeAt(0);
-    if (state.status == CatalogStatus.success) {
-      if (pending.count == 1 && pending.singleTitle != null) {
+    final effect = state.deletionEffect;
+    if (effect == null) return;
+    if (effect.success) {
+      if (effect.count == 1 && effect.singleTitle != null) {
         showToast(
           context,
           type: NotificationType.success,
           // Title may be very long. Pinning " deleted" as a suffix keeps
           // the verb visible regardless of available width.
-          message: '"${pending.singleTitle}"',
+          message: '"${effect.singleTitle}"',
           messageSuffix: ' deleted',
         );
       } else {
         showToast(
           context,
           type: NotificationType.success,
-          message: pending.count == 1
+          message: effect.count == 1
               ? 'Book deleted'
-              : '${pending.count} books deleted',
+              : '${effect.count} books deleted',
         );
       }
-    } else if (state.status == CatalogStatus.failure) {
+    } else {
       showToast(
         context,
         type: NotificationType.error,
-        message: pending.count == 1
+        message: effect.count == 1
             ? 'Failed to delete the book'
             : 'Failed to delete the books',
       );
@@ -235,13 +196,9 @@ class _CatalogViewState extends State<_CatalogView> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<CatalogBloc, CatalogState>(
-      // Fires once per dispatched delete (success OR failure). The
-      // `deletionVersion` discriminator is the only thing that can
-      // distinguish a post-delete success from any other success
-      // emit (CatalogLoadRequested, CatalogRefreshRequested) that
-      // happens while a delete is in flight.
       listenWhen: (prev, curr) =>
-          curr.deletionVersion != _consumedDeletionVersion,
+          prev.deletionEffect != curr.deletionEffect &&
+          curr.deletionEffect != null,
       listener: _onCatalogStateForToast,
       child: BlocBuilder<CatalogSelectionCubit, CatalogSelectionState>(
         builder: (context, selection) {
@@ -367,14 +324,4 @@ class _CatalogFab extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Display-side metadata captured at delete-dispatch time so the
-/// post-delete toast can reference the correct title / count even if
-/// other deletes overlap or land first.
-class _PendingDeletion {
-  const _PendingDeletion({required this.count, this.singleTitle});
-
-  final int count;
-  final String? singleTitle;
 }

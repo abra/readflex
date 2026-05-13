@@ -146,6 +146,12 @@ void main() {
           status: DictionaryStatus.success,
           entries: [_entry2],
           deletionVersion: 1,
+          deletionEffect: const DictionaryDeletionEffect(
+            version: 1,
+            success: true,
+            count: 1,
+            singleWord: 'hello',
+          ),
         ),
       ],
     );
@@ -167,6 +173,14 @@ void main() {
       verify: (bloc) {
         expect(bloc.state.status, DictionaryStatus.success);
         expect(bloc.state.entries.map((e) => e.id), [_entry2.id]);
+        expect(
+          bloc.state.deletionEffect,
+          const DictionaryDeletionEffect(
+            version: 1,
+            success: true,
+            count: 2,
+          ),
+        );
       },
     );
 
@@ -262,15 +276,20 @@ void main() {
           status: DictionaryStatus.failure,
           entries: [_entry1],
           deletionVersion: 1,
+          deletionEffect: const DictionaryDeletionEffect(
+            version: 1,
+            success: false,
+            count: 1,
+            singleWord: 'hello',
+          ),
         ),
       ],
     );
 
-    // Same toast-discriminator contract as the catalog: every dispatched
-    // delete must bump deletionVersion exactly once, success or fail —
-    // otherwise overlapping deletes can mis-attribute the toast.
+    // Delete completion metadata is emitted by the bloc so the screen does
+    // not need a local queue to attribute toasts to overlapping deletes.
     blocTest<DictionaryBloc, DictionaryState>(
-      'delete entry bumps deletionVersion on success',
+      'delete entry emits a success deletion effect',
       setUp: () => repository.seed([_entry1]),
       build: () => DictionaryBloc(
         dictionaryRepository: repository,
@@ -281,7 +300,18 @@ void main() {
         entries: [_entry1],
       ),
       act: (bloc) => bloc.add(DictionaryEntryDeleted(_entry1.id)),
-      verify: (bloc) => expect(bloc.state.deletionVersion, 1),
+      verify: (bloc) {
+        expect(bloc.state.deletionVersion, 1);
+        expect(
+          bloc.state.deletionEffect,
+          const DictionaryDeletionEffect(
+            version: 1,
+            success: true,
+            count: 1,
+            singleWord: 'hello',
+          ),
+        );
+      },
     );
 
     blocTest<DictionaryBloc, DictionaryState>(
