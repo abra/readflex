@@ -121,6 +121,37 @@ void main() {
     );
 
     blocTest<ReaderAppearanceCubit, ReaderAppearanceState>(
+      'resetTextScale clears only the text scale override',
+      build: () => ReaderAppearanceCubit(
+        preferencesService: preferencesService,
+        sourceId: _sourceId,
+      ),
+      act: (cubit) async {
+        await cubit.setFont('sans');
+        cubit.previewTextScale(1.2);
+        await cubit.resetTextScale();
+      },
+      expect: () => [
+        isA<ReaderAppearanceState>()
+            .having((s) => s.effectiveAppearance.fontId, 'fontId', 'sans')
+            .having((s) => s.effectiveAppearance.textScale, 'textScale', 1.0),
+        isA<ReaderAppearanceState>()
+            .having((s) => s.effectiveAppearance.fontId, 'fontId', 'sans')
+            .having((s) => s.effectiveAppearance.textScale, 'textScale', 1.2),
+        isA<ReaderAppearanceState>()
+            .having((s) => s.effectiveAppearance.fontId, 'fontId', 'sans')
+            .having((s) => s.effectiveAppearance.textScale, 'textScale', 1.0),
+      ],
+      verify: (_) {
+        final override = preferencesService.readerAppearanceOverrideFor(
+          _sourceId,
+        );
+        expect(override?.fontId, 'sans');
+        expect(override?.textScale, isNull);
+      },
+    );
+
+    blocTest<ReaderAppearanceCubit, ReaderAppearanceState>(
       'commitSideMargin persists the source override',
       build: () => ReaderAppearanceCubit(
         preferencesService: preferencesService,

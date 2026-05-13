@@ -11,6 +11,8 @@ import 'practice_item_resolver.dart';
 
 part 'mini_review_state.dart';
 
+const _miniReviewDueLimit = 50;
+
 /// Short in-reader review session scoped to a single source (book).
 ///
 /// Mirrors [PracticeBloc]'s flow (load → reveal → rate → advance) but talks
@@ -39,7 +41,10 @@ class MiniReviewCubit extends Cubit<MiniReviewState> {
     emit(state.copyWith(status: MiniReviewStatus.loading));
 
     try {
-      final dueItems = await _fsrsRepository.getDueItemsBySource(sourceId);
+      final dueItems = await _fsrsRepository.getDueItemsBySource(
+        sourceId,
+        limit: _miniReviewDueLimit,
+      );
       final items = await _resolver.resolve(dueItems);
 
       if (items.isEmpty) {

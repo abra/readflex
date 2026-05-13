@@ -478,6 +478,9 @@ class _SizeControl extends StatelessWidget {
     final textScale = context.select<ReaderAppearanceCubit, double>(
       (c) => c.state.effectiveAppearance.textScale,
     );
+    final globalTextScale = context.select<ReaderAppearanceCubit, double>(
+      (c) => c.state.globalAppearance.textScale,
+    );
     final cs = context.colors;
     final text = context.text;
     final cubit = context.read<ReaderAppearanceCubit>();
@@ -485,6 +488,7 @@ class _SizeControl extends StatelessWidget {
         textScale > ReaderAppearanceCubit.minTextScale + _textScaleEpsilon;
     final canIncrease =
         textScale < ReaderAppearanceCubit.maxTextScale - _textScaleEpsilon;
+    final canReset = (textScale - globalTextScale).abs() > _textScaleEpsilon;
     return Row(
       children: [
         _TextSizeButton(
@@ -499,19 +503,28 @@ class _SizeControl extends StatelessWidget {
               : null,
         ),
         Expanded(
-          child: Container(
-            height: _textSizeButtonHeight,
-            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: cs.secondary.withValues(alpha: 0.35),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-            ),
-            child: Text(
-              '${(textScale * 100).round()}%',
-              style: text.labelLarge.copyWith(
-                color: cs.onSurface,
-                fontWeight: FontWeight.w600,
+          child: Semantics(
+            button: true,
+            enabled: canReset,
+            label: 'Reset text size',
+            child: GestureDetector(
+              onTap: canReset ? cubit.resetTextScale : null,
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                height: _textSizeButtonHeight,
+                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: cs.secondary.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Text(
+                  '${(textScale * 100).round()}%',
+                  style: text.labelLarge.copyWith(
+                    color: cs.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
           ),

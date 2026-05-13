@@ -55,6 +55,29 @@ void main() {
     );
 
     blocTest<CatalogBloc, CatalogState>(
+      'debounces rapid search changes and emits only the last query',
+      build: () => CatalogBloc(bookRepository: repository),
+      seed: () => CatalogState(
+        status: CatalogStatus.success,
+        books: [_book],
+      ),
+      act: (bloc) {
+        bloc
+          ..add(const CatalogSearchQueryChanged('t'))
+          ..add(const CatalogSearchQueryChanged('te'))
+          ..add(const CatalogSearchQueryChanged('test'));
+      },
+      wait: const Duration(milliseconds: 400),
+      expect: () => [
+        CatalogState(
+          status: CatalogStatus.success,
+          books: [_book],
+          searchQuery: 'test',
+        ),
+      ],
+    );
+
+    blocTest<CatalogBloc, CatalogState>(
       'CatalogBookDeleted removes book and reloads',
       setUp: () => repository.seedBooks([_book]),
       build: () => CatalogBloc(bookRepository: repository),

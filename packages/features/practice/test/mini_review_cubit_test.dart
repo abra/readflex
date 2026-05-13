@@ -55,6 +55,15 @@ void main() {
 
   group('MiniReviewCubit.load()', () {
     blocTest<MiniReviewCubit, MiniReviewState>(
+      'passes a limit to getDueItemsBySource',
+      build: buildCubit,
+      act: (cubit) => cubit.load('book-1'),
+      verify: (_) {
+        expect(fsrsRepository.lastDueBySourceLimitPassed, isNotNull);
+      },
+    );
+
+    blocTest<MiniReviewCubit, MiniReviewState>(
       'emits empty when no due items',
       build: buildCubit,
       act: (cubit) => cubit.load('book-1'),

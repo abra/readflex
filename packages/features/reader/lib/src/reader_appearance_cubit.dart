@@ -120,6 +120,14 @@ class ReaderAppearanceCubit extends Cubit<ReaderAppearanceState> {
     _textScaleCommitTimer = Timer(_commitDebounce, _flushTextScale);
   }
 
+  Future<void> resetTextScale() async {
+    _pendingTextScale = null;
+    _textScaleCommitTimer?.cancel();
+    _textScaleCommitTimer = null;
+    final next = state.sourceOverride.copyWith(textScale: null);
+    await _persistOverride(next);
+  }
+
   void previewLineHeight(double value) {
     final next = state.sourceOverride.copyWith(
       lineHeight: value == state.globalAppearance.lineHeight ? null : value,

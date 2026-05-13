@@ -130,6 +130,32 @@ void main() {
     );
 
     blocTest<DictionaryBloc, DictionaryState>(
+      'debounces rapid search changes and emits only the last query',
+      build: () => DictionaryBloc(
+        dictionaryRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
+      seed: () => DictionaryState(
+        status: DictionaryStatus.success,
+        entries: [_entry1, _entry2],
+      ),
+      act: (bloc) {
+        bloc
+          ..add(const DictionarySearchChanged('h'))
+          ..add(const DictionarySearchChanged('he'))
+          ..add(const DictionarySearchChanged('hello'));
+      },
+      wait: const Duration(milliseconds: 400),
+      expect: () => [
+        DictionaryState(
+          status: DictionaryStatus.success,
+          entries: [_entry1, _entry2],
+          searchQuery: 'hello',
+        ),
+      ],
+    );
+
+    blocTest<DictionaryBloc, DictionaryState>(
       'delete entry removes it and reloads',
       setUp: () => repository.seed([_entry1, _entry2]),
       build: () => DictionaryBloc(

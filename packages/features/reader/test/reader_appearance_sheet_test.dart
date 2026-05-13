@@ -82,6 +82,26 @@ void main() {
     expect(cubit.state.hasOverride, isFalse);
   });
 
+  testWidgets('tapping size percent resets text size to global default', (
+    tester,
+  ) async {
+    await tester.openAppearanceSheet(cubit);
+
+    await tester.tap(find.text('A+'));
+    await tester.pump();
+
+    expect(find.text('105%'), findsOneWidget);
+
+    await tester.tap(find.text('105%'));
+    await tester.pump();
+
+    expect(find.text('100%'), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(preferencesService.readerAppearanceOverrideFor(_sourceId), isNull);
+  });
+
   testWidgets('restores reader chrome after appearance sheet is fully hidden', (
     tester,
   ) async {

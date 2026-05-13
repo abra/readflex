@@ -9,6 +9,7 @@ class FakeFsrsRepository implements FsrsRepository {
   Map<String, List<ReviewItem>> dueItemsBySource = {};
   bool shouldThrow = false;
   int? lastDueLimitPassed;
+  int? lastDueBySourceLimitPassed;
   final List<({String itemId, ReviewableType itemType, Rating rating})>
   reviews = [];
 
@@ -20,6 +21,7 @@ class FakeFsrsRepository implements FsrsRepository {
     int? offset,
   }) async {
     if (shouldThrow) throw StorageException(cause: 'fake');
+    lastDueBySourceLimitPassed = limit;
     return List.unmodifiable(dueItemsBySource[sourceId] ?? []);
   }
 

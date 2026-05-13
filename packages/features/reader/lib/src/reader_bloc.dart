@@ -148,6 +148,17 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       currentCfi: event.cfi,
       readingProgress: progress,
     );
+    final nextSizeTotal = event.sizeTotal ?? state.sizeTotal;
+    final hasMeaningfulChange =
+        updated != state.book ||
+        state.chapterTitle != event.chapterTitle ||
+        state.bookCurrentPage != bookCurrentPage ||
+        state.bookTotalPages != event.bookTotalPages ||
+        state.chapterCurrentPage != event.chapterCurrentPage ||
+        state.chapterTotalPages != event.chapterTotalPages ||
+        state.sizeTotal != nextSizeTotal;
+    if (!hasMeaningfulChange) return;
+
     // Emit immediately so chrome stays in sync with the WebView.
     // `sizeTotal` is constant per book; cache the first non-null value and
     // never overwrite it back to null on subsequent emits.
@@ -159,7 +170,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         bookTotalPages: event.bookTotalPages,
         chapterCurrentPage: event.chapterCurrentPage,
         chapterTotalPages: event.chapterTotalPages,
-        sizeTotal: event.sizeTotal ?? state.sizeTotal,
+        sizeTotal: nextSizeTotal,
       ),
     );
     // Persist with a trailing debounce — successive emits within the

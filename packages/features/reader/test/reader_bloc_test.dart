@@ -501,6 +501,38 @@ void main() {
         },
       );
 
+      blocTest<ReaderBloc, ReaderState>(
+        'duplicate position event does not schedule a persist',
+        setUp: () => bookRepository.seedBook(testBook),
+        build: buildBloc,
+        seed: () {
+          final positionedBook = testBook.copyWith(
+            currentCfi: 'epubcfi(/6/4)',
+            readingProgress: 0.2,
+          );
+          return ReaderState(
+            status: ReaderStatus.ready,
+            title: positionedBook.title,
+            book: positionedBook,
+            bookCurrentPage: 20,
+            bookTotalPages: 200,
+          );
+        },
+        act: (bloc) => bloc.add(
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/4)',
+            progress: 0.2,
+            bookCurrentPage: 20,
+            bookTotalPages: 200,
+          ),
+        ),
+        wait: const Duration(milliseconds: 700),
+        expect: () => <ReaderState>[],
+        verify: (_) {
+          expect(bookRepository.updateCallCount, 0);
+        },
+      );
+
       // Closing the bloc before the debounce window elapses must
       // still flush the pending write — otherwise navigating away
       // mid-drag (e.g. tap-to-go-home) drops the latest position.

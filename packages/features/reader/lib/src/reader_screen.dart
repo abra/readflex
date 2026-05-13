@@ -27,6 +27,7 @@ const _kContextPanelHeight = 80.0;
 /// Duration and curve for the reader chrome slide animation.
 const _kChromeAnimDuration = Duration(milliseconds: 200);
 const _kChromeAnimCurve = Curves.easeOutCubic;
+const _kChromeHideAnimCurve = Curves.easeInCubic;
 
 final _readerDrawerCloseButtonStyle = IconButton.styleFrom(
   backgroundColor: Colors.transparent,
@@ -559,6 +560,9 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
 
   @override
   Widget build(BuildContext context) {
+    final chromeAnimCurve = widget.visible
+        ? _kChromeAnimCurve
+        : _kChromeHideAnimCurve;
     final clamped = widget.progress.clamp(0.0, 1.0);
     final sliderValue = (_dragValue ?? clamped).clamp(0.0, 1.0);
     final mutedText = widget.textColor.withValues(alpha: 0.7);
@@ -579,11 +583,11 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
         child: AnimatedSlide(
           offset: widget.visible ? Offset.zero : const Offset(0, 1),
           duration: _kChromeAnimDuration,
-          curve: _kChromeAnimCurve,
+          curve: chromeAnimCurve,
           child: AnimatedOpacity(
             opacity: widget.visible ? 1 : 0,
             duration: _kChromeAnimDuration,
-            curve: _kChromeAnimCurve,
+            curve: chromeAnimCurve,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: widget.panelColor,
