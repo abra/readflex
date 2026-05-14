@@ -13,7 +13,7 @@ import 'package:flutter/material.dart';
 abstract final class AppTypography {
   static const String fontFamilySans = 'Geist';
   static const String fontFamilySerif = 'Literata';
-  static const String fontFamilyMerriweather = 'Merriweather';
+  static const String fontFamilyPtSerif = 'PT Serif';
   static const String fontFamilyOpenSans = 'Open Sans';
 
   static const TextTheme textTheme = TextTheme(

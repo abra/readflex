@@ -67,12 +67,12 @@ void main() {
   ) async {
     await tester.openAppearanceSheet(cubit);
 
-    await tester.tap(find.text('Merriweather'));
+    await tester.tap(find.text('PT Serif'));
     await tester.pumpAndSettle();
 
     expect(
       preferencesService.readerAppearanceOverrideFor(_sourceId)?.fontId,
-      'merriweather',
+      'ptSerif',
     );
 
     await tester.tap(find.text('Reset'));

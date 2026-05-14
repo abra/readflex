@@ -21,9 +21,16 @@ flutter:
         - asset: fonts/Literata-Variable.ttf
         - asset: fonts/Literata-Italic-Variable.ttf
           style: italic
-    - family: Merriweather
+    - family: PT Serif
       fonts:
-        - asset: fonts/Merriweather-Regular.ttf
+        - asset: fonts/PTSerif-Regular.ttf
+        - asset: fonts/PTSerif-Italic.ttf
+          style: italic
+        - asset: fonts/PTSerif-Bold.ttf
+          weight: 700
+        - asset: fonts/PTSerif-BoldItalic.ttf
+          weight: 700
+          style: italic
     - family: Open Sans
       fonts:
         - asset: fonts/OpenSans-Variable.ttf

@@ -8,8 +8,9 @@ void main() {
       expect(ReaderFontPreset.fromId('serif'), ReaderFontPreset.serif);
       expect(
         ReaderFontPreset.fromId('merriweather'),
-        ReaderFontPreset.merriweather,
+        ReaderFontPreset.ptSerif,
       );
+      expect(ReaderFontPreset.fromId('ptSerif'), ReaderFontPreset.ptSerif);
       expect(ReaderFontPreset.fromId('sans'), ReaderFontPreset.sans);
       expect(ReaderFontPreset.fromId('geist'), ReaderFontPreset.geist);
       expect(ReaderFontPreset.fromId(null), ReaderFontPreset.serif);
@@ -19,7 +20,7 @@ void main() {
     test('reader font options have distinct labels and font files', () {
       expect(
         ReaderFontPreset.values.map((preset) => preset.label),
-        ['Literata', 'Merriweather', 'Open Sans', 'Geist'],
+        ['Literata', 'PT Serif', 'Open Sans', 'Geist'],
       );
       expect(
         ReaderFontPreset.values.map((preset) => preset.fontFile).toSet(),

@@ -67,7 +67,10 @@ class AssetExtractor {
     'packages/component_library/fonts/Geist-Variable.ttf',
     'packages/component_library/fonts/Literata-Variable.ttf',
     'packages/component_library/fonts/Literata-Italic-Variable.ttf',
-    'packages/component_library/fonts/Merriweather-Regular.ttf',
+    'packages/component_library/fonts/PTSerif-Regular.ttf',
+    'packages/component_library/fonts/PTSerif-Italic.ttf',
+    'packages/component_library/fonts/PTSerif-Bold.ttf',
+    'packages/component_library/fonts/PTSerif-BoldItalic.ttf',
     'packages/component_library/fonts/OpenSans-Variable.ttf',
   ];
 
