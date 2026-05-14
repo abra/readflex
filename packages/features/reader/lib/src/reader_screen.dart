@@ -28,6 +28,7 @@ const _kContextPanelHeight = 80.0;
 const _kChromeAnimDuration = Duration(milliseconds: 200);
 const _kChromeAnimCurve = Curves.easeOutCubic;
 const _kChromeHideAnimCurve = Curves.easeInCubic;
+const _kReaderTopChromeHeight = 64.0;
 
 final _readerDrawerCloseButtonStyle = IconButton.styleFrom(
   backgroundColor: Colors.transparent,
@@ -389,6 +390,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
               onPositionChanged: _handleReaderPositionChanged,
             ),
           ),
+          const _ReaderTopChromeDriver(),
           _ReaderBottomChromeDriver(
             onTocPressed: _openTocDrawer,
             onFontPressed: _openAppearanceSheet,
@@ -411,6 +413,108 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
             onResultSelected: _goToSearchResult,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ReaderTopChromeDriver extends StatelessWidget {
+  const _ReaderTopChromeDriver();
+
+  @override
+  Widget build(BuildContext context) {
+    final chromeVisible = context.select<ReaderUiCubit, bool>(
+      (c) => c.state.chromeVisible,
+    );
+    final hasSelection = context.select<ReaderSelectionCubit, bool>(
+      (c) => c.state.hasSelection,
+    );
+    final title = context.select<ReaderBloc, String>(
+      (b) =>
+          b.state.title.isNotEmpty ? b.state.title : b.state.book?.title ?? '',
+    );
+    final colors = context.colors;
+
+    return _ReaderTopChrome(
+      visible: chromeVisible && !hasSelection,
+      title: title,
+      panelColor: colors.surface,
+      titleColor: colors.onSurface,
+      dividerColor: colors.outlineVariant,
+    );
+  }
+}
+
+class _ReaderTopChrome extends StatelessWidget {
+  const _ReaderTopChrome({
+    required this.visible,
+    required this.title,
+    required this.panelColor,
+    required this.titleColor,
+    required this.dividerColor,
+  });
+
+  final bool visible;
+  final String title;
+  final Color panelColor;
+  final Color titleColor;
+  final Color dividerColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final chromeAnimCurve = visible ? _kChromeAnimCurve : _kChromeHideAnimCurve;
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      top: 0,
+      child: IgnorePointer(
+        ignoring: !visible,
+        child: AnimatedSlide(
+          offset: visible ? Offset.zero : const Offset(0, -1),
+          duration: _kChromeAnimDuration,
+          curve: chromeAnimCurve,
+          child: AnimatedOpacity(
+            opacity: visible ? 1 : 0,
+            duration: _kChromeAnimDuration,
+            curve: chromeAnimCurve,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: panelColor,
+                boxShadow: AppShadows.panelDown,
+                border: Border(
+                  bottom: BorderSide(
+                    color: dividerColor,
+                    width: 1 / MediaQuery.devicePixelRatioOf(context),
+                  ),
+                ),
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: SizedBox(
+                  height: _kReaderTopChromeHeight,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                    ),
+                    child: Center(
+                      child: Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: context.text.bodyMedium.copyWith(
+                          fontFamily: ReaderFontPreset.serif.fontFamily,
+                          color: titleColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
