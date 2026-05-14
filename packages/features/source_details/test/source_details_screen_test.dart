@@ -68,6 +68,31 @@ void main() {
       expect(find.byIcon(AppIcons.chevronRight), findsNWidgets(3));
     });
 
+    testWidgets('hides review section for comics', (tester) async {
+      final comicSource = _newSource.copyWith(
+        title: 'Sample Comic',
+        filePath: '/comic.cbz',
+        format: BookFormat.cbz,
+      );
+      repository.source = comicSource;
+
+      await tester.pumpSourceDetails(
+        repository: repository,
+        highlightRepository: highlightRepository,
+        flashcardRepository: flashcardRepository,
+        dictionaryRepository: dictionaryRepository,
+        initialSource: comicSource,
+      );
+
+      expect(find.text('Sample Comic'), findsWidgets);
+      expect(find.text('CBZ  •  New'), findsOneWidget);
+      expect(find.text('Review'), findsNothing);
+      expect(find.text('Highlights'), findsNothing);
+      expect(find.text('Flashcards'), findsNothing);
+      expect(find.text('Dictionary'), findsNothing);
+      expect(find.byIcon(AppIcons.chevronRight), findsNothing);
+    });
+
     testWidgets(
       'shows continue action for opened source and invokes callback',
       (

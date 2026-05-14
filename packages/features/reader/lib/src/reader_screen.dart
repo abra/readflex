@@ -15,6 +15,7 @@ import 'book_custom_css.dart';
 import 'reader_appearance_cubit.dart';
 import 'reader_appearance_sheet.dart';
 import 'reader_bloc.dart';
+import 'reader_chrome_actions.dart';
 import 'reader_color_utils.dart';
 import 'reader_loading_indicator_style.dart';
 import 'reader_progress_label.dart';
@@ -578,6 +579,7 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
     final format = context.select<ReaderBloc, BookFormat?>(
       (b) => b.state.book?.format,
     );
+    final actions = readerChromeActionsForFormat(format);
     final colors = context.colors;
 
     return _ReaderBottomChrome(
@@ -592,6 +594,10 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
       accentColor: colors.primary,
       dividerColor: colors.outlineVariant,
       foregroundColor: colors.onSurface,
+      showTocAction: actions.contains(ReaderChromeAction.contents),
+      showFontAction: actions.contains(ReaderChromeAction.textAppearance),
+      showBookmarkAction: actions.contains(ReaderChromeAction.bookmark),
+      showSearchAction: actions.contains(ReaderChromeAction.textSearch),
       onBack: () => Navigator.of(context).maybePop(),
       onTocPressed: onTocPressed,
       onFontPressed: onFontPressed,
@@ -619,6 +625,10 @@ class _ReaderBottomChrome extends StatefulWidget {
     required this.accentColor,
     required this.dividerColor,
     required this.foregroundColor,
+    required this.showTocAction,
+    required this.showFontAction,
+    required this.showBookmarkAction,
+    required this.showSearchAction,
     this.onBack,
     this.onTocPressed,
     this.onFontPressed,
@@ -638,6 +648,10 @@ class _ReaderBottomChrome extends StatefulWidget {
   final Color accentColor;
   final Color dividerColor;
   final Color foregroundColor;
+  final bool showTocAction;
+  final bool showFontAction;
+  final bool showBookmarkAction;
+  final bool showSearchAction;
   final VoidCallback? onBack;
   final VoidCallback? onTocPressed;
   final VoidCallback? onFontPressed;
@@ -835,34 +849,17 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                               foregroundColor: widget.foregroundColor,
                               onPressed: widget.onBack,
                             ),
-                            const SizedBox(width: AppSpacing.sm),
-                            _ReaderChromeIconButton(
-                              icon: AppIcons.toc,
-                              tooltip: 'Contents',
-                              foregroundColor: widget.foregroundColor,
-                              onPressed: widget.onTocPressed,
-                            ),
+                            if (widget.showTocAction) ...[
+                              const SizedBox(width: AppSpacing.sm),
+                              _ReaderChromeIconButton(
+                                icon: AppIcons.toc,
+                                tooltip: 'Contents',
+                                foregroundColor: widget.foregroundColor,
+                                onPressed: widget.onTocPressed,
+                              ),
+                            ],
                             const Spacer(),
-                            _ReaderChromeIconButton(
-                              icon: AppIcons.font,
-                              tooltip: 'Font',
-                              foregroundColor: widget.foregroundColor,
-                              onPressed: widget.onFontPressed,
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            _ReaderChromeIconButton(
-                              icon: AppIcons.bookmark,
-                              tooltip: 'Bookmark',
-                              foregroundColor: widget.foregroundColor,
-                              onPressed: widget.onBookmarkPressed,
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            _ReaderChromeIconButton(
-                              icon: AppIcons.search,
-                              tooltip: 'Search',
-                              foregroundColor: widget.foregroundColor,
-                              onPressed: widget.onSearchPressed,
-                            ),
+                            ..._buildTrailingActions(),
                           ],
                         ),
                       ),
@@ -875,6 +872,52 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
         ),
       ),
     );
+  }
+
+  List<Widget> _buildTrailingActions() {
+    final buttons = <Widget>[];
+
+    void addButton(Widget button) {
+      if (buttons.isNotEmpty) {
+        buttons.add(const SizedBox(width: AppSpacing.sm));
+      }
+      buttons.add(button);
+    }
+
+    if (widget.showFontAction) {
+      addButton(
+        _ReaderChromeIconButton(
+          icon: AppIcons.font,
+          tooltip: 'Font',
+          foregroundColor: widget.foregroundColor,
+          onPressed: widget.onFontPressed,
+        ),
+      );
+    }
+
+    if (widget.showBookmarkAction) {
+      addButton(
+        _ReaderChromeIconButton(
+          icon: AppIcons.bookmark,
+          tooltip: 'Bookmark',
+          foregroundColor: widget.foregroundColor,
+          onPressed: widget.onBookmarkPressed,
+        ),
+      );
+    }
+
+    if (widget.showSearchAction) {
+      addButton(
+        _ReaderChromeIconButton(
+          icon: AppIcons.search,
+          tooltip: 'Search',
+          foregroundColor: widget.foregroundColor,
+          onPressed: widget.onSearchPressed,
+        ),
+      );
+    }
+
+    return buttons;
   }
 }
 

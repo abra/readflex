@@ -80,6 +80,42 @@ void main() {
     );
 
     blocTest<SourceDetailsBloc, SourceDetailsState>(
+      'skips review summary counts for comics',
+      setUp: () {
+        repository.source = _source.copyWith(
+          filePath: '/comic.cbz',
+          format: BookFormat.cbz,
+        );
+        highlightRepository.count = 2;
+        flashcardRepository.count = 3;
+        dictionaryRepository.count = 4;
+      },
+      build: () => _buildBloc(
+        repository,
+        highlightRepository,
+        flashcardRepository,
+        dictionaryRepository,
+      ),
+      act: (bloc) => bloc.add(const SourceDetailsLoadRequested('source-1')),
+      wait: const Duration(milliseconds: 10),
+      expect: () => [
+        const SourceDetailsState(status: SourceDetailsStatus.loading),
+        SourceDetailsState(
+          status: SourceDetailsStatus.success,
+          source: _source.copyWith(
+            filePath: '/comic.cbz',
+            format: BookFormat.cbz,
+          ),
+        ),
+      ],
+      verify: (_) {
+        expect(highlightRepository.callCount, 0);
+        expect(flashcardRepository.callCount, 0);
+        expect(dictionaryRepository.callCount, 0);
+      },
+    );
+
+    blocTest<SourceDetailsBloc, SourceDetailsState>(
       'refreshes initial source without returning to loading',
       setUp: () => repository.source = _source.copyWith(readingProgress: 0.4),
       build: () => _buildBloc(
@@ -162,9 +198,13 @@ class _FakeBookRepository implements BookRepository {
 
 class _FakeHighlightRepository implements HighlightRepository {
   int count = 0;
+  int callCount = 0;
 
   @override
-  Future<int> getHighlightCountBySource(String sourceId) async => count;
+  Future<int> getHighlightCountBySource(String sourceId) async {
+    callCount++;
+    return count;
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -172,9 +212,13 @@ class _FakeHighlightRepository implements HighlightRepository {
 
 class _FakeFlashcardRepository implements FlashcardRepository {
   int count = 0;
+  int callCount = 0;
 
   @override
-  Future<int> getFlashcardCountByDeck(String deckId) async => count;
+  Future<int> getFlashcardCountByDeck(String deckId) async {
+    callCount++;
+    return count;
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -182,9 +226,13 @@ class _FakeFlashcardRepository implements FlashcardRepository {
 
 class _FakeDictionaryRepository implements DictionaryRepository {
   int count = 0;
+  int callCount = 0;
 
   @override
-  Future<int> getEntryCountBySource(String sourceId) async => count;
+  Future<int> getEntryCountBySource(String sourceId) async {
+    callCount++;
+    return count;
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

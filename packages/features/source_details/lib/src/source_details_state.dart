@@ -13,6 +13,11 @@ class SourceDetailsState extends Equatable {
   final Book? source;
   final SourceReviewSummary reviewSummary;
 
+  bool get showReviewSection {
+    final source = this.source;
+    return source != null && sourceSupportsReview(source);
+  }
+
   SourceDetailsState copyWith({
     SourceDetailsStatus? status,
     Book? source,
@@ -50,3 +55,5 @@ class SourceReviewSummary extends Equatable {
     dictionaryEntryCount,
   ];
 }
+
+bool sourceSupportsReview(Book source) => source.format != BookFormat.cbz;

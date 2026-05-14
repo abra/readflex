@@ -49,7 +49,9 @@ class SourceDetailsBloc extends Bloc<SourceDetailsEvent, SourceDetailsState> {
         emit(const SourceDetailsState(status: SourceDetailsStatus.notFound));
         return;
       }
-      final reviewSummary = await _loadReviewSummary(event.sourceId);
+      final reviewSummary = sourceSupportsReview(source)
+          ? await _loadReviewSummary(event.sourceId)
+          : const SourceReviewSummary.empty();
       emit(
         SourceDetailsState(
           status: SourceDetailsStatus.success,

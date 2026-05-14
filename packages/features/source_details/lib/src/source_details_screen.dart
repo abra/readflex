@@ -94,6 +94,7 @@ class SourceDetailsView extends StatelessWidget {
               ),
               SourceDetailsStatus.success => _SourceDetailsContent(
                 source: state.source!,
+                showReviewSection: state.showReviewSection,
                 reviewSummary: state.reviewSummary,
                 onReadPressed: onReadPressed,
               ),
@@ -165,11 +166,13 @@ class _SourceDetailsBottomBar extends StatelessWidget {
 class _SourceDetailsContent extends StatelessWidget {
   const _SourceDetailsContent({
     required this.source,
+    required this.showReviewSection,
     required this.reviewSummary,
     required this.onReadPressed,
   });
 
   final Book source;
+  final bool showReviewSection;
   final SourceReviewSummary reviewSummary;
   final Future<void> Function(Book source) onReadPressed;
 
@@ -207,16 +210,18 @@ class _SourceDetailsContent extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     _SourceMetadata(source: source),
-                    const SizedBox(height: AppSpacing.xl),
-                    Text(
-                      'Review',
-                      style: text.titleSmall.copyWith(
-                        color: colors.onSurface,
-                        fontWeight: FontWeight.w600,
+                    if (showReviewSection) ...[
+                      const SizedBox(height: AppSpacing.xl),
+                      Text(
+                        'Review',
+                        style: text.titleSmall.copyWith(
+                          color: colors.onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    _ReviewActions(summary: reviewSummary),
+                      const SizedBox(height: AppSpacing.sm),
+                      _ReviewActions(summary: reviewSummary),
+                    ],
                     const SizedBox(height: AppSpacing.xl),
                   ],
                 ),
