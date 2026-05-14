@@ -23,6 +23,7 @@ import 'reader_review_reminder_cubit.dart';
 import 'reader_search_cubit.dart';
 import 'reader_selection_cubit.dart';
 import 'reader_system_ui_overlay.dart';
+import 'reader_tap_action.dart';
 import 'reader_ui_cubit.dart';
 
 /// Approximate height of the context panel, used to offset the review banner.
@@ -1944,7 +1945,19 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     final state = bloc.state;
     final highlights = _readerHighlightsFor(highlightsState);
 
-    void onTapped(double x, double y) => uiCubit.toggleChrome();
+    void onTapped(double x, double _) {
+      switch (readerTapActionFor(
+        x: x,
+        chromeVisible: uiCubit.state.chromeVisible,
+      )) {
+        case ReaderTapAction.previousPage:
+          widget.webViewKey?.currentState?.prevPage();
+        case ReaderTapAction.nextPage:
+          widget.webViewKey?.currentState?.nextPage();
+        case ReaderTapAction.toggleChrome:
+          uiCubit.toggleChrome();
+      }
+    }
 
     final appearance = context
         .select<ReaderAppearanceCubit, ReaderAppearancePreferences>(
