@@ -57,7 +57,7 @@ class PreferencesRepository {
         readerLineHeight: (map['readerLineHeight'] as num?)?.toDouble() ?? 1.55,
         readerSideMargin: (map['readerSideMargin'] as num?)?.toDouble() ?? 6.0,
         readerInvertImagesInDark:
-            map['readerInvertImagesInDark'] as bool? ?? true,
+            map['readerInvertImagesInDark'] as bool? ?? false,
         readerOverrideFont: map['readerOverrideFont'] as bool? ?? true,
         readerOverrideColor: map['readerOverrideColor'] as bool? ?? true,
         readerUseBookLayout: map['readerUseBookLayout'] as bool? ?? true,

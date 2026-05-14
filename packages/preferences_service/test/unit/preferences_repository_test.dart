@@ -29,7 +29,7 @@ void main() {
       expect(prefs.readerTextScale, 1.0);
       expect(prefs.readerLineHeight, 1.55);
       expect(prefs.readerSideMargin, 6.0);
-      expect(prefs.readerInvertImagesInDark, isTrue);
+      expect(prefs.readerInvertImagesInDark, isFalse);
       expect(prefs.readerOverrideFont, isTrue);
       expect(prefs.readerOverrideColor, isTrue);
       expect(prefs.readerUseBookLayout, isTrue);
@@ -130,7 +130,7 @@ void main() {
         expect(prefs.themeMode, ThemeMode.dark);
         expect(prefs.readerLayoutId, 'standard');
         expect(prefs.readerSideMargin, 6.0);
-        expect(prefs.readerInvertImagesInDark, isTrue);
+        expect(prefs.readerInvertImagesInDark, isFalse);
         expect(prefs.readerOverrideFont, isTrue);
         expect(prefs.readerOverrideColor, isTrue);
         expect(prefs.readerUseBookLayout, isTrue);

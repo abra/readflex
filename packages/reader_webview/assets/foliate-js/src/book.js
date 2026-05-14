@@ -9,6 +9,7 @@ import {
   attachGestures as readflexAttachGestures,
   registerGesture as readflexRegisterGesture,
 } from './readflex_gestures.js'
+import { applyTextContrastGuard } from './readflex_contrast_guard.js'
 const { configure, ZipReader, BlobReader, TextWriter, BlobWriter } =
   await import('./vendor/zip.js')
 const { EPUB } = await import('./epub.js')
@@ -817,6 +818,12 @@ const bionicReadingHandler = (doc) => {
 
 };
 
+const applyReaderContrastGuard = doc => {
+  applyTextContrastGuard(doc, {
+    backgroundColor: style.backgroundColor,
+    textColor: style.fontColor,
+  })
+}
 
 const readingFeaturesDocHandler = (doc) => {
   if (readingRules.convertChineseMode !== 'none') {
@@ -875,6 +882,7 @@ const replaceFootnote = (view) => {
     setSelectionHandler(view, doc, index)
     // convertChineseHandler(convertChineseMode, doc)
     readingFeaturesDocHandler(doc)
+    applyReaderContrastGuard(doc)
     doc.__isFootNote = true
 
 
@@ -1271,6 +1279,12 @@ class Reader {
   readingFeatures = () => {
     this.#restoreOriginalContent()
     readingFeaturesDocHandler(this.#doc)
+    this.applyTextContrastGuard()
+  }
+
+  applyTextContrastGuard = () => {
+    if (!this.#doc) return
+    applyReaderContrastGuard(this.#doc)
   }
 
   getChapterContent = () => {
@@ -1562,6 +1576,7 @@ const setStyle = (oldStyle) => {
     useBookLayout: style.useBookLayout,
   }
   reader.view.renderer.setStyles?.(getCSS(newStyle))
+  requestAnimationFrame(() => reader.applyTextContrastGuard?.())
 
   if (!oldStyle) {
     return

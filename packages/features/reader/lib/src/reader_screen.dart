@@ -5,6 +5,7 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/services.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:reader_webview/reader_webview.dart';
@@ -15,10 +16,12 @@ import 'reader_appearance_cubit.dart';
 import 'reader_appearance_sheet.dart';
 import 'reader_bloc.dart';
 import 'reader_color_utils.dart';
+import 'reader_loading_indicator_style.dart';
 import 'reader_progress_label.dart';
 import 'reader_review_reminder_cubit.dart';
 import 'reader_search_cubit.dart';
 import 'reader_selection_cubit.dart';
+import 'reader_system_ui_overlay.dart';
 import 'reader_ui_cubit.dart';
 
 /// Approximate height of the context panel, used to offset the review banner.
@@ -177,9 +180,18 @@ class _ReaderBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final readerTheme = ReaderThemePreset.fromId(
+      context.select(
+        (ReaderAppearanceCubit cubit) =>
+            cubit.state.effectiveAppearance.themeId,
+      ),
+    ).data;
+
     return switch (status) {
-      ReaderStatus.initial ||
-      ReaderStatus.loading => const Center(child: CircularProgressIndicator()),
+      ReaderStatus.initial || ReaderStatus.loading => ColoredBox(
+        color: readerTheme.backgroundColor,
+        child: Center(child: _ReaderLoadingIndicator(theme: readerTheme)),
+      ),
       ReaderStatus.failure => Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -370,49 +382,53 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     // pulls colours from the app theme themselves; they don't take
     // a `readerTheme` prop any more.
     final readerTheme = ReaderThemePreset.fromId(appearance.themeId).data;
+    final systemUiStyle = readerSystemUiOverlayStyle(readerTheme);
 
-    return BlocListener<ReaderUiCubit, ReaderUiState>(
-      listenWhen: (previous, current) =>
-          previous.clearSearchToken != current.clearSearchToken,
-      listener: (_, _) => _webViewKey.currentState?.clearSearch(),
-      child: Stack(
-        children: [
-          // WebView body — subscribes to `state.highlights` via
-          // `context.select` so a TextAction (Highlight, Flashcard, ...)
-          // that adds/removes one fans through to the WebView via
-          // didUpdateWidget without forcing a reader reopen.
-          ColoredBox(
-            color: readerTheme.backgroundColor,
-            child: _ReaderWebViewBody(
-              serverPort: widget.serverPort,
-              readerTheme: readerTheme,
-              webViewKey: _webViewKey,
-              onPositionChanged: _handleReaderPositionChanged,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemUiStyle,
+      child: BlocListener<ReaderUiCubit, ReaderUiState>(
+        listenWhen: (previous, current) =>
+            previous.clearSearchToken != current.clearSearchToken,
+        listener: (_, _) => _webViewKey.currentState?.clearSearch(),
+        child: Stack(
+          children: [
+            // WebView body — subscribes to `state.highlights` via
+            // `context.select` so a TextAction (Highlight, Flashcard, ...)
+            // that adds/removes one fans through to the WebView via
+            // didUpdateWidget without forcing a reader reopen.
+            ColoredBox(
+              color: readerTheme.backgroundColor,
+              child: _ReaderWebViewBody(
+                serverPort: widget.serverPort,
+                readerTheme: readerTheme,
+                webViewKey: _webViewKey,
+                onPositionChanged: _handleReaderPositionChanged,
+              ),
             ),
-          ),
-          const _ReaderTopChromeDriver(),
-          _ReaderBottomChromeDriver(
-            onTocPressed: _openTocDrawer,
-            onFontPressed: _openAppearanceSheet,
-            onSearchPressed: _openSearchDrawer,
-            onSeekFraction: _seekFraction,
-          ),
-          const _ComicProgressOverlayDriver(),
-          _ContextPanelDriver(textActions: widget.textActions),
-          const _ReviewReminderDriver(),
-          _ReaderTocDrawerDriver(
-            visible: uiState.tocDrawerVisible,
-            onClose: _closeTocDrawer,
-            onItemSelected: _goToTocItem,
-          ),
-          _ReaderSearchDrawer(
-            visible: uiState.searchDrawerVisible,
-            onClose: _closeSearchDrawer,
-            onSearch: _searchBook,
-            onClearSearch: _clearDrawerSearch,
-            onResultSelected: _goToSearchResult,
-          ),
-        ],
+            const _ReaderTopChromeDriver(),
+            _ReaderBottomChromeDriver(
+              onTocPressed: _openTocDrawer,
+              onFontPressed: _openAppearanceSheet,
+              onSearchPressed: _openSearchDrawer,
+              onSeekFraction: _seekFraction,
+            ),
+            const _ComicProgressOverlayDriver(),
+            _ContextPanelDriver(textActions: widget.textActions),
+            const _ReviewReminderDriver(),
+            _ReaderTocDrawerDriver(
+              visible: uiState.tocDrawerVisible,
+              onClose: _closeTocDrawer,
+              onItemSelected: _goToTocItem,
+            ),
+            _ReaderSearchDrawer(
+              visible: uiState.searchDrawerVisible,
+              onClose: _closeSearchDrawer,
+              onSearch: _searchBook,
+              onClearSearch: _clearDrawerSearch,
+              onResultSelected: _goToSearchResult,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1851,27 +1867,22 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
   }
 
   /// Memoization for `buildBookCustomCSS`. The CSS string only depends on
-  /// the reader theme and the dark-mode image-inversion toggle; both are
-  /// value-equatable, so we cache the latest pair and reuse the string
+  /// the reader theme. Reader themes are value-equatable, so we cache
+  /// the latest value and reuse the string
   /// across rebuilds triggered by chrome/highlight/scrim emits — those
-  /// don't change either input but used to re-run the (~80-line)
-  /// StringBuffer build every frame.
+  /// don't change this input but used to re-run the StringBuffer build
+  /// every frame.
   String? _cachedCustomCSS;
   ReaderThemeData? _lastCssTheme;
-  bool? _lastCssInvertImages;
 
-  String _customCSSFor(ReaderThemeData theme, bool invertImagesInDark) {
+  String _customCSSFor(ReaderThemeData theme) {
     final cached = _cachedCustomCSS;
-    if (cached != null &&
-        _lastCssTheme == theme &&
-        _lastCssInvertImages == invertImagesInDark) {
+    if (cached != null && _lastCssTheme == theme) {
       return cached;
     }
     _lastCssTheme = theme;
-    _lastCssInvertImages = invertImagesInDark;
     return _cachedCustomCSS = buildBookCustomCSS(
       theme: theme,
-      invertImagesInDark: invertImagesInDark,
     );
   }
 
@@ -1898,10 +1909,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         );
     final fontPreset = ReaderFontPreset.fromId(appearance.fontId);
     final layout = BookLayoutPreset.fromId(appearance.layoutId).data;
-    final customCSS = _customCSSFor(
-      widget.readerTheme,
-      appearance.invertImagesInDark,
-    );
+    final customCSS = _customCSSFor(widget.readerTheme);
 
     final readerSurface = BookReaderWebView(
       // Parent's GlobalKey when provided (lets progress chrome seek
@@ -2010,20 +2018,30 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
                 child: SizedBox(
                   width: 28,
                   height: 28,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.4,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      widget.readerTheme.primaryTextColor.withValues(
-                        alpha: 0.55,
-                      ),
-                    ),
-                  ),
+                  child: _ReaderLoadingIndicator(theme: widget.readerTheme),
                 ),
               ),
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ReaderLoadingIndicator extends StatelessWidget {
+  const _ReaderLoadingIndicator({required this.theme});
+
+  final ReaderThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return CircularProgressIndicator(
+      strokeWidth: 2.4,
+      backgroundColor: readerLoadingIndicatorTrackColor(theme),
+      valueColor: AlwaysStoppedAnimation<Color>(
+        readerLoadingIndicatorColor(theme),
+      ),
     );
   }
 }

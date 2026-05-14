@@ -26,19 +26,34 @@ void main() {
     );
 
     test('emits accent link color from theme', () {
-      final css = buildBookCustomCSS(
-        theme: lightTheme,
-        invertImagesInDark: true,
-      );
+      final css = buildBookCustomCSS(theme: lightTheme);
       expect(css, contains('a:link, a:visited'));
       expect(css, contains('#b86a2d'));
     });
 
-    test('emits blockquote rule with divider color', () {
-      final css = buildBookCustomCSS(
-        theme: lightTheme,
-        invertImagesInDark: true,
+    test('forces readable text colors in dark themes', () {
+      final css = buildBookCustomCSS(theme: darkTheme);
+      expect(
+        css,
+        contains(
+          'html, body { color-scheme: dark; color: #f1e7d9 !important; }',
+        ),
       );
+      expect(css, contains('h1, h2, h3, h4, h5, h6'));
+      expect(css, contains('pre, code, kbd, samp'));
+      expect(css, contains('color: #f1e7d9 !important'));
+      expect(css, contains('color: #baad9b !important'));
+      expect(css, isNot(contains('img, canvas, svg { filter')));
+    });
+
+    test('does not force dark text normalization in light themes', () {
+      final css = buildBookCustomCSS(theme: lightTheme);
+      expect(css, isNot(contains('color-scheme: dark')));
+      expect(css, isNot(contains('color: #2a221b !important')));
+    });
+
+    test('emits blockquote rule with divider color', () {
+      final css = buildBookCustomCSS(theme: lightTheme);
       expect(css, contains('blockquote'));
       expect(css, contains('#d9cab4'));
       expect(css, contains('text-indent: 0 !important'));
@@ -46,10 +61,7 @@ void main() {
     });
 
     test('emits semantic code/pre rules with panel color', () {
-      final css = buildBookCustomCSS(
-        theme: lightTheme,
-        invertImagesInDark: true,
-      );
+      final css = buildBookCustomCSS(theme: lightTheme);
       expect(css, contains('code {'));
       expect(css, contains('kbd {'));
       expect(css, contains('samp {'));
@@ -77,10 +89,7 @@ void main() {
     });
 
     test('emits safe word wrapping and wraps code blocks inside columns', () {
-      final css = buildBookCustomCSS(
-        theme: lightTheme,
-        invertImagesInDark: true,
-      );
+      final css = buildBookCustomCSS(theme: lightTheme);
       expect(css, contains('-webkit-text-size-adjust: 100% !important'));
       expect(css, contains('body, p, li, blockquote, figcaption'));
       expect(css, contains('white-space: normal !important'));
@@ -94,10 +103,7 @@ void main() {
     });
 
     test('emits table and figure rules outside prose layout', () {
-      final css = buildBookCustomCSS(
-        theme: lightTheme,
-        invertImagesInDark: true,
-      );
+      final css = buildBookCustomCSS(theme: lightTheme);
       expect(css, contains('table {'));
       expect(css, contains('.readflex-wide-table'));
       expect(css, contains('figure {'));
@@ -106,79 +112,39 @@ void main() {
     });
 
     test('emits wide math/media containment rules', () {
-      final css = buildBookCustomCSS(
-        theme: lightTheme,
-        invertImagesInDark: true,
-      );
+      final css = buildBookCustomCSS(theme: lightTheme);
       expect(css, contains('table img, table svg, table canvas'));
       expect(css, contains('math, mjx-container'));
       expect(css, contains('overflow-x: auto'));
     });
 
     test('emits heading size rules', () {
-      final css = buildBookCustomCSS(
-        theme: lightTheme,
-        invertImagesInDark: true,
-      );
+      final css = buildBookCustomCSS(theme: lightTheme);
       expect(css, contains('h1 { font-size: 1.8em !important; }'));
       expect(css, contains('h2 { font-size: 1.5em !important; }'));
       expect(css, contains('h3 { font-size: 1.3em !important; }'));
       expect(css, contains('h4, h5, h6 { font-size: 1.1em !important; }'));
     });
 
-    test('includes image invert filter when dark theme and flag enabled', () {
-      final css = buildBookCustomCSS(
-        theme: darkTheme,
-        invertImagesInDark: true,
-      );
-      expect(css, contains('img, canvas, svg'));
-      expect(css, contains('filter: invert(100%) hue-rotate(180deg)'));
-    });
-
-    test('omits image invert filter when dark theme but flag disabled', () {
-      final css = buildBookCustomCSS(
-        theme: darkTheme,
-        invertImagesInDark: false,
-      );
+    test('does not emit image inversion in dark themes', () {
+      final css = buildBookCustomCSS(theme: darkTheme);
       expect(css, isNot(contains('filter: invert')));
     });
 
-    test(
-      'omits image invert filter for light theme even with flag enabled',
-      () {
-        final css = buildBookCustomCSS(
-          theme: lightTheme,
-          invertImagesInDark: true,
-        );
-        expect(css, isNot(contains('filter: invert')));
-      },
-    );
-
-    test('base rules emitted regardless of invert flag', () {
-      final cssOn = buildBookCustomCSS(
-        theme: lightTheme,
-        invertImagesInDark: true,
-      );
-      final cssOff = buildBookCustomCSS(
-        theme: lightTheme,
-        invertImagesInDark: false,
-      );
-      for (final css in [cssOn, cssOff]) {
-        expect(css, contains('a:link, a:visited'));
-        expect(css, contains('blockquote'));
-        expect(css, contains('code {'));
-        expect(css, contains('kbd {'));
-        expect(css, contains('samp {'));
-        expect(css, contains('pre, .readflex-code-block'));
-        expect(css, contains('h1 { font-size'));
-      }
+    test('base rules are emitted without image inversion', () {
+      final css = buildBookCustomCSS(theme: lightTheme);
+      expect(css, contains('a:link, a:visited'));
+      expect(css, contains('blockquote'));
+      expect(css, contains('code {'));
+      expect(css, contains('kbd {'));
+      expect(css, contains('samp {'));
+      expect(css, contains('pre, .readflex-code-block'));
+      expect(css, contains('h1 { font-size'));
+      expect(css, isNot(contains('filter: invert')));
     });
 
     test('uses !important to win over publisher CSS', () {
-      final css = buildBookCustomCSS(
-        theme: lightTheme,
-        invertImagesInDark: true,
-      );
+      final css = buildBookCustomCSS(theme: lightTheme);
       expect('!important'.allMatches(css).length, greaterThan(5));
     });
 
@@ -186,19 +152,13 @@ void main() {
       'does not emit optimizeLegibility (traps Android Chromium in a '
       'paginator ResizeObserver loop on web-font load)',
       () {
-        final css = buildBookCustomCSS(
-          theme: lightTheme,
-          invertImagesInDark: true,
-        );
+        final css = buildBookCustomCSS(theme: lightTheme);
         expect(css, isNot(contains('optimizeLegibility')));
       },
     );
 
     test('keeps code block wrapping for pre descendants', () {
-      final css = buildBookCustomCSS(
-        theme: lightTheme,
-        invertImagesInDark: true,
-      );
+      final css = buildBookCustomCSS(theme: lightTheme);
       expect(css, contains('pre code, pre kbd, pre samp'));
       expect(css, contains('word-break: inherit !important'));
     });

@@ -268,7 +268,7 @@ class Preferences {
     this.readerTextScale = 1.0,
     this.readerLineHeight = 1.55,
     this.readerSideMargin = 6.0,
-    this.readerInvertImagesInDark = true,
+    this.readerInvertImagesInDark = false,
     this.readerOverrideFont = true,
     this.readerOverrideColor = true,
     this.readerUseBookLayout = true,
