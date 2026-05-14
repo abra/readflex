@@ -43,6 +43,15 @@ void main() {
       expect(result.first.front, 'F1');
     });
 
+    test('getFlashcardCountByDeck returns deck count', () async {
+      await repo.addFlashcard(deckId: 'd1', front: 'F1', back: 'B1');
+      await repo.addFlashcard(deckId: 'd1', front: 'F2', back: 'B2');
+      await repo.addFlashcard(deckId: 'd2', front: 'F3', back: 'B3');
+
+      expect(await repo.getFlashcardCountByDeck('d1'), 2);
+      expect(await repo.getFlashcardCountByDeck('missing'), 0);
+    });
+
     test('getFlashcardById returns correct flashcard', () async {
       final created = await repo.addFlashcard(
         deckId: 'd1',

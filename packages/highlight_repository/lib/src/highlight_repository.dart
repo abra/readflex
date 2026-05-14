@@ -42,6 +42,14 @@ class HighlightRepository {
     }
   }
 
+  Future<int> getHighlightCountBySource(String sourceId) async {
+    try {
+      return await _dao.highlightCountBySource(sourceId);
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
   Future<Highlight?> getHighlightById(String id) async {
     try {
       final row = await _dao.highlightById(id);

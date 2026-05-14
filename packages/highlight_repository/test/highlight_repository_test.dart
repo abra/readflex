@@ -60,6 +60,27 @@ void main() {
       expect(result.first.text, 'Book highlight');
     });
 
+    test('getHighlightCountBySource returns source count', () async {
+      await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.book,
+        text: 'First',
+      );
+      await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.book,
+        text: 'Second',
+      );
+      await repo.addHighlight(
+        sourceId: 's2',
+        sourceType: SourceType.book,
+        text: 'Other',
+      );
+
+      expect(await repo.getHighlightCountBySource('s1'), 2);
+      expect(await repo.getHighlightCountBySource('missing'), 0);
+    });
+
     test('getHighlightById returns correct highlight', () async {
       final created = await repo.addHighlight(
         sourceId: 's1',

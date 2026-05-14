@@ -43,6 +43,15 @@ void main() {
     expect(result.first.id, 'h1');
   });
 
+  test('highlightCountBySource counts only source highlights', () async {
+    await dao.insertHighlight(makeHighlight(id: 'h1', sourceId: 's1'));
+    await dao.insertHighlight(makeHighlight(id: 'h2', sourceId: 's1'));
+    await dao.insertHighlight(makeHighlight(id: 'h3', sourceId: 's2'));
+
+    expect(await dao.highlightCountBySource('s1'), 2);
+    expect(await dao.highlightCountBySource('missing'), 0);
+  });
+
   test('deleteHighlightsBySource removes all for source', () async {
     await dao.insertHighlight(makeHighlight(id: 'h1', sourceId: 's1'));
     await dao.insertHighlight(makeHighlight(id: 'h2', sourceId: 's1'));

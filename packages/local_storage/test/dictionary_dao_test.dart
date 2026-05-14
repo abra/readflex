@@ -44,6 +44,16 @@ void main() {
     expect(result.first.id, 'e1');
   });
 
+  test('entryCountBySource counts only source entries', () async {
+    await dao.insertEntry(makeEntry(id: 'e1', sourceId: 's1'));
+    await dao.insertEntry(makeEntry(id: 'e2', sourceId: 's1'));
+    await dao.insertEntry(makeEntry(id: 'e3', sourceId: 's2'));
+    await dao.insertEntry(makeEntry(id: 'e4'));
+
+    expect(await dao.entryCountBySource('s1'), 2);
+    expect(await dao.entryCountBySource('missing'), 0);
+  });
+
   test('updateEntry modifies translation', () async {
     await dao.insertEntry(makeEntry());
     await dao.updateEntry(

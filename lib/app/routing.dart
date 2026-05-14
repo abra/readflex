@@ -185,6 +185,9 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
             sourceId: sourceId,
             initialSource: initialSource,
             bookRepository: deps.bookRepository,
+            highlightRepository: deps.highlightRepository,
+            flashcardRepository: deps.flashcardRepository,
+            dictionaryRepository: deps.dictionaryRepository,
             onReadPressed: (source) async {
               await context.push(AppRoutes.reader(source.id), extra: source);
             },

@@ -23,6 +23,15 @@ class DictionaryDao extends DatabaseAccessor<AppDatabase>
             ..orderBy([(t) => OrderingTerm.desc(t.addedAt)]))
           .get();
 
+  Future<int> entryCountBySource(String sourceId) {
+    final count = dictionaryTable.id.count();
+    return (selectOnly(dictionaryTable)
+          ..addColumns([count])
+          ..where(dictionaryTable.sourceId.equals(sourceId)))
+        .map((row) => row.read(count) ?? 0)
+        .getSingle();
+  }
+
   Future<DictionaryTableData?> entryById(String id) => (select(
     dictionaryTable,
   )..where((t) => t.id.equals(id))).getSingleOrNull();

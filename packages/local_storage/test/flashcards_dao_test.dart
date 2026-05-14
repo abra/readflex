@@ -40,4 +40,13 @@ void main() {
     final result = await dao.flashcardsByDeck('d1');
     expect(result, hasLength(1));
   });
+
+  test('flashcardCountByDeck counts only deck cards', () async {
+    await dao.insertFlashcard(makeCard(id: 'f1', deckId: 'd1'));
+    await dao.insertFlashcard(makeCard(id: 'f2', deckId: 'd1'));
+    await dao.insertFlashcard(makeCard(id: 'f3', deckId: 'd2'));
+
+    expect(await dao.flashcardCountByDeck('d1'), 2);
+    expect(await dao.flashcardCountByDeck('missing'), 0);
+  });
 }

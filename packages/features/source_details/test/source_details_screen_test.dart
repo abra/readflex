@@ -1,8 +1,11 @@
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
+import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:highlight_repository/highlight_repository.dart';
 import 'package:source_details/source_details.dart';
 
 final _newSource = Book(
@@ -17,9 +20,15 @@ final _newSource = Book(
 void main() {
   group('SourceDetailsScreen', () {
     late _FakeBookRepository repository;
+    late _FakeHighlightRepository highlightRepository;
+    late _FakeFlashcardRepository flashcardRepository;
+    late _FakeDictionaryRepository dictionaryRepository;
 
     setUp(() {
       repository = _FakeBookRepository()..source = _newSource;
+      highlightRepository = _FakeHighlightRepository()..count = 2;
+      flashcardRepository = _FakeFlashcardRepository()..count = 3;
+      dictionaryRepository = _FakeDictionaryRepository()..count = 4;
     });
 
     testWidgets('renders initial source details with start action', (
@@ -27,6 +36,9 @@ void main() {
     ) async {
       await tester.pumpSourceDetails(
         repository: repository,
+        highlightRepository: highlightRepository,
+        flashcardRepository: flashcardRepository,
+        dictionaryRepository: dictionaryRepository,
         initialSource: _newSource,
       );
 
@@ -50,6 +62,10 @@ void main() {
       expect(find.text('Highlights'), findsOneWidget);
       expect(find.text('Flashcards'), findsOneWidget);
       expect(find.text('Dictionary'), findsOneWidget);
+      expect(find.text('2 saved passages'), findsOneWidget);
+      expect(find.text('3 cards created'), findsOneWidget);
+      expect(find.text('4 words collected'), findsOneWidget);
+      expect(find.byIcon(AppIcons.chevronRight), findsNWidgets(3));
     });
 
     testWidgets(
@@ -65,6 +81,9 @@ void main() {
 
         await tester.pumpSourceDetails(
           repository: repository,
+          highlightRepository: highlightRepository,
+          flashcardRepository: flashcardRepository,
+          dictionaryRepository: dictionaryRepository,
           initialSource: openedSource,
           onReadPressed: (source) async => selectedSource = source,
         );
@@ -81,13 +100,16 @@ void main() {
     ) async {
       await tester.pumpSourceDetails(
         repository: repository,
+        highlightRepository: highlightRepository,
+        flashcardRepository: flashcardRepository,
+        dictionaryRepository: dictionaryRepository,
         initialSource: _newSource,
       );
 
       final heroSize = tester.getSize(find.byType(Hero));
 
-      expect(heroSize.width, 220);
-      expect(heroSize.height, 330);
+      expect(heroSize.width, 184);
+      expect(heroSize.height, 276);
     });
   });
 }
@@ -95,6 +117,9 @@ void main() {
 extension on WidgetTester {
   Future<void> pumpSourceDetails({
     required BookRepository repository,
+    HighlightRepository? highlightRepository,
+    FlashcardRepository? flashcardRepository,
+    DictionaryRepository? dictionaryRepository,
     Book? initialSource,
     Future<void> Function(Book source)? onReadPressed,
   }) async {
@@ -104,6 +129,12 @@ extension on WidgetTester {
         home: SourceDetailsScreen(
           sourceId: initialSource?.id ?? 'source-1',
           bookRepository: repository,
+          highlightRepository:
+              highlightRepository ?? _FakeHighlightRepository(),
+          flashcardRepository:
+              flashcardRepository ?? _FakeFlashcardRepository(),
+          dictionaryRepository:
+              dictionaryRepository ?? _FakeDictionaryRepository(),
           initialSource: initialSource,
           onReadPressed: onReadPressed ?? (_) async {},
         ),
@@ -119,6 +150,36 @@ class _FakeBookRepository implements BookRepository {
   @override
   Future<Book?> getBookById(String id) async =>
       source?.id == id ? source : null;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakeHighlightRepository implements HighlightRepository {
+  int count = 0;
+
+  @override
+  Future<int> getHighlightCountBySource(String sourceId) async => count;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakeFlashcardRepository implements FlashcardRepository {
+  int count = 0;
+
+  @override
+  Future<int> getFlashcardCountByDeck(String deckId) async => count;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakeDictionaryRepository implements DictionaryRepository {
+  int count = 0;
+
+  @override
+  Future<int> getEntryCountBySource(String sourceId) async => count;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

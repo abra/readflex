@@ -39,6 +39,14 @@ class DictionaryRepository {
     }
   }
 
+  Future<int> getEntryCountBySource(String sourceId) async {
+    try {
+      return await _dao.entryCountBySource(sourceId);
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
   Future<DictionaryEntry?> getEntryById(String id) async {
     try {
       final row = await _dao.entryById(id);

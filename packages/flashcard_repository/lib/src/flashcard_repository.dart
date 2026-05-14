@@ -45,6 +45,14 @@ class FlashcardRepository {
     }
   }
 
+  Future<int> getFlashcardCountByDeck(String deckId) async {
+    try {
+      return await _dao.flashcardCountByDeck(deckId);
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
   Future<Flashcard?> getFlashcardById(String id) async {
     try {
       final row = await _dao.flashcardById(id);

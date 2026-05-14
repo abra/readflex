@@ -23,6 +23,15 @@ class FlashcardsDao extends DatabaseAccessor<AppDatabase>
             ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
           .get();
 
+  Future<int> flashcardCountByDeck(String deckId) {
+    final count = flashcardsTable.id.count();
+    return (selectOnly(flashcardsTable)
+          ..addColumns([count])
+          ..where(flashcardsTable.deckId.equals(deckId)))
+        .map((row) => row.read(count) ?? 0)
+        .getSingle();
+  }
+
   Future<FlashcardsTableData?> flashcardById(String id) => (select(
     flashcardsTable,
   )..where((t) => t.id.equals(id))).getSingleOrNull();

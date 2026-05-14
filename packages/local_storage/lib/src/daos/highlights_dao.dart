@@ -23,6 +23,15 @@ class HighlightsDao extends DatabaseAccessor<AppDatabase>
             ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
           .get();
 
+  Future<int> highlightCountBySource(String sourceId) {
+    final count = highlightsTable.id.count();
+    return (selectOnly(highlightsTable)
+          ..addColumns([count])
+          ..where(highlightsTable.sourceId.equals(sourceId)))
+        .map((row) => row.read(count) ?? 0)
+        .getSingle();
+  }
+
   Future<HighlightsTableData?> highlightById(String id) => (select(
     highlightsTable,
   )..where((t) => t.id.equals(id))).getSingleOrNull();

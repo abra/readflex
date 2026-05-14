@@ -48,6 +48,30 @@ void main() {
       expect(result.first.word, 'book word');
     });
 
+    test('getEntryCountBySource returns source count', () async {
+      await repo.addEntry(
+        word: 'first',
+        translation: 'первый',
+        sourceId: 's1',
+        sourceType: SourceType.book,
+      );
+      await repo.addEntry(
+        word: 'second',
+        translation: 'второй',
+        sourceId: 's1',
+        sourceType: SourceType.book,
+      );
+      await repo.addEntry(
+        word: 'other',
+        translation: 'другой',
+        sourceId: 's2',
+        sourceType: SourceType.book,
+      );
+
+      expect(await repo.getEntryCountBySource('s1'), 2);
+      expect(await repo.getEntryCountBySource('missing'), 0);
+    });
+
     test('getEntryById returns correct entry', () async {
       final created = await repo.addEntry(word: 'find', translation: 'найти');
       final found = await repo.getEntryById(created.id);

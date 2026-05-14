@@ -3,15 +3,18 @@ import 'dart:math' as math;
 
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
+import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:highlight_repository/highlight_repository.dart';
 
 import 'source_details_bloc.dart';
 
-const _coverMaxWidth = 220.0;
-const _coverMinWidth = 168.0;
-const _coverScreenWidthFactor = 0.54;
+const _coverMaxWidth = 184.0;
+const _coverMinWidth = 140.0;
+const _coverScreenWidthFactor = 0.45;
 const _coverAspectRatio = 2 / 3;
 const _titleMaxLines = 3;
 const _authorMaxLines = 2;
@@ -21,6 +24,9 @@ class SourceDetailsScreen extends StatelessWidget {
   const SourceDetailsScreen({
     required this.sourceId,
     required this.bookRepository,
+    required this.highlightRepository,
+    required this.flashcardRepository,
+    required this.dictionaryRepository,
     required this.onReadPressed,
     this.initialSource,
     super.key,
@@ -28,6 +34,9 @@ class SourceDetailsScreen extends StatelessWidget {
 
   final String sourceId;
   final BookRepository bookRepository;
+  final HighlightRepository highlightRepository;
+  final FlashcardRepository flashcardRepository;
+  final DictionaryRepository dictionaryRepository;
   final Future<void> Function(Book source) onReadPressed;
   final Book? initialSource;
 
@@ -38,6 +47,9 @@ class SourceDetailsScreen extends StatelessWidget {
     return BlocProvider(
       create: (_) => SourceDetailsBloc(
         bookRepository: bookRepository,
+        highlightRepository: highlightRepository,
+        flashcardRepository: flashcardRepository,
+        dictionaryRepository: dictionaryRepository,
         initialSource: initialSource,
       )..add(SourceDetailsLoadRequested(sourceId)),
       child: SourceDetailsView(
@@ -82,6 +94,7 @@ class SourceDetailsView extends StatelessWidget {
               ),
               SourceDetailsStatus.success => _SourceDetailsContent(
                 source: state.source!,
+                reviewSummary: state.reviewSummary,
                 onReadPressed: onReadPressed,
               ),
             },
@@ -152,10 +165,12 @@ class _SourceDetailsBottomBar extends StatelessWidget {
 class _SourceDetailsContent extends StatelessWidget {
   const _SourceDetailsContent({
     required this.source,
+    required this.reviewSummary,
     required this.onReadPressed,
   });
 
   final Book source;
+  final SourceReviewSummary reviewSummary;
   final Future<void> Function(Book source) onReadPressed;
 
   @override
@@ -167,7 +182,7 @@ class _SourceDetailsContent extends StatelessWidget {
       _coverMaxWidth,
       math.max(_coverMinWidth, screenSize.width * _coverScreenWidthFactor),
     );
-    final topSpacer = math.max(AppSpacing.xl, screenSize.height * 0.06);
+    final topSpacer = math.max(AppSpacing.sm, screenSize.height * 0.02);
 
     return CustomScrollView(
       slivers: [
@@ -179,7 +194,7 @@ class _SourceDetailsContent extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.lg,
-                  AppSpacing.xl,
+                  AppSpacing.lg,
                   AppSpacing.lg,
                   AppSpacing.xl,
                 ),
@@ -201,7 +216,7 @@ class _SourceDetailsContent extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    const _ReviewActions(),
+                    _ReviewActions(summary: reviewSummary),
                     const SizedBox(height: AppSpacing.xl),
                   ],
                 ),
@@ -336,30 +351,44 @@ class _SourceCover extends StatelessWidget {
 }
 
 class _ReviewActions extends StatelessWidget {
-  const _ReviewActions();
+  const _ReviewActions({required this.summary});
+
+  final SourceReviewSummary summary;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: const [
-        Expanded(
-          child: _ReviewActionButton(
-            icon: AppIcons.highlight,
-            label: 'Highlights',
+    return Column(
+      children: [
+        _ReviewActionRow(
+          icon: AppIcons.highlight,
+          title: 'Highlights',
+          subtitle: _reviewSummaryLabel(
+            summary.highlightCount,
+            empty: 'No saved passages yet',
+            singular: '1 saved passage',
+            plural: 'saved passages',
           ),
         ),
-        SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: _ReviewActionButton(
-            icon: AppIcons.flashcard,
-            label: 'Flashcards',
+        const SizedBox(height: AppSpacing.sm),
+        _ReviewActionRow(
+          icon: AppIcons.flashcard,
+          title: 'Flashcards',
+          subtitle: _reviewSummaryLabel(
+            summary.flashcardCount,
+            empty: 'No cards created yet',
+            singular: '1 card created',
+            plural: 'cards created',
           ),
         ),
-        SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: _ReviewActionButton(
-            icon: AppIcons.dictionary,
-            label: 'Dictionary',
+        const SizedBox(height: AppSpacing.sm),
+        _ReviewActionRow(
+          icon: AppIcons.dictionary,
+          title: 'Dictionary',
+          subtitle: _reviewSummaryLabel(
+            summary.dictionaryEntryCount,
+            empty: 'No words collected yet',
+            singular: '1 word collected',
+            plural: 'words collected',
           ),
         ),
       ],
@@ -367,35 +396,28 @@ class _ReviewActions extends StatelessWidget {
   }
 }
 
-class _ReviewActionButton extends StatelessWidget {
-  const _ReviewActionButton({
+class _ReviewActionRow extends StatelessWidget {
+  const _ReviewActionRow({
     required this.icon,
-    required this.label,
+    required this.title,
+    required this.subtitle,
   });
 
   final IconData icon;
-  final String label;
+  final String title;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.text;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerHighest.withValues(alpha: 0.34),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(
-          color: colors.outlineVariant.withValues(alpha: 0.72),
-        ),
-      ),
+    return Material(
+      color: colors.surfaceContainerHighest.withValues(alpha: 0.30),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.md,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        child: Row(
           children: [
             DecoratedBox(
               decoration: BoxDecoration(
@@ -411,16 +433,38 @@ class _ReviewActionButton extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: text.labelMedium.copyWith(
-                color: colors.onSurface,
-                fontWeight: FontWeight.w600,
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.bodyMedium.copyWith(
+                      color: colors.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.labelSmall.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Icon(
+              AppIcons.chevronRight,
+              size: AppIconSize.sm,
+              color: colors.onSurfaceVariant.withValues(alpha: 0.60),
             ),
           ],
         ),
@@ -433,6 +477,18 @@ String _readButtonLabel(Book source) =>
     source.readingProgress > 0 || source.lastOpenedAt != null
     ? 'Continue reading'
     : 'Start reading';
+
+String _reviewSummaryLabel(
+  int count, {
+  required String empty,
+  required String singular,
+  required String plural,
+}) {
+  if (count == 0) return empty;
+  if (count == 1) return singular;
+  final value = count > 999 ? '999+' : '$count';
+  return '$value $plural';
+}
 
 String _progressLabel(Book source) {
   if (source.isFinished) return 'Finished';
