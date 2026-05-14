@@ -23,8 +23,6 @@ class SourceDetailsScreen extends StatelessWidget {
     required this.bookRepository,
     required this.onReadPressed,
     this.initialSource,
-    this.onBookmarkPressed,
-    this.onMorePressed,
     super.key,
   });
 
@@ -32,8 +30,6 @@ class SourceDetailsScreen extends StatelessWidget {
   final BookRepository bookRepository;
   final Future<void> Function(Book source) onReadPressed;
   final Book? initialSource;
-  final VoidCallback? onBookmarkPressed;
-  final VoidCallback? onMorePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -47,8 +43,6 @@ class SourceDetailsScreen extends StatelessWidget {
       child: SourceDetailsView(
         sourceId: sourceId,
         onReadPressed: onReadPressed,
-        onBookmarkPressed: onBookmarkPressed,
-        onMorePressed: onMorePressed,
       ),
     );
   }
@@ -58,15 +52,11 @@ class SourceDetailsView extends StatelessWidget {
   const SourceDetailsView({
     required this.sourceId,
     required this.onReadPressed,
-    this.onBookmarkPressed,
-    this.onMorePressed,
     super.key,
   });
 
   final String sourceId;
   final Future<void> Function(Book source) onReadPressed;
-  final VoidCallback? onBookmarkPressed;
-  final VoidCallback? onMorePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -105,8 +95,8 @@ class SourceDetailsView extends StatelessWidget {
             return const SizedBox.shrink();
           }
           return _SourceDetailsBottomBar(
-            onBookmarkPressed: onBookmarkPressed,
-            onMorePressed: onMorePressed,
+            source: state.source!,
+            onReadPressed: onReadPressed,
           );
         },
       ),
@@ -116,12 +106,12 @@ class SourceDetailsView extends StatelessWidget {
 
 class _SourceDetailsBottomBar extends StatelessWidget {
   const _SourceDetailsBottomBar({
-    this.onBookmarkPressed,
-    this.onMorePressed,
+    required this.source,
+    required this.onReadPressed,
   });
 
-  final VoidCallback? onBookmarkPressed;
-  final VoidCallback? onMorePressed;
+  final Book source;
+  final Future<void> Function(Book source) onReadPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -138,23 +128,20 @@ class _SourceDetailsBottomBar extends StatelessWidget {
             icon: const Icon(AppIcons.back, size: AppIconSize.md),
           ),
         ),
-        const Spacer(),
-        SizedBox.square(
-          dimension: AppSizes.buttonHeight,
-          child: IconButton(
-            tooltip: 'Bookmark',
-            onPressed: onBookmarkPressed,
-            style: style,
-            icon: const Icon(AppIcons.bookmark, size: AppIconSize.sm),
-          ),
-        ),
-        SizedBox.square(
-          dimension: AppSizes.buttonHeight,
-          child: IconButton(
-            tooltip: 'More',
-            onPressed: onMorePressed,
-            style: style,
-            icon: const Icon(AppIcons.moreHorizontal, size: AppIconSize.sm),
+        Expanded(
+          child: SizedBox(
+            height: AppSizes.buttonHeight,
+            child: FilledButton.icon(
+              onPressed: () async {
+                await onReadPressed(source);
+                if (!context.mounted) return;
+                context.read<SourceDetailsBloc>().add(
+                  SourceDetailsLoadRequested(source.id),
+                );
+              },
+              icon: const Icon(AppIcons.book, size: AppIconSize.sm),
+              label: Text(_readButtonLabel(source)),
+            ),
           ),
         ),
       ],
@@ -205,17 +192,6 @@ class _SourceDetailsContent extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     _SourceMetadata(source: source),
-                    const SizedBox(height: AppSpacing.xl),
-                    FilledButton(
-                      onPressed: () async {
-                        await onReadPressed(source);
-                        if (!context.mounted) return;
-                        context.read<SourceDetailsBloc>().add(
-                          SourceDetailsLoadRequested(source.id),
-                        );
-                      },
-                      child: Text(_readButtonLabel(source)),
-                    ),
                     const SizedBox(height: AppSpacing.xl),
                     Text(
                       'Review',
