@@ -6,6 +6,9 @@ import { Translator, TranslationMode } from './translator.js'
 const { TTS } = await import('./tts.js')
 
 const SEARCH_PREFIX = 'foliate-search:'
+const SEARCH_HIGHLIGHT_COLOR = '#00d4d8'
+const SEARCH_HIGHLIGHT_OPACITY = '.68'
+const SEARCH_HIGHLIGHT_PADDING = 1
 
 class History extends EventTarget {
   #arr = []
@@ -345,7 +348,11 @@ export class View extends HTMLElement {
           return
         }
         const range = doc ? anchor(doc) : anchor
-        overlayer.add(value, range, Overlayer.highlight, { color: '#ffb000ff' });
+        overlayer.add(value, range, Overlayer.highlight, {
+          color: SEARCH_HIGHLIGHT_COLOR,
+          opacity: SEARCH_HIGHLIGHT_OPACITY,
+          padding: SEARCH_HIGHLIGHT_PADDING,
+        });
       }
       return
     }

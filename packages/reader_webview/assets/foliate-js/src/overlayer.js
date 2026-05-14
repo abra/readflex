@@ -177,11 +177,16 @@ export class Overlayer {
         return g
     }
     static highlight(rects, options = {}) {
-        const { color = 'red', padding = 0 } = options
+        const {
+            color = 'red',
+            padding = 0,
+            opacity = 'var(--overlayer-highlight-opacity, .3)',
+            mixBlendMode = 'var(--overlayer-highlight-blend-mode, normal)',
+        } = options
         const g = createSVGElement('g')
         g.setAttribute('fill', color)
-        g.style.opacity = 'var(--overlayer-highlight-opacity, .3)'
-        g.style.mixBlendMode = 'var(--overlayer-highlight-blend-mode, normal)'
+        g.style.opacity = opacity
+        g.style.mixBlendMode = mixBlendMode
         for (const { left, top, height, width } of rects) {
             const el = createSVGElement('rect')
             el.setAttribute('x', left - padding)
