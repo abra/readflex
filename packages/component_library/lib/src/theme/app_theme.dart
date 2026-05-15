@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'app_system_ui_overlay.dart';
 import 'app_typography.dart';
 import 'components/app_button_themes.dart';
 import 'components/app_card_theme.dart';
@@ -206,6 +207,11 @@ ThemeData _assembleTheme({
   required Brightness brightness,
   required AppColorsExt colorsExt,
 }) {
+  final systemOverlayStyle = appSystemUiOverlayStyle(
+    brightness: brightness,
+    backgroundColor: palette.background,
+  );
+
   return ThemeData(
     useMaterial3: true,
     brightness: brightness,
@@ -240,6 +246,7 @@ ThemeData _assembleTheme({
       scrolledUnderElevation: AppElevation.level0,
       elevation: AppElevation.level0,
       toolbarHeight: AppSizes.appBarHeight,
+      systemOverlayStyle: systemOverlayStyle,
       titleTextStyle: textTheme.titleMedium?.copyWith(
         fontWeight: FontWeight.w600,
       ),

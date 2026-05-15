@@ -384,7 +384,11 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     // pulls colours from the app theme themselves; they don't take
     // a `readerTheme` prop any more.
     final readerTheme = ReaderThemePreset.fromId(appearance.themeId).data;
-    final systemUiStyle = readerSystemUiOverlayStyle(readerTheme);
+    final systemUiStyle = readerSystemUiOverlayStyle(
+      readerTheme: readerTheme,
+      chromeVisible: uiState.chromeVisible,
+      chromeSurfaceColor: context.colors.surface,
+    );
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemUiStyle,

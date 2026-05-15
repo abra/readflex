@@ -35,6 +35,34 @@ void main() {
       expect(theme.extension<AppColorsExt>(), isNotNull);
     });
 
+    test('light() uses dark system icons over light surfaces', () {
+      final style = appSystemUiOverlayStyle(
+        brightness: Brightness.light,
+        backgroundColor: PrimitiveColors.gray50,
+      );
+
+      expect(style.statusBarColor, Colors.transparent);
+      expect(style.statusBarIconBrightness, Brightness.dark);
+      expect(style.statusBarBrightness, Brightness.light);
+      expect(style.systemNavigationBarColor, PrimitiveColors.gray50);
+      expect(style.systemNavigationBarIconBrightness, Brightness.dark);
+      expect(style.systemStatusBarContrastEnforced, isFalse);
+      expect(style.systemNavigationBarContrastEnforced, isFalse);
+    });
+
+    test('dark() uses light system icons over dark surfaces', () {
+      final theme = AppTheme.dark();
+      final style = theme.appBarTheme.systemOverlayStyle;
+
+      expect(style?.statusBarColor, Colors.transparent);
+      expect(style?.statusBarIconBrightness, Brightness.light);
+      expect(style?.statusBarBrightness, Brightness.dark);
+      expect(style?.systemNavigationBarColor, PrimitiveColors.darkGray900);
+      expect(style?.systemNavigationBarIconBrightness, Brightness.light);
+      expect(style?.systemStatusBarContrastEnforced, isFalse);
+      expect(style?.systemNavigationBarContrastEnforced, isFalse);
+    });
+
     testWidgets('Theme.of(context).ext returns AppColorsExt', (tester) async {
       late AppColorsExt result;
 

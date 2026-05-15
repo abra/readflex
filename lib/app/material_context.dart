@@ -7,6 +7,7 @@ import 'dart:io' show Platform;
 
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:preferences_service/preferences_service.dart';
@@ -87,9 +88,16 @@ class _MaterialContextState extends State<MaterialContext>
         darkTheme: AppTheme.dark(),
         routerConfig: _router,
         builder: (context, child) {
+          final theme = Theme.of(context);
           return KeyedSubtree(
             key: _globalKey,
-            child: _MediaQueryRootOverride(child: child!),
+            child: AnnotatedRegion<SystemUiOverlayStyle>(
+              value: appSystemUiOverlayStyle(
+                brightness: theme.brightness,
+                backgroundColor: theme.scaffoldBackgroundColor,
+              ),
+              child: _MediaQueryRootOverride(child: child!),
+            ),
           );
         },
       ),
