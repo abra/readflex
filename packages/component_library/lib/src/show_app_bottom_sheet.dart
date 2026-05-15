@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_radius.dart';
@@ -34,14 +35,20 @@ Future<T?> showAppBottomSheet<T>(
   var wasVisible = false;
   final dismissedCompleter = Completer<void>();
 
+  void restoreSystemUiOverlays() {
+    unawaited(SystemChrome.restoreSystemUIOverlays());
+  }
+
   void statusListener(AnimationStatus status) {
     if (status == AnimationStatus.forward ||
         status == AnimationStatus.completed) {
       wasVisible = true;
+      restoreSystemUiOverlays();
     }
     if (wasVisible &&
         status == AnimationStatus.dismissed &&
         !dismissedCompleter.isCompleted) {
+      restoreSystemUiOverlays();
       onFullyHidden?.call();
       dismissedCompleter.complete();
     }

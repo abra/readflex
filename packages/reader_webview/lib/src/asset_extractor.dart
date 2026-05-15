@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:path/path.dart' as p;
@@ -20,6 +21,15 @@ class AssetExtractor {
   /// or missing asset doesn't silently degrade the reader to a blank
   /// screen.
   final Logger? logger;
+
+  // Bump when bundled reader HTML/JS assets must be re-extracted even if the
+  // app version/build number did not change, e.g. release-mode device testing.
+  @visibleForTesting
+  static const assetRevision = 'reader_webview_assets_3';
+
+  @visibleForTesting
+  static String extractionVersionFor(String version) =>
+      '$version|$assetRevision';
 
   /// All asset paths relative to the package's `assets/` directory.
   /// The rootBundle key includes the `packages/reader_webview/` prefix.
@@ -54,8 +64,6 @@ class AssetExtractor {
     'assets/foliate-js/src/vendor/fflate.js',
     'assets/foliate-js/src/vendor/pdfjs/pdf.js',
     'assets/foliate-js/src/vendor/pdfjs/pdf.worker.js',
-    // foliate-js legacy bundle
-    'assets/foliate-js/dist/bundle.js',
   ];
 
   /// Reading-typography fonts copied from `component_library` so foliate-js
@@ -77,12 +85,15 @@ class AssetExtractor {
 
   /// Extracts all reader assets to [targetDirectory].
   ///
-  /// On unchanged [version], existing files are skipped. When [version]
-  /// differs from the last extracted version, all files are re-written.
+  /// On unchanged [version] and reader asset revision, existing files are
+  /// skipped. When either differs from the last extracted version, all files
+  /// are re-written.
   /// Pass `force: true` to unconditionally re-extract.
   Future<void> extractAll({required String version, bool force = false}) async {
     final versionFile = File(p.join(targetDirectory.path, '.asset_version'));
-    final shouldForce = force || !await _versionMatches(versionFile, version);
+    final extractionVersion = extractionVersionFor(version);
+    final shouldForce =
+        force || !await _versionMatches(versionFile, extractionVersion);
 
     for (final assetPath in _assetPaths) {
       await _extractOne(
@@ -102,7 +113,7 @@ class AssetExtractor {
 
     if (shouldForce) {
       await versionFile.parent.create(recursive: true);
-      await versionFile.writeAsString(version, flush: true);
+      await versionFile.writeAsString(extractionVersion, flush: true);
     }
   }
 

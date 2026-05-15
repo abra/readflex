@@ -50,5 +50,40 @@ void main() {
         ReaderTapAction.previousPage,
       );
     });
+
+    test('blocks page input only while reader chrome is visible', () {
+      expect(
+        shouldBlockReaderPageInput(
+          chromeVisible: true,
+          overlayVisible: false,
+          hasSelection: false,
+        ),
+        isTrue,
+      );
+      expect(
+        shouldBlockReaderPageInput(
+          chromeVisible: false,
+          overlayVisible: false,
+          hasSelection: false,
+        ),
+        isFalse,
+      );
+      expect(
+        shouldBlockReaderPageInput(
+          chromeVisible: true,
+          overlayVisible: true,
+          hasSelection: false,
+        ),
+        isFalse,
+      );
+      expect(
+        shouldBlockReaderPageInput(
+          chromeVisible: true,
+          overlayVisible: false,
+          hasSelection: true,
+        ),
+        isFalse,
+      );
+    });
   });
 }

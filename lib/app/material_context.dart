@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:preferences_service/preferences_service.dart';
+import 'package:readflex/app/app_system_ui_mode.dart';
 import 'package:reader_server/reader_server.dart';
 import 'package:readflex/app/dependency_scope.dart';
 import 'package:readflex/app/routing.dart';
@@ -80,26 +81,28 @@ class _MaterialContextState extends State<MaterialContext>
   Widget build(BuildContext context) {
     final themeMode = PreferencesScope.themeModeOf(context);
 
-    return ToastWrapper(
-      child: MaterialApp.router(
-        debugShowCheckedModeBanner: false,
-        themeMode: themeMode,
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
-        routerConfig: _router,
-        builder: (context, child) {
-          final theme = Theme.of(context);
-          return KeyedSubtree(
-            key: _globalKey,
-            child: AnnotatedRegion<SystemUiOverlayStyle>(
-              value: appSystemUiOverlayStyle(
-                brightness: theme.brightness,
-                backgroundColor: theme.scaffoldBackgroundColor,
+    return AppSystemUiMode(
+      child: ToastWrapper(
+        child: MaterialApp.router(
+          debugShowCheckedModeBanner: false,
+          themeMode: themeMode,
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          routerConfig: _router,
+          builder: (context, child) {
+            final theme = Theme.of(context);
+            return KeyedSubtree(
+              key: _globalKey,
+              child: AnnotatedRegion<SystemUiOverlayStyle>(
+                value: appSystemUiOverlayStyle(
+                  brightness: theme.brightness,
+                  backgroundColor: theme.scaffoldBackgroundColor,
+                ),
+                child: _MediaQueryRootOverride(child: child!),
               ),
-              child: _MediaQueryRootOverride(child: child!),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

@@ -577,6 +577,7 @@ const getReaderStylePrelude = ({ fontSize,
       --readflex-text-indent: ${textIndent}em;
       --readflex-paragraph-spacing: ${paragraphSpacing / 2}em;
       --readflex-font-color: ${fontColor};
+      --readflex-background-color: ${backgroundColor};
       --readflex-font-weight: ${fontWeight};
       --readflex-text-align: ${textAlign === 'auto' ? (justify ? 'justify' : 'start') : textAlign};
       --readflex-hyphens: ${hyphenate ? 'auto' : 'manual'};
@@ -640,7 +641,7 @@ const getCSS = style => {
         ${writingModeDecl}
         ${htmlColorDecl}
         ${backgroundImageDecl}
-        background-color: transparent !important;
+        background-color: var(--readflex-background-color) !important;
         letter-spacing: var(--readflex-letter-spacing);
         font-size: var(--readflex-font-size);
         orphans: 1;
@@ -648,8 +649,8 @@ const getCSS = style => {
     }
 
     body {
-        background: none !important;
-        background-color: transparent;
+        background-image: none !important;
+        background-color: var(--readflex-background-color) !important;
         padding: 0;
     }
 

@@ -31,6 +31,9 @@ class ReaderAppearanceState extends Equatable {
 
   bool get hasOverride => !sourceOverride.isEmpty;
 
+  bool get isFactoryDefault =>
+      effectiveAppearance == ReaderAppearancePreferences.defaults;
+
   @override
   List<Object?> get props => [
     globalAppearance,
@@ -61,6 +64,8 @@ class ReaderAppearanceCubit extends Cubit<ReaderAppearanceState> {
 
   static const double minTextScale = 0.85;
   static const double maxTextScale = 1.45;
+  static final double defaultTextScale =
+      ReaderAppearancePreferences.defaults.textScale;
   static const double textScaleStep = 0.05;
   static const List<double> lineHeightPresets = [1.2, 1.4, 1.6, 1.8, 2.0];
   static const double lineHeightMatchTolerance = 0.05;
@@ -124,7 +129,11 @@ class ReaderAppearanceCubit extends Cubit<ReaderAppearanceState> {
     _pendingTextScale = null;
     _textScaleCommitTimer?.cancel();
     _textScaleCommitTimer = null;
-    final next = state.sourceOverride.copyWith(textScale: null);
+    final next = state.sourceOverride.copyWith(
+      textScale: defaultTextScale == state.globalAppearance.textScale
+          ? null
+          : defaultTextScale,
+    );
     await _persistOverride(next);
   }
 
@@ -157,7 +166,50 @@ class ReaderAppearanceCubit extends Cubit<ReaderAppearanceState> {
     _sideMarginCommitTimer = Timer(_commitDebounce, _flushSideMargin);
   }
 
-  Future<void> reset() => _persistOverride(const ReaderAppearanceOverride());
+  Future<void> reset() async {
+    _textScaleCommitTimer?.cancel();
+    _lineHeightCommitTimer?.cancel();
+    _sideMarginCommitTimer?.cancel();
+    _textScaleCommitTimer = null;
+    _lineHeightCommitTimer = null;
+    _sideMarginCommitTimer = null;
+    _pendingTextScale = null;
+    _pendingLineHeight = null;
+    _pendingSideMargin = null;
+    await _persistOverride(_overrideForFactoryDefaults());
+  }
+
+  ReaderAppearanceOverride _overrideForFactoryDefaults() {
+    final defaults = ReaderAppearancePreferences.defaults;
+    final global = state.globalAppearance;
+    return ReaderAppearanceOverride(
+      themeId: defaults.themeId == global.themeId ? null : defaults.themeId,
+      fontId: defaults.fontId == global.fontId ? null : defaults.fontId,
+      layoutId: defaults.layoutId == global.layoutId ? null : defaults.layoutId,
+      textScale: defaults.textScale == global.textScale
+          ? null
+          : defaults.textScale,
+      lineHeight: defaults.lineHeight == global.lineHeight
+          ? null
+          : defaults.lineHeight,
+      sideMargin: defaults.sideMargin == global.sideMargin
+          ? null
+          : defaults.sideMargin,
+      invertImagesInDark:
+          defaults.invertImagesInDark == global.invertImagesInDark
+          ? null
+          : defaults.invertImagesInDark,
+      overrideFont: defaults.overrideFont == global.overrideFont
+          ? null
+          : defaults.overrideFont,
+      overrideColor: defaults.overrideColor == global.overrideColor
+          ? null
+          : defaults.overrideColor,
+      useBookLayout: defaults.useBookLayout == global.useBookLayout
+          ? null
+          : defaults.useBookLayout,
+    );
+  }
 
   Future<void> _flushTextScale() async {
     _textScaleCommitTimer = null;

@@ -4,6 +4,7 @@ import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_shadows.dart';
 import 'theme/tokens/app_sizes.dart';
 import 'theme/tokens/app_spacing.dart';
+import 'app_bottom_safe_area.dart';
 
 /// Thumb-friendly action bar anchored at the bottom of a screen.
 ///
@@ -33,8 +34,7 @@ class AppBottomActionBar extends StatelessWidget {
           ),
         ),
       ),
-      child: SafeArea(
-        top: false,
+      child: AppBottomSafeArea(
         child: SizedBox(
           height: AppSizes.navBarHeight,
           child: Padding(

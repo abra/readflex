@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:component_library/component_library.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -144,6 +145,16 @@ void main() {
     tester,
   ) async {
     var fullyHidden = false;
+    final systemCalls = <MethodCall>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          systemCalls.add(call);
+          return null;
+        });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+    });
 
     await tester.pumpWidget(
       MaterialApp(
@@ -184,6 +195,11 @@ void main() {
     await tester.tap(find.text('Open sheet'));
     await tester.pumpAndSettle();
 
+    final restoresAfterOpen = systemCalls
+        .where((call) => call.method == 'SystemChrome.restoreSystemUIOverlays')
+        .length;
+    expect(restoresAfterOpen, greaterThan(0));
+
     await tester.tap(find.text('Close sheet'));
     await tester.pump();
 
@@ -192,6 +208,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(fullyHidden, isTrue);
+    expect(
+      systemCalls
+          .where(
+            (call) => call.method == 'SystemChrome.restoreSystemUIOverlays',
+          )
+          .length,
+      greaterThan(restoresAfterOpen),
+    );
   });
 
   testWidgets('AppBottomActionBar renders provided actions', (tester) async {
@@ -221,7 +245,7 @@ void main() {
     expect(find.byIcon(AppIcons.bookmark), findsOneWidget);
     expect(
       tester.getSize(find.byType(AppBottomActionBar)).height,
-      AppSizes.navBarHeight,
+      AppSizes.navBarHeight + AppSpacing.lg,
     );
 
     final decoration =

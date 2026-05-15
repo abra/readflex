@@ -102,8 +102,15 @@ const segmenterSearch = function* (strs, query, options = {}) {
 
 export const search = (strs, query, options) => {
     const { granularity = 'grapheme', sensitivity = 'base' } = options
-    if (!Intl?.Segmenter || granularity === 'grapheme'
-    && (sensitivity === 'variant' || sensitivity === 'accent'))
+    // Full-book search runs on the UI WebView process. Android WebView's
+    // Intl.Segmenter can be extremely slow on long sections, so keep the
+    // common substring path on simple indexOf-based search and reserve
+    // segmentation for whole-word matching.
+    if (granularity !== 'word'
+        || typeof Intl === 'undefined'
+        || !Intl.Segmenter
+        || granularity === 'grapheme'
+        && (sensitivity === 'variant' || sensitivity === 'accent'))
         return simpleSearch(strs, query, options)
     return segmenterSearch(strs, query, options)
 }

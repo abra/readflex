@@ -28,4 +28,3 @@ flutter:
     - assets/foliate-js/src/
     - assets/foliate-js/src/vendor/
     - assets/foliate-js/src/vendor/pdfjs/
-    - assets/foliate-js/dist/

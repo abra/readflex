@@ -151,6 +151,28 @@ void main() {
       },
     );
 
+    test(
+      'resetTextScale returns to factory default instead of global scale',
+      () async {
+        await preferencesService.update(
+          (prefs) => prefs.copyWith(readerTextScale: 1.15),
+        );
+        final cubit = ReaderAppearanceCubit(
+          preferencesService: preferencesService,
+          sourceId: _sourceId,
+        );
+        addTearDown(cubit.close);
+
+        await cubit.resetTextScale();
+
+        expect(cubit.state.effectiveAppearance.textScale, 1.0);
+        expect(
+          preferencesService.readerAppearanceOverrideFor(_sourceId)?.textScale,
+          1.0,
+        );
+      },
+    );
+
     blocTest<ReaderAppearanceCubit, ReaderAppearanceState>(
       'commitSideMargin persists the source override',
       build: () => ReaderAppearanceCubit(
@@ -191,6 +213,34 @@ void main() {
           preferencesService.readerAppearanceOverrideFor(_sourceId),
           isNull,
         );
+      },
+    );
+
+    test(
+      'reset returns to factory defaults instead of global appearance',
+      () async {
+        await preferencesService.update(
+          (prefs) => prefs.copyWith(
+            readerThemeId: 'night',
+            readerTextScale: 1.15,
+          ),
+        );
+        final cubit = ReaderAppearanceCubit(
+          preferencesService: preferencesService,
+          sourceId: _sourceId,
+        );
+        addTearDown(cubit.close);
+
+        await cubit.reset();
+
+        expect(cubit.state.isFactoryDefault, isTrue);
+        expect(cubit.state.effectiveAppearance.themeId, 'paper');
+        expect(cubit.state.effectiveAppearance.textScale, 1.0);
+        final override = preferencesService.readerAppearanceOverrideFor(
+          _sourceId,
+        );
+        expect(override?.themeId, 'paper');
+        expect(override?.textScale, 1.0);
       },
     );
   });

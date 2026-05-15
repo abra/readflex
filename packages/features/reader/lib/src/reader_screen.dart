@@ -43,6 +43,12 @@ final _readerDrawerCloseButtonStyle = IconButton.styleFrom(
   highlightColor: Colors.transparent,
 );
 
+double _readerDrawerListBottomPadding(BuildContext context) {
+  return MediaQuery.viewInsetsOf(context).bottom +
+      MediaQuery.paddingOf(context).bottom +
+      AppSpacing.lg;
+}
+
 /// Carries the optional mini-review callback down the reader widget tree.
 class _ReaderCallbacksScope extends InheritedWidget {
   const _ReaderCallbacksScope({
@@ -151,6 +157,7 @@ class _ReaderView extends StatelessWidget {
     return Scaffold(
       extendBodyBehindAppBar: true,
       extendBody: true,
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           Positioned.fill(
@@ -299,6 +306,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   }
 
   void _closeTocDrawer({bool restoreChrome = true}) {
+    _dismissReaderKeyboard();
     context.read<ReaderUiCubit>().closeTocDrawer(restoreChrome: restoreChrome);
   }
 
@@ -327,10 +335,15 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     bool restoreChrome = true,
     bool clearSearch = true,
   }) {
+    _dismissReaderKeyboard();
     context.read<ReaderUiCubit>().closeSearchDrawer(
       restoreChrome: restoreChrome,
       clearSearch: clearSearch,
     );
+  }
+
+  void _dismissReaderKeyboard() {
+    FocusManager.instance.primaryFocus?.unfocus();
   }
 
   void _handleReaderPositionChanged(BookPosition position) {
@@ -388,6 +401,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
       readerTheme: readerTheme,
       chromeVisible: uiState.chromeVisible,
       chromeSurfaceColor: context.colors.surface,
+      appNavigationBarColor: Theme.of(context).scaffoldBackgroundColor,
     );
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -411,6 +425,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                 onPositionChanged: _handleReaderPositionChanged,
               ),
             ),
+            const _ReaderChromeDismissBarrierDriver(),
             const _ReaderTopChromeDriver(),
             _ReaderBottomChromeDriver(
               onTocPressed: _openTocDrawer,
@@ -434,6 +449,42 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
               onResultSelected: _goToSearchResult,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Blocks page input while reader chrome is visible.
+///
+/// WebView gestures are native enough that tap-zone logic alone is not
+/// sufficient: a swipe can still reach foliate-js before Flutter decides it is
+/// not a tap. This barrier sits above the page but below the chrome panels; any
+/// pointer on the page hides chrome and is not forwarded to the WebView.
+class _ReaderChromeDismissBarrierDriver extends StatelessWidget {
+  const _ReaderChromeDismissBarrierDriver();
+
+  @override
+  Widget build(BuildContext context) {
+    final uiState = context.select<ReaderUiCubit, ReaderUiState>(
+      (c) => c.state,
+    );
+    final hasSelection = context.select<ReaderSelectionCubit, bool>(
+      (c) => c.state.hasSelection,
+    );
+    final shouldBlockPage = shouldBlockReaderPageInput(
+      chromeVisible: uiState.chromeVisible,
+      overlayVisible: uiState.overlay != ReaderOverlay.none,
+      hasSelection: hasSelection,
+    );
+
+    return Positioned.fill(
+      child: IgnorePointer(
+        ignoring: !shouldBlockPage,
+        child: Listener(
+          behavior: HitTestBehavior.opaque,
+          onPointerDown: (_) => context.read<ReaderUiCubit>().hideChrome(),
+          child: const SizedBox.expand(),
         ),
       ),
     );
@@ -738,8 +789,7 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                   ),
                 ),
               ),
-              child: SafeArea(
-                top: false,
+              child: AppBottomSafeArea(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1122,8 +1172,7 @@ class _ReaderTocTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final normalizedQuery = query.trim().toLowerCase();
-    final listBottomPadding =
-        MediaQuery.paddingOf(context).bottom + AppSpacing.lg;
+    final listBottomPadding = _readerDrawerListBottomPadding(context);
     final filteredItems = normalizedQuery.isEmpty
         ? items
         : [
@@ -1317,6 +1366,7 @@ class _ReaderSearchDrawerContentState
         if (mounted) _focusNode.requestFocus();
       });
     } else if (!widget.visible && oldWidget.visible) {
+      _focusNode.unfocus();
       _controller.clear();
       context.read<ReaderSearchCubit>().reset();
     }
@@ -1355,8 +1405,7 @@ class _ReaderSearchDrawerContentState
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final listBottomPadding =
-        MediaQuery.paddingOf(context).bottom + AppSpacing.lg;
+    final listBottomPadding = _readerDrawerListBottomPadding(context);
 
     return BlocListener<ReaderSearchCubit, ReaderSearchState>(
       listenWhen: (previous, current) =>
@@ -1767,7 +1816,7 @@ class _ComicProgressOverlayDriver extends StatelessWidget {
 
     final displayed = displayZeroIndexedPage(current, total);
     final colors = context.colors;
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final bottomInset = appBottomSafeInset(context);
     return Positioned(
       left: 0,
       right: 0,
@@ -2138,8 +2187,7 @@ class _ContextPanel extends StatelessWidget {
     return Material(
       color: panelColor,
       elevation: 0,
-      child: SafeArea(
-        top: false,
+      child: AppBottomSafeArea(
         child: DecoratedBox(
           decoration: BoxDecoration(
             border: Border(top: BorderSide(color: dividerColor)),

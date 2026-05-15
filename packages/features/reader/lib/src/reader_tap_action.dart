@@ -21,3 +21,11 @@ ReaderTapAction readerTapActionFor({
   }
   return ReaderTapAction.toggleChrome;
 }
+
+bool shouldBlockReaderPageInput({
+  required bool chromeVisible,
+  required bool overlayVisible,
+  required bool hasSelection,
+}) {
+  return chromeVisible && !overlayVisible && !hasSelection;
+}

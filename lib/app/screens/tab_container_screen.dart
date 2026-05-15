@@ -73,36 +73,38 @@ class _NavBarWithIndicator extends StatelessWidget {
 
     return Stack(
       children: [
-        NavigationBar(
-          selectedIndex: selectedIndex,
-          onDestinationSelected: onDestinationSelected,
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(AppIcons.home),
-              selectedIcon: Icon(AppIcons.home),
-              label: 'Home',
-            ),
-            NavigationDestination(
-              icon: Icon(AppIcons.library),
-              selectedIcon: Icon(AppIcons.library),
-              label: 'Library',
-            ),
-            NavigationDestination(
-              icon: Icon(AppIcons.dictionary),
-              selectedIcon: Icon(AppIcons.dictionary),
-              label: 'Dictionary',
-            ),
-            NavigationDestination(
-              icon: Icon(AppIcons.practice),
-              selectedIcon: Icon(AppIcons.practice),
-              label: 'Practice',
-            ),
-            NavigationDestination(
-              icon: Icon(AppIcons.profile),
-              selectedIcon: Icon(AppIcons.profile),
-              label: 'Profile',
-            ),
-          ],
+        AppBottomSafeArea(
+          child: NavigationBar(
+            selectedIndex: selectedIndex,
+            onDestinationSelected: onDestinationSelected,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(AppIcons.home),
+                selectedIcon: Icon(AppIcons.home),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(AppIcons.library),
+                selectedIcon: Icon(AppIcons.library),
+                label: 'Library',
+              ),
+              NavigationDestination(
+                icon: Icon(AppIcons.dictionary),
+                selectedIcon: Icon(AppIcons.dictionary),
+                label: 'Dictionary',
+              ),
+              NavigationDestination(
+                icon: Icon(AppIcons.practice),
+                selectedIcon: Icon(AppIcons.practice),
+                label: 'Practice',
+              ),
+              NavigationDestination(
+                icon: Icon(AppIcons.profile),
+                selectedIcon: Icon(AppIcons.profile),
+                label: 'Profile',
+              ),
+            ],
+          ),
         ),
         Positioned(
           top: 0,

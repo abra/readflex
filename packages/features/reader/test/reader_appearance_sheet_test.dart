@@ -82,7 +82,7 @@ void main() {
     expect(cubit.state.hasOverride, isFalse);
   });
 
-  testWidgets('tapping size percent resets text size to global default', (
+  testWidgets('tapping size percent resets text size to factory default', (
     tester,
   ) async {
     await tester.openAppearanceSheet(cubit);

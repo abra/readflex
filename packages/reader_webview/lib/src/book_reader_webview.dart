@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
@@ -41,6 +42,61 @@ final class ReaderInitialLocation {
 
   final String? cfi;
   final double? progress;
+}
+
+@visibleForTesting
+String buildReaderSearchStartScript({
+  required int requestId,
+  required String query,
+}) {
+  final escapedQuery = jsonEncode(query);
+  return '''
+(() => {
+  const requestId = $requestId;
+  const query = $escapedQuery;
+  const defaultOptions = {
+    scope: 'book',
+    matchCase: false,
+    matchDiacritics: false,
+    matchWholeWords: false,
+  };
+
+  const sendSearchError = (message) => {
+    try {
+      const bridge = window.flutter_inappwebview;
+      if (bridge && bridge.callHandler) {
+        bridge.callHandler('onSearch', {
+          requestId,
+          type: 'error',
+          message: String(message || 'Book search failed'),
+        });
+      }
+    } catch (_) {}
+  };
+
+  try {
+    if (typeof window.startSearch !== 'function') {
+      sendSearchError('Book search bridge is missing');
+      return;
+    }
+    Promise.resolve(window.startSearch(requestId, query, defaultOptions))
+      .catch((error) => {
+        sendSearchError(error && error.message ? error.message : error);
+      });
+  } catch (error) {
+    sendSearchError(error && error.message ? error.message : error);
+  }
+})();
+''';
+}
+
+@visibleForTesting
+bool shouldLogReaderConsoleMessage({
+  required bool debugMode,
+  required String level,
+}) {
+  if (debugMode) return true;
+  return level.toLowerCase().contains('error');
 }
 
 /// WebView-based book reader backed by foliate-js.
@@ -125,6 +181,8 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   StreamController<ReaderSearchEvent>? _searchEvents;
   int _searchRequestSerial = 0;
   int? _activeSearchRequestId;
+  Timer? _searchWatchdogTimer;
+  static const _searchSilenceTimeout = Duration(seconds: 15);
 
   // TEMP WORKAROUND — remove once the WKWebView deep-CFI restore crash is
   // fixed properly (see memory: project_wkwebview_cfi_crash_root_cause.md).
@@ -138,6 +196,7 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
 
   @override
   void dispose() {
+    _cancelSearchWatchdog();
     _closeSearchEvents();
     super.dispose();
   }
@@ -251,9 +310,21 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       initialUrlRequest: URLRequest(url: WebUri(_indexUrl)),
       initialSettings: baseReaderSettings(),
       onWebViewCreated: _onWebViewCreated,
+      onConsoleMessage: _onConsoleMessage,
       // TEMP — see _recoveringFromCrash field doc for context.
       onWebContentProcessDidTerminate: _onContentProcessTerminated,
     );
+  }
+
+  void _onConsoleMessage(
+    InAppWebViewController controller,
+    ConsoleMessage message,
+  ) {
+    final level = message.messageLevel.toString();
+    if (!shouldLogReaderConsoleMessage(debugMode: kDebugMode, level: level)) {
+      return;
+    }
+    debugPrint('[reader-console] $level: ${message.message}');
   }
 
   /// TEMP WORKAROUND for the WKWebView deep-CFI restore crash.
@@ -445,12 +516,13 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     final events = StreamController<ReaderSearchEvent>();
     _searchEvents = events;
     _activeSearchRequestId = requestId;
+    _startSearchWatchdog(requestId);
     events.onCancel = () {
       if (_activeSearchRequestId == requestId) _cancelActiveSearch();
     };
 
     final controller = _controller;
-    if (controller == null) {
+    if (controller == null || !_isReady) {
       scheduleMicrotask(() {
         _handleSearchEvent(
           ReaderSearchError(
@@ -462,10 +534,14 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       return events.stream;
     }
 
-    final escapedQuery = jsonEncode(trimmed);
     unawaited(
       controller
-          .evaluateJavascript(source: 'startSearch($requestId, $escapedQuery);')
+          .evaluateJavascript(
+            source: buildReaderSearchStartScript(
+              requestId: requestId,
+              query: trimmed,
+            ),
+          )
           .catchError((Object error) {
             _handleSearchEvent(
               ReaderSearchError(
@@ -481,15 +557,24 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   /// Clear active search annotations inside foliate-js.
   void clearSearch() {
     _cancelActiveSearch();
-    _controller?.evaluateJavascript(source: 'clearSearch();');
+    _controller?.evaluateJavascript(
+      source:
+          "if (typeof window.clearSearch === 'function') window.clearSearch();",
+    );
   }
 
   void _handleSearchEvent(ReaderSearchEvent event) {
     if (_activeSearchRequestId != event.requestId) return;
     final events = _searchEvents;
     if (events == null || events.isClosed) return;
+    final isTerminal = event is ReaderSearchDone || event is ReaderSearchError;
+    if (isTerminal) {
+      _cancelSearchWatchdog();
+    } else {
+      _startSearchWatchdog(event.requestId);
+    }
     events.add(event);
-    if (event is ReaderSearchDone || event is ReaderSearchError) {
+    if (isTerminal) {
       _activeSearchRequestId = null;
       _searchEvents = null;
       unawaited(events.close());
@@ -499,16 +584,43 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   void _cancelActiveSearch() {
     final requestId = _activeSearchRequestId;
     _activeSearchRequestId = null;
+    _cancelSearchWatchdog();
     _closeSearchEvents();
     if (requestId != null) {
-      _controller?.evaluateJavascript(source: 'cancelSearch($requestId);');
+      _controller?.evaluateJavascript(
+        source:
+            "if (typeof window.cancelSearch === 'function') window.cancelSearch($requestId);",
+      );
     }
   }
 
   void _closeSearchEvents() {
+    _cancelSearchWatchdog();
     final events = _searchEvents;
     _searchEvents = null;
     if (events != null && !events.isClosed) unawaited(events.close());
+  }
+
+  void _startSearchWatchdog(int requestId) {
+    _searchWatchdogTimer?.cancel();
+    _searchWatchdogTimer = Timer(_searchSilenceTimeout, () {
+      if (_activeSearchRequestId != requestId) return;
+      _controller?.evaluateJavascript(
+        source:
+            "if (typeof window.cancelSearch === 'function') window.cancelSearch($requestId);",
+      );
+      _handleSearchEvent(
+        ReaderSearchError(
+          requestId: requestId,
+          message: 'Book search timed out',
+        ),
+      );
+    });
+  }
+
+  void _cancelSearchWatchdog() {
+    _searchWatchdogTimer?.cancel();
+    _searchWatchdogTimer = null;
   }
 
   /// Navigate to a fraction `[0, 1]` of the whole book. Used by the

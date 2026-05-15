@@ -24,6 +24,19 @@ class ReaderAppearancePreferences {
     required this.useBookLayout,
   });
 
+  static const defaults = ReaderAppearancePreferences(
+    themeId: 'paper',
+    fontId: 'serif',
+    layoutId: 'standard',
+    textScale: 1.0,
+    lineHeight: 1.55,
+    sideMargin: 6.0,
+    invertImagesInDark: false,
+    overrideFont: true,
+    overrideColor: true,
+    useBookLayout: true,
+  );
+
   final String themeId;
   final String fontId;
   final String layoutId;

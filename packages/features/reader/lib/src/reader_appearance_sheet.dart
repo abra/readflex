@@ -67,13 +67,11 @@ class _ResetAppearanceButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasOverride = context.select<ReaderAppearanceCubit, bool>(
-      (c) => c.state.hasOverride,
+    final canReset = context.select<ReaderAppearanceCubit, bool>(
+      (c) => !c.state.isFactoryDefault,
     );
     return TextButton(
-      onPressed: hasOverride
-          ? context.read<ReaderAppearanceCubit>().reset
-          : null,
+      onPressed: canReset ? context.read<ReaderAppearanceCubit>().reset : null,
       child: const Text('Reset'),
     );
   }
@@ -478,9 +476,6 @@ class _SizeControl extends StatelessWidget {
     final textScale = context.select<ReaderAppearanceCubit, double>(
       (c) => c.state.effectiveAppearance.textScale,
     );
-    final globalTextScale = context.select<ReaderAppearanceCubit, double>(
-      (c) => c.state.globalAppearance.textScale,
-    );
     final cs = context.colors;
     final text = context.text;
     final cubit = context.read<ReaderAppearanceCubit>();
@@ -488,7 +483,9 @@ class _SizeControl extends StatelessWidget {
         textScale > ReaderAppearanceCubit.minTextScale + _textScaleEpsilon;
     final canIncrease =
         textScale < ReaderAppearanceCubit.maxTextScale - _textScaleEpsilon;
-    final canReset = (textScale - globalTextScale).abs() > _textScaleEpsilon;
+    final canReset =
+        (textScale - ReaderAppearanceCubit.defaultTextScale).abs() >
+        _textScaleEpsilon;
     return Row(
       children: [
         _TextSizeButton(

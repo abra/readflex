@@ -5,16 +5,27 @@ SystemUiOverlayStyle readerSystemUiOverlayStyle({
   required ReaderThemeData readerTheme,
   required bool chromeVisible,
   required Color chromeSurfaceColor,
+  required Color appNavigationBarColor,
 }) {
-  final surfaceColor = chromeVisible
+  final statusSurfaceColor = chromeVisible
       ? chromeSurfaceColor
       : readerTheme.backgroundColor;
-  final brightness = surfaceColor.computeLuminance() < 0.5
-      ? Brightness.dark
-      : Brightness.light;
+  final statusBrightness = _surfaceBrightness(statusSurfaceColor);
+  final navigationBrightness = _surfaceBrightness(appNavigationBarColor);
 
   return appSystemUiOverlayStyle(
-    brightness: brightness,
-    backgroundColor: surfaceColor,
+    brightness: statusBrightness,
+    backgroundColor: statusSurfaceColor,
+    navigationBarColor: appNavigationBarColor,
+  ).copyWith(
+    systemNavigationBarIconBrightness: _iconBrightnessFor(
+      navigationBrightness,
+    ),
   );
 }
+
+Brightness _surfaceBrightness(Color color) =>
+    color.computeLuminance() < 0.5 ? Brightness.dark : Brightness.light;
+
+Brightness _iconBrightnessFor(Brightness surfaceBrightness) =>
+    surfaceBrightness == Brightness.dark ? Brightness.light : Brightness.dark;

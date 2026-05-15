@@ -13,7 +13,7 @@ can serve them over localhost.
 | Symbol                   | Kind      | Purpose                                                              |
 |--------------------------|-----------|----------------------------------------------------------------------|
 | `BookReaderWebView`      | Widget    | Loads foliate-js `index.html`, which fetches the book file from `/book/<path>`. Emits position, selection, and highlight-tap events; accepts imperative calls (goToCfi, nextPage, changeStyle, addAnnotation). |
-| `AssetExtractor`         | Utility   | Copies bundled foliate-js assets from rootBundle to a target directory. Version-gated via an `.asset_version` sentinel: unchanged version skips, changed version re-writes everything. |
+| `AssetExtractor`         | Utility   | Copies bundled foliate-js assets from rootBundle to a target directory. Version-gated via app version plus reader asset revision: unchanged version skips, changed version re-writes everything. |
 | `BookMetadataExtractor`  | Utility   | Spawns a `HeadlessInAppWebView` running foliate-js in import mode to extract `{title, author, description, coverData, coverMimeType}` from any supported format. Used by the import flow. |
 | Bridge types             | Models    | `BookPosition`, `ReaderSelection`, `ReaderHighlight`, `FoliateStyle` — DTOs exchanged with JS. |
 
@@ -21,9 +21,9 @@ can serve them over localhost.
 
 ```
 JS -> Flutter:  onLoadEnd, onRelocated, onSelectionEnd, onSelectionCleared,
-                onAnnotationClick, onClick
+                onAnnotationClick, onClick, onSearch, onJsError
 Flutter -> JS:  goToCfi, nextPage, prevPage, changeStyle, addAnnotation,
-                removeAnnotation
+                removeAnnotation, startSearch, cancelSearch, clearSearch
 ```
 
 Shared selection/click handlers are registered by

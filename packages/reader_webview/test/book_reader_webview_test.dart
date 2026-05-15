@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader_webview/reader_webview.dart';
 
@@ -45,6 +47,108 @@ void main() {
 
       expect(location.cfi, isNull);
       expect(location.progress, isNull);
+    });
+  });
+
+  group('foliate bootstrap', () {
+    test('always uses the modern app bridge', () {
+      final indexHtml = File(
+        'assets/foliate-js/index.html',
+      ).readAsStringSync();
+      final bookJs = File(
+        'assets/foliate-js/src/book.js',
+      ).readAsStringSync();
+
+      expect(indexHtml, isNot(contains('shouldUseModernBundle')));
+      expect(indexHtml, isNot(contains('./dist/bundle.js')));
+      expect(indexHtml, isNot(contains('./dist/pdf-legacy.js')));
+      expect(indexHtml, contains("await loadScript('./src/book.js'"));
+      expect(
+        indexHtml,
+        contains("await loadScript('./src/vendor/pdfjs/pdf.js'"),
+      );
+      expect(bookJs, contains('window.startSearch'));
+      expect(bookJs, contains('window.cancelSearch'));
+      expect(bookJs, contains("callFlutter('onSearch'"));
+    });
+
+    test('keeps default search off Intl Segmenter', () {
+      final searchJs = File(
+        'assets/foliate-js/src/search.js',
+      ).readAsStringSync();
+
+      expect(searchJs, contains("granularity !== 'word'"));
+      expect(searchJs, contains('return simpleSearch(strs, query, options)'));
+    });
+
+    test('applies reader background color inside the iframe document', () {
+      final bookJs = File(
+        'assets/foliate-js/src/book.js',
+      ).readAsStringSync();
+
+      expect(
+        bookJs,
+        contains('--readflex-background-color: \${backgroundColor};'),
+      );
+      expect(
+        bookJs,
+        contains(
+          'background-color: var(--readflex-background-color) !important;',
+        ),
+      );
+      expect(
+        bookJs,
+        isNot(contains('background-color: transparent !important;')),
+      );
+    });
+  });
+
+  group('search bridge script', () {
+    test('guards missing startSearch and escapes query', () {
+      final script = buildReaderSearchStartScript(
+        requestId: 42,
+        query: 'email "test"',
+      );
+
+      expect(script, contains('const requestId = 42;'));
+      expect(script, contains('const query = "email \\"test\\"";'));
+      expect(script, contains("typeof window.startSearch !== 'function'"));
+      expect(script, isNot(contains('window.search')));
+      expect(script, contains("bridge.callHandler('onSearch'"));
+      expect(script, contains('Book search bridge is missing'));
+      expect(script, contains("type: 'error'"));
+    });
+  });
+
+  group('console logging', () {
+    test('keeps warning noise out of release logs', () {
+      expect(
+        shouldLogReaderConsoleMessage(
+          debugMode: false,
+          level: 'WARNING',
+        ),
+        isFalse,
+      );
+      expect(
+        shouldLogReaderConsoleMessage(debugMode: false, level: 'ERROR'),
+        isTrue,
+      );
+      expect(
+        shouldLogReaderConsoleMessage(
+          debugMode: true,
+          level: 'WARNING',
+        ),
+        isTrue,
+      );
+    });
+  });
+
+  group('asset extraction', () {
+    test('versions bundled reader assets independently of app version', () {
+      expect(
+        AssetExtractor.extractionVersionFor('1.0.0+1'),
+        '1.0.0+1|${AssetExtractor.assetRevision}',
+      );
     });
   });
 }
