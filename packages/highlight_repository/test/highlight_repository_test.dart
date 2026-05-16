@@ -44,6 +44,21 @@ void main() {
       expect(highlights, hasLength(2));
     });
 
+    test('getHighlightCount returns total count', () async {
+      await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.book,
+        text: 'First',
+      );
+      await repo.addHighlight(
+        sourceId: 's2',
+        sourceType: SourceType.book,
+        text: 'Second',
+      );
+
+      expect(await repo.getHighlightCount(), 2);
+    });
+
     test('getHighlightsBySource filters correctly', () async {
       await repo.addHighlight(
         sourceId: 's1',

@@ -109,6 +109,38 @@ void main() {
         expect(bookRepo.lastLimitPassed, isNotNull);
       },
     );
+
+    blocTest<HomeBloc, HomeState>(
+      'uses count queries for dashboard stats',
+      setUp: () {
+        bookRepo.books = [_book];
+        highlightRepo.highlights = [_highlight];
+        highlightRepo.throwOnFullListLoad = true;
+        fsrsRepo.dueItems = [_dueItem];
+        fsrsRepo.throwOnFullListLoad = true;
+      },
+      build: () => HomeBloc(
+        bookRepository: bookRepo,
+        highlightRepository: highlightRepo,
+        fsrsRepository: fsrsRepo,
+      ),
+      act: (bloc) => bloc.add(const HomeLoadRequested()),
+      expect: () => [
+        const HomeState(status: HomeStatus.loading),
+        HomeState(
+          status: HomeStatus.success,
+          recentBooks: [_book],
+          totalHighlights: 1,
+          dueFlashcards: 1,
+        ),
+      ],
+      verify: (_) {
+        expect(highlightRepo.getHighlightCountCalled, isTrue);
+        expect(highlightRepo.getHighlightsCalled, isFalse);
+        expect(fsrsRepo.getDueItemCountCalled, isTrue);
+        expect(fsrsRepo.getDueItemsCalled, isFalse);
+      },
+    );
   });
 
   group('HomeState', () {

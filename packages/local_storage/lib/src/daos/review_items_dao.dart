@@ -37,18 +37,19 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
     int? offset,
   }) {
     final query = select(reviewItemsTable)
-      ..where((t) {
-        final dueCondition =
-            t.nextReviewAt.isNull() |
-            t.nextReviewAt.isSmallerOrEqual(Variable(now));
-        if (type != null) {
-          return t.itemType.equals(type) & dueCondition;
-        }
-        return dueCondition;
-      })
+      ..where((_) => _duePredicate(now, type: type))
       ..orderBy([(t) => OrderingTerm.asc(t.nextReviewAt)]);
     if (limit != null) query.limit(limit, offset: offset);
     return query.get();
+  }
+
+  Future<int> dueItemCount(String now, {String? type}) {
+    final count = reviewItemsTable.itemId.count();
+    return (selectOnly(reviewItemsTable)
+          ..addColumns([count])
+          ..where(_duePredicate(now, type: type)))
+        .map((row) => row.read(count) ?? 0)
+        .getSingle();
   }
 
   Future<List<ReviewItemsTableData>> dueItemsBySource(
@@ -144,4 +145,14 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
             ..where((t) => t.itemId.equals(itemId))
             ..orderBy([(t) => OrderingTerm.desc(t.reviewedAt)]))
           .get();
+
+  Expression<bool> _duePredicate(String now, {String? type}) {
+    final dueCondition =
+        reviewItemsTable.nextReviewAt.isNull() |
+        reviewItemsTable.nextReviewAt.isSmallerOrEqual(Variable(now));
+    if (type != null) {
+      return reviewItemsTable.itemType.equals(type) & dueCondition;
+    }
+    return dueCondition;
+  }
 }

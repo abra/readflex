@@ -44,18 +44,18 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       // three sequential awaits; on a cold dashboard load that
       // serialised three SQLite queries that could have run together.
       // Same idiom is used in `ReaderBloc._onSourceLoadRequested`.
-      final (books, highlights, dueCards) = await (
+      final (books, totalHighlights, dueCards) = await (
         _bookRepository.getBooks(limit: 20),
-        _highlightRepository.getHighlights(),
-        _fsrsRepository.getDueItems(),
+        _highlightRepository.getHighlightCount(),
+        _fsrsRepository.getDueItemCount(),
       ).wait;
 
       emit(
         state.copyWith(
           status: HomeStatus.success,
           recentBooks: books,
-          totalHighlights: highlights.length,
-          dueFlashcards: dueCards.length,
+          totalHighlights: totalHighlights,
+          dueFlashcards: dueCards,
         ),
       );
     } catch (e, st) {

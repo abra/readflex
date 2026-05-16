@@ -7,6 +7,9 @@ class FakeFsrsRepository implements FsrsRepository {
 
   List<ReviewItem> dueItems = [];
   bool shouldThrow = false;
+  bool getDueItemsCalled = false;
+  bool getDueItemCountCalled = false;
+  bool throwOnFullListLoad = false;
 
   @override
   Future<List<ReviewItem>> getDueItems({
@@ -14,7 +17,17 @@ class FakeFsrsRepository implements FsrsRepository {
     int? limit,
     int? offset,
   }) async {
+    getDueItemsCalled = true;
+    if (throwOnFullListLoad) throw StorageException(cause: 'full list load');
     if (shouldThrow) throw StorageException(cause: 'fake');
     return List.unmodifiable(dueItems);
+  }
+
+  @override
+  Future<int> getDueItemCount({ReviewableType? type}) async {
+    getDueItemCountCalled = true;
+    if (shouldThrow) throw StorageException(cause: 'fake');
+    if (type == null) return dueItems.length;
+    return dueItems.where((item) => item.itemType == type).length;
   }
 }

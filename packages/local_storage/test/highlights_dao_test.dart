@@ -35,6 +35,13 @@ void main() {
     expect(highlights.first.highlightText, 'Selected text');
   });
 
+  test('highlightCount returns total highlight count', () async {
+    await dao.insertHighlight(makeHighlight(id: 'h1', sourceId: 's1'));
+    await dao.insertHighlight(makeHighlight(id: 'h2', sourceId: 's2'));
+
+    expect(await dao.highlightCount(), 2);
+  });
+
   test('highlightsBySource filters correctly', () async {
     await dao.insertHighlight(makeHighlight(id: 'h1', sourceId: 's1'));
     await dao.insertHighlight(makeHighlight(id: 'h2', sourceId: 's2'));

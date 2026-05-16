@@ -119,6 +119,15 @@ class FsrsRepository {
     }
   }
 
+  Future<int> getDueItemCount({ReviewableType? type}) async {
+    try {
+      final now = DateTime.now().toUtc().toIso8601String();
+      return await _dao.dueItemCount(now, type: type?.toStorageString());
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
   /// Returns due review items for a specific source.
   Future<List<ReviewItem>> getDueItemsBySource(
     String sourceId, {

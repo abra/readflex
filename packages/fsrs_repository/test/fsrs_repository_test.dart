@@ -102,6 +102,12 @@ void main() {
         );
         expect(flashcards, hasLength(1));
         expect(flashcards.first.itemId, 'card-1');
+
+        expect(await repo.getDueItemCount(), 3);
+        expect(
+          await repo.getDueItemCount(type: ReviewableType.flashcard),
+          1,
+        );
       },
     );
 

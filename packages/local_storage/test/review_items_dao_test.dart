@@ -148,6 +148,35 @@ void main() {
       expect(flashcards.first.itemId, 'f1');
     });
 
+    test('dueItemCount counts due items and filters by type', () async {
+      await dao.insertItem(
+        makeItem(itemId: 'f1', itemType: 'flashcard', nextReviewAt: null),
+      );
+      await dao.insertItem(
+        makeItem(
+          itemId: 'h1',
+          itemType: 'highlight',
+          nextReviewAt: '2026-03-01T00:00:00.000Z',
+        ),
+      );
+      await dao.insertItem(
+        makeItem(
+          itemId: 'f2',
+          itemType: 'flashcard',
+          nextReviewAt: '2026-05-01T00:00:00.000Z',
+        ),
+      );
+
+      expect(await dao.dueItemCount('2026-04-01T00:00:00.000Z'), 2);
+      expect(
+        await dao.dueItemCount(
+          '2026-04-01T00:00:00.000Z',
+          type: 'flashcard',
+        ),
+        1,
+      );
+    });
+
     test('dueItemsBySource filters by sourceId', () async {
       await dao.insertItem(
         makeItem(itemId: 'f1', sourceId: 'book-1', nextReviewAt: null),
