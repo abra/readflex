@@ -15,8 +15,10 @@ const _uuid = Uuid();
 /// lives in `FsrsRepository` and is joined by `itemId`.
 class DictionaryRepository {
   DictionaryRepository({required AppDatabase database})
-    : _dao = database.dictionaryDao;
+    : _db = database,
+      _dao = database.dictionaryDao;
 
+  final AppDatabase _db;
   final DictionaryDao _dao;
 
   // ─── CRUD ───
@@ -106,9 +108,15 @@ class DictionaryRepository {
     }
   }
 
+  /// Deletes the entry and its FSRS review row in one transaction.
+  /// Without the FSRS purge a deleted word can stay in the review queue
+  /// because due-item queries are driven by `review_items_table`.
   Future<void> deleteEntry(String id) async {
     try {
-      await _dao.deleteEntry(id);
+      await _db.transaction(() async {
+        await _db.reviewItemsDao.deleteItemsByIds([id]);
+        await _dao.deleteEntry(id);
+      });
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }

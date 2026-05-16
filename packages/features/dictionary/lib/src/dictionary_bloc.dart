@@ -14,8 +14,8 @@ part 'dictionary_state.dart';
 /// [DictionaryLoadRequested] together with the set of mastered ids from
 /// [FsrsRepository] for the "Mastered" badge. Handles debounced search
 /// ([DictionarySearchChanged]) and entry removal
-/// ([DictionaryEntryDeleted]) — deleting also drops the matching FSRS
-/// review row.
+/// ([DictionaryEntryDeleted]). The repository owns entry + FSRS cleanup so
+/// deletion stays transactional below the BLoC layer.
 class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
   DictionaryBloc({
     required DictionaryRepository dictionaryRepository,
@@ -91,7 +91,6 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
     final deletion = _deletionDescriptorFor({event.entryId});
     try {
       await _repository.deleteEntry(event.entryId);
-      await _fsrsRepository.deleteReviewItem(event.entryId);
       await _loadEntries(emit, deletion: deletion);
     } catch (e, st) {
       addError(e, st);
@@ -118,7 +117,6 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
     for (final id in event.entryIds) {
       try {
         await _repository.deleteEntry(id);
-        await _fsrsRepository.deleteReviewItem(id);
       } catch (e, st) {
         anyFailed = true;
         addError(e, st);

@@ -1,5 +1,6 @@
 import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:local_storage/local_storage.dart';
@@ -100,6 +101,28 @@ void main() {
       await repo.deleteEntry(created.id);
       final entries = await repo.getEntries();
       expect(entries, isEmpty);
+    });
+
+    test('deleteEntry also removes FSRS review row', () async {
+      final created = await repo.addEntry(
+        word: 'tracked',
+        translation: 'отслеживаемый',
+        sourceId: 's1',
+        sourceType: SourceType.book,
+      );
+      await db.reviewItemsDao.upsertItem(
+        ReviewItemsTableCompanion.insert(
+          itemId: created.id,
+          itemType: ReviewableType.dictionary.name,
+          sourceId: const Value('s1'),
+        ),
+      );
+      expect(await db.reviewItemsDao.byItemId(created.id), isNotNull);
+
+      await repo.deleteEntry(created.id);
+
+      expect(await db.reviewItemsDao.byItemId(created.id), isNull);
+      expect(await repo.getEntries(), isEmpty);
     });
 
     test('usageExamples round-trips through storage', () async {
