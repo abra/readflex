@@ -301,6 +301,8 @@ class ReaderSelection {
 class FoliateStyle {
   const FoliateStyle({
     this.fontSize = 1.4,
+    this.textScale = 1.0,
+    this.deviceFontScale = 1.0,
     this.fontName = '',
     this.fontPath = '',
     this.fontWeight = 400,
@@ -329,6 +331,8 @@ class FoliateStyle {
   });
 
   final double fontSize;
+  final double textScale;
+  final double deviceFontScale;
   final String fontName;
   final String fontPath;
   final double fontWeight;
@@ -377,6 +381,8 @@ class FoliateStyle {
 
   Map<String, dynamic> toMap() => {
     'fontSize': fontSize,
+    'textScale': textScale,
+    'deviceFontScale': deviceFontScale,
     'fontName': fontName,
     'fontPath': fontPath,
     'fontWeight': fontWeight,
@@ -415,6 +421,8 @@ class FoliateStyle {
       identical(this, other) ||
       other is FoliateStyle &&
           fontSize == other.fontSize &&
+          textScale == other.textScale &&
+          deviceFontScale == other.deviceFontScale &&
           fontName == other.fontName &&
           fontPath == other.fontPath &&
           fontWeight == other.fontWeight &&
@@ -444,6 +452,8 @@ class FoliateStyle {
   @override
   int get hashCode => Object.hashAll([
     fontSize,
+    textScale,
+    deviceFontScale,
     fontName,
     fontPath,
     fontWeight,

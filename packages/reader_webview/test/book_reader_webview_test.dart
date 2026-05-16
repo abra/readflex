@@ -92,6 +92,19 @@ void main() {
       );
       expect(
         bookJs,
+        contains('--readflex-prose-font-size: \${proseFontSizePx}px;'),
+      );
+      expect(
+        bookJs,
+        contains(
+          '--readflex-code-block-font-size: \${codeBlockFontSizePx}px;',
+        ),
+      );
+      expect(bookJs, contains('textScale: style.textScale'));
+      expect(bookJs, isNot(contains('const layoutChanged =')));
+      expect(bookJs, isNot(contains('oldStyle?.fontSize !== style.fontSize')));
+      expect(
+        bookJs,
         contains(
           'background-color: var(--readflex-background-color) !important;',
         ),
@@ -100,6 +113,19 @@ void main() {
         bookJs,
         isNot(contains('background-color: transparent !important;')),
       );
+    });
+
+    test('guards pagination while iframe document body is unavailable', () {
+      final paginatorJs = File(
+        'assets/foliate-js/src/paginator.js',
+      ).readAsStringSync();
+
+      expect(paginatorJs, contains('if (!doc?.body)'));
+      expect(
+        paginatorJs,
+        contains('[readflex-paginator] visible range skipped'),
+      );
+      expect(paginatorJs, contains('if (!range) return'));
     });
   });
 

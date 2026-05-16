@@ -59,6 +59,40 @@ void main() {
     expect(shadows.every((shadow) => shadow.offset.dy > 0), isTrue);
   });
 
+  testWidgets('AppSourceCover reports failed cover decode with context', (
+    tester,
+  ) async {
+    final previousOnError = FlutterError.onError;
+    final errors = <FlutterErrorDetails>[];
+    FlutterError.onError = errors.add;
+    addTearDown(() => FlutterError.onError = previousOnError);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 120,
+            height: 180,
+            child: AppSourceCover(
+              title: 'Broken Cover',
+              seed: 'book-1',
+              coverImage: _FailingImageProvider('cover.jpeg'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    FlutterError.onError = previousOnError;
+
+    expect(errors, hasLength(1));
+    final details = errors.single.toString();
+    expect(details, contains('while decoding a source cover'));
+    expect(details, contains('Broken Cover'));
+    expect(details, contains('book-1'));
+    expect(details, contains('cover.jpeg'));
+  });
+
   testWidgets('AppImageAspectRatio uses fallback ratio without image', (
     tester,
   ) async {
@@ -216,6 +250,49 @@ void main() {
           .length,
       greaterThan(restoresAfterOpen),
     );
+  });
+
+  testWidgets('showAppBottomSheet reserves minimum bottom spacing', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(padding: EdgeInsets.zero),
+          child: Builder(
+            builder: (context) {
+              return Scaffold(
+                body: Center(
+                  child: FilledButton(
+                    onPressed: () {
+                      unawaited(
+                        showAppBottomSheet<void>(
+                          context,
+                          builder: (_) => const SizedBox(
+                            height: 80,
+                            child: Text('Sheet content'),
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('Open sheet'),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open sheet'));
+    await tester.pumpAndSettle();
+
+    final safeArea = tester.widget<AppBottomSafeArea>(
+      find.byType(AppBottomSafeArea),
+    );
+    expect(safeArea.minimumBottom, AppSpacing.lg);
+    expect(find.text('Sheet content'), findsOneWidget);
   });
 
   testWidgets('AppBottomActionBar renders provided actions', (tester) async {
@@ -736,4 +813,31 @@ class _TestImageProvider extends ImageProvider<_TestImageProvider> {
       Future<ImageInfo>.value(ImageInfo(image: key.image.clone())),
     );
   }
+}
+
+class _FailingImageProvider extends ImageProvider<_FailingImageProvider> {
+  const _FailingImageProvider(this.label);
+
+  final String label;
+
+  @override
+  Future<_FailingImageProvider> obtainKey(ImageConfiguration configuration) {
+    return SynchronousFuture<_FailingImageProvider>(this);
+  }
+
+  @override
+  ImageStreamCompleter loadImage(
+    _FailingImageProvider key,
+    ImageDecoderCallback decode,
+  ) {
+    return OneFrameImageStreamCompleter(
+      Future<ImageInfo>.error(
+        StateError('Failed to decode $label'),
+        StackTrace.current,
+      ),
+    );
+  }
+
+  @override
+  String toString() => 'FailingImageProvider($label)';
 }

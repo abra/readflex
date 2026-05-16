@@ -27,7 +27,9 @@ class PreferencesRepository {
   ///      for new installs has always been serif, but stored prefs from
   ///      those sessions kept the wrong value.
   ///   3: add per-source reader appearance overrides and reader side margin.
-  static const _currentSchemaVersion = 3;
+  ///   4: reset global reader text scale to 100%. Android readability is now
+  ///      handled by device-scale in the reader, not persisted user percent.
+  static const _currentSchemaVersion = 4;
 
   final PreferencesStorage _storage;
 
@@ -44,6 +46,9 @@ class PreferencesRepository {
       // returns, the service's first save() persists `_schemaVersion: 2`
       // so this only runs once per device.
       final fontId = storedVersion < 2 ? 'serif' : (fontIdRaw ?? 'serif');
+      final readerTextScale = storedVersion < 4
+          ? 1.0
+          : (map['readerTextScale'] as num?)?.toDouble() ?? 1.0;
       return Preferences(
         themeMode: ThemeMode.values.byName(
           map['themeMode'] as String? ?? 'system',
@@ -53,7 +58,7 @@ class PreferencesRepository {
         readerThemeId: map['readerThemeId'] as String? ?? 'paper',
         readerFontId: fontId,
         readerLayoutId: map['readerLayoutId'] as String? ?? 'standard',
-        readerTextScale: (map['readerTextScale'] as num?)?.toDouble() ?? 1.0,
+        readerTextScale: readerTextScale,
         readerLineHeight: (map['readerLineHeight'] as num?)?.toDouble() ?? 1.55,
         readerSideMargin: (map['readerSideMargin'] as num?)?.toDouble() ?? 6.0,
         readerInvertImagesInDark:

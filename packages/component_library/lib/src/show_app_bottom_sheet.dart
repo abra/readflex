@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'app_bottom_safe_area.dart';
 import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_radius.dart';
 import 'theme/tokens/app_spacing.dart';
@@ -67,10 +68,9 @@ Future<T?> showAppBottomSheet<T>(
       // Lift the sheet above the keyboard. Done once here so every
       // sheet body gets it, regardless of whether it has form fields.
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
-      child: SafeArea(
-        // Top safe-area is owned by the modal sheet itself; only the
-        // bottom inset is ours to honour.
-        top: false,
+      child: AppBottomSafeArea(
+        // Android immersive mode can report a zero bottom inset. Keep
+        // sheet actions off the physical screen edge in that case.
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

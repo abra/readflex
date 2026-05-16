@@ -118,6 +118,13 @@ class BookRepository {
       String? coverFileName;
       if (coverData != null) {
         final coverExt = _extensionForMime(coverMimeType);
+        _logCoverDiagnostics(
+          id: id,
+          title: title,
+          mimeType: coverMimeType,
+          extension: coverExt,
+          data: coverData,
+        );
         coverFileName = 'cover$coverExt';
         await File(
           p.join(bookDir.path, coverFileName),
@@ -259,11 +266,154 @@ class BookRepository {
   }
 
   static String _extensionForMime(String? mime) {
-    return switch (mime) {
+    return switch (_normalizedMime(mime)) {
+      'image/jpeg' || 'image/jpg' => '.jpeg',
       'image/png' => '.png',
       'image/gif' => '.gif',
       'image/webp' => '.webp',
       _ => '.jpeg',
     };
   }
+
+  void _logCoverDiagnostics({
+    required String id,
+    required String title,
+    required String? mimeType,
+    required String extension,
+    required Uint8List data,
+  }) {
+    final diagnostics = _CoverDiagnostics.from(
+      mimeType: mimeType,
+      extension: extension,
+      data: data,
+    );
+    if (!diagnostics.isSuspicious) return;
+
+    _logger?.warn(
+      'BookRepository: suspicious cover data '
+      '(bookId=$id, title="$title", mime=${diagnostics.mimeType}, '
+      'ext=$extension, bytes=${data.length}, '
+      'detected=${diagnostics.detectedFormat}, '
+      'signature=${diagnostics.signature})',
+    );
+  }
+}
+
+final class _CoverDiagnostics {
+  const _CoverDiagnostics({
+    required this.mimeType,
+    required this.detectedFormat,
+    required this.signature,
+    required this.isSuspicious,
+  });
+
+  final String mimeType;
+  final String detectedFormat;
+  final String signature;
+  final bool isSuspicious;
+
+  static _CoverDiagnostics from({
+    required String? mimeType,
+    required String extension,
+    required Uint8List data,
+  }) {
+    final normalizedMime = _normalizedMime(mimeType) ?? '<none>';
+    final mimeFormat = _formatForMime(mimeType);
+    final detectedFormat = _detectImageFormat(data);
+    final supportedFormat = _isFlutterImageFormat(detectedFormat);
+    final mismatch =
+        mimeFormat != null && supportedFormat && mimeFormat != detectedFormat;
+
+    return _CoverDiagnostics(
+      mimeType: normalizedMime,
+      detectedFormat: detectedFormat,
+      signature: _hexSignature(data),
+      isSuspicious:
+          data.isEmpty ||
+          !supportedFormat ||
+          mimeFormat == 'svg' ||
+          mismatch ||
+          _extensionLooksWrong(extension, detectedFormat),
+    );
+  }
+}
+
+String? _normalizedMime(String? mime) {
+  final normalized = mime?.split(';').first.trim().toLowerCase();
+  return normalized == null || normalized.isEmpty ? null : normalized;
+}
+
+String? _formatForMime(String? mime) {
+  return switch (_normalizedMime(mime)) {
+    'image/jpeg' || 'image/jpg' => 'jpeg',
+    'image/png' => 'png',
+    'image/gif' => 'gif',
+    'image/webp' => 'webp',
+    'image/svg+xml' => 'svg',
+    _ => null,
+  };
+}
+
+bool _isFlutterImageFormat(String format) {
+  return switch (format) {
+    'jpeg' || 'png' || 'gif' || 'webp' => true,
+    _ => false,
+  };
+}
+
+bool _extensionLooksWrong(String extension, String detectedFormat) {
+  return switch (detectedFormat) {
+    'jpeg' => extension != '.jpeg',
+    'png' => extension != '.png',
+    'gif' => extension != '.gif',
+    'webp' => extension != '.webp',
+    _ => false,
+  };
+}
+
+String _detectImageFormat(Uint8List data) {
+  if (data.isEmpty) return 'empty';
+  if (data.length >= 3 &&
+      data[0] == 0xFF &&
+      data[1] == 0xD8 &&
+      data[2] == 0xFF) {
+    return 'jpeg';
+  }
+  if (data.length >= 8 &&
+      data[0] == 0x89 &&
+      data[1] == 0x50 &&
+      data[2] == 0x4E &&
+      data[3] == 0x47 &&
+      data[4] == 0x0D &&
+      data[5] == 0x0A &&
+      data[6] == 0x1A &&
+      data[7] == 0x0A) {
+    return 'png';
+  }
+  if (data.length >= 6) {
+    final header = String.fromCharCodes(data.take(6));
+    if (header == 'GIF87a' || header == 'GIF89a') return 'gif';
+  }
+  if (data.length >= 12) {
+    final riff = String.fromCharCodes(data.take(4));
+    final webp = String.fromCharCodes(data.skip(8).take(4));
+    if (riff == 'RIFF' && webp == 'WEBP') return 'webp';
+  }
+
+  final prefix = String.fromCharCodes(data.take(512)).trimLeft().toLowerCase();
+  if (prefix.startsWith('<svg') ||
+      (prefix.startsWith('<?xml') && prefix.contains('<svg'))) {
+    return 'svg';
+  }
+
+  return 'unknown';
+}
+
+String _hexSignature(Uint8List data) {
+  if (data.isEmpty) return '<empty>';
+  final length = data.length < 12 ? data.length : 12;
+  return data
+      .take(length)
+      .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
+      .join(' ');
 }

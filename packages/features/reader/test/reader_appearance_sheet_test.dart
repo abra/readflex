@@ -82,7 +82,7 @@ void main() {
     expect(cubit.state.hasOverride, isFalse);
   });
 
-  testWidgets('tapping size percent resets text size to factory default', (
+  testWidgets('tapping size percent clears text size override', (
     tester,
   ) async {
     await tester.openAppearanceSheet(cubit);
@@ -100,6 +100,34 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(preferencesService.readerAppearanceOverrideFor(_sourceId), isNull);
+  });
+
+  testWidgets('size percent resets inherited global scale to 100%', (
+    tester,
+  ) async {
+    await preferencesService.update(
+      (prefs) => prefs.copyWith(readerTextScale: 1.15),
+    );
+    await tester.pump();
+
+    await tester.openAppearanceSheet(cubit);
+
+    final resetButton = tester.widget<TextButton>(
+      find.widgetWithText(TextButton, 'Reset'),
+    );
+    expect(resetButton.onPressed, isNull);
+    expect(find.text('115%'), findsOneWidget);
+    expect(preferencesService.readerAppearanceOverrideFor(_sourceId), isNull);
+    expect(cubit.state.effectiveAppearance.textScale, 1.15);
+
+    await tester.tap(find.text('115%'));
+    await tester.pump();
+
+    expect(find.text('100%'), findsOneWidget);
+    expect(
+      preferencesService.readerAppearanceOverrideFor(_sourceId)?.textScale,
+      1.0,
+    );
   });
 
   testWidgets('restores reader chrome after appearance sheet is fully hidden', (

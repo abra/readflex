@@ -51,6 +51,7 @@ const { SHOW_ELEMENT, SHOW_TEXT, SHOW_CDATA_SECTION,
   FILTER_ACCEPT, FILTER_REJECT, FILTER_SKIP } = NodeFilter
 
 const filter = SHOW_ELEMENT | SHOW_TEXT | SHOW_CDATA_SECTION
+let missingBodyVisibleRangeLogged = false
 
 const getVisibleRange = (doc, start, end, mapRect) => {
   // first get all visible nodes
@@ -80,7 +81,15 @@ const getVisibleRange = (doc, start, end, mapRect) => {
     }
     return FILTER_SKIP
   }
-  if (!doc) return
+  if (!doc?.body) {
+    if (missingBodyVisibleRangeLogged) return
+    missingBodyVisibleRangeLogged = true
+    console.warn(
+      '[readflex-paginator] visible range skipped: document body is unavailable',
+      { readyState: doc?.readyState, url: doc?.URL },
+    )
+    return
+  }
   const walker = doc.createTreeWalker(doc.body, filter, { acceptNode })
   const nodes = []
   for (let node = walker.nextNode(); node; node = walker.nextNode())
@@ -1217,6 +1226,7 @@ export class Paginator extends HTMLElement {
   }
   #afterScroll(reason) {
     const range = this.#getVisibleRange()
+    if (!range) return
     // don't set new anchor if relocation was to scroll to anchor
     if (reason !== 'anchor') this.#anchor = range
     else this.#justAnchored = true

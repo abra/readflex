@@ -532,6 +532,7 @@ const getFontFamilyToken = fontName =>
   fontName === 'system' ? 'system-ui' : quoteFontFamily(fontName)
 
 const getReaderStylePrelude = ({ fontSize,
+  textScale = 1,
   fontName,
   fontPath,
   fontWeight,
@@ -566,12 +567,24 @@ const getReaderStylePrelude = ({ fontSize,
   const fontFamilyVarDecl = !overrideFont || fontName === 'book'
     ? ''
     : `--readflex-font-family: ${getFontFamilyToken(fontName)};`
+  const safeFontSize = Number(fontSize) || 1
+  const safeTextScale = Number(textScale) || 1
+  const rootFontSizePx = 16 * safeFontSize
+  const proseFontSizePx = rootFontSizePx * safeTextScale
+  const inlineCodeFontSizePx = rootFontSizePx * 0.9
+  const kbdFontSizePx = rootFontSizePx * 0.85
+  const codeBlockFontSizePx = rootFontSizePx * 0.875
 
   return `
     ${fontFaceDecl}
     :root {
       ${fontFamilyVarDecl}
       --readflex-font-size: ${fontSize}em;
+      --readflex-text-scale: ${safeTextScale};
+      --readflex-prose-font-size: ${proseFontSizePx}px;
+      --readflex-inline-code-font-size: ${inlineCodeFontSizePx}px;
+      --readflex-kbd-font-size: ${kbdFontSizePx}px;
+      --readflex-code-block-font-size: ${codeBlockFontSizePx}px;
       --readflex-letter-spacing: ${letterSpacing}px;
       --readflex-line-height: ${spacing};
       --readflex-text-indent: ${textIndent}em;
@@ -923,6 +936,7 @@ const replaceFootnote = (view) => {
   renderer.setAttribute('bottom-margin', '0px')
   const footNoteStyle = {
     fontSize: style.fontSize,
+    textScale: style.textScale,
     fontName: style.fontName,
     fontPath: style.fontPath,
     letterSpacing: style.letterSpacing,
@@ -1555,6 +1569,7 @@ const setStyle = (oldStyle) => {
 
   const newStyle = {
     fontSize: style.fontSize,
+    textScale: style.textScale,
     fontName: style.fontName,
     fontPath: style.fontPath,
     fontWeight: style.fontWeight,

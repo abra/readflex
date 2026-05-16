@@ -277,6 +277,8 @@ void main() {
       final map = style.toMap();
 
       expect(map['fontSize'], 1.4);
+      expect(map['textScale'], 1.0);
+      expect(map['deviceFontScale'], 1.0);
       expect(map['fontName'], '');
       expect(map['fontPath'], '');
       expect(map['fontWeight'], 400);
@@ -320,6 +322,8 @@ void main() {
     test('toMap reflects custom values', () {
       const style = FoliateStyle(
         fontSize: 1.8,
+        textScale: 1.15,
+        deviceFontScale: 1.12,
         fontColor: '#FFFFFF',
         backgroundColor: '#1A1A1A',
         pageTurnStyle: 'scroll',
@@ -330,6 +334,8 @@ void main() {
       final map = style.toMap();
 
       expect(map['fontSize'], 1.8);
+      expect(map['textScale'], 1.15);
+      expect(map['deviceFontScale'], 1.12);
       expect(map['fontColor'], '#FFFFFF');
       expect(map['backgroundColor'], '#1A1A1A');
       expect(map['pageTurnStyle'], 'scroll');
@@ -343,7 +349,7 @@ void main() {
 
     test('toMap has expected key count', () {
       const style = FoliateStyle();
-      expect(style.toMap().length, 26);
+      expect(style.toMap().length, 28);
     });
   });
 

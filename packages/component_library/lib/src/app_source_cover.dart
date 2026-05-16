@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app_cover_art.dart';
 import 'theme/tokens/app_radius.dart';
+
+final _reportedCoverDecodeFailures = <String>{};
 
 /// Shared renderer for imported source covers and deterministic fallback art.
 class AppSourceCover extends StatelessWidget {
@@ -54,7 +57,16 @@ class AppSourceCover extends StatelessWidget {
               fit: fit,
               width: constraints.maxWidth,
               height: constraints.maxHeight,
-              errorBuilder: (_, _, _) => fallback,
+              errorBuilder: (_, error, stackTrace) {
+                _reportCoverDecodeFailure(
+                  imageProvider: imageProvider,
+                  title: title,
+                  seed: seed,
+                  error: error,
+                  stackTrace: stackTrace,
+                );
+                return fallback;
+              },
             ),
           );
           if (!showMatte) return image;
@@ -75,4 +87,37 @@ class AppSourceCover extends StatelessWidget {
       },
     );
   }
+}
+
+void _reportCoverDecodeFailure({
+  required ImageProvider imageProvider,
+  required String title,
+  required String seed,
+  required Object error,
+  required StackTrace? stackTrace,
+}) {
+  final key = '$imageProvider|$seed';
+  if (!_reportedCoverDecodeFailures.add(key)) return;
+
+  debugPrint(
+    '[source-cover-decode] Failed to decode cover '
+    '(sourceId=$seed, title="$title", provider=$imageProvider): $error',
+  );
+
+  FlutterError.reportError(
+    FlutterErrorDetails(
+      exception: error,
+      stack: stackTrace,
+      library: 'component_library',
+      context: ErrorDescription('while decoding a source cover image'),
+      informationCollector: () sync* {
+        yield DiagnosticsProperty<ImageProvider>(
+          'image provider',
+          imageProvider,
+        );
+        yield StringProperty('title', title);
+        yield StringProperty('source id', seed);
+      },
+    ),
+  );
 }

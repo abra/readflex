@@ -234,6 +234,44 @@ void main() {
       },
     );
 
+    test(
+      'load() v3→v4 migration resets global reader text scale to 100%',
+      () async {
+        final storage = PreferencesStorage();
+        await storage.setString(
+          _key,
+          jsonEncode(<String, Object?>{
+            '_schemaVersion': 3,
+            'readerTextScale': 1.15,
+          }),
+        );
+
+        final repo = PreferencesRepository(storage);
+        final prefs = await repo.load(_supportedCodes);
+
+        expect(prefs.readerTextScale, 1.0);
+      },
+    );
+
+    test(
+      'load() preserves readerTextScale when stored JSON is schema v4',
+      () async {
+        final storage = PreferencesStorage();
+        await storage.setString(
+          _key,
+          jsonEncode(<String, Object?>{
+            '_schemaVersion': 4,
+            'readerTextScale': 1.15,
+          }),
+        );
+
+        final repo = PreferencesRepository(storage);
+        final prefs = await repo.load(_supportedCodes);
+
+        expect(prefs.readerTextScale, 1.15);
+      },
+    );
+
     test('save() writes _schemaVersion key alongside the data', () async {
       final storage = PreferencesStorage();
       final repo = PreferencesRepository(storage);
@@ -242,7 +280,7 @@ void main() {
       final raw = await storage.getString(_key);
       final map = jsonDecode(raw!) as Map<String, Object?>;
 
-      expect(map['_schemaVersion'], 3);
+      expect(map['_schemaVersion'], 4);
     });
 
     test(

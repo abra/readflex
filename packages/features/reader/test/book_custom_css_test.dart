@@ -78,6 +78,20 @@ void main() {
       expect(css, contains('.ProgramCode { white-space: normal !important; }'));
       expect(css, contains('overflow-wrap: anywhere !important'));
       expect(css, contains('word-break: break-word !important'));
+      expect(
+        css,
+        contains('font-size: var(--readflex-inline-code-font-size, 0.9em)'),
+      );
+      expect(
+        css,
+        contains('font-size: var(--readflex-kbd-font-size, 0.85em)'),
+      );
+      expect(
+        css,
+        contains(
+          'font-size: var(--readflex-code-block-font-size, 0.875em)',
+        ),
+      );
       expect(css, contains('line-height: 1.45 !important'));
       expect(css, contains('break-inside: auto !important'));
       expect(css, contains('.readflex-code-block *'));
@@ -92,6 +106,7 @@ void main() {
       final css = buildBookCustomCSS(theme: lightTheme);
       expect(css, contains('-webkit-text-size-adjust: 100% !important'));
       expect(css, contains('body, p, li, blockquote, figcaption'));
+      expect(css, contains('var(--readflex-prose-font-size, 1em)'));
       expect(css, contains('white-space: normal !important'));
       expect(css, contains('overflow-wrap: anywhere !important'));
       expect(css, contains('word-break: break-word !important'));
@@ -120,10 +135,30 @@ void main() {
 
     test('emits heading size rules', () {
       final css = buildBookCustomCSS(theme: lightTheme);
-      expect(css, contains('h1 { font-size: 1.8em !important; }'));
-      expect(css, contains('h2 { font-size: 1.5em !important; }'));
-      expect(css, contains('h3 { font-size: 1.3em !important; }'));
-      expect(css, contains('h4, h5, h6 { font-size: 1.1em !important; }'));
+      expect(
+        css,
+        contains(
+          'h1 { font-size: calc(var(--readflex-prose-font-size, 1em) * 1.8) !important; }',
+        ),
+      );
+      expect(
+        css,
+        contains(
+          'h2 { font-size: calc(var(--readflex-prose-font-size, 1em) * 1.5) !important; }',
+        ),
+      );
+      expect(
+        css,
+        contains(
+          'h3 { font-size: calc(var(--readflex-prose-font-size, 1em) * 1.3) !important; }',
+        ),
+      );
+      expect(
+        css,
+        contains(
+          'h4, h5, h6 { font-size: calc(var(--readflex-prose-font-size, 1em) * 1.1) !important; }',
+        ),
+      );
     });
 
     test('does not emit image inversion in dark themes', () {

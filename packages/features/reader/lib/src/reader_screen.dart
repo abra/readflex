@@ -17,6 +17,7 @@ import 'reader_appearance_sheet.dart';
 import 'reader_bloc.dart';
 import 'reader_chrome_actions.dart';
 import 'reader_color_utils.dart';
+import 'reader_device_font_scale.dart';
 import 'reader_loading_indicator_style.dart';
 import 'reader_progress_label.dart';
 import 'reader_review_reminder_cubit.dart';
@@ -2018,6 +2019,10 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         );
     final fontPreset = ReaderFontPreset.fromId(appearance.fontId);
     final layout = BookLayoutPreset.fromId(appearance.layoutId).data;
+    final deviceFontScale = readerDeviceFontScale(
+      platform: Theme.of(context).platform,
+      viewportSize: MediaQuery.sizeOf(context),
+    );
     final customCSS = _customCSSFor(widget.readerTheme);
 
     final readerSurface = BookReaderWebView(
@@ -2034,12 +2039,12 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         fontPath:
             'http://127.0.0.1:${widget.serverPort}'
             '/assets/fonts/${fontPreset.fontFile}',
-        // Layout preset gives the baseline em-size (compact/standard/
-        // comfortable); textScale is the user's per-step zoom on top
-        // (slider in Profile → Font & Text Size). Multiply so both
-        // controls actually take effect — earlier the slider wrote to
-        // prefs but never reached the WebView.
-        fontSize: layout.fontSize * appearance.textScale,
+        // `fontSize` is the device-adjusted baseline. User A-/A+ zoom is
+        // passed separately as `textScale` so code/pre blocks can stay on
+        // the stable baseline while prose grows.
+        fontSize: layout.fontSize * deviceFontScale,
+        textScale: appearance.textScale,
+        deviceFontScale: deviceFontScale,
         fontWeight: layout.fontWeight,
         letterSpacing: layout.letterSpacing,
         spacing: appearance.lineHeight,

@@ -16,6 +16,10 @@ String buildBookCustomCSS({
   final primaryText = colorToHex(theme.primaryTextColor);
   final secondaryText = colorToHex(theme.secondaryTextColor);
   final isDark = theme.backgroundColor.computeLuminance() < 0.5;
+  const proseFontSize = 'var(--readflex-prose-font-size, 1em)';
+  const inlineCodeFontSize = 'var(--readflex-inline-code-font-size, 0.9em)';
+  const kbdFontSize = 'var(--readflex-kbd-font-size, 0.85em)';
+  const codeBlockFontSize = 'var(--readflex-code-block-font-size, 0.875em)';
 
   final buffer = StringBuffer();
   // No `text-rendering: optimizeLegibility` — it re-measures kerning when
@@ -41,6 +45,12 @@ String buildBookCustomCSS({
   buffer.writeln(
     'p:empty, span:empty, div:empty:not([class]):not([id]) { '
     'display: none !important; }',
+  );
+  buffer.writeln(
+    'p, li, dd, dt, figcaption, caption, blockquote, font, section, article, '
+    'div:not(.readflex-wide-table):not(.readflex-code-block):not(.ProgramCode)'
+    ':not(.ParaTypeProgramcode):not(.LineGroup):not(.FixedLineContainer)'
+    ':not(.FixedLine) { font-size: $proseFontSize !important; }',
   );
   if (isDark) {
     // In dark reader themes, readability wins over publisher colors. Keep
@@ -77,7 +87,7 @@ String buildBookCustomCSS({
     'padding: 0.1em 0.35em; border-radius: 4px; '
     'text-indent: 0 !important; line-height: inherit !important; '
     'font-family: ui-monospace, Menlo, monospace !important; '
-    'font-size: 0.9em !important; letter-spacing: -0.01em; }',
+    'font-size: $inlineCodeFontSize !important; letter-spacing: -0.01em; }',
   );
   // <samp> = sample program output. Same shape as inline code but without
   // a border so it reads as "what the program said" rather than "source
@@ -86,7 +96,7 @@ String buildBookCustomCSS({
     'samp { background: $panel !important; '
     'padding: 0.15em 0.35em; border-radius: 4px; '
     'font-family: ui-monospace, Menlo, monospace !important; '
-    'font-size: 0.9em !important; }',
+    'font-size: $inlineCodeFontSize !important; }',
   );
   // <kbd> = key cap. Inset bottom shadow gives a subtle raised feel so
   // a sequence like "press Cmd+K" reads as physical keys, distinct from
@@ -96,7 +106,7 @@ String buildBookCustomCSS({
     'box-shadow: inset 0 -1px 0 $divider; '
     'padding: 0.1em 0.4em; border-radius: 4px; '
     'font-family: ui-monospace, Menlo, monospace !important; '
-    'font-size: 0.85em !important; font-weight: 600; }',
+    'font-size: $kbdFontSize !important; font-weight: 600; }',
   );
   // Code block: smaller font + tighter line-height than prose (mono looks
   // dense and refined that way), plus a contour bordered card. Springer
@@ -113,7 +123,8 @@ String buildBookCustomCSS({
     'text-align: start !important; '
     'overflow-wrap: anywhere !important; word-break: break-word !important; '
     'font-family: ui-monospace, Menlo, monospace !important; '
-    'font-size: 0.875em !important; line-height: 1.45 !important; }',
+    'font-size: $codeBlockFontSize !important; '
+    'line-height: 1.45 !important; }',
   );
   buffer.writeln(
     'pre, .readflex-code-block, .ParaTypeProgramcode { white-space: pre-wrap !important; } '
@@ -193,9 +204,17 @@ String buildBookCustomCSS({
     'overflow-y: hidden; -webkit-overflow-scrolling: touch; '
     'box-sizing: border-box; }',
   );
-  buffer.writeln('h1 { font-size: 1.8em !important; }');
-  buffer.writeln('h2 { font-size: 1.5em !important; }');
-  buffer.writeln('h3 { font-size: 1.3em !important; }');
-  buffer.writeln('h4, h5, h6 { font-size: 1.1em !important; }');
+  buffer.writeln(
+    'h1 { font-size: calc($proseFontSize * 1.8) !important; }',
+  );
+  buffer.writeln(
+    'h2 { font-size: calc($proseFontSize * 1.5) !important; }',
+  );
+  buffer.writeln(
+    'h3 { font-size: calc($proseFontSize * 1.3) !important; }',
+  );
+  buffer.writeln(
+    'h4, h5, h6 { font-size: calc($proseFontSize * 1.1) !important; }',
+  );
   return buffer.toString();
 }

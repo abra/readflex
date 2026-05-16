@@ -1,6 +1,7 @@
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:preferences_service/preferences_service.dart';
 
 import 'reader_appearance_cubit.dart';
 
@@ -68,7 +69,7 @@ class _ResetAppearanceButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final canReset = context.select<ReaderAppearanceCubit, bool>(
-      (c) => !c.state.isFactoryDefault,
+      (c) => c.state.hasOverride,
     );
     return TextButton(
       onPressed: canReset ? context.read<ReaderAppearanceCubit>().reset : null,
@@ -483,9 +484,13 @@ class _SizeControl extends StatelessWidget {
         textScale > ReaderAppearanceCubit.minTextScale + _textScaleEpsilon;
     final canIncrease =
         textScale < ReaderAppearanceCubit.maxTextScale - _textScaleEpsilon;
-    final canReset =
-        (textScale - ReaderAppearanceCubit.defaultTextScale).abs() >
-        _textScaleEpsilon;
+    final canReset = context.select<ReaderAppearanceCubit, bool>(
+      (c) =>
+          (c.state.effectiveAppearance.textScale -
+                  ReaderAppearancePreferences.defaults.textScale)
+              .abs() >
+          _textScaleEpsilon,
+    );
     return Row(
       children: [
         _TextSizeButton(

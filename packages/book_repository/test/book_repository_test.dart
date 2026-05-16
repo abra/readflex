@@ -7,6 +7,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:local_storage/local_storage.dart';
+import 'package:monitoring/monitoring.dart';
 import 'package:path/path.dart' as p;
 
 void main() {
@@ -435,6 +436,32 @@ void main() {
       expect(book.coverImagePath, contains('cover.png'));
     });
 
+    test('addBook logs suspicious cover diagnostics', () async {
+      final observer = _CollectingLogObserver();
+      final loggedRepo = BookRepository(
+        database: db,
+        booksDirectory: booksDir,
+        logger: Logger(observers: [observer]),
+      );
+      final sourceFile = await createTempBookFile();
+      final coverData = Uint8List.fromList('<svg></svg>'.codeUnits);
+
+      await loggedRepo.addBook(
+        sourceFile: sourceFile,
+        title: 'SVG Cover',
+        format: BookFormat.epub,
+        coverData: coverData,
+        coverMimeType: 'image/jpeg',
+      );
+
+      final message = observer.messages.single.message;
+      expect(message, contains('suspicious cover data'));
+      expect(message, contains('title="SVG Cover"'));
+      expect(message, contains('mime=image/jpeg'));
+      expect(message, contains('detected=svg'));
+      expect(message, contains('signature=3c 73 76 67'));
+    });
+
     test('source file is not modified after import', () async {
       final sourceFile = await createTempBookFile();
       final originalContent = await sourceFile.readAsString();
@@ -487,4 +514,13 @@ void main() {
       },
     );
   });
+}
+
+final class _CollectingLogObserver with LogObserver {
+  final messages = <LogMessage>[];
+
+  @override
+  void onLog(LogMessage logMessage) {
+    messages.add(logMessage);
+  }
 }
