@@ -411,7 +411,8 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       handlerName: 'onRelocated',
       callback: (args) {
         if (args.isEmpty) return;
-        final data = args.first as Map<String, dynamic>;
+        final data = readerBridgeMap(args.first);
+        if (data == null) return;
         final position = BookPosition.fromMap(data);
         widget.onPositionChanged?.call(position);
       },
@@ -421,8 +422,9 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       handlerName: 'onAnnotationClick',
       callback: (args) {
         if (args.isEmpty) return;
-        final data = args.first as Map<String, dynamic>;
-        final annotation = data['annotation'] as Map<String, dynamic>?;
+        final data = readerBridgeMap(args.first);
+        if (data == null) return;
+        final annotation = readerBridgeMap(data['annotation']);
         final id = annotation?['id'] as String?;
         if (id != null) widget.onHighlightTapped?.call(id);
       },
@@ -432,11 +434,11 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       handlerName: 'onSetToc',
       callback: (args) {
         if (args.isEmpty) return;
-        final rawItems = args.first as List<dynamic>? ?? const [];
+        final rawItems = readerBridgeList(args.first) ?? const [];
         final items = [
           for (final raw in rawItems)
-            if (raw is Map)
-              ReaderTocItem.fromMap(Map<String, dynamic>.from(raw)),
+            if (readerBridgeMap(raw) case final data?)
+              ReaderTocItem.fromMap(data),
         ];
         widget.onTocChanged?.call(items);
       },
@@ -446,11 +448,9 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       handlerName: 'onSearch',
       callback: (args) {
         if (args.isEmpty) return;
-        final raw = args.first;
-        if (raw is! Map) return;
-        final event = ReaderSearchEvent.fromMap(
-          Map<String, dynamic>.from(raw),
-        );
+        final raw = readerBridgeMap(args.first);
+        if (raw == null) return;
+        final event = ReaderSearchEvent.fromMap(raw);
         _handleSearchEvent(event);
       },
     );

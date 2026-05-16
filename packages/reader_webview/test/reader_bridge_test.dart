@@ -89,6 +89,26 @@ void main() {
       });
       expect(position.fraction, 0.0);
     });
+
+    test('fromMap tolerates malformed bridge values', () {
+      final position = BookPosition.fromMap({
+        'cfi': 42,
+        'percentage': 'invalid',
+        'chapterTitle': 10,
+        'chapterCurrentPage': 'page',
+        'bookTotalPages': '200',
+        'sizeTotal': false,
+        'atEnd': 'yes',
+      });
+
+      expect(position.cfi, '');
+      expect(position.fraction, 0.0);
+      expect(position.chapterTitle, isNull);
+      expect(position.chapterCurrentPage, isNull);
+      expect(position.bookTotalPages, isNull);
+      expect(position.sizeTotal, isNull);
+      expect(position.atEnd, isFalse);
+    });
   });
 
   group('ReaderTocItem', () {
@@ -119,6 +139,22 @@ void main() {
       expect(item.label, 'Cover');
       expect(item.href, 'cover.xhtml');
       expect(item.id, isNull);
+      expect(item.level, 1);
+      expect(item.startPercentage, isNull);
+      expect(item.startPage, isNull);
+    });
+
+    test('fromMap tolerates malformed bridge values', () {
+      final item = ReaderTocItem.fromMap({
+        'label': 42,
+        'href': false,
+        'level': 'two',
+        'startPercentage': 'half',
+        'startPage': 'ten',
+      });
+
+      expect(item.label, '');
+      expect(item.href, '');
       expect(item.level, 1);
       expect(item.startPercentage, isNull);
       expect(item.startPage, isNull);
@@ -154,6 +190,18 @@ void main() {
       expect(result.excerpt.pre, '');
       expect(result.excerpt.match, '');
       expect(result.excerpt.post, '');
+    });
+
+    test('fromMap tolerates malformed bridge values', () {
+      final result = ReaderSearchResult.fromMap({
+        'cfi': 10,
+        'chapterTitle': false,
+        'excerpt': 'needle',
+      });
+
+      expect(result.cfi, '');
+      expect(result.chapterTitle, isNull);
+      expect(result.excerpt.match, '');
     });
   });
 
@@ -230,6 +278,19 @@ void main() {
       expect(error, isA<ReaderSearchError>());
       expect((error as ReaderSearchError).message, 'boom');
     });
+
+    test('fromMap tolerates malformed bridge values', () {
+      final event = ReaderSearchEvent.fromMap({
+        'requestId': 'bad',
+        'type': false,
+        'items': ['invalid'],
+      });
+
+      expect(event, isA<ReaderSearchResults>());
+      final results = event as ReaderSearchResults;
+      expect(results.requestId, -1);
+      expect(results.results, isEmpty);
+    });
   });
 
   group('ReaderSelection', () {
@@ -268,6 +329,18 @@ void main() {
       expect(selection.text, 'Both fields');
       expect(selection.cfiRange, 'epubcfi(/6/4)');
       expect(selection.scrollOffset, 0.3);
+    });
+
+    test('fromMap tolerates malformed bridge values', () {
+      final selection = ReaderSelection.fromMap({
+        'text': 42,
+        'cfi': false,
+        'scrollOffset': 'half',
+      });
+
+      expect(selection.text, '');
+      expect(selection.cfiRange, isNull);
+      expect(selection.scrollOffset, isNull);
     });
   });
 

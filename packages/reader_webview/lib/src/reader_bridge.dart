@@ -3,6 +3,56 @@
 // JS → Flutter handlers report events (position, selection).
 // Flutter → JS calls control the WebView (navigate, style, highlights).
 
+import 'dart:convert';
+
+/// Safely coerces a WebView bridge value into a string-keyed map.
+///
+/// `flutter_inappwebview` can surface JavaScript payloads as generic maps, and
+/// malformed publisher/reader scripts may occasionally send strings or wrong
+/// shapes. Bridge parsing must treat that input as untrusted and avoid hard
+/// casts inside handler callbacks.
+Map<String, dynamic>? readerBridgeMap(Object? value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) {
+    final result = <String, dynamic>{};
+    for (final entry in value.entries) {
+      final key = entry.key;
+      if (key is String) result[key] = entry.value;
+    }
+    return result;
+  }
+  if (value is String) {
+    try {
+      final decoded = jsonDecode(value);
+      return readerBridgeMap(decoded);
+    } catch (_) {
+      return null;
+    }
+  }
+  return null;
+}
+
+List<dynamic>? readerBridgeList(Object? value) {
+  if (value is List) return value;
+  if (value is String) {
+    try {
+      final decoded = jsonDecode(value);
+      return decoded is List ? decoded : null;
+    } catch (_) {
+      return null;
+    }
+  }
+  return null;
+}
+
+String? _string(Object? value) => value is String ? value : null;
+
+int? _int(Object? value) => value is num ? value.toInt() : null;
+
+double? _double(Object? value) => value is num ? value.toDouble() : null;
+
+bool? _bool(Object? value) => value is bool ? value : null;
+
 /// Current reading position inside a book WebView, reported by foliate-js
 /// on every page turn. Includes the EPUB CFI (for exact restore), an
 /// overall progress fraction, and optional chapter context.
@@ -61,17 +111,17 @@ class BookPosition {
 
   factory BookPosition.fromMap(Map<String, dynamic> map) {
     return BookPosition(
-      cfi: map['cfi'] as String,
-      fraction: (map['percentage'] as num?)?.toDouble() ?? 0,
-      chapterTitle: map['chapterTitle'] as String?,
-      chapterCurrentPage: (map['chapterCurrentPage'] as num?)?.toInt(),
-      chapterTotalPages: (map['chapterTotalPages'] as num?)?.toInt(),
-      bookCurrentPage: (map['bookCurrentPage'] as num?)?.toInt(),
-      bookTotalPages: (map['bookTotalPages'] as num?)?.toInt(),
-      sizeTotal: (map['sizeTotal'] as num?)?.toInt(),
-      relocationReason: map['reason'] as String?,
-      atEnd: map['atEnd'] as bool? ?? false,
-      atStart: map['atStart'] as bool? ?? false,
+      cfi: _string(map['cfi']) ?? '',
+      fraction: _double(map['percentage']) ?? 0,
+      chapterTitle: _string(map['chapterTitle']),
+      chapterCurrentPage: _int(map['chapterCurrentPage']),
+      chapterTotalPages: _int(map['chapterTotalPages']),
+      bookCurrentPage: _int(map['bookCurrentPage']),
+      bookTotalPages: _int(map['bookTotalPages']),
+      sizeTotal: _int(map['sizeTotal']),
+      relocationReason: _string(map['reason']),
+      atEnd: _bool(map['atEnd']) ?? false,
+      atStart: _bool(map['atStart']) ?? false,
     );
   }
 }
@@ -100,12 +150,12 @@ class ReaderTocItem {
 
   factory ReaderTocItem.fromMap(Map<String, dynamic> map) {
     return ReaderTocItem(
-      label: map['label'] as String? ?? '',
-      href: map['href'] as String? ?? '',
+      label: _string(map['label']) ?? '',
+      href: _string(map['href']) ?? '',
       id: map['id']?.toString(),
-      level: (map['level'] as num?)?.toInt() ?? 1,
-      startPercentage: (map['startPercentage'] as num?)?.toDouble(),
-      startPage: (map['startPage'] as num?)?.toInt(),
+      level: _int(map['level']) ?? 1,
+      startPercentage: _double(map['startPercentage']),
+      startPage: _int(map['startPage']),
     );
   }
 }
@@ -127,11 +177,11 @@ class ReaderSearchResult {
 
   factory ReaderSearchResult.fromMap(Map<String, dynamic> map) {
     return ReaderSearchResult(
-      cfi: map['cfi'] as String? ?? '',
+      cfi: _string(map['cfi']) ?? '',
       excerpt: ReaderSearchExcerpt.fromMap(
-        Map<String, dynamic>.from(map['excerpt'] as Map? ?? const {}),
+        readerBridgeMap(map['excerpt']) ?? const {},
       ),
-      chapterTitle: map['chapterTitle'] as String?,
+      chapterTitle: _string(map['chapterTitle']),
     );
   }
 }
@@ -147,9 +197,9 @@ sealed class ReaderSearchEvent {
   final int requestId;
 
   factory ReaderSearchEvent.fromMap(Map<String, dynamic> map) {
-    final requestId = (map['requestId'] as num?)?.toInt() ?? -1;
+    final requestId = _int(map['requestId']) ?? -1;
     final type =
-        map['type'] as String? ??
+        _string(map['type']) ??
         (map.containsKey('process') || map.containsKey('progress')
             ? 'progress'
             : 'results');
@@ -162,7 +212,7 @@ sealed class ReaderSearchEvent {
       'done' => ReaderSearchDone(requestId: requestId),
       'error' => ReaderSearchError(
         requestId: requestId,
-        message: map['message'] as String? ?? 'Book search failed',
+        message: _string(map['message']) ?? 'Book search failed',
       ),
       _ => ReaderSearchResults(
         requestId: requestId,
@@ -204,28 +254,28 @@ final class ReaderSearchError extends ReaderSearchEvent {
 }
 
 double _progressFromMap(Map<String, dynamic> map) {
-  final value = (map['progress'] ?? map['process']) as num?;
-  return (value?.toDouble() ?? 0).clamp(0.0, 1.0).toDouble();
+  final value = _double(map['progress']) ?? _double(map['process']);
+  return (value ?? 0).clamp(0.0, 1.0).toDouble();
 }
 
 List<ReaderSearchResult> _searchResultsFromMap(Map<String, dynamic> map) {
-  final items = map['items'];
-  if (items is List) {
+  final items = readerBridgeList(map['items']);
+  if (items != null) {
     return [
       for (final item in items)
-        if (item is Map)
-          ReaderSearchResult.fromMap(Map<String, dynamic>.from(item)),
+        if (readerBridgeMap(item) case final data?)
+          ReaderSearchResult.fromMap(data),
     ];
   }
 
-  final chapterTitle = (map['chapterTitle'] ?? map['label']) as String?;
-  final subitems = map['subitems'];
-  if (subitems is List) {
+  final chapterTitle = _string(map['chapterTitle']) ?? _string(map['label']);
+  final subitems = readerBridgeList(map['subitems']);
+  if (subitems != null) {
     return [
       for (final item in subitems)
-        if (item is Map)
+        if (readerBridgeMap(item) case final data?)
           ReaderSearchResult.fromMap({
-            ...Map<String, dynamic>.from(item),
+            ...data,
             'chapterTitle': ?chapterTitle,
           }),
     ];
@@ -258,9 +308,9 @@ class ReaderSearchExcerpt {
 
   factory ReaderSearchExcerpt.fromMap(Map<String, dynamic> map) {
     return ReaderSearchExcerpt(
-      pre: map['pre'] as String? ?? '',
-      match: map['match'] as String? ?? '',
-      post: map['post'] as String? ?? '',
+      pre: _string(map['pre']) ?? '',
+      match: _string(map['match']) ?? '',
+      post: _string(map['post']) ?? '',
     );
   }
 }
@@ -285,9 +335,9 @@ class ReaderSelection {
 
   factory ReaderSelection.fromMap(Map<String, dynamic> map) {
     return ReaderSelection(
-      text: map['text'] as String,
-      cfiRange: map['cfi'] as String?,
-      scrollOffset: (map['scrollOffset'] as num?)?.toDouble(),
+      text: _string(map['text']) ?? '',
+      cfiRange: _string(map['cfi']),
+      scrollOffset: _double(map['scrollOffset']),
     );
   }
 }

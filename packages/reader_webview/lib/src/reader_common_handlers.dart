@@ -16,7 +16,8 @@ void registerSharedReaderHandlers(
     handlerName: 'onSelectionEnd',
     callback: (args) {
       if (args.isEmpty) return;
-      final data = args.first as Map<String, dynamic>;
+      final data = readerBridgeMap(args.first);
+      if (data == null) return;
       onTextSelected?.call(ReaderSelection.fromMap(data));
     },
   );
@@ -30,11 +31,12 @@ void registerSharedReaderHandlers(
     handlerName: 'onClick',
     callback: (args) {
       if (args.isEmpty) return;
-      final data = args.first as Map<String, dynamic>;
-      final x = (data['x'] as num?)?.toDouble();
-      final y = (data['y'] as num?)?.toDouble();
-      if (x == null || y == null) return;
-      onTapped?.call(x, y);
+      final data = readerBridgeMap(args.first);
+      if (data == null) return;
+      final x = data['x'];
+      final y = data['y'];
+      if (x is! num || y is! num) return;
+      onTapped?.call(x.toDouble(), y.toDouble());
     },
   );
 }
