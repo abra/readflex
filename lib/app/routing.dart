@@ -214,6 +214,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
               bookRepository: deps.bookRepository,
               highlightRepository: deps.highlightRepository,
               preferencesService: deps.preferencesService,
+              screenControlService: deps.screenControlService,
               initialSearchHistory:
                   deps.preferencesService.current.readerSearchHistory,
               onSearchHistoryChanged: (queries) {

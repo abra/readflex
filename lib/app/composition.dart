@@ -24,6 +24,7 @@ import 'package:preferences_service/preferences_service.dart';
 import 'package:reader_server/reader_server.dart';
 import 'package:readflex/app/config/application_config.dart';
 import 'package:readflex/app/dependency_container.dart';
+import 'package:screen_control_service/screen_control_service.dart';
 import 'package:subscription_service/subscription_service.dart';
 import 'package:translation_service/translation_service.dart';
 
@@ -141,6 +142,7 @@ Future<DependenciesContainer> createDependenciesContainer(
   const subscriptionService = NoopSubscriptionService();
   final connectivityService = await ConnectivityPlusService.create();
   const notificationService = NoopNotificationService();
+  const screenControlService = WakelockScreenControlService();
 
   return DependenciesContainer(
     logger: logger,
@@ -159,6 +161,7 @@ Future<DependenciesContainer> createDependenciesContainer(
     subscriptionService: subscriptionService,
     connectivityService: connectivityService,
     notificationService: notificationService,
+    screenControlService: screenControlService,
     readerServer: readerServer,
   );
 }

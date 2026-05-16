@@ -26,6 +26,9 @@ class ReaderUiState extends Equatable {
 
   bool get appearanceSheetVisible => overlay == ReaderOverlay.appearance;
 
+  bool get contentOnlyVisible =>
+      !chromeVisible && overlay == ReaderOverlay.none;
+
   ReaderUiState copyWith({
     bool? chromeVisible,
     ReaderOverlay? overlay,

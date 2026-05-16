@@ -9,6 +9,7 @@ void main() {
       final cubit = buildCubit();
       expect(cubit.state.chromeVisible, isFalse);
       expect(cubit.state.overlay, ReaderOverlay.none);
+      expect(cubit.state.contentOnlyVisible, isTrue);
       expect(cubit.state.clearSearchToken, 0);
     });
 
@@ -17,9 +18,11 @@ void main() {
 
       cubit.toggleChrome();
       expect(cubit.state.chromeVisible, isTrue);
+      expect(cubit.state.contentOnlyVisible, isFalse);
 
       cubit.toggleChrome();
       expect(cubit.state.chromeVisible, isFalse);
+      expect(cubit.state.contentOnlyVisible, isTrue);
     });
 
     test('openTocDrawer hides chrome and requests search clear', () {
@@ -29,6 +32,7 @@ void main() {
 
       expect(cubit.state.chromeVisible, isFalse);
       expect(cubit.state.tocDrawerVisible, isTrue);
+      expect(cubit.state.contentOnlyVisible, isFalse);
       expect(cubit.state.clearSearchToken, 1);
     });
 

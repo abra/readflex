@@ -18,6 +18,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:reader_server/reader_server.dart';
 import 'package:readflex/app/config/application_config.dart';
+import 'package:screen_control_service/screen_control_service.dart';
 import 'package:subscription_service/subscription_service.dart';
 import 'package:translation_service/translation_service.dart';
 
@@ -40,6 +41,7 @@ class DependenciesContainer {
     required this.subscriptionService,
     required this.connectivityService,
     required this.notificationService,
+    required this.screenControlService,
     required this.readerServer,
   });
 
@@ -59,6 +61,7 @@ class DependenciesContainer {
   final SubscriptionService subscriptionService;
   final ConnectivityService connectivityService;
   final NotificationService notificationService;
+  final ScreenControlService screenControlService;
   final ReaderServer readerServer;
 
   /// Releases resources owned by the container — the local reader HTTP

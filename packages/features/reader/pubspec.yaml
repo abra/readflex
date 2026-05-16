@@ -28,6 +28,8 @@ dependencies:
     path: ../../component_library
   reader_webview:
     path: ../../reader_webview
+  screen_control_service:
+    path: ../../screen_control_service
 
 dev_dependencies:
   flutter_test:

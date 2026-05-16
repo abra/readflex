@@ -45,6 +45,8 @@ dependencies:
     path: packages/subscription_service
   notification_service:
     path: packages/notification_service
+  screen_control_service:
+    path: packages/screen_control_service
   preferences_service:
     path: packages/preferences_service
   reader_server:

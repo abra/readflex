@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:reader_webview/reader_webview.dart';
+import 'package:screen_control_service/screen_control_service.dart';
 import 'package:shared/shared.dart';
 
 import 'book_custom_css.dart';
@@ -82,6 +83,7 @@ class ReaderScreen extends StatelessWidget {
     required this.bookRepository,
     required this.highlightRepository,
     required this.preferencesService,
+    required this.screenControlService,
     required this.textActions,
     this.initialSearchHistory = const [],
     this.initialSource,
@@ -96,6 +98,7 @@ class ReaderScreen extends StatelessWidget {
   final BookRepository bookRepository;
   final HighlightRepository highlightRepository;
   final PreferencesService preferencesService;
+  final ScreenControlService screenControlService;
   final List<TextAction> textActions;
   final List<String> initialSearchHistory;
   final Book? initialSource;
@@ -141,17 +144,143 @@ class ReaderScreen extends StatelessWidget {
             ),
           ),
         ],
-        child: _ReaderView(serverPort: serverPort, textActions: textActions),
+        child: _ReaderView(
+          serverPort: serverPort,
+          textActions: textActions,
+          screenControlService: screenControlService,
+        ),
       ),
     );
   }
 }
 
+class ReaderKeepAwakeDriver extends StatelessWidget {
+  const ReaderKeepAwakeDriver({
+    required this.screenControlService,
+    required this.child,
+    super.key,
+  });
+
+  final ScreenControlService screenControlService;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<ReaderUiCubit, ReaderUiState, bool>(
+      selector: (state) => state.contentOnlyVisible,
+      builder: (context, contentOnlyVisible) {
+        return ReaderKeepAwakeScope(
+          active: contentOnlyVisible,
+          screenControlService: screenControlService,
+          child: child,
+        );
+      },
+    );
+  }
+}
+
+/// Keeps the device awake only while the reader shows bare reading content.
+///
+/// Chrome panels, drawers, and bottom sheets release keep-awake because the user
+/// is interacting with controls rather than passively reading.
+class ReaderKeepAwakeScope extends StatefulWidget {
+  const ReaderKeepAwakeScope({
+    required this.active,
+    required this.screenControlService,
+    required this.child,
+    super.key,
+  });
+
+  final bool active;
+  final ScreenControlService screenControlService;
+  final Widget child;
+
+  @override
+  State<ReaderKeepAwakeScope> createState() => _ReaderKeepAwakeScopeState();
+}
+
+class _ReaderKeepAwakeScopeState extends State<ReaderKeepAwakeScope>
+    with WidgetsBindingObserver {
+  bool _keepAwakeRequested = false;
+  bool _foreground = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(_sync());
+  }
+
+  @override
+  void didUpdateWidget(ReaderKeepAwakeScope oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active != oldWidget.active ||
+        widget.screenControlService != oldWidget.screenControlService) {
+      unawaited(_sync());
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _foreground = true;
+        unawaited(_sync());
+        break;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        _foreground = false;
+        unawaited(_sync());
+        break;
+    }
+  }
+
+  Future<void> _sync() {
+    if (widget.active && _foreground) {
+      return _keepAwake();
+    }
+    return _allowSleep();
+  }
+
+  Future<void> _keepAwake() async {
+    if (_keepAwakeRequested) {
+      return;
+    }
+    _keepAwakeRequested = true;
+    await widget.screenControlService.keepAwake();
+  }
+
+  Future<void> _allowSleep() async {
+    if (!_keepAwakeRequested) {
+      return;
+    }
+    _keepAwakeRequested = false;
+    await widget.screenControlService.allowSleep();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    unawaited(_allowSleep());
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
 class _ReaderView extends StatelessWidget {
-  const _ReaderView({required this.serverPort, required this.textActions});
+  const _ReaderView({
+    required this.serverPort,
+    required this.textActions,
+    required this.screenControlService,
+  });
 
   final int serverPort;
   final List<TextAction> textActions;
+  final ScreenControlService screenControlService;
 
   @override
   Widget build(BuildContext context) {
@@ -168,6 +297,7 @@ class _ReaderView extends StatelessWidget {
                 status: status,
                 serverPort: serverPort,
                 textActions: textActions,
+                screenControlService: screenControlService,
               ),
             ),
           ),
@@ -182,11 +312,13 @@ class _ReaderBody extends StatelessWidget {
     required this.status,
     required this.serverPort,
     required this.textActions,
+    required this.screenControlService,
   });
 
   final ReaderStatus status;
   final int serverPort;
   final List<TextAction> textActions;
+  final ScreenControlService screenControlService;
 
   @override
   Widget build(BuildContext context) {
@@ -217,9 +349,12 @@ class _ReaderBody extends StatelessWidget {
           ],
         ),
       ),
-      ReaderStatus.ready => _ReadyContent(
-        serverPort: serverPort,
-        textActions: textActions,
+      ReaderStatus.ready => ReaderKeepAwakeDriver(
+        screenControlService: screenControlService,
+        child: _ReadyContent(
+          serverPort: serverPort,
+          textActions: textActions,
+        ),
       ),
     };
   }

@@ -14,7 +14,12 @@ class ReaderScreen extends StatelessWidget {
     required int serverPort,                       // local reader_server port
     required BookRepository bookRepository,
     required HighlightRepository highlightRepository,
+    required PreferencesService preferencesService,
+    required ScreenControlService screenControlService,
     required List<TextAction> textActions,         // plug-in actions
+    List<String> initialSearchHistory = const [],
+    Book? initialSource,
+    ValueChanged<List<String>>? onSearchHistoryChanged,
     Future<int> Function(String sourceId)? onCheckDueItems,
     void Function(BuildContext, String sourceId)? onStartMiniReview,
   });
@@ -59,6 +64,10 @@ through the bloc's error pipeline without emitting state themselves.
 
 - **`_ReaderCallbacksScope`** — `InheritedWidget` that carries
   `onStartMiniReview` to the review banner without prop drilling.
+- **`ReaderKeepAwakeDriver` / `ReaderKeepAwakeScope`** — content-only
+  screen-awake owner. It enables keep-awake only while the reader shows bare
+  reading content, and releases it when chrome, drawer, bottom sheet, route
+  disposal, or app backgrounding takes over.
 - **Driver pattern** — stateless widgets (`_ReaderBottomChromeDriver`,
   `_ContextPanelDriver`, `_ReviewReminderDriver`)
   subscribe to multiple BLoC/Cubit sources via `context.select` and feed
@@ -89,6 +98,7 @@ composition root.
   persistence
 - `preferences_service` — persisted `ReaderAppearance` preferences (theme,
   font, layout presets)
+- `screen_control_service` — content-only keep-awake control
 - `reader_webview` — `BookReaderWebView`, `FoliateStyle`, `ReaderHighlight`
 - `shared` — `TextAction`, `TextSelectionContext`
 - `domain_models` — `Book`, `SourceType`
