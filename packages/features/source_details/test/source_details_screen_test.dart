@@ -120,6 +120,32 @@ void main() {
       },
     );
 
+    testWidgets('updates bottom action after source reloads from reader', (
+      tester,
+    ) async {
+      await tester.pumpSourceDetails(
+        repository: repository,
+        highlightRepository: highlightRepository,
+        flashcardRepository: flashcardRepository,
+        dictionaryRepository: dictionaryRepository,
+        initialSource: _newSource,
+        onReadPressed: (source) async {
+          repository.source = source.copyWith(
+            lastOpenedAt: DateTime(2026, 1, 2),
+          );
+        },
+      );
+
+      expect(find.text('Start reading'), findsOneWidget);
+      expect(find.text('Continue reading'), findsNothing);
+
+      await tester.tap(find.text('Start reading'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Start reading'), findsNothing);
+      expect(find.text('Continue reading'), findsOneWidget);
+    });
+
     testWidgets('keeps source cover Hero bounds at stable 2:3 ratio', (
       tester,
     ) async {

@@ -103,7 +103,9 @@ class SourceDetailsView extends StatelessWidget {
         },
       ),
       bottomNavigationBar: BlocBuilder<SourceDetailsBloc, SourceDetailsState>(
-        buildWhen: (previous, current) => previous.status != current.status,
+        buildWhen: (previous, current) =>
+            previous.status != current.status ||
+            previous.source != current.source,
         builder: (context, state) {
           if (state.status != SourceDetailsStatus.success) {
             return const SizedBox.shrink();
