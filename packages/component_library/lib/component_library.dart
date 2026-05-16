@@ -11,6 +11,7 @@ export 'src/app_icons.dart';
 export 'src/app_image_aspect_ratio.dart';
 export 'src/app_source_cover.dart';
 export 'src/app_source_cover_frame.dart';
+export 'src/app_source_cover_image.dart';
 export 'src/bottom_sheet_header.dart';
 export 'src/button_loading_indicator.dart';
 export 'src/centered_circular_progress_indicator.dart';

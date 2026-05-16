@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:book_repository/book_repository.dart';
@@ -504,8 +503,5 @@ String _progressLabel(Book source) {
 }
 
 ImageProvider? _coverImageFor(Book source) {
-  return switch (source.coverImagePath) {
-    final path? when path.isNotEmpty => FileImage(File(path)),
-    _ => null,
-  };
+  return appSourceCoverImageFromPath(source.coverImagePath);
 }

@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
@@ -28,10 +26,7 @@ class BookLibraryGridTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final coverImage = switch (book.coverImagePath) {
-      final path? when path.isNotEmpty => FileImage(File(path)),
-      _ => null,
-    };
+    final coverImage = appSourceCoverImageFromPath(book.coverImagePath);
 
     return _GridTileShell(
       sourceId: book.id,
