@@ -1,8 +1,7 @@
-/// Cross-package contract: saving a reviewable item and registering it with
-/// FSRS must result in the item appearing in the FSRS due queue for its
-/// source. Regressions in DB mapping, ReviewableType serialization, or
-/// `dueItems` SQL would be invisible to per-package unit tests with fakes.
-library;
+// Cross-package contract: saving a reviewable item and registering it with
+// FSRS must result in the item appearing in the FSRS due queue for its
+// source. Regressions in DB mapping, ReviewableType serialization, or
+// `dueItems` SQL would be invisible to per-package unit tests with fakes.
 
 import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';

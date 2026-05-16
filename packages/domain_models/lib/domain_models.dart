@@ -1,6 +1,5 @@
-/// Immutable domain models, enums, and exceptions shared across packages.
-/// Pure Dart: no Flutter, no storage, no services.
-library;
+// Immutable domain models, enums, and exceptions shared across packages.
+// Pure Dart: no Flutter, no storage, no services.
 
 export 'src/exceptions/not_found_exception.dart';
 export 'src/exceptions/storage_exception.dart';

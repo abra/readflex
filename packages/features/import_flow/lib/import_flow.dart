@@ -1,6 +1,5 @@
-/// Bottom sheet for adding book files (EPUB / PDF / FB2 / ...) to the
-/// library.
-library;
+// Bottom sheet for adding book files (EPUB / PDF / FB2 / ...) to the
+// library.
 
 export 'src/book_import.dart';
 export 'src/import_flow_cubit.dart';

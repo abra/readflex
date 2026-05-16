@@ -1,8 +1,7 @@
-/// Data types for the JS ↔ Flutter bridge protocol.
-///
-/// JS → Flutter handlers report events (position, selection).
-/// Flutter → JS calls control the WebView (navigate, style, highlights).
-library;
+// Data types for the JS ↔ Flutter bridge protocol.
+//
+// JS → Flutter handlers report events (position, selection).
+// Flutter → JS calls control the WebView (navigate, style, highlights).
 
 /// Current reading position inside a book WebView, reported by foliate-js
 /// on every page turn. Includes the EPUB CFI (for exact restore), an
