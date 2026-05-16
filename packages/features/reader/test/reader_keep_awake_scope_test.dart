@@ -1,11 +1,24 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:domain_models/domain_models.dart';
+import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_screen.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
 import 'package:screen_control_service/screen_control_service.dart';
 
+import 'helpers/fake_book_repository.dart';
+import 'helpers/fake_highlight_repository.dart';
+
 void main() {
+  final book = Book(
+    id: 'book-1',
+    title: 'Test Book',
+    filePath: '/books/test.epub',
+    format: BookFormat.epub,
+    addedAt: DateTime(2024, 1, 1),
+  );
+
   testWidgets('keeps screen awake while content-only mode is active', (
     tester,
   ) async {
@@ -59,11 +72,20 @@ void main() {
   ) async {
     final service = _FakeScreenControlService();
     final uiCubit = ReaderUiCubit();
+    final readerBloc = ReaderBloc(
+      bookRepository: FakeBookRepository(),
+      highlightRepository: FakeHighlightRepository(),
+      initialSource: book,
+    );
     addTearDown(uiCubit.close);
+    addTearDown(readerBloc.close);
 
     await tester.pumpWidget(
-      BlocProvider.value(
-        value: uiCubit,
+      MultiBlocProvider(
+        providers: [
+          BlocProvider.value(value: readerBloc),
+          BlocProvider.value(value: uiCubit),
+        ],
         child: ReaderKeepAwakeDriver(
           screenControlService: service,
           child: const SizedBox.shrink(),
@@ -85,6 +107,41 @@ void main() {
       service.calls,
       const ['keepAwake', 'allowSleep', 'keepAwake', 'allowSleep'],
     );
+  });
+
+  testWidgets('waits for reader ready state before keeping screen awake', (
+    tester,
+  ) async {
+    final service = _FakeScreenControlService();
+    final uiCubit = ReaderUiCubit();
+    final bookRepository = FakeBookRepository()..seedBook(book);
+    final readerBloc = ReaderBloc(
+      bookRepository: bookRepository,
+      highlightRepository: FakeHighlightRepository(),
+    );
+    addTearDown(uiCubit.close);
+    addTearDown(readerBloc.close);
+
+    await tester.pumpWidget(
+      MultiBlocProvider(
+        providers: [
+          BlocProvider.value(value: readerBloc),
+          BlocProvider.value(value: uiCubit),
+        ],
+        child: ReaderKeepAwakeDriver(
+          screenControlService: service,
+          child: const SizedBox.shrink(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(service.calls, isEmpty);
+
+    readerBloc.add(const ReaderSourceLoadRequested(sourceId: 'book-1'));
+    await tester.pumpAndSettle();
+
+    expect(service.calls, const ['keepAwake']);
   });
 
   testWidgets('releases in background and re-enables on resume', (

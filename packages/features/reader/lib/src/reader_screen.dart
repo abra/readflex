@@ -154,10 +154,12 @@ class ReaderScreen extends StatelessWidget {
         child: Builder(
           builder: (context) => ReaderBrightnessLifecycleScope(
             cubit: context.read<ReaderBrightnessCubit>(),
-            child: _ReaderView(
-              serverPort: serverPort,
-              textActions: textActions,
+            child: ReaderKeepAwakeDriver(
               screenControlService: screenControlService,
+              child: _ReaderView(
+                serverPort: serverPort,
+                textActions: textActions,
+              ),
             ),
           ),
         ),
@@ -178,11 +180,15 @@ class ReaderKeepAwakeDriver extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final readerReady = context.select<ReaderBloc, bool>(
+      (bloc) => bloc.state.status == ReaderStatus.ready,
+    );
+
     return BlocSelector<ReaderUiCubit, ReaderUiState, bool>(
       selector: (state) => state.contentOnlyVisible,
       builder: (context, contentOnlyVisible) {
         return ReaderKeepAwakeScope(
-          active: contentOnlyVisible,
+          active: readerReady && contentOnlyVisible,
           screenControlService: screenControlService,
           child: child,
         );
@@ -346,12 +352,10 @@ class _ReaderView extends StatelessWidget {
   const _ReaderView({
     required this.serverPort,
     required this.textActions,
-    required this.screenControlService,
   });
 
   final int serverPort;
   final List<TextAction> textActions;
-  final ScreenControlService screenControlService;
 
   @override
   Widget build(BuildContext context) {
@@ -368,7 +372,6 @@ class _ReaderView extends StatelessWidget {
                 status: status,
                 serverPort: serverPort,
                 textActions: textActions,
-                screenControlService: screenControlService,
               ),
             ),
           ),
@@ -383,13 +386,11 @@ class _ReaderBody extends StatelessWidget {
     required this.status,
     required this.serverPort,
     required this.textActions,
-    required this.screenControlService,
   });
 
   final ReaderStatus status;
   final int serverPort;
   final List<TextAction> textActions;
-  final ScreenControlService screenControlService;
 
   @override
   Widget build(BuildContext context) {
@@ -420,12 +421,9 @@ class _ReaderBody extends StatelessWidget {
           ],
         ),
       ),
-      ReaderStatus.ready => ReaderKeepAwakeDriver(
-        screenControlService: screenControlService,
-        child: _ReadyContent(
-          serverPort: serverPort,
-          textActions: textActions,
-        ),
+      ReaderStatus.ready => _ReadyContent(
+        serverPort: serverPort,
+        textActions: textActions,
       ),
     };
   }
