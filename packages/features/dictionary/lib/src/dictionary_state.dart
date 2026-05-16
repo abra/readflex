@@ -74,9 +74,11 @@ class DictionaryState extends Equatable {
 
   bool get isEmpty => entries.isEmpty;
 
-  int get masteredCount => masteredIds.length;
+  late final int masteredCount = entries.where((entry) {
+    return masteredIds.contains(entry.id);
+  }).length;
 
-  int get learningCount => entries.length - masteredIds.length;
+  late final int learningCount = entries.length - masteredCount;
 
   bool isMastered(String entryId) => masteredIds.contains(entryId);
 

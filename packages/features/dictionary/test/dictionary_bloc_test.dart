@@ -487,5 +487,14 @@ void main() {
       expect(state.masteredCount, 1);
       expect(state.learningCount, 2);
     });
+
+    test('counts ignore mastered ids that are not in current entries', () {
+      final state = DictionaryState(
+        entries: [_entry1],
+        masteredIds: const {'missing'},
+      );
+      expect(state.masteredCount, 0);
+      expect(state.learningCount, 1);
+    });
   });
 }
