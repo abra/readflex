@@ -97,7 +97,7 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
       final effect = _deletionEffect(deletion, success: false);
       emit(
         state.copyWith(
-          status: DictionaryStatus.failure,
+          status: DictionaryStatus.success,
           deletionVersion: effect.version,
           deletionEffect: effect,
         ),
@@ -131,7 +131,7 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
         final effect = _deletionEffect(deletion, success: false);
         emit(
           state.copyWith(
-            status: DictionaryStatus.failure,
+            status: DictionaryStatus.success,
             entries: entries,
             masteredIds: masteredIds,
             deletionVersion: effect.version,
@@ -143,7 +143,7 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
         final effect = _deletionEffect(deletion, success: false);
         emit(
           state.copyWith(
-            status: DictionaryStatus.failure,
+            status: DictionaryStatus.success,
             deletionVersion: effect.version,
             deletionEffect: effect,
           ),
@@ -183,9 +183,12 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
       final effect = deletion == null
           ? null
           : _deletionEffect(deletion, success: false);
+      final status = deletion == null
+          ? DictionaryStatus.failure
+          : DictionaryStatus.success;
       emit(
         state.copyWith(
-          status: DictionaryStatus.failure,
+          status: status,
           deletionVersion: effect?.version,
           deletionEffect: effect,
         ),

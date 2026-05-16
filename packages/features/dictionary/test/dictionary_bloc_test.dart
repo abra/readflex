@@ -211,6 +211,38 @@ void main() {
     );
 
     blocTest<DictionaryBloc, DictionaryState>(
+      'bulk delete keeps list visible on per-id failure',
+      setUp: () {
+        repository.seed([_entry1, _entry2, _entry3]);
+        repository.failOnIds = {_entry1.id};
+      },
+      build: () => DictionaryBloc(
+        dictionaryRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
+      seed: () => DictionaryState(
+        status: DictionaryStatus.success,
+        entries: [_entry1, _entry2, _entry3],
+      ),
+      act: (bloc) => bloc.add(
+        DictionaryEntriesDeleted({_entry1.id, _entry3.id}),
+      ),
+      errors: () => [isA<Object>()],
+      verify: (bloc) {
+        expect(bloc.state.status, DictionaryStatus.success);
+        expect(bloc.state.entries.map((e) => e.id), [_entry1.id, _entry2.id]);
+        expect(
+          bloc.state.deletionEffect,
+          const DictionaryDeletionEffect(
+            version: 1,
+            success: false,
+            count: 2,
+          ),
+        );
+      },
+    );
+
+    blocTest<DictionaryBloc, DictionaryState>(
       'filter changed emits new filter state',
       build: () => DictionaryBloc(
         dictionaryRepository: repository,
@@ -283,7 +315,7 @@ void main() {
     );
 
     blocTest<DictionaryBloc, DictionaryState>(
-      'delete emits failure when repository throws',
+      'delete keeps current list visible when repository throws',
       setUp: () {
         repository.seed([_entry1]);
         repository.shouldThrow = true;
@@ -299,7 +331,7 @@ void main() {
       act: (bloc) => bloc.add(DictionaryEntryDeleted(_entry1.id)),
       expect: () => [
         DictionaryState(
-          status: DictionaryStatus.failure,
+          status: DictionaryStatus.success,
           entries: [_entry1],
           deletionVersion: 1,
           deletionEffect: const DictionaryDeletionEffect(

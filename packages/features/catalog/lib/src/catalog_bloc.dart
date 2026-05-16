@@ -72,7 +72,7 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
       final effect = _deletionEffect(deletion, success: false);
       emit(
         state.copyWith(
-          status: CatalogStatus.failure,
+          status: CatalogStatus.success,
           deletionVersion: effect.version,
           deletionEffect: effect,
         ),
@@ -101,13 +101,14 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
     }
     if (anyFailed) {
       // Re-pull the list so the rows that DID delete fall away from the
-      // grid even though we're emitting the failure status.
+      // grid. Keep the screen in success because the list remains usable;
+      // the error is surfaced through the deletion effect/toast.
       try {
         final books = await _bookRepository.getBooks();
         final effect = _deletionEffect(deletion, success: false);
         emit(
           state.copyWith(
-            status: CatalogStatus.failure,
+            status: CatalogStatus.success,
             books: books,
             deletionVersion: effect.version,
             deletionEffect: effect,
@@ -118,7 +119,7 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
         final effect = _deletionEffect(deletion, success: false);
         emit(
           state.copyWith(
-            status: CatalogStatus.failure,
+            status: CatalogStatus.success,
             deletionVersion: effect.version,
             deletionEffect: effect,
           ),
@@ -155,9 +156,12 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
       final effect = deletion == null
           ? null
           : _deletionEffect(deletion, success: false);
+      final status = deletion == null
+          ? CatalogStatus.failure
+          : CatalogStatus.success;
       emit(
         state.copyWith(
-          status: CatalogStatus.failure,
+          status: status,
           deletionVersion: effect?.version,
           deletionEffect: effect,
         ),

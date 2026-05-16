@@ -163,10 +163,10 @@ void main() {
       },
     );
 
-    // The bulk-delete handler is now resilient to per-id failure — if
-    // one of the ids throws we still attempt the rest, then re-pull
-    // the list and emit `failure` so the screen can show a recovery
-    // toast and the rows that DID delete fall out of view.
+    // The bulk-delete handler is resilient to per-id failure — if one id
+    // throws we still attempt the rest, then re-pull the list and emit an
+    // error effect without replacing the visible list with a full-screen
+    // failure state.
     blocTest<CatalogBloc, CatalogState>(
       'CatalogBooksDeleted continues on per-id failure and refetches',
       setUp: () {
@@ -193,7 +193,7 @@ void main() {
       ),
       errors: () => [isA<Object>()],
       verify: (bloc) {
-        expect(bloc.state.status, CatalogStatus.failure);
+        expect(bloc.state.status, CatalogStatus.success);
         expect(bloc.state.deletionVersion, 1);
         expect(
           bloc.state.deletionEffect,
@@ -209,7 +209,7 @@ void main() {
     );
 
     blocTest<CatalogBloc, CatalogState>(
-      'CatalogBookDeleted bumps deletionVersion on failure',
+      'CatalogBookDeleted keeps current list visible on failure',
       setUp: () {
         repository.seedBooks([_book]);
         repository.shouldThrow = true;
@@ -221,7 +221,8 @@ void main() {
       ),
       errors: () => [isA<Object>()],
       verify: (bloc) {
-        expect(bloc.state.status, CatalogStatus.failure);
+        expect(bloc.state.status, CatalogStatus.success);
+        expect(bloc.state.books, [_book]);
         expect(bloc.state.deletionVersion, 1);
         expect(
           bloc.state.deletionEffect,

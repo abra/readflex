@@ -7,6 +7,7 @@ class FakeDictionaryRepository implements DictionaryRepository {
 
   final List<DictionaryEntry> _entries = [];
   bool shouldThrow = false;
+  Set<String> failOnIds = const {};
 
   void seed(List<DictionaryEntry> entries) => _entries
     ..clear()
@@ -20,7 +21,9 @@ class FakeDictionaryRepository implements DictionaryRepository {
 
   @override
   Future<void> deleteEntry(String id) async {
-    if (shouldThrow) throw StorageException(cause: 'fake');
+    if (shouldThrow || failOnIds.contains(id)) {
+      throw StorageException(cause: 'fake');
+    }
     _entries.removeWhere((e) => e.id == id);
   }
 
