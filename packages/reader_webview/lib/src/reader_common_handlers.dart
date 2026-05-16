@@ -3,6 +3,31 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import 'reader_bridge.dart';
 
+@visibleForTesting
+final class ReaderTapPayload {
+  const ReaderTapPayload({required this.x, required this.y});
+
+  final double x;
+  final double y;
+}
+
+@visibleForTesting
+ReaderSelection? parseReaderSelectionPayload(Object? raw) {
+  final data = readerBridgeMap(raw);
+  if (data == null) return null;
+  return ReaderSelection.fromMap(data);
+}
+
+@visibleForTesting
+ReaderTapPayload? parseReaderTapPayload(Object? raw) {
+  final data = readerBridgeMap(raw);
+  if (data == null) return null;
+  final x = data['x'];
+  final y = data['y'];
+  if (x is! num || y is! num) return null;
+  return ReaderTapPayload(x: x.toDouble(), y: y.toDouble());
+}
+
 /// Registers the three JS → Flutter bridge handlers that the reader
 /// WebView fires — `onSelectionEnd`, `onSelectionCleared`, `onClick` —
 /// and wires each one to the provided Dart callback.
@@ -16,9 +41,9 @@ void registerSharedReaderHandlers(
     handlerName: 'onSelectionEnd',
     callback: (args) {
       if (args.isEmpty) return;
-      final data = readerBridgeMap(args.first);
-      if (data == null) return;
-      onTextSelected?.call(ReaderSelection.fromMap(data));
+      final selection = parseReaderSelectionPayload(args.first);
+      if (selection == null) return;
+      onTextSelected?.call(selection);
     },
   );
 
@@ -31,12 +56,9 @@ void registerSharedReaderHandlers(
     handlerName: 'onClick',
     callback: (args) {
       if (args.isEmpty) return;
-      final data = readerBridgeMap(args.first);
-      if (data == null) return;
-      final x = data['x'];
-      final y = data['y'];
-      if (x is! num || y is! num) return;
-      onTapped?.call(x.toDouble(), y.toDouble());
+      final tap = parseReaderTapPayload(args.first);
+      if (tap == null) return;
+      onTapped?.call(tap.x, tap.y);
     },
   );
 }
