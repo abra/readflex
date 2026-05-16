@@ -206,11 +206,8 @@ class _FormatBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          fontSize: 8,
-          fontWeight: FontWeight.w600,
+        style: context.text.sourceCoverBadge.copyWith(
           color: Colors.white,
-          letterSpacing: 0.5,
         ),
       ),
     );

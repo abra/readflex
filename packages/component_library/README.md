@@ -96,6 +96,8 @@ as static semantic token classes:
   and headline roles use Literata, title/body/label roles use Geist
 - `AppTypography.fontFamilySans` / `fontFamilySerif` -- `Geist` / `Literata`
 - `AppTypography.serif(...)` / `sans(...)` -- factory methods for one-off styles
+- `context.text.screenCounter`, `sourceMetadata`, `readerChromeLabel`, etc. --
+  semantic styles for repeated compact UI surfaces
 
 ### Rules
 
@@ -103,6 +105,8 @@ as static semantic token classes:
   UI code.
 - **Use context extensions** -- `context.text.bodyMedium`, not
   `Theme.of(context).textTheme.bodyMedium`.
+- **Platform differences are centralized** -- iOS/Android adjustments belong in
+  theme/component helpers, not in feature widgets.
 - **Primitives feed semantics** -- `PrimitiveColors` / `PrimitiveSpacing` are raw values;
   `AppColorPalette` / `AppSpacing` assign meaning.
 - **ColorScheme** for Material-native roles (primary, surface, error, etc.).

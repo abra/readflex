@@ -92,7 +92,9 @@ class _SubscriptionPaywallSheetView extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: Text(
                     'Purchase failed. Please try again.',
-                    style: TextStyle(color: context.colors.error),
+                    style: context.text.bodyMedium.copyWith(
+                      color: context.colors.error,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ),

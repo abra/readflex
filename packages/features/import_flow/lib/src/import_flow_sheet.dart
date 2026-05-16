@@ -246,10 +246,7 @@ class _FailureView extends StatelessWidget {
               // around the mark, mirroring the success view's bare check.
               child: Text(
                 '!',
-                style: TextStyle(
-                  fontSize: 22,
-                  height: 1.0,
-                  fontWeight: FontWeight.w700,
+                style: text.statusGlyph.copyWith(
                   color: cs.error,
                 ),
               ),

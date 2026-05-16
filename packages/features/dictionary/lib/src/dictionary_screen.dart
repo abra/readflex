@@ -321,8 +321,7 @@ class _SuccessBody extends StatelessWidget {
                   const Spacer(),
                   Text(
                     '${state.entries.length} words',
-                    style: TextStyle(
-                      fontSize: 12,
+                    style: text.screenCounter.copyWith(
                       color: cs.onSurface.withValues(alpha: 0.55),
                     ),
                   ),

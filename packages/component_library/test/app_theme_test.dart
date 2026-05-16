@@ -80,5 +80,32 @@ void main() {
 
       expect(result, isA<AppColorsExt>());
     });
+
+    testWidgets('context.text exposes semantic app text roles', (tester) async {
+      late AppTextTheme text;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Builder(
+            builder: (context) {
+              text = context.text;
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+
+      expect(text.screenCounter.fontSize, text.labelSmall.fontSize);
+      expect(text.sourceListTitle.fontSize, 14);
+      expect(text.sourceMetadata.fontSize, 11);
+      expect(text.sourceCoverBadge.fontSize, 8);
+      expect(text.readerChromeLabel.fontSize, text.bodySmall.fontSize);
+      expect(text.readerChromeNumber.fontFeatures, isNotEmpty);
+      expect(text.kicker.fontSize, 10);
+      expect(text.statusGlyph.fontSize, 22);
+      expect(text.readerTextSizeControl(large: true).fontSize, 18);
+      expect(text.readerTextSizeControl(large: false).fontSize, 14);
+    });
   });
 }

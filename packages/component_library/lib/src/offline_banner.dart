@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app_icons.dart';
 import 'theme/extensions/app_colors_ext.dart';
+import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_spacing.dart';
 
 /// Thin strip shown while the device has no network.
@@ -37,7 +38,7 @@ class OfflineBanner extends StatelessWidget {
             const SizedBox(width: AppSpacing.xs),
             Text(
               message,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              style: context.text.labelSmall.copyWith(
                 color: colors.warningForeground,
               ),
             ),

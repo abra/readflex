@@ -136,7 +136,7 @@ class _FlashcardSheetView extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: Text(
                     'Failed to save flashcard',
-                    style: TextStyle(
+                    style: context.text.bodyMedium.copyWith(
                       color: context.colors.error,
                     ),
                   ),

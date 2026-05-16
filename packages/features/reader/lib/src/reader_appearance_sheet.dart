@@ -581,10 +581,11 @@ class _TextSizeButton extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: text.labelLarge.copyWith(
-            fontSize: large ? 18 : 14,
-            color: cs.onSurface.withValues(alpha: enabled ? 1 : 0.35),
-          ),
+          style: text
+              .readerTextSizeControl(large: large)
+              .copyWith(
+                color: cs.onSurface.withValues(alpha: enabled ? 1 : 0.35),
+              ),
         ),
       ),
     );

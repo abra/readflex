@@ -309,7 +309,7 @@ class _FontPreview extends StatelessWidget {
                     'The happiness of your life depends upon the quality of your thoughts.',
                     maxLines: 2,
                     overflow: TextOverflow.fade,
-                    style: TextStyle(
+                    style: text.bodyMedium.copyWith(
                       fontFamily: readerFont.fontFamily,
                       fontSize:
                           text.bodyMedium.fontSize! *

@@ -275,7 +275,7 @@ class _SourceQuote extends StatelessWidget {
                   const TextSpan(text: 'from '),
                   TextSpan(
                     text: sourceId,
-                    style: TextStyle(
+                    style: text.labelSmall.copyWith(
                       fontWeight: FontWeight.w500,
                       color: cs.onSurface.withValues(alpha: 0.7),
                     ),
@@ -309,11 +309,8 @@ class _ContextSection extends StatelessWidget {
       children: [
         Text(
           'IN THIS CONTEXT',
-          style: text.labelSmall.copyWith(
-            fontWeight: FontWeight.w600,
+          style: text.kicker.copyWith(
             color: muted,
-            letterSpacing: 1.2,
-            fontSize: 10,
           ),
         ),
         const SizedBox(height: AppSpacing.xs),

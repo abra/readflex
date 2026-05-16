@@ -57,8 +57,7 @@ class CatalogHeader extends StatelessWidget {
               const Spacer(),
               Text(
                 '${state.totalCount} items',
-                style: TextStyle(
-                  fontSize: 12,
+                style: context.text.screenCounter.copyWith(
                   color: colors.onSurface.withValues(alpha: _kMutedAlpha),
                 ),
               ),

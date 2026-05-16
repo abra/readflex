@@ -66,14 +66,17 @@ class BookLibraryListTile extends StatelessWidget {
         // exact demo-tuned literal (10).
         Icon(AppIcons.book, size: 10, color: mutedColor),
         const SizedBox(width: AppSpacing.xs),
-        Text('Book', style: _metaStyle(mutedColor)),
+        Text('Book', style: _metaStyle(context, mutedColor)),
         _MetaDot(mutedColor: mutedColor),
-        Text(book.format.name.toUpperCase(), style: _metaStyle(mutedColor)),
+        Text(
+          book.format.name.toUpperCase(),
+          style: _metaStyle(context, mutedColor),
+        ),
         _MetaDot(mutedColor: mutedColor),
         if (book.isFinished)
           ..._doneBadge(context)
         else if (book.lastOpenedAt == null)
-          Text('New', style: _metaStyle(mutedColor))
+          Text('New', style: _metaStyle(context, mutedColor))
         else
           // Once the user has opened the book, show the progress %
           // even if it's 0 — they may have navigated back to the
@@ -81,7 +84,7 @@ class BookLibraryListTile extends StatelessWidget {
           // never having been read.
           Text(
             '$progress%',
-            style: _metaStyle(context.colors.onSurface).copyWith(
+            style: _metaStyle(context, context.colors.onSurface).copyWith(
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -189,11 +192,8 @@ class _ListRowShell extends StatelessWidget {
                         title,
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
+                        style: context.text.sourceListTitle.copyWith(
                           color: colors.onSurface,
-                          height: 1.25,
                         ),
                       ),
                       // Demo uses 6dp title-to-meta gap (between xs=4 and
@@ -208,7 +208,7 @@ class _ListRowShell extends StatelessWidget {
                                 subtitle!,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: _metaStyle(mutedColor),
+                                style: _metaStyle(context, mutedColor),
                               ),
                             ),
                             _MetaDot(mutedColor: mutedColor),
@@ -264,11 +264,12 @@ class _MetaDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(' · ', style: _metaStyle(mutedColor));
+    return Text(' · ', style: _metaStyle(context, mutedColor));
   }
 }
 
-TextStyle _metaStyle(Color color) => TextStyle(fontSize: 11, color: color);
+TextStyle _metaStyle(BuildContext context, Color color) =>
+    context.text.sourceMetadata.copyWith(color: color);
 
 /// Builds the green ` ✓ Done` kicker that replaces the progress segment
 /// when an item is fully read. Colour comes from the semantic
@@ -280,8 +281,7 @@ List<Widget> _doneBadge(BuildContext context) {
     const SizedBox(width: 2),
     Text(
       'Done',
-      style: TextStyle(
-        fontSize: 11,
+      style: context.text.sourceMetadata.copyWith(
         fontWeight: FontWeight.w500,
         color: success,
       ),

@@ -138,7 +138,7 @@ class _TranslateSheetView extends StatelessWidget {
                   padding: const EdgeInsets.only(top: AppSpacing.sm),
                   child: Text(
                     state.errorMessage ?? 'An error occurred',
-                    style: TextStyle(
+                    style: context.text.bodyMedium.copyWith(
                       color: context.colors.error,
                     ),
                   ),

@@ -817,22 +817,19 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                                     widget.chapterTitle ?? '',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: mutedText,
-                                    ),
+                                    style: context.text.readerChromeLabel
+                                        .copyWith(
+                                          color: mutedText,
+                                        ),
                                   ),
                                 ),
                                 const SizedBox(width: AppSpacing.sm),
                                 Text(
                                   displayedText,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: mutedText,
-                                    fontFeatures: const [
-                                      FontFeature.tabularFigures(),
-                                    ],
-                                  ),
+                                  style: context.text.readerChromeNumber
+                                      .copyWith(
+                                        color: mutedText,
+                                      ),
                                 ),
                               ],
                             ),
@@ -1621,7 +1618,7 @@ class _ReaderSearchResultTile extends StatelessWidget {
               TextSpan(text: result.excerpt.pre),
               TextSpan(
                 text: result.excerpt.match,
-                style: TextStyle(
+                style: context.text.bodyMedium.copyWith(
                   color: colors.primary,
                   fontWeight: FontWeight.w700,
                 ),
@@ -1869,12 +1866,8 @@ class _ComicProgressOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = TextStyle(
-      fontSize: 13,
+    final style = context.text.readerChromeNumber.copyWith(
       color: textColor,
-      // Tabular figures so digit-to-digit ticks (e.g. "9 / 30" → "10
-      // / 30") don't shift sub-pixel inside the reserved width.
-      fontFeatures: const [FontFeature.tabularFigures()],
     );
 
     return Container(
