@@ -54,6 +54,7 @@ abstract class TextAction {
 | `ReaderUiCubit`               | Chrome, drawer, appearance-sheet and search-highlight UI state             |
 | `ReaderSearchCubit`           | Book-search debounce, streamed results, progress and recent queries        |
 | `ReaderSelectionCubit`        | Current text selection (text + `cfiRange`)                                 |
+| `ReaderBrightnessCubit`       | Temporary application brightness override for active reader sessions       |
 | `ReaderReviewReminderCubit`   | Periodic timer; flips `showReminder` when `onCheckDueItems` returns > 0    |
 
 `ReaderBloc.reportError(e, st)` is a public facade over the protected

@@ -31,10 +31,12 @@ This is **not** where auth tokens live — those go through `auth_service` /
 | `readerLayoutId`           | `String`    | `'standard'`|
 | `readerTextScale`          | `double`    | `1.0`       |
 | `readerLineHeight`         | `double`    | `1.55`      |
-| `readerInvertImagesInDark` | `bool`      | `true`      |
+| `readerSideMargin`         | `double`    | `6.0`       |
+| `readerInvertImagesInDark` | `bool`      | `false`     |
 | `readerOverrideFont`       | `bool`      | `true`      |
 | `readerOverrideColor`      | `bool`      | `true`      |
 | `readerUseBookLayout`      | `bool`      | `true`      |
+| `readerBrightnessOverride` | `double?`   | `null`      |
 | `onboardingCompleted`      | `bool`      | `false`     |
 | `hasCompletedSetup`        | `bool`      | `false`     |
 

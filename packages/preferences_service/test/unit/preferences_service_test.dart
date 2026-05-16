@@ -56,6 +56,7 @@ void main() {
           readerLineHeight: 1.8,
           readerSideMargin: 9,
           readerInvertImagesInDark: false,
+          readerBrightnessOverride: 0.55,
         ),
       );
 
@@ -66,6 +67,7 @@ void main() {
       expect(service.current.readerLineHeight, 1.8);
       expect(service.current.readerSideMargin, 9);
       expect(service.current.readerInvertImagesInDark, isFalse);
+      expect(service.current.readerBrightnessOverride, 0.55);
     });
 
     test(
@@ -204,6 +206,7 @@ void main() {
           readerFontId: 'sans',
           readerTextScale: 1.1,
           readerSideMargin: 8,
+          readerBrightnessOverride: 0.45,
         ),
       );
 
@@ -217,6 +220,7 @@ void main() {
       expect(service2.current.readerFontId, 'sans');
       expect(service2.current.readerTextScale, 1.1);
       expect(service2.current.readerSideMargin, 8);
+      expect(service2.current.readerBrightnessOverride, 0.45);
     });
 
     test('persists locale correctly', () async {

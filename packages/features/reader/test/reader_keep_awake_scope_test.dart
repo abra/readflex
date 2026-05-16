@@ -122,4 +122,14 @@ class _FakeScreenControlService implements ScreenControlService {
   Future<void> allowSleep() async {
     calls.add('allowSleep');
   }
+
+  @override
+  Future<void> setApplicationBrightness(double brightness) async {
+    calls.add('setBrightness');
+  }
+
+  @override
+  Future<void> resetApplicationBrightness() async {
+    calls.add('resetBrightness');
+  }
 }

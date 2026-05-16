@@ -34,6 +34,7 @@ void main() {
       expect(prefs.readerOverrideFont, isTrue);
       expect(prefs.readerOverrideColor, isTrue);
       expect(prefs.readerUseBookLayout, isTrue);
+      expect(prefs.readerBrightnessOverride, isNull);
       expect(prefs.readerSearchHistory, isEmpty);
       expect(prefs.readerAppearanceOverrides, isEmpty);
       expect(prefs.onboardingCompleted, isFalse);
@@ -46,6 +47,7 @@ void main() {
         themeMode: ThemeMode.dark,
         locale: const Locale('ru'),
         catalogLayoutMode: 'list',
+        readerBrightnessOverride: 0.42,
         readerSearchHistory: const ['design patterns', 'bloc'],
         readerAppearanceOverrides: const {
           'source-1': ReaderAppearanceOverride(fontId: 'sans'),
@@ -56,6 +58,7 @@ void main() {
       expect(updated.themeMode, ThemeMode.dark);
       expect(updated.locale, const Locale('ru'));
       expect(updated.catalogLayoutMode, 'list');
+      expect(updated.readerBrightnessOverride, 0.42);
       expect(updated.readerSearchHistory, ['design patterns', 'bloc']);
       expect(updated.readerAppearanceOverrides['source-1']?.fontId, 'sans');
       expect(updated.onboardingCompleted, isTrue);
@@ -97,6 +100,14 @@ void main() {
       const a = Preferences();
       final b = a.copyWith(themeMode: ThemeMode.dark);
       expect(a, isNot(equals(b)));
+    });
+
+    test('copyWith can clear readerBrightnessOverride', () {
+      const prefs = Preferences(readerBrightnessOverride: 0.4);
+
+      final updated = prefs.copyWith(readerBrightnessOverride: null);
+
+      expect(updated.readerBrightnessOverride, isNull);
     });
 
     test('readerAppearance getter builds from fields', () {

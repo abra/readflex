@@ -29,7 +29,8 @@ class PreferencesRepository {
   ///   3: add per-source reader appearance overrides and reader side margin.
   ///   4: reset global reader text scale to 100%. Android readability is now
   ///      handled by device-scale in the reader, not persisted user percent.
-  static const _currentSchemaVersion = 4;
+  ///   5: add readerBrightnessOverride for temporary reader brightness.
+  static const _currentSchemaVersion = 5;
 
   final PreferencesStorage _storage;
 
@@ -66,6 +67,9 @@ class PreferencesRepository {
         readerOverrideFont: map['readerOverrideFont'] as bool? ?? true,
         readerOverrideColor: map['readerOverrideColor'] as bool? ?? true,
         readerUseBookLayout: map['readerUseBookLayout'] as bool? ?? true,
+        readerBrightnessOverride: _readReaderBrightness(
+          map['readerBrightnessOverride'],
+        ),
         readerSearchHistory: _readStringList(map['readerSearchHistory']),
         readerAppearanceOverrides: _readReaderAppearanceOverrides(
           map['readerAppearanceOverrides'],
@@ -102,6 +106,7 @@ class PreferencesRepository {
       'readerOverrideFont': prefs.readerOverrideFont,
       'readerOverrideColor': prefs.readerOverrideColor,
       'readerUseBookLayout': prefs.readerUseBookLayout,
+      'readerBrightnessOverride': prefs.readerBrightnessOverride,
       'readerSearchHistory': prefs.readerSearchHistory,
       'readerAppearanceOverrides': _writeReaderAppearanceOverrides(
         prefs.readerAppearanceOverrides,
@@ -125,6 +130,11 @@ class PreferencesRepository {
   static List<String> _readStringList(Object? value) {
     if (value is! List) return const [];
     return value.whereType<String>().toList(growable: false);
+  }
+
+  static double? _readReaderBrightness(Object? value) {
+    if (value is! num) return null;
+    return value.toDouble().clamp(0.05, 1.0).toDouble();
   }
 
   static Map<String, ReaderAppearanceOverride> _readReaderAppearanceOverrides(

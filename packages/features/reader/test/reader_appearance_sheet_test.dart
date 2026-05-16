@@ -27,7 +27,9 @@ void main() {
     );
   });
 
-  tearDown(() => cubit.close());
+  tearDown(() async {
+    await cubit.close();
+  });
 
   testWidgets('renders compact Aa sheet without an embedded preview', (
     tester,
@@ -187,12 +189,16 @@ void main() {
 }
 
 extension on WidgetTester {
-  Future<void> openAppearanceSheet(ReaderAppearanceCubit cubit) async {
+  Future<void> openAppearanceSheet(
+    ReaderAppearanceCubit cubit,
+  ) async {
     await pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        home: BlocProvider.value(
-          value: cubit,
+        home: MultiBlocProvider(
+          providers: [
+            BlocProvider.value(value: cubit),
+          ],
           child: Builder(
             builder: (context) {
               return Scaffold(

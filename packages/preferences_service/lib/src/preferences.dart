@@ -285,6 +285,7 @@ class Preferences {
     this.readerOverrideFont = true,
     this.readerOverrideColor = true,
     this.readerUseBookLayout = true,
+    this.readerBrightnessOverride,
     this.readerSearchHistory = const [],
     this.readerAppearanceOverrides = const {},
     this.onboardingCompleted = false,
@@ -304,6 +305,7 @@ class Preferences {
   final bool readerOverrideFont;
   final bool readerOverrideColor;
   final bool readerUseBookLayout;
+  final double? readerBrightnessOverride;
   final List<String> readerSearchHistory;
   final Map<String, ReaderAppearanceOverride> readerAppearanceOverrides;
 
@@ -352,6 +354,7 @@ class Preferences {
     bool? readerOverrideFont,
     bool? readerOverrideColor,
     bool? readerUseBookLayout,
+    Object? readerBrightnessOverride = _unset,
     List<String>? readerSearchHistory,
     Map<String, ReaderAppearanceOverride>? readerAppearanceOverrides,
     bool? onboardingCompleted,
@@ -371,6 +374,9 @@ class Preferences {
     readerOverrideFont: readerOverrideFont ?? this.readerOverrideFont,
     readerOverrideColor: readerOverrideColor ?? this.readerOverrideColor,
     readerUseBookLayout: readerUseBookLayout ?? this.readerUseBookLayout,
+    readerBrightnessOverride: identical(readerBrightnessOverride, _unset)
+        ? this.readerBrightnessOverride
+        : readerBrightnessOverride as double?,
     readerSearchHistory: readerSearchHistory ?? this.readerSearchHistory,
     readerAppearanceOverrides:
         readerAppearanceOverrides ?? this.readerAppearanceOverrides,
@@ -395,6 +401,7 @@ class Preferences {
           readerOverrideFont == other.readerOverrideFont &&
           readerOverrideColor == other.readerOverrideColor &&
           readerUseBookLayout == other.readerUseBookLayout &&
+          readerBrightnessOverride == other.readerBrightnessOverride &&
           listEquals(readerSearchHistory, other.readerSearchHistory) &&
           mapEquals(
             readerAppearanceOverrides,
@@ -418,6 +425,7 @@ class Preferences {
     readerOverrideFont,
     readerOverrideColor,
     readerUseBookLayout,
+    readerBrightnessOverride,
     Object.hashAll(readerSearchHistory),
     _hashReaderAppearanceOverrides(readerAppearanceOverrides),
     onboardingCompleted,

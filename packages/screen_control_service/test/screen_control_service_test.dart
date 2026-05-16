@@ -14,5 +14,17 @@ void main() {
 
       await expectLater(service.allowSleep(), completes);
     });
+
+    test('setApplicationBrightness completes without error', () async {
+      const service = NoopScreenControlService();
+
+      await expectLater(service.setApplicationBrightness(0.4), completes);
+    });
+
+    test('resetApplicationBrightness completes without error', () async {
+      const service = NoopScreenControlService();
+
+      await expectLater(service.resetApplicationBrightness(), completes);
+    });
   });
 }

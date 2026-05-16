@@ -5,6 +5,12 @@ abstract class ScreenControlService {
 
   /// Restores the platform's normal screen-sleep behavior.
   Future<void> allowSleep();
+
+  /// Sets temporary application brightness for the current app session.
+  Future<void> setApplicationBrightness(double brightness);
+
+  /// Resets application brightness back to the platform/system value.
+  Future<void> resetApplicationBrightness();
 }
 
 /// Stub implementation for tests and isolated previews.
@@ -16,4 +22,10 @@ class NoopScreenControlService implements ScreenControlService {
 
   @override
   Future<void> allowSleep() async {}
+
+  @override
+  Future<void> setApplicationBrightness(double brightness) async {}
+
+  @override
+  Future<void> resetApplicationBrightness() async {}
 }
