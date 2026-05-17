@@ -47,6 +47,11 @@ List<dynamic>? readerBridgeList(Object? value) {
 
 String? _string(Object? value) => value is String ? value : null;
 
+String? _nonEmptyString(Object? value) {
+  final text = _string(value)?.trim();
+  return text == null || text.isEmpty ? null : text;
+}
+
 int? _int(Object? value) => value is num ? value.toInt() : null;
 
 double? _double(Object? value) => value is num ? value.toDouble() : null;
@@ -71,22 +76,40 @@ class ReaderBookmarkChange {
     required this.content,
     required this.progress,
     required this.source,
+    this.id,
+    this.anchorExact,
+    this.anchorPrefix,
+    this.anchorSuffix,
+    this.anchorSectionIndex,
+    this.anchorSectionPage,
   });
 
   final bool remove;
+  final String? id;
   final String cfi;
   final String content;
   final double progress;
   final ReaderBookmarkChangeSource source;
+  final String? anchorExact;
+  final String? anchorPrefix;
+  final String? anchorSuffix;
+  final int? anchorSectionIndex;
+  final int? anchorSectionPage;
 
   factory ReaderBookmarkChange.fromMap(Map<String, dynamic> map) {
     final detail = readerBridgeMap(map['detail']) ?? const {};
     return ReaderBookmarkChange(
       remove: _bool(map['remove']) ?? false,
+      id: _nonEmptyString(detail['id']),
       cfi: _string(detail['cfi']) ?? '',
       content: _string(detail['content']) ?? '',
       progress: (_double(detail['percentage']) ?? 0).clamp(0.0, 1.0).toDouble(),
       source: _bookmarkChangeSource(map['source']),
+      anchorExact: _nonEmptyString(detail['anchorExact']),
+      anchorPrefix: _nonEmptyString(detail['anchorPrefix']),
+      anchorSuffix: _nonEmptyString(detail['anchorSuffix']),
+      anchorSectionIndex: _int(detail['anchorSectionIndex']),
+      anchorSectionPage: _int(detail['anchorSectionPage']),
     );
   }
 }
@@ -624,10 +647,20 @@ class ReaderBookmark {
     required this.cfi,
     required this.progress,
     this.content = '',
+    this.anchorExact,
+    this.anchorPrefix,
+    this.anchorSuffix,
+    this.anchorSectionIndex,
+    this.anchorSectionPage,
   });
 
   final String id;
   final String cfi;
   final double progress;
   final String content;
+  final String? anchorExact;
+  final String? anchorPrefix;
+  final String? anchorSuffix;
+  final int? anchorSectionIndex;
+  final int? anchorSectionPage;
 }

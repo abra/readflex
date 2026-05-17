@@ -77,7 +77,7 @@ export class View extends HTMLElement {
   isFixedLayout = false
   lastLocation
   history = new History()
-  #lastCfi = null
+  #lastRelocateKey = null
   #translator = new Translator()
   constructor() {
     super()
@@ -150,6 +150,7 @@ export class View extends HTMLElement {
     this.#pageProgress = null
     this.#searchResults = new Map()
     this.lastLocation = null
+    this.#lastRelocateKey = null
     this.history.clear()
     this.tts = null
     this.mediaOverlay = null
@@ -192,8 +193,17 @@ export class View extends HTMLElement {
     if (reason === 'snap' || reason === 'page' || reason === 'scroll')
       this.history.replaceState(cfi)
 
-    if (cfi && (!this.#lastCfi || cfi !== this.#lastCfi)) {
-      this.#lastCfi = cfi
+    const relocateKey = [
+      index,
+      cfi ?? '',
+      reason ?? '',
+      currentPage ?? '',
+      totalPages ?? '',
+      fraction ?? '',
+      size ?? '',
+    ].join(':')
+    if (relocateKey !== this.#lastRelocateKey) {
+      this.#lastRelocateKey = relocateKey
       this.#emit('relocate', this.lastLocation)
     }
   }
@@ -448,6 +458,26 @@ export class View extends HTMLElement {
     const [index, anchor] = this.#sectionProgress.getSection(frac)
     await this.renderer.goTo({ index, anchor })
     this.history.pushState({ fraction: frac })
+  }
+  async goToSectionPage(index, page) {
+    const sectionIndex = Number(index)
+    const sectionPage = Number(page)
+    if (!Number.isInteger(sectionIndex) || !Number.isInteger(sectionPage)) return false
+    if (sectionPage < 0) return false
+
+    await this.renderer.goTo({
+      index: sectionIndex,
+      anchor: () => {
+        const textPages = this.renderer.pages
+          ? Math.max(1, this.renderer.pages - 2)
+          : 1
+        if (textPages <= 1) return 0
+        const pageIndex = Math.max(0, Math.min(textPages - 1, sectionPage - 1))
+        return pageIndex / (textPages - 1)
+      },
+    })
+    this.history.pushState({ sectionIndex, sectionPage })
+    return true
   }
   async select(target) {
     try {

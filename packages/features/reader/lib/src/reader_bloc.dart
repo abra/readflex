@@ -161,7 +161,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         state.chapterTotalPages != event.chapterTotalPages ||
         state.sizeTotal != nextSizeTotal ||
         state.currentPageBookmarked != event.currentPageBookmarked ||
-        state.currentPageBookmarkCfi != event.currentPageBookmarkCfi;
+        state.currentPageBookmarkCfi != event.currentPageBookmarkCfi ||
+        state.currentPageBookmarkId != event.currentPageBookmarkId;
     if (!hasMeaningfulChange) return;
 
     // Emit immediately so chrome stays in sync with the WebView.
@@ -178,6 +179,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         sizeTotal: nextSizeTotal,
         currentPageBookmarked: event.currentPageBookmarked,
         currentPageBookmarkCfi: event.currentPageBookmarkCfi,
+        currentPageBookmarkId: event.currentPageBookmarkId,
       ),
     );
     // Persist with a trailing debounce — successive emits within the
@@ -235,15 +237,27 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
 
     try {
       if (event.remove) {
-        await _bookRepository.deleteBookmarkBySourceAndCfi(book.id, event.cfi);
+        final bookmarkId = event.id;
+        if (bookmarkId != null && bookmarkId.isNotEmpty) {
+          await _bookRepository.deleteBookmarkById(book.id, bookmarkId);
+        } else {
+          await _bookRepository.deleteBookmarkBySourceAndCfi(
+            book.id,
+            event.cfi,
+          );
+        }
         emit(
           state.copyWith(
             bookmarks: [
               for (final bookmark in state.bookmarks)
-                if (bookmark.cfi != event.cfi) bookmark,
+                if (bookmarkId != null && bookmarkId.isNotEmpty
+                    ? bookmark.id != bookmarkId
+                    : bookmark.cfi != event.cfi)
+                  bookmark,
             ],
             currentPageBookmarked: false,
             currentPageBookmarkCfi: null,
+            currentPageBookmarkId: null,
           ),
         );
         return;
@@ -256,12 +270,16 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         content: event.content,
         progress: event.progress,
         chapterTitle: state.chapterTitle,
+        anchorExact: event.anchorExact,
+        anchorPrefix: event.anchorPrefix,
+        anchorSuffix: event.anchorSuffix,
+        anchorSectionIndex: event.anchorSectionIndex,
+        anchorSectionPage: event.anchorSectionPage,
       );
       final next =
           [
             for (final existing in state.bookmarks)
-              if (existing.id != bookmark.id && existing.cfi != bookmark.cfi)
-                existing,
+              if (existing.id != bookmark.id) existing,
             bookmark,
           ]..sort((a, b) {
             final byProgress = a.progress.compareTo(b.progress);
@@ -273,6 +291,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
           bookmarks: next,
           currentPageBookmarked: true,
           currentPageBookmarkCfi: bookmark.cfi,
+          currentPageBookmarkId: bookmark.id,
         ),
       );
     } catch (e, st) {

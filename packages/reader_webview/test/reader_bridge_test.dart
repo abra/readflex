@@ -10,15 +10,43 @@ void main() {
           'cfi': 'epubcfi(/6/34!/4/2)',
           'content': 'Bookmark context',
           'percentage': 0.56,
+          'anchorExact': 'Bookmark exact text',
+          'anchorPrefix': 'Before text',
+          'anchorSuffix': 'After text',
+          'anchorSectionIndex': 12,
+          'anchorSectionPage': 3,
         },
         'source': 'pull-down',
       });
 
       expect(change.remove, isFalse);
+      expect(change.id, isNull);
       expect(change.cfi, 'epubcfi(/6/34!/4/2)');
       expect(change.content, 'Bookmark context');
       expect(change.progress, 0.56);
       expect(change.source, ReaderBookmarkChangeSource.pullDown);
+      expect(change.anchorExact, 'Bookmark exact text');
+      expect(change.anchorPrefix, 'Before text');
+      expect(change.anchorSuffix, 'After text');
+      expect(change.anchorSectionIndex, 12);
+      expect(change.anchorSectionPage, 3);
+    });
+
+    test('fromMap parses remove event id', () {
+      final change = ReaderBookmarkChange.fromMap({
+        'remove': true,
+        'detail': {
+          'id': 'bookmark-1',
+          'cfi': 'epubcfi(/6/34!/4/2)',
+          'percentage': 0.56,
+        },
+        'source': 'chrome',
+      });
+
+      expect(change.remove, isTrue);
+      expect(change.id, 'bookmark-1');
+      expect(change.cfi, 'epubcfi(/6/34!/4/2)');
+      expect(change.source, ReaderBookmarkChangeSource.chrome);
     });
 
     test('fromMap tolerates malformed bridge values', () {

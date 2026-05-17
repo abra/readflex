@@ -34,8 +34,9 @@ filenames before being written to the DB.
 | `addBook({sourceFile, title, format, author, coverData, ...})` | Copy file in, save cover, insert row |
 | `updateBook(book)`                  | Update metadata + reading position            |
 | `getBookmarksBySource(sourceId)`    | List saved positions for a source in reading order |
-| `addBookmark({sourceId, cfi, content, progress, ...})` | Save a source position, idempotent by source + CFI |
-| `deleteBookmarkBySourceAndCfi(sourceId, cfi)` | Remove a saved source position |
+| `addBookmark({sourceId, cfi, content, progress, anchorExact, anchorSectionPage, ...})` | Save a source position, idempotent by visual/text anchor when present |
+| `deleteBookmarkById(sourceId, bookmarkId)` | Remove one saved bookmark precisely |
+| `deleteBookmarkBySourceAndCfi(sourceId, cfi)` | Legacy fallback removal by CFI |
 | `deleteBook(id, {scope})`           | Delete row + remove per-book directory; optionally preserve learning data |
 
 Cover bytes (`coverData`) are typically produced upstream by

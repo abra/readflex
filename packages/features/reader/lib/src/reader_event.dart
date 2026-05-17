@@ -39,6 +39,7 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
     this.atEnd = false,
     this.currentPageBookmarked = false,
     this.currentPageBookmarkCfi,
+    this.currentPageBookmarkId,
   });
 
   final String cfi;
@@ -61,6 +62,7 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
   final bool atEnd;
   final bool currentPageBookmarked;
   final String? currentPageBookmarkCfi;
+  final String? currentPageBookmarkId;
 
   @override
   List<Object?> get props => [
@@ -75,6 +77,7 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
     atEnd,
     currentPageBookmarked,
     currentPageBookmarkCfi,
+    currentPageBookmarkId,
   ];
 }
 
@@ -101,13 +104,36 @@ final class ReaderBookmarkChanged extends ReaderEvent {
     required this.cfi,
     required this.content,
     required this.progress,
+    this.id,
+    this.anchorExact,
+    this.anchorPrefix,
+    this.anchorSuffix,
+    this.anchorSectionIndex,
+    this.anchorSectionPage,
   });
 
   final bool remove;
+  final String? id;
   final String cfi;
   final String content;
   final double progress;
+  final String? anchorExact;
+  final String? anchorPrefix;
+  final String? anchorSuffix;
+  final int? anchorSectionIndex;
+  final int? anchorSectionPage;
 
   @override
-  List<Object?> get props => [remove, cfi, content, progress];
+  List<Object?> get props => [
+    remove,
+    id,
+    cfi,
+    content,
+    progress,
+    anchorExact,
+    anchorPrefix,
+    anchorSuffix,
+    anchorSectionIndex,
+    anchorSectionPage,
+  ];
 }

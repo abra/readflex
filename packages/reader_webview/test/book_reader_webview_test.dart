@@ -69,6 +69,7 @@ void main() {
       );
       expect(bookJs, contains('window.startSearch'));
       expect(bookJs, contains('window.cancelSearch'));
+      expect(bookJs, contains('window.goToBookmark'));
       expect(bookJs, contains('window.toggleBookmarkHere'));
       expect(bookJs, contains("callFlutter('onSearch'"));
       expect(bookJs, contains("callFlutter('handleBookmark'"));
@@ -88,22 +89,75 @@ void main() {
       final bookJs = File(
         'assets/foliate-js/src/book.js',
       ).readAsStringSync();
+      final viewJs = File(
+        'assets/foliate-js/src/view.js',
+      ).readAsStringSync();
       final webViewDart = File(
         'lib/src/book_reader_webview.dart',
       ).readAsStringSync();
 
       expect(bookJs, contains('window.refreshBookmarkState'));
       expect(bookJs, contains("reason = 'bookmark-sync'"));
+      expect(bookJs, isNot(contains('#rangeContainsBookmark')));
+      expect(bookJs, isNot(contains('currentRange.comparePoint')));
+      expect(bookJs, isNot(contains('resolveCFI(bookmark.value)')));
+      expect(bookJs, contains('#checkBookmark(bm, currentAnchor)'));
       expect(
         bookJs,
-        contains('#rangeContainsBookmark(currentRange, bookmarkRange)'),
+        contains('#sameBookmarkTextAnchor(bookmark, currentAnchor)'),
       );
-      expect(bookJs, contains('currentRange.comparePoint'));
-      expect(bookJs, contains('unwrapCFI(bookmark.value)'));
+      expect(
+        bookJs,
+        contains('#sameBookmarkVisualPageAnchor(bookmark, currentAnchor)'),
+      );
+      expect(bookJs, contains('#isBookmarkAnchorInteger(value)'));
+      expect(bookJs, contains("value != null && value !== ''"));
+      expect(bookJs, contains('#rangeIsVisibleInViewport(range)'));
+      expect(bookJs, contains('range.getClientRects()'));
+      expect(bookJs, contains('unwrapCFI(cfi)'));
+      expect(bookJs, contains('unwrapCFI(a)'));
+      expect(bookJs, contains('#isPreciseBookmarkCfi(cfi)'));
+      expect(bookJs, contains('#rangeLooksLikeBookmarkAnchor(range)'));
+      expect(bookJs, contains('#bookmarkSelectorFromRange(anchorRange)'));
+      expect(
+        bookJs,
+        contains('#bookmarkVisualPageAnchorFromLocation(location)'),
+      );
+      expect(bookJs, contains('anchorExact: anchor?.anchorExact'));
+      expect(bookJs, contains('anchorSectionPage: anchor?.anchorSectionPage'));
+      expect(webViewDart, contains("'anchorExact': bookmark.anchorExact"));
+      expect(
+        webViewDart,
+        contains("'anchorSectionPage': bookmark.anchorSectionPage"),
+      );
+      expect(
+        webViewDart,
+        contains(r'removeAnnotation($escaped, false, $escapedId)'),
+      );
       expect(bookJs, isNot(contains('#checkBookmarkProgress')));
+      expect(bookJs, isNot(contains('anchor?.cfi ?? location?.cfi')));
       expect(bookJs, contains('#bookmarkAnchorFromLocation(location)'));
-      expect(bookJs, contains('#visibleWordRange(visibleRange)'));
+      expect(bookJs, contains('goToBookmark = async target'));
+      expect(
+        bookJs,
+        contains('this.view.goToSectionPage(sectionIndex, sectionPage)'),
+      );
+      expect(bookJs, contains('#visibleViewportBookmarkRange(visibleRange)'));
+      expect(bookJs, contains('#visibleViewportWordRange(visibleRange)'));
+      expect(bookJs, contains('#nearestVisibleWordRange('));
+      expect(bookJs, contains('#rangeViewportScore('));
+      expect(bookJs, contains('caretRangeFromPoint'));
+      expect(bookJs, contains('caretPositionFromPoint'));
       expect(bookJs, contains('this.view.getCFI(this.#index, anchorRange)'));
+      expect(viewJs, isNot(contains("if (cfi && (!this.#lastCfi")));
+      expect(viewJs, contains('#lastRelocateKey'));
+      expect(viewJs, contains('async goToSectionPage(index, page)'));
+      expect(
+        viewJs,
+        contains('this.history.pushState({ sectionIndex, sectionPage })'),
+      );
+      expect(viewJs, contains('currentPage ??'));
+      expect(viewJs, contains('totalPages ??'));
       expect(webViewDart, contains("'progress': bookmark.progress"));
       expect(webViewDart, contains('window.refreshBookmarkState'));
     });

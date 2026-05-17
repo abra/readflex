@@ -51,11 +51,28 @@ class FakeBookRepository implements BookRepository {
     required String content,
     required double progress,
     String? chapterTitle,
+    String? anchorExact,
+    String? anchorPrefix,
+    String? anchorSuffix,
+    int? anchorSectionIndex,
+    int? anchorSectionPage,
   }) async {
     if (shouldThrow) throw Exception('addBookmark failed');
-    final existing = (bookmarksBySourceId[sourceId] ?? [])
-        .where((bookmark) => bookmark.cfi == cfi)
-        .firstOrNull;
+    final existing = (bookmarksBySourceId[sourceId] ?? []).where((bookmark) {
+      if (anchorExact == null &&
+          anchorPrefix == null &&
+          anchorSuffix == null &&
+          anchorSectionIndex == null &&
+          anchorSectionPage == null) {
+        return bookmark.cfi == cfi;
+      }
+      return bookmark.cfi == cfi &&
+          bookmark.anchorExact == anchorExact &&
+          bookmark.anchorPrefix == anchorPrefix &&
+          bookmark.anchorSuffix == anchorSuffix &&
+          bookmark.anchorSectionIndex == anchorSectionIndex &&
+          bookmark.anchorSectionPage == anchorSectionPage;
+    }).firstOrNull;
     if (existing != null) return existing;
 
     final bookmark = SourceBookmark(
@@ -66,6 +83,11 @@ class FakeBookRepository implements BookRepository {
       content: content,
       progress: progress,
       chapterTitle: chapterTitle,
+      anchorExact: anchorExact,
+      anchorPrefix: anchorPrefix,
+      anchorSuffix: anchorSuffix,
+      anchorSectionIndex: anchorSectionIndex,
+      anchorSectionPage: anchorSectionPage,
       createdAt: DateTime(2026, 5, 17, bookmarksBySourceId.length),
     );
     bookmarksBySourceId.update(
@@ -84,6 +106,19 @@ class FakeBookRepository implements BookRepository {
       (bookmarks) => [
         for (final bookmark in bookmarks)
           if (bookmark.cfi != cfi) bookmark,
+      ],
+      ifAbsent: () => const [],
+    );
+  }
+
+  @override
+  Future<void> deleteBookmarkById(String sourceId, String bookmarkId) async {
+    if (shouldThrow) throw Exception('deleteBookmark failed');
+    bookmarksBySourceId.update(
+      sourceId,
+      (bookmarks) => [
+        for (final bookmark in bookmarks)
+          if (bookmark.id != bookmarkId) bookmark,
       ],
       ifAbsent: () => const [],
     );

@@ -12,6 +12,11 @@ void main() {
       content: 'Interesting page',
       progress: 0.42,
       chapterTitle: 'Chapter 7',
+      anchorExact: 'Factory Method',
+      anchorPrefix: 'about the',
+      anchorSuffix: 'pattern in Flutter',
+      anchorSectionIndex: 12,
+      anchorSectionPage: 3,
       createdAt: createdAt,
     );
 
@@ -25,6 +30,11 @@ void main() {
         content: 'Interesting page',
         progress: 0.42,
         chapterTitle: 'Chapter 7',
+        anchorExact: 'Factory Method',
+        anchorPrefix: 'about the',
+        anchorSuffix: 'pattern in Flutter',
+        anchorSectionIndex: 12,
+        anchorSectionPage: 3,
         createdAt: createdAt,
       ),
     );

@@ -42,7 +42,9 @@ v3→v4 migration — see the comment in `database.dart`.
 
 `bookmarks_table` is a small custom-SQL table owned by `BookRepository`
 rather than a generated DAO because bookmark operations are source-scoped and
-do not need cross-feature query composition yet.
+do not need cross-feature query composition yet. It stores both the navigation
+CFI plus optional text and visual-page anchor fields so readers can
+distinguish pages when a book format reports coarse section-level CFI values.
 
 `articles_table` existed in earlier schemas but was dropped in v13 when the
 article reader was removed. Migrations v5–v12 still touch it for upgrade

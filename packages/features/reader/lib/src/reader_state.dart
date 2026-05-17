@@ -20,6 +20,7 @@ class ReaderState extends Equatable {
     this.sizeTotal,
     this.currentPageBookmarked = false,
     this.currentPageBookmarkCfi,
+    this.currentPageBookmarkId,
   });
 
   final ReaderStatus status;
@@ -51,6 +52,7 @@ class ReaderState extends Equatable {
   /// True when foliate-js reports that the visible page is already bookmarked.
   final bool currentPageBookmarked;
   final String? currentPageBookmarkCfi;
+  final String? currentPageBookmarkId;
 
   String? get sourceId => book?.id;
 
@@ -71,6 +73,7 @@ class ReaderState extends Equatable {
     Object? sizeTotal = _absent,
     bool? currentPageBookmarked,
     Object? currentPageBookmarkCfi = _absent,
+    Object? currentPageBookmarkId = _absent,
   }) => ReaderState(
     status: status ?? this.status,
     title: title ?? this.title,
@@ -98,6 +101,9 @@ class ReaderState extends Equatable {
     currentPageBookmarkCfi: currentPageBookmarkCfi == _absent
         ? this.currentPageBookmarkCfi
         : currentPageBookmarkCfi as String?,
+    currentPageBookmarkId: currentPageBookmarkId == _absent
+        ? this.currentPageBookmarkId
+        : currentPageBookmarkId as String?,
   );
 
   @override
@@ -116,5 +122,6 @@ class ReaderState extends Equatable {
     sizeTotal,
     currentPageBookmarked,
     currentPageBookmarkCfi,
+    currentPageBookmarkId,
   ];
 }

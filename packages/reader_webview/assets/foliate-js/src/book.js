@@ -4,7 +4,6 @@ console.log('ReadflexUA', navigator.userAgent)
 import './view.js'
 import { FootnoteHandler } from './footnotes.js'
 import { Overlayer } from './overlayer.js'
-import { collapse, compare, fromRange, toRange } from './epubcfi.js'
 import {
   attachGestures as readflexAttachGestures,
   registerGesture as readflexRegisterGesture,
@@ -967,6 +966,7 @@ footnoteDialog.addEventListener('click', e =>
 class Reader {
   annotations = new Map()
   annotationsByValue = new Map()
+  annotationsById = new Map()
   #footnoteHandler = new FootnoteHandler()
   #doc
   #index
@@ -1107,9 +1107,11 @@ class Reader {
     else this.annotations.set(spineCode, [annotation])
 
     this.annotationsByValue.set(value, annotation)
+    if (annotation.id) this.annotationsById.set(annotation.id, annotation)
 
     if (annotation.type === 'bookmark') {
-      if (this.#checkBookmark(annotation)) {
+      const currentAnchor = this.#bookmarkAnchorFromLocation(this.view.lastLocation)
+      if (this.#checkBookmark(annotation, currentAnchor)) {
         this.#bookmarkInfo = {
           exists: true,
           cfi: annotation.value,
@@ -1125,12 +1127,13 @@ class Reader {
   #checkCurrentPageBookmark() {
     const spineCode = this.#index
     const list = this.annotations.get(spineCode)
+    const currentAnchor = this.#bookmarkAnchorFromLocation(this.view.lastLocation)
     let found = false
     let bookmark = null
-    if (list) {
+    if (list && currentAnchor) {
       for (const bm of list) {
         if (bm.type === 'bookmark') {
-          found = this.#checkBookmark(bm) ? true : found
+          found = this.#checkBookmark(bm, currentAnchor) ? true : found
           if (found) {
             bookmark = bm
             break
@@ -1146,60 +1149,115 @@ class Reader {
     }
   }
 
-  #checkBookmark(bookmark) {
-    const currentRange = this.view.lastLocation?.range
-    if (currentRange && this.#doc) {
-      try {
-        const resolved = this.view.resolveCFI(bookmark.value)
-        if (resolved?.index !== this.#index) return false
-        const bookmarkRange = resolved.anchor(this.#doc)
-        if (this.#rangeContainsBookmark(currentRange, bookmarkRange)) {
-          return true
-        }
-      } catch (_) {
-        // Fall back to CFI comparison below for renderers / formats where
-        // the bookmark cannot be resolved into the currently loaded document.
-      }
+  #checkBookmark(bookmark, currentAnchor) {
+    if (!bookmark || !currentAnchor) return false
+    if (this.#hasBookmarkVisualPageAnchor(bookmark)) {
+      return this.#sameBookmarkVisualPageAnchor(bookmark, currentAnchor)
     }
-
-    const currCfi = this.view.lastLocation?.cfi
-    if (!currCfi || !bookmark.value) return false
-    if (bookmark.value === currCfi) return true
-    if (unwrapCFI(bookmark.value)?.startsWith(unwrapCFI(currCfi))) return true
-
-    const currStart = collapse(currCfi)
-    const currEnd = collapse(currCfi, true)
-    const bookmarkStart = collapse(bookmark.value)
-
-    if (compare(currStart, bookmarkStart) <= 0 &&
-      compare(currEnd, bookmarkStart) >= 0) {
-      return true
-    }
+    if (this.#sameBookmarkTextAnchor(bookmark, currentAnchor)) return true
+    if (this.#hasBookmarkTextAnchor(bookmark)) return false
+    if (!this.#isPreciseBookmarkCfi(bookmark.value)) return false
+    if (!this.#isPreciseBookmarkCfi(currentAnchor.cfi)) return false
+    return this.#sameBookmarkCfi(bookmark.value, currentAnchor.cfi)
   }
 
-  #rangeContainsBookmark(currentRange, bookmarkRange) {
-    const startContainer = bookmarkRange?.startContainer
-    if (!startContainer) return false
+  #isPreciseBookmarkCfi(cfi) {
+    const unwrapped = unwrapCFI(cfi)
+    return Boolean(unwrapped && unwrapped.includes(',') && /:\d+/.test(unwrapped))
+  }
 
-    if (typeof currentRange.comparePoint === 'function') {
-      try {
-        return currentRange.comparePoint(startContainer, bookmarkRange.startOffset) === 0
-      } catch (_) {
-        return false
-      }
-    }
+  #sameBookmarkCfi(a, b) {
+    const left = unwrapCFI(a)
+    const right = unwrapCFI(b)
+    return Boolean(left && right && left === right)
+  }
 
-    try {
-      return currentRange.compareBoundaryPoints(
-        Range.START_TO_START,
-        bookmarkRange,
-      ) <= 0 && currentRange.compareBoundaryPoints(
-        Range.END_TO_START,
-        bookmarkRange,
-      ) > 0
-    } catch (_) {
+  #hasBookmarkTextAnchor(bookmark) {
+    return Boolean(this.#normalizeBookmarkText(bookmark.anchorExact))
+  }
+
+  #hasBookmarkVisualPageAnchor(bookmark) {
+    return this.#isBookmarkAnchorInteger(bookmark.anchorSectionIndex) &&
+      this.#isBookmarkAnchorInteger(bookmark.anchorSectionPage)
+  }
+
+  #sameBookmarkVisualPageAnchor(bookmark, currentAnchor) {
+    if (!this.#isBookmarkAnchorInteger(currentAnchor.anchorSectionIndex) ||
+      !this.#isBookmarkAnchorInteger(currentAnchor.anchorSectionPage)) {
       return false
     }
+    return Number(bookmark.anchorSectionIndex) === currentAnchor.anchorSectionIndex &&
+      Number(bookmark.anchorSectionPage) === currentAnchor.anchorSectionPage
+  }
+
+  #isBookmarkAnchorInteger(value) {
+    return value != null && value !== '' && Number.isInteger(Number(value))
+  }
+
+  #sameBookmarkTextAnchor(bookmark, currentAnchor) {
+    const exact = this.#normalizeBookmarkText(bookmark.anchorExact)
+    if (!exact || exact !== currentAnchor.anchorExact) return false
+
+    const prefix = this.#normalizeBookmarkText(bookmark.anchorPrefix)
+    const suffix = this.#normalizeBookmarkText(bookmark.anchorSuffix)
+    const currentPrefix = currentAnchor.anchorPrefix
+    const currentSuffix = currentAnchor.anchorSuffix
+    if (prefix && currentPrefix && prefix !== currentPrefix) return false
+    if (suffix && currentSuffix && suffix !== currentSuffix) return false
+
+    const hasMatchingContext =
+      (prefix && currentPrefix && prefix === currentPrefix) ||
+      (suffix && currentSuffix && suffix === currentSuffix)
+    return exact.length >= 12 || hasMatchingContext
+  }
+
+  #normalizeBookmarkText(value) {
+    return typeof value === 'string'
+      ? value.replace(/\s+/g, ' ').trim()
+      : ''
+  }
+
+  #rangeIsVisibleInViewport(range) {
+    if (!range || typeof range.getClientRects !== 'function') return null
+    if (!this.#rangeLooksLikeBookmarkAnchor(range)) return false
+    const doc = range.startContainer?.ownerDocument ?? this.#doc
+    const win = doc?.defaultView
+    const width = win?.innerWidth ?? doc?.documentElement?.clientWidth
+    const height = win?.innerHeight ?? doc?.documentElement?.clientHeight
+    if (!width || !height) return null
+
+    const rects = Array.from(range.getClientRects())
+    if (!rects.length) return null
+
+    const tolerance = 1
+    const viewportArea = width * height
+    let visibleArea = 0
+    for (const rect of rects) {
+      const visibleWidth =
+        Math.min(rect.right, width) - Math.max(rect.left, 0)
+      const visibleHeight =
+        Math.min(rect.bottom, height) - Math.max(rect.top, 0)
+      if (visibleWidth > 0 && visibleHeight > 0) {
+        visibleArea += visibleWidth * visibleHeight
+      }
+    }
+    if (visibleArea > viewportArea * 0.2) return false
+
+    return rects.some(rect =>
+      rect.bottom > tolerance &&
+      rect.top < height - tolerance &&
+      rect.right > tolerance &&
+      rect.left < width - tolerance
+    )
+  }
+
+  #rangeLooksLikeBookmarkAnchor(range) {
+    const text = range.toString?.().trim() ?? ''
+    if (!text || text.length > 240) return false
+    const rects = typeof range.getClientRects === 'function'
+      ? Array.from(range.getClientRects())
+      : []
+    return rects.length <= 8
   }
 
   #bookmarkAnchorFromLocation(location) {
@@ -1207,13 +1265,25 @@ class Reader {
     if (!visibleRange || !this.#doc || this.#index == null) return null
 
     try {
-      // Use a word near the middle of the currently visible text as the
-      // bookmark anchor. The page-level location CFI can span enough content
-      // to keep a bookmark active on an adjacent page.
-      const anchorRange = this.#visibleWordRange(visibleRange)
+      // Prefer a word from the visual viewport. The location DOM range can span
+      // multiple CSS columns, so its midpoint may belong to a later page.
+      const anchorRange = this.#visibleViewportBookmarkRange(visibleRange)
       if (!anchorRange) return null
+      let cfi = location?.cfi
+      try {
+        cfi = this.view.getCFI(this.#index, anchorRange) ?? cfi
+      } catch (_) {
+        // Some non-EPUB renderers expose a visual range but cannot produce a
+        // precise CFI for it. Keep the page CFI for navigation and rely on the
+        // text selector for active-state checks.
+      }
+      if (!cfi) return null
+      const selector = this.#bookmarkSelectorFromRange(anchorRange)
+      const pageAnchor = this.#bookmarkVisualPageAnchorFromLocation(location)
       return {
-        cfi: this.view.getCFI(this.#index, anchorRange),
+        cfi,
+        ...selector,
+        ...pageAnchor,
         content: this.#bookmarkContentFromRange(anchorRange),
       }
     } catch (_) {
@@ -1221,7 +1291,117 @@ class Reader {
     }
   }
 
-  #visibleWordRange(visibleRange) {
+  #bookmarkVisualPageAnchorFromLocation(location) {
+    const page = location?.chapterLocation?.current
+    return {
+      anchorSectionIndex: Number.isInteger(this.#index) ? this.#index : null,
+      anchorSectionPage: Number.isInteger(page) ? page : null,
+    }
+  }
+
+  #visibleViewportBookmarkRange(visibleRange) {
+    const wordRange = this.#visibleViewportWordRange(visibleRange)
+    return wordRange
+      ? this.#expandRangeToBookmarkQuote(wordRange, visibleRange)
+      : null
+  }
+
+  #visibleViewportWordRange(visibleRange) {
+    const doc = this.#doc
+    const win = doc?.defaultView
+    const width = win?.innerWidth ?? doc?.documentElement?.clientWidth
+    const height = win?.innerHeight ?? doc?.documentElement?.clientHeight
+    if (!doc || !width || !height) return null
+
+    const yCandidates = [0.5, 0.42, 0.58, 0.33, 0.67, 0.25, 0.75]
+    const xCandidates = [0.5, 0.42, 0.58, 0.34, 0.66]
+
+    for (const y of yCandidates) {
+      for (const x of xCandidates) {
+        const range = this.#wordRangeFromPoint(width * x, height * y, visibleRange)
+        if (range && this.#rangeIsVisibleInViewport(range) === true) {
+          return range
+        }
+      }
+    }
+
+    return this.#nearestVisibleWordRange(visibleRange, width / 2, height / 2)
+  }
+
+  #wordRangeFromPoint(x, y, visibleRange) {
+    const caret = this.#caretRangeFromPoint(x, y)
+    const position = this.#textPositionFromCaret(caret)
+    if (!position) return null
+
+    const slice = this.#visibleTextSlice(visibleRange, position.node)
+    if (!slice) return null
+
+    return this.#wordRangeInSlice(slice, position.offset)
+  }
+
+  #caretRangeFromPoint(x, y) {
+    const doc = this.#doc
+    if (!doc) return null
+
+    if (typeof doc.caretRangeFromPoint === 'function') {
+      return doc.caretRangeFromPoint(x, y)
+    }
+
+    if (typeof doc.caretPositionFromPoint === 'function') {
+      const position = doc.caretPositionFromPoint(x, y)
+      if (!position?.offsetNode) return null
+      const range = doc.createRange()
+      range.setStart(position.offsetNode, position.offset)
+      range.collapse(true)
+      return range
+    }
+
+    return null
+  }
+
+  #textPositionFromCaret(caret) {
+    const container = caret?.startContainer
+    if (!container) return null
+
+    const textNodeType =
+      this.#doc?.defaultView?.Node?.TEXT_NODE ?? globalThis.Node?.TEXT_NODE ?? 3
+    if (container.nodeType === textNodeType) {
+      return { node: container, offset: caret.startOffset }
+    }
+
+    const children = container.childNodes
+    if (!children?.length) return null
+    const index = Math.min(Math.max(caret.startOffset, 0), children.length - 1)
+    const node =
+      this.#firstTextNode(children[index]) ??
+      this.#firstTextNode(children[index - 1])
+    return node ? { node, offset: 0 } : null
+  }
+
+  #firstTextNode(node) {
+    if (!node) return null
+
+    const win = node.ownerDocument?.defaultView ?? this.#doc?.defaultView
+    const textNodeType = win?.Node?.TEXT_NODE ?? globalThis.Node?.TEXT_NODE ?? 3
+    if (node.nodeType === textNodeType && node.nodeValue?.trim()) return node
+
+    const nodeFilter = win?.NodeFilter ?? globalThis.NodeFilter
+    if (!nodeFilter || !node.ownerDocument?.createTreeWalker) return null
+
+    const walker = node.ownerDocument.createTreeWalker(
+      node,
+      nodeFilter.SHOW_TEXT,
+      {
+        acceptNode: textNode =>
+          textNode.nodeValue?.trim()
+            ? nodeFilter.FILTER_ACCEPT
+            : nodeFilter.FILTER_REJECT,
+      },
+    )
+    return walker.nextNode()
+  }
+
+  #nearestVisibleWordRange(visibleRange, centerX, centerY) {
     const doc = this.#doc
     if (!doc?.body) return null
     const nodeFilter = doc.defaultView?.NodeFilter ?? globalThis.NodeFilter
@@ -1243,28 +1423,23 @@ class Reader {
         },
       },
     )
-    const slices = []
-    let total = 0
+    let best = null
 
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       const slice = this.#visibleTextSlice(visibleRange, node)
       if (!slice) continue
-      slices.push(slice)
-      total += slice.end - slice.start
-    }
 
-    if (!total) return null
-
-    let midpoint = Math.floor(total / 2)
-    for (const slice of slices) {
-      const length = slice.end - slice.start
-      if (midpoint < length) {
-        return this.#wordRangeInSlice(slice, slice.start + midpoint)
+      for (const range of this.#wordRangesInSlice(slice)) {
+        if (this.#rangeIsVisibleInViewport(range) !== true) continue
+        const score = this.#rangeViewportScore(range, centerX, centerY)
+        if (score == null) continue
+        if (!best || score < best.score) {
+          best = { range, score }
+        }
       }
-      midpoint -= length
     }
 
-    return null
+    return best?.range ?? null
   }
 
   #visibleTextSlice(range, node) {
@@ -1281,6 +1456,24 @@ class Reader {
     if (start >= end || !text.slice(start, end).trim()) return null
 
     return { node, start, end }
+  }
+
+  #wordRangesInSlice(slice) {
+    const ranges = []
+    const { node, start, end } = slice
+    const text = node.nodeValue ?? ''
+    const matches = text.slice(start, end).matchAll(/\S+/g)
+
+    for (const match of matches) {
+      const wordStart = start + match.index
+      const wordEnd = wordStart + match[0].length
+      const range = node.ownerDocument.createRange()
+      range.setStart(node, wordStart)
+      range.setEnd(node, wordEnd)
+      ranges.push(range)
+    }
+
+    return ranges
   }
 
   #wordRangeInSlice(slice, offset) {
@@ -1324,6 +1517,80 @@ class Reader {
     return range
   }
 
+  #expandRangeToBookmarkQuote(range, visibleRange) {
+    const node = range.startContainer
+    if (!node || node !== range.endContainer) return range
+
+    const slice = this.#visibleTextSlice(visibleRange, node)
+    if (!slice) return range
+
+    const text = node.nodeValue ?? ''
+    const targetSideChars = 60
+    let start = Math.max(slice.start, range.startOffset - targetSideChars)
+    let end = Math.min(slice.end, range.endOffset + targetSideChars)
+
+    while (start > slice.start && !/\s/.test(text[start - 1])) start--
+    while (end < slice.end && !/\s/.test(text[end])) end++
+    while (start < end && /\s/.test(text[start])) start++
+    while (end > start && /\s/.test(text[end - 1])) end--
+
+    if (start >= end) return range
+
+    const quoteRange = node.ownerDocument.createRange()
+    quoteRange.setStart(node, start)
+    quoteRange.setEnd(node, end)
+    return quoteRange
+  }
+
+  #bookmarkSelectorFromRange(range) {
+    const exact = this.#normalizeBookmarkText(range.toString())
+    const node = range.startContainer === range.endContainer
+      ? range.startContainer
+      : null
+    if (!node?.nodeValue) {
+      return {
+        anchorExact: exact,
+        anchorPrefix: '',
+        anchorSuffix: '',
+      }
+    }
+
+    const text = node.nodeValue
+    const prefix = this.#normalizeBookmarkText(
+      text.slice(Math.max(0, range.startOffset - 80), range.startOffset),
+    )
+    const suffix = this.#normalizeBookmarkText(
+      text.slice(range.endOffset, Math.min(text.length, range.endOffset + 80)),
+    )
+    return {
+      anchorExact: exact,
+      anchorPrefix: prefix.slice(-80),
+      anchorSuffix: suffix.slice(0, 80),
+    }
+  }
+
+  #rangeViewportScore(range, centerX, centerY) {
+    const doc = range.startContainer?.ownerDocument ?? this.#doc
+    const win = doc?.defaultView
+    const width = win?.innerWidth ?? doc?.documentElement?.clientWidth
+    const height = win?.innerHeight ?? doc?.documentElement?.clientHeight
+    if (!width || !height) return null
+
+    let best = null
+    for (const rect of Array.from(range.getClientRects())) {
+      const left = Math.max(rect.left, 0)
+      const right = Math.min(rect.right, width)
+      const top = Math.max(rect.top, 0)
+      const bottom = Math.min(rect.bottom, height)
+      if (right <= left || bottom <= top) continue
+      const x = (left + right) / 2
+      const y = (top + bottom) / 2
+      const score = (x - centerX) ** 2 + (y - centerY) ** 2
+      best = best == null ? score : Math.min(best, score)
+    }
+    return best
+  }
+
   #bookmarkContentFromRange(range) {
     const word = range.toString().trim()
     const context = range.startContainer?.parentElement?.textContent?.trim()
@@ -1350,8 +1617,10 @@ class Reader {
     })
   }
 
-  removeAnnotation(cfi, notify = true) {
-    const annotation = this.annotationsByValue.get(cfi)
+  removeAnnotation(cfi, notify = true, id = null) {
+    const annotation = id
+      ? this.annotationsById.get(id)
+      : this.annotationsByValue.get(cfi)
     if (!annotation) return
     const { value } = annotation
     const spineCode = (value.split('/')[2].split('!')[0] - 2) / 2
@@ -1363,10 +1632,15 @@ class Reader {
     }
 
     this.annotationsByValue.delete(value)
+    if (annotation.id) this.annotationsById.delete(annotation.id)
 
     this.view.addAnnotation(annotation, true)
 
-    if (annotation.type === 'bookmark' && this.#checkBookmark(annotation)) {
+    const currentAnchor = this.#bookmarkAnchorFromLocation(this.view.lastLocation)
+    if (
+      annotation.type === 'bookmark' &&
+      this.#checkBookmark(annotation, currentAnchor)
+    ) {
       if (notify) this.handleBookmark(true)
       this.#bookmarkInfo = {
         exists: false,
@@ -1604,7 +1878,7 @@ class Reader {
   handleBookmark = (remove, source = 'unknown') => {
     const location = this.view.lastLocation
     const anchor = remove ? null : this.#bookmarkAnchorFromLocation(location)
-    const cfi = remove ? this.#bookmarkInfo.cfi : anchor?.cfi ?? location?.cfi
+    const cfi = remove ? this.#bookmarkInfo.cfi : anchor?.cfi
     if (!cfi) return
 
     const container = location?.range?.startContainer
@@ -1619,11 +1893,41 @@ class Reader {
       remove,
       source,
       detail: {
+        id: remove ? this.#bookmarkInfo.id : null,
         cfi,
         content,
-        percentage
+        percentage,
+        anchorExact: anchor?.anchorExact,
+        anchorPrefix: anchor?.anchorPrefix,
+        anchorSuffix: anchor?.anchorSuffix,
+        anchorSectionIndex: anchor?.anchorSectionIndex,
+        anchorSectionPage: anchor?.anchorSectionPage,
       }
     })
+  }
+
+  goToBookmark = async target => {
+    const sectionIndex = target?.anchorSectionIndex
+    const sectionPage = target?.anchorSectionPage
+    if (this.#isBookmarkAnchorInteger(sectionIndex) &&
+      this.#isBookmarkAnchorInteger(sectionPage)) {
+      try {
+        const didNavigate = await this.view.goToSectionPage(sectionIndex, sectionPage)
+        if (didNavigate) return
+      } catch (e) {
+        console.warn('goToBookmark visual page fallback failed', e)
+      }
+    }
+
+    if (target?.cfi) {
+      await this.view.goTo(target.cfi)
+      return
+    }
+
+    const progress = Number(target?.progress)
+    if (Number.isFinite(progress) && progress > 0 && progress <= 1) {
+      await this.view.goToFraction(progress)
+    }
   }
 
   toggleBookmark = () => {
@@ -1858,6 +2162,8 @@ window.goToCfi = cfi => reader.view.goTo(cfi)
 
 window.goToPercent = percent => reader.view.goToFraction(percent)
 
+window.goToBookmark = target => reader.goToBookmark(target)
+
 window.nextPage = () => reader.view.next()
 
 window.prevPage = () => reader.view.prev()
@@ -1906,7 +2212,8 @@ window.addBookmarkHere = () => reader.handleBookmark(false, 'chrome')
 
 window.toggleBookmarkHere = () => reader.toggleBookmark()
 
-window.removeAnnotation = (cfi, notify = true) => reader.removeAnnotation(cfi, notify)
+window.removeAnnotation = (cfi, notify = true, id = null) =>
+  reader.removeAnnotation(cfi, notify, id)
 
 window.prevSection = () => reader.view.renderer.prevSection()
 

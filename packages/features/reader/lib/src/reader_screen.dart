@@ -690,7 +690,12 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
 
   void _goToBookmark(SourceBookmark bookmark) {
     if (bookmark.cfi.isEmpty) return;
-    _webViewKey.currentState?.goToCfi(bookmark.cfi);
+    _webViewKey.currentState?.goToBookmark(
+      cfi: bookmark.cfi,
+      progress: bookmark.progress,
+      anchorSectionIndex: bookmark.anchorSectionIndex,
+      anchorSectionPage: bookmark.anchorSectionPage,
+    );
     _closeTocDrawer(restoreChrome: false);
   }
 
@@ -2782,6 +2787,11 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
           cfi: bookmark.cfi,
           progress: bookmark.progress,
           content: bookmark.content,
+          anchorExact: bookmark.anchorExact,
+          anchorPrefix: bookmark.anchorPrefix,
+          anchorSuffix: bookmark.anchorSuffix,
+          anchorSectionIndex: bookmark.anchorSectionIndex,
+          anchorSectionPage: bookmark.anchorSectionPage,
         ),
     ];
   }
@@ -2920,6 +2930,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
             atEnd: position.atEnd,
             currentPageBookmarked: position.bookmarkExists,
             currentPageBookmarkCfi: position.bookmarkCfi,
+            currentPageBookmarkId: position.bookmarkId,
           ),
         );
         widget.onPositionChanged?.call(position);
@@ -2931,9 +2942,15 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         bloc.add(
           ReaderBookmarkChanged(
             remove: change.remove,
+            id: change.id,
             cfi: change.cfi,
             content: change.content,
             progress: change.progress,
+            anchorExact: change.anchorExact,
+            anchorPrefix: change.anchorPrefix,
+            anchorSuffix: change.anchorSuffix,
+            anchorSectionIndex: change.anchorSectionIndex,
+            anchorSectionPage: change.anchorSectionPage,
           ),
         );
       },

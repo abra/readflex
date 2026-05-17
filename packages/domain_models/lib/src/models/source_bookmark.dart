@@ -13,6 +13,11 @@ class SourceBookmark extends Equatable {
     required this.progress,
     required this.createdAt,
     this.chapterTitle,
+    this.anchorExact,
+    this.anchorPrefix,
+    this.anchorSuffix,
+    this.anchorSectionIndex,
+    this.anchorSectionPage,
   });
 
   final String id;
@@ -23,6 +28,11 @@ class SourceBookmark extends Equatable {
   final double progress;
   final DateTime createdAt;
   final String? chapterTitle;
+  final String? anchorExact;
+  final String? anchorPrefix;
+  final String? anchorSuffix;
+  final int? anchorSectionIndex;
+  final int? anchorSectionPage;
 
   @override
   List<Object?> get props => [
@@ -34,5 +44,10 @@ class SourceBookmark extends Equatable {
     progress,
     createdAt,
     chapterTitle,
+    anchorExact,
+    anchorPrefix,
+    anchorSuffix,
+    anchorSectionIndex,
+    anchorSectionPage,
   ];
 }

@@ -148,6 +148,48 @@ void main() {
       expect(await repo.getBookmarksBySource(book.id), hasLength(1));
     });
 
+    test('addBookmark keeps distinct text anchors with the same cfi', () async {
+      final book = await repo.addBook(
+        sourceFile: await createTempBookFile(),
+        title: 'Bookmark source',
+        format: BookFormat.epub,
+      );
+
+      final first = await repo.addBookmark(
+        sourceId: book.id,
+        sourceType: SourceType.book,
+        cfi: 'epubcfi(/6/4)',
+        content: 'First visual page',
+        progress: 0.2,
+        anchorExact: 'Factory Method starts here',
+        anchorPrefix: 'Chapter seven',
+        anchorSuffix: 'Technical requirements',
+        anchorSectionIndex: 12,
+        anchorSectionPage: 1,
+      );
+      final second = await repo.addBookmark(
+        sourceId: book.id,
+        sourceType: SourceType.book,
+        cfi: 'epubcfi(/6/4)',
+        content: 'Second visual page',
+        progress: 0.3,
+        anchorExact: 'Dependency creation moves here',
+        anchorPrefix: 'Implementation details',
+        anchorSuffix: 'Summary follows',
+        anchorSectionIndex: 12,
+        anchorSectionPage: 2,
+      );
+
+      expect(second.id, isNot(first.id));
+      final bookmarks = await repo.getBookmarksBySource(book.id);
+      expect(bookmarks, hasLength(2));
+      expect(bookmarks.map((b) => b.anchorExact), [
+        'Factory Method starts here',
+        'Dependency creation moves here',
+      ]);
+      expect(bookmarks.map((b) => b.anchorSectionPage), [1, 2]);
+    });
+
     test(
       'deleteBookmarkBySourceAndCfi removes only matching bookmark',
       () async {
@@ -173,6 +215,44 @@ void main() {
         );
 
         await repo.deleteBookmarkBySourceAndCfi(book.id, 'epubcfi(/6/4)');
+
+        final bookmarks = await repo.getBookmarksBySource(book.id);
+        expect(bookmarks, hasLength(1));
+        expect(bookmarks.single.content, 'Keep me');
+      },
+    );
+
+    test(
+      'deleteBookmarkById removes one bookmark when cfi is shared',
+      () async {
+        final book = await repo.addBook(
+          sourceFile: await createTempBookFile(),
+          title: 'Bookmark source',
+          format: BookFormat.epub,
+        );
+
+        final first = await repo.addBookmark(
+          sourceId: book.id,
+          sourceType: SourceType.book,
+          cfi: 'epubcfi(/6/4)',
+          content: 'Remove me',
+          progress: 0.2,
+          anchorExact: 'First anchor',
+          anchorSectionIndex: 12,
+          anchorSectionPage: 1,
+        );
+        await repo.addBookmark(
+          sourceId: book.id,
+          sourceType: SourceType.book,
+          cfi: 'epubcfi(/6/4)',
+          content: 'Keep me',
+          progress: 0.3,
+          anchorExact: 'Second anchor',
+          anchorSectionIndex: 12,
+          anchorSectionPage: 2,
+        );
+
+        await repo.deleteBookmarkById(book.id, first.id);
 
         final bookmarks = await repo.getBookmarksBySource(book.id);
         expect(bookmarks, hasLength(1));

@@ -38,6 +38,9 @@ void main() {
     content: 'Saved page',
     progress: 0.2,
     chapterTitle: 'Chapter 1',
+    anchorExact: 'Saved page anchor',
+    anchorSectionIndex: 12,
+    anchorSectionPage: 1,
     createdAt: DateTime(2024, 1, 3),
   );
 
@@ -687,6 +690,11 @@ void main() {
             cfi: 'epubcfi(/6/34)',
             content: 'Bookmark text',
             progress: 0.56,
+            anchorExact: 'Bookmark text anchor',
+            anchorPrefix: 'Before',
+            anchorSuffix: 'After',
+            anchorSectionIndex: 12,
+            anchorSectionPage: 3,
           ),
         ),
         expect: () => [
@@ -706,11 +714,13 @@ void main() {
           final bookmarks = bookRepository.bookmarksBySourceId['book-1'];
           expect(bookmarks, hasLength(1));
           expect(bookmarks!.single.chapterTitle, 'Chapter 7');
+          expect(bookmarks.single.anchorExact, 'Bookmark text anchor');
+          expect(bookmarks.single.anchorSectionPage, 3);
         },
       );
 
       blocTest<ReaderBloc, ReaderState>(
-        'removes bookmark by cfi',
+        'removes bookmark by id',
         setUp: () {
           bookRepository.seedBook(testBook);
           bookRepository.seedBookmarks('book-1', [testBookmark]);
@@ -726,6 +736,7 @@ void main() {
         act: (bloc) => bloc.add(
           ReaderBookmarkChanged(
             remove: true,
+            id: testBookmark.id,
             cfi: testBookmark.cfi,
             content: '',
             progress: testBookmark.progress,

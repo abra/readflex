@@ -178,7 +178,9 @@ class BookRepository {
           .customSelect(
             '''
                 SELECT id, source_id, source_type, cfi, content, progress,
-                       chapter_title, created_at
+                       chapter_title, anchor_exact, anchor_prefix,
+                       anchor_suffix, anchor_section_index,
+                       anchor_section_page, created_at
                 FROM bookmarks_table
                 WHERE source_id = ?
                 ORDER BY progress ASC, created_at ASC
@@ -199,9 +201,22 @@ class BookRepository {
     required String content,
     required double progress,
     String? chapterTitle,
+    String? anchorExact,
+    String? anchorPrefix,
+    String? anchorSuffix,
+    int? anchorSectionIndex,
+    int? anchorSectionPage,
   }) async {
     try {
-      final existing = await _bookmarkBySourceAndCfi(sourceId, cfi);
+      final existing = await _bookmarkBySourceAndAnchor(
+        sourceId: sourceId,
+        cfi: cfi,
+        anchorExact: anchorExact,
+        anchorPrefix: anchorPrefix,
+        anchorSuffix: anchorSuffix,
+        anchorSectionIndex: anchorSectionIndex,
+        anchorSectionPage: anchorSectionPage,
+      );
       if (existing != null) return existing;
 
       final bookmark = SourceBookmark(
@@ -212,14 +227,20 @@ class BookRepository {
         content: content,
         progress: progress.clamp(0.0, 1.0).toDouble(),
         chapterTitle: chapterTitle,
+        anchorExact: anchorExact,
+        anchorPrefix: anchorPrefix,
+        anchorSuffix: anchorSuffix,
+        anchorSectionIndex: anchorSectionIndex,
+        anchorSectionPage: anchorSectionPage,
         createdAt: DateTime.now(),
       );
       await _db.customStatement(
         '''
-        INSERT OR IGNORE INTO bookmarks_table
+        INSERT INTO bookmarks_table
           (id, source_id, source_type, cfi, content, progress, chapter_title,
-           created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+           anchor_exact, anchor_prefix, anchor_suffix, anchor_section_index,
+           anchor_section_page, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''',
         [
           bookmark.id,
@@ -229,10 +250,29 @@ class BookRepository {
           bookmark.content,
           bookmark.progress,
           bookmark.chapterTitle,
+          bookmark.anchorExact,
+          bookmark.anchorPrefix,
+          bookmark.anchorSuffix,
+          bookmark.anchorSectionIndex,
+          bookmark.anchorSectionPage,
           bookmark.createdAt.toIso8601String(),
         ],
       );
-      return await _bookmarkBySourceAndCfi(sourceId, cfi) ?? bookmark;
+      return await _bookmarkById(sourceId, bookmark.id) ?? bookmark;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  Future<void> deleteBookmarkById(String sourceId, String bookmarkId) async {
+    try {
+      await _db.customStatement(
+        '''
+        DELETE FROM bookmarks_table
+        WHERE source_id = ? AND id = ?
+        ''',
+        [sourceId, bookmarkId],
+      );
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }
@@ -255,6 +295,54 @@ class BookRepository {
     }
   }
 
+  Future<SourceBookmark?> _bookmarkBySourceAndAnchor({
+    required String sourceId,
+    required String cfi,
+    required String? anchorExact,
+    required String? anchorPrefix,
+    required String? anchorSuffix,
+    required int? anchorSectionIndex,
+    required int? anchorSectionPage,
+  }) async {
+    if (anchorExact == null &&
+        anchorPrefix == null &&
+        anchorSuffix == null &&
+        anchorSectionIndex == null &&
+        anchorSectionPage == null) {
+      return _bookmarkBySourceAndCfi(sourceId, cfi);
+    }
+
+    final row = await _db
+        .customSelect(
+          '''
+              SELECT id, source_id, source_type, cfi, content, progress,
+                     chapter_title, anchor_exact, anchor_prefix,
+                     anchor_suffix, anchor_section_index,
+                     anchor_section_page, created_at
+              FROM bookmarks_table
+              WHERE source_id = ?
+                AND cfi = ?
+                AND COALESCE(anchor_exact, '') = ?
+                AND COALESCE(anchor_prefix, '') = ?
+                AND COALESCE(anchor_suffix, '') = ?
+                AND COALESCE(anchor_section_index, -1) = ?
+                AND COALESCE(anchor_section_page, -1) = ?
+              LIMIT 1
+              ''',
+          variables: [
+            Variable<String>(sourceId),
+            Variable<String>(cfi),
+            Variable<String>(anchorExact ?? ''),
+            Variable<String>(anchorPrefix ?? ''),
+            Variable<String>(anchorSuffix ?? ''),
+            Variable<int>(anchorSectionIndex ?? -1),
+            Variable<int>(anchorSectionPage ?? -1),
+          ],
+        )
+        .getSingleOrNull();
+    return row == null ? null : _bookmarkRowToDomain(row);
+  }
+
   Future<SourceBookmark?> _bookmarkBySourceAndCfi(
     String sourceId,
     String cfi,
@@ -263,12 +351,38 @@ class BookRepository {
         .customSelect(
           '''
               SELECT id, source_id, source_type, cfi, content, progress,
-                     chapter_title, created_at
+                     chapter_title, anchor_exact, anchor_prefix,
+                     anchor_suffix, anchor_section_index,
+                     anchor_section_page, created_at
               FROM bookmarks_table
               WHERE source_id = ? AND cfi = ?
               LIMIT 1
               ''',
           variables: [Variable<String>(sourceId), Variable<String>(cfi)],
+        )
+        .getSingleOrNull();
+    return row == null ? null : _bookmarkRowToDomain(row);
+  }
+
+  Future<SourceBookmark?> _bookmarkById(
+    String sourceId,
+    String bookmarkId,
+  ) async {
+    final row = await _db
+        .customSelect(
+          '''
+              SELECT id, source_id, source_type, cfi, content, progress,
+                     chapter_title, anchor_exact, anchor_prefix,
+                     anchor_suffix, anchor_section_index,
+                     anchor_section_page, created_at
+              FROM bookmarks_table
+              WHERE source_id = ? AND id = ?
+              LIMIT 1
+              ''',
+          variables: [
+            Variable<String>(sourceId),
+            Variable<String>(bookmarkId),
+          ],
         )
         .getSingleOrNull();
     return row == null ? null : _bookmarkRowToDomain(row);
@@ -351,6 +465,11 @@ class BookRepository {
       content: row.read<String>('content'),
       progress: row.read<double>('progress').clamp(0.0, 1.0).toDouble(),
       chapterTitle: row.readNullable<String>('chapter_title'),
+      anchorExact: row.readNullable<String>('anchor_exact'),
+      anchorPrefix: row.readNullable<String>('anchor_prefix'),
+      anchorSuffix: row.readNullable<String>('anchor_suffix'),
+      anchorSectionIndex: row.readNullable<int>('anchor_section_index'),
+      anchorSectionPage: row.readNullable<int>('anchor_section_page'),
       createdAt: DateTime.parse(row.read<String>('created_at')),
     );
   }

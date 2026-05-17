@@ -52,7 +52,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -362,6 +362,12 @@ class AppDatabase extends _$AppDatabase {
       if (from < 15) {
         await _createBookmarksTable();
       }
+      if (from < 16) {
+        await _migrateBookmarksToTextAnchors();
+      }
+      if (from < 17) {
+        await _addBookmarkVisualPageAnchors();
+      }
     },
   );
 
@@ -375,13 +381,65 @@ class AppDatabase extends _$AppDatabase {
         content TEXT NOT NULL,
         progress REAL NOT NULL DEFAULT 0.0,
         chapter_title TEXT,
-        created_at TEXT NOT NULL,
-        UNIQUE(source_id, cfi)
+        anchor_exact TEXT,
+        anchor_prefix TEXT,
+        anchor_suffix TEXT,
+        anchor_section_index INTEGER,
+        anchor_section_page INTEGER,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    await _createBookmarksIndexes();
+  }
+
+  Future<void> _migrateBookmarksToTextAnchors() async {
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS bookmarks_table_v16 (
+        id TEXT NOT NULL PRIMARY KEY,
+        source_id TEXT NOT NULL,
+        source_type TEXT NOT NULL,
+        cfi TEXT NOT NULL,
+        content TEXT NOT NULL,
+        progress REAL NOT NULL DEFAULT 0.0,
+        chapter_title TEXT,
+        anchor_exact TEXT,
+        anchor_prefix TEXT,
+        anchor_suffix TEXT,
+        created_at TEXT NOT NULL
       )
     ''');
     await customStatement('''
+      INSERT OR IGNORE INTO bookmarks_table_v16
+        (id, source_id, source_type, cfi, content, progress, chapter_title,
+         anchor_exact, anchor_prefix, anchor_suffix, created_at)
+      SELECT id, source_id, source_type, cfi, content, progress, chapter_title,
+             NULL, NULL, NULL, created_at
+      FROM bookmarks_table
+    ''');
+    await customStatement('DROP TABLE IF EXISTS bookmarks_table');
+    await customStatement(
+      'ALTER TABLE bookmarks_table_v16 RENAME TO bookmarks_table',
+    );
+    await _createBookmarksIndexes();
+  }
+
+  Future<void> _addBookmarkVisualPageAnchors() async {
+    await customStatement(
+      'ALTER TABLE bookmarks_table ADD COLUMN anchor_section_index INTEGER',
+    );
+    await customStatement(
+      'ALTER TABLE bookmarks_table ADD COLUMN anchor_section_page INTEGER',
+    );
+  }
+
+  Future<void> _createBookmarksIndexes() async {
+    await customStatement('''
       CREATE INDEX IF NOT EXISTS idx_bookmarks_source_progress
       ON bookmarks_table (source_id, progress)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_bookmarks_source_cfi
+      ON bookmarks_table (source_id, cfi)
     ''');
   }
 

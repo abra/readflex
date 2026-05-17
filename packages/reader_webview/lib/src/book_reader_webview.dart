@@ -292,7 +292,7 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     for (final bookmark in oldList) {
       final next = newById[bookmark.id];
       if (next == null) {
-        _evalRemoveBookmarkAnnotation(bookmark.cfi);
+        _evalRemoveBookmarkAnnotation(bookmark.cfi, id: bookmark.id);
         changed = true;
       }
     }
@@ -301,8 +301,13 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       if (prev == null) {
         _evalAddBookmarkAnnotation(bookmark);
         changed = true;
-      } else if (prev.cfi != bookmark.cfi) {
-        _evalRemoveBookmarkAnnotation(prev.cfi);
+      } else if (prev.cfi != bookmark.cfi ||
+          prev.anchorExact != bookmark.anchorExact ||
+          prev.anchorPrefix != bookmark.anchorPrefix ||
+          prev.anchorSuffix != bookmark.anchorSuffix ||
+          prev.anchorSectionIndex != bookmark.anchorSectionIndex ||
+          prev.anchorSectionPage != bookmark.anchorSectionPage) {
+        _evalRemoveBookmarkAnnotation(prev.cfi, id: prev.id);
         _evalAddBookmarkAnnotation(bookmark);
         changed = true;
       }
@@ -318,14 +323,20 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       'value': bookmark.cfi,
       'content': bookmark.content,
       'progress': bookmark.progress,
+      'anchorExact': bookmark.anchorExact,
+      'anchorPrefix': bookmark.anchorPrefix,
+      'anchorSuffix': bookmark.anchorSuffix,
+      'anchorSectionIndex': bookmark.anchorSectionIndex,
+      'anchorSectionPage': bookmark.anchorSectionPage,
     });
     _controller?.evaluateJavascript(source: 'addAnnotation($annotation);');
   }
 
-  void _evalRemoveBookmarkAnnotation(String cfiRange) {
+  void _evalRemoveBookmarkAnnotation(String cfiRange, {String? id}) {
     final escaped = jsonEncode(cfiRange);
+    final escapedId = jsonEncode(id);
     _controller?.evaluateJavascript(
-      source: 'removeAnnotation($escaped, false);',
+      source: 'removeAnnotation($escaped, false, $escapedId);',
     );
   }
 
@@ -553,6 +564,24 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   void goToCfi(String cfi) {
     final escaped = jsonEncode(cfi);
     _controller?.evaluateJavascript(source: 'goToCfi($escaped);');
+  }
+
+  /// Navigate to a stored bookmark, preferring its visual page anchor when
+  /// available because some formats expose a coarse CFI for the whole section.
+  void goToBookmark({
+    required String cfi,
+    required double progress,
+    int? anchorSectionIndex,
+    int? anchorSectionPage,
+  }) {
+    if (cfi.isEmpty && progress <= 0) return;
+    final payload = jsonEncode({
+      'cfi': cfi,
+      'progress': progress,
+      'anchorSectionIndex': anchorSectionIndex,
+      'anchorSectionPage': anchorSectionPage,
+    });
+    _controller?.evaluateJavascript(source: 'goToBookmark($payload);');
   }
 
   /// Navigate to a TOC/book href target.
