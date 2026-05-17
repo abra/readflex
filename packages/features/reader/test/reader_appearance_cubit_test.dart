@@ -31,6 +31,10 @@ void main() {
         expect(cubit.state.effectiveAppearance.fontId, 'serif');
         expect(cubit.state.effectiveAppearance.themeId, 'paper');
         expect(cubit.state.effectiveAppearance.sideMargin, 6);
+        expect(
+          cubit.state.effectiveAppearance.textAlignment,
+          ReaderTextAlignment.start,
+        );
       },
     );
 
@@ -73,6 +77,54 @@ void main() {
             .having((s) => s.effectiveAppearance.fontId, 'fontId', 'sans')
             .having((s) => s.effectiveAppearance.themeId, 'themeId', 'night'),
       ],
+    );
+
+    blocTest<ReaderAppearanceCubit, ReaderAppearanceState>(
+      'setTextAlignment persists a source-specific override',
+      build: () => ReaderAppearanceCubit(
+        preferencesService: preferencesService,
+        sourceId: _sourceId,
+      ),
+      act: (cubit) => cubit.setTextAlignment(ReaderTextAlignment.justify),
+      expect: () => [
+        isA<ReaderAppearanceState>().having(
+          (s) => s.effectiveAppearance.textAlignment,
+          'textAlignment',
+          ReaderTextAlignment.justify,
+        ),
+      ],
+      verify: (_) {
+        expect(
+          preferencesService
+              .readerAppearanceOverrideFor(_sourceId)
+              ?.textAlignment,
+          ReaderTextAlignment.justify,
+        );
+      },
+    );
+
+    blocTest<ReaderAppearanceCubit, ReaderAppearanceState>(
+      'setTextAlignment supports logical end alignment',
+      build: () => ReaderAppearanceCubit(
+        preferencesService: preferencesService,
+        sourceId: _sourceId,
+      ),
+      act: (cubit) => cubit.setTextAlignment(ReaderTextAlignment.end),
+      expect: () => [
+        isA<ReaderAppearanceState>().having(
+          (s) => s.effectiveAppearance.textAlignment,
+          'textAlignment',
+          ReaderTextAlignment.end,
+        ),
+      ],
+      verify: (_) {
+        expect(
+          preferencesService
+              .readerAppearanceOverrideFor(_sourceId)
+              ?.textAlignment,
+          ReaderTextAlignment.end,
+        );
+      },
     );
 
     blocTest<ReaderAppearanceCubit, ReaderAppearanceState>(

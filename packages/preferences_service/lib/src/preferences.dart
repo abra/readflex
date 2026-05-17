@@ -5,6 +5,30 @@ import 'package:flutter/material.dart' show ThemeMode;
 
 const _unset = Object();
 
+enum ReaderTextAlignment {
+  start('start'),
+  end('end'),
+  justify('justify')
+  ;
+
+  const ReaderTextAlignment(this.id);
+
+  final String id;
+
+  static ReaderTextAlignment fromId(String? value) => switch (value) {
+    'end' => end,
+    'justify' => justify,
+    _ => start,
+  };
+
+  static ReaderTextAlignment? tryFromId(String? value) => switch (value) {
+    'start' => start,
+    'end' => end,
+    'justify' => justify,
+    _ => null,
+  };
+}
+
 /// Reader-scoped appearance slice of [Preferences] (theme / font / layout
 /// IDs plus per-trait toggles). Exposed separately so widgets that only
 /// care about reader look can subscribe via
@@ -18,6 +42,7 @@ class ReaderAppearancePreferences {
     required this.textScale,
     required this.lineHeight,
     required this.sideMargin,
+    required this.textAlignment,
     required this.invertImagesInDark,
     required this.overrideFont,
     required this.overrideColor,
@@ -31,6 +56,7 @@ class ReaderAppearancePreferences {
     textScale: 1.0,
     lineHeight: 1.55,
     sideMargin: 6.0,
+    textAlignment: ReaderTextAlignment.start,
     invertImagesInDark: false,
     overrideFont: true,
     overrideColor: true,
@@ -43,6 +69,7 @@ class ReaderAppearancePreferences {
   final double textScale;
   final double lineHeight;
   final double sideMargin;
+  final ReaderTextAlignment textAlignment;
   final bool invertImagesInDark;
 
   /// When `false`, publisher font-family / font-weight win over reader prefs.
@@ -61,6 +88,7 @@ class ReaderAppearancePreferences {
     double? textScale,
     double? lineHeight,
     double? sideMargin,
+    ReaderTextAlignment? textAlignment,
     bool? invertImagesInDark,
     bool? overrideFont,
     bool? overrideColor,
@@ -72,6 +100,7 @@ class ReaderAppearancePreferences {
     textScale: textScale ?? this.textScale,
     lineHeight: lineHeight ?? this.lineHeight,
     sideMargin: sideMargin ?? this.sideMargin,
+    textAlignment: textAlignment ?? this.textAlignment,
     invertImagesInDark: invertImagesInDark ?? this.invertImagesInDark,
     overrideFont: overrideFont ?? this.overrideFont,
     overrideColor: overrideColor ?? this.overrideColor,
@@ -88,6 +117,7 @@ class ReaderAppearancePreferences {
           textScale == other.textScale &&
           lineHeight == other.lineHeight &&
           sideMargin == other.sideMargin &&
+          textAlignment == other.textAlignment &&
           invertImagesInDark == other.invertImagesInDark &&
           overrideFont == other.overrideFont &&
           overrideColor == other.overrideColor &&
@@ -101,6 +131,7 @@ class ReaderAppearancePreferences {
     textScale,
     lineHeight,
     sideMargin,
+    textAlignment,
     invertImagesInDark,
     overrideFont,
     overrideColor,
@@ -121,6 +152,7 @@ class ReaderAppearanceOverride {
     this.textScale,
     this.lineHeight,
     this.sideMargin,
+    this.textAlignment,
     this.invertImagesInDark,
     this.overrideFont,
     this.overrideColor,
@@ -133,6 +165,7 @@ class ReaderAppearanceOverride {
   final double? textScale;
   final double? lineHeight;
   final double? sideMargin;
+  final ReaderTextAlignment? textAlignment;
   final bool? invertImagesInDark;
   final bool? overrideFont;
   final bool? overrideColor;
@@ -145,6 +178,7 @@ class ReaderAppearanceOverride {
       textScale == null &&
       lineHeight == null &&
       sideMargin == null &&
+      textAlignment == null &&
       invertImagesInDark == null &&
       overrideFont == null &&
       overrideColor == null &&
@@ -158,6 +192,7 @@ class ReaderAppearanceOverride {
         textScale: textScale,
         lineHeight: lineHeight,
         sideMargin: sideMargin,
+        textAlignment: textAlignment,
         invertImagesInDark: invertImagesInDark,
         overrideFont: overrideFont,
         overrideColor: overrideColor,
@@ -171,6 +206,7 @@ class ReaderAppearanceOverride {
     Object? textScale = _unset,
     Object? lineHeight = _unset,
     Object? sideMargin = _unset,
+    Object? textAlignment = _unset,
     Object? invertImagesInDark = _unset,
     Object? overrideFont = _unset,
     Object? overrideColor = _unset,
@@ -182,6 +218,9 @@ class ReaderAppearanceOverride {
     textScale: _copyOptionalDouble(textScale, this.textScale),
     lineHeight: _copyOptionalDouble(lineHeight, this.lineHeight),
     sideMargin: _copyOptionalDouble(sideMargin, this.sideMargin),
+    textAlignment: identical(textAlignment, _unset)
+        ? this.textAlignment
+        : textAlignment as ReaderTextAlignment?,
     invertImagesInDark: identical(invertImagesInDark, _unset)
         ? this.invertImagesInDark
         : invertImagesInDark as bool?,
@@ -203,6 +242,7 @@ class ReaderAppearanceOverride {
     if (textScale != null) 'textScale': textScale,
     if (lineHeight != null) 'lineHeight': lineHeight,
     if (sideMargin != null) 'sideMargin': sideMargin,
+    if (textAlignment != null) 'textAlignment': textAlignment!.id,
     if (invertImagesInDark != null) 'invertImagesInDark': invertImagesInDark,
     if (overrideFont != null) 'overrideFont': overrideFont,
     if (overrideColor != null) 'overrideColor': overrideColor,
@@ -217,6 +257,7 @@ class ReaderAppearanceOverride {
       textScale: _readDouble(json['textScale']),
       lineHeight: _readDouble(json['lineHeight']),
       sideMargin: _readDouble(json['sideMargin']),
+      textAlignment: _readTextAlignment(json['textAlignment']),
       invertImagesInDark: _readBool(json['invertImagesInDark']),
       overrideFont: _readBool(json['overrideFont']),
       overrideColor: _readBool(json['overrideColor']),
@@ -236,6 +277,11 @@ class ReaderAppearanceOverride {
 
   static bool? _readBool(Object? value) => value is bool ? value : null;
 
+  static ReaderTextAlignment? _readTextAlignment(Object? value) {
+    if (value is! String || value.isEmpty) return null;
+    return ReaderTextAlignment.tryFromId(value);
+  }
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -246,6 +292,7 @@ class ReaderAppearanceOverride {
           textScale == other.textScale &&
           lineHeight == other.lineHeight &&
           sideMargin == other.sideMargin &&
+          textAlignment == other.textAlignment &&
           invertImagesInDark == other.invertImagesInDark &&
           overrideFont == other.overrideFont &&
           overrideColor == other.overrideColor &&
@@ -259,6 +306,7 @@ class ReaderAppearanceOverride {
     textScale,
     lineHeight,
     sideMargin,
+    textAlignment,
     invertImagesInDark,
     overrideFont,
     overrideColor,
@@ -281,6 +329,7 @@ class Preferences {
     this.readerTextScale = 1.0,
     this.readerLineHeight = 1.55,
     this.readerSideMargin = 6.0,
+    this.readerTextAlignment = ReaderTextAlignment.start,
     this.readerInvertImagesInDark = false,
     this.readerOverrideFont = true,
     this.readerOverrideColor = true,
@@ -301,6 +350,7 @@ class Preferences {
   final double readerTextScale;
   final double readerLineHeight;
   final double readerSideMargin;
+  final ReaderTextAlignment readerTextAlignment;
   final bool readerInvertImagesInDark;
   final bool readerOverrideFont;
   final bool readerOverrideColor;
@@ -323,6 +373,7 @@ class Preferences {
         textScale: readerTextScale,
         lineHeight: readerLineHeight,
         sideMargin: readerSideMargin,
+        textAlignment: readerTextAlignment,
         invertImagesInDark: readerInvertImagesInDark,
         overrideFont: readerOverrideFont,
         overrideColor: readerOverrideColor,
@@ -350,6 +401,7 @@ class Preferences {
     double? readerTextScale,
     double? readerLineHeight,
     double? readerSideMargin,
+    ReaderTextAlignment? readerTextAlignment,
     bool? readerInvertImagesInDark,
     bool? readerOverrideFont,
     bool? readerOverrideColor,
@@ -369,6 +421,7 @@ class Preferences {
     readerTextScale: readerTextScale ?? this.readerTextScale,
     readerLineHeight: readerLineHeight ?? this.readerLineHeight,
     readerSideMargin: readerSideMargin ?? this.readerSideMargin,
+    readerTextAlignment: readerTextAlignment ?? this.readerTextAlignment,
     readerInvertImagesInDark:
         readerInvertImagesInDark ?? this.readerInvertImagesInDark,
     readerOverrideFont: readerOverrideFont ?? this.readerOverrideFont,
@@ -397,6 +450,7 @@ class Preferences {
           readerTextScale == other.readerTextScale &&
           readerLineHeight == other.readerLineHeight &&
           readerSideMargin == other.readerSideMargin &&
+          readerTextAlignment == other.readerTextAlignment &&
           readerInvertImagesInDark == other.readerInvertImagesInDark &&
           readerOverrideFont == other.readerOverrideFont &&
           readerOverrideColor == other.readerOverrideColor &&
@@ -421,6 +475,7 @@ class Preferences {
     readerTextScale,
     readerLineHeight,
     readerSideMargin,
+    readerTextAlignment,
     readerInvertImagesInDark,
     readerOverrideFont,
     readerOverrideColor,

@@ -54,6 +54,7 @@ void main() {
 
     expect(find.text('SPACING'), findsOneWidget);
     expect(find.text('MARGINS'), findsOneWidget);
+    expect(find.text('ALIGNMENT'), findsOneWidget);
     expect(find.text('TYPEFACE'), findsNothing);
 
     await tester.tap(find.text('Theme'));
@@ -62,6 +63,40 @@ void main() {
     expect(find.text('READING THEME'), findsOneWidget);
     expect(find.text('Paper'), findsOneWidget);
     expect(find.text('Warm'), findsOneWidget);
+  });
+
+  testWidgets('persists text alignment from layout panel', (tester) async {
+    await tester.openAppearanceSheet(cubit);
+
+    await tester.tap(find.text('Layout'));
+    await tester.pumpAndSettle();
+    expect(find.text('Start'), findsOneWidget);
+    expect(find.text('End'), findsOneWidget);
+    expect(find.text('Justify'), findsOneWidget);
+
+    await tester.tap(find.text('End'));
+    await tester.pumpAndSettle();
+
+    expect(
+      cubit.state.effectiveAppearance.textAlignment,
+      ReaderTextAlignment.end,
+    );
+    expect(
+      preferencesService.readerAppearanceOverrideFor(_sourceId)?.textAlignment,
+      ReaderTextAlignment.end,
+    );
+
+    await tester.tap(find.text('Justify'));
+    await tester.pumpAndSettle();
+
+    expect(
+      cubit.state.effectiveAppearance.textAlignment,
+      ReaderTextAlignment.justify,
+    );
+    expect(
+      preferencesService.readerAppearanceOverrideFor(_sourceId)?.textAlignment,
+      ReaderTextAlignment.justify,
+    );
   });
 
   testWidgets('persists font changes and resets source override from header', (

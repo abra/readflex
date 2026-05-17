@@ -29,6 +29,7 @@ void main() {
       expect(prefs.readerTextScale, 1.0);
       expect(prefs.readerLineHeight, 1.55);
       expect(prefs.readerSideMargin, 6.0);
+      expect(prefs.readerTextAlignment, ReaderTextAlignment.start);
       expect(prefs.readerInvertImagesInDark, isFalse);
       expect(prefs.readerOverrideFont, isTrue);
       expect(prefs.readerOverrideColor, isTrue);
@@ -52,6 +53,7 @@ void main() {
         readerTextScale: 1.3,
         readerLineHeight: 1.9,
         readerSideMargin: 10,
+        readerTextAlignment: ReaderTextAlignment.justify,
         readerInvertImagesInDark: false,
         readerOverrideFont: false,
         readerOverrideColor: false,
@@ -65,6 +67,7 @@ void main() {
             textScale: 1.2,
             lineHeight: 1.8,
             sideMargin: 9,
+            textAlignment: ReaderTextAlignment.justify,
           ),
         },
         onboardingCompleted: true,
@@ -82,6 +85,7 @@ void main() {
       final repo = PreferencesRepository(storage);
       const prefs = Preferences(
         readerLayoutId: 'compact',
+        readerTextAlignment: ReaderTextAlignment.justify,
         readerInvertImagesInDark: false,
         readerOverrideFont: false,
         readerOverrideColor: false,
@@ -93,6 +97,7 @@ void main() {
       final map = jsonDecode(raw!) as Map<String, Object?>;
 
       expect(map['readerLayoutId'], 'compact');
+      expect(map['readerTextAlignment'], 'justify');
       expect(map['readerInvertImagesInDark'], isFalse);
       expect(map['readerOverrideFont'], isFalse);
       expect(map['readerOverrideColor'], isFalse);
@@ -133,6 +138,7 @@ void main() {
         expect(prefs.themeMode, ThemeMode.dark);
         expect(prefs.readerLayoutId, 'standard');
         expect(prefs.readerSideMargin, 6.0);
+        expect(prefs.readerTextAlignment, ReaderTextAlignment.start);
         expect(prefs.readerInvertImagesInDark, isFalse);
         expect(prefs.readerOverrideFont, isTrue);
         expect(prefs.readerOverrideColor, isTrue);
@@ -186,6 +192,7 @@ void main() {
               'fontId': 'sans',
               'textScale': 1.25,
               'sideMargin': 9,
+              'textAlignment': 'justify',
             },
             'empty': <String, Object?>{},
             'invalid': 'not a map',
@@ -201,6 +208,10 @@ void main() {
       expect(prefs.readerAppearanceOverrides['source-1']?.fontId, 'sans');
       expect(prefs.readerAppearanceOverrides['source-1']?.textScale, 1.25);
       expect(prefs.readerAppearanceOverrides['source-1']?.sideMargin, 9);
+      expect(
+        prefs.readerAppearanceOverrides['source-1']?.textAlignment,
+        ReaderTextAlignment.justify,
+      );
     });
 
     test('load() falls back to defaults on corrupt JSON', () async {
@@ -300,7 +311,7 @@ void main() {
       final raw = await storage.getString(_key);
       final map = jsonDecode(raw!) as Map<String, Object?>;
 
-      expect(map['_schemaVersion'], 5);
+      expect(map['_schemaVersion'], 6);
     });
 
     test(

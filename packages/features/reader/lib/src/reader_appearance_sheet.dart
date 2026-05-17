@@ -8,7 +8,7 @@ import 'reader_appearance_cubit.dart';
 const double _sizeButtonSize = 36;
 const double _tabButtonHeight = 40;
 const double _tabTrackPadding = 4;
-const double _tabContentHeight = 204;
+const double _tabContentHeight = 260;
 const double _themeCardHeight = 76;
 const double _textSizeButtonWidth = 64;
 const double _textSizeButtonHeight = 44;
@@ -281,6 +281,10 @@ class _LayoutPanel extends StatelessWidget {
         ),
         SizedBox(height: AppSpacing.sm),
         _MarginControl(),
+        SizedBox(height: AppSpacing.md),
+        _PanelHeader(title: 'ALIGNMENT'),
+        SizedBox(height: AppSpacing.sm),
+        _AlignmentControl(),
       ],
     );
   }
@@ -360,12 +364,55 @@ class _ControlGrid extends StatelessWidget {
           Row(
             children: [
               Expanded(child: children[i]),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(child: children[i + 1]),
+              if (i + 1 < children.length) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(child: children[i + 1]),
+              ] else
+                const Spacer(),
             ],
           ),
           if (i + 2 < children.length) const SizedBox(height: AppSpacing.sm),
         ],
+      ],
+    );
+  }
+}
+
+class _AlignmentControl extends StatelessWidget {
+  const _AlignmentControl();
+
+  @override
+  Widget build(BuildContext context) {
+    final alignment = context
+        .select<ReaderAppearanceCubit, ReaderTextAlignment>(
+          (c) => c.state.effectiveAppearance.textAlignment,
+        );
+    final cubit = context.read<ReaderAppearanceCubit>();
+    return Row(
+      children: [
+        Expanded(
+          child: _ChoiceButton(
+            label: 'Start',
+            active: alignment == ReaderTextAlignment.start,
+            onTap: () => cubit.setTextAlignment(ReaderTextAlignment.start),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: _ChoiceButton(
+            label: 'End',
+            active: alignment == ReaderTextAlignment.end,
+            onTap: () => cubit.setTextAlignment(ReaderTextAlignment.end),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: _ChoiceButton(
+            label: 'Justify',
+            active: alignment == ReaderTextAlignment.justify,
+            onTap: () => cubit.setTextAlignment(ReaderTextAlignment.justify),
+          ),
+        ),
       ],
     );
   }

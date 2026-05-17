@@ -11,6 +11,7 @@ const _baseRA = ReaderAppearancePreferences(
   textScale: 1.0,
   lineHeight: 1.55,
   sideMargin: 6.0,
+  textAlignment: ReaderTextAlignment.start,
   invertImagesInDark: false,
   overrideFont: true,
   overrideColor: true,
@@ -30,6 +31,7 @@ void main() {
       expect(prefs.readerTextScale, 1.0);
       expect(prefs.readerLineHeight, 1.55);
       expect(prefs.readerSideMargin, 6.0);
+      expect(prefs.readerTextAlignment, ReaderTextAlignment.start);
       expect(prefs.readerInvertImagesInDark, isFalse);
       expect(prefs.readerOverrideFont, isTrue);
       expect(prefs.readerOverrideColor, isTrue);
@@ -118,6 +120,7 @@ void main() {
         readerTextScale: 1.2,
         readerLineHeight: 1.8,
         readerSideMargin: 9,
+        readerTextAlignment: ReaderTextAlignment.justify,
         readerInvertImagesInDark: false,
         readerOverrideFont: false,
         readerOverrideColor: false,
@@ -131,6 +134,7 @@ void main() {
       expect(ra.textScale, 1.2);
       expect(ra.lineHeight, 1.8);
       expect(ra.sideMargin, 9);
+      expect(ra.textAlignment, ReaderTextAlignment.justify);
       expect(ra.invertImagesInDark, isFalse);
       expect(ra.overrideFont, isFalse);
       expect(ra.overrideColor, isFalse);
@@ -147,6 +151,7 @@ void main() {
             fontId: 'sans',
             textScale: 1.2,
             sideMargin: 10,
+            textAlignment: ReaderTextAlignment.justify,
           ),
         },
       );
@@ -157,6 +162,7 @@ void main() {
       expect(ra.textScale, 1.2);
       expect(ra.lineHeight, 1.55);
       expect(ra.sideMargin, 10);
+      expect(ra.textAlignment, ReaderTextAlignment.justify);
       expect(
         prefs.effectiveReaderAppearanceFor('source-2'),
         prefs.readerAppearance,
@@ -171,6 +177,7 @@ void main() {
         textScale: 1.3,
         layoutId: 'compact',
         sideMargin: 8,
+        textAlignment: ReaderTextAlignment.justify,
         invertImagesInDark: false,
         overrideFont: false,
       );
@@ -181,6 +188,7 @@ void main() {
       expect(updated.textScale, 1.3);
       expect(updated.lineHeight, 1.55);
       expect(updated.sideMargin, 8);
+      expect(updated.textAlignment, ReaderTextAlignment.justify);
       expect(updated.invertImagesInDark, isFalse);
       expect(updated.overrideFont, isFalse);
       expect(updated.overrideColor, isTrue);
@@ -196,6 +204,7 @@ void main() {
         textScale: 1.0,
         lineHeight: 1.55,
         sideMargin: 6.0,
+        textAlignment: ReaderTextAlignment.start,
         invertImagesInDark: false,
         overrideFont: true,
         overrideColor: true,
@@ -216,9 +225,28 @@ void main() {
         isNot(equals(_baseRA.copyWith(invertImagesInDark: true))),
       );
       expect(_baseRA, isNot(equals(_baseRA.copyWith(sideMargin: 8))));
+      expect(
+        _baseRA,
+        isNot(
+          equals(
+            _baseRA.copyWith(textAlignment: ReaderTextAlignment.justify),
+          ),
+        ),
+      );
       expect(_baseRA, isNot(equals(_baseRA.copyWith(overrideFont: false))));
       expect(_baseRA, isNot(equals(_baseRA.copyWith(overrideColor: false))));
       expect(_baseRA, isNot(equals(_baseRA.copyWith(useBookLayout: false))));
+    });
+
+    test('ReaderTextAlignment parses start end and justify IDs', () {
+      expect(ReaderTextAlignment.fromId('start'), ReaderTextAlignment.start);
+      expect(ReaderTextAlignment.fromId('end'), ReaderTextAlignment.end);
+      expect(
+        ReaderTextAlignment.fromId('justify'),
+        ReaderTextAlignment.justify,
+      );
+      expect(ReaderTextAlignment.fromId('unknown'), ReaderTextAlignment.start);
+      expect(ReaderTextAlignment.tryFromId('unknown'), isNull);
     });
   });
 
@@ -230,11 +258,13 @@ void main() {
         fontId: null,
         textScale: 1.2,
         sideMargin: 8,
+        textAlignment: ReaderTextAlignment.justify,
       );
 
       expect(updated.fontId, isNull);
       expect(updated.textScale, 1.2);
       expect(updated.sideMargin, 8);
+      expect(updated.textAlignment, ReaderTextAlignment.justify);
     });
 
     test('toJson/fromJson round-trip omits null values', () {
@@ -242,6 +272,7 @@ void main() {
         fontId: 'sans',
         textScale: 1.25,
         sideMargin: 9,
+        textAlignment: ReaderTextAlignment.justify,
         overrideColor: false,
       );
 

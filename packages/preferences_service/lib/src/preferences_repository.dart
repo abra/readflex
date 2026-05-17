@@ -30,7 +30,8 @@ class PreferencesRepository {
   ///   4: reset global reader text scale to 100%. Android readability is now
   ///      handled by device-scale in the reader, not persisted user percent.
   ///   5: add readerBrightnessOverride for temporary reader brightness.
-  static const _currentSchemaVersion = 5;
+  ///   6: add readerTextAlignment for left/justified book text.
+  static const _currentSchemaVersion = 6;
 
   final PreferencesStorage _storage;
 
@@ -62,6 +63,9 @@ class PreferencesRepository {
         readerTextScale: readerTextScale,
         readerLineHeight: (map['readerLineHeight'] as num?)?.toDouble() ?? 1.55,
         readerSideMargin: (map['readerSideMargin'] as num?)?.toDouble() ?? 6.0,
+        readerTextAlignment: _readReaderTextAlignment(
+          map['readerTextAlignment'],
+        ),
         readerInvertImagesInDark:
             map['readerInvertImagesInDark'] as bool? ?? false,
         readerOverrideFont: map['readerOverrideFont'] as bool? ?? true,
@@ -102,6 +106,7 @@ class PreferencesRepository {
       'readerTextScale': prefs.readerTextScale,
       'readerLineHeight': prefs.readerLineHeight,
       'readerSideMargin': prefs.readerSideMargin,
+      'readerTextAlignment': prefs.readerTextAlignment.id,
       'readerInvertImagesInDark': prefs.readerInvertImagesInDark,
       'readerOverrideFont': prefs.readerOverrideFont,
       'readerOverrideColor': prefs.readerOverrideColor,
@@ -135,6 +140,11 @@ class PreferencesRepository {
   static double? _readReaderBrightness(Object? value) {
     if (value is! num) return null;
     return value.toDouble().clamp(0.05, 1.0).toDouble();
+  }
+
+  static ReaderTextAlignment _readReaderTextAlignment(Object? value) {
+    if (value is! String) return ReaderTextAlignment.start;
+    return ReaderTextAlignment.fromId(value);
   }
 
   static Map<String, ReaderAppearanceOverride> _readReaderAppearanceOverrides(

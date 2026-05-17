@@ -108,6 +108,15 @@ class ReaderAppearanceCubit extends Cubit<ReaderAppearanceState> {
     await _persistOverride(next);
   }
 
+  Future<void> setTextAlignment(ReaderTextAlignment alignment) async {
+    final next = state.sourceOverride.copyWith(
+      textAlignment: alignment == state.globalAppearance.textAlignment
+          ? null
+          : alignment,
+    );
+    await _persistOverride(next);
+  }
+
   void previewTextScale(double value) {
     final nextValue = value.clamp(minTextScale, maxTextScale).toDouble();
     final next = state.sourceOverride.copyWith(
