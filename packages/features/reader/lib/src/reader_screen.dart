@@ -1179,21 +1179,18 @@ class _ReaderPageBookmarkIndicator extends StatelessWidget {
 
     return Positioned(
       top: topOffset,
-      right: 0,
-      child: Padding(
-        padding: const EdgeInsets.only(right: AppSpacing.xs),
-        child: IgnorePointer(
-          child: AnimatedOpacity(
-            opacity: visible ? 1 : 0,
-            duration: _kChromeAnimDuration,
-            curve: curve,
-            child: Semantics(
-              label: 'Page bookmarked',
-              child: _ReaderBookmarkGlyph(
-                filled: true,
-                color: color,
-                size: _kReaderPageBookmarkIndicatorSize,
-              ),
+      right: AppSpacing.md,
+      child: IgnorePointer(
+        child: AnimatedOpacity(
+          opacity: visible ? 1 : 0,
+          duration: _kChromeAnimDuration,
+          curve: curve,
+          child: Semantics(
+            label: 'Page bookmarked',
+            child: _ReaderBookmarkGlyph(
+              filled: true,
+              color: color,
+              size: _kReaderPageBookmarkIndicatorSize,
             ),
           ),
         ),
