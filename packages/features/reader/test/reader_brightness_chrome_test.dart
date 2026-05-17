@@ -60,7 +60,7 @@ void main() {
     expect(tester.brightnessIgnorePointer.ignoring, isTrue);
   });
 
-  testWidgets('auto chip clears custom brightness override', (tester) async {
+  testWidgets('center label clears custom brightness override', (tester) async {
     await tester.pumpBrightnessChrome(
       uiCubit: uiCubit,
       selectionCubit: selectionCubit,
@@ -74,12 +74,75 @@ void main() {
     expect(find.text('50%'), findsOneWidget);
     expect(brightnessCubit.state.usesSystemBrightness, isFalse);
 
-    await tester.tap(find.text('Auto'));
+    await tester.tap(find.text('50%'));
     await tester.pumpAndSettle();
 
     expect(find.text('System'), findsOneWidget);
     expect(brightnessCubit.state.usesSystemBrightness, isTrue);
     expect(preferencesService.current.readerBrightnessOverride, isNull);
+  });
+
+  testWidgets('brightness buttons adjust custom override in steps', (
+    tester,
+  ) async {
+    await tester.pumpBrightnessChrome(
+      uiCubit: uiCubit,
+      selectionCubit: selectionCubit,
+      brightnessCubit: brightnessCubit,
+    );
+
+    uiCubit.showChrome();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Increase brightness'));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('75%'), findsOneWidget);
+    expect(brightnessCubit.state.brightnessOverride, closeTo(0.75, 0.001));
+    expect(
+      preferencesService.current.readerBrightnessOverride,
+      closeTo(0.75, 0.001),
+    );
+
+    await tester.tap(find.byTooltip('Decrease brightness'));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('70%'), findsOneWidget);
+    expect(brightnessCubit.state.brightnessOverride, closeTo(0.7, 0.001));
+    expect(
+      preferencesService.current.readerBrightnessOverride,
+      closeTo(0.7, 0.001),
+    );
+  });
+
+  testWidgets('dragging brightness chrome previews and persists override', (
+    tester,
+  ) async {
+    await tester.pumpBrightnessChrome(
+      uiCubit: uiCubit,
+      selectionCubit: selectionCubit,
+      brightnessCubit: brightnessCubit,
+    );
+
+    uiCubit.showChrome();
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const ValueKey('readerBrightnessChromeDragArea')),
+      const Offset(0, -40),
+    );
+    await tester.pump();
+
+    expect(brightnessCubit.state.usesSystemBrightness, isFalse);
+    expect(brightnessCubit.state.brightnessOverride, greaterThan(0.7));
+    expect(preferencesService.current.readerBrightnessOverride, isNull);
+
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(
+      preferencesService.current.readerBrightnessOverride,
+      brightnessCubit.state.brightnessOverride,
+    );
   });
 }
 

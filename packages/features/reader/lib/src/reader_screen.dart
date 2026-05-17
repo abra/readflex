@@ -40,6 +40,12 @@ const _kChromeHideAnimCurve = Curves.easeInCubic;
 const _kReaderTopChromeHeight = 64.0;
 const _kReaderPageBookmarkIndicatorLift = 28.0;
 const _kReaderPageBookmarkIndicatorSize = AppIconSize.md;
+const _kReaderBrightnessStep = 0.05;
+const _kReaderBrightnessEpsilon = 0.0001;
+const _kReaderBrightnessChromeWidth = 56.0;
+const _kReaderBrightnessChromeHeight = 190.0;
+const _kReaderBrightnessChromeDragHeight =
+    _kReaderBrightnessChromeHeight - AppSpacing.sm * 2;
 
 final _readerDrawerCloseButtonStyle = IconButton.styleFrom(
   backgroundColor: Colors.transparent,
@@ -849,6 +855,20 @@ class ReaderBrightnessChromeDriver extends StatelessWidget {
         uiState.chromeVisible &&
         uiState.overlay == ReaderOverlay.none &&
         !hasSelection;
+    double brightnessAfterDelta(double delta) {
+      return (brightnessState.sliderValue + delta)
+          .clamp(
+            ReaderBrightnessCubit.minBrightness,
+            ReaderBrightnessCubit.maxBrightness,
+          )
+          .toDouble();
+    }
+
+    void changeBrightnessBy(double delta) {
+      final nextValue = brightnessAfterDelta(delta);
+      cubit.previewBrightness(nextValue);
+      cubit.commitBrightness(nextValue);
+    }
 
     return _ReaderBrightnessChrome(
       visible: visible,
@@ -857,41 +877,85 @@ class ReaderBrightnessChromeDriver extends StatelessWidget {
           ? 'System'
           : '${brightnessState.percent}%',
       usesSystemBrightness: brightnessState.usesSystemBrightness,
-      onChanged: cubit.previewBrightness,
-      onChangeEnd: cubit.commitBrightness,
+      canIncrease:
+          brightnessState.sliderValue <
+          ReaderBrightnessCubit.maxBrightness - _kReaderBrightnessEpsilon,
+      canDecrease:
+          brightnessState.sliderValue >
+          ReaderBrightnessCubit.minBrightness + _kReaderBrightnessEpsilon,
+      onIncrease: () => changeBrightnessBy(_kReaderBrightnessStep),
+      onDecrease: () => changeBrightnessBy(-_kReaderBrightnessStep),
+      onDragPreview: cubit.previewBrightness,
+      onDragEnd: cubit.commitBrightness,
       onUseSystem: () => unawaited(cubit.useSystemBrightness()),
     );
   }
 }
 
-class _ReaderBrightnessChrome extends StatelessWidget {
+class _ReaderBrightnessChrome extends StatefulWidget {
   const _ReaderBrightnessChrome({
     required this.visible,
     required this.value,
     required this.label,
     required this.usesSystemBrightness,
-    required this.onChanged,
-    required this.onChangeEnd,
+    required this.canIncrease,
+    required this.canDecrease,
+    required this.onIncrease,
+    required this.onDecrease,
+    required this.onDragPreview,
+    required this.onDragEnd,
     required this.onUseSystem,
   });
-
-  static const _width = 56.0;
-  static const _height = 238.0;
-  static const _sliderHeight = 118.0;
 
   final bool visible;
   final double value;
   final String label;
   final bool usesSystemBrightness;
-  final ValueChanged<double> onChanged;
-  final ValueChanged<double> onChangeEnd;
+  final bool canIncrease;
+  final bool canDecrease;
+  final VoidCallback onIncrease;
+  final VoidCallback onDecrease;
+  final ValueChanged<double> onDragPreview;
+  final ValueChanged<double> onDragEnd;
   final VoidCallback onUseSystem;
 
   @override
+  State<_ReaderBrightnessChrome> createState() =>
+      _ReaderBrightnessChromeState();
+}
+
+class _ReaderBrightnessChromeState extends State<_ReaderBrightnessChrome> {
+  double? _dragPreviewValue;
+
+  void _handleVerticalDragUpdate(DragUpdateDetails details) {
+    final dy = details.primaryDelta;
+    if (dy == null || dy == 0) return;
+    final brightnessRange =
+        ReaderBrightnessCubit.maxBrightness -
+        ReaderBrightnessCubit.minBrightness;
+    final delta = -dy / _kReaderBrightnessChromeDragHeight * brightnessRange;
+    final nextValue = ((_dragPreviewValue ?? widget.value) + delta)
+        .clamp(
+          ReaderBrightnessCubit.minBrightness,
+          ReaderBrightnessCubit.maxBrightness,
+        )
+        .toDouble();
+    if (nextValue == _dragPreviewValue) return;
+    _dragPreviewValue = nextValue;
+    widget.onDragPreview(nextValue);
+  }
+
+  void _flushDrag() {
+    final value = _dragPreviewValue;
+    if (value == null) return;
+    _dragPreviewValue = null;
+    widget.onDragEnd(value);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final curve = visible ? _kChromeAnimCurve : _kChromeHideAnimCurve;
+    final curve = widget.visible ? _kChromeAnimCurve : _kChromeHideAnimCurve;
     final cs = context.colors;
-    final text = context.text;
     final borderColor = cs.outlineVariant.withValues(alpha: 0.72);
     final foreground = cs.onSurface.withValues(alpha: 0.74);
 
@@ -906,90 +970,65 @@ class _ReaderBrightnessChrome extends StatelessWidget {
         child: Center(
           child: IgnorePointer(
             key: const ValueKey('readerBrightnessChromeIgnorePointer'),
-            ignoring: !visible,
+            ignoring: !widget.visible,
             child: AnimatedOpacity(
-              opacity: visible ? 1 : 0,
+              opacity: widget.visible ? 1 : 0,
               duration: _kChromeAnimDuration,
               curve: curve,
               child: AnimatedSlide(
-                offset: visible ? Offset.zero : const Offset(0.18, 0),
+                offset: widget.visible ? Offset.zero : const Offset(0.18, 0),
                 duration: _kChromeAnimDuration,
                 curve: curve,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: cs.surface,
-                    borderRadius: BorderRadius.circular(AppRadius.full),
-                    border: Border.all(
-                      color: borderColor,
-                      width: 1 / MediaQuery.devicePixelRatioOf(context),
-                    ),
-                    boxShadow: AppShadows.panelUp,
-                  ),
-                  child: SizedBox(
-                    width: _width,
-                    height: _height,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.xs,
-                        vertical: AppSpacing.sm,
+                child: GestureDetector(
+                  key: const ValueKey('readerBrightnessChromeDragArea'),
+                  behavior: HitTestBehavior.opaque,
+                  onVerticalDragUpdate: _handleVerticalDragUpdate,
+                  onVerticalDragEnd: (_) => _flushDrag(),
+                  onVerticalDragCancel: _flushDrag,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: cs.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.full),
+                      border: Border.all(
+                        color: borderColor,
+                        width: 1 / MediaQuery.devicePixelRatioOf(context),
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            AppIcons.lightMode,
-                            size: AppIconSize.sm,
-                            color: foreground,
-                          ),
-                          SizedBox(
-                            width: AppIconSize.md,
-                            height: _sliderHeight,
-                            child: RotatedBox(
-                              quarterTurns: -1,
-                              child: SliderTheme(
-                                data: SliderTheme.of(context).copyWith(
-                                  trackHeight: 3,
-                                  thumbShape: const RoundSliderThumbShape(
-                                    enabledThumbRadius: 7,
-                                  ),
-                                  overlayShape: const RoundSliderOverlayShape(
-                                    overlayRadius: 14,
-                                  ),
-                                ),
-                                child: Slider(
-                                  value: value,
-                                  min: ReaderBrightnessCubit.minBrightness,
-                                  max: ReaderBrightnessCubit.maxBrightness,
-                                  onChanged: onChanged,
-                                  onChangeEnd: onChangeEnd,
-                                ),
-                              ),
+                      boxShadow: AppShadows.panelUp,
+                    ),
+                    child: SizedBox(
+                      width: _kReaderBrightnessChromeWidth,
+                      height: _kReaderBrightnessChromeHeight,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xs,
+                          vertical: AppSpacing.sm,
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _ReaderBrightnessStepButton(
+                              tooltip: 'Increase brightness',
+                              icon: AppIcons.lightMode,
+                              enabled: widget.canIncrease,
+                              foreground: foreground,
+                              onPressed: widget.onIncrease,
                             ),
-                          ),
-                          Icon(
-                            AppIcons.darkMode,
-                            size: AppIconSize.sm,
-                            color: foreground.withValues(alpha: 0.68),
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            label,
-                            maxLines: 1,
-                            overflow: TextOverflow.fade,
-                            softWrap: false,
-                            style: text.labelSmall.copyWith(
-                              color: foreground,
-                              fontWeight: FontWeight.w700,
+                            _ReaderBrightnessValueButton(
+                              widget.label,
+                              usesSystemBrightness: widget.usesSystemBrightness,
+                              onPressed: widget.usesSystemBrightness
+                                  ? null
+                                  : widget.onUseSystem,
                             ),
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          _ReaderBrightnessSystemChip(
-                            active: usesSystemBrightness,
-                            onPressed: usesSystemBrightness
-                                ? null
-                                : onUseSystem,
-                          ),
-                        ],
+                            _ReaderBrightnessStepButton(
+                              tooltip: 'Decrease brightness',
+                              icon: AppIcons.darkMode,
+                              enabled: widget.canDecrease,
+                              foreground: foreground,
+                              onPressed: widget.onDecrease,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -1003,48 +1042,87 @@ class _ReaderBrightnessChrome extends StatelessWidget {
   }
 }
 
-class _ReaderBrightnessSystemChip extends StatelessWidget {
-  const _ReaderBrightnessSystemChip({
-    required this.active,
+class _ReaderBrightnessStepButton extends StatelessWidget {
+  const _ReaderBrightnessStepButton({
+    required this.tooltip,
+    required this.icon,
+    required this.enabled,
+    required this.foreground,
     required this.onPressed,
   });
 
-  final bool active;
+  final String tooltip;
+  final IconData icon;
+  final bool enabled;
+  final Color foreground;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final iconColor = foreground.withValues(alpha: enabled ? 1 : 0.32);
+
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: enabled ? onPressed : null,
+          child: SizedBox.square(
+            dimension: 36,
+            child: Icon(icon, size: AppIconSize.sm, color: iconColor),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReaderBrightnessValueButton extends StatelessWidget {
+  const _ReaderBrightnessValueButton(
+    this.label, {
+    required this.usesSystemBrightness,
+    required this.onPressed,
+  });
+
+  final String label;
+  final bool usesSystemBrightness;
   final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     final cs = context.colors;
     final text = context.text;
-    final backgroundColor = active
-        ? cs.primary.withValues(alpha: 0.14)
-        : Colors.transparent;
-    final borderColor = active
-        ? cs.primary.withValues(alpha: 0.28)
-        : cs.outlineVariant.withValues(alpha: 0.84);
-    final foregroundColor = active ? cs.primary : cs.onSurfaceVariant;
+    final active = !usesSystemBrightness;
 
     return Semantics(
       button: true,
       enabled: onPressed != null,
       label: 'Use system brightness',
       child: Material(
-        color: backgroundColor,
-        shape: StadiumBorder(side: BorderSide(color: borderColor)),
+        color: active
+            ? cs.primary.withValues(alpha: 0.12)
+            : cs.secondary.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         child: InkWell(
-          customBorder: const StadiumBorder(),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           onTap: onPressed,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xs,
-              vertical: 3,
-            ),
-            child: Text(
-              'Auto',
-              style: text.labelSmall.copyWith(
-                color: foregroundColor,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.1,
+          child: SizedBox(
+            width: 44,
+            height: 34,
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: text.labelSmall.copyWith(
+                    color: active ? cs.primary : cs.onSurface,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.1,
+                  ),
+                ),
               ),
             ),
           ),
