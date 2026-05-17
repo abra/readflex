@@ -1111,7 +1111,9 @@ class _ReaderBrightnessValueButton extends StatelessWidget {
     return Semantics(
       button: true,
       enabled: onPressed != null,
-      label: 'Use system brightness',
+      label: usesSystemBrightness
+          ? 'Using system brightness'
+          : 'Use system brightness',
       child: Material(
         color: active
             ? cs.primary.withValues(alpha: 0.12)
@@ -1126,15 +1128,21 @@ class _ReaderBrightnessValueButton extends StatelessWidget {
             child: Center(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  style: text.labelSmall.copyWith(
-                    color: active ? cs.primary : cs.onSurface,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.1,
-                  ),
-                ),
+                child: usesSystemBrightness
+                    ? Icon(
+                        AppIcons.refresh,
+                        size: AppIconSize.sm,
+                        color: cs.onSurface,
+                      )
+                    : Text(
+                        label,
+                        maxLines: 1,
+                        style: text.labelSmall.copyWith(
+                          color: cs.primary,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
               ),
             ),
           ),
