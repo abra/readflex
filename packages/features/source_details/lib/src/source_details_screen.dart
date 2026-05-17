@@ -140,7 +140,7 @@ class _SourceDetailsBottomBar extends StatelessWidget {
             tooltip: 'Back',
             onPressed: () => Navigator.of(context).maybePop(),
             style: style,
-            icon: const Icon(AppIcons.back, size: AppIconSize.md),
+            icon: const Icon(AppIcons.back, size: AppIconSize.lg),
           ),
         ),
         Expanded(

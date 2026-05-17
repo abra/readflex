@@ -446,26 +446,33 @@ class _ReaderChromeIconButton extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     required this.foregroundColor,
+    this.iconSize = AppIconSize.md,
     this.onPressed,
   });
 
   final IconData icon;
   final String tooltip;
   final Color foregroundColor;
+  final double iconSize;
   final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     final disabled = onPressed == null;
-    return IconButton(
-      icon: Icon(icon, size: AppIconSize.md),
-      tooltip: tooltip,
-      onPressed: onPressed,
-      style: IconButton.styleFrom(
-        backgroundColor: Colors.transparent,
-        foregroundColor: disabled
-            ? foregroundColor.withValues(alpha: 0.35)
-            : foregroundColor,
+    return SizedBox.square(
+      dimension: AppSizes.buttonHeight,
+      child: IconButton(
+        icon: Icon(icon, size: iconSize),
+        tooltip: tooltip,
+        onPressed: onPressed,
+        style: IconButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          foregroundColor: disabled
+              ? foregroundColor.withValues(alpha: 0.35)
+              : foregroundColor,
+          minimumSize: const Size.square(AppSizes.iconButtonSize),
+          padding: const EdgeInsets.all(AppSpacing.sm),
+        ),
       ),
     );
   }
@@ -1618,6 +1625,7 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                           children: [
                             _ReaderChromeIconButton(
                               icon: AppIcons.back,
+                              iconSize: AppIconSize.lg,
                               tooltip: 'Back',
                               foregroundColor: widget.foregroundColor,
                               onPressed: widget.onBack,

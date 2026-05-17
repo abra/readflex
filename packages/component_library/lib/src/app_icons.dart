@@ -22,6 +22,7 @@ abstract final class AppIcons {
   static const IconData remove = LucideIcons.minus;
   static const IconData delete = LucideIcons.trash2;
   static const IconData moreHorizontal = LucideIcons.moreHorizontal;
+  static const IconData chevronLeft = LucideIcons.chevronLeft;
   static const IconData chevronRight = LucideIcons.chevronRight;
 
   // ── Content ───────────────────────────────────────────────
@@ -39,7 +40,7 @@ abstract final class AppIcons {
   // ── Reader ────────────────────────────────────────────────
   static const IconData translate = LucideIcons.languages;
   static const IconData volumeUp = LucideIcons.volume2;
-  static const IconData back = LucideIcons.arrowLeft;
+  static const IconData back = chevronLeft;
   static const IconData toc = LucideIcons.list;
   static const IconData font = LucideIcons.type;
   static const IconData share = LucideIcons.share2;
