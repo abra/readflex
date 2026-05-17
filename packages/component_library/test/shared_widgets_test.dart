@@ -54,6 +54,7 @@ void main() {
                 .decoration
             as BoxDecoration;
     final shadows = decoration.boxShadow!;
+    expect(decoration.borderRadius, BorderRadius.circular(AppRadius.xs));
     expect(shadows, hasLength(2));
     expect(shadows.every((shadow) => shadow.offset.dx < 0), isTrue);
     expect(shadows.every((shadow) => shadow.offset.dy > 0), isTrue);

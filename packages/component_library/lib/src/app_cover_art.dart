@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_icons.dart';
+import 'source_cover_tokens.dart';
 import 'theme/tokens/app_radius.dart';
 
 /// Stylised cover placeholder used when a book has no real cover image of
@@ -146,7 +147,7 @@ class AppCoverArt extends StatelessWidget {
       height: height,
       width: width,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadius.sm),
+        borderRadius: BorderRadius.circular(appSourceCoverRadius),
         gradient: LinearGradient(
           begin: isArticle ? Alignment.bottomCenter : Alignment.topLeft,
           end: isArticle ? Alignment.topCenter : Alignment.bottomRight,
@@ -155,7 +156,7 @@ class AppCoverArt extends StatelessWidget {
       ),
       foregroundDecoration: showMatte
           ? BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.sm),
+              borderRadius: BorderRadius.circular(appSourceCoverRadius),
               border: Border.all(
                 color: Theme.of(context).scaffoldBackgroundColor,
                 width: 2,

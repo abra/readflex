@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app_cover_art.dart';
-import 'theme/tokens/app_radius.dart';
+import 'source_cover_tokens.dart';
 
 final _reportedCoverDecodeFailures = <String>{};
 
@@ -51,7 +51,7 @@ class AppSourceCover extends StatelessWidget {
 
         if (coverImage case final imageProvider?) {
           final image = ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.sm),
+            borderRadius: BorderRadius.circular(appSourceCoverRadius),
             child: Image(
               image: imageProvider,
               fit: fit,
@@ -73,7 +73,7 @@ class AppSourceCover extends StatelessWidget {
           return DecoratedBox(
             position: DecorationPosition.foreground,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.sm),
+              borderRadius: BorderRadius.circular(appSourceCoverRadius),
               border: Border.all(
                 color: Theme.of(context).scaffoldBackgroundColor,
                 width: 2,

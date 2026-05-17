@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'theme/tokens/app_radius.dart';
+import 'source_cover_tokens.dart';
 
 /// Shared physical frame for source covers.
 ///
@@ -24,7 +24,7 @@ class AppSourceCoverFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadius.sm),
+        borderRadius: BorderRadius.circular(appSourceCoverRadius),
         boxShadow: const [
           BoxShadow(
             color: Color(0x2E000000),
@@ -41,7 +41,7 @@ class AppSourceCoverFrame extends StatelessWidget {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadius.sm),
+        borderRadius: BorderRadius.circular(appSourceCoverRadius),
         child: Stack(
           fit: StackFit.expand,
           children: [
