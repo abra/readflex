@@ -50,7 +50,7 @@ abstract class TextAction {
 
 | Unit                          | Responsibility                                                             |
 |-------------------------------|----------------------------------------------------------------------------|
-| `ReaderBloc`                  | Content: load book + highlights, debounced position save (500ms)           |
+| `ReaderBloc`                  | Content: load book + highlights/bookmarks, debounced position save (500ms) |
 | `ReaderUiCubit`               | Chrome, drawer, appearance-sheet and search-highlight UI state             |
 | `ReaderSearchCubit`           | Book-search debounce, streamed results, progress and recent queries        |
 | `ReaderSelectionCubit`        | Current text selection (text + `cfiRange`)                                 |
@@ -77,7 +77,8 @@ through the bloc's error pipeline without emitting state themselves.
   BLoC/Cubit interaction lives in drivers.
 - **`_ReaderWebViewBody`** hosts a `BookReaderWebView` (foliate-js) keyed on
   source id / recovery token so source swaps and WebContent recovery rebuild
-  the WebView cleanly.
+  the WebView cleanly. It maps domain highlights/bookmarks into WebView
+  annotations and sends pull-down bookmark events back to `ReaderBloc`.
 - Reader theme (`ReaderThemeData`, font preset, layout preset) is resolved
   from `ReaderAppearanceCubit` and passed as CSS / URL params to the WebView; the
   `_ReaderWebViewBody` itself is rebuilt only on preference changes, never
@@ -95,7 +96,7 @@ composition root.
 
 ## Dependencies
 
-- `book_repository`, `highlight_repository` — content and highlight
+- `book_repository`, `highlight_repository` — content, bookmark and highlight
   persistence
 - `preferences_service` — persisted `ReaderAppearance` preferences (theme,
   font, layout presets)

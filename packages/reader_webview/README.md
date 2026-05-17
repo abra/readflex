@@ -12,18 +12,20 @@ can serve them over localhost.
 
 | Symbol                   | Kind      | Purpose                                                              |
 |--------------------------|-----------|----------------------------------------------------------------------|
-| `BookReaderWebView`      | Widget    | Loads foliate-js `index.html`, which fetches the book file from `/book/<path>`. Emits position, selection, and highlight-tap events; accepts imperative calls (goToCfi, nextPage, changeStyle, addAnnotation). |
+| `BookReaderWebView`      | Widget    | Loads foliate-js `index.html`, which fetches the book file from `/book/<path>`. Emits position, selection, search, highlight-tap and bookmark events; accepts imperative calls (goToCfi, nextPage, changeStyle, addAnnotation, toggleBookmark). |
 | `AssetExtractor`         | Utility   | Copies bundled foliate-js assets from rootBundle to a target directory. Version-gated via app version plus reader asset revision: unchanged version skips, changed version re-writes everything. |
 | `BookMetadataExtractor`  | Utility   | Spawns a `HeadlessInAppWebView` running foliate-js in import mode to extract `{title, author, description, coverData, coverMimeType}` from any supported format. Used by the import flow. |
-| Bridge types             | Models    | `BookPosition`, `ReaderSelection`, `ReaderHighlight`, `FoliateStyle` — DTOs exchanged with JS. |
+| Bridge types             | Models    | `BookPosition`, `ReaderSelection`, `ReaderHighlight`, `ReaderBookmark`, `ReaderBookmarkChange`, `FoliateStyle` — DTOs exchanged with JS. |
 
 ## JS <-> Flutter bridge
 
 ```
 JS -> Flutter:  onLoadEnd, onRelocated, onSelectionEnd, onSelectionCleared,
-                onAnnotationClick, onClick, onSearch, onJsError
+                onAnnotationClick, onClick, onSearch, handleBookmark,
+                onJsError
 Flutter -> JS:  goToCfi, nextPage, prevPage, changeStyle, addAnnotation,
-                removeAnnotation, startSearch, cancelSearch, clearSearch
+                removeAnnotation, toggleBookmarkHere, startSearch,
+                cancelSearch, clearSearch
 ```
 
 Shared selection/click handlers are registered by

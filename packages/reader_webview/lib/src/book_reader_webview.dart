@@ -108,10 +108,11 @@ bool shouldLogReaderConsoleMessage({
 /// Communication:
 ///   JS → Flutter: `onReady`, `onRelocated`, `onSelectionEnd`,
 ///                  `onSelectionCleared`, `onAnnotationClick`, `onSetToc`,
-///                  `onSearch`
+///                  `onSearch`, `handleBookmark`
 ///   Flutter → JS: `goToCfi`, `goToHref`, `startSearch`, `cancelSearch`,
 ///                  `searchBook`, `clearSearch`, `nextPage`, `prevPage`,
-///                  `changeStyle`, `addAnnotation`, `removeAnnotation`
+///                  `changeStyle`, `addAnnotation`, `removeAnnotation`,
+///                  `toggleBookmarkHere`
 class BookReaderWebView extends StatefulWidget {
   const BookReaderWebView({
     required this.serverPort,
@@ -120,12 +121,14 @@ class BookReaderWebView extends StatefulWidget {
     this.initialProgress,
     this.foliateStyle = const FoliateStyle(),
     this.highlights = const [],
+    this.bookmarks = const [],
     this.onReady,
     this.onPositionChanged,
     this.onTextSelected,
     this.onTextDeselected,
     this.onHighlightTapped,
     this.onTocChanged,
+    this.onBookmarkChanged,
     this.onTapped,
     super.key,
   });
@@ -149,6 +152,9 @@ class BookReaderWebView extends StatefulWidget {
   /// Highlights to render as annotations on load.
   final List<ReaderHighlight> highlights;
 
+  /// Bookmarks to render as foliate-js bookmark annotations on load.
+  final List<ReaderBookmark> bookmarks;
+
   /// Fires once when foliate-js has loaded the book and is ready.
   final VoidCallback? onReady;
 
@@ -166,6 +172,9 @@ class BookReaderWebView extends StatefulWidget {
 
   /// Fires when foliate-js has parsed the book's table of contents.
   final void Function(List<ReaderTocItem> items)? onTocChanged;
+
+  /// Fires when foliate-js requests adding/removing a bookmark.
+  final void Function(ReaderBookmarkChange change)? onBookmarkChanged;
 
   /// Fires when the user taps empty reader space (no selection, no link).
   /// Coordinates are normalized to [0, 1] over the viewport.
@@ -213,6 +222,7 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     }
 
     _syncAnnotations(oldWidget.highlights, widget.highlights);
+    _syncBookmarkAnnotations(oldWidget.bookmarks, widget.bookmarks);
   }
 
   /// Push a highlight diff into the WebView without rebuilding the
@@ -269,6 +279,54 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   void _evalRemoveAnnotation(String cfiRange) {
     final escaped = jsonEncode(cfiRange);
     _controller?.evaluateJavascript(source: 'removeAnnotation($escaped);');
+  }
+
+  void _syncBookmarkAnnotations(
+    List<ReaderBookmark> oldList,
+    List<ReaderBookmark> newList,
+  ) {
+    final oldById = {for (final h in oldList) h.id: h};
+    final newById = {for (final h in newList) h.id: h};
+    var changed = false;
+
+    for (final bookmark in oldList) {
+      final next = newById[bookmark.id];
+      if (next == null) {
+        _evalRemoveBookmarkAnnotation(bookmark.cfi);
+        changed = true;
+      }
+    }
+    for (final bookmark in newList) {
+      final prev = oldById[bookmark.id];
+      if (prev == null) {
+        _evalAddBookmarkAnnotation(bookmark);
+        changed = true;
+      } else if (prev.cfi != bookmark.cfi) {
+        _evalRemoveBookmarkAnnotation(prev.cfi);
+        _evalAddBookmarkAnnotation(bookmark);
+        changed = true;
+      }
+    }
+    if (changed) _refreshBookmarkState();
+  }
+
+  void _evalAddBookmarkAnnotation(ReaderBookmark bookmark) {
+    if (bookmark.cfi.isEmpty) return;
+    final annotation = jsonEncode({
+      'id': bookmark.id,
+      'type': 'bookmark',
+      'value': bookmark.cfi,
+      'content': bookmark.content,
+      'progress': bookmark.progress,
+    });
+    _controller?.evaluateJavascript(source: 'addAnnotation($annotation);');
+  }
+
+  void _evalRemoveBookmarkAnnotation(String cfiRange) {
+    final escaped = jsonEncode(cfiRange);
+    _controller?.evaluateJavascript(
+      source: 'removeAnnotation($escaped, false);',
+    );
   }
 
   String get _bookUrl {
@@ -455,6 +513,17 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       },
     );
 
+    controller.addJavaScriptHandler(
+      handlerName: 'handleBookmark',
+      callback: (args) {
+        if (args.isEmpty) return;
+        final raw = readerBridgeMap(args.first);
+        if (raw == null) return;
+        final change = ReaderBookmarkChange.fromMap(raw);
+        widget.onBookmarkChanged?.call(change);
+      },
+    );
+
     registerSharedReaderHandlers(
       controller,
       onTextSelected: widget.onTextSelected,
@@ -467,6 +536,17 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     for (final h in widget.highlights) {
       _evalAddAnnotation(h);
     }
+    for (final bookmark in widget.bookmarks) {
+      _evalAddBookmarkAnnotation(bookmark);
+    }
+    _refreshBookmarkState();
+  }
+
+  void _refreshBookmarkState() {
+    _controller?.evaluateJavascript(
+      source:
+          "if (typeof window.refreshBookmarkState === 'function') window.refreshBookmarkState();",
+    );
   }
 
   /// Navigate to a specific CFI position.
@@ -639,6 +719,14 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   /// Go to the previous page.
   void prevPage() {
     _controller?.evaluateJavascript(source: 'prevPage();');
+  }
+
+  /// Toggle a bookmark at the current visible page.
+  void toggleBookmark() {
+    _controller?.evaluateJavascript(
+      source:
+          "if (typeof window.toggleBookmarkHere === 'function') window.toggleBookmarkHere();",
+    );
   }
 
   /// Update style from Flutter.

@@ -53,6 +53,44 @@ double? _double(Object? value) => value is num ? value.toDouble() : null;
 
 bool? _bool(Object? value) => value is bool ? value : null;
 
+enum ReaderBookmarkChangeSource { unknown, pullDown, chrome }
+
+ReaderBookmarkChangeSource _bookmarkChangeSource(Object? value) {
+  return switch (_string(value)) {
+    'pull-down' => ReaderBookmarkChangeSource.pullDown,
+    'chrome' => ReaderBookmarkChangeSource.chrome,
+    _ => ReaderBookmarkChangeSource.unknown,
+  };
+}
+
+/// Bookmark add/remove event emitted by foliate-js.
+class ReaderBookmarkChange {
+  const ReaderBookmarkChange({
+    required this.remove,
+    required this.cfi,
+    required this.content,
+    required this.progress,
+    required this.source,
+  });
+
+  final bool remove;
+  final String cfi;
+  final String content;
+  final double progress;
+  final ReaderBookmarkChangeSource source;
+
+  factory ReaderBookmarkChange.fromMap(Map<String, dynamic> map) {
+    final detail = readerBridgeMap(map['detail']) ?? const {};
+    return ReaderBookmarkChange(
+      remove: _bool(map['remove']) ?? false,
+      cfi: _string(detail['cfi']) ?? '',
+      content: _string(detail['content']) ?? '',
+      progress: (_double(detail['percentage']) ?? 0).clamp(0.0, 1.0).toDouble(),
+      source: _bookmarkChangeSource(map['source']),
+    );
+  }
+}
+
 /// Current reading position inside a book WebView, reported by foliate-js
 /// on every page turn. Includes the EPUB CFI (for exact restore), an
 /// overall progress fraction, and optional chapter context.
@@ -69,6 +107,9 @@ class BookPosition {
     this.relocationReason,
     this.atEnd = false,
     this.atStart = false,
+    this.bookmarkExists = false,
+    this.bookmarkCfi,
+    this.bookmarkId,
   });
 
   /// EPUB Canonical Fragment Identifier — exact position in the book.
@@ -109,7 +150,13 @@ class BookPosition {
   /// symmetry, currently unused.
   final bool atStart;
 
+  /// Current visible page has a bookmark annotation.
+  final bool bookmarkExists;
+  final String? bookmarkCfi;
+  final String? bookmarkId;
+
   factory BookPosition.fromMap(Map<String, dynamic> map) {
+    final bookmark = readerBridgeMap(map['bookmark']) ?? const {};
     return BookPosition(
       cfi: _string(map['cfi']) ?? '',
       fraction: _double(map['percentage']) ?? 0,
@@ -122,6 +169,9 @@ class BookPosition {
       relocationReason: _string(map['reason']),
       atEnd: _bool(map['atEnd']) ?? false,
       atStart: _bool(map['atStart']) ?? false,
+      bookmarkExists: _bool(bookmark['exists']) ?? false,
+      bookmarkCfi: _string(bookmark['cfi']),
+      bookmarkId: _string(bookmark['id']),
     );
   }
 }
@@ -361,6 +411,7 @@ class FoliateStyle {
     this.textIndent = 0,
     this.fontColor = '#000000',
     this.backgroundColor = '#FFFFFF',
+    this.accentColor = '#000000',
     this.topMargin = 90,
     this.bottomMargin = 50,
     this.sideMargin = 6,
@@ -397,6 +448,9 @@ class FoliateStyle {
 
   /// Hex color including `#`, e.g. `'#FFFFFF'`.
   final String backgroundColor;
+
+  /// App primary/accent color used for reader gesture feedback.
+  final String accentColor;
 
   final double topMargin;
   final double bottomMargin;
@@ -441,6 +495,7 @@ class FoliateStyle {
     'textIndent': textIndent,
     'fontColor': fontColor,
     'backgroundColor': backgroundColor,
+    'accentColor': accentColor,
     'topMargin': topMargin,
     'bottomMargin': bottomMargin,
     'sideMargin': sideMargin,
@@ -481,6 +536,7 @@ class FoliateStyle {
           textIndent == other.textIndent &&
           fontColor == other.fontColor &&
           backgroundColor == other.backgroundColor &&
+          accentColor == other.accentColor &&
           topMargin == other.topMargin &&
           bottomMargin == other.bottomMargin &&
           sideMargin == other.sideMargin &&
@@ -512,6 +568,7 @@ class FoliateStyle {
     textIndent,
     fontColor,
     backgroundColor,
+    accentColor,
     topMargin,
     bottomMargin,
     sideMargin,
@@ -557,4 +614,20 @@ class ReaderHighlight {
     if (cfiRange != null) 'cfiRange': cfiRange,
     if (color != null) 'color': color,
   };
+}
+
+/// A bookmark annotation the WebView should render and track against the
+/// current page.
+class ReaderBookmark {
+  const ReaderBookmark({
+    required this.id,
+    required this.cfi,
+    required this.progress,
+    this.content = '',
+  });
+
+  final String id;
+  final String cfi;
+  final double progress;
+  final String content;
 }

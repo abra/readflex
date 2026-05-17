@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:domain_models/domain_models.dart';
+import 'package:drift/drift.dart' show QueryRow, Variable;
 import 'package:local_storage/local_storage.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:path/path.dart' as p;
@@ -171,6 +172,108 @@ class BookRepository {
     }
   }
 
+  Future<List<SourceBookmark>> getBookmarksBySource(String sourceId) async {
+    try {
+      final rows = await _db
+          .customSelect(
+            '''
+                SELECT id, source_id, source_type, cfi, content, progress,
+                       chapter_title, created_at
+                FROM bookmarks_table
+                WHERE source_id = ?
+                ORDER BY progress ASC, created_at ASC
+                ''',
+            variables: [Variable<String>(sourceId)],
+          )
+          .get();
+      return rows.map(_bookmarkRowToDomain).toList(growable: false);
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  Future<SourceBookmark> addBookmark({
+    required String sourceId,
+    required SourceType sourceType,
+    required String cfi,
+    required String content,
+    required double progress,
+    String? chapterTitle,
+  }) async {
+    try {
+      final existing = await _bookmarkBySourceAndCfi(sourceId, cfi);
+      if (existing != null) return existing;
+
+      final bookmark = SourceBookmark(
+        id: _uuid.v4(),
+        sourceId: sourceId,
+        sourceType: sourceType,
+        cfi: cfi,
+        content: content,
+        progress: progress.clamp(0.0, 1.0).toDouble(),
+        chapterTitle: chapterTitle,
+        createdAt: DateTime.now(),
+      );
+      await _db.customStatement(
+        '''
+        INSERT OR IGNORE INTO bookmarks_table
+          (id, source_id, source_type, cfi, content, progress, chapter_title,
+           created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''',
+        [
+          bookmark.id,
+          bookmark.sourceId,
+          bookmark.sourceType.name,
+          bookmark.cfi,
+          bookmark.content,
+          bookmark.progress,
+          bookmark.chapterTitle,
+          bookmark.createdAt.toIso8601String(),
+        ],
+      );
+      return await _bookmarkBySourceAndCfi(sourceId, cfi) ?? bookmark;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  Future<void> deleteBookmarkBySourceAndCfi(
+    String sourceId,
+    String cfi,
+  ) async {
+    try {
+      await _db.customStatement(
+        '''
+        DELETE FROM bookmarks_table
+        WHERE source_id = ? AND cfi = ?
+        ''',
+        [sourceId, cfi],
+      );
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  Future<SourceBookmark?> _bookmarkBySourceAndCfi(
+    String sourceId,
+    String cfi,
+  ) async {
+    final row = await _db
+        .customSelect(
+          '''
+              SELECT id, source_id, source_type, cfi, content, progress,
+                     chapter_title, created_at
+              FROM bookmarks_table
+              WHERE source_id = ? AND cfi = ?
+              LIMIT 1
+              ''',
+          variables: [Variable<String>(sourceId), Variable<String>(cfi)],
+        )
+        .getSingleOrNull();
+    return row == null ? null : _bookmarkRowToDomain(row);
+  }
+
   /// Deletes the book in a single transaction. The fate of dependent
   /// rows (highlights, flashcards, dictionary entries, FSRS review state)
   /// is decided by [scope]:
@@ -213,6 +316,10 @@ class BookRepository {
             await _db.flashcardsDao.deleteFlashcardsByDeck(id);
             await _db.dictionaryDao.deleteEntriesBySource(id);
         }
+        await _db.customStatement(
+          'DELETE FROM bookmarks_table WHERE source_id = ?',
+          [id],
+        );
         await _dao.deleteBook(id);
       });
     } catch (e, st) {
@@ -233,6 +340,19 @@ class BookRepository {
         stackTrace: st,
       );
     }
+  }
+
+  SourceBookmark _bookmarkRowToDomain(QueryRow row) {
+    return SourceBookmark(
+      id: row.read<String>('id'),
+      sourceId: row.read<String>('source_id'),
+      sourceType: SourceType.from(row.read<String>('source_type')),
+      cfi: row.read<String>('cfi'),
+      content: row.read<String>('content'),
+      progress: row.read<double>('progress').clamp(0.0, 1.0).toDouble(),
+      chapterTitle: row.readNullable<String>('chapter_title'),
+      createdAt: DateTime.parse(row.read<String>('created_at')),
+    );
   }
 
   // ── Helpers ──

@@ -10,6 +10,7 @@ class ReaderState extends Equatable {
     this.title = '',
     this.book,
     this.highlights = const [],
+    this.bookmarks = const [],
     this.tocItems = const [],
     this.chapterTitle,
     this.bookCurrentPage,
@@ -17,12 +18,15 @@ class ReaderState extends Equatable {
     this.chapterCurrentPage,
     this.chapterTotalPages,
     this.sizeTotal,
+    this.currentPageBookmarked = false,
+    this.currentPageBookmarkCfi,
   });
 
   final ReaderStatus status;
   final String title;
   final Book? book;
   final List<Highlight> highlights;
+  final List<SourceBookmark> bookmarks;
   final List<ReaderTocItem> tocItems;
 
   /// Live chapter / page metrics surfaced by foliate-js on every page
@@ -44,6 +48,10 @@ class ReaderState extends Equatable {
   /// Constant per book; first `onRelocated` after open populates it.
   final int? sizeTotal;
 
+  /// True when foliate-js reports that the visible page is already bookmarked.
+  final bool currentPageBookmarked;
+  final String? currentPageBookmarkCfi;
+
   String? get sourceId => book?.id;
 
   static const _absent = Object();
@@ -53,6 +61,7 @@ class ReaderState extends Equatable {
     String? title,
     Object? book = _absent,
     List<Highlight>? highlights,
+    List<SourceBookmark>? bookmarks,
     List<ReaderTocItem>? tocItems,
     Object? chapterTitle = _absent,
     Object? bookCurrentPage = _absent,
@@ -60,11 +69,14 @@ class ReaderState extends Equatable {
     Object? chapterCurrentPage = _absent,
     Object? chapterTotalPages = _absent,
     Object? sizeTotal = _absent,
+    bool? currentPageBookmarked,
+    Object? currentPageBookmarkCfi = _absent,
   }) => ReaderState(
     status: status ?? this.status,
     title: title ?? this.title,
     book: book == _absent ? this.book : book as Book?,
     highlights: highlights ?? this.highlights,
+    bookmarks: bookmarks ?? this.bookmarks,
     tocItems: tocItems ?? this.tocItems,
     chapterTitle: chapterTitle == _absent
         ? this.chapterTitle
@@ -82,6 +94,10 @@ class ReaderState extends Equatable {
         ? this.chapterTotalPages
         : chapterTotalPages as int?,
     sizeTotal: sizeTotal == _absent ? this.sizeTotal : sizeTotal as int?,
+    currentPageBookmarked: currentPageBookmarked ?? this.currentPageBookmarked,
+    currentPageBookmarkCfi: currentPageBookmarkCfi == _absent
+        ? this.currentPageBookmarkCfi
+        : currentPageBookmarkCfi as String?,
   );
 
   @override
@@ -90,6 +106,7 @@ class ReaderState extends Equatable {
     title,
     book,
     highlights,
+    bookmarks,
     tocItems,
     chapterTitle,
     bookCurrentPage,
@@ -97,5 +114,7 @@ class ReaderState extends Equatable {
     chapterCurrentPage,
     chapterTotalPages,
     sizeTotal,
+    currentPageBookmarked,
+    currentPageBookmarkCfi,
   ];
 }

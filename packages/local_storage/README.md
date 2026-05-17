@@ -31,6 +31,7 @@ and companions are also reachable through the DAO exports.
 ```
 books_table              highlights_table        flashcards_table
 dictionary_table         review_items_table      review_logs_table
+bookmarks_table
 ```
 
 All FSRS state (stability, difficulty, due date, reps, lapses) is
@@ -38,6 +39,10 @@ centralized in `review_items_table`, keyed by `(item_id, item_type)`.
 Entity tables (flashcards/highlights/dictionary) hold only domain
 fields; nothing reviewable is duplicated across tables. This was the
 v3→v4 migration — see the comment in `database.dart`.
+
+`bookmarks_table` is a small custom-SQL table owned by `BookRepository`
+rather than a generated DAO because bookmark operations are source-scoped and
+do not need cross-feature query composition yet.
 
 `articles_table` existed in earlier schemas but was dropped in v13 when the
 article reader was removed. Migrations v5–v12 still touch it for upgrade
@@ -132,5 +137,5 @@ through a repository.
   in the repository that owns the domain concept.
 - Every schema change bumps `schemaVersion` and adds an `if (from < N)`
   branch. Never edit a past migration.
-- Hot-path queries get a matching index in `_createIndexes()` — add an
-  `if (from < N) await _createIndexes()` branch when you add one.
+- Hot-path queries get a matching index in `_createIndexes()` or beside the
+  custom table setup that owns them.

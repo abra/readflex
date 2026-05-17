@@ -30,6 +30,17 @@ void main() {
     createdAt: DateTime(2024, 1, 2),
   );
 
+  final testBookmark = SourceBookmark(
+    id: 'bm-1',
+    sourceId: 'book-1',
+    sourceType: SourceType.book,
+    cfi: 'epubcfi(/6/4)',
+    content: 'Saved page',
+    progress: 0.2,
+    chapterTitle: 'Chapter 1',
+    createdAt: DateTime(2024, 1, 3),
+  );
+
   setUp(() {
     bookRepository = FakeBookRepository();
     highlightRepository = FakeHighlightRepository();
@@ -73,6 +84,7 @@ void main() {
         setUp: () {
           bookRepository.seedBook(testBook);
           highlightRepository.seedHighlights('book-1', [testHighlight]);
+          bookRepository.seedBookmarks('book-1', [testBookmark]);
         },
         build: buildBloc,
         act: (bloc) =>
@@ -83,7 +95,8 @@ void main() {
               .having((s) => s.status, 'status', ReaderStatus.ready)
               .having((s) => s.title, 'title', 'Test Book')
               .having((s) => s.book, 'book', isNotNull)
-              .having((s) => s.highlights, 'highlights', hasLength(1)),
+              .having((s) => s.highlights, 'highlights', hasLength(1))
+              .having((s) => s.bookmarks, 'bookmarks', hasLength(1)),
         ],
         verify: (_) {
           expect(bookRepository.updatedBook, isNotNull);
@@ -285,6 +298,30 @@ void main() {
         wait: const Duration(seconds: 3),
         verify: (bloc) {
           expect(bloc.state.sizeTotal, 480000);
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'surfaces current page bookmark state',
+        setUp: () => bookRepository.seedBook(testBook),
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          title: testBook.title,
+          book: testBook,
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/4!/4/2)',
+            progress: 0.2,
+            currentPageBookmarked: true,
+            currentPageBookmarkCfi: 'epubcfi(/6/4)',
+          ),
+        ),
+        wait: const Duration(seconds: 3),
+        verify: (bloc) {
+          expect(bloc.state.currentPageBookmarked, isTrue);
+          expect(bloc.state.currentPageBookmarkCfi, 'epubcfi(/6/4)');
         },
       );
 
@@ -631,6 +668,96 @@ void main() {
           // which for List is reference equality.
           expect(identical(bloc.state.highlights, const []), isFalse);
         },
+      );
+    });
+
+    group('ReaderBookmarkChanged', () {
+      blocTest<ReaderBloc, ReaderState>(
+        'adds bookmark for current source',
+        setUp: () => bookRepository.seedBook(testBook),
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          book: testBook,
+          chapterTitle: 'Chapter 7',
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderBookmarkChanged(
+            remove: false,
+            cfi: 'epubcfi(/6/34)',
+            content: 'Bookmark text',
+            progress: 0.56,
+          ),
+        ),
+        expect: () => [
+          isA<ReaderState>()
+              .having(
+                (s) => s.bookmarks.single.content,
+                'bookmark content',
+                'Bookmark text',
+              )
+              .having(
+                (s) => s.currentPageBookmarked,
+                'current page bookmarked',
+                isTrue,
+              ),
+        ],
+        verify: (bloc) {
+          final bookmarks = bookRepository.bookmarksBySourceId['book-1'];
+          expect(bookmarks, hasLength(1));
+          expect(bookmarks!.single.chapterTitle, 'Chapter 7');
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'removes bookmark by cfi',
+        setUp: () {
+          bookRepository.seedBook(testBook);
+          bookRepository.seedBookmarks('book-1', [testBookmark]);
+        },
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          book: testBook,
+          bookmarks: [testBookmark],
+          currentPageBookmarked: true,
+          currentPageBookmarkCfi: testBookmark.cfi,
+        ),
+        act: (bloc) => bloc.add(
+          ReaderBookmarkChanged(
+            remove: true,
+            cfi: testBookmark.cfi,
+            content: '',
+            progress: testBookmark.progress,
+          ),
+        ),
+        expect: () => [
+          isA<ReaderState>()
+              .having((s) => s.bookmarks, 'bookmarks', isEmpty)
+              .having(
+                (s) => s.currentPageBookmarked,
+                'current page bookmarked',
+                isFalse,
+              ),
+        ],
+        verify: (_) {
+          expect(bookRepository.bookmarksBySourceId['book-1'], isEmpty);
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'ignores malformed bookmark event without cfi',
+        build: buildBloc,
+        seed: () => ReaderState(status: ReaderStatus.ready, book: testBook),
+        act: (bloc) => bloc.add(
+          const ReaderBookmarkChanged(
+            remove: false,
+            cfi: '',
+            content: 'No target',
+            progress: 0.1,
+          ),
+        ),
+        expect: () => <ReaderState>[],
       );
     });
 

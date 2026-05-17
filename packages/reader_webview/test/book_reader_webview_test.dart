@@ -69,7 +69,43 @@ void main() {
       );
       expect(bookJs, contains('window.startSearch'));
       expect(bookJs, contains('window.cancelSearch'));
+      expect(bookJs, contains('window.toggleBookmarkHere'));
       expect(bookJs, contains("callFlutter('onSearch'"));
+      expect(bookJs, contains("callFlutter('handleBookmark'"));
+    });
+
+    test('pull-down bookmark does not render transient feedback icon', () {
+      final bookJs = File(
+        'assets/foliate-js/src/book.js',
+      ).readAsStringSync();
+
+      expect(bookJs, isNot(contains('bookmark-feedback-icon')));
+      expect(bookJs, isNot(contains('showBookmarkFeedback')));
+      expect(bookJs, isNot(contains('fill="#215a8f"')));
+    });
+
+    test('bookmark state is refreshed after stored annotations render', () {
+      final bookJs = File(
+        'assets/foliate-js/src/book.js',
+      ).readAsStringSync();
+      final webViewDart = File(
+        'lib/src/book_reader_webview.dart',
+      ).readAsStringSync();
+
+      expect(bookJs, contains('window.refreshBookmarkState'));
+      expect(bookJs, contains("reason = 'bookmark-sync'"));
+      expect(
+        bookJs,
+        contains('#rangeContainsBookmark(currentRange, bookmarkRange)'),
+      );
+      expect(bookJs, contains('currentRange.comparePoint'));
+      expect(bookJs, contains('unwrapCFI(bookmark.value)'));
+      expect(bookJs, isNot(contains('#checkBookmarkProgress')));
+      expect(bookJs, contains('#bookmarkAnchorFromLocation(location)'));
+      expect(bookJs, contains('#visibleWordRange(visibleRange)'));
+      expect(bookJs, contains('this.view.getCFI(this.#index, anchorRange)'));
+      expect(webViewDart, contains("'progress': bookmark.progress"));
+      expect(webViewDart, contains('window.refreshBookmarkState'));
     });
 
     test('keeps default search off Intl Segmenter', () {

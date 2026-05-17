@@ -76,6 +76,8 @@ const getSelectionRange = (selection) => {
   return range.collapsed ? null : range;
 };
 
+const unwrapCFI = cfi => cfi?.match(/^epubcfi\((.+)\)$/)?.[1] ?? cfi
+
 const wrapWideTables = doc => {
   for (const table of doc.querySelectorAll('table')) {
     if (table.closest('.readflex-wide-table')) continue
@@ -969,7 +971,7 @@ class Reader {
   #doc
   #index
   #originalContent
-  #bookMarkExists = false
+  #bookmarkExistedOnGesture = false
   #upTriggered = false
   #bookmarkInfo = {
     exists: false,
@@ -1108,7 +1110,6 @@ class Reader {
 
     if (annotation.type === 'bookmark') {
       if (this.#checkBookmark(annotation)) {
-        this.#showBookmarkIcon(60)
         this.#bookmarkInfo = {
           exists: true,
           cfi: annotation.value,
@@ -1132,7 +1133,6 @@ class Reader {
           found = this.#checkBookmark(bm) ? true : found
           if (found) {
             bookmark = bm
-            this.#showBookmarkIcon(60)
             break
           }
         }
@@ -1144,26 +1144,213 @@ class Reader {
       cfi: found ? bookmark.value : null,
       id: found ? bookmark.id : null,
     }
-    if (!found) {
-      this.#hideBookmarkIcon()
-    }
   }
 
   #checkBookmark(bookmark) {
+    const currentRange = this.view.lastLocation?.range
+    if (currentRange && this.#doc) {
+      try {
+        const resolved = this.view.resolveCFI(bookmark.value)
+        if (resolved?.index !== this.#index) return false
+        const bookmarkRange = resolved.anchor(this.#doc)
+        if (this.#rangeContainsBookmark(currentRange, bookmarkRange)) {
+          return true
+        }
+      } catch (_) {
+        // Fall back to CFI comparison below for renderers / formats where
+        // the bookmark cannot be resolved into the currently loaded document.
+      }
+    }
+
     const currCfi = this.view.lastLocation?.cfi
+    if (!currCfi || !bookmark.value) return false
+    if (bookmark.value === currCfi) return true
+    if (unwrapCFI(bookmark.value)?.startsWith(unwrapCFI(currCfi))) return true
+
     const currStart = collapse(currCfi)
     const currEnd = collapse(currCfi, true)
-
-    const bookmarkCfi = bookmark.value
-    const bookmarkStart = collapse(bookmarkCfi)
+    const bookmarkStart = collapse(bookmark.value)
 
     if (compare(currStart, bookmarkStart) <= 0 &&
-      compare(currEnd, bookmarkStart) > 0) {
+      compare(currEnd, bookmarkStart) >= 0) {
       return true
     }
   }
 
-  removeAnnotation(cfi) {
+  #rangeContainsBookmark(currentRange, bookmarkRange) {
+    const startContainer = bookmarkRange?.startContainer
+    if (!startContainer) return false
+
+    if (typeof currentRange.comparePoint === 'function') {
+      try {
+        return currentRange.comparePoint(startContainer, bookmarkRange.startOffset) === 0
+      } catch (_) {
+        return false
+      }
+    }
+
+    try {
+      return currentRange.compareBoundaryPoints(
+        Range.START_TO_START,
+        bookmarkRange,
+      ) <= 0 && currentRange.compareBoundaryPoints(
+        Range.END_TO_START,
+        bookmarkRange,
+      ) > 0
+    } catch (_) {
+      return false
+    }
+  }
+
+  #bookmarkAnchorFromLocation(location) {
+    const visibleRange = location?.range
+    if (!visibleRange || !this.#doc || this.#index == null) return null
+
+    try {
+      // Use a word near the middle of the currently visible text as the
+      // bookmark anchor. The page-level location CFI can span enough content
+      // to keep a bookmark active on an adjacent page.
+      const anchorRange = this.#visibleWordRange(visibleRange)
+      if (!anchorRange) return null
+      return {
+        cfi: this.view.getCFI(this.#index, anchorRange),
+        content: this.#bookmarkContentFromRange(anchorRange),
+      }
+    } catch (_) {
+      return null
+    }
+  }
+
+  #visibleWordRange(visibleRange) {
+    const doc = this.#doc
+    if (!doc?.body) return null
+    const nodeFilter = doc.defaultView?.NodeFilter ?? globalThis.NodeFilter
+    if (!nodeFilter) return null
+
+    const walker = doc.createTreeWalker(
+      doc.body,
+      nodeFilter.SHOW_TEXT,
+      {
+        acceptNode: node => {
+          if (!node.nodeValue?.trim()) return nodeFilter.FILTER_REJECT
+          try {
+            return visibleRange.intersectsNode(node)
+              ? nodeFilter.FILTER_ACCEPT
+              : nodeFilter.FILTER_REJECT
+          } catch (_) {
+            return nodeFilter.FILTER_REJECT
+          }
+        },
+      },
+    )
+    const slices = []
+    let total = 0
+
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const slice = this.#visibleTextSlice(visibleRange, node)
+      if (!slice) continue
+      slices.push(slice)
+      total += slice.end - slice.start
+    }
+
+    if (!total) return null
+
+    let midpoint = Math.floor(total / 2)
+    for (const slice of slices) {
+      const length = slice.end - slice.start
+      if (midpoint < length) {
+        return this.#wordRangeInSlice(slice, slice.start + midpoint)
+      }
+      midpoint -= length
+    }
+
+    return null
+  }
+
+  #visibleTextSlice(range, node) {
+    const text = node.nodeValue ?? ''
+    let start = 0
+    let end = text.length
+
+    if (node === range.startContainer) {
+      start = Math.min(Math.max(range.startOffset, 0), end)
+    }
+    if (node === range.endContainer) {
+      end = Math.min(Math.max(range.endOffset, 0), end)
+    }
+    if (start >= end || !text.slice(start, end).trim()) return null
+
+    return { node, start, end }
+  }
+
+  #wordRangeInSlice(slice, offset) {
+    const { node, start, end } = slice
+    const text = node.nodeValue ?? ''
+    let pos = Math.min(Math.max(offset, start), end - 1)
+
+    if (/\s/.test(text[pos])) {
+      let left = pos
+      let right = pos
+      let found = -1
+      while (left >= start || right < end) {
+        if (right < end && !/\s/.test(text[right])) {
+          found = right
+          break
+        }
+        if (left >= start && !/\s/.test(text[left])) {
+          found = left
+          break
+        }
+        right++
+        left--
+      }
+      if (found === -1) return null
+      pos = found
+    }
+
+    let wordStart = pos
+    while (wordStart > start && !/\s/.test(text[wordStart - 1])) {
+      wordStart--
+    }
+
+    let wordEnd = pos + 1
+    while (wordEnd < end && !/\s/.test(text[wordEnd])) {
+      wordEnd++
+    }
+
+    const range = node.ownerDocument.createRange()
+    range.setStart(node, wordStart)
+    range.setEnd(node, wordEnd)
+    return range
+  }
+
+  #bookmarkContentFromRange(range) {
+    const word = range.toString().trim()
+    const context = range.startContainer?.parentElement?.textContent?.trim()
+    const content = context || word
+    return content.length > 200 ? content.slice(0, 200) + '...' : content
+  }
+
+  refreshBookmarkState = (reason = 'bookmark-sync') => {
+    const lastLocation = this.view.lastLocation
+    if (!lastLocation) return
+    this.#checkCurrentPageBookmark()
+    onRelocated({
+      cfi: lastLocation.cfi,
+      fraction: lastLocation.fraction,
+      loc: lastLocation.pageItem
+        ? `Page ${lastLocation.pageItem.label}`
+        : `Loc ${lastLocation.location.current}`,
+      tocItem: lastLocation.tocItem,
+      pageItem: lastLocation.pageItem,
+      location: lastLocation.location,
+      chapterLocation: lastLocation.chapterLocation,
+      reason,
+      bookmark: this.#bookmarkInfo,
+    })
+  }
+
+  removeAnnotation(cfi, notify = true) {
     const annotation = this.annotationsByValue.get(cfi)
     if (!annotation) return
     const { value } = annotation
@@ -1180,8 +1367,7 @@ class Reader {
     this.view.addAnnotation(annotation, true)
 
     if (annotation.type === 'bookmark' && this.#checkBookmark(annotation)) {
-      this.#hideBookmarkIcon()
-      this.handleBookmark(true)
+      if (notify) this.handleBookmark(true)
       this.#bookmarkInfo = {
         exists: false,
         cfi: null,
@@ -1362,7 +1548,7 @@ class Reader {
   #onTouchStart = ({ detail: e }) => {
     if (this.#ignoreTouch()) return;
 
-    this.#bookMarkExists = !!document.getElementById('bookmark-icon');
+    this.#bookmarkExistedOnGesture = this.#bookmarkInfo.exists;
     this.#upTriggered = false;
   }
 
@@ -1375,7 +1561,6 @@ class Reader {
 
       if (deltaY > 0) {
         mainView.style.transform = `translateY(${Math.sqrt(deltaY * 50)}px)`;
-        this.#showBookmarkIcon(deltaY);
       } else if (deltaY < -60) {
         if (!this.#upTriggered) {
           this.#upTriggered = true;
@@ -1400,15 +1585,11 @@ class Reader {
       if (deltaY < -60) {
         // console.log('UP');
       } else if (deltaY > 60) {
-        if (this.#bookMarkExists) {
-          this.#hideBookmarkIcon();
-          this.handleBookmark(true);
+        if (this.#bookmarkExistedOnGesture) {
+          this.handleBookmark(true, 'pull-down');
         } else {
-          this.#showBookmarkIcon(deltaY);
-          this.handleBookmark(false);
+          this.handleBookmark(false, 'pull-down');
         }
-      } else {
-        this.#hideBookmarkIcon();
       }
 
       mainView.style.transition = 'transform 0.3s ease-out';
@@ -1420,66 +1601,37 @@ class Reader {
     }
   }
 
-  #showBookmarkIcon = (deltaY) => {
-    let bookmarkIcon = document.getElementById('bookmark-icon');
+  handleBookmark = (remove, source = 'unknown') => {
+    const location = this.view.lastLocation
+    const anchor = remove ? null : this.#bookmarkAnchorFromLocation(location)
+    const cfi = remove ? this.#bookmarkInfo.cfi : anchor?.cfi ?? location?.cfi
+    if (!cfi) return
 
-    const bookMarkSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 24"><g data-name="Layer 2"><g data-name="bookmark"><rect width="8" height="24" opacity="0"/><path d="M2 21a1 1 0 0 1-.49-.13A1 1 0 0 1 1 20V5.33A2.28 2.28 0 0 1 3.2 3h1.6A2.28 2.28 0 0 1 7 5.33V20a1 1 0 0 1-.5.86 1 1 0 0 1-1 0L4 19.07l-1.5 1.79A1 1 0 0 1 2 21z" fill="#215a8f"/></g></g></svg>`
-
-    if (!bookmarkIcon) {
-      bookmarkIcon = document.createElement('div');
-      bookmarkIcon.id = 'bookmark-icon';
-      bookmarkIcon.innerHTML = bookMarkSvg;
-      bookmarkIcon.style.cssText = `
-        height: 80px;
-        width: 26px;
-        position: fixed;
-        top: -16px;
-        right: 20px;
-        font-size: 24px;
-        opacity: 0;
-        transition: opacity 0.2s ease;
-        z-index: 1000;
-        pointer-events: none;
-      `;
-      document.body.appendChild(bookmarkIcon);
-    }
-
-    const opacity = Math.min(deltaY / 60, 1);
-    bookmarkIcon.style.opacity = opacity;
-  }
-
-  #hideBookmarkIcon = () => {
-    const bookmarkIcon = document.getElementById('bookmark-icon');
-    if (bookmarkIcon) {
-      bookmarkIcon.style.transition = 'opacity 0.3s ease-out';
-      bookmarkIcon.style.opacity = '0';
-
-      setTimeout(() => {
-        if (bookmarkIcon && bookmarkIcon.parentNode) {
-          bookmarkIcon.parentNode.removeChild(bookmarkIcon);
-        }
-      }, 300);
-    }
-  }
-
-  handleBookmark = (remove) => {
-    const cfi = remove ? this.#bookmarkInfo.cfi : this.view.lastLocation?.cfi
-
-    let content = this.view.lastLocation.range.startContainer.data ?? this.view.lastLocation.range.startContainer.innerText
+    const container = location?.range?.startContainer
+    let content = anchor?.content ?? container?.data ?? container?.innerText ?? ''
     content = content.trim()
     if (content.length > 200) {
       content = content.slice(0, 200) + '...'
     }
-    const percentage = this.view.lastLocation.fraction
+    const percentage = location?.fraction ?? 0
 
     callFlutter('handleBookmark', {
       remove,
+      source,
       detail: {
         cfi,
         content,
         percentage
       }
     })
+  }
+
+  toggleBookmark = () => {
+    if (this.#bookmarkInfo.exists) {
+      this.handleBookmark(true, 'chrome')
+    } else {
+      this.handleBookmark(false, 'chrome')
+    }
   }
 
   get toc() {
@@ -1750,9 +1902,11 @@ window.clearSelection = () => reader.view.deselect()
 
 window.addAnnotation = (annotation) => reader.addAnnotation(annotation)
 
-window.addBookmarkHere = () => reader.handleBookmark(false)
+window.addBookmarkHere = () => reader.handleBookmark(false, 'chrome')
 
-window.removeAnnotation = (cfi) => reader.removeAnnotation(cfi)
+window.toggleBookmarkHere = () => reader.toggleBookmark()
+
+window.removeAnnotation = (cfi, notify = true) => reader.removeAnnotation(cfi, notify)
 
 window.prevSection = () => reader.view.renderer.prevSection()
 
@@ -1966,6 +2120,8 @@ window.back = () => reader.view.history.back()
 window.forward = () => reader.view.history.forward()
 
 window.renderAnnotations = (annotations) => reader.renderAnnotation(annotations)
+
+window.refreshBookmarkState = () => reader.refreshBookmarkState()
 
 window.theChapterContent = () => reader.getChapterContent()
 

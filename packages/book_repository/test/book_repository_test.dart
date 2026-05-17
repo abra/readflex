@@ -90,6 +90,115 @@ void main() {
       expect(book.coverImagePath, isNull);
     });
 
+    test('bookmarks are stored by source in reading order', () async {
+      final book = await repo.addBook(
+        sourceFile: await createTempBookFile(),
+        title: 'Bookmark source',
+        format: BookFormat.epub,
+      );
+
+      await repo.addBookmark(
+        sourceId: book.id,
+        sourceType: SourceType.book,
+        cfi: 'epubcfi(/6/20)',
+        content: 'Second bookmark',
+        progress: 0.8,
+        chapterTitle: 'Late chapter',
+      );
+      await repo.addBookmark(
+        sourceId: book.id,
+        sourceType: SourceType.book,
+        cfi: 'epubcfi(/6/4)',
+        content: 'First bookmark',
+        progress: 0.2,
+        chapterTitle: 'Early chapter',
+      );
+
+      final bookmarks = await repo.getBookmarksBySource(book.id);
+
+      expect(bookmarks, hasLength(2));
+      expect(bookmarks.first.content, 'First bookmark');
+      expect(bookmarks.first.chapterTitle, 'Early chapter');
+      expect(bookmarks.last.content, 'Second bookmark');
+    });
+
+    test('addBookmark is idempotent per source and cfi', () async {
+      final book = await repo.addBook(
+        sourceFile: await createTempBookFile(),
+        title: 'Bookmark source',
+        format: BookFormat.epub,
+      );
+
+      final first = await repo.addBookmark(
+        sourceId: book.id,
+        sourceType: SourceType.book,
+        cfi: 'epubcfi(/6/4)',
+        content: 'Saved once',
+        progress: 0.2,
+      );
+      final second = await repo.addBookmark(
+        sourceId: book.id,
+        sourceType: SourceType.book,
+        cfi: 'epubcfi(/6/4)',
+        content: 'Duplicate',
+        progress: 0.3,
+      );
+
+      expect(second.id, first.id);
+      expect(await repo.getBookmarksBySource(book.id), hasLength(1));
+    });
+
+    test(
+      'deleteBookmarkBySourceAndCfi removes only matching bookmark',
+      () async {
+        final book = await repo.addBook(
+          sourceFile: await createTempBookFile(),
+          title: 'Bookmark source',
+          format: BookFormat.epub,
+        );
+
+        await repo.addBookmark(
+          sourceId: book.id,
+          sourceType: SourceType.book,
+          cfi: 'epubcfi(/6/4)',
+          content: 'Remove me',
+          progress: 0.2,
+        );
+        await repo.addBookmark(
+          sourceId: book.id,
+          sourceType: SourceType.book,
+          cfi: 'epubcfi(/6/8)',
+          content: 'Keep me',
+          progress: 0.4,
+        );
+
+        await repo.deleteBookmarkBySourceAndCfi(book.id, 'epubcfi(/6/4)');
+
+        final bookmarks = await repo.getBookmarksBySource(book.id);
+        expect(bookmarks, hasLength(1));
+        expect(bookmarks.single.content, 'Keep me');
+      },
+    );
+
+    test('deleteBook removes bookmarks for deleted source', () async {
+      final book = await repo.addBook(
+        sourceFile: await createTempBookFile(),
+        title: 'Bookmark source',
+        format: BookFormat.epub,
+      );
+      await repo.addBookmark(
+        sourceId: book.id,
+        sourceType: SourceType.book,
+        cfi: 'epubcfi(/6/4)',
+        content: 'Bookmarked page',
+        progress: 0.2,
+      );
+
+      await repo.deleteBook(book.id);
+
+      expect(await repo.getBookmarksBySource(book.id), isEmpty);
+    });
+
     test('addBook preserves file extension', () async {
       final sourceFile = await createTempBookFile(name: 'book.fb2');
       final book = await repo.addBook(

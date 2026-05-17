@@ -2,6 +2,43 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:reader_webview/reader_webview.dart';
 
 void main() {
+  group('ReaderBookmarkChange', () {
+    test('fromMap parses add event', () {
+      final change = ReaderBookmarkChange.fromMap({
+        'remove': false,
+        'detail': {
+          'cfi': 'epubcfi(/6/34!/4/2)',
+          'content': 'Bookmark context',
+          'percentage': 0.56,
+        },
+        'source': 'pull-down',
+      });
+
+      expect(change.remove, isFalse);
+      expect(change.cfi, 'epubcfi(/6/34!/4/2)');
+      expect(change.content, 'Bookmark context');
+      expect(change.progress, 0.56);
+      expect(change.source, ReaderBookmarkChangeSource.pullDown);
+    });
+
+    test('fromMap tolerates malformed bridge values', () {
+      final change = ReaderBookmarkChange.fromMap({
+        'remove': 'yes',
+        'detail': {
+          'cfi': 42,
+          'content': false,
+          'percentage': 'half',
+        },
+      });
+
+      expect(change.remove, isFalse);
+      expect(change.cfi, '');
+      expect(change.content, '');
+      expect(change.progress, 0.0);
+      expect(change.source, ReaderBookmarkChangeSource.unknown);
+    });
+  });
+
   group('BookPosition', () {
     test('fromMap parses all fields', () {
       final position = BookPosition.fromMap({
@@ -16,6 +53,11 @@ void main() {
         'reason': 'page',
         'atEnd': false,
         'atStart': false,
+        'bookmark': {
+          'exists': true,
+          'cfi': 'epubcfi(/6/4)',
+          'id': 'bookmark-1',
+        },
       });
 
       expect(position.cfi, 'epubcfi(/6/4!/4/2)');
@@ -29,6 +71,9 @@ void main() {
       expect(position.relocationReason, 'page');
       expect(position.atEnd, isFalse);
       expect(position.atStart, isFalse);
+      expect(position.bookmarkExists, isTrue);
+      expect(position.bookmarkCfi, 'epubcfi(/6/4)');
+      expect(position.bookmarkId, 'bookmark-1');
     });
 
     test('fromMap handles missing optional fields', () {
@@ -49,6 +94,8 @@ void main() {
       // that haven't added the field) keep working without coercion.
       expect(position.atEnd, isFalse);
       expect(position.atStart, isFalse);
+      expect(position.bookmarkExists, isFalse);
+      expect(position.bookmarkCfi, isNull);
     });
 
     test('fromMap coerces sizeTotal from num to int', () {
@@ -361,6 +408,7 @@ void main() {
       expect(map['textIndent'], 0);
       expect(map['fontColor'], '#000000');
       expect(map['backgroundColor'], '#FFFFFF');
+      expect(map['accentColor'], '#000000');
       expect(map['topMargin'], 90);
       expect(map['bottomMargin'], 50);
       expect(map['sideMargin'], 6);
@@ -399,6 +447,7 @@ void main() {
         deviceFontScale: 1.12,
         fontColor: '#FFFFFF',
         backgroundColor: '#1A1A1A',
+        accentColor: '#9B1C31',
         pageTurnStyle: 'scroll',
         topMargin: 40,
         bottomMargin: 30,
@@ -411,6 +460,7 @@ void main() {
       expect(map['deviceFontScale'], 1.12);
       expect(map['fontColor'], '#FFFFFF');
       expect(map['backgroundColor'], '#1A1A1A');
+      expect(map['accentColor'], '#9B1C31');
       expect(map['pageTurnStyle'], 'scroll');
       expect(map['topMargin'], 40);
       expect(map['bottomMargin'], 30);
@@ -422,7 +472,7 @@ void main() {
 
     test('toMap has expected key count', () {
       const style = FoliateStyle();
-      expect(style.toMap().length, 28);
+      expect(style.toMap().length, 29);
     });
   });
 

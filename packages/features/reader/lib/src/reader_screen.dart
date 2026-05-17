@@ -15,6 +15,7 @@ import 'package:shared/shared.dart';
 import 'book_custom_css.dart';
 import 'reader_appearance_cubit.dart';
 import 'reader_appearance_sheet.dart';
+import 'reader_bookmark_filter.dart';
 import 'reader_bloc.dart';
 import 'reader_brightness_cubit.dart';
 import 'reader_chrome_actions.dart';
@@ -37,6 +38,8 @@ const _kChromeAnimDuration = Duration(milliseconds: 200);
 const _kChromeAnimCurve = Curves.easeOutCubic;
 const _kChromeHideAnimCurve = Curves.easeInCubic;
 const _kReaderTopChromeHeight = 64.0;
+const _kReaderPageBookmarkIndicatorLift = 28.0;
+const _kReaderPageBookmarkIndicatorSize = AppIconSize.md;
 
 final _readerDrawerCloseButtonStyle = IconButton.styleFrom(
   backgroundColor: Colors.transparent,
@@ -462,6 +465,118 @@ class _ReaderChromeIconButton extends StatelessWidget {
   }
 }
 
+class _ReaderBookmarkIconButton extends StatelessWidget {
+  const _ReaderBookmarkIconButton({
+    required this.active,
+    required this.tooltip,
+    required this.foregroundColor,
+    required this.activeColor,
+    this.onPressed,
+  });
+
+  final bool active;
+  final String tooltip;
+  final Color foregroundColor;
+  final Color activeColor;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = onPressed == null;
+    final color = active ? activeColor : foregroundColor;
+    return IconButton(
+      icon: _ReaderBookmarkGlyph(
+        filled: active,
+        color: disabled ? color.withValues(alpha: 0.35) : color,
+        size: AppIconSize.md,
+      ),
+      tooltip: tooltip,
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        backgroundColor: Colors.transparent,
+        foregroundColor: disabled ? color.withValues(alpha: 0.35) : color,
+      ),
+    );
+  }
+}
+
+class _ReaderBookmarkGlyph extends StatelessWidget {
+  const _ReaderBookmarkGlyph({
+    required this.filled,
+    required this.color,
+    required this.size,
+  });
+
+  final bool filled;
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: size,
+      child: CustomPaint(
+        painter: _ReaderBookmarkGlyphPainter(
+          color: color,
+          filled: filled,
+        ),
+      ),
+    );
+  }
+}
+
+class _ReaderBookmarkGlyphPainter extends CustomPainter {
+  const _ReaderBookmarkGlyphPainter({
+    required this.color,
+    required this.filled,
+  });
+
+  final Color color;
+  final bool filled;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final scale = size.shortestSide / 24;
+    final path = Path()
+      ..moveTo(5, 21)
+      ..lineTo(12, 17)
+      ..lineTo(19, 21)
+      ..lineTo(19, 5)
+      ..quadraticBezierTo(19, 3, 17, 3)
+      ..lineTo(7, 3)
+      ..quadraticBezierTo(5, 3, 5, 5)
+      ..close();
+
+    canvas.save();
+    canvas.scale(scale, scale);
+
+    if (filled) {
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.fill
+          ..color = color,
+      );
+    }
+
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.2
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..color = color,
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _ReaderBookmarkGlyphPainter oldDelegate) {
+    return color != oldDelegate.color || filled != oldDelegate.filled;
+  }
+}
+
 class _ReadyContent extends StatelessWidget {
   const _ReadyContent({
     required this.serverPort,
@@ -519,6 +634,10 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     context.read<ReaderUiCubit>().openSearchDrawer();
   }
 
+  void _toggleBookmark() {
+    _webViewKey.currentState?.toggleBookmark();
+  }
+
   Future<void> _openAppearanceSheet() async {
     final uiCubit = context.read<ReaderUiCubit>();
     final wasChromeVisible = uiCubit.state.chromeVisible;
@@ -560,6 +679,12 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   void _goToTocItem(ReaderTocItem item) {
     if (item.href.isEmpty) return;
     _webViewKey.currentState?.goToHref(item.href);
+    _closeTocDrawer(restoreChrome: false);
+  }
+
+  void _goToBookmark(SourceBookmark bookmark) {
+    if (bookmark.cfi.isEmpty) return;
+    _webViewKey.currentState?.goToCfi(bookmark.cfi);
     _closeTocDrawer(restoreChrome: false);
   }
 
@@ -632,10 +757,12 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
             ),
             const _ReaderChromeDismissBarrierDriver(),
             const _ReaderTopChromeDriver(),
+            const _ReaderPageBookmarkIndicatorDriver(),
             const ReaderBrightnessChromeDriver(),
             _ReaderBottomChromeDriver(
               onTocPressed: _openTocDrawer,
               onFontPressed: _openAppearanceSheet,
+              onBookmarkPressed: _toggleBookmark,
               onSearchPressed: _openSearchDrawer,
               onSeekFraction: _seekFraction,
             ),
@@ -646,6 +773,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
               visible: uiState.tocDrawerVisible,
               onClose: _closeTocDrawer,
               onItemSelected: _goToTocItem,
+              onBookmarkSelected: _goToBookmark,
             ),
             _ReaderSearchDrawer(
               visible: uiState.searchDrawerVisible,
@@ -926,6 +1054,76 @@ class _ReaderBrightnessSystemChip extends StatelessWidget {
   }
 }
 
+class _ReaderPageBookmarkIndicatorDriver extends StatelessWidget {
+  const _ReaderPageBookmarkIndicatorDriver();
+
+  @override
+  Widget build(BuildContext context) {
+    final uiState = context.select<ReaderUiCubit, ReaderUiState>(
+      (c) => c.state,
+    );
+    final hasSelection = context.select<ReaderSelectionCubit, bool>(
+      (c) => c.state.hasSelection,
+    );
+    final bookmarked = context.select<ReaderBloc, bool>(
+      (b) => b.state.currentPageBookmarked,
+    );
+    final layoutId = context.select<ReaderAppearanceCubit, String>(
+      (c) => c.state.effectiveAppearance.layoutId,
+    );
+    final visible = bookmarked && uiState.contentOnlyVisible && !hasSelection;
+    final topOffset =
+        BookLayoutPreset.fromId(layoutId).data.topMargin -
+        _kReaderPageBookmarkIndicatorLift;
+
+    return _ReaderPageBookmarkIndicator(
+      visible: visible,
+      color: context.colors.primary,
+      topOffset: topOffset,
+    );
+  }
+}
+
+class _ReaderPageBookmarkIndicator extends StatelessWidget {
+  const _ReaderPageBookmarkIndicator({
+    required this.visible,
+    required this.color,
+    required this.topOffset,
+  });
+
+  final bool visible;
+  final Color color;
+  final double topOffset;
+
+  @override
+  Widget build(BuildContext context) {
+    final curve = visible ? _kChromeAnimCurve : _kChromeHideAnimCurve;
+
+    return Positioned(
+      top: topOffset,
+      right: 0,
+      child: Padding(
+        padding: const EdgeInsets.only(right: AppSpacing.xs),
+        child: IgnorePointer(
+          child: AnimatedOpacity(
+            opacity: visible ? 1 : 0,
+            duration: _kChromeAnimDuration,
+            curve: curve,
+            child: Semantics(
+              label: 'Page bookmarked',
+              child: _ReaderBookmarkGlyph(
+                filled: true,
+                color: color,
+                size: _kReaderPageBookmarkIndicatorSize,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ReaderTopChromeDriver extends StatelessWidget {
   const _ReaderTopChromeDriver();
 
@@ -1034,12 +1232,14 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
   const _ReaderBottomChromeDriver({
     required this.onTocPressed,
     required this.onFontPressed,
+    required this.onBookmarkPressed,
     required this.onSearchPressed,
     required this.onSeekFraction,
   });
 
   final VoidCallback onTocPressed;
   final VoidCallback onFontPressed;
+  final VoidCallback onBookmarkPressed;
   final VoidCallback onSearchPressed;
 
   /// Forwarded to the slider's drag-end handler. Skips the bloc entirely —
@@ -1067,6 +1267,9 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
     final chapterTotalPages = context.select<ReaderBloc, int?>(
       (b) => b.state.chapterTotalPages,
     );
+    final currentPageBookmarked = context.select<ReaderBloc, bool>(
+      (b) => b.state.currentPageBookmarked,
+    );
     final format = context.select<ReaderBloc, BookFormat?>(
       (b) => b.state.book?.format,
     );
@@ -1085,6 +1288,7 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
       accentColor: colors.primary,
       dividerColor: colors.outlineVariant,
       foregroundColor: colors.onSurface,
+      bookmarkActive: currentPageBookmarked,
       showTocAction: actions.contains(ReaderChromeAction.contents),
       showFontAction: actions.contains(ReaderChromeAction.textAppearance),
       showBookmarkAction: actions.contains(ReaderChromeAction.bookmark),
@@ -1092,7 +1296,7 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
       onBack: () => Navigator.of(context).maybePop(),
       onTocPressed: onTocPressed,
       onFontPressed: onFontPressed,
-      onBookmarkPressed: null,
+      onBookmarkPressed: onBookmarkPressed,
       onSearchPressed: onSearchPressed,
       onSeekFraction: onSeekFraction,
     );
@@ -1116,6 +1320,7 @@ class _ReaderBottomChrome extends StatefulWidget {
     required this.accentColor,
     required this.dividerColor,
     required this.foregroundColor,
+    required this.bookmarkActive,
     required this.showTocAction,
     required this.showFontAction,
     required this.showBookmarkAction,
@@ -1139,6 +1344,7 @@ class _ReaderBottomChrome extends StatefulWidget {
   final Color accentColor;
   final Color dividerColor;
   final Color foregroundColor;
+  final bool bookmarkActive;
   final bool showTocAction;
   final bool showFontAction;
   final bool showBookmarkAction;
@@ -1384,10 +1590,11 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
 
     if (widget.showBookmarkAction) {
       addButton(
-        _ReaderChromeIconButton(
-          icon: AppIcons.bookmark,
-          tooltip: 'Bookmark',
+        _ReaderBookmarkIconButton(
+          active: widget.bookmarkActive,
+          tooltip: widget.bookmarkActive ? 'Remove bookmark' : 'Bookmark',
           foregroundColor: widget.foregroundColor,
+          activeColor: widget.accentColor,
           onPressed: widget.onBookmarkPressed,
         ),
       );
@@ -1413,26 +1620,33 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
     required this.visible,
     required this.onClose,
     required this.onItemSelected,
+    required this.onBookmarkSelected,
   });
 
   final bool visible;
   final VoidCallback onClose;
   final ValueChanged<ReaderTocItem> onItemSelected;
+  final ValueChanged<SourceBookmark> onBookmarkSelected;
 
   @override
   Widget build(BuildContext context) {
     final tocItems = context.select<ReaderBloc, List<ReaderTocItem>>(
       (b) => b.state.tocItems,
     );
+    final bookmarks = context.select<ReaderBloc, List<SourceBookmark>>(
+      (b) => b.state.bookmarks,
+    );
     final colors = context.colors;
 
     return _ReaderTocDrawer(
       visible: visible,
       tocItems: tocItems,
+      bookmarks: bookmarks,
       panelColor: colors.surface,
       dividerColor: colors.outlineVariant,
       onClose: onClose,
       onItemSelected: onItemSelected,
+      onBookmarkSelected: onBookmarkSelected,
     );
   }
 }
@@ -1441,18 +1655,22 @@ class _ReaderTocDrawer extends StatelessWidget {
   const _ReaderTocDrawer({
     required this.visible,
     required this.tocItems,
+    required this.bookmarks,
     required this.panelColor,
     required this.dividerColor,
     required this.onClose,
     required this.onItemSelected,
+    required this.onBookmarkSelected,
   });
 
   final bool visible;
   final List<ReaderTocItem> tocItems;
+  final List<SourceBookmark> bookmarks;
   final Color panelColor;
   final Color dividerColor;
   final VoidCallback onClose;
   final ValueChanged<ReaderTocItem> onItemSelected;
+  final ValueChanged<SourceBookmark> onBookmarkSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -1470,8 +1688,10 @@ class _ReaderTocDrawer extends StatelessWidget {
               bottom: false,
               child: _ReaderTocDrawerContent(
                 tocItems: tocItems,
+                bookmarks: bookmarks,
                 onClose: onClose,
                 onItemSelected: onItemSelected,
+                onBookmarkSelected: onBookmarkSelected,
               ),
             ),
           ),
@@ -1484,13 +1704,17 @@ class _ReaderTocDrawer extends StatelessWidget {
 class _ReaderTocDrawerContent extends StatefulWidget {
   const _ReaderTocDrawerContent({
     required this.tocItems,
+    required this.bookmarks,
     required this.onClose,
     required this.onItemSelected,
+    required this.onBookmarkSelected,
   });
 
   final List<ReaderTocItem> tocItems;
+  final List<SourceBookmark> bookmarks;
   final VoidCallback onClose;
   final ValueChanged<ReaderTocItem> onItemSelected;
+  final ValueChanged<SourceBookmark> onBookmarkSelected;
 
   @override
   State<_ReaderTocDrawerContent> createState() =>
@@ -1571,9 +1795,11 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
                 _ReaderBookmarksTab(
                   controller: _bookmarksSearchController,
                   query: _bookmarksQuery,
+                  bookmarks: widget.bookmarks,
                   onQueryChanged: (value) {
                     setState(() => _bookmarksQuery = value);
                   },
+                  onBookmarkSelected: widget.onBookmarkSelected,
                 ),
               ],
             ),
@@ -1688,15 +1914,22 @@ class _ReaderBookmarksTab extends StatelessWidget {
   const _ReaderBookmarksTab({
     required this.controller,
     required this.query,
+    required this.bookmarks,
     required this.onQueryChanged,
+    required this.onBookmarkSelected,
   });
 
   final TextEditingController controller;
   final String query;
+  final List<SourceBookmark> bookmarks;
   final ValueChanged<String> onQueryChanged;
+  final ValueChanged<SourceBookmark> onBookmarkSelected;
 
   @override
   Widget build(BuildContext context) {
+    final listBottomPadding = _readerDrawerListBottomPadding(context);
+    final filteredBookmarks = filterReaderBookmarks(bookmarks, query);
+
     return Column(
       children: [
         Padding(
@@ -1708,13 +1941,81 @@ class _ReaderBookmarksTab extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: _ReaderDrawerEmptyState(
-            message: query.trim().isEmpty
-                ? 'Bookmarks are not available yet'
-                : 'No matching bookmarks',
+          child: _ReaderDrawerContentFrame(
+            child: filteredBookmarks.isEmpty
+                ? _ReaderDrawerEmptyState(
+                    message: bookmarks.isEmpty
+                        ? 'No bookmarks yet'
+                        : 'No matching bookmarks',
+                  )
+                : ScrollEdgeFadeStack(
+                    child: ListView.builder(
+                      padding: EdgeInsets.only(bottom: listBottomPadding),
+                      itemCount: filteredBookmarks.length,
+                      itemBuilder: (context, index) {
+                        final bookmark = filteredBookmarks[index];
+                        return _ReaderBookmarkListTile(
+                          bookmark: bookmark,
+                          onTap: () => onBookmarkSelected(bookmark),
+                        );
+                      },
+                    ),
+                  ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ReaderBookmarkListTile extends StatelessWidget {
+  const _ReaderBookmarkListTile({
+    required this.bookmark,
+    required this.onTap,
+  });
+
+  final SourceBookmark bookmark;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final chapterTitle = bookmark.chapterTitle;
+    final content = bookmark.content.trim();
+    final percentage = (bookmark.progress * 100).clamp(0, 100).round();
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xxs,
+      ),
+      minVerticalPadding: AppSpacing.xs,
+      leading: Icon(
+        AppIcons.bookmark,
+        size: AppIconSize.sm,
+        color: colors.primary,
+      ),
+      title: Text(
+        content.isEmpty ? 'Bookmarked page' : content,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: context.text.bodyMedium.copyWith(color: colors.onSurface),
+      ),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.xxs),
+        child: Text(
+          [
+            if (chapterTitle != null && chapterTitle.isNotEmpty) chapterTitle,
+            '$percentage%',
+          ].join(' · '),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: context.text.bodySmall.copyWith(
+            color: colors.onSurfaceVariant,
+          ),
+        ),
+      ),
+      onTap: onTap,
     );
   }
 }
@@ -2378,6 +2679,8 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
   /// non-highlights rebuild.
   List<Highlight>? _lastHighlightsRef;
   List<ReaderHighlight>? _cachedReaderHighlights;
+  List<SourceBookmark>? _lastBookmarksRef;
+  List<ReaderBookmark>? _cachedReaderBookmarks;
 
   List<ReaderHighlight> _readerHighlightsFor(List<Highlight> source) {
     final cached = _cachedReaderHighlights;
@@ -2388,6 +2691,23 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     return _cachedReaderHighlights = [
       for (final h in source)
         ReaderHighlight(id: h.id, text: h.text, cfiRange: h.cfiRange),
+    ];
+  }
+
+  List<ReaderBookmark> _readerBookmarksFor(List<SourceBookmark> source) {
+    final cached = _cachedReaderBookmarks;
+    if (cached != null && identical(source, _lastBookmarksRef)) {
+      return cached;
+    }
+    _lastBookmarksRef = source;
+    return _cachedReaderBookmarks = [
+      for (final bookmark in source)
+        ReaderBookmark(
+          id: bookmark.id,
+          cfi: bookmark.cfi,
+          progress: bookmark.progress,
+          content: bookmark.content,
+        ),
     ];
   }
 
@@ -2423,8 +2743,12 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     final highlightsState = context.select<ReaderBloc, List<Highlight>>(
       (b) => b.state.highlights,
     );
+    final bookmarksState = context.select<ReaderBloc, List<SourceBookmark>>(
+      (b) => b.state.bookmarks,
+    );
     final state = bloc.state;
     final highlights = _readerHighlightsFor(highlightsState);
+    final bookmarks = _readerBookmarksFor(bookmarksState);
 
     void onTapped(double x, double _) {
       switch (readerTapActionFor(
@@ -2484,6 +2808,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         hyphenate: layout.hyphenate,
         fontColor: colorToHex(widget.readerTheme.primaryTextColor),
         backgroundColor: colorToHex(widget.readerTheme.backgroundColor),
+        accentColor: colorToHex(context.colors.primary),
         customCSS: customCSS,
         customCSSEnabled: true,
         overrideFont: appearance.overrideFont,
@@ -2499,6 +2824,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         maxColumnCount: 1,
       ),
       highlights: highlights,
+      bookmarks: bookmarks,
       onReady: () {
         if (mounted && !_foliateReady) {
           setState(() => _foliateReady = true);
@@ -2516,12 +2842,24 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
             chapterTotalPages: position.chapterTotalPages,
             sizeTotal: position.sizeTotal,
             atEnd: position.atEnd,
+            currentPageBookmarked: position.bookmarkExists,
+            currentPageBookmarkCfi: position.bookmarkCfi,
           ),
         );
         widget.onPositionChanged?.call(position);
       },
       onTocChanged: (items) {
         bloc.add(ReaderTocUpdated(items: items));
+      },
+      onBookmarkChanged: (change) {
+        bloc.add(
+          ReaderBookmarkChanged(
+            remove: change.remove,
+            cfi: change.cfi,
+            content: change.content,
+            progress: change.progress,
+          ),
+        );
       },
       onTextSelected: (selection) {
         uiCubit.hideChrome();

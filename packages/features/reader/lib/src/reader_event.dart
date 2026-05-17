@@ -37,6 +37,8 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
     this.chapterTotalPages,
     this.sizeTotal,
     this.atEnd = false,
+    this.currentPageBookmarked = false,
+    this.currentPageBookmarkCfi,
   });
 
   final String cfi;
@@ -57,6 +59,8 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
   /// for the full rationale.
   final int? sizeTotal;
   final bool atEnd;
+  final bool currentPageBookmarked;
+  final String? currentPageBookmarkCfi;
 
   @override
   List<Object?> get props => [
@@ -69,6 +73,8 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
     chapterTotalPages,
     sizeTotal,
     atEnd,
+    currentPageBookmarked,
+    currentPageBookmarkCfi,
   ];
 }
 
@@ -86,4 +92,22 @@ final class ReaderTocUpdated extends ReaderEvent {
 
   @override
   List<Object?> get props => [items];
+}
+
+/// foliate-js requested adding/removing a bookmark at the current page.
+final class ReaderBookmarkChanged extends ReaderEvent {
+  const ReaderBookmarkChanged({
+    required this.remove,
+    required this.cfi,
+    required this.content,
+    required this.progress,
+  });
+
+  final bool remove;
+  final String cfi;
+  final String content;
+  final double progress;
+
+  @override
+  List<Object?> get props => [remove, cfi, content, progress];
 }

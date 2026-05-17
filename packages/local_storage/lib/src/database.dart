@@ -52,12 +52,13 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) async {
       await migrator.createAll();
+      await _createBookmarksTable();
       await _createIndexes();
     },
     onUpgrade: (migrator, from, to) async {
@@ -358,8 +359,31 @@ class AppDatabase extends _$AppDatabase {
           "DELETE FROM books_table WHERE format = 'txt'",
         );
       }
+      if (from < 15) {
+        await _createBookmarksTable();
+      }
     },
   );
+
+  Future<void> _createBookmarksTable() async {
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS bookmarks_table (
+        id TEXT NOT NULL PRIMARY KEY,
+        source_id TEXT NOT NULL,
+        source_type TEXT NOT NULL,
+        cfi TEXT NOT NULL,
+        content TEXT NOT NULL,
+        progress REAL NOT NULL DEFAULT 0.0,
+        chapter_title TEXT,
+        created_at TEXT NOT NULL,
+        UNIQUE(source_id, cfi)
+      )
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_bookmarks_source_progress
+      ON bookmarks_table (source_id, progress)
+    ''');
+  }
 
   Future<void> _createIndexes() async {
     // Composite indexes for the hot-path review_items queries:
