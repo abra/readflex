@@ -1284,7 +1284,7 @@ class Reader {
         cfi,
         ...selector,
         ...pageAnchor,
-        content: this.#bookmarkContentFromRange(anchorRange),
+        content: this.#bookmarkContentFromVisibleRange(visibleRange),
       }
     } catch (_) {
       return null
@@ -1591,10 +1591,8 @@ class Reader {
     return best
   }
 
-  #bookmarkContentFromRange(range) {
-    const word = range.toString().trim()
-    const context = range.startContainer?.parentElement?.textContent?.trim()
-    const content = context || word
+  #bookmarkContentFromVisibleRange(range) {
+    const content = this.#normalizeBookmarkText(range.toString())
     return content.length > 200 ? content.slice(0, 200) + '...' : content
   }
 

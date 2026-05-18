@@ -162,6 +162,22 @@ void main() {
       expect(webViewDart, contains('window.refreshBookmarkState'));
     });
 
+    test('bookmark drawer text comes from the visible page range', () {
+      final bookJs = File(
+        'assets/foliate-js/src/book.js',
+      ).readAsStringSync();
+
+      expect(
+        bookJs,
+        contains('content: this.#bookmarkContentFromVisibleRange(visibleRange)'),
+      );
+      expect(bookJs, contains('#bookmarkContentFromVisibleRange(range)'));
+      expect(
+        bookJs,
+        isNot(contains('parentElement?.textContent')),
+      );
+    });
+
     test('keeps default search off Intl Segmenter', () {
       final searchJs = File(
         'assets/foliate-js/src/search.js',
