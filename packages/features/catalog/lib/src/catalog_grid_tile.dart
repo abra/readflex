@@ -119,7 +119,7 @@ class _GridTileShell extends StatelessWidget {
                 Positioned.fill(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      borderRadius: BorderRadius.circular(appSourceCoverRadius),
                       border: Border.all(color: colors.primary, width: 3),
                       color: colors.primary.withValues(alpha: 0.15),
                     ),
