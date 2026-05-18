@@ -14,6 +14,9 @@ import 'catalog_layout_cubit.dart';
 import 'catalog_selection_cubit.dart';
 import 'confirm_book_deletion_sheet.dart';
 
+const _sourceRouteReturnRefreshDelay = Duration(milliseconds: 320);
+const _sourceRouteReturnScrollDuration = Duration(milliseconds: 280);
+
 /// Entry point for the Library tab.
 ///
 /// Pure composition: creates [CatalogBloc] + [CatalogLayoutCubit] +
@@ -95,10 +98,12 @@ class _CatalogViewState extends State<_CatalogView> {
   /// any future build-time read of this field will now see fresh
   /// values via the rebuild cycle.
   bool _addInFlight = false;
+  final _scrollController = ScrollController();
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -123,7 +128,19 @@ class _CatalogViewState extends State<_CatalogView> {
       return;
     }
     await widget.onBookPressed(book);
+    // `Navigator.push` completes as soon as the details route starts popping,
+    // before the reverse Hero flight finishes. Refreshing immediately can move
+    // the opened item to the top and destroy the Hero endpoint mid-flight.
+    await Future<void>.delayed(_sourceRouteReturnRefreshDelay);
     if (!context.mounted) return;
+    if (_scrollController.hasClients && _scrollController.offset > 0) {
+      await _scrollController.animateTo(
+        0,
+        duration: _sourceRouteReturnScrollDuration,
+        curve: Curves.easeOutCubic,
+      );
+      if (!context.mounted) return;
+    }
     context.read<CatalogBloc>().add(const CatalogRefreshRequested());
   }
 
@@ -256,6 +273,7 @@ class _CatalogViewState extends State<_CatalogView> {
                               child: CatalogBody(
                                 state: state,
                                 selection: selection,
+                                scrollController: _scrollController,
                                 onBookPressed: (book) =>
                                     _handleBookTap(context, book),
                                 onBookLongPressed: (book) =>
@@ -263,7 +281,9 @@ class _CatalogViewState extends State<_CatalogView> {
                                 onConfirmSwipeDelete: (book) =>
                                     _confirmAndDispatchSwipe(context, book),
                                 onRefresh: () async {
-                                  bloc.add(const CatalogRefreshRequested());
+                                  bloc.add(
+                                    const CatalogRefreshRequested(),
+                                  );
                                 },
                               ),
                             ),

@@ -196,4 +196,89 @@ void main() {
     );
     expect(settledFab.onPressed, isNotNull);
   });
+
+  testWidgets('refreshes and resorts after source details return delay', (
+    tester,
+  ) async {
+    final newest = Book(
+      id: 'b-newest',
+      title: 'Newest',
+      author: 'Author',
+      filePath: '/books/newest.epub',
+      format: BookFormat.epub,
+      addedAt: DateTime(2026, 1, 4),
+    );
+    final second = Book(
+      id: 'b-second',
+      title: 'Second',
+      author: 'Author',
+      filePath: '/books/second.epub',
+      format: BookFormat.epub,
+      addedAt: DateTime(2026, 1, 3),
+    );
+    final target = Book(
+      id: 'b-target',
+      title: 'Target',
+      author: 'Author',
+      filePath: '/books/target.epub',
+      format: BookFormat.epub,
+      addedAt: DateTime(2026, 1),
+    );
+
+    bookRepository.seedBooks([newest, second, target]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: CatalogScreen(
+          bookRepository: bookRepository,
+          preferencesService: preferencesService,
+          onBookPressed: (book) async {
+            expect(book.id, target.id);
+            bookRepository.seedBooks([
+              target.copyWith(lastOpenedAt: DateTime(2026, 1, 5)),
+              newest,
+              second,
+            ]);
+          },
+          onAddPressed: () async {},
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final targetFinder = find.text('Target');
+    final newestFinder = find.text('Newest');
+    expect(bookRepository.getBooksCallCount, 1);
+    expect(
+      tester.getTopLeft(targetFinder).dx,
+      greaterThan(tester.getTopLeft(newestFinder).dx),
+    );
+
+    await tester.tap(targetFinder);
+    await tester.pump();
+
+    expect(
+      bookRepository.getBooksCallCount,
+      1,
+      reason: 'refreshing immediately would move the reverse Hero endpoint',
+    );
+    expect(
+      tester.getTopLeft(targetFinder).dx,
+      greaterThan(tester.getTopLeft(newestFinder).dx),
+    );
+
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(bookRepository.getBooksCallCount, 1);
+
+    await tester.pump(const Duration(milliseconds: 25));
+    await tester.pump();
+
+    expect(bookRepository.getBooksCallCount, 2);
+    expect(tester.getTopLeft(targetFinder).dx, lessThan(100));
+    expect(
+      tester.getTopLeft(targetFinder).dy,
+      tester.getTopLeft(newestFinder).dy,
+    );
+  });
 }

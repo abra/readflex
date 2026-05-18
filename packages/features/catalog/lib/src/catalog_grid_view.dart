@@ -10,6 +10,7 @@ class CatalogGridView extends StatelessWidget {
   const CatalogGridView({
     required this.books,
     required this.selection,
+    required this.scrollController,
     required this.onBookPressed,
     required this.onBookLongPressed,
     super.key,
@@ -17,12 +18,14 @@ class CatalogGridView extends StatelessWidget {
 
   final List<Book> books;
   final CatalogSelectionState selection;
+  final ScrollController scrollController;
   final void Function(Book book) onBookPressed;
   final void Function(Book book) onBookLongPressed;
 
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
+      controller: scrollController,
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         0,

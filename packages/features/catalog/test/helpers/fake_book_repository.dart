@@ -7,6 +7,7 @@ class FakeBookRepository implements BookRepository {
 
   final List<Book> _books = [];
   bool shouldThrow = false;
+  int getBooksCallCount = 0;
 
   /// Specific ids whose `deleteBook` throws a [StorageException]. Used
   /// to simulate partial-failure bulk deletes without affecting other
@@ -19,6 +20,7 @@ class FakeBookRepository implements BookRepository {
 
   @override
   Future<List<Book>> getBooks({int? limit, int? offset}) async {
+    getBooksCallCount++;
     if (shouldThrow) throw StorageException(cause: 'fake error');
     return List.unmodifiable(_books);
   }

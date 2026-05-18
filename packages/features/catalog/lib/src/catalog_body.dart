@@ -24,6 +24,7 @@ class CatalogBody extends StatelessWidget {
   const CatalogBody({
     required this.state,
     required this.selection,
+    required this.scrollController,
     required this.onBookPressed,
     required this.onBookLongPressed,
     required this.onConfirmSwipeDelete,
@@ -33,6 +34,7 @@ class CatalogBody extends StatelessWidget {
 
   final CatalogState state;
   final CatalogSelectionState selection;
+  final ScrollController scrollController;
   final void Function(Book book) onBookPressed;
   final void Function(Book book) onBookLongPressed;
   final Future<bool> Function(Book book) onConfirmSwipeDelete;
@@ -75,6 +77,7 @@ class CatalogBody extends StatelessWidget {
             CatalogLayoutMode.list => CatalogListView(
               books: visibleItems,
               selection: selection,
+              scrollController: scrollController,
               onBookPressed: onBookPressed,
               onBookLongPressed: onBookLongPressed,
               onConfirmSwipeDelete: onConfirmSwipeDelete,
@@ -82,6 +85,7 @@ class CatalogBody extends StatelessWidget {
             CatalogLayoutMode.grid => CatalogGridView(
               books: visibleItems,
               selection: selection,
+              scrollController: scrollController,
               onBookPressed: onBookPressed,
               onBookLongPressed: onBookLongPressed,
             ),

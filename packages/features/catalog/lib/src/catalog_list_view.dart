@@ -22,6 +22,7 @@ class CatalogListView extends StatelessWidget {
   const CatalogListView({
     required this.books,
     required this.selection,
+    required this.scrollController,
     required this.onBookPressed,
     required this.onBookLongPressed,
     required this.onConfirmSwipeDelete,
@@ -30,6 +31,7 @@ class CatalogListView extends StatelessWidget {
 
   final List<Book> books;
   final CatalogSelectionState selection;
+  final ScrollController scrollController;
   final void Function(Book book) onBookPressed;
   final void Function(Book book) onBookLongPressed;
   final Future<bool> Function(Book book) onConfirmSwipeDelete;
@@ -37,6 +39,7 @@ class CatalogListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
+      controller: scrollController,
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         0,
