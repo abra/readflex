@@ -430,24 +430,7 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   void _registerHandlers(InAppWebViewController controller) {
     controller.addJavaScriptHandler(
       handlerName: 'onLoadEnd',
-      callback: (_) {
-        _isReady = true;
-        // TEMP — clear the crash-recovery flag once the post-crash
-        // reload finishes. Remove with the rest of the workaround.
-        if (_recoveringFromCrash) {
-          final progress = widget.initialProgress;
-          final recoveredAt = progress != null && progress > 0
-              ? ' at progress=${progress.toStringAsFixed(4)}'
-              : ' at chapter 1';
-          debugPrint(
-            '[reader-recovery] post-crash reload completed; book is open'
-            '$recoveredAt (saved deep CFI was discarded)',
-          );
-          _recoveringFromCrash = false;
-        }
-        _renderAnnotations();
-        widget.onReady?.call();
-      },
+      callback: (_) => _markReady('onLoadEnd'),
     );
 
     // Capture uncaught JS errors and unhandled promise rejections from
@@ -484,6 +467,7 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
         if (data == null) return;
         final position = BookPosition.fromMap(data);
         widget.onPositionChanged?.call(position);
+        _markReady('onRelocated');
       },
     );
 
@@ -541,6 +525,31 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       onTextDeselected: widget.onTextDeselected,
       onTapped: widget.onTapped,
     );
+  }
+
+  void _markReady(String source) {
+    final wasReady = _isReady;
+    _isReady = true;
+
+    // TEMP — clear the crash-recovery flag once the post-crash reload produces
+    // either the normal load callback or a first relocation event. Some heavy
+    // formats can relocate before `onLoadEnd`; at that point the page is usable
+    // and keeping the loading scrim would be worse than showing the content.
+    if (_recoveringFromCrash) {
+      final progress = widget.initialProgress;
+      final recoveredAt = progress != null && progress > 0
+          ? ' at progress=${progress.toStringAsFixed(4)}'
+          : ' at chapter 1';
+      debugPrint(
+        '[reader-recovery] post-crash reload completed via $source; book is open'
+        '$recoveredAt (saved deep CFI was discarded)',
+      );
+      _recoveringFromCrash = false;
+    }
+
+    if (wasReady) return;
+    _renderAnnotations();
+    widget.onReady?.call();
   }
 
   void _renderAnnotations() {
