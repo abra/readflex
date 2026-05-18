@@ -1,6 +1,7 @@
 # screen_control_service
 
-Screen lifecycle controls for reader surfaces.
+Screen lifecycle controls for reader surfaces: keep-awake and temporary
+application brightness.
 
 Production uses `wakelock_plus` to keep the screen awake while bare reading
 content is visible. The reader owns the lifetime: it enables keep-awake when no
@@ -15,6 +16,6 @@ application brightness when the route closes or the app goes into background.
 
 | Symbol                         | Type           | Purpose                         |
 |--------------------------------|----------------|---------------------------------|
-| `ScreenControlService`         | abstract class | Keep-awake contract             |
-| `WakelockScreenControlService` | concrete       | Production screen-control wrapper |
+| `ScreenControlService`         | abstract class | Keep-awake + app brightness contract |
+| `WakelockScreenControlService` | concrete       | Production wrapper over wakelock + brightness |
 | `NoopScreenControlService`     | concrete       | Test/preview no-op implementation |

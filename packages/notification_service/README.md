@@ -1,17 +1,18 @@
 # notification_service
 
-Local push notifications for FSRS review reminders. Scheduled based on
-`fsrsRepository.nextReviewAt`; users can toggle reminders in Profile.
+Local push notification contract for future FSRS review reminders. The app
+currently wires `NoopNotificationService`; no platform notification backend or
+Profile toggle is active yet.
 
-Production implementation wraps `flutter_local_notifications`; development
-uses `NoopNotificationService` (no-op).
+The future production implementation should wrap `flutter_local_notifications`
+and schedule reminders from persisted FSRS `nextReviewAt` values.
 
 ## Public API
 
 | Symbol                    | Type           | Purpose                                |
 |---------------------------|----------------|----------------------------------------|
 | `NotificationService`     | abstract class | Schedule / cancel local notifications  |
-| `NoopNotificationService` | concrete       | Stub — does nothing, safe for dev      |
+| `NoopNotificationService` | concrete       | Current no-op implementation           |
 
 ### Methods
 
@@ -23,7 +24,7 @@ The `id` is the caller's responsibility (typically derived from the
 reviewable item's id) so the same notification can be cancelled or rescheduled
 deterministically.
 
-## Usage
+## Intended usage
 
 ```dart
 final notifications = context.dependencies.notificationService;
@@ -43,7 +44,6 @@ await notifications.cancelAll();
 ## Where it fits
 
 Registered on `DependenciesContainer.notificationService` in
-`lib/app/composition.dart`. Typically invoked from the FSRS repository /
-practice feature after a review rating is recorded. The real implementation
-will wrap `flutter_local_notifications`, request platform permissions, and
-honor the user's Profile toggle.
+`lib/app/composition.dart`, currently as `NoopNotificationService`. The real
+implementation will wrap `flutter_local_notifications`, request platform
+permissions, and honor a future user preference before scheduling reminders.

@@ -20,12 +20,13 @@ Consequences:
 - The FSRS v6 algorithm is implemented once in `review_scheduler` and
   injected here, so tuning parameters is a one-line change.
 
-## Implicit tracking
+## Tracking lifecycle
 
-`recordReview()` implicitly creates a `ReviewItem` on the first review.
-Callers don't need to call `createReviewItem` when saving a highlight or
-dictionary word — the item enters FSRS tracking only once the user actually
-reviews it. Items that are never reviewed take zero rows in the review table.
+Features normally call `createReviewItem` when a flashcard, highlight, or
+dictionary entry is saved so new items can appear in the due queue immediately.
+`recordReview()` still implicitly creates the row if it is missing; that keeps
+review flows resilient when old data, test fixtures, or future import paths
+encounter content that was not pre-registered.
 
 ## Public API
 

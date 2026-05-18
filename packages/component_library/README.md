@@ -37,7 +37,7 @@ src/theme/
   app_text_theme.dart           # TextTheme construction helpers
   app_typography.dart           # AppTypography: textTheme, fontFamilySans/Serif, serif()/sans()
   book_layout.dart              # Reader book layout presets
-  reader_appearance.dart        # Reader-specific theme presets (Paper, Warm, Mist, Night)
+  reader_appearance.dart        # Reader-specific theme presets (Paper, Warm, Graphite, Night)
 ```
 
 ### Usage in UI

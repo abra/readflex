@@ -1,5 +1,5 @@
 name: notification_service
-description: "Local push notifications for review reminders."
+description: "Notification contract for review reminders."
 publish_to: none
 version: 0.1.0
 

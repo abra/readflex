@@ -37,7 +37,7 @@ if (!subscription.isPremium) {
 ## Where it fits
 
 Registered on `DependenciesContainer.subscriptionService` in
-`lib/app/composition.dart`. Used by features that gate premium functionality
-(AI-enriched translation, unlimited flashcards, etc.) and by the backend AI
-service for server-side entitlement checks. Swap the stub for a real
-implementation without touching callers — they depend on the interface only.
+`lib/app/composition.dart`. Currently consumed by Profile and the paywall
+sheet; future premium feature gates should depend on this interface instead of
+checking purchase state directly. Swap the stub for a real implementation
+without touching callers — they depend on the interface only.

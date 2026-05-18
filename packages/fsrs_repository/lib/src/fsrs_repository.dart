@@ -154,12 +154,10 @@ class FsrsRepository {
 
   /// Records a review for an item. Returns the updated FSRS state.
   ///
-  /// Implicitly creates a review tracking row on the first review — callers
-  /// don't need to call [createReviewItem] first. This keeps the review flow
-  /// decoupled from entity creation: a highlight or dictionary word only
-  /// enters FSRS tracking the moment the user actually reviews it, not the
-  /// moment it's saved. As a side effect, items that are never reviewed
-  /// don't take up space in review_items_table.
+  /// Creates a review tracking row if it is missing. Normal feature flows call
+  /// [createReviewItem] when content is saved so it enters the due queue
+  /// immediately; this fallback protects old data, tests, and future import
+  /// paths that may not pre-register reviewable items.
   Future<FsrsCardData> recordReview({
     required String itemId,
     required ReviewableType itemType,

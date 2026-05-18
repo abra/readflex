@@ -1,4 +1,4 @@
-/// Controls device screen-awake behavior.
+/// Controls reader-specific screen-awake behavior and app brightness.
 abstract class ScreenControlService {
   /// Prevents the screen from sleeping.
   Future<void> keepAwake();

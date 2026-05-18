@@ -3,7 +3,8 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'screen_control_service.dart';
 
-/// Production [ScreenControlService] backed by `wakelock_plus`.
+/// Production [ScreenControlService] backed by `wakelock_plus` and
+/// `screen_brightness`.
 class WakelockScreenControlService implements ScreenControlService {
   const WakelockScreenControlService();
 

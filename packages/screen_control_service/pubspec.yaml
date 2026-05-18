@@ -1,5 +1,5 @@
 name: screen_control_service
-description: "Screen awake controls for active reading sessions."
+description: "Screen awake and brightness controls for active reading sessions."
 publish_to: none
 version: 0.1.0
 

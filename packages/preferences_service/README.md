@@ -1,9 +1,9 @@
 # preferences_service
 
-User preferences: theme mode, locale, reader appearance, catalog layout, and
-onboarding / setup flags. Backed by `shared_preferences` (JSON blob under a
-single key) and exposed to the UI via a reactive stream and an
-`InheritedModel` scope.
+User preferences: theme mode, locale, catalog layout, global reader appearance,
+per-source reader appearance overrides, reader search history, and onboarding /
+setup flags. Backed by `shared_preferences` (JSON blob under a single key) and
+exposed to the UI via a reactive stream and an `InheritedModel` scope.
 
 This is **not** where auth tokens live — those go through `auth_service` /
 `flutter_secure_storage`.
@@ -13,7 +13,9 @@ This is **not** where auth tokens live — those go through `auth_service` /
 | Symbol                          | Type             | Purpose                                                            |
 |---------------------------------|------------------|--------------------------------------------------------------------|
 | `Preferences`                   | data class       | Immutable snapshot of all preferences, with `copyWith`             |
-| `ReaderAppearancePreferences`   | data class       | Reader-only view over `Preferences` (theme, font, scale, etc.)    |
+| `ReaderAppearancePreferences`   | data class       | Global/effective reader appearance slice (theme, font, scale, etc.) |
+| `ReaderAppearanceOverride`      | data class       | Optional per-source reader appearance override                    |
+| `ReaderTextAlignment`           | enum             | Reader text alignment (`start`, `end`, `justify`)                 |
 | `PreferencesService`            | concrete         | Loads, streams, and persists `Preferences`                         |
 | `PreferencesStorage`            | concrete         | Thin `SharedPreferences` wrapper                                   |
 | `PreferencesRepository`         | concrete         | JSON (de)serialization + locale resolution                         |
@@ -32,11 +34,14 @@ This is **not** where auth tokens live — those go through `auth_service` /
 | `readerTextScale`          | `double`    | `1.0`       |
 | `readerLineHeight`         | `double`    | `1.55`      |
 | `readerSideMargin`         | `double`    | `6.0`       |
+| `readerTextAlignment`      | `ReaderTextAlignment` | `start` |
 | `readerInvertImagesInDark` | `bool`      | `false`     |
 | `readerOverrideFont`       | `bool`      | `true`      |
 | `readerOverrideColor`      | `bool`      | `true`      |
 | `readerUseBookLayout`      | `bool`      | `true`      |
 | `readerBrightnessOverride` | `double?`   | `null`      |
+| `readerSearchHistory`      | `List<String>` | `[]`     |
+| `readerAppearanceOverrides`| `Map<String, ReaderAppearanceOverride>` | `{}` |
 | `onboardingCompleted`      | `bool`      | `false`     |
 | `hasCompletedSetup`        | `bool`      | `false`     |
 
@@ -61,6 +66,12 @@ final prefs = PreferencesScope.of(context); // rebuild on any change
 
 // Update
 await service.update((p) => p.copyWith(themeMode: ThemeMode.dark));
+
+// Reader-specific override for one source/book.
+await service.setReaderAppearanceOverride(
+  sourceId,
+  const ReaderAppearanceOverride(fontId: 'ptSerif'),
+);
 ```
 
 `update()` is non-fatal on disk errors: in-memory state still updates and
@@ -72,4 +83,5 @@ restores the last successfully-persisted value.
 Registered on `DependenciesContainer.preferencesService` in
 `lib/app/composition.dart` and exposed via `PreferencesScope` in
 `RootContext`. `MaterialContext` reads `themeModeOf(context)` to drive
-`MaterialApp.themeMode`; the reader reads `readerAppearanceOf(context)`.
+`MaterialApp.themeMode`; Profile edits global reader defaults, while the
+reader applies per-source overrides through `ReaderAppearanceCubit`.
