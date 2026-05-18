@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 /// Alpha for the format badge background (dark overlay on cover art).
 const double _kBadgeBackgroundAlpha = 0.55;
+const double _kGridCoverInset = AppSpacing.xxs;
 
 /// Grid-mode tile for a [Book].
 ///
@@ -90,90 +91,95 @@ class _GridTileShell extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
       behavior: HitTestBehavior.opaque,
-      child: AnimatedScale(
-        // Subtle press-in cue when selected — same idea as iOS Photos
-        // multi-select: tile shrinks slightly so the unselected siblings
-        // visually "stay in place" when a checkmark appears.
-        scale: isSelected ? 0.92 : 1.0,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOut,
-        child: Hero(
-          tag: sourceCoverHeroTag(sourceId),
-          transitionOnUserGestures: true,
-          child: AppSourceCoverFrame(
-            cover: cover,
-            overlays: [
-              if (formatLabel != null)
-                Positioned(
-                  top: AppSpacing.xs,
-                  left: AppSpacing.xs,
-                  child: _FormatBadge(label: formatLabel!),
-                ),
-              if (isFinished)
-                const Positioned(
-                  top: AppSpacing.xs,
-                  right: AppSpacing.xs,
-                  child: _FinishedBadge(),
-                ),
-              if (isSelected)
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(appSourceCoverRadius),
-                      border: Border.all(color: colors.primary, width: 3),
-                      color: colors.primary.withValues(alpha: 0.15),
-                    ),
+      child: Padding(
+        padding: const EdgeInsets.all(_kGridCoverInset),
+        child: AnimatedScale(
+          // Subtle press-in cue when selected — same idea as iOS Photos
+          // multi-select: tile shrinks slightly so the unselected siblings
+          // visually "stay in place" when a checkmark appears.
+          scale: isSelected ? 0.92 : 1.0,
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOut,
+          child: Hero(
+            tag: sourceCoverHeroTag(sourceId),
+            transitionOnUserGestures: true,
+            child: AppSourceCoverFrame(
+              cover: cover,
+              overlays: [
+                if (formatLabel != null)
+                  Positioned(
+                    top: AppSpacing.xs,
+                    left: AppSpacing.xs,
+                    child: _FormatBadge(label: formatLabel!),
                   ),
-                ),
-              if (isSelected)
-                Positioned(
-                  top: AppSpacing.xs,
-                  right: AppSpacing.xs,
-                  child: _SelectionCheck(color: colors.primary),
-                ),
-              if (progress > 0 && !isFinished) ...[
-                const Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        stops: [0.0, 0.15],
-                        colors: [Color(0x4D1B1F30), Color(0x001B1F30)],
+                if (isFinished)
+                  const Positioned(
+                    top: AppSpacing.xs,
+                    right: AppSpacing.xs,
+                    child: _FinishedBadge(),
+                  ),
+                if (isSelected)
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(
+                          appSourceCoverRadius,
+                        ),
+                        border: Border.all(color: colors.primary, width: 3),
+                        color: colors.primary.withValues(alpha: 0.15),
                       ),
                     ),
                   ),
-                ),
-                Positioned(
-                  left: 6,
-                  right: 6,
-                  bottom: 4,
-                  child: LayoutBuilder(
-                    builder: (_, constraints) => ClipRRect(
-                      borderRadius: BorderRadius.circular(AppRadius.full),
-                      child: SizedBox(
-                        height: 3,
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                              child: ColoredBox(
-                                color: Colors.white.withValues(alpha: 0.35),
-                              ),
-                            ),
-                            Container(
-                              width:
-                                  constraints.maxWidth *
-                                  progress.clamp(0.0, 1.0),
-                              color: Colors.white.withValues(alpha: 0.9),
-                            ),
-                          ],
+                if (isSelected)
+                  Positioned(
+                    top: AppSpacing.xs,
+                    right: AppSpacing.xs,
+                    child: _SelectionCheck(color: colors.primary),
+                  ),
+                if (progress > 0 && !isFinished) ...[
+                  const Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          stops: [0.0, 0.15],
+                          colors: [Color(0x4D1B1F30), Color(0x001B1F30)],
                         ),
                       ),
                     ),
                   ),
-                ),
+                  Positioned(
+                    left: 6,
+                    right: 6,
+                    bottom: 4,
+                    child: LayoutBuilder(
+                      builder: (_, constraints) => ClipRRect(
+                        borderRadius: BorderRadius.circular(AppRadius.full),
+                        child: SizedBox(
+                          height: 3,
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                child: ColoredBox(
+                                  color: Colors.white.withValues(alpha: 0.35),
+                                ),
+                              ),
+                              Container(
+                                width:
+                                    constraints.maxWidth *
+                                    progress.clamp(0.0, 1.0),
+                                color: Colors.white.withValues(alpha: 0.9),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

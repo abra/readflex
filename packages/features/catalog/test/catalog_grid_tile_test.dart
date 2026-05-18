@@ -55,4 +55,33 @@ void main() {
       BorderRadius.circular(appSourceCoverRadius),
     );
   });
+
+  testWidgets('grid cover frame is symmetrically inset inside tap target', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 120,
+              height: 180,
+              child: BookLibraryGridTile(
+                book: _book,
+                onTap: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final tileRect = tester.getRect(find.byType(GestureDetector));
+    final coverFrameRect = tester.getRect(find.byType(AppSourceCoverFrame));
+    expect(coverFrameRect.left, tileRect.left + AppSpacing.xxs);
+    expect(coverFrameRect.top, tileRect.top + AppSpacing.xxs);
+    expect(coverFrameRect.right, tileRect.right - AppSpacing.xxs);
+    expect(coverFrameRect.bottom, tileRect.bottom - AppSpacing.xxs);
+  });
 }

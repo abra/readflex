@@ -22,9 +22,11 @@ class AppSourceCoverFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(appSourceCoverRadius);
+
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(appSourceCoverRadius),
+        borderRadius: radius,
         boxShadow: const [
           BoxShadow(
             color: Color(0x2E000000),
@@ -41,7 +43,7 @@ class AppSourceCoverFrame extends StatelessWidget {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(appSourceCoverRadius),
+        borderRadius: radius,
         child: Stack(
           fit: StackFit.expand,
           children: [
