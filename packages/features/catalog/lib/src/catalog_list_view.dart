@@ -7,10 +7,10 @@ import 'catalog_selection_cubit.dart';
 
 /// Vertically scrolling list of book rows.
 ///
-/// Each row is one tile; per-row bottom hairlines are drawn by the tile
-/// itself (see `showDivider`) so there's no trailing separator under the
-/// last row. Rows are wrapped in [Dismissible] so a single right-to-left
-/// swipe deletes one book — matched to the demo's iOS-mail style swipe.
+/// Each row is one tile; per-row top hairlines are drawn by the tile
+/// itself (see `showTopDivider`) so cover shadows cannot cover separators.
+/// Rows are wrapped in [Dismissible] so a single right-to-left swipe deletes
+/// one book — matched to the demo's iOS-mail style swipe.
 /// Swipe is suppressed while a multi-select is active to avoid two
 /// destructive paths competing for the same gesture.
 ///
@@ -55,11 +55,10 @@ class CatalogListView extends StatelessWidget {
       itemCount: books.length,
       itemBuilder: (context, index) {
         final book = books[index];
-        final showDivider = index < books.length - 1;
         final tile = BookLibraryListTile(
           book: book,
           isSelected: selection.contains(book.id),
-          showDivider: showDivider,
+          showTopDivider: index > 0,
           onTap: () => onBookPressed(book),
           onLongPress: () => onBookLongPressed(book),
         );

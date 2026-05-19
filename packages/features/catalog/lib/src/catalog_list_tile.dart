@@ -4,16 +4,20 @@ import 'package:flutter/material.dart';
 
 /// Alpha applied to muted metadata (secondary text, icons) in list rows.
 const double _kMutedAlpha = 0.55;
+const double _kListCoverWidth = 60;
+const double _kListCoverHeight = 90;
+const double _kCoverToTextGap = AppSpacing.md + AppSpacing.xxs;
+const double _kListRowHorizontalPadding = AppSpacing.xs;
 
 /// List-mode row for a [Book].
 ///
 /// Layout: 44×60 cover on the left, two-line text column on the right
-/// (title + author + a meta strip with the format + progress). A bottom
-/// hairline is drawn except on the last row (see [showDivider]).
+/// (title + author + a meta strip with the format + progress). A top
+/// hairline is drawn except on the first row (see [showTopDivider]).
 class BookLibraryListTile extends StatelessWidget {
   const BookLibraryListTile({
     required this.book,
-    required this.showDivider,
+    required this.showTopDivider,
     required this.onTap,
     this.onLongPress,
     this.isSelected = false,
@@ -21,7 +25,7 @@ class BookLibraryListTile extends StatelessWidget {
   });
 
   final Book book;
-  final bool showDivider;
+  final bool showTopDivider;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
   final bool isSelected;
@@ -51,7 +55,7 @@ class BookLibraryListTile extends StatelessWidget {
       ),
       title: book.title,
       subtitle: book.author,
-      showDivider: showDivider,
+      showTopDivider: showTopDivider,
       isSelected: isSelected,
       onTap: onTap,
       onLongPress: onLongPress,
@@ -93,14 +97,14 @@ class BookLibraryListTile extends StatelessWidget {
 ///
 /// Layout: up-to-3-line title on top, single combined meta strip
 /// underneath (subtitle prepended in front of the type-specific
-/// segments). Bottom hairline drawn for all rows except the last.
+/// segments). Top hairline drawn for all rows except the first.
 class _ListRowShell extends StatelessWidget {
   const _ListRowShell({
     required this.cover,
     required this.title,
     required this.subtitle,
     required this.metaBuilder,
-    required this.showDivider,
+    required this.showTopDivider,
     required this.onTap,
     this.onLongPress,
     this.isSelected = false,
@@ -111,7 +115,7 @@ class _ListRowShell extends StatelessWidget {
   final String? subtitle;
   final List<Widget> Function(BuildContext context, Color mutedColor)
   metaBuilder;
-  final bool showDivider;
+  final bool showTopDivider;
   final bool isSelected;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
@@ -128,13 +132,12 @@ class _ListRowShell extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Stack(
         children: [
           Container(
             padding: const EdgeInsets.symmetric(
               vertical: AppSpacing.md,
-              horizontal: AppSpacing.xs,
+              horizontal: _kListRowHorizontalPadding,
             ),
             decoration: BoxDecoration(
               color: isSelected ? colors.primary.withValues(alpha: 0.18) : null,
@@ -147,8 +150,8 @@ class _ListRowShell extends StatelessWidget {
                 // its own corners (Container.clipBehavior), so no outer
                 // ClipRRect needed.
                 SizedBox(
-                  width: 60,
-                  height: 90,
+                  width: _kListCoverWidth,
+                  height: _kListCoverHeight,
                   child: Stack(
                     children: [
                       Positioned.fill(child: cover),
@@ -177,7 +180,7 @@ class _ListRowShell extends StatelessWidget {
                 // Demo uses 14dp cover-to-text gap — sits between our
                 // md(12) and lg(16) tokens. `md + xxs` = 14 exactly and
                 // composes from real tokens, so we don't add a new one.
-                const SizedBox(width: AppSpacing.md + AppSpacing.xxs),
+                const SizedBox(width: _kCoverToTextGap),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,13 +220,20 @@ class _ListRowShell extends StatelessWidget {
               ],
             ),
           ),
-          if (showDivider)
-            // Flat 1-px hairline rendered as a sibling of the row,
-            // not as part of the row's BoxDecoration. A bottom
-            // BorderSide combined with the row's borderRadius would
-            // taper the line at both ends; a separate ColoredBox
-            // keeps the divider full-width with square ends.
-            Container(height: 1, color: context.appColors.divider),
+          if (showTopDivider)
+            // Paint the separator above this row's cover shadow. A bottom
+            // divider on the previous row can be covered by the next row's
+            // shadow because list children paint in order.
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              child: Container(
+                key: const ValueKey('catalogListRowTopDivider'),
+                height: 1,
+                color: _listDividerColor(context),
+              ),
+            ),
         ],
       ),
     );
@@ -265,6 +275,9 @@ class _MetaDot extends StatelessWidget {
 
 TextStyle _metaStyle(BuildContext context, Color color) =>
     context.text.sourceMetadata.copyWith(color: color);
+
+Color _listDividerColor(BuildContext context) =>
+    Color.lerp(context.appColors.divider, context.colors.onSurface, 0.12)!;
 
 /// Builds the green ` ✓ Done` kicker that replaces the progress segment
 /// when an item is fully read. Colour comes from the semantic
