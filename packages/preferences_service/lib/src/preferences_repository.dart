@@ -31,7 +31,8 @@ class PreferencesRepository {
   ///      handled by device-scale in the reader, not persisted user percent.
   ///   5: add readerBrightnessOverride for temporary reader brightness.
   ///   6: add readerTextAlignment for left/justified book text.
-  static const _currentSchemaVersion = 6;
+  ///   7: move reader brightness into per-source reader appearance overrides.
+  static const _currentSchemaVersion = 7;
 
   final PreferencesStorage _storage;
 
@@ -71,9 +72,6 @@ class PreferencesRepository {
         readerOverrideFont: map['readerOverrideFont'] as bool? ?? true,
         readerOverrideColor: map['readerOverrideColor'] as bool? ?? true,
         readerUseBookLayout: map['readerUseBookLayout'] as bool? ?? true,
-        readerBrightnessOverride: _readReaderBrightness(
-          map['readerBrightnessOverride'],
-        ),
         readerSearchHistory: _readStringList(map['readerSearchHistory']),
         readerAppearanceOverrides: _readReaderAppearanceOverrides(
           map['readerAppearanceOverrides'],
@@ -111,7 +109,6 @@ class PreferencesRepository {
       'readerOverrideFont': prefs.readerOverrideFont,
       'readerOverrideColor': prefs.readerOverrideColor,
       'readerUseBookLayout': prefs.readerUseBookLayout,
-      'readerBrightnessOverride': prefs.readerBrightnessOverride,
       'readerSearchHistory': prefs.readerSearchHistory,
       'readerAppearanceOverrides': _writeReaderAppearanceOverrides(
         prefs.readerAppearanceOverrides,
@@ -135,11 +132,6 @@ class PreferencesRepository {
   static List<String> _readStringList(Object? value) {
     if (value is! List) return const [];
     return value.whereType<String>().toList(growable: false);
-  }
-
-  static double? _readReaderBrightness(Object? value) {
-    if (value is! num) return null;
-    return value.toDouble().clamp(0.05, 1.0).toDouble();
   }
 
   static ReaderTextAlignment _readReaderTextAlignment(Object? value) {

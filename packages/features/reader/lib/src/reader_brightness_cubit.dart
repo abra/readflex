@@ -25,12 +25,15 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
   ReaderBrightnessCubit({
     required PreferencesService preferencesService,
     required ScreenControlService screenControlService,
+    required String sourceId,
   }) : _preferencesService = preferencesService,
        _screenControlService = screenControlService,
+       _sourceId = sourceId,
        super(
          ReaderBrightnessState(
-           brightnessOverride:
-               preferencesService.current.readerBrightnessOverride,
+           brightnessOverride: preferencesService.readerBrightnessOverrideFor(
+             sourceId,
+           ),
          ),
        ) {
     _prefsSub = _preferencesService.stream.listen(_onPreferencesChanged);
@@ -43,6 +46,7 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
 
   final PreferencesService _preferencesService;
   final ScreenControlService _screenControlService;
+  final String _sourceId;
   late final StreamSubscription<Preferences> _prefsSub;
   Timer? _commitTimer;
   double? _pendingBrightness;
@@ -80,9 +84,7 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
     if (!state.usesSystemBrightness) {
       emit(const ReaderBrightnessState(brightnessOverride: null));
     }
-    await _preferencesService.update(
-      (prefs) => prefs.copyWith(readerBrightnessOverride: null),
-    );
+    await _preferencesService.setReaderBrightnessOverride(_sourceId, null);
     await _syncPlatform();
   }
 
@@ -90,7 +92,7 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
     if (isClosed) return;
     if (prefs != _preferencesService.current) return;
     final next = ReaderBrightnessState(
-      brightnessOverride: prefs.readerBrightnessOverride,
+      brightnessOverride: prefs.readerBrightnessOverrideFor(_sourceId),
     );
     if (next == state) return;
     emit(next);
@@ -102,9 +104,7 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
     final value = _pendingBrightness;
     if (value == null) return;
     _pendingBrightness = null;
-    await _preferencesService.update(
-      (prefs) => prefs.copyWith(readerBrightnessOverride: value),
-    );
+    await _preferencesService.setReaderBrightnessOverride(_sourceId, value);
   }
 
   Future<void> _syncPlatform() {

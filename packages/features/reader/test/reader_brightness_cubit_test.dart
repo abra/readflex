@@ -6,6 +6,8 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 void main() {
+  const sourceId = 'source-1';
+  const otherSourceId = 'source-2';
   late PreferencesService preferencesService;
   late _FakeScreenControlService screenControlService;
 
@@ -18,10 +20,12 @@ void main() {
     screenControlService = _FakeScreenControlService();
   });
 
-  ReaderBrightnessCubit buildCubit() => ReaderBrightnessCubit(
-    preferencesService: preferencesService,
-    screenControlService: screenControlService,
-  );
+  ReaderBrightnessCubit buildCubit({String id = sourceId}) =>
+      ReaderBrightnessCubit(
+        preferencesService: preferencesService,
+        screenControlService: screenControlService,
+        sourceId: id,
+      );
 
   test('activate resets application brightness in system mode', () async {
     final cubit = buildCubit();
@@ -46,14 +50,17 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 250));
 
     expect(cubit.state.brightnessOverride, 0.6);
-    expect(preferencesService.current.readerBrightnessOverride, 0.6);
+    expect(preferencesService.readerBrightnessOverrideFor(sourceId), 0.6);
+    expect(
+      preferencesService.readerBrightnessOverrideFor(otherSourceId),
+      isNull,
+    );
     expect(screenControlService.calls, const ['resetBrightness', 'set:0.60']);
   });
 
   test('useSystemBrightness clears preference and resets platform', () async {
-    await preferencesService.update(
-      (prefs) => prefs.copyWith(readerBrightnessOverride: 0.5),
-    );
+    await preferencesService.setReaderBrightnessOverride(sourceId, 0.5);
+    await preferencesService.setReaderBrightnessOverride(otherSourceId, 0.8);
     final cubit = buildCubit();
     addTearDown(cubit.close);
 
@@ -62,14 +69,44 @@ void main() {
     await cubit.useSystemBrightness();
 
     expect(cubit.state.usesSystemBrightness, isTrue);
-    expect(preferencesService.current.readerBrightnessOverride, isNull);
+    expect(preferencesService.readerBrightnessOverrideFor(sourceId), isNull);
+    expect(preferencesService.readerBrightnessOverrideFor(otherSourceId), 0.8);
     expect(screenControlService.calls, const ['set:0.50', 'resetBrightness']);
   });
 
-  test('deactivate resets and activate reapplies custom brightness', () async {
-    await preferencesService.update(
-      (prefs) => prefs.copyWith(readerBrightnessOverride: 0.4),
+  test('source brightness is isolated per book', () async {
+    await preferencesService.setReaderBrightnessOverride(sourceId, 0.6);
+    await preferencesService.setReaderBrightnessOverride(otherSourceId, 0.8);
+
+    final cubit = buildCubit();
+    final otherCubit = buildCubit(id: otherSourceId);
+    addTearDown(cubit.close);
+    addTearDown(otherCubit.close);
+
+    expect(cubit.state.brightnessOverride, 0.6);
+    expect(otherCubit.state.brightnessOverride, 0.8);
+  });
+
+  test('clearing brightness preserves other appearance overrides', () async {
+    await preferencesService.setReaderAppearanceOverride(
+      sourceId,
+      const ReaderAppearanceOverride(
+        fontId: 'sans',
+        brightnessOverride: 0.5,
+      ),
     );
+    final cubit = buildCubit();
+    addTearDown(cubit.close);
+
+    await cubit.useSystemBrightness();
+
+    final override = preferencesService.readerAppearanceOverrideFor(sourceId);
+    expect(override?.fontId, 'sans');
+    expect(override?.brightnessOverride, isNull);
+  });
+
+  test('deactivate resets and activate reapplies custom brightness', () async {
+    await preferencesService.setReaderBrightnessOverride(sourceId, 0.4);
     final cubit = buildCubit();
     addTearDown(cubit.close);
 

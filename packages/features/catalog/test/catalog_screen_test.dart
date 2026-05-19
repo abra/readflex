@@ -38,7 +38,7 @@ void main() {
     home: CatalogScreen(
       bookRepository: bookRepository,
       preferencesService: preferencesService,
-      onBookPressed: (_) async {},
+      onBookPressed: (_, {onSourceOpened}) async {},
       onAddPressed: () async {},
     ),
   );
@@ -120,7 +120,7 @@ void main() {
         home: CatalogScreen(
           bookRepository: bookRepository,
           preferencesService: preferencesService,
-          onBookPressed: (_) async {},
+          onBookPressed: (_, {onSourceOpened}) async {},
           onAddPressed: () async {
             invocations++;
             await gate.future;
@@ -162,7 +162,7 @@ void main() {
         home: CatalogScreen(
           bookRepository: bookRepository,
           preferencesService: preferencesService,
-          onBookPressed: (_) async {},
+          onBookPressed: (_, {onSourceOpened}) async {},
           onAddPressed: () async {
             await gate.future;
           },
@@ -233,7 +233,7 @@ void main() {
         home: CatalogScreen(
           bookRepository: bookRepository,
           preferencesService: preferencesService,
-          onBookPressed: (book) async {
+          onBookPressed: (book, {onSourceOpened}) async {
             expect(book.id, target.id);
             bookRepository.seedBooks([
               target.copyWith(lastOpenedAt: DateTime(2026, 1, 5)),
@@ -279,6 +279,85 @@ void main() {
     expect(
       tester.getTopLeft(targetFinder).dy,
       tester.getTopLeft(newestFinder).dy,
+    );
+  });
+
+  testWidgets('refreshes before source details returns when reader opens', (
+    tester,
+  ) async {
+    final newest = Book(
+      id: 'b-newest',
+      title: 'Newest',
+      author: 'Author',
+      filePath: '/books/newest.epub',
+      format: BookFormat.epub,
+      addedAt: DateTime(2026, 1, 4),
+    );
+    final target = Book(
+      id: 'b-target',
+      title: 'Target',
+      author: 'Author',
+      filePath: '/books/target.epub',
+      format: BookFormat.epub,
+      addedAt: DateTime(2026, 1),
+    );
+    final routeCompleter = Completer<void>();
+    VoidCallback? notifySourceOpened;
+
+    bookRepository.seedBooks([newest, target]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: CatalogScreen(
+          bookRepository: bookRepository,
+          preferencesService: preferencesService,
+          onBookPressed: (book, {onSourceOpened}) async {
+            expect(book.id, target.id);
+            notifySourceOpened = onSourceOpened;
+            await routeCompleter.future;
+          },
+          onAddPressed: () async {},
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final targetFinder = find.text('Target');
+    final newestFinder = find.text('Newest');
+    expect(bookRepository.getBooksCallCount, 1);
+    expect(
+      tester.getTopLeft(targetFinder).dx,
+      greaterThan(tester.getTopLeft(newestFinder).dx),
+    );
+
+    await tester.tap(targetFinder);
+    await tester.pump();
+
+    expect(bookRepository.getBooksCallCount, 1);
+    expect(notifySourceOpened, isNotNull);
+
+    bookRepository.seedBooks([
+      target.copyWith(lastOpenedAt: DateTime(2026, 1, 5)),
+      newest,
+    ]);
+    notifySourceOpened!();
+    await tester.pump();
+    await tester.pump();
+
+    expect(bookRepository.getBooksCallCount, 2);
+    expect(tester.getTopLeft(targetFinder).dx, lessThan(100));
+    expect(
+      tester.getTopLeft(targetFinder).dy,
+      tester.getTopLeft(newestFinder).dy,
+    );
+
+    routeCompleter.complete();
+    await tester.pumpAndSettle();
+    expect(
+      bookRepository.getBooksCallCount,
+      2,
+      reason: 'the return path must not refresh again after the early update',
     );
   });
 }

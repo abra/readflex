@@ -56,7 +56,6 @@ void main() {
           readerLineHeight: 1.8,
           readerSideMargin: 9,
           readerInvertImagesInDark: false,
-          readerBrightnessOverride: 0.55,
         ),
       );
 
@@ -67,7 +66,6 @@ void main() {
       expect(service.current.readerLineHeight, 1.8);
       expect(service.current.readerSideMargin, 9);
       expect(service.current.readerInvertImagesInDark, isFalse);
-      expect(service.current.readerBrightnessOverride, 0.55);
     });
 
     test(
@@ -175,6 +173,40 @@ void main() {
       },
     );
 
+    test('reader brightness override persists per source', () async {
+      final service = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+
+      await service.setReaderBrightnessOverride('source-1', 0.55);
+
+      final service2 = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+
+      expect(service2.readerBrightnessOverrideFor('source-1'), 0.55);
+      expect(service2.readerBrightnessOverrideFor('source-2'), isNull);
+    });
+
+    test('reader brightness clear preserves other source overrides', () async {
+      final service = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+      await service.setReaderAppearanceOverride(
+        'source-1',
+        const ReaderAppearanceOverride(
+          fontId: 'sans',
+          brightnessOverride: 0.55,
+        ),
+      );
+
+      await service.setReaderBrightnessOverride('source-1', null);
+
+      final override = service.readerAppearanceOverrideFor('source-1');
+      expect(override?.fontId, 'sans');
+      expect(override?.brightnessOverride, isNull);
+    });
+
     test('update() emits updated preferences on stream', () async {
       final service = await PreferencesService.create(
         supportedCodes: _supportedCodes,
@@ -206,7 +238,6 @@ void main() {
           readerFontId: 'sans',
           readerTextScale: 1.1,
           readerSideMargin: 8,
-          readerBrightnessOverride: 0.45,
         ),
       );
 
@@ -220,7 +251,6 @@ void main() {
       expect(service2.current.readerFontId, 'sans');
       expect(service2.current.readerTextScale, 1.1);
       expect(service2.current.readerSideMargin, 8);
-      expect(service2.current.readerBrightnessOverride, 0.45);
     });
 
     test('persists locale correctly', () async {

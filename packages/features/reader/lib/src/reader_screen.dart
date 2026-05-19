@@ -98,6 +98,7 @@ class ReaderScreen extends StatelessWidget {
     this.initialSearchHistory = const [],
     this.initialSource,
     this.onSearchHistoryChanged,
+    this.onSourceOpened,
     this.onCheckDueItems,
     this.onStartMiniReview,
     super.key,
@@ -113,6 +114,7 @@ class ReaderScreen extends StatelessWidget {
   final List<String> initialSearchHistory;
   final Book? initialSource;
   final ValueChanged<List<String>>? onSearchHistoryChanged;
+  final VoidCallback? onSourceOpened;
   final Future<int> Function(String sourceId)? onCheckDueItems;
   final void Function(BuildContext context, String sourceId)? onStartMiniReview;
 
@@ -157,22 +159,65 @@ class ReaderScreen extends StatelessWidget {
             create: (_) => ReaderBrightnessCubit(
               preferencesService: preferencesService,
               screenControlService: screenControlService,
+              sourceId: sourceId,
             ),
           ),
         ],
         child: Builder(
-          builder: (context) => ReaderBrightnessLifecycleScope(
-            cubit: context.read<ReaderBrightnessCubit>(),
-            child: ReaderKeepAwakeDriver(
-              screenControlService: screenControlService,
-              child: _ReaderView(
-                serverPort: serverPort,
-                textActions: textActions,
+          builder: (context) => _ReaderSourceOpenedNotifier(
+            onSourceOpened: onSourceOpened,
+            child: ReaderBrightnessLifecycleScope(
+              cubit: context.read<ReaderBrightnessCubit>(),
+              child: ReaderKeepAwakeDriver(
+                screenControlService: screenControlService,
+                child: _ReaderView(
+                  serverPort: serverPort,
+                  textActions: textActions,
+                ),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ReaderSourceOpenedNotifier extends StatefulWidget {
+  const _ReaderSourceOpenedNotifier({
+    required this.onSourceOpened,
+    required this.child,
+  });
+
+  final VoidCallback? onSourceOpened;
+  final Widget child;
+
+  @override
+  State<_ReaderSourceOpenedNotifier> createState() =>
+      _ReaderSourceOpenedNotifierState();
+}
+
+class _ReaderSourceOpenedNotifierState
+    extends State<_ReaderSourceOpenedNotifier> {
+  bool _notified = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ReaderBloc, ReaderState>(
+      listenWhen: (previous, current) {
+        if (_notified || current.status != ReaderStatus.ready) {
+          return false;
+        }
+        final previousOpenedAt = previous.book?.lastOpenedAt;
+        final currentOpenedAt = current.book?.lastOpenedAt;
+        return currentOpenedAt != null && currentOpenedAt != previousOpenedAt;
+      },
+      listener: (_, _) {
+        if (_notified) return;
+        _notified = true;
+        widget.onSourceOpened?.call();
+      },
+      child: widget.child,
     );
   }
 }

@@ -34,7 +34,6 @@ void main() {
       expect(prefs.readerOverrideFont, isTrue);
       expect(prefs.readerOverrideColor, isTrue);
       expect(prefs.readerUseBookLayout, isTrue);
-      expect(prefs.readerBrightnessOverride, isNull);
       expect(prefs.readerSearchHistory, isEmpty);
       expect(prefs.readerAppearanceOverrides, isEmpty);
       expect(prefs.onboardingCompleted, isFalse);
@@ -58,7 +57,6 @@ void main() {
         readerOverrideFont: false,
         readerOverrideColor: false,
         readerUseBookLayout: false,
-        readerBrightnessOverride: 0.42,
         readerSearchHistory: ['design patterns', 'bloc'],
         readerAppearanceOverrides: {
           'source-1': ReaderAppearanceOverride(
@@ -68,6 +66,7 @@ void main() {
             lineHeight: 1.8,
             sideMargin: 9,
             textAlignment: ReaderTextAlignment.justify,
+            brightnessOverride: 0.42,
           ),
         },
         onboardingCompleted: true,
@@ -102,7 +101,7 @@ void main() {
       expect(map['readerOverrideFont'], isFalse);
       expect(map['readerOverrideColor'], isFalse);
       expect(map['readerUseBookLayout'], isFalse);
-      expect(map['readerBrightnessOverride'], isNull);
+      expect(map.containsKey('readerBrightnessOverride'), isFalse);
       expect(map['readerSearchHistory'], isEmpty);
       expect(map['readerAppearanceOverrides'], isEmpty);
       expect(map['readerThemeId'], 'paper');
@@ -143,7 +142,6 @@ void main() {
         expect(prefs.readerOverrideFont, isTrue);
         expect(prefs.readerOverrideColor, isTrue);
         expect(prefs.readerUseBookLayout, isTrue);
-        expect(prefs.readerBrightnessOverride, isNull);
         expect(prefs.readerSearchHistory, isEmpty);
         expect(prefs.readerAppearanceOverrides, isEmpty);
       },
@@ -165,20 +163,22 @@ void main() {
       expect(prefs.readerSearchHistory, ['flutter', 'bloc']);
     });
 
-    test('load() clamps readerBrightnessOverride from JSON', () async {
+    test('load() clamps source reader brightness override from JSON', () async {
       final storage = PreferencesStorage();
       await storage.setString(
         _key,
         jsonEncode(<String, Object?>{
-          '_schemaVersion': 5,
-          'readerBrightnessOverride': 2.0,
+          '_schemaVersion': 7,
+          'readerAppearanceOverrides': {
+            'source-1': {'brightnessOverride': 2.0},
+          },
         }),
       );
 
       final repo = PreferencesRepository(storage);
       final prefs = await repo.load(_supportedCodes);
 
-      expect(prefs.readerBrightnessOverride, 1.0);
+      expect(prefs.readerBrightnessOverrideFor('source-1'), 1.0);
     });
 
     test('load() ignores invalid readerAppearanceOverrides entries', () async {
@@ -311,7 +311,7 @@ void main() {
       final raw = await storage.getString(_key);
       final map = jsonDecode(raw!) as Map<String, Object?>;
 
-      expect(map['_schemaVersion'], 6);
+      expect(map['_schemaVersion'], 7);
     });
 
     test(

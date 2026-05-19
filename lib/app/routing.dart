@@ -107,9 +107,12 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                 builder: (context, state) => CatalogScreen(
                   bookRepository: deps.bookRepository,
                   preferencesService: deps.preferencesService,
-                  onBookPressed: (book) => context.push(
+                  onBookPressed: (book, {onSourceOpened}) => context.push(
                     AppRoutes.sourceDetails(book.id),
-                    extra: book,
+                    extra: _SourceDetailsRouteExtra(
+                      initialSource: book,
+                      onSourceOpened: onSourceOpened,
+                    ),
                   ),
                   onAddPressed: () async {
                     await showImportFlowSheet(
@@ -181,6 +184,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
         builder: (context, state) {
           final sourceId = state.pathParameters['sourceId']!;
           final initialSource = _initialSourceFromRoute(state);
+          final onSourceOpened = _onSourceOpenedFromRoute(state);
           return SourceDetailsScreen(
             sourceId: sourceId,
             initialSource: initialSource,
@@ -189,7 +193,13 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
             flashcardRepository: deps.flashcardRepository,
             dictionaryRepository: deps.dictionaryRepository,
             onReadPressed: (source) async {
-              await context.push(AppRoutes.reader(source.id), extra: source);
+              await context.push(
+                AppRoutes.reader(source.id),
+                extra: _ReaderRouteExtra(
+                  initialSource: source,
+                  onSourceOpened: onSourceOpened,
+                ),
+              );
             },
           );
         },
@@ -215,6 +225,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
               highlightRepository: deps.highlightRepository,
               preferencesService: deps.preferencesService,
               screenControlService: deps.screenControlService,
+              onSourceOpened: _onSourceOpenedFromRoute(state),
               initialSearchHistory:
                   deps.preferencesService.current.readerSearchHistory,
               onSearchHistoryChanged: (queries) {
@@ -318,13 +329,51 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
   );
 }
 
+class _SourceDetailsRouteExtra {
+  const _SourceDetailsRouteExtra({
+    this.initialSource,
+    this.onSourceOpened,
+  });
+
+  final Book? initialSource;
+  final VoidCallback? onSourceOpened;
+}
+
+class _ReaderRouteExtra {
+  const _ReaderRouteExtra({
+    this.initialSource,
+    this.onSourceOpened,
+  });
+
+  final Book? initialSource;
+  final VoidCallback? onSourceOpened;
+}
+
 Book? _initialSourceFromRoute(GoRouterState state) {
   final sourceId = state.pathParameters['sourceId'];
   final extra = state.extra;
-  if (sourceId == null || extra is! Book || extra.id != sourceId) {
+  if (sourceId == null) {
     return null;
   }
-  return extra;
+
+  final source = switch (extra) {
+    Book source => source,
+    _SourceDetailsRouteExtra(:final initialSource) => initialSource,
+    _ReaderRouteExtra(:final initialSource) => initialSource,
+    _ => null,
+  };
+  if (source?.id != sourceId) {
+    return null;
+  }
+  return source;
+}
+
+VoidCallback? _onSourceOpenedFromRoute(GoRouterState state) {
+  return switch (state.extra) {
+    _SourceDetailsRouteExtra(:final onSourceOpened) => onSourceOpened,
+    _ReaderRouteExtra(:final onSourceOpened) => onSourceOpened,
+    _ => null,
+  };
 }
 
 Future<String> _resolveEntryRoute(DependenciesContainer deps) async {

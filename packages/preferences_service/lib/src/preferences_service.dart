@@ -60,6 +60,9 @@ class PreferencesService {
   ReaderAppearancePreferences effectiveReaderAppearanceFor(String sourceId) =>
       _current.effectiveReaderAppearanceFor(sourceId);
 
+  double? readerBrightnessOverrideFor(String sourceId) =>
+      _current.readerBrightnessOverrideFor(sourceId);
+
   Future<void> setReaderAppearanceOverride(
     String sourceId,
     ReaderAppearanceOverride override,
@@ -78,6 +81,20 @@ class PreferencesService {
         readerAppearanceOverrides: Map.unmodifiable(overrides),
       );
     });
+  }
+
+  Future<void> setReaderBrightnessOverride(
+    String sourceId,
+    double? brightnessOverride,
+  ) async {
+    if (sourceId.isEmpty) return;
+    final currentOverride =
+        readerAppearanceOverrideFor(sourceId) ??
+        const ReaderAppearanceOverride();
+    await setReaderAppearanceOverride(
+      sourceId,
+      currentOverride.copyWith(brightnessOverride: brightnessOverride),
+    );
   }
 
   Future<void> clearReaderAppearanceOverride(String sourceId) async {

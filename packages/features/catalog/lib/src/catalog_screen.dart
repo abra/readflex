@@ -15,7 +15,6 @@ import 'catalog_selection_cubit.dart';
 import 'confirm_book_deletion_sheet.dart';
 
 const _sourceRouteReturnRefreshDelay = Duration(milliseconds: 320);
-const _sourceRouteReturnScrollDuration = Duration(milliseconds: 280);
 
 /// Entry point for the Library tab.
 ///
@@ -35,7 +34,11 @@ class CatalogScreen extends StatelessWidget {
 
   final BookRepository bookRepository;
   final PreferencesService preferencesService;
-  final Future<void> Function(Book book) onBookPressed;
+  final Future<void> Function(
+    Book book, {
+    VoidCallback? onSourceOpened,
+  })
+  onBookPressed;
   final AsyncCallback onAddPressed;
 
   @override
@@ -77,7 +80,11 @@ class _CatalogView extends StatefulWidget {
     required this.onAddPressed,
   });
 
-  final Future<void> Function(Book book) onBookPressed;
+  final Future<void> Function(
+    Book book, {
+    VoidCallback? onSourceOpened,
+  })
+  onBookPressed;
   final AsyncCallback onAddPressed;
 
   @override
@@ -127,20 +134,24 @@ class _CatalogViewState extends State<_CatalogView> {
       selection.toggle(book.id);
       return;
     }
-    await widget.onBookPressed(book);
+
+    var sourceOpened = false;
+    void handleSourceOpened() {
+      if (!mounted || sourceOpened) return;
+      sourceOpened = true;
+      context.read<CatalogBloc>().add(const CatalogRefreshRequested());
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
+    }
+
+    await widget.onBookPressed(book, onSourceOpened: handleSourceOpened);
+    if (sourceOpened) return;
     // `Navigator.push` completes as soon as the details route starts popping,
     // before the reverse Hero flight finishes. Refreshing immediately can move
     // the opened item to the top and destroy the Hero endpoint mid-flight.
     await Future<void>.delayed(_sourceRouteReturnRefreshDelay);
     if (!context.mounted) return;
-    if (_scrollController.hasClients && _scrollController.offset > 0) {
-      await _scrollController.animateTo(
-        0,
-        duration: _sourceRouteReturnScrollDuration,
-        curve: Curves.easeOutCubic,
-      );
-      if (!context.mounted) return;
-    }
     context.read<CatalogBloc>().add(const CatalogRefreshRequested());
   }
 

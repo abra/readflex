@@ -36,7 +36,6 @@ void main() {
       expect(prefs.readerOverrideFont, isTrue);
       expect(prefs.readerOverrideColor, isTrue);
       expect(prefs.readerUseBookLayout, isTrue);
-      expect(prefs.readerBrightnessOverride, isNull);
       expect(prefs.readerSearchHistory, isEmpty);
       expect(prefs.readerAppearanceOverrides, isEmpty);
       expect(prefs.onboardingCompleted, isFalse);
@@ -49,10 +48,12 @@ void main() {
         themeMode: ThemeMode.dark,
         locale: const Locale('ru'),
         catalogLayoutMode: 'list',
-        readerBrightnessOverride: 0.42,
         readerSearchHistory: const ['design patterns', 'bloc'],
         readerAppearanceOverrides: const {
-          'source-1': ReaderAppearanceOverride(fontId: 'sans'),
+          'source-1': ReaderAppearanceOverride(
+            fontId: 'sans',
+            brightnessOverride: 0.42,
+          ),
         },
         onboardingCompleted: true,
       );
@@ -60,9 +61,9 @@ void main() {
       expect(updated.themeMode, ThemeMode.dark);
       expect(updated.locale, const Locale('ru'));
       expect(updated.catalogLayoutMode, 'list');
-      expect(updated.readerBrightnessOverride, 0.42);
       expect(updated.readerSearchHistory, ['design patterns', 'bloc']);
       expect(updated.readerAppearanceOverrides['source-1']?.fontId, 'sans');
+      expect(updated.readerBrightnessOverrideFor('source-1'), 0.42);
       expect(updated.onboardingCompleted, isTrue);
       // Unchanged fields preserved
       expect(updated.readerThemeId, 'paper');
@@ -104,12 +105,15 @@ void main() {
       expect(a, isNot(equals(b)));
     });
 
-    test('copyWith can clear readerBrightnessOverride', () {
-      const prefs = Preferences(readerBrightnessOverride: 0.4);
+    test('readerBrightnessOverrideFor reads source-specific override', () {
+      const prefs = Preferences(
+        readerAppearanceOverrides: {
+          'source-1': ReaderAppearanceOverride(brightnessOverride: 0.4),
+        },
+      );
 
-      final updated = prefs.copyWith(readerBrightnessOverride: null);
-
-      expect(updated.readerBrightnessOverride, isNull);
+      expect(prefs.readerBrightnessOverrideFor('source-1'), 0.4);
+      expect(prefs.readerBrightnessOverrideFor('source-2'), isNull);
     });
 
     test('readerAppearance getter builds from fields', () {
@@ -259,12 +263,14 @@ void main() {
         textScale: 1.2,
         sideMargin: 8,
         textAlignment: ReaderTextAlignment.justify,
+        brightnessOverride: 0.5,
       );
 
       expect(updated.fontId, isNull);
       expect(updated.textScale, 1.2);
       expect(updated.sideMargin, 8);
       expect(updated.textAlignment, ReaderTextAlignment.justify);
+      expect(updated.brightnessOverride, 0.5);
     });
 
     test('toJson/fromJson round-trip omits null values', () {
@@ -274,6 +280,7 @@ void main() {
         sideMargin: 9,
         textAlignment: ReaderTextAlignment.justify,
         overrideColor: false,
+        brightnessOverride: 0.65,
       );
 
       final json = source.toJson();

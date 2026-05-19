@@ -12,6 +12,7 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 void main() {
+  const sourceId = 'source-1';
   late PreferencesService preferencesService;
   late ReaderUiCubit uiCubit;
   late ReaderSelectionCubit selectionCubit;
@@ -28,6 +29,7 @@ void main() {
     brightnessCubit = ReaderBrightnessCubit(
       preferencesService: preferencesService,
       screenControlService: _FakeScreenControlService(),
+      sourceId: sourceId,
     );
   });
 
@@ -79,7 +81,7 @@ void main() {
 
     expect(find.byIcon(AppIcons.refresh), findsOneWidget);
     expect(brightnessCubit.state.usesSystemBrightness, isTrue);
-    expect(preferencesService.current.readerBrightnessOverride, isNull);
+    expect(preferencesService.readerBrightnessOverrideFor(sourceId), isNull);
   });
 
   testWidgets('brightness buttons adjust custom override in steps', (
@@ -100,7 +102,7 @@ void main() {
     expect(find.text('75%'), findsOneWidget);
     expect(brightnessCubit.state.brightnessOverride, closeTo(0.75, 0.001));
     expect(
-      preferencesService.current.readerBrightnessOverride,
+      preferencesService.readerBrightnessOverrideFor(sourceId),
       closeTo(0.75, 0.001),
     );
 
@@ -110,7 +112,7 @@ void main() {
     expect(find.text('70%'), findsOneWidget);
     expect(brightnessCubit.state.brightnessOverride, closeTo(0.7, 0.001));
     expect(
-      preferencesService.current.readerBrightnessOverride,
+      preferencesService.readerBrightnessOverrideFor(sourceId),
       closeTo(0.7, 0.001),
     );
   });
@@ -135,12 +137,12 @@ void main() {
 
     expect(brightnessCubit.state.usesSystemBrightness, isFalse);
     expect(brightnessCubit.state.brightnessOverride, greaterThan(0.7));
-    expect(preferencesService.current.readerBrightnessOverride, isNull);
+    expect(preferencesService.readerBrightnessOverrideFor(sourceId), isNull);
 
     await tester.pump(const Duration(milliseconds: 250));
 
     expect(
-      preferencesService.current.readerBrightnessOverride,
+      preferencesService.readerBrightnessOverrideFor(sourceId),
       brightnessCubit.state.brightnessOverride,
     );
   });
