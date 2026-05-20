@@ -1175,7 +1175,7 @@ class _ReaderBrightnessValueButton extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 child: usesSystemBrightness
                     ? Icon(
-                        AppIcons.refresh,
+                        AppIcons.deviceMode,
                         size: AppIconSize.sm,
                         color: cs.onSurface,
                       )

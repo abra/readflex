@@ -54,7 +54,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.brightnessIgnorePointer.ignoring, isFalse);
-    expect(find.byIcon(AppIcons.refresh), findsOneWidget);
+    expect(find.byIcon(AppIcons.deviceMode), findsOneWidget);
 
     selectionCubit.select(text: 'Selected text');
     await tester.pumpAndSettle();
@@ -79,7 +79,7 @@ void main() {
     await tester.tap(find.text('50%'));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(AppIcons.refresh), findsOneWidget);
+    expect(find.byIcon(AppIcons.deviceMode), findsOneWidget);
     expect(brightnessCubit.state.usesSystemBrightness, isTrue);
     expect(preferencesService.readerBrightnessOverrideFor(sourceId), isNull);
   });
