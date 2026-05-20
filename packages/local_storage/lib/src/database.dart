@@ -6,11 +6,13 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'daos/articles_dao.dart';
 import 'daos/books_dao.dart';
 import 'daos/dictionary_dao.dart';
 import 'daos/flashcards_dao.dart';
 import 'daos/highlights_dao.dart';
 import 'daos/review_items_dao.dart';
+import 'tables/articles_table.dart';
 import 'tables/books_table.dart';
 import 'tables/dictionary_table.dart';
 import 'tables/flashcards_table.dart';
@@ -30,6 +32,7 @@ part 'database.g.dart';
 /// directory.
 @DriftDatabase(
   tables: [
+    ArticlesTable,
     BooksTable,
     HighlightsTable,
     FlashcardsTable,
@@ -38,6 +41,7 @@ part 'database.g.dart';
     ReviewLogsTable,
   ],
   daos: [
+    ArticlesDao,
     BooksDao,
     HighlightsDao,
     FlashcardsDao,
@@ -52,13 +56,14 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) async {
       await migrator.createAll();
       await _createBookmarksTable();
+      await _createArticlesIndexes();
       await _createIndexes();
     },
     onUpgrade: (migrator, from, to) async {
@@ -368,8 +373,47 @@ class AppDatabase extends _$AppDatabase {
       if (from < 17) {
         await _addBookmarkVisualPageAnchors();
       }
+      if (from < 18) {
+        await _createArticlesTable();
+      }
     },
   );
+
+  Future<void> _createArticlesTable() async {
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS articles_table (
+        id TEXT NOT NULL PRIMARY KEY,
+        title TEXT NOT NULL,
+        url TEXT NOT NULL,
+        resolved_url TEXT,
+        canonical_url TEXT,
+        author TEXT,
+        site_name TEXT,
+        hostname TEXT,
+        description TEXT,
+        image_url TEXT,
+        cover_image_path TEXT,
+        language TEXT,
+        content_path TEXT NOT NULL,
+        plain_text TEXT NOT NULL DEFAULT '',
+        text_length INTEGER NOT NULL DEFAULT 0,
+        estimated_word_count INTEGER NOT NULL DEFAULT 0,
+        current_cfi TEXT,
+        reading_progress REAL NOT NULL DEFAULT 0.0,
+        added_at TEXT NOT NULL,
+        last_opened_at TEXT,
+        is_finished INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+    await _createArticlesIndexes();
+  }
+
+  Future<void> _createArticlesIndexes() async {
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_articles_last_opened
+      ON articles_table (last_opened_at, added_at)
+    ''');
+  }
 
   Future<void> _createBookmarksTable() async {
     await customStatement('''

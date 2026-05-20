@@ -105,6 +105,108 @@ void main() {
     expect(details, contains('cover.jpeg'));
   });
 
+  testWidgets(
+    'AppSourceCover renders article fallback instead of cover image',
+    (
+      tester,
+    ) async {
+      final previousOnError = FlutterError.onError;
+      final errors = <FlutterErrorDetails>[];
+      FlutterError.onError = errors.add;
+      addTearDown(() => FlutterError.onError = previousOnError);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 120,
+              height: 180,
+              child: AppSourceCover(
+                title: 'Saved Article',
+                seed: 'article-1',
+                source: 'Example',
+                coverImage: _FailingImageProvider('article.jpeg'),
+                isArticle: true,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      FlutterError.onError = previousOnError;
+
+      expect(errors, isEmpty);
+      expect(find.byType(AppCoverArt), findsOneWidget);
+      expect(find.text('Saved Article'), findsOneWidget);
+      expect(find.text('EXAMPLE'), findsOneWidget);
+    },
+  );
+
+  testWidgets('AppCoverArt suppresses article author text', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 120,
+            height: 180,
+            child: AppCoverArt(
+              title: 'Saved Article',
+              author: 'Article Author',
+              source: 'Example',
+              seed: 'article-1',
+              isArticle: true,
+              height: 180,
+              width: 120,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Saved Article'), findsOneWidget);
+    expect(find.text('EXAMPLE'), findsOneWidget);
+    expect(find.text('ARTICLE AUTHOR'), findsNothing);
+  });
+
+  testWidgets('AppCoverArt text does not inherit Hero overlay fallback style', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: DefaultTextStyle(
+            style: TextStyle(
+              color: Colors.yellow,
+              decoration: TextDecoration.underline,
+              decorationStyle: TextDecorationStyle.double,
+            ),
+            child: SizedBox(
+              width: 120,
+              height: 180,
+              child: AppCoverArt(
+                title: 'Article Title',
+                source: 'Example',
+                seed: 'article-1',
+                isArticle: true,
+                centerText: true,
+                bottomReserve: 16,
+                showMatte: false,
+                height: 180,
+                width: 120,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    for (final label in ['Article Title', 'EXAMPLE']) {
+      final text = tester.widget<Text>(find.text(label));
+      expect(text.style?.inherit, isFalse);
+      expect(text.style?.decoration, TextDecoration.none);
+    }
+  });
+
   testWidgets('AppImageAspectRatio uses fallback ratio without image', (
     tester,
   ) async {

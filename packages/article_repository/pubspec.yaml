@@ -1,0 +1,26 @@
+name: article_repository
+description: "Article domain logic. Stores extracted articles and reader adapters."
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  archive: ^3.6.0
+  domain_models:
+    path: ../domain_models
+  drift: ^2.23.1
+  http: ^1.6.0
+  local_storage:
+    path: ../local_storage
+  monitoring:
+    path: ../monitoring
+  path: ^1.9.0
+  uuid: ^4.5.1
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+  sqlite3: ^2.7.0

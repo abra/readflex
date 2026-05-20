@@ -1,3 +1,4 @@
+import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
@@ -21,24 +22,26 @@ const _sourceRouteReturnRefreshDelay = Duration(milliseconds: 320);
 /// Pure composition: creates [CatalogBloc] + [CatalogLayoutCubit] +
 /// [CatalogSelectionCubit], kicks off the initial load, and hands the
 /// widget tree down to [_CatalogView]. All external callbacks
-/// (`onBookPressed`, `onAddPressed`) come from the composition root
+/// (`onSourcePressed`, `onAddPressed`) come from the composition root
 /// (`routing.dart`) — the feature itself doesn't know about navigation.
 class CatalogScreen extends StatelessWidget {
   const CatalogScreen({
     required this.bookRepository,
     required this.preferencesService,
-    required this.onBookPressed,
+    required this.onSourcePressed,
     required this.onAddPressed,
+    this.articleRepository,
     super.key,
   });
 
   final BookRepository bookRepository;
+  final ArticleRepository? articleRepository;
   final PreferencesService preferencesService;
   final Future<void> Function(
-    Book book, {
+    LibrarySource source, {
     VoidCallback? onSourceOpened,
   })
-  onBookPressed;
+  onSourcePressed;
   final AsyncCallback onAddPressed;
 
   @override
@@ -48,9 +51,10 @@ class CatalogScreen extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (_) =>
-              CatalogBloc(bookRepository: bookRepository)
-                ..add(const CatalogLoadRequested()),
+          create: (_) => CatalogBloc(
+            bookRepository: bookRepository,
+            articleRepository: articleRepository,
+          )..add(const CatalogLoadRequested()),
         ),
         BlocProvider(
           create: (_) => CatalogLayoutCubit(
@@ -60,7 +64,7 @@ class CatalogScreen extends StatelessWidget {
         BlocProvider(create: (_) => CatalogSelectionCubit()),
       ],
       child: _CatalogView(
-        onBookPressed: onBookPressed,
+        onSourcePressed: onSourcePressed,
         onAddPressed: onAddPressed,
       ),
     );
@@ -76,15 +80,15 @@ class CatalogScreen extends StatelessWidget {
 /// fresh.
 class _CatalogView extends StatefulWidget {
   const _CatalogView({
-    required this.onBookPressed,
+    required this.onSourcePressed,
     required this.onAddPressed,
   });
 
   final Future<void> Function(
-    Book book, {
+    LibrarySource source, {
     VoidCallback? onSourceOpened,
   })
-  onBookPressed;
+  onSourcePressed;
   final AsyncCallback onAddPressed;
 
   @override
@@ -128,10 +132,13 @@ class _CatalogViewState extends State<_CatalogView> {
     }
   }
 
-  Future<void> _handleBookTap(BuildContext context, Book book) async {
+  Future<void> _handleSourceTap(
+    BuildContext context,
+    LibrarySource source,
+  ) async {
     final selection = context.read<CatalogSelectionCubit>();
     if (selection.state.isActive) {
-      selection.toggle(book.id);
+      selection.toggle(source.id);
       return;
     }
 
@@ -145,18 +152,20 @@ class _CatalogViewState extends State<_CatalogView> {
       }
     }
 
-    await widget.onBookPressed(book, onSourceOpened: handleSourceOpened);
-    if (sourceOpened) return;
+    await widget.onSourcePressed(source, onSourceOpened: handleSourceOpened);
     // `Navigator.push` completes as soon as the details route starts popping,
     // before the reverse Hero flight finishes. Refreshing immediately can move
     // the opened item to the top and destroy the Hero endpoint mid-flight.
+    // If the reader was opened, we still need this second delayed refresh:
+    // the early refresh only updates recency, while reading progress is written
+    // later by ReaderBloc.
     await Future<void>.delayed(_sourceRouteReturnRefreshDelay);
     if (!context.mounted) return;
     context.read<CatalogBloc>().add(const CatalogRefreshRequested());
   }
 
-  void _handleBookLongPress(BuildContext context, Book book) {
-    context.read<CatalogSelectionCubit>().toggle(book.id);
+  void _handleSourceLongPress(BuildContext context, LibrarySource source) {
+    context.read<CatalogSelectionCubit>().toggle(source.id);
   }
 
   Future<void> _handleDeleteSelected(BuildContext context) async {
@@ -168,7 +177,7 @@ class _CatalogViewState extends State<_CatalogView> {
       count: ids.length,
     );
     if (scope == null || !context.mounted) return;
-    context.read<CatalogBloc>().add(CatalogBooksDeleted(ids, scope: scope));
+    context.read<CatalogBloc>().add(CatalogSourcesDeleted(ids, scope: scope));
     selection.clear();
   }
 
@@ -178,12 +187,12 @@ class _CatalogViewState extends State<_CatalogView> {
   /// know the chosen scope at dispatch time.
   Future<bool> _confirmAndDispatchSwipe(
     BuildContext context,
-    Book book,
+    LibrarySource source,
   ) async {
     final scope = await showConfirmBookDeletionSheet(context, count: 1);
     if (scope == null || !context.mounted) return false;
     context.read<CatalogBloc>().add(
-      CatalogBookDeleted(book.id, scope: scope),
+      CatalogSourceDeleted(source.id, scope: scope),
     );
     return true;
   }
@@ -206,8 +215,8 @@ class _CatalogViewState extends State<_CatalogView> {
           context,
           type: NotificationType.success,
           message: effect.count == 1
-              ? 'Book deleted'
-              : '${effect.count} books deleted',
+              ? 'Item deleted'
+              : '${effect.count} items deleted',
         );
       }
     } else {
@@ -215,8 +224,8 @@ class _CatalogViewState extends State<_CatalogView> {
         context,
         type: NotificationType.error,
         message: effect.count == 1
-            ? 'Failed to delete the book'
-            : 'Failed to delete the books',
+            ? 'Failed to delete the item'
+            : 'Failed to delete the items',
       );
     }
   }
@@ -256,6 +265,7 @@ class _CatalogViewState extends State<_CatalogView> {
                   buildWhen: (prev, curr) =>
                       prev.status != curr.status ||
                       prev.books != curr.books ||
+                      prev.articles != curr.articles ||
                       prev.filter != curr.filter ||
                       prev.searchQuery != curr.searchQuery,
                   builder: (context, state) {
@@ -285,12 +295,12 @@ class _CatalogViewState extends State<_CatalogView> {
                                 state: state,
                                 selection: selection,
                                 scrollController: _scrollController,
-                                onBookPressed: (book) =>
-                                    _handleBookTap(context, book),
-                                onBookLongPressed: (book) =>
-                                    _handleBookLongPress(context, book),
-                                onConfirmSwipeDelete: (book) =>
-                                    _confirmAndDispatchSwipe(context, book),
+                                onSourcePressed: (source) =>
+                                    _handleSourceTap(context, source),
+                                onSourceLongPressed: (source) =>
+                                    _handleSourceLongPress(context, source),
+                                onConfirmSwipeDelete: (source) =>
+                                    _confirmAndDispatchSwipe(context, source),
                                 onRefresh: () async {
                                   bloc.add(
                                     const CatalogRefreshRequested(),
@@ -315,7 +325,7 @@ class _CatalogViewState extends State<_CatalogView> {
 
 /// Swaps the FAB icon based on whether a multi-select is active.
 ///
-/// Add (`+`) when idle, trash when ≥1 book is selected. Both share the
+/// Add (`+`) when idle, trash when ≥1 item is selected. Both share the
 /// same shape / color so the swap reads as an icon change rather than a
 /// new control appearing.
 class _CatalogFab extends StatelessWidget {

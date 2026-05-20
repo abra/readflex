@@ -67,7 +67,7 @@ class CatalogHeader extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           SearchField(
-            hintText: 'Search books...',
+            hintText: 'Search library...',
             controller: searchController,
             onChanged: onSearchChanged,
           ),
@@ -115,6 +115,7 @@ class _FilterSegments extends StatelessWidget {
   static String _labelFor(CatalogFilter filter) => switch (filter) {
     CatalogFilter.all => 'All',
     CatalogFilter.books => 'Books',
+    CatalogFilter.articles => 'Articles',
     CatalogFilter.comics => 'Comics',
     CatalogFilter.unread => 'New',
     CatalogFilter.finished => 'Finished',

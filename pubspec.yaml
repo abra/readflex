@@ -23,6 +23,10 @@ dependencies:
     path: packages/local_storage
   book_repository:
     path: packages/book_repository
+  article_extraction_service:
+    path: packages/article_extraction_service
+  article_repository:
+    path: packages/article_repository
   highlight_repository:
     path: packages/highlight_repository
   dictionary_repository:

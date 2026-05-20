@@ -15,6 +15,8 @@ dependencies:
 
   book_repository:
     path: ../../book_repository
+  article_repository:
+    path: ../../article_repository
   dictionary_repository:
     path: ../../dictionary_repository
   flashcard_repository:

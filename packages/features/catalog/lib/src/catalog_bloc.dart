@@ -1,3 +1,4 @@
+import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
@@ -8,12 +9,15 @@ part 'catalog_event.dart';
 part 'catalog_state.dart';
 
 class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
-  CatalogBloc({required BookRepository bookRepository})
-    : _bookRepository = bookRepository,
-      super(CatalogState()) {
+  CatalogBloc({
+    required BookRepository bookRepository,
+    ArticleRepository? articleRepository,
+  }) : _bookRepository = bookRepository,
+       _articleRepository = articleRepository,
+       super(CatalogState()) {
     on<CatalogLoadRequested>(_onLoadRequested);
-    on<CatalogBookDeleted>(_onBookDeleted);
-    on<CatalogBooksDeleted>(_onBooksDeleted);
+    on<CatalogSourceDeleted>(_onSourceDeleted);
+    on<CatalogSourcesDeleted>(_onSourcesDeleted);
     on<CatalogRefreshRequested>(_onRefreshRequested);
     on<CatalogSearchQueryChanged>(
       _onSearchQueryChanged,
@@ -43,6 +47,7 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
   }
 
   final BookRepository _bookRepository;
+  final ArticleRepository? _articleRepository;
 
   Future<void> _onLoadRequested(
     CatalogLoadRequested event,
@@ -59,13 +64,13 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
     await _loadItems(emit);
   }
 
-  Future<void> _onBookDeleted(
-    CatalogBookDeleted event,
+  Future<void> _onSourceDeleted(
+    CatalogSourceDeleted event,
     Emitter<CatalogState> emit,
   ) async {
-    final deletion = _deletionDescriptorFor({event.bookId});
+    final deletion = _deletionDescriptorFor({event.sourceId});
     try {
-      await _bookRepository.deleteBook(event.bookId, scope: event.scope);
+      await _deleteSource(event.sourceId, event.scope);
       await _loadItems(emit, deletion: deletion);
     } catch (e, st) {
       addError(e, st);
@@ -80,20 +85,20 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
     }
   }
 
-  Future<void> _onBooksDeleted(
-    CatalogBooksDeleted event,
+  Future<void> _onSourcesDeleted(
+    CatalogSourcesDeleted event,
     Emitter<CatalogState> emit,
   ) async {
-    final deletion = _deletionDescriptorFor(event.bookIds);
+    final deletion = _deletionDescriptorFor(event.sourceIds);
     // Loop deliberately continues on per-id failure: if id #2 throws we
     // still try ids #3..N. Stopping early would leave the user with a
     // partial deletion they have no way to learn about — half the
     // selection gone, the other half still in the list, and a generic
     // failure toast that says nothing about the split.
     var anyFailed = false;
-    for (final id in event.bookIds) {
+    for (final id in event.sourceIds) {
       try {
-        await _bookRepository.deleteBook(id, scope: event.scope);
+        await _deleteSource(id, event.scope);
       } catch (e, st) {
         anyFailed = true;
         addError(e, st);
@@ -104,12 +109,13 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
       // grid. Keep the screen in success because the list remains usable;
       // the error is surfaced through the deletion effect/toast.
       try {
-        final books = await _bookRepository.getBooks();
+        final (books, articles) = await _loadRawSources();
         final effect = _deletionEffect(deletion, success: false);
         emit(
           state.copyWith(
             status: CatalogStatus.success,
             books: books,
+            articles: articles,
             deletionVersion: effect.version,
             deletionEffect: effect,
           ),
@@ -130,7 +136,7 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
     await _loadItems(emit, deletion: deletion);
   }
 
-  /// Pulls the latest book list and emits a `success` (or `failure`)
+  /// Pulls the latest source list and emits a `success` (or `failure`)
   /// state. Pass [fromDeletion] when this load is the post-delete
   /// refresh — that emits a [CatalogDeletionEffect] so the screen can show
   /// the correct toast without tracking a local queue.
@@ -139,7 +145,7 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
     _CatalogDeletionDescriptor? deletion,
   }) async {
     try {
-      final books = await _bookRepository.getBooks();
+      final (books, articles) = await _loadRawSources();
       final effect = deletion == null
           ? null
           : _deletionEffect(deletion, success: true);
@@ -147,6 +153,7 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
         state.copyWith(
           status: CatalogStatus.success,
           books: books,
+          articles: articles,
           deletionVersion: effect?.version,
           deletionEffect: effect,
         ),
@@ -167,6 +174,26 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
         ),
       );
     }
+  }
+
+  Future<(List<Book>, List<Article>)> _loadRawSources() async {
+    final articleRepository = _articleRepository;
+    if (articleRepository == null) {
+      return (await _bookRepository.getBooks(), const <Article>[]);
+    }
+    return (
+      await _bookRepository.getBooks(),
+      await articleRepository.getArticles(),
+    );
+  }
+
+  Future<void> _deleteSource(String id, BookDeletionScope scope) async {
+    final source = _sourceOf(id);
+    if (source?.sourceType == SourceType.article) {
+      await _articleRepository?.deleteArticle(id);
+      return;
+    }
+    await _bookRepository.deleteBook(id, scope: scope);
   }
 
   _CatalogDeletionDescriptor _deletionDescriptorFor(Iterable<String> ids) {
@@ -191,8 +218,15 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
   }
 
   String? _titleOf(String id) {
-    for (final book in state.books) {
-      if (book.id == id) return book.title;
+    for (final source in state.sources) {
+      if (source.id == id) return source.title;
+    }
+    return null;
+  }
+
+  LibrarySource? _sourceOf(String id) {
+    for (final source in state.sources) {
+      if (source.id == id) return source;
     }
     return null;
   }

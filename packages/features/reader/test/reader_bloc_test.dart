@@ -3,6 +3,7 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_bloc.dart';
 
+import 'helpers/fake_article_repository.dart';
 import 'helpers/fake_book_repository.dart';
 import 'helpers/fake_highlight_repository.dart';
 
@@ -605,6 +606,137 @@ void main() {
         expect(bookRepository.updatedBook!.currentCfi, 'epubcfi(end)');
         expect(bookRepository.updatedBook!.readingProgress, 0.9);
       });
+
+      test(
+        'persists first article progress immediately so catalog refresh sees it',
+        () async {
+          final articleRepository = FakeArticleRepository();
+          articleRepository.seedArticle(
+            Article(
+              id: 'article-1',
+              title: 'Saved Article',
+              url: 'https://example.com/article',
+              siteName: 'Example',
+              contentPath: '/articles/article-1/article.json',
+              addedAt: DateTime(2024, 1, 1),
+            ),
+          );
+          final bloc = ReaderBloc(
+            bookRepository: bookRepository,
+            articleRepository: articleRepository,
+            highlightRepository: highlightRepository,
+          );
+          addTearDown(bloc.close);
+
+          bloc.add(const ReaderSourceLoadRequested(sourceId: 'article-1'));
+          await bloc.stream.firstWhere(
+            (s) => s.status == ReaderStatus.ready,
+          );
+          expect(articleRepository.updateCallCount, 1);
+
+          bloc.add(
+            const ReaderBookPositionUpdated(
+              cfi: 'epubcfi(/6/2)',
+              progress: 0.4,
+            ),
+          );
+          await bloc.stream.firstWhere(
+            (s) => s.book?.readingProgress == 0.4,
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+
+          expect(articleRepository.updateCallCount, 2);
+          expect(articleRepository.updatedArticle?.readingProgress, 0.4);
+        },
+      );
+
+      test(
+        'treats a single-page article as fully progressed after opening',
+        () async {
+          final articleRepository = FakeArticleRepository();
+          articleRepository.seedArticle(
+            Article(
+              id: 'article-1',
+              title: 'Saved Article',
+              url: 'https://example.com/article',
+              siteName: 'Example',
+              contentPath: '/articles/article-1/article.json',
+              addedAt: DateTime(2024, 1, 1),
+            ),
+          );
+          final bloc = ReaderBloc(
+            bookRepository: bookRepository,
+            articleRepository: articleRepository,
+            highlightRepository: highlightRepository,
+          );
+          addTearDown(bloc.close);
+
+          bloc.add(const ReaderSourceLoadRequested(sourceId: 'article-1'));
+          await bloc.stream.firstWhere(
+            (s) => s.status == ReaderStatus.ready,
+          );
+
+          bloc.add(
+            const ReaderBookPositionUpdated(
+              cfi: 'epubcfi(/6/2)',
+              progress: 0,
+              bookCurrentPage: 1,
+              bookTotalPages: 1,
+            ),
+          );
+          await bloc.stream.firstWhere(
+            (s) => s.book?.readingProgress == 1,
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+
+          expect(bloc.state.book?.readingProgress, 1);
+          expect(articleRepository.updatedArticle?.readingProgress, 1);
+        },
+      );
+
+      test(
+        'treats the first page of a multi-page article as visible progress',
+        () async {
+          final articleRepository = FakeArticleRepository();
+          articleRepository.seedArticle(
+            Article(
+              id: 'article-1',
+              title: 'Saved Article',
+              url: 'https://example.com/article',
+              siteName: 'Example',
+              contentPath: '/articles/article-1/article.json',
+              addedAt: DateTime(2024, 1, 1),
+            ),
+          );
+          final bloc = ReaderBloc(
+            bookRepository: bookRepository,
+            articleRepository: articleRepository,
+            highlightRepository: highlightRepository,
+          );
+          addTearDown(bloc.close);
+
+          bloc.add(const ReaderSourceLoadRequested(sourceId: 'article-1'));
+          await bloc.stream.firstWhere(
+            (s) => s.status == ReaderStatus.ready,
+          );
+
+          bloc.add(
+            const ReaderBookPositionUpdated(
+              cfi: 'epubcfi(/6/2)',
+              progress: 0,
+              bookCurrentPage: 0,
+              bookTotalPages: 4,
+            ),
+          );
+          await bloc.stream.firstWhere(
+            (s) => s.book?.readingProgress == 0.25,
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+
+          expect(bloc.state.book?.readingProgress, 0.25);
+          expect(articleRepository.updatedArticle?.readingProgress, 0.25);
+        },
+      );
     });
 
     group('ReaderHighlightsRefreshed', () {

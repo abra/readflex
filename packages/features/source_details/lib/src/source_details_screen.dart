@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:dictionary_repository/dictionary_repository.dart';
@@ -15,6 +16,10 @@ const _coverMaxWidth = 184.0;
 const _coverMinWidth = 140.0;
 const _coverScreenWidthFactor = 0.45;
 const _coverAspectRatio = 2 / 3;
+const _coverTextScale = 1.3;
+const _articleCoverIconAlpha = 0.4;
+const _articleListCoverWidth = 60.0;
+const _articleCoverIconWidthFactor = AppIconSize.md / _articleListCoverWidth;
 const _titleMaxLines = 3;
 const _authorMaxLines = 2;
 const _metadataMaxLines = 1;
@@ -27,17 +32,19 @@ class SourceDetailsScreen extends StatelessWidget {
     required this.flashcardRepository,
     required this.dictionaryRepository,
     required this.onReadPressed,
+    this.articleRepository,
     this.initialSource,
     super.key,
   });
 
   final String sourceId;
   final BookRepository bookRepository;
+  final ArticleRepository? articleRepository;
   final HighlightRepository highlightRepository;
   final FlashcardRepository flashcardRepository;
   final DictionaryRepository dictionaryRepository;
-  final Future<void> Function(Book source) onReadPressed;
-  final Book? initialSource;
+  final Future<void> Function(Book source, SourceType sourceType) onReadPressed;
+  final LibrarySource? initialSource;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +53,7 @@ class SourceDetailsScreen extends StatelessWidget {
     return BlocProvider(
       create: (_) => SourceDetailsBloc(
         bookRepository: bookRepository,
+        articleRepository: articleRepository,
         highlightRepository: highlightRepository,
         flashcardRepository: flashcardRepository,
         dictionaryRepository: dictionaryRepository,
@@ -67,7 +75,7 @@ class SourceDetailsView extends StatelessWidget {
   });
 
   final String sourceId;
-  final Future<void> Function(Book source) onReadPressed;
+  final Future<void> Function(Book source, SourceType sourceType) onReadPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +103,6 @@ class SourceDetailsView extends StatelessWidget {
                 source: state.source!,
                 showReviewSection: state.showReviewSection,
                 reviewSummary: state.reviewSummary,
-                onReadPressed: onReadPressed,
               ),
             },
           );
@@ -104,13 +111,17 @@ class SourceDetailsView extends StatelessWidget {
       bottomNavigationBar: BlocBuilder<SourceDetailsBloc, SourceDetailsState>(
         buildWhen: (previous, current) =>
             previous.status != current.status ||
-            previous.source != current.source,
+            previous.source != current.source ||
+            previous.readerBook != current.readerBook,
         builder: (context, state) {
           if (state.status != SourceDetailsStatus.success) {
             return const SizedBox.shrink();
           }
+          final readerBook = state.readerBook;
+          if (readerBook == null) return const SizedBox.shrink();
           return _SourceDetailsBottomBar(
             source: state.source!,
+            readerBook: readerBook,
             onReadPressed: onReadPressed,
           );
         },
@@ -122,11 +133,13 @@ class SourceDetailsView extends StatelessWidget {
 class _SourceDetailsBottomBar extends StatelessWidget {
   const _SourceDetailsBottomBar({
     required this.source,
+    required this.readerBook,
     required this.onReadPressed,
   });
 
-  final Book source;
-  final Future<void> Function(Book source) onReadPressed;
+  final LibrarySource source;
+  final Book readerBook;
+  final Future<void> Function(Book source, SourceType sourceType) onReadPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -148,7 +161,7 @@ class _SourceDetailsBottomBar extends StatelessWidget {
             height: AppSizes.buttonHeight,
             child: FilledButton.icon(
               onPressed: () async {
-                await onReadPressed(source);
+                await onReadPressed(readerBook, source.sourceType);
                 if (!context.mounted) return;
                 context.read<SourceDetailsBloc>().add(
                   SourceDetailsLoadRequested(source.id),
@@ -169,13 +182,11 @@ class _SourceDetailsContent extends StatelessWidget {
     required this.source,
     required this.showReviewSection,
     required this.reviewSummary,
-    required this.onReadPressed,
   });
 
-  final Book source;
+  final LibrarySource source;
   final bool showReviewSection;
   final SourceReviewSummary reviewSummary;
-  final Future<void> Function(Book source) onReadPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -238,15 +249,14 @@ class _SourceDetailsContent extends StatelessWidget {
 class _SourceMetadata extends StatelessWidget {
   const _SourceMetadata({required this.source});
 
-  final Book source;
+  final LibrarySource source;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.text;
     final items = [
-      source.format.name.toUpperCase(),
-      if (source.totalLocations > 0) '${source.totalLocations} locations',
+      source.typeLabel,
       _progressLabel(source),
     ];
 
@@ -285,7 +295,7 @@ class _HeroSection extends StatelessWidget {
     required this.coverWidth,
   });
 
-  final Book source;
+  final LibrarySource source;
   final double coverWidth;
 
   @override
@@ -293,6 +303,7 @@ class _HeroSection extends StatelessWidget {
     final colors = context.colors;
     final text = context.text;
     final coverImage = _coverImageFor(source);
+    final subtitle = _subtitleFor(source);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -317,10 +328,10 @@ class _HeroSection extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: text.titleMedium.copyWith(color: colors.onSurface),
         ),
-        if (source.author case final author? when author.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.xs),
+        if (subtitle case final value? when value.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.md),
           Text(
-            author,
+            value,
             textAlign: TextAlign.center,
             maxLines: _authorMaxLines,
             overflow: TextOverflow.ellipsis,
@@ -338,20 +349,59 @@ class _SourceCover extends StatelessWidget {
     required this.coverImage,
   });
 
-  final Book source;
+  final LibrarySource source;
   final ImageProvider? coverImage;
 
   @override
   Widget build(BuildContext context) {
+    final isArticle = source.sourceType == SourceType.article;
+
     return AppSourceCoverFrame(
-      cover: AppSourceCover(
-        title: source.title,
-        author: source.author,
-        seed: source.id,
-        coverImage: coverImage,
-        progress: source.readingProgress > 0 ? source.readingProgress : null,
-        showMatte: false,
-      ),
+      cover: isArticle
+          ? Stack(
+              children: [
+                Positioned.fill(
+                  child: AppSourceCover(
+                    title: source.title,
+                    author: source.author,
+                    source: source.sourceName,
+                    seed: source.id,
+                    isArticle: true,
+                    coverImage: coverImage,
+                    showTitle: false,
+                    showProgress: false,
+                    showMatte: false,
+                    showArticleBadge: false,
+                  ),
+                ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final iconSize =
+                        constraints.maxWidth * _articleCoverIconWidthFactor;
+
+                    return Center(
+                      child: Icon(
+                        AppIcons.language,
+                        size: iconSize,
+                        color: Colors.white.withValues(
+                          alpha: _articleCoverIconAlpha,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            )
+          : AppSourceCover(
+              title: source.title,
+              author: source.author,
+              source: source.sourceName,
+              seed: source.id,
+              coverImage: coverImage,
+              showProgress: false,
+              showMatte: false,
+              textScale: _coverTextScale,
+            ),
     );
   }
 }
@@ -479,7 +529,7 @@ class _ReviewActionRow extends StatelessWidget {
   }
 }
 
-String _readButtonLabel(Book source) =>
+String _readButtonLabel(LibrarySource source) =>
     source.readingProgress > 0 || source.lastOpenedAt != null
     ? 'Continue reading'
     : 'Start reading';
@@ -496,12 +546,23 @@ String _reviewSummaryLabel(
   return '$value $plural';
 }
 
-String _progressLabel(Book source) {
+String _progressLabel(LibrarySource source) {
   if (source.isFinished) return 'Finished';
   final progress = (source.readingProgress * 100).round();
   return progress > 0 ? '$progress% read' : 'New';
 }
 
-ImageProvider? _coverImageFor(Book source) {
+String? _subtitleFor(LibrarySource source) {
+  if (source.sourceType == SourceType.article) {
+    final sourceName = source.sourceName?.trim();
+    if (sourceName != null && sourceName.isNotEmpty) return sourceName;
+    return null;
+  }
+  final author = source.author?.trim();
+  if (author != null && author.isNotEmpty) return author;
+  return null;
+}
+
+ImageProvider? _coverImageFor(LibrarySource source) {
   return appSourceCoverImageFromPath(source.coverImagePath);
 }

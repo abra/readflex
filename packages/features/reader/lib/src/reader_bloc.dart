@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
@@ -27,8 +28,11 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   ReaderBloc({
     required BookRepository bookRepository,
     required HighlightRepository highlightRepository,
+    ArticleRepository? articleRepository,
     Book? initialSource,
+    SourceType initialSourceType = SourceType.book,
   }) : _bookRepository = bookRepository,
+       _articleRepository = articleRepository,
        _highlightRepository = highlightRepository,
        super(
          initialSource == null
@@ -37,6 +41,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
                  status: ReaderStatus.ready,
                  title: initialSource.title,
                  book: initialSource,
+                 sourceType: initialSourceType,
                ),
        ) {
     on<ReaderSourceLoadRequested>(_onSourceLoadRequested);
@@ -47,6 +52,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   }
 
   final BookRepository _bookRepository;
+  final ArticleRepository? _articleRepository;
   final HighlightRepository _highlightRepository;
 
   /// Pending Book to persist to the repository. foliate-js can emit frequent
@@ -68,7 +74,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     _pendingPersist = null;
     if (pending != null) {
       try {
-        await _bookRepository.updateBook(pending);
+        await _persistReaderBook(pending);
       } catch (e, st) {
         addError(e, st);
       }
@@ -86,8 +92,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     }
 
     try {
-      final (book, highlights, bookmarks) = await (
+      final (book, article, highlights, bookmarks) = await (
         _bookRepository.getBookById(event.sourceId),
+        _articleRepository?.getArticleById(event.sourceId) ??
+            Future.value(null),
         _highlightRepository.getHighlightsBySource(event.sourceId),
         _bookRepository.getBookmarksBySource(event.sourceId),
       ).wait;
@@ -107,6 +115,29 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             status: ReaderStatus.ready,
             title: updatedBook.title,
             book: updatedBook,
+            sourceType: SourceType.book,
+            highlights: highlights,
+            bookmarks: bookmarks,
+          ),
+        );
+        return;
+      }
+
+      if (article != null) {
+        final updatedArticle = article.copyWith(lastOpenedAt: DateTime.now());
+        final articleRepository = _articleRepository;
+        if (articleRepository == null) {
+          emit(state.copyWith(status: ReaderStatus.failure));
+          return;
+        }
+        await articleRepository.updateArticle(updatedArticle);
+        final readerBook = articleRepository.toReaderBook(updatedArticle);
+        emit(
+          state.copyWith(
+            status: ReaderStatus.ready,
+            title: readerBook.title,
+            book: readerBook,
+            sourceType: SourceType.article,
             highlights: highlights,
             bookmarks: bookmarks,
           ),
@@ -144,13 +175,26 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     // "we're at the very end" values, the same trick readest uses.
     final total = event.bookTotalPages;
     final isPhantomEnd = event.atEnd && total != null && total > 0;
-    final progress = isPhantomEnd ? 1.0 : event.progress.clamp(0.0, 1.0);
+    final isSinglePageArticle =
+        state.sourceType == SourceType.article && total == 1;
+    final clampedProgress = event.progress.clamp(0.0, 1.0).toDouble();
+    final progress = isPhantomEnd || isSinglePageArticle
+        ? 1.0
+        : _articleVisiblePageProgress(
+            sourceType: state.sourceType,
+            progress: clampedProgress,
+            bookCurrentPage: event.bookCurrentPage,
+            bookTotalPages: event.bookTotalPages,
+            chapterCurrentPage: event.chapterCurrentPage,
+            chapterTotalPages: event.chapterTotalPages,
+          );
     final bookCurrentPage = isPhantomEnd ? total - 1 : event.bookCurrentPage;
 
     final updated = state.book!.copyWith(
       currentCfi: event.cfi,
       readingProgress: progress,
     );
+    final previousProgress = state.book?.readingProgress ?? 0;
     final nextSizeTotal = event.sizeTotal ?? state.sizeTotal;
     final hasMeaningfulChange =
         updated != state.book ||
@@ -182,6 +226,18 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         currentPageBookmarkId: event.currentPageBookmarkId,
       ),
     );
+    final isFirstArticleProgress =
+        state.sourceType == SourceType.article &&
+        previousProgress <= 0 &&
+        progress > 0;
+    if (isFirstArticleProgress) {
+      _persistTimer?.cancel();
+      _persistTimer = null;
+      _pendingPersist = null;
+      await _persistReaderBook(updated);
+      return;
+    }
+
     // Persist with a trailing debounce — successive emits within the
     // window only update [_pendingPersist], so a 5-second drag that
     // fires ~50 onRelocated events still results in one write at the
@@ -197,10 +253,24 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     if (pending == null) return;
     _pendingPersist = null;
     try {
-      await _bookRepository.updateBook(pending);
+      await _persistReaderBook(pending);
     } catch (e, st) {
       addError(e, st);
     }
+  }
+
+  Future<void> _persistReaderBook(Book book) async {
+    if (state.sourceType == SourceType.article) {
+      final articleRepository = _articleRepository;
+      if (articleRepository == null) return;
+      final article = await articleRepository.getArticleById(book.id);
+      if (article == null) return;
+      await articleRepository.updateArticle(
+        articleRepository.updateFromReaderBook(article, book),
+      );
+      return;
+    }
+    await _bookRepository.updateBook(book);
   }
 
   /// Routes an external error through BLoC's error pipeline (e.g. from a
@@ -265,7 +335,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
 
       final bookmark = await _bookRepository.addBookmark(
         sourceId: book.id,
-        sourceType: SourceType.book,
+        sourceType: state.sourceType,
         cfi: event.cfi,
         content: event.content,
         progress: event.progress,
@@ -298,4 +368,36 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       addError(e, st);
     }
   }
+}
+
+double _articleVisiblePageProgress({
+  required SourceType sourceType,
+  required double progress,
+  required int? bookCurrentPage,
+  required int? bookTotalPages,
+  required int? chapterCurrentPage,
+  required int? chapterTotalPages,
+}) {
+  if (sourceType != SourceType.article || progress > 0) return progress;
+
+  final totalPages =
+      _positivePageTotal(bookTotalPages) ??
+      _positivePageTotal(chapterTotalPages);
+  if (totalPages == null || totalPages <= 1) return progress;
+
+  final currentPage =
+      _visibleArticlePage(bookCurrentPage) ??
+      _visibleArticlePage(chapterCurrentPage) ??
+      1;
+  return (currentPage / totalPages).clamp(0.0, 1.0).toDouble();
+}
+
+int? _positivePageTotal(int? value) {
+  if (value == null || value <= 0) return null;
+  return value;
+}
+
+int? _visibleArticlePage(int? value) {
+  if (value == null) return null;
+  return value < 1 ? 1 : value;
 }

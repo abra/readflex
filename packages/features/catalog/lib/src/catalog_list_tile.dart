@@ -4,19 +4,20 @@ import 'package:flutter/material.dart';
 
 /// Alpha applied to muted metadata (secondary text, icons) in list rows.
 const double _kMutedAlpha = 0.55;
+const double _kArticleIconAlpha = 0.4;
 const double _kListCoverWidth = 60;
 const double _kListCoverHeight = 90;
 const double _kCoverToTextGap = AppSpacing.md + AppSpacing.xxs;
 const double _kListRowHorizontalPadding = AppSpacing.xs;
 
-/// List-mode row for a [Book].
+/// List-mode row for a library source.
 ///
 /// Layout: 44×60 cover on the left, two-line text column on the right
 /// (title + author + a meta strip with the format + progress). A top
 /// hairline is drawn except on the first row (see [showTopDivider]).
 class BookLibraryListTile extends StatelessWidget {
   const BookLibraryListTile({
-    required this.book,
+    required this.source,
     required this.showTopDivider,
     required this.onTap,
     this.onLongPress,
@@ -24,7 +25,7 @@ class BookLibraryListTile extends StatelessWidget {
     super.key,
   });
 
-  final Book book;
+  final LibrarySource source;
   final bool showTopDivider;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
@@ -32,67 +33,104 @@ class BookLibraryListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress = (book.readingProgress * 100).round();
-    final coverImage = appSourceCoverImageFromPath(book.coverImagePath);
+    final progress = (source.readingProgress * 100).round();
+    final coverImage = appSourceCoverImageFromPath(source.coverImagePath);
+    final isArticle = source.sourceType == SourceType.article;
+    final subtitle = _subtitleFor(source);
+    final articleIconColor = Colors.white.withValues(alpha: _kArticleIconAlpha);
+    final sourceCover = AppSourceCover(
+      title: source.title,
+      author: source.author,
+      source: source.sourceName,
+      seed: source.id,
+      isArticle: isArticle,
+      coverImage: coverImage,
+      progress: source.readingProgress > 0 ? source.readingProgress : null,
+      showAuthor: false,
+      showTitle: false,
+      showProgress: false,
+      showMatte: false,
+    );
 
     return _ListRowShell(
       cover: Hero(
-        tag: sourceCoverHeroTag(book.id),
+        tag: sourceCoverHeroTag(source.id),
         transitionOnUserGestures: true,
         child: AppSourceCoverFrame(
-          cover: AppSourceCover(
-            title: book.title,
-            author: book.author,
-            seed: book.id,
-            coverImage: coverImage,
-            progress: book.readingProgress > 0 ? book.readingProgress : null,
-            showAuthor: false,
-            showTitle: false,
-            showProgress: false,
-            showMatte: false,
-          ),
+          cover: isArticle
+              ? Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    sourceCover,
+                    Icon(
+                      AppIcons.language,
+                      size: AppIconSize.md,
+                      color: articleIconColor,
+                    ),
+                  ],
+                )
+              : sourceCover,
         ),
       ),
-      title: book.title,
-      subtitle: book.author,
+      title: source.title,
+      subtitle: subtitle,
       showTopDivider: showTopDivider,
       isSelected: isSelected,
       onTap: onTap,
       onLongPress: onLongPress,
-      metaBuilder: (context, mutedColor) => [
-        // Material analogue for demo's LucideIcons.bookOpen. No sub-sm
-        // icon size token exists, so we bypass AppIconSize and use the
-        // exact demo-tuned literal (10).
-        Icon(AppIcons.book, size: 10, color: mutedColor),
-        const SizedBox(width: AppSpacing.xs),
-        Text('Book', style: _metaStyle(context, mutedColor)),
-        _MetaDot(mutedColor: mutedColor),
-        Text(
-          book.format.name.toUpperCase(),
-          style: _metaStyle(context, mutedColor),
-        ),
-        _MetaDot(mutedColor: mutedColor),
-        if (book.isFinished)
-          ..._doneBadge(context)
-        else if (book.lastOpenedAt == null)
-          Text('New', style: _metaStyle(context, mutedColor))
-        else
-          // Once the user has opened the book, show the progress %
-          // even if it's 0 — they may have navigated back to the
-          // cover. Showing "New" again would lie about the book
-          // never having been read.
+      metaBuilder: (context, mutedColor) {
+        final sourceName = _secondarySourceName(source, subtitle);
+
+        return [
+          // No sub-sm icon token exists, so we bypass AppIconSize and use
+          // the exact row-tuned literal (10).
+          Icon(_sourceIcon(source), size: 10, color: mutedColor),
+          const SizedBox(width: AppSpacing.xs),
           Text(
-            '$progress%',
-            style: _metaStyle(context, context.colors.onSurface).copyWith(
-              fontWeight: FontWeight.w500,
-            ),
+            _sourceKindLabel(source),
+            style: _metaStyle(context, mutedColor),
           ),
-      ],
+          if (sourceName != null) ...[
+            _MetaDot(mutedColor: mutedColor),
+            Flexible(
+              child: Text(
+                sourceName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _metaStyle(context, mutedColor),
+              ),
+            ),
+          ],
+          if (!isArticle) ...[
+            _MetaDot(mutedColor: mutedColor),
+            Text(
+              source.typeLabel,
+              style: _metaStyle(context, mutedColor),
+            ),
+          ],
+          _MetaDot(mutedColor: mutedColor),
+          if (source.isFinished)
+            ..._doneBadge(context)
+          else if (source.lastOpenedAt == null)
+            Text('New', style: _metaStyle(context, mutedColor))
+          else
+            // Once the user has opened the source, show the progress %
+            // even if it's 0 — they may have navigated back to the
+            // cover. Showing "New" again would lie about it never
+            // having been read.
+            Text(
+              '$progress%',
+              style: _metaStyle(context, context.colors.onSurface).copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+        ];
+      },
     );
   }
 }
 
-/// Layout scaffold for the book list tile. Owns the row geometry
+/// Layout scaffold for the source list tile. Owns the row geometry
 /// (60×90 cover, 14dp gap, title/meta column).
 ///
 /// Layout: up-to-3-line title on top, single combined meta strip
@@ -278,6 +316,35 @@ TextStyle _metaStyle(BuildContext context, Color color) =>
 
 Color _listDividerColor(BuildContext context) =>
     Color.lerp(context.appColors.divider, context.colors.onSurface, 0.12)!;
+
+String? _subtitleFor(LibrarySource source) {
+  final author = source.author?.trim();
+  if (author != null && author.isNotEmpty) return author;
+  if (source.sourceType == SourceType.article) {
+    final sourceName = source.sourceName?.trim();
+    if (sourceName != null && sourceName.isNotEmpty) return sourceName;
+  }
+  return null;
+}
+
+String? _secondarySourceName(LibrarySource source, String? subtitle) {
+  if (source.sourceType != SourceType.article) return null;
+  final sourceName = source.sourceName?.trim();
+  if (sourceName == null || sourceName.isEmpty) return null;
+  if (subtitle != null &&
+      sourceName.toLowerCase() == subtitle.trim().toLowerCase()) {
+    return null;
+  }
+  return sourceName;
+}
+
+IconData _sourceIcon(LibrarySource source) =>
+    source.sourceType == SourceType.article ? AppIcons.article : AppIcons.book;
+
+String _sourceKindLabel(LibrarySource source) {
+  if (source.sourceType == SourceType.article) return 'Article';
+  return source.isComic ? 'Comic' : 'Book';
+}
 
 /// Builds the green ` ✓ Done` kicker that replaces the progress segment
 /// when an item is fully read. Colour comes from the semantic

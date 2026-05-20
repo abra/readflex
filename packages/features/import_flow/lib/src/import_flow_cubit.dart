@@ -28,6 +28,20 @@ typedef ImportBookFile =
       void Function(double progress)? onProgress,
     });
 
+/// Extracts, cleans, and persists a web article by URL.
+typedef ImportArticleUrl = Future<Article?> Function(String url);
+
+/// User-facing failure raised by the app layer when article extraction has
+/// a meaningful backend reason (unsupported URL, extraction failed, etc.).
+class ArticleImportException implements Exception {
+  const ArticleImportException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'ArticleImportException: $message';
+}
+
 /// Drives the multi-step Add-to-Library bottom sheet. State is a sealed
 /// hierarchy ([ImportFlowState]) — each step has the exact data it
 /// needs (filename, progress) so the UI can switch on the concrete
@@ -36,12 +50,15 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
   ImportFlowCubit({
     required PickBookFile onPickBookFile,
     required ImportBookFile onImportBook,
+    required ImportArticleUrl onImportArticle,
   }) : _onPickBookFile = onPickBookFile,
        _onImportBook = onImportBook,
+       _onImportArticle = onImportArticle,
        super(const ImportFlowMenu());
 
   final PickBookFile _onPickBookFile;
   final ImportBookFile _onImportBook;
+  final ImportArticleUrl _onImportArticle;
 
   /// Re-entry guard for [pickAndImportBook]. Without it a double-tap
   /// on the menu's "Upload Book" tile (or the failure screen's "Try
@@ -54,6 +71,11 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
   /// sealed state hierarchy describes screens we paint. Process-control
   /// belongs in the cubit's private fields.
   bool _isPickingFile = false;
+  bool _isImportingArticle = false;
+
+  void showArticleUrlEntry() {
+    emit(const ImportFlowArticleUrlEntry());
+  }
 
   /// Open the platform file picker, then drive book import through
   /// uploading → done. No-op when the picker is dismissed or a pick
@@ -147,8 +169,99 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
     emit(ImportFlowBookDone(filename: filename, format: book.format));
   }
 
+  Future<void> importArticle(String rawUrl) async {
+    if (_isImportingArticle) return;
+    final url = _normalizeArticleUrl(rawUrl);
+    if (url == null) {
+      emit(
+        const ImportFlowFailure(
+          message: 'Enter a valid article URL',
+          retryTarget: ImportFlowRetryTarget.article,
+        ),
+      );
+      return;
+    }
+
+    _isImportingArticle = true;
+    emit(ImportFlowArticleUploading(url: url));
+    try {
+      final article = await _onImportArticle(url);
+      if (isClosed) return;
+      if (article == null) {
+        emit(
+          ImportFlowFailure(
+            message: 'Failed to save the article',
+            filename: url,
+            retryTarget: ImportFlowRetryTarget.article,
+          ),
+        );
+        return;
+      }
+      emit(ImportFlowArticleDone(title: article.title));
+    } on ArticleImportException catch (e) {
+      if (!isClosed) {
+        emit(
+          ImportFlowFailure(
+            message: e.message,
+            filename: url,
+            retryTarget: ImportFlowRetryTarget.article,
+          ),
+        );
+      }
+    } catch (_) {
+      if (!isClosed) {
+        emit(
+          ImportFlowFailure(
+            message: 'Failed to save the article',
+            filename: url,
+            retryTarget: ImportFlowRetryTarget.article,
+          ),
+        );
+      }
+    } finally {
+      _isImportingArticle = false;
+    }
+  }
+
   /// Reset to the menu — used by the failure-screen "Try again" button.
   void backToMenu() {
     emit(const ImportFlowMenu());
   }
+
+  void retryAfterFailure() {
+    final current = state;
+    if (current is ImportFlowFailure &&
+        current.retryTarget == ImportFlowRetryTarget.article) {
+      emit(const ImportFlowArticleUrlEntry());
+      return;
+    }
+    pickAndImportBook();
+  }
+}
+
+String? _normalizeArticleUrl(String rawUrl) {
+  final value = rawUrl.trim();
+  if (value.isEmpty || value.contains(RegExp(r'\s'))) return null;
+
+  final hasExplicitScheme = RegExp(
+    r'^[a-zA-Z][a-zA-Z0-9+.-]*://',
+  ).hasMatch(value);
+  final candidate = hasExplicitScheme ? value : 'https://$value';
+  final uri = Uri.tryParse(candidate);
+  if (uri == null ||
+      !(uri.scheme == 'http' || uri.scheme == 'https') ||
+      !uri.hasAuthority ||
+      uri.host.isEmpty) {
+    return null;
+  }
+  if (!hasExplicitScheme && !_looksLikeHost(uri.host)) return null;
+
+  return uri.toString();
+}
+
+bool _looksLikeHost(String host) {
+  if (host == 'localhost') return true;
+  if (InternetAddress.tryParse(host) != null) return true;
+  final labels = host.split('.');
+  return labels.length > 1 && labels.every((label) => label.isNotEmpty);
 }

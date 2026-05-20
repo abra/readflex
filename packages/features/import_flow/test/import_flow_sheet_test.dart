@@ -14,6 +14,7 @@ void main() {
           context,
           onPickBookFile: () async => null,
           onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (_) async => null,
         ),
       ),
     );
@@ -33,6 +34,7 @@ void main() {
           context,
           onPickBookFile: () async => null,
           onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (_) async => null,
         ),
       ),
     );
@@ -56,6 +58,7 @@ void main() {
             return null;
           },
           onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (_) async => null,
         ),
       ),
     );
@@ -82,6 +85,7 @@ void main() {
             onProgress?.call(1.0);
             return _fakeBook();
           },
+          onImportArticle: (_) async => null,
         ),
       ),
     );
@@ -105,6 +109,7 @@ void main() {
           onImportBook: (file, {onProgress}) async => _fakeBook(
             format: BookFormat.cbz,
           ),
+          onImportArticle: (_) async => null,
         ),
       ),
     );
@@ -126,6 +131,7 @@ void main() {
           context,
           onPickBookFile: () async => File('/tmp/Bad.epub'),
           onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (_) async => null,
         ),
       ),
     );

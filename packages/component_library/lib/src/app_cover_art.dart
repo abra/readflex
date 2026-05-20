@@ -14,10 +14,9 @@ import 'theme/tokens/app_radius.dart';
 /// per item in its data layer, whereas we pick deterministically from a
 /// shared palette keyed by [seed] (usually the book id).
 ///
-/// The [isArticle] / [source] inputs and the article badge / icon helpers
-/// below are leftovers from the removed article reader. They are kept
-/// because the design-system demo still exercises them; once the demo is
-/// pruned, the article path can be deleted entirely.
+/// The [isArticle] / [source] inputs render saved web articles with a
+/// distinct newspaper-style treatment instead of making them look like
+/// generated book covers.
 ///
 /// Must be hosted inside a bounded box (grid cell, SizedBox, LayoutBuilder).
 /// Caller passes the exact [height] / [width] — the widget does not
@@ -39,6 +38,9 @@ class AppCoverArt extends StatelessWidget {
     this.bottomReserve = 0,
     this.progress,
     this.showMatte = true,
+    this.articleBadgeAlignment = Alignment.topLeft,
+    this.showArticleBadge = true,
+    this.textScale = 1,
     super.key,
   });
 
@@ -102,6 +104,17 @@ class AppCoverArt extends StatelessWidget {
   /// in by the matte.
   final bool showMatte;
 
+  /// Corner for the article icon. Grid tiles can reserve the top-left
+  /// corner for their external WEB badge and move this icon to the right.
+  final Alignment articleBadgeAlignment;
+
+  /// Whether to draw the built-in article corner icon.
+  final bool showArticleBadge;
+
+  /// Multiplier for fallback cover typography. Keep at `1` for dense
+  /// library tiles; larger standalone covers can opt into more legible text.
+  final double textScale;
+
   final double height;
   final double? width;
 
@@ -111,11 +124,16 @@ class AppCoverArt extends StatelessWidget {
     // not "clean up" these magic values; they were tuned together and
     // the visual falls apart quickly if you round them.
     final contentPadding = (height * 0.075).clamp(6.0, 12.0).toDouble();
-    final titleFontSize = (height * 0.06875).clamp(6.0, 11.0).toDouble();
-    final authorFontSize = (height * 0.06).clamp(7.0, 9.0).toDouble();
-    final sourceFontSize = (height * 0.05).clamp(7.0, 8.0).toDouble();
+    final effectiveTextScale = textScale.clamp(0.75, 1.6).toDouble();
+    final titleFontSize =
+        (height * 0.06875).clamp(6.0, 11.0).toDouble() * effectiveTextScale;
+    final authorFontSize =
+        (height * 0.06).clamp(7.0, 9.0).toDouble() * effectiveTextScale;
+    final sourceFontSize =
+        (height * 0.05).clamp(7.0, 8.0).toDouble() * effectiveTextScale;
     final articleIconSize = (height * 0.075).clamp(10.0, 12.0).toDouble();
     final showExtendedMeta = height >= 110;
+    final effectiveShowAuthor = showAuthor && !isArticle;
 
     final clampedProgress = progress?.clamp(0.0, 1.0);
     final showProgress = clampedProgress != null;
@@ -138,21 +156,24 @@ class AppCoverArt extends StatelessWidget {
       sourceFontSize: sourceFontSize,
       topInset: topInset,
       bottomReserve: effectiveBottomReserve,
+      showAuthor: effectiveShowAuthor,
       showExtendedMeta: showExtendedMeta,
     );
 
-    final gradient = _pickGradient(seed ?? title);
+    final gradient = isArticle
+        ? _articleGradient(seed ?? title)
+        : _bookGradient(seed ?? title);
+    final textColor = Colors.white;
+    final metaColor = Colors.white.withValues(alpha: 0.5);
+    final sourceColor = Colors.white.withValues(alpha: 0.7);
+    final articleIconColor = Colors.white.withValues(alpha: 0.7);
 
     return Container(
       height: height,
       width: width,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(appSourceCoverRadius),
-        gradient: LinearGradient(
-          begin: isArticle ? Alignment.bottomCenter : Alignment.topLeft,
-          end: isArticle ? Alignment.topCenter : Alignment.bottomRight,
-          colors: [gradient.$1, gradient.$2],
-        ),
+        gradient: gradient,
       ),
       foregroundDecoration: showMatte
           ? BoxDecoration(
@@ -172,7 +193,7 @@ class AppCoverArt extends StatelessWidget {
               title: title,
               author: author,
               source: source,
-              showAuthor: showAuthor,
+              showAuthor: effectiveShowAuthor,
               isArticle: isArticle,
               centerText: centerText,
               contentPadding: contentPadding,
@@ -183,10 +204,17 @@ class AppCoverArt extends StatelessWidget {
               titleMaxLines: titleMaxLines,
               authorFontSize: authorFontSize,
               sourceFontSize: sourceFontSize,
+              textColor: textColor,
+              metaColor: metaColor,
+              sourceColor: sourceColor,
               showExtendedMeta: showExtendedMeta,
             ),
-          if (isArticle && showExtendedMeta)
-            _ArticleBadge(iconSize: articleIconSize),
+          if (isArticle && showArticleBadge && showExtendedMeta)
+            _ArticleBadge(
+              iconSize: articleIconSize,
+              color: articleIconColor,
+              alignment: articleBadgeAlignment,
+            ),
           if (showProgress)
             _ProgressPill(
               contentPadding: contentPadding,
@@ -205,6 +233,7 @@ class AppCoverArt extends StatelessWidget {
     required double sourceFontSize,
     required double topInset,
     required double bottomReserve,
+    required bool showAuthor,
     required bool showExtendedMeta,
   }) {
     // Dynamic title line count: grow the title to fill whatever vertical
@@ -244,7 +273,27 @@ class AppCoverArt extends StatelessWidget {
   // topLeft to a light bottomRight. Those three are replaced here with
   // honest dark→light pairs in the same hue family, so every cover shows
   // a consistent diagonal fall-off.
-  static (Color, Color) _pickGradient(String seed) {
+  static LinearGradient _bookGradient(String seed) {
+    final colors = _coverGradientColors(seed);
+
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [colors.$1, colors.$2],
+    );
+  }
+
+  static LinearGradient _articleGradient(String seed) {
+    final colors = _coverGradientColors(seed);
+
+    return LinearGradient(
+      begin: const Alignment(-0.25, 1),
+      end: const Alignment(0.25, -1),
+      colors: [colors.$1, colors.$2],
+    );
+  }
+
+  static (Color, Color) _coverGradientColors(String seed) {
     const palettes = <(Color, Color)>[
       (Color(0xFF8B4513), Color(0xFFD2691E)), // saddle brown
       (Color(0xFF1a1a2e), Color(0xFFe2c044)), // near black → mustard
@@ -330,6 +379,9 @@ class _CoverTextColumn extends StatelessWidget {
     required this.titleMaxLines,
     required this.authorFontSize,
     required this.sourceFontSize,
+    required this.textColor,
+    required this.metaColor,
+    required this.sourceColor,
     required this.showExtendedMeta,
   });
 
@@ -347,6 +399,9 @@ class _CoverTextColumn extends StatelessWidget {
   final int titleMaxLines;
   final double authorFontSize;
   final double sourceFontSize;
+  final Color textColor;
+  final Color metaColor;
+  final Color sourceColor;
   final bool showExtendedMeta;
 
   @override
@@ -360,10 +415,12 @@ class _CoverTextColumn extends StatelessWidget {
           maxLines: titleMaxLines,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
+            inherit: false,
             fontSize: titleFontSize,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: textColor,
             height: 1.2,
+            decoration: TextDecoration.none,
           ),
         ),
         if (showAuthor && author != null && showExtendedMeta) ...[
@@ -373,22 +430,26 @@ class _CoverTextColumn extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
+              inherit: false,
               fontSize: authorFontSize,
-              color: Colors.white.withValues(alpha: 0.5),
+              color: metaColor,
               letterSpacing: 1,
+              decoration: TextDecoration.none,
             ),
           ),
         ],
         if (isArticle && source != null && showExtendedMeta) ...[
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
             source!.toUpperCase(),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
+              inherit: false,
               fontSize: sourceFontSize,
-              color: Colors.white.withValues(alpha: 0.7),
+              color: sourceColor,
               letterSpacing: 1,
+              decoration: TextDecoration.none,
             ),
           ),
         ],
@@ -426,22 +487,39 @@ class _CoverTextColumn extends StatelessWidget {
 /// Small newspaper-style icon shown in the top-left corner of an
 /// article-flavoured cover.
 class _ArticleBadge extends StatelessWidget {
-  const _ArticleBadge({required this.iconSize});
+  const _ArticleBadge({
+    required this.iconSize,
+    required this.color,
+    required this.alignment,
+  });
 
   final double iconSize;
+  final Color color;
+  final Alignment alignment;
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
+    final horizontalPosition = alignment.x > 0
+        ? const _BadgeHorizontalPosition.right(8)
+        : const _BadgeHorizontalPosition.left(8);
+    return PositionedDirectional(
       top: 8,
-      left: 8,
-      child: Icon(
-        AppIcons.language,
-        size: iconSize,
-        color: Colors.white.withValues(alpha: 0.7),
-      ),
+      start: horizontalPosition.start,
+      end: horizontalPosition.end,
+      child: Icon(AppIcons.language, size: iconSize, color: color),
     );
   }
+}
+
+class _BadgeHorizontalPosition {
+  const _BadgeHorizontalPosition.left(double value) : start = value, end = null;
+
+  const _BadgeHorizontalPosition.right(double value)
+    : start = null,
+      end = value;
+
+  final double? start;
+  final double? end;
 }
 
 /// Bottom-anchored progress pill rendered when [AppCoverArt.progress]

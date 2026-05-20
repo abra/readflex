@@ -5,6 +5,8 @@
 // them easy to substitute in tests via TestDependenciesContainer.
 
 import 'package:ai_service/ai_service.dart';
+import 'package:article_extraction_service/article_extraction_service.dart';
+import 'package:article_repository/article_repository.dart';
 import 'package:auth_service/auth_service.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
@@ -31,6 +33,8 @@ class DependenciesContainer {
     required this.packageInfo,
     required this.preferencesService,
     required this.authService,
+    required this.articleExtractionService,
+    required this.articleRepository,
     required this.bookRepository,
     required this.highlightRepository,
     required this.flashcardRepository,
@@ -51,6 +55,8 @@ class DependenciesContainer {
   final PackageInfo packageInfo;
   final PreferencesService preferencesService;
   final AuthService authService;
+  final ArticleExtractionService articleExtractionService;
+  final ArticleRepository articleRepository;
   final BookRepository bookRepository;
   final HighlightRepository highlightRepository;
   final FlashcardRepository flashcardRepository;
@@ -78,6 +84,20 @@ class DependenciesContainer {
       await readerServer.stop();
     } catch (e, st) {
       logger.warn('readerServer.stop failed', error: e, stackTrace: st);
+    }
+    try {
+      articleExtractionService.dispose();
+    } catch (e, st) {
+      logger.warn(
+        'articleExtractionService.dispose failed',
+        error: e,
+        stackTrace: st,
+      );
+    }
+    try {
+      articleRepository.dispose();
+    } catch (e, st) {
+      logger.warn('articleRepository.dispose failed', error: e, stackTrace: st);
     }
   }
 }

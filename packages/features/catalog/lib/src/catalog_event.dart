@@ -12,17 +12,17 @@ final class CatalogRefreshRequested extends CatalogEvent {
   const CatalogRefreshRequested();
 }
 
-final class CatalogBookDeleted extends CatalogEvent {
-  const CatalogBookDeleted(this.bookId, {required this.scope});
+final class CatalogSourceDeleted extends CatalogEvent {
+  const CatalogSourceDeleted(this.sourceId, {required this.scope});
 
-  final String bookId;
+  final String sourceId;
   final BookDeletionScope scope;
 }
 
-final class CatalogBooksDeleted extends CatalogEvent {
-  const CatalogBooksDeleted(this.bookIds, {required this.scope});
+final class CatalogSourcesDeleted extends CatalogEvent {
+  const CatalogSourcesDeleted(this.sourceIds, {required this.scope});
 
-  final Set<String> bookIds;
+  final Set<String> sourceIds;
   final BookDeletionScope scope;
 }
 

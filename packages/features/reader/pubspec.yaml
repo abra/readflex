@@ -22,6 +22,8 @@ dependencies:
     path: ../../preferences_service
   book_repository:
     path: ../../book_repository
+  article_repository:
+    path: ../../article_repository
   highlight_repository:
     path: ../../highlight_repository
   component_library:

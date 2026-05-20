@@ -36,6 +36,19 @@ class ApplicationConfig {
 
   /// Supported locale codes for the app.
   List<String> get supportedLocaleCodes => const ['en', 'ru'];
+
+  /// Base URL of the article extraction backend.
+  ///
+  /// Local simulator default is intentionally `127.0.0.1`; real Android
+  /// devices must pass the host machine LAN address via dart-define.
+  String get articleCleanerBaseUrl => const String.fromEnvironment(
+    'ARTICLE_CLEANER_BASE_URL',
+    defaultValue: 'http://127.0.0.1:9090',
+  ).trim();
+
+  /// Optional API key for the article extraction backend.
+  String get articleCleanerApiKey =>
+      const String.fromEnvironment('ARTICLE_CLEANER_API_KEY').trim();
 }
 
 /// A special version of [ApplicationConfig] that is used in tests.

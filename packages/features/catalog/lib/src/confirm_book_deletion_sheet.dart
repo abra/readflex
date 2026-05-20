@@ -2,16 +2,15 @@ import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 
-/// Confirmation bottom sheet shown before any book deletion.
+/// Confirmation bottom sheet shown before deleting a library item.
 ///
 /// The sheet returns one of:
 ///   * `null` — user cancelled (Cancel button, scrim tap, system back).
 ///   * [BookDeletionScope.keepLearningData] — checkbox unchecked.
 ///   * [BookDeletionScope.deleteEverything] — checkbox checked.
 ///
-/// Wording is count-aware: `count == 1` shows the singular phrasing
-/// ("Delete this book?"), `count > 1` shows the plural with the actual
-/// number ("Delete 3 books?").
+/// Wording is count-aware: `count == 1` shows the singular phrasing,
+/// `count > 1` shows the plural with the actual number.
 Future<BookDeletionScope?> showConfirmBookDeletionSheet(
   BuildContext context, {
   required int count,
@@ -40,12 +39,12 @@ class _ConfirmBookDeletionSheetState extends State<_ConfirmBookDeletionSheet> {
     final colors = Theme.of(context).colorScheme;
     final isSingle = widget.count == 1;
     final title = isSingle
-        ? 'Delete this book?'
-        : 'Delete ${widget.count} books?';
+        ? 'Delete this item?'
+        : 'Delete ${widget.count} items?';
     final body = isSingle
-        ? 'This removes the book file and your highlights. '
+        ? 'This removes the library item and your highlights. '
               'Saved words and flashcards stay in your library.'
-        : 'This removes the book files and your highlights. '
+        : 'This removes the library items and your highlights. '
               'Saved words and flashcards stay in your library.';
 
     return ActionBottomSheetLayout(
@@ -63,7 +62,7 @@ class _ConfirmBookDeletionSheetState extends State<_ConfirmBookDeletionSheet> {
           Text(body, style: context.text.bodyMedium),
           const SizedBox(height: AppSpacing.md),
           // Opt-in to the destructive cascade. Default = keep learning
-          // data, since "I deleted my last book and lost my whole
+          // data, since "I deleted my last item and lost my whole
           // vocabulary" is a worse failure mode than leftover orphan rows.
           InkWell(
             onTap: () => setState(

@@ -15,6 +15,10 @@ class ImportFlowMenu extends ImportFlowState {
   const ImportFlowMenu();
 }
 
+class ImportFlowArticleUrlEntry extends ImportFlowState {
+  const ImportFlowArticleUrlEntry();
+}
+
 /// Book file is being parsed and copied to disk.
 ///
 /// `progress == null` means the byte-copy hasn't started yet — the
@@ -53,10 +57,34 @@ class ImportFlowBookDone extends ImportFlowState {
   List<Object?> get props => [filename, format, estimate];
 }
 
+class ImportFlowArticleUploading extends ImportFlowState {
+  const ImportFlowArticleUploading({required this.url});
+
+  final String url;
+
+  @override
+  List<Object?> get props => [url];
+}
+
+class ImportFlowArticleDone extends ImportFlowState {
+  const ImportFlowArticleDone({required this.title});
+
+  final String title;
+
+  @override
+  List<Object?> get props => [title];
+}
+
+enum ImportFlowRetryTarget { book, article }
+
 /// Terminal failure screen for the book path. Tap "Try again" re-opens
 /// the file picker.
 class ImportFlowFailure extends ImportFlowState {
-  const ImportFlowFailure({required this.message, this.filename});
+  const ImportFlowFailure({
+    required this.message,
+    this.filename,
+    this.retryTarget = ImportFlowRetryTarget.book,
+  });
 
   final String message;
 
@@ -64,7 +92,8 @@ class ImportFlowFailure extends ImportFlowState {
   /// the failure screen mirrors the success view's filename line so the
   /// user can tell which item failed.
   final String? filename;
+  final ImportFlowRetryTarget retryTarget;
 
   @override
-  List<Object?> get props => [message, filename];
+  List<Object?> get props => [message, filename, retryTarget];
 }

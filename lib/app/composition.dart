@@ -7,6 +7,8 @@
 import 'dart:io';
 
 import 'package:ai_service/ai_service.dart';
+import 'package:article_extraction_service/article_extraction_service.dart';
+import 'package:article_repository/article_repository.dart';
 import 'package:auth_service/auth_service.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
@@ -112,6 +114,7 @@ Future<DependenciesContainer> createDependenciesContainer(
   // ─── Filesystem layout ───
   final documentsDir = await getApplicationDocumentsDirectory();
   final booksDir = Directory(p.join(documentsDir.path, 'books'));
+  final articlesDir = Directory(p.join(documentsDir.path, 'articles'));
   final readerAssetsDir = Directory(p.join(documentsDir.path, 'reader_assets'));
 
   final readerServer = ReaderServer(
@@ -123,6 +126,11 @@ Future<DependenciesContainer> createDependenciesContainer(
   final bookRepository = BookRepository(
     database: database,
     booksDirectory: booksDir,
+    logger: logger,
+  );
+  final articleRepository = ArticleRepository(
+    database: database,
+    articlesDirectory: articlesDir,
     logger: logger,
   );
   final highlightRepository = HighlightRepository(database: database);
@@ -143,6 +151,12 @@ Future<DependenciesContainer> createDependenciesContainer(
   final connectivityService = await ConnectivityPlusService.create();
   const notificationService = NoopNotificationService();
   const screenControlService = WakelockScreenControlService();
+  final articleExtractionService = TrafilaturaArticleExtractionService(
+    baseUri: Uri.parse(config.articleCleanerBaseUrl),
+    apiKey: config.articleCleanerApiKey.isEmpty
+        ? null
+        : config.articleCleanerApiKey,
+  );
 
   return DependenciesContainer(
     logger: logger,
@@ -151,6 +165,8 @@ Future<DependenciesContainer> createDependenciesContainer(
     packageInfo: packageInfo,
     preferencesService: preferencesService,
     authService: authService,
+    articleExtractionService: articleExtractionService,
+    articleRepository: articleRepository,
     bookRepository: bookRepository,
     highlightRepository: highlightRepository,
     flashcardRepository: flashcardRepository,

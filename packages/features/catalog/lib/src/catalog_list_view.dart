@@ -20,21 +20,21 @@ import 'catalog_selection_cubit.dart';
 /// (or false to spring it back).
 class CatalogListView extends StatelessWidget {
   const CatalogListView({
-    required this.books,
+    required this.sources,
     required this.selection,
     required this.scrollController,
-    required this.onBookPressed,
-    required this.onBookLongPressed,
+    required this.onSourcePressed,
+    required this.onSourceLongPressed,
     required this.onConfirmSwipeDelete,
     super.key,
   });
 
-  final List<Book> books;
+  final List<LibrarySource> sources;
   final CatalogSelectionState selection;
   final ScrollController scrollController;
-  final void Function(Book book) onBookPressed;
-  final void Function(Book book) onBookLongPressed;
-  final Future<bool> Function(Book book) onConfirmSwipeDelete;
+  final void Function(LibrarySource source) onSourcePressed;
+  final void Function(LibrarySource source) onSourceLongPressed;
+  final Future<bool> Function(LibrarySource source) onConfirmSwipeDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -52,15 +52,15 @@ class CatalogListView extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(
         parent: BouncingScrollPhysics(),
       ),
-      itemCount: books.length,
+      itemCount: sources.length,
       itemBuilder: (context, index) {
-        final book = books[index];
+        final source = sources[index];
         final tile = BookLibraryListTile(
-          book: book,
-          isSelected: selection.contains(book.id),
+          source: source,
+          isSelected: selection.contains(source.id),
           showTopDivider: index > 0,
-          onTap: () => onBookPressed(book),
-          onLongPress: () => onBookLongPressed(book),
+          onTap: () => onSourcePressed(source),
+          onLongPress: () => onSourceLongPressed(source),
         );
 
         if (selection.isActive) {
@@ -68,10 +68,10 @@ class CatalogListView extends StatelessWidget {
         }
 
         return Dismissible(
-          key: ValueKey('catalog-row-${book.id}'),
+          key: ValueKey('catalog-row-${source.id}'),
           direction: DismissDirection.endToStart,
           background: const _SwipeDeleteBackground(),
-          confirmDismiss: (_) => onConfirmSwipeDelete(book),
+          confirmDismiss: (_) => onConfirmSwipeDelete(source),
           child: tile,
         );
       },

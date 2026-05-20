@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
@@ -96,7 +97,9 @@ class ReaderScreen extends StatelessWidget {
     required this.screenControlService,
     required this.textActions,
     this.initialSearchHistory = const [],
+    this.articleRepository,
     this.initialSource,
+    this.initialSourceType = SourceType.book,
     this.onSearchHistoryChanged,
     this.onSourceOpened,
     this.onCheckDueItems,
@@ -107,12 +110,14 @@ class ReaderScreen extends StatelessWidget {
   final String sourceId;
   final int serverPort;
   final BookRepository bookRepository;
+  final ArticleRepository? articleRepository;
   final HighlightRepository highlightRepository;
   final PreferencesService preferencesService;
   final ScreenControlService screenControlService;
   final List<TextAction> textActions;
   final List<String> initialSearchHistory;
   final Book? initialSource;
+  final SourceType initialSourceType;
   final ValueChanged<List<String>>? onSearchHistoryChanged;
   final VoidCallback? onSourceOpened;
   final Future<int> Function(String sourceId)? onCheckDueItems;
@@ -129,10 +134,12 @@ class ReaderScreen extends StatelessWidget {
           BlocProvider(
             create: (_) => ReaderBloc(
               bookRepository: bookRepository,
+              articleRepository: articleRepository,
               highlightRepository: highlightRepository,
               initialSource: initialSource?.id == sourceId
                   ? initialSource
                   : null,
+              initialSourceType: initialSourceType,
             )..add(ReaderSourceLoadRequested(sourceId: sourceId)),
           ),
           BlocProvider(create: (_) => ReaderUiCubit()),

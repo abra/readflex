@@ -5,7 +5,7 @@ enum CatalogStatus { initial, loading, success, failure }
 /// Filter segments mirrored from the readwell_demo Library screen. Kept
 /// as an enum (not a string) so switches are exhaustive and renames are
 /// refactor-safe.
-enum CatalogFilter { all, books, comics, unread, finished }
+enum CatalogFilter { all, books, articles, comics, unread, finished }
 
 class CatalogDeletionEffect extends Equatable {
   const CatalogDeletionEffect({
@@ -32,6 +32,7 @@ class CatalogState extends Equatable {
   CatalogState({
     this.status = CatalogStatus.initial,
     this.books = const [],
+    this.articles = const [],
     this.filter = CatalogFilter.all,
     this.searchQuery = '',
     this.deletionVersion = 0,
@@ -40,6 +41,12 @@ class CatalogState extends Equatable {
 
   final CatalogStatus status;
   final List<Book> books;
+  final List<Article> articles;
+
+  late final List<LibrarySource> sources = [
+    ...books.map(LibrarySource.fromBook),
+    ...articles.map(LibrarySource.fromArticle),
+  ];
 
   final CatalogFilter filter;
   final String searchQuery;
@@ -53,13 +60,13 @@ class CatalogState extends Equatable {
   /// for changes and renders the toast; it no longer owns delete queues.
   final CatalogDeletionEffect? deletionEffect;
 
-  bool get isEmpty => books.isEmpty;
+  bool get isEmpty => sources.isEmpty;
 
   /// Total count shown in the header ("N items") — reflects the raw
   /// library size regardless of the active filter.
-  int get totalCount => books.length;
+  int get totalCount => sources.length;
 
-  /// Books after applying the current [filter] and [searchQuery],
+  /// Sources after applying the current [filter] and [searchQuery],
   /// sorted by most-recently-opened first, then by newest added.
   ///
   /// Cached: `late final` evaluates [_computeVisibleItems] once per
@@ -70,32 +77,34 @@ class CatalogState extends Equatable {
   ///
   /// Not in [props]: derived from already-compared fields, so two
   /// states with equal raw inputs already produce the same list.
-  late final List<Book> visibleItems = _computeVisibleItems(
-    books: books,
+  late final List<LibrarySource> visibleItems = _computeVisibleItems(
+    sources: sources,
     filter: filter,
     searchQuery: searchQuery,
   );
 
-  static List<Book> _computeVisibleItems({
-    required List<Book> books,
+  static List<LibrarySource> _computeVisibleItems({
+    required List<LibrarySource> sources,
     required CatalogFilter filter,
     required String searchQuery,
   }) {
     final trimmedQuery = searchQuery.trim().toLowerCase();
 
-    final filtered = books.where((book) {
+    final filtered = sources.where((source) {
       final matchesFilter = switch (filter) {
         CatalogFilter.all => true,
-        CatalogFilter.books => book.format != BookFormat.cbz,
-        CatalogFilter.comics => book.format == BookFormat.cbz,
-        CatalogFilter.unread => book.readingProgress == 0,
-        CatalogFilter.finished => book.isFinished,
+        CatalogFilter.books =>
+          source.sourceType == SourceType.book && !source.isComic,
+        CatalogFilter.articles => source.sourceType == SourceType.article,
+        CatalogFilter.comics => source.isComic,
+        CatalogFilter.unread => source.readingProgress == 0,
+        CatalogFilter.finished => source.isFinished,
       };
       if (!matchesFilter) return false;
 
       if (trimmedQuery.isEmpty) return true;
-      final title = book.title.toLowerCase();
-      final author = (book.author ?? '').toLowerCase();
+      final title = source.title.toLowerCase();
+      final author = (source.author ?? '').toLowerCase();
       return title.contains(trimmedQuery) || author.contains(trimmedQuery);
     }).toList();
 
@@ -117,6 +126,7 @@ class CatalogState extends Equatable {
   CatalogState copyWith({
     CatalogStatus? status,
     List<Book>? books,
+    List<Article>? articles,
     CatalogFilter? filter,
     String? searchQuery,
     int? deletionVersion,
@@ -124,6 +134,7 @@ class CatalogState extends Equatable {
   }) => CatalogState(
     status: status ?? this.status,
     books: books ?? this.books,
+    articles: articles ?? this.articles,
     filter: filter ?? this.filter,
     searchQuery: searchQuery ?? this.searchQuery,
     deletionVersion: deletionVersion ?? this.deletionVersion,
@@ -134,6 +145,7 @@ class CatalogState extends Equatable {
   List<Object?> get props => [
     status,
     books,
+    articles,
     filter,
     searchQuery,
     deletionVersion,

@@ -3,6 +3,7 @@
 // extract the DAO they need.
 
 export 'src/daos/books_dao.dart';
+export 'src/daos/articles_dao.dart';
 export 'src/daos/dictionary_dao.dart';
 export 'src/daos/flashcards_dao.dart';
 export 'src/daos/highlights_dao.dart';

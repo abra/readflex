@@ -38,7 +38,7 @@ void main() {
     home: CatalogScreen(
       bookRepository: bookRepository,
       preferencesService: preferencesService,
-      onBookPressed: (_, {onSourceOpened}) async {},
+      onSourcePressed: (_, {onSourceOpened}) async {},
       onAddPressed: () async {},
     ),
   );
@@ -87,7 +87,7 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    expect(find.text('Search books...'), findsOneWidget);
+    expect(find.text('Search library...'), findsOneWidget);
   });
 
   testWidgets('shows filter segments', (tester) async {
@@ -120,7 +120,7 @@ void main() {
         home: CatalogScreen(
           bookRepository: bookRepository,
           preferencesService: preferencesService,
-          onBookPressed: (_, {onSourceOpened}) async {},
+          onSourcePressed: (_, {onSourceOpened}) async {},
           onAddPressed: () async {
             invocations++;
             await gate.future;
@@ -162,7 +162,7 @@ void main() {
         home: CatalogScreen(
           bookRepository: bookRepository,
           preferencesService: preferencesService,
-          onBookPressed: (_, {onSourceOpened}) async {},
+          onSourcePressed: (_, {onSourceOpened}) async {},
           onAddPressed: () async {
             await gate.future;
           },
@@ -233,8 +233,8 @@ void main() {
         home: CatalogScreen(
           bookRepository: bookRepository,
           preferencesService: preferencesService,
-          onBookPressed: (book, {onSourceOpened}) async {
-            expect(book.id, target.id);
+          onSourcePressed: (source, {onSourceOpened}) async {
+            expect(source.id, target.id);
             bookRepository.seedBooks([
               target.copyWith(lastOpenedAt: DateTime(2026, 1, 5)),
               newest,
@@ -312,8 +312,8 @@ void main() {
         home: CatalogScreen(
           bookRepository: bookRepository,
           preferencesService: preferencesService,
-          onBookPressed: (book, {onSourceOpened}) async {
-            expect(book.id, target.id);
+          onSourcePressed: (source, {onSourceOpened}) async {
+            expect(source.id, target.id);
             notifySourceOpened = onSourceOpened;
             await routeCompleter.future;
           },
@@ -352,12 +352,27 @@ void main() {
       tester.getTopLeft(newestFinder).dy,
     );
 
+    bookRepository.seedBooks([
+      target.copyWith(
+        lastOpenedAt: DateTime(2026, 1, 5),
+        readingProgress: 0.5,
+      ),
+      newest,
+    ]);
     routeCompleter.complete();
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(
       bookRepository.getBooksCallCount,
       2,
-      reason: 'the return path must not refresh again after the early update',
+      reason: 'return refresh waits for the reverse Hero endpoint',
+    );
+    await tester.pump(const Duration(milliseconds: 25));
+    await tester.pump();
+    expect(
+      bookRepository.getBooksCallCount,
+      3,
+      reason: 'return refresh picks up reader progress persisted after open',
     );
   });
 }

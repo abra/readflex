@@ -127,6 +127,73 @@ void main() {
       expect: () => [const ImportFlowMenu()],
     );
 
+    blocTest<ImportFlowCubit, ImportFlowState>(
+      'article import emits URL entry, uploading, then done',
+      build: () => _buildCubit(
+        importArticle: (url) async => _fakeArticle(title: 'Saved article'),
+      ),
+      act: (cubit) async {
+        cubit.showArticleUrlEntry();
+        await cubit.importArticle('https://example.com/article');
+      },
+      expect: () => [
+        const ImportFlowArticleUrlEntry(),
+        const ImportFlowArticleUploading(url: 'https://example.com/article'),
+        const ImportFlowArticleDone(title: 'Saved article'),
+      ],
+    );
+
+    blocTest<ImportFlowCubit, ImportFlowState>(
+      'article import accepts pasted domain without scheme',
+      build: () => _buildCubit(
+        importArticle: (url) async {
+          expect(url, 'https://habr.com/ru/articles/1029802/');
+          return _fakeArticle(title: 'Saved article');
+        },
+      ),
+      act: (cubit) => cubit.importArticle('habr.com/ru/articles/1029802/'),
+      expect: () => [
+        const ImportFlowArticleUploading(
+          url: 'https://habr.com/ru/articles/1029802/',
+        ),
+        const ImportFlowArticleDone(title: 'Saved article'),
+      ],
+    );
+
+    blocTest<ImportFlowCubit, ImportFlowState>(
+      'article import rejects invalid URLs without calling import callback',
+      build: () => _buildCubit(
+        importArticle: (_) async => throw StateError('should not be called'),
+      ),
+      act: (cubit) => cubit.importArticle('not a url'),
+      expect: () => [
+        const ImportFlowFailure(
+          message: 'Enter a valid article URL',
+          retryTarget: ImportFlowRetryTarget.article,
+        ),
+      ],
+    );
+
+    blocTest<ImportFlowCubit, ImportFlowState>(
+      'article import surfaces ArticleImportException.message in failure state',
+      build: () => _buildCubit(
+        importArticle: (_) async {
+          throw const ArticleImportException(
+            'Could not extract article content',
+          );
+        },
+      ),
+      act: (cubit) => cubit.importArticle('https://example.com/article'),
+      expect: () => [
+        const ImportFlowArticleUploading(url: 'https://example.com/article'),
+        const ImportFlowFailure(
+          message: 'Could not extract article content',
+          filename: 'https://example.com/article',
+          retryTarget: ImportFlowRetryTarget.article,
+        ),
+      ],
+    );
+
     // "Try again" on the failure screen wires straight to
     // pickAndImportBook (no detour through the menu). From an
     // ImportFlowFailure seed we expect the same uploading→done sequence
@@ -176,6 +243,7 @@ void main() {
           capturedOnProgress = onProgress!;
           return importCompleter.future;
         },
+        onImportArticle: (_) async => null,
       );
 
       // Kick off the import; it'll park awaiting the completer.
@@ -209,6 +277,7 @@ void main() {
       final cubit = ImportFlowCubit(
         onPickBookFile: () async => File('/tmp/will_fail.epub'),
         onImportBook: (file, {onProgress}) => importCompleter.future,
+        onImportArticle: (_) async => null,
       );
       final pending = cubit.pickAndImportBook();
       await Future<void>.delayed(Duration.zero);
@@ -298,10 +367,12 @@ void main() {
 ImportFlowCubit _buildCubit({
   PickBookFile? pickBookFile,
   ImportBookFile? importBook,
+  ImportArticleUrl? importArticle,
 }) {
   return ImportFlowCubit(
     onPickBookFile: pickBookFile ?? () async => null,
     onImportBook: importBook ?? (file, {onProgress}) async => null,
+    onImportArticle: importArticle ?? (_) async => null,
   );
 }
 
@@ -310,5 +381,13 @@ Book _fakeBook({BookFormat format = BookFormat.epub}) => Book(
   title: 'Test',
   filePath: 'book.epub',
   format: format,
+  addedAt: DateTime(2026),
+);
+
+Article _fakeArticle({String title = 'Article'}) => Article(
+  id: 'article-1',
+  title: title,
+  url: 'https://example.com/article',
+  contentPath: '/articles/article-1/article.json',
   addedAt: DateTime(2026),
 );

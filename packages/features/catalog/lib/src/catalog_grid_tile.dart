@@ -5,38 +5,42 @@ import 'package:flutter/material.dart';
 /// Alpha for the format badge background (dark overlay on cover art).
 const double _kBadgeBackgroundAlpha = 0.55;
 const double _kGridCoverInset = AppSpacing.xxs;
+const double _kArticleProgressOverlayReserve = 16.0;
 
-/// Grid-mode tile for a [Book].
+/// Grid-mode tile for a library source.
 ///
 /// Cover-only: 2:3 aspect ratio with optional format/finished badges and a
 /// slim progress bar overlay. Tap target spans the whole cover. Width is
 /// decided by the enclosing grid delegate.
 class BookLibraryGridTile extends StatelessWidget {
   const BookLibraryGridTile({
-    required this.book,
+    required this.source,
     required this.onTap,
     this.onLongPress,
     this.isSelected = false,
     super.key,
   });
 
-  final Book book;
+  final LibrarySource source;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
   final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
-    final coverImage = appSourceCoverImageFromPath(book.coverImagePath);
+    final coverImage = appSourceCoverImageFromPath(source.coverImagePath);
+    final isArticle = source.sourceType == SourceType.article;
 
     return _GridTileShell(
-      sourceId: book.id,
+      sourceId: source.id,
       cover: AppSourceCover(
-        title: book.title,
-        author: book.author,
-        seed: book.id,
+        title: source.title,
+        author: source.author,
+        source: source.sourceName,
+        seed: source.id,
+        isArticle: isArticle,
         coverImage: coverImage,
-        progress: book.readingProgress > 0 ? book.readingProgress : null,
+        progress: source.readingProgress > 0 ? source.readingProgress : null,
         // Show the title on the fallback cover art so any format
         // that doesn't ship an embedded cover (a CBZ without a
         // cover image, an EPUB stripped to text-only, etc.) stays
@@ -46,13 +50,18 @@ class BookLibraryGridTile extends StatelessWidget {
         showTitle: true,
         showAuthor: false,
         showProgress: false,
-        // The shared frame paints the physical cover edge; AppSourceCover's
-        // matte would add a second border and make Hero endpoints differ.
+        // The shared frame owns cover edges; AppCoverArt's matte would add
+        // a white inner border around generated article covers.
         showMatte: false,
+        centerText: isArticle,
+        bottomReserve: isArticle ? _kArticleProgressOverlayReserve : 0,
+        articleBadgeAlignment: isArticle
+            ? Alignment.topRight
+            : Alignment.topLeft,
       ),
-      isFinished: book.isFinished,
-      progress: book.readingProgress,
-      formatLabel: book.format.name.toUpperCase(),
+      isFinished: source.isFinished,
+      progress: source.readingProgress,
+      formatLabel: isArticle ? 'WEB' : source.typeLabel,
       isSelected: isSelected,
       onTap: onTap,
       onLongPress: onLongPress,
@@ -140,19 +149,25 @@ class _GridTileShell extends StatelessWidget {
                   const Positioned.fill(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(appSourceCoverRadius - 2),
+                          bottomRight: Radius.circular(
+                            appSourceCoverRadius - 2,
+                          ),
+                        ),
                         gradient: LinearGradient(
                           begin: Alignment.bottomCenter,
                           end: Alignment.topCenter,
-                          stops: [0.0, 0.15],
-                          colors: [Color(0x4D1B1F30), Color(0x001B1F30)],
+                          stops: [0.0, 0.30],
+                          colors: [Color(0x8C1B1F30), Color(0x001B1F30)],
                         ),
                       ),
                     ),
                   ),
                   Positioned(
-                    left: 6,
-                    right: 6,
-                    bottom: 4,
+                    left: 8,
+                    right: 8,
+                    bottom: 8,
                     child: LayoutBuilder(
                       builder: (_, constraints) => ClipRRect(
                         borderRadius: BorderRadius.circular(AppRadius.full),

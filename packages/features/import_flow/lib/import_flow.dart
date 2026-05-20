@@ -1,4 +1,4 @@
-// Bottom sheet for adding book files (EPUB / PDF / FB2 / ...) to the
+// Bottom sheet for adding local book files or saved web articles to the
 // library.
 
 export 'src/book_import.dart';

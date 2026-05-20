@@ -24,6 +24,7 @@ Future<ImportFlowResult?> showImportFlowSheet(
   BuildContext context, {
   required PickBookFile onPickBookFile,
   required ImportBookFile onImportBook,
+  required ImportArticleUrl onImportArticle,
 }) {
   return showAppBottomSheet<ImportFlowResult>(
     context,
@@ -31,6 +32,7 @@ Future<ImportFlowResult?> showImportFlowSheet(
       create: (_) => ImportFlowCubit(
         onPickBookFile: onPickBookFile,
         onImportBook: onImportBook,
+        onImportArticle: onImportArticle,
       ),
       child: const _ImportFlowSheet(),
     ),
@@ -52,7 +54,7 @@ class _ImportFlowSheet extends StatelessWidget {
         // distance from the bottom regardless of which state is
         // active.
         return SizedBox(
-          height: 200,
+          height: 280,
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
             switchInCurve: Curves.easeOut,
@@ -61,8 +63,13 @@ class _ImportFlowSheet extends StatelessWidget {
               key: ValueKey(state.runtimeType),
               child: switch (state) {
                 ImportFlowMenu() => const _MenuView(),
+                ImportFlowArticleUrlEntry() => const _ArticleUrlEntryView(),
                 ImportFlowBookUploading() => _BookUploadingView(state: state),
+                ImportFlowArticleUploading() => _ArticleUploadingView(
+                  state: state,
+                ),
                 ImportFlowBookDone() => _BookDoneView(state: state),
+                ImportFlowArticleDone() => _ArticleDoneView(state: state),
                 ImportFlowFailure() => _FailureView(state: state),
               },
             ),
@@ -96,6 +103,13 @@ class _MenuView extends StatelessWidget {
             subtitle: 'EPUB, FB2, MOBI, PDF, AZW3, CBZ',
             onTap: cubit.pickAndImportBook,
           ),
+          const SizedBox(height: AppSpacing.sm),
+          AppActionCard(
+            icon: AppIcons.link,
+            title: 'Save Article',
+            subtitle: 'Paste a web URL for offline reading',
+            onTap: cubit.showArticleUrlEntry,
+          ),
           const Spacer(),
           _PlainTextButton(
             label: 'Cancel',
@@ -119,6 +133,67 @@ class _PlainTextButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return OutlinedButton(onPressed: onPressed, child: Text(label));
+  }
+}
+
+class _ArticleUrlEntryView extends StatefulWidget {
+  const _ArticleUrlEntryView();
+
+  @override
+  State<_ArticleUrlEntryView> createState() => _ArticleUrlEntryViewState();
+}
+
+class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cubit = context.read<ImportFlowCubit>();
+
+    return Padding(
+      padding: _kStatusViewPadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const BottomSheetHeader(title: 'Save Article'),
+          const SizedBox(height: AppSpacing.lg),
+          TextField(
+            controller: _controller,
+            keyboardType: TextInputType.url,
+            textInputAction: TextInputAction.done,
+            autocorrect: false,
+            decoration: const InputDecoration(
+              hintText: 'https://example.com/article',
+            ),
+            onSubmitted: cubit.importArticle,
+          ),
+          const Spacer(),
+          Row(
+            children: [
+              Expanded(
+                child: _PlainTextButton(
+                  label: 'Back',
+                  onPressed: cubit.backToMenu,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => cubit.importArticle(_controller.text),
+                  child: const Text('Save'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -187,6 +262,48 @@ class _BookUploadingView extends StatelessWidget {
   }
 }
 
+class _ArticleUploadingView extends StatelessWidget {
+  const _ArticleUploadingView({required this.state});
+
+  final ImportFlowArticleUploading state;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = context.text;
+
+    return Padding(
+      padding: _kStatusViewPadding,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const CenteredCircularProgressIndicator(),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Saving article...',
+            textAlign: TextAlign.center,
+            style: text.bodyMedium.copyWith(
+              color: colors.onSurface,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            state.url,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: text.labelSmall.copyWith(
+              color: colors.onSurface.withValues(alpha: 0.55),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Insets used by the title-less status views (uploading, done,
 /// failure) so they line up with the [_MenuView]'s ActionBottomSheet
 /// gutter.
@@ -217,8 +334,22 @@ class _BookDoneView extends StatelessWidget {
   }
 }
 
-/// Terminal failure screen for the book path. "Try again" re-opens the
-/// file picker; the user can also dismiss the sheet to exit entirely.
+class _ArticleDoneView extends StatelessWidget {
+  const _ArticleDoneView({required this.state});
+
+  final ImportFlowArticleDone state;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SuccessLayout(
+      title: 'Article saved!',
+      detail: state.title,
+      onDone: () => Navigator.of(context).pop(ImportFlowResult.articleImported),
+    );
+  }
+}
+
+/// Terminal failure screen. "Try again" returns to the right failed flow.
 class _FailureView extends StatelessWidget {
   const _FailureView({required this.state});
 
@@ -287,11 +418,7 @@ class _FailureView extends StatelessWidget {
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: FilledButton(
-                  // Re-open the file picker directly. Going back to the
-                  // menu would force the user to tap "Upload Book"
-                  // again — the failure context already implies that's
-                  // what they want to retry.
-                  onPressed: cubit.pickAndImportBook,
+                  onPressed: cubit.retryAfterFailure,
                   child: const Text('Try again'),
                 ),
               ),

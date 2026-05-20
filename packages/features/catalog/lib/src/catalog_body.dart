@@ -25,8 +25,8 @@ class CatalogBody extends StatelessWidget {
     required this.state,
     required this.selection,
     required this.scrollController,
-    required this.onBookPressed,
-    required this.onBookLongPressed,
+    required this.onSourcePressed,
+    required this.onSourceLongPressed,
     required this.onConfirmSwipeDelete,
     required this.onRefresh,
     super.key,
@@ -35,9 +35,9 @@ class CatalogBody extends StatelessWidget {
   final CatalogState state;
   final CatalogSelectionState selection;
   final ScrollController scrollController;
-  final void Function(Book book) onBookPressed;
-  final void Function(Book book) onBookLongPressed;
-  final Future<bool> Function(Book book) onConfirmSwipeDelete;
+  final void Function(LibrarySource source) onSourcePressed;
+  final void Function(LibrarySource source) onSourceLongPressed;
+  final Future<bool> Function(LibrarySource source) onConfirmSwipeDelete;
   final Future<void> Function() onRefresh;
 
   @override
@@ -57,7 +57,7 @@ class CatalogBody extends StatelessWidget {
                 ? const EmptyState(
                     icon: AppIcons.book,
                     message: 'Your library is empty',
-                    subtitle: 'Import your first book to get started',
+                    subtitle: 'Add your first book or article to get started',
                   )
                 : const EmptyState(
                     icon: AppIcons.searchOff,
@@ -75,19 +75,19 @@ class CatalogBody extends StatelessWidget {
         builder: (context, layoutMode) {
           return switch (layoutMode) {
             CatalogLayoutMode.list => CatalogListView(
-              books: visibleItems,
+              sources: visibleItems,
               selection: selection,
               scrollController: scrollController,
-              onBookPressed: onBookPressed,
-              onBookLongPressed: onBookLongPressed,
+              onSourcePressed: onSourcePressed,
+              onSourceLongPressed: onSourceLongPressed,
               onConfirmSwipeDelete: onConfirmSwipeDelete,
             ),
             CatalogLayoutMode.grid => CatalogGridView(
-              books: visibleItems,
+              sources: visibleItems,
               selection: selection,
               scrollController: scrollController,
-              onBookPressed: onBookPressed,
-              onBookLongPressed: onBookLongPressed,
+              onSourcePressed: onSourcePressed,
+              onSourceLongPressed: onSourceLongPressed,
             ),
           };
         },

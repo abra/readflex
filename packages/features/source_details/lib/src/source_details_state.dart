@@ -6,30 +6,34 @@ class SourceDetailsState extends Equatable {
   const SourceDetailsState({
     this.status = SourceDetailsStatus.initial,
     this.source,
+    this.readerBook,
     this.reviewSummary = const SourceReviewSummary.empty(),
   });
 
   final SourceDetailsStatus status;
-  final Book? source;
+  final LibrarySource? source;
+  final Book? readerBook;
   final SourceReviewSummary reviewSummary;
 
   bool get showReviewSection {
     final source = this.source;
-    return source != null && sourceSupportsReview(source);
+    return source != null && source.supportsReview;
   }
 
   SourceDetailsState copyWith({
     SourceDetailsStatus? status,
-    Book? source,
+    LibrarySource? source,
+    Book? readerBook,
     SourceReviewSummary? reviewSummary,
   }) => SourceDetailsState(
     status: status ?? this.status,
     source: source ?? this.source,
+    readerBook: readerBook ?? this.readerBook,
     reviewSummary: reviewSummary ?? this.reviewSummary,
   );
 
   @override
-  List<Object?> get props => [status, source, reviewSummary];
+  List<Object?> get props => [status, source, readerBook, reviewSummary];
 }
 
 class SourceReviewSummary extends Equatable {
@@ -55,5 +59,3 @@ class SourceReviewSummary extends Equatable {
     dictionaryEntryCount,
   ];
 }
-
-bool sourceSupportsReview(Book source) => source.format != BookFormat.cbz;

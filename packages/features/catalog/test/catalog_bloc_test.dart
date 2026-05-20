@@ -78,7 +78,7 @@ void main() {
     );
 
     blocTest<CatalogBloc, CatalogState>(
-      'CatalogBookDeleted removes book and reloads',
+      'CatalogSourceDeleted removes source and reloads',
       setUp: () => repository.seedBooks([_book]),
       build: () => CatalogBloc(bookRepository: repository),
       seed: () => CatalogState(
@@ -86,7 +86,10 @@ void main() {
         books: [_book],
       ),
       act: (bloc) => bloc.add(
-        CatalogBookDeleted(_book.id, scope: BookDeletionScope.keepLearningData),
+        CatalogSourceDeleted(
+          _book.id,
+          scope: BookDeletionScope.keepLearningData,
+        ),
       ),
       expect: () => [
         CatalogState(
@@ -103,7 +106,7 @@ void main() {
     );
 
     blocTest<CatalogBloc, CatalogState>(
-      'CatalogBooksDeleted removes every id in batch and reloads once',
+      'CatalogSourcesDeleted removes every id in batch and reloads once',
       setUp: () {
         final second = Book(
           id: '2',
@@ -120,7 +123,7 @@ void main() {
         books: [_book],
       ),
       act: (bloc) => bloc.add(
-        const CatalogBooksDeleted(
+        const CatalogSourcesDeleted(
           {'1', '2'},
           scope: BookDeletionScope.keepLearningData,
         ),
@@ -142,12 +145,15 @@ void main() {
     // Delete completion metadata is emitted by the bloc so the screen does
     // not need a local queue to attribute toasts to overlapping deletes.
     blocTest<CatalogBloc, CatalogState>(
-      'CatalogBookDeleted emits a success deletion effect',
+      'CatalogSourceDeleted emits a success deletion effect',
       setUp: () => repository.seedBooks([_book]),
       build: () => CatalogBloc(bookRepository: repository),
       seed: () => CatalogState(status: CatalogStatus.success, books: [_book]),
       act: (bloc) => bloc.add(
-        CatalogBookDeleted(_book.id, scope: BookDeletionScope.keepLearningData),
+        CatalogSourceDeleted(
+          _book.id,
+          scope: BookDeletionScope.keepLearningData,
+        ),
       ),
       verify: (bloc) {
         expect(bloc.state.deletionVersion, 1);
@@ -168,7 +174,7 @@ void main() {
     // error effect without replacing the visible list with a full-screen
     // failure state.
     blocTest<CatalogBloc, CatalogState>(
-      'CatalogBooksDeleted continues on per-id failure and refetches',
+      'CatalogSourcesDeleted continues on per-id failure and refetches',
       setUp: () {
         final second = Book(
           id: '2',
@@ -186,7 +192,7 @@ void main() {
         books: [_book],
       ),
       act: (bloc) => bloc.add(
-        const CatalogBooksDeleted(
+        const CatalogSourcesDeleted(
           {'1', '2'},
           scope: BookDeletionScope.keepLearningData,
         ),
@@ -209,7 +215,7 @@ void main() {
     );
 
     blocTest<CatalogBloc, CatalogState>(
-      'CatalogBookDeleted keeps current list visible on failure',
+      'CatalogSourceDeleted keeps current list visible on failure',
       setUp: () {
         repository.seedBooks([_book]);
         repository.shouldThrow = true;
@@ -217,7 +223,10 @@ void main() {
       build: () => CatalogBloc(bookRepository: repository),
       seed: () => CatalogState(status: CatalogStatus.success, books: [_book]),
       act: (bloc) => bloc.add(
-        CatalogBookDeleted(_book.id, scope: BookDeletionScope.keepLearningData),
+        CatalogSourceDeleted(
+          _book.id,
+          scope: BookDeletionScope.keepLearningData,
+        ),
       ),
       errors: () => [isA<Object>()],
       verify: (bloc) {
@@ -268,7 +277,7 @@ void main() {
         // may leave the bloc in a dangling state.
         bloc
           ..add(
-            CatalogBookDeleted(
+            CatalogSourceDeleted(
               _book.id,
               scope: BookDeletionScope.keepLearningData,
             ),
@@ -316,7 +325,11 @@ void main() {
 
         expect(
           state.visibleItems,
-          [recentlyOpened, neverOpenedNewest, neverOpenedOlder],
+          [
+            recentlyOpened,
+            neverOpenedNewest,
+            neverOpenedOlder,
+          ].map(LibrarySource.fromBook).toList(),
         );
       },
     );

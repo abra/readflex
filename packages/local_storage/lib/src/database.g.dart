@@ -3,6 +3,1189 @@
 part of 'database.dart';
 
 // ignore_for_file: type=lint
+class $ArticlesTableTable extends ArticlesTable
+    with TableInfo<$ArticlesTableTable, ArticlesTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ArticlesTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _urlMeta = const VerificationMeta('url');
+  @override
+  late final GeneratedColumn<String> url = GeneratedColumn<String>(
+    'url',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _resolvedUrlMeta = const VerificationMeta(
+    'resolvedUrl',
+  );
+  @override
+  late final GeneratedColumn<String> resolvedUrl = GeneratedColumn<String>(
+    'resolved_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _canonicalUrlMeta = const VerificationMeta(
+    'canonicalUrl',
+  );
+  @override
+  late final GeneratedColumn<String> canonicalUrl = GeneratedColumn<String>(
+    'canonical_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _authorMeta = const VerificationMeta('author');
+  @override
+  late final GeneratedColumn<String> author = GeneratedColumn<String>(
+    'author',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _siteNameMeta = const VerificationMeta(
+    'siteName',
+  );
+  @override
+  late final GeneratedColumn<String> siteName = GeneratedColumn<String>(
+    'site_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _hostnameMeta = const VerificationMeta(
+    'hostname',
+  );
+  @override
+  late final GeneratedColumn<String> hostname = GeneratedColumn<String>(
+    'hostname',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _imageUrlMeta = const VerificationMeta(
+    'imageUrl',
+  );
+  @override
+  late final GeneratedColumn<String> imageUrl = GeneratedColumn<String>(
+    'image_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _coverImagePathMeta = const VerificationMeta(
+    'coverImagePath',
+  );
+  @override
+  late final GeneratedColumn<String> coverImagePath = GeneratedColumn<String>(
+    'cover_image_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _languageMeta = const VerificationMeta(
+    'language',
+  );
+  @override
+  late final GeneratedColumn<String> language = GeneratedColumn<String>(
+    'language',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _contentPathMeta = const VerificationMeta(
+    'contentPath',
+  );
+  @override
+  late final GeneratedColumn<String> contentPath = GeneratedColumn<String>(
+    'content_path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _plainTextMeta = const VerificationMeta(
+    'plainText',
+  );
+  @override
+  late final GeneratedColumn<String> plainText = GeneratedColumn<String>(
+    'plain_text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _textLengthMeta = const VerificationMeta(
+    'textLength',
+  );
+  @override
+  late final GeneratedColumn<int> textLength = GeneratedColumn<int>(
+    'text_length',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _estimatedWordCountMeta =
+      const VerificationMeta('estimatedWordCount');
+  @override
+  late final GeneratedColumn<int> estimatedWordCount = GeneratedColumn<int>(
+    'estimated_word_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _currentCfiMeta = const VerificationMeta(
+    'currentCfi',
+  );
+  @override
+  late final GeneratedColumn<String> currentCfi = GeneratedColumn<String>(
+    'current_cfi',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _readingProgressMeta = const VerificationMeta(
+    'readingProgress',
+  );
+  @override
+  late final GeneratedColumn<double> readingProgress = GeneratedColumn<double>(
+    'reading_progress',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _addedAtMeta = const VerificationMeta(
+    'addedAt',
+  );
+  @override
+  late final GeneratedColumn<String> addedAt = GeneratedColumn<String>(
+    'added_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastOpenedAtMeta = const VerificationMeta(
+    'lastOpenedAt',
+  );
+  @override
+  late final GeneratedColumn<String> lastOpenedAt = GeneratedColumn<String>(
+    'last_opened_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isFinishedMeta = const VerificationMeta(
+    'isFinished',
+  );
+  @override
+  late final GeneratedColumn<bool> isFinished = GeneratedColumn<bool>(
+    'is_finished',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_finished" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    title,
+    url,
+    resolvedUrl,
+    canonicalUrl,
+    author,
+    siteName,
+    hostname,
+    description,
+    imageUrl,
+    coverImagePath,
+    language,
+    contentPath,
+    plainText,
+    textLength,
+    estimatedWordCount,
+    currentCfi,
+    readingProgress,
+    addedAt,
+    lastOpenedAt,
+    isFinished,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'articles_table';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ArticlesTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('url')) {
+      context.handle(
+        _urlMeta,
+        url.isAcceptableOrUnknown(data['url']!, _urlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_urlMeta);
+    }
+    if (data.containsKey('resolved_url')) {
+      context.handle(
+        _resolvedUrlMeta,
+        resolvedUrl.isAcceptableOrUnknown(
+          data['resolved_url']!,
+          _resolvedUrlMeta,
+        ),
+      );
+    }
+    if (data.containsKey('canonical_url')) {
+      context.handle(
+        _canonicalUrlMeta,
+        canonicalUrl.isAcceptableOrUnknown(
+          data['canonical_url']!,
+          _canonicalUrlMeta,
+        ),
+      );
+    }
+    if (data.containsKey('author')) {
+      context.handle(
+        _authorMeta,
+        author.isAcceptableOrUnknown(data['author']!, _authorMeta),
+      );
+    }
+    if (data.containsKey('site_name')) {
+      context.handle(
+        _siteNameMeta,
+        siteName.isAcceptableOrUnknown(data['site_name']!, _siteNameMeta),
+      );
+    }
+    if (data.containsKey('hostname')) {
+      context.handle(
+        _hostnameMeta,
+        hostname.isAcceptableOrUnknown(data['hostname']!, _hostnameMeta),
+      );
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('image_url')) {
+      context.handle(
+        _imageUrlMeta,
+        imageUrl.isAcceptableOrUnknown(data['image_url']!, _imageUrlMeta),
+      );
+    }
+    if (data.containsKey('cover_image_path')) {
+      context.handle(
+        _coverImagePathMeta,
+        coverImagePath.isAcceptableOrUnknown(
+          data['cover_image_path']!,
+          _coverImagePathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('language')) {
+      context.handle(
+        _languageMeta,
+        language.isAcceptableOrUnknown(data['language']!, _languageMeta),
+      );
+    }
+    if (data.containsKey('content_path')) {
+      context.handle(
+        _contentPathMeta,
+        contentPath.isAcceptableOrUnknown(
+          data['content_path']!,
+          _contentPathMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentPathMeta);
+    }
+    if (data.containsKey('plain_text')) {
+      context.handle(
+        _plainTextMeta,
+        plainText.isAcceptableOrUnknown(data['plain_text']!, _plainTextMeta),
+      );
+    }
+    if (data.containsKey('text_length')) {
+      context.handle(
+        _textLengthMeta,
+        textLength.isAcceptableOrUnknown(data['text_length']!, _textLengthMeta),
+      );
+    }
+    if (data.containsKey('estimated_word_count')) {
+      context.handle(
+        _estimatedWordCountMeta,
+        estimatedWordCount.isAcceptableOrUnknown(
+          data['estimated_word_count']!,
+          _estimatedWordCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('current_cfi')) {
+      context.handle(
+        _currentCfiMeta,
+        currentCfi.isAcceptableOrUnknown(data['current_cfi']!, _currentCfiMeta),
+      );
+    }
+    if (data.containsKey('reading_progress')) {
+      context.handle(
+        _readingProgressMeta,
+        readingProgress.isAcceptableOrUnknown(
+          data['reading_progress']!,
+          _readingProgressMeta,
+        ),
+      );
+    }
+    if (data.containsKey('added_at')) {
+      context.handle(
+        _addedAtMeta,
+        addedAt.isAcceptableOrUnknown(data['added_at']!, _addedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_addedAtMeta);
+    }
+    if (data.containsKey('last_opened_at')) {
+      context.handle(
+        _lastOpenedAtMeta,
+        lastOpenedAt.isAcceptableOrUnknown(
+          data['last_opened_at']!,
+          _lastOpenedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_finished')) {
+      context.handle(
+        _isFinishedMeta,
+        isFinished.isAcceptableOrUnknown(data['is_finished']!, _isFinishedMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ArticlesTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ArticlesTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      url: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}url'],
+      )!,
+      resolvedUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}resolved_url'],
+      ),
+      canonicalUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}canonical_url'],
+      ),
+      author: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}author'],
+      ),
+      siteName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}site_name'],
+      ),
+      hostname: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hostname'],
+      ),
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+      imageUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}image_url'],
+      ),
+      coverImagePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cover_image_path'],
+      ),
+      language: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}language'],
+      ),
+      contentPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_path'],
+      )!,
+      plainText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}plain_text'],
+      )!,
+      textLength: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}text_length'],
+      )!,
+      estimatedWordCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}estimated_word_count'],
+      )!,
+      currentCfi: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}current_cfi'],
+      ),
+      readingProgress: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}reading_progress'],
+      )!,
+      addedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}added_at'],
+      )!,
+      lastOpenedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_opened_at'],
+      ),
+      isFinished: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_finished'],
+      )!,
+    );
+  }
+
+  @override
+  $ArticlesTableTable createAlias(String alias) {
+    return $ArticlesTableTable(attachedDatabase, alias);
+  }
+}
+
+class ArticlesTableData extends DataClass
+    implements Insertable<ArticlesTableData> {
+  final String id;
+  final String title;
+  final String url;
+  final String? resolvedUrl;
+  final String? canonicalUrl;
+  final String? author;
+  final String? siteName;
+  final String? hostname;
+  final String? description;
+  final String? imageUrl;
+  final String? coverImagePath;
+  final String? language;
+  final String contentPath;
+  final String plainText;
+  final int textLength;
+  final int estimatedWordCount;
+  final String? currentCfi;
+  final double readingProgress;
+  final String addedAt;
+  final String? lastOpenedAt;
+  final bool isFinished;
+  const ArticlesTableData({
+    required this.id,
+    required this.title,
+    required this.url,
+    this.resolvedUrl,
+    this.canonicalUrl,
+    this.author,
+    this.siteName,
+    this.hostname,
+    this.description,
+    this.imageUrl,
+    this.coverImagePath,
+    this.language,
+    required this.contentPath,
+    required this.plainText,
+    required this.textLength,
+    required this.estimatedWordCount,
+    this.currentCfi,
+    required this.readingProgress,
+    required this.addedAt,
+    this.lastOpenedAt,
+    required this.isFinished,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['title'] = Variable<String>(title);
+    map['url'] = Variable<String>(url);
+    if (!nullToAbsent || resolvedUrl != null) {
+      map['resolved_url'] = Variable<String>(resolvedUrl);
+    }
+    if (!nullToAbsent || canonicalUrl != null) {
+      map['canonical_url'] = Variable<String>(canonicalUrl);
+    }
+    if (!nullToAbsent || author != null) {
+      map['author'] = Variable<String>(author);
+    }
+    if (!nullToAbsent || siteName != null) {
+      map['site_name'] = Variable<String>(siteName);
+    }
+    if (!nullToAbsent || hostname != null) {
+      map['hostname'] = Variable<String>(hostname);
+    }
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    if (!nullToAbsent || imageUrl != null) {
+      map['image_url'] = Variable<String>(imageUrl);
+    }
+    if (!nullToAbsent || coverImagePath != null) {
+      map['cover_image_path'] = Variable<String>(coverImagePath);
+    }
+    if (!nullToAbsent || language != null) {
+      map['language'] = Variable<String>(language);
+    }
+    map['content_path'] = Variable<String>(contentPath);
+    map['plain_text'] = Variable<String>(plainText);
+    map['text_length'] = Variable<int>(textLength);
+    map['estimated_word_count'] = Variable<int>(estimatedWordCount);
+    if (!nullToAbsent || currentCfi != null) {
+      map['current_cfi'] = Variable<String>(currentCfi);
+    }
+    map['reading_progress'] = Variable<double>(readingProgress);
+    map['added_at'] = Variable<String>(addedAt);
+    if (!nullToAbsent || lastOpenedAt != null) {
+      map['last_opened_at'] = Variable<String>(lastOpenedAt);
+    }
+    map['is_finished'] = Variable<bool>(isFinished);
+    return map;
+  }
+
+  ArticlesTableCompanion toCompanion(bool nullToAbsent) {
+    return ArticlesTableCompanion(
+      id: Value(id),
+      title: Value(title),
+      url: Value(url),
+      resolvedUrl: resolvedUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(resolvedUrl),
+      canonicalUrl: canonicalUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(canonicalUrl),
+      author: author == null && nullToAbsent
+          ? const Value.absent()
+          : Value(author),
+      siteName: siteName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(siteName),
+      hostname: hostname == null && nullToAbsent
+          ? const Value.absent()
+          : Value(hostname),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      imageUrl: imageUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imageUrl),
+      coverImagePath: coverImagePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coverImagePath),
+      language: language == null && nullToAbsent
+          ? const Value.absent()
+          : Value(language),
+      contentPath: Value(contentPath),
+      plainText: Value(plainText),
+      textLength: Value(textLength),
+      estimatedWordCount: Value(estimatedWordCount),
+      currentCfi: currentCfi == null && nullToAbsent
+          ? const Value.absent()
+          : Value(currentCfi),
+      readingProgress: Value(readingProgress),
+      addedAt: Value(addedAt),
+      lastOpenedAt: lastOpenedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastOpenedAt),
+      isFinished: Value(isFinished),
+    );
+  }
+
+  factory ArticlesTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ArticlesTableData(
+      id: serializer.fromJson<String>(json['id']),
+      title: serializer.fromJson<String>(json['title']),
+      url: serializer.fromJson<String>(json['url']),
+      resolvedUrl: serializer.fromJson<String?>(json['resolvedUrl']),
+      canonicalUrl: serializer.fromJson<String?>(json['canonicalUrl']),
+      author: serializer.fromJson<String?>(json['author']),
+      siteName: serializer.fromJson<String?>(json['siteName']),
+      hostname: serializer.fromJson<String?>(json['hostname']),
+      description: serializer.fromJson<String?>(json['description']),
+      imageUrl: serializer.fromJson<String?>(json['imageUrl']),
+      coverImagePath: serializer.fromJson<String?>(json['coverImagePath']),
+      language: serializer.fromJson<String?>(json['language']),
+      contentPath: serializer.fromJson<String>(json['contentPath']),
+      plainText: serializer.fromJson<String>(json['plainText']),
+      textLength: serializer.fromJson<int>(json['textLength']),
+      estimatedWordCount: serializer.fromJson<int>(json['estimatedWordCount']),
+      currentCfi: serializer.fromJson<String?>(json['currentCfi']),
+      readingProgress: serializer.fromJson<double>(json['readingProgress']),
+      addedAt: serializer.fromJson<String>(json['addedAt']),
+      lastOpenedAt: serializer.fromJson<String?>(json['lastOpenedAt']),
+      isFinished: serializer.fromJson<bool>(json['isFinished']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'title': serializer.toJson<String>(title),
+      'url': serializer.toJson<String>(url),
+      'resolvedUrl': serializer.toJson<String?>(resolvedUrl),
+      'canonicalUrl': serializer.toJson<String?>(canonicalUrl),
+      'author': serializer.toJson<String?>(author),
+      'siteName': serializer.toJson<String?>(siteName),
+      'hostname': serializer.toJson<String?>(hostname),
+      'description': serializer.toJson<String?>(description),
+      'imageUrl': serializer.toJson<String?>(imageUrl),
+      'coverImagePath': serializer.toJson<String?>(coverImagePath),
+      'language': serializer.toJson<String?>(language),
+      'contentPath': serializer.toJson<String>(contentPath),
+      'plainText': serializer.toJson<String>(plainText),
+      'textLength': serializer.toJson<int>(textLength),
+      'estimatedWordCount': serializer.toJson<int>(estimatedWordCount),
+      'currentCfi': serializer.toJson<String?>(currentCfi),
+      'readingProgress': serializer.toJson<double>(readingProgress),
+      'addedAt': serializer.toJson<String>(addedAt),
+      'lastOpenedAt': serializer.toJson<String?>(lastOpenedAt),
+      'isFinished': serializer.toJson<bool>(isFinished),
+    };
+  }
+
+  ArticlesTableData copyWith({
+    String? id,
+    String? title,
+    String? url,
+    Value<String?> resolvedUrl = const Value.absent(),
+    Value<String?> canonicalUrl = const Value.absent(),
+    Value<String?> author = const Value.absent(),
+    Value<String?> siteName = const Value.absent(),
+    Value<String?> hostname = const Value.absent(),
+    Value<String?> description = const Value.absent(),
+    Value<String?> imageUrl = const Value.absent(),
+    Value<String?> coverImagePath = const Value.absent(),
+    Value<String?> language = const Value.absent(),
+    String? contentPath,
+    String? plainText,
+    int? textLength,
+    int? estimatedWordCount,
+    Value<String?> currentCfi = const Value.absent(),
+    double? readingProgress,
+    String? addedAt,
+    Value<String?> lastOpenedAt = const Value.absent(),
+    bool? isFinished,
+  }) => ArticlesTableData(
+    id: id ?? this.id,
+    title: title ?? this.title,
+    url: url ?? this.url,
+    resolvedUrl: resolvedUrl.present ? resolvedUrl.value : this.resolvedUrl,
+    canonicalUrl: canonicalUrl.present ? canonicalUrl.value : this.canonicalUrl,
+    author: author.present ? author.value : this.author,
+    siteName: siteName.present ? siteName.value : this.siteName,
+    hostname: hostname.present ? hostname.value : this.hostname,
+    description: description.present ? description.value : this.description,
+    imageUrl: imageUrl.present ? imageUrl.value : this.imageUrl,
+    coverImagePath: coverImagePath.present
+        ? coverImagePath.value
+        : this.coverImagePath,
+    language: language.present ? language.value : this.language,
+    contentPath: contentPath ?? this.contentPath,
+    plainText: plainText ?? this.plainText,
+    textLength: textLength ?? this.textLength,
+    estimatedWordCount: estimatedWordCount ?? this.estimatedWordCount,
+    currentCfi: currentCfi.present ? currentCfi.value : this.currentCfi,
+    readingProgress: readingProgress ?? this.readingProgress,
+    addedAt: addedAt ?? this.addedAt,
+    lastOpenedAt: lastOpenedAt.present ? lastOpenedAt.value : this.lastOpenedAt,
+    isFinished: isFinished ?? this.isFinished,
+  );
+  ArticlesTableData copyWithCompanion(ArticlesTableCompanion data) {
+    return ArticlesTableData(
+      id: data.id.present ? data.id.value : this.id,
+      title: data.title.present ? data.title.value : this.title,
+      url: data.url.present ? data.url.value : this.url,
+      resolvedUrl: data.resolvedUrl.present
+          ? data.resolvedUrl.value
+          : this.resolvedUrl,
+      canonicalUrl: data.canonicalUrl.present
+          ? data.canonicalUrl.value
+          : this.canonicalUrl,
+      author: data.author.present ? data.author.value : this.author,
+      siteName: data.siteName.present ? data.siteName.value : this.siteName,
+      hostname: data.hostname.present ? data.hostname.value : this.hostname,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      imageUrl: data.imageUrl.present ? data.imageUrl.value : this.imageUrl,
+      coverImagePath: data.coverImagePath.present
+          ? data.coverImagePath.value
+          : this.coverImagePath,
+      language: data.language.present ? data.language.value : this.language,
+      contentPath: data.contentPath.present
+          ? data.contentPath.value
+          : this.contentPath,
+      plainText: data.plainText.present ? data.plainText.value : this.plainText,
+      textLength: data.textLength.present
+          ? data.textLength.value
+          : this.textLength,
+      estimatedWordCount: data.estimatedWordCount.present
+          ? data.estimatedWordCount.value
+          : this.estimatedWordCount,
+      currentCfi: data.currentCfi.present
+          ? data.currentCfi.value
+          : this.currentCfi,
+      readingProgress: data.readingProgress.present
+          ? data.readingProgress.value
+          : this.readingProgress,
+      addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
+      lastOpenedAt: data.lastOpenedAt.present
+          ? data.lastOpenedAt.value
+          : this.lastOpenedAt,
+      isFinished: data.isFinished.present
+          ? data.isFinished.value
+          : this.isFinished,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ArticlesTableData(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('url: $url, ')
+          ..write('resolvedUrl: $resolvedUrl, ')
+          ..write('canonicalUrl: $canonicalUrl, ')
+          ..write('author: $author, ')
+          ..write('siteName: $siteName, ')
+          ..write('hostname: $hostname, ')
+          ..write('description: $description, ')
+          ..write('imageUrl: $imageUrl, ')
+          ..write('coverImagePath: $coverImagePath, ')
+          ..write('language: $language, ')
+          ..write('contentPath: $contentPath, ')
+          ..write('plainText: $plainText, ')
+          ..write('textLength: $textLength, ')
+          ..write('estimatedWordCount: $estimatedWordCount, ')
+          ..write('currentCfi: $currentCfi, ')
+          ..write('readingProgress: $readingProgress, ')
+          ..write('addedAt: $addedAt, ')
+          ..write('lastOpenedAt: $lastOpenedAt, ')
+          ..write('isFinished: $isFinished')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+    id,
+    title,
+    url,
+    resolvedUrl,
+    canonicalUrl,
+    author,
+    siteName,
+    hostname,
+    description,
+    imageUrl,
+    coverImagePath,
+    language,
+    contentPath,
+    plainText,
+    textLength,
+    estimatedWordCount,
+    currentCfi,
+    readingProgress,
+    addedAt,
+    lastOpenedAt,
+    isFinished,
+  ]);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ArticlesTableData &&
+          other.id == this.id &&
+          other.title == this.title &&
+          other.url == this.url &&
+          other.resolvedUrl == this.resolvedUrl &&
+          other.canonicalUrl == this.canonicalUrl &&
+          other.author == this.author &&
+          other.siteName == this.siteName &&
+          other.hostname == this.hostname &&
+          other.description == this.description &&
+          other.imageUrl == this.imageUrl &&
+          other.coverImagePath == this.coverImagePath &&
+          other.language == this.language &&
+          other.contentPath == this.contentPath &&
+          other.plainText == this.plainText &&
+          other.textLength == this.textLength &&
+          other.estimatedWordCount == this.estimatedWordCount &&
+          other.currentCfi == this.currentCfi &&
+          other.readingProgress == this.readingProgress &&
+          other.addedAt == this.addedAt &&
+          other.lastOpenedAt == this.lastOpenedAt &&
+          other.isFinished == this.isFinished);
+}
+
+class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
+  final Value<String> id;
+  final Value<String> title;
+  final Value<String> url;
+  final Value<String?> resolvedUrl;
+  final Value<String?> canonicalUrl;
+  final Value<String?> author;
+  final Value<String?> siteName;
+  final Value<String?> hostname;
+  final Value<String?> description;
+  final Value<String?> imageUrl;
+  final Value<String?> coverImagePath;
+  final Value<String?> language;
+  final Value<String> contentPath;
+  final Value<String> plainText;
+  final Value<int> textLength;
+  final Value<int> estimatedWordCount;
+  final Value<String?> currentCfi;
+  final Value<double> readingProgress;
+  final Value<String> addedAt;
+  final Value<String?> lastOpenedAt;
+  final Value<bool> isFinished;
+  final Value<int> rowid;
+  const ArticlesTableCompanion({
+    this.id = const Value.absent(),
+    this.title = const Value.absent(),
+    this.url = const Value.absent(),
+    this.resolvedUrl = const Value.absent(),
+    this.canonicalUrl = const Value.absent(),
+    this.author = const Value.absent(),
+    this.siteName = const Value.absent(),
+    this.hostname = const Value.absent(),
+    this.description = const Value.absent(),
+    this.imageUrl = const Value.absent(),
+    this.coverImagePath = const Value.absent(),
+    this.language = const Value.absent(),
+    this.contentPath = const Value.absent(),
+    this.plainText = const Value.absent(),
+    this.textLength = const Value.absent(),
+    this.estimatedWordCount = const Value.absent(),
+    this.currentCfi = const Value.absent(),
+    this.readingProgress = const Value.absent(),
+    this.addedAt = const Value.absent(),
+    this.lastOpenedAt = const Value.absent(),
+    this.isFinished = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ArticlesTableCompanion.insert({
+    required String id,
+    required String title,
+    required String url,
+    this.resolvedUrl = const Value.absent(),
+    this.canonicalUrl = const Value.absent(),
+    this.author = const Value.absent(),
+    this.siteName = const Value.absent(),
+    this.hostname = const Value.absent(),
+    this.description = const Value.absent(),
+    this.imageUrl = const Value.absent(),
+    this.coverImagePath = const Value.absent(),
+    this.language = const Value.absent(),
+    required String contentPath,
+    this.plainText = const Value.absent(),
+    this.textLength = const Value.absent(),
+    this.estimatedWordCount = const Value.absent(),
+    this.currentCfi = const Value.absent(),
+    this.readingProgress = const Value.absent(),
+    required String addedAt,
+    this.lastOpenedAt = const Value.absent(),
+    this.isFinished = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       title = Value(title),
+       url = Value(url),
+       contentPath = Value(contentPath),
+       addedAt = Value(addedAt);
+  static Insertable<ArticlesTableData> custom({
+    Expression<String>? id,
+    Expression<String>? title,
+    Expression<String>? url,
+    Expression<String>? resolvedUrl,
+    Expression<String>? canonicalUrl,
+    Expression<String>? author,
+    Expression<String>? siteName,
+    Expression<String>? hostname,
+    Expression<String>? description,
+    Expression<String>? imageUrl,
+    Expression<String>? coverImagePath,
+    Expression<String>? language,
+    Expression<String>? contentPath,
+    Expression<String>? plainText,
+    Expression<int>? textLength,
+    Expression<int>? estimatedWordCount,
+    Expression<String>? currentCfi,
+    Expression<double>? readingProgress,
+    Expression<String>? addedAt,
+    Expression<String>? lastOpenedAt,
+    Expression<bool>? isFinished,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (title != null) 'title': title,
+      if (url != null) 'url': url,
+      if (resolvedUrl != null) 'resolved_url': resolvedUrl,
+      if (canonicalUrl != null) 'canonical_url': canonicalUrl,
+      if (author != null) 'author': author,
+      if (siteName != null) 'site_name': siteName,
+      if (hostname != null) 'hostname': hostname,
+      if (description != null) 'description': description,
+      if (imageUrl != null) 'image_url': imageUrl,
+      if (coverImagePath != null) 'cover_image_path': coverImagePath,
+      if (language != null) 'language': language,
+      if (contentPath != null) 'content_path': contentPath,
+      if (plainText != null) 'plain_text': plainText,
+      if (textLength != null) 'text_length': textLength,
+      if (estimatedWordCount != null)
+        'estimated_word_count': estimatedWordCount,
+      if (currentCfi != null) 'current_cfi': currentCfi,
+      if (readingProgress != null) 'reading_progress': readingProgress,
+      if (addedAt != null) 'added_at': addedAt,
+      if (lastOpenedAt != null) 'last_opened_at': lastOpenedAt,
+      if (isFinished != null) 'is_finished': isFinished,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ArticlesTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? title,
+    Value<String>? url,
+    Value<String?>? resolvedUrl,
+    Value<String?>? canonicalUrl,
+    Value<String?>? author,
+    Value<String?>? siteName,
+    Value<String?>? hostname,
+    Value<String?>? description,
+    Value<String?>? imageUrl,
+    Value<String?>? coverImagePath,
+    Value<String?>? language,
+    Value<String>? contentPath,
+    Value<String>? plainText,
+    Value<int>? textLength,
+    Value<int>? estimatedWordCount,
+    Value<String?>? currentCfi,
+    Value<double>? readingProgress,
+    Value<String>? addedAt,
+    Value<String?>? lastOpenedAt,
+    Value<bool>? isFinished,
+    Value<int>? rowid,
+  }) {
+    return ArticlesTableCompanion(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      url: url ?? this.url,
+      resolvedUrl: resolvedUrl ?? this.resolvedUrl,
+      canonicalUrl: canonicalUrl ?? this.canonicalUrl,
+      author: author ?? this.author,
+      siteName: siteName ?? this.siteName,
+      hostname: hostname ?? this.hostname,
+      description: description ?? this.description,
+      imageUrl: imageUrl ?? this.imageUrl,
+      coverImagePath: coverImagePath ?? this.coverImagePath,
+      language: language ?? this.language,
+      contentPath: contentPath ?? this.contentPath,
+      plainText: plainText ?? this.plainText,
+      textLength: textLength ?? this.textLength,
+      estimatedWordCount: estimatedWordCount ?? this.estimatedWordCount,
+      currentCfi: currentCfi ?? this.currentCfi,
+      readingProgress: readingProgress ?? this.readingProgress,
+      addedAt: addedAt ?? this.addedAt,
+      lastOpenedAt: lastOpenedAt ?? this.lastOpenedAt,
+      isFinished: isFinished ?? this.isFinished,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (url.present) {
+      map['url'] = Variable<String>(url.value);
+    }
+    if (resolvedUrl.present) {
+      map['resolved_url'] = Variable<String>(resolvedUrl.value);
+    }
+    if (canonicalUrl.present) {
+      map['canonical_url'] = Variable<String>(canonicalUrl.value);
+    }
+    if (author.present) {
+      map['author'] = Variable<String>(author.value);
+    }
+    if (siteName.present) {
+      map['site_name'] = Variable<String>(siteName.value);
+    }
+    if (hostname.present) {
+      map['hostname'] = Variable<String>(hostname.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (imageUrl.present) {
+      map['image_url'] = Variable<String>(imageUrl.value);
+    }
+    if (coverImagePath.present) {
+      map['cover_image_path'] = Variable<String>(coverImagePath.value);
+    }
+    if (language.present) {
+      map['language'] = Variable<String>(language.value);
+    }
+    if (contentPath.present) {
+      map['content_path'] = Variable<String>(contentPath.value);
+    }
+    if (plainText.present) {
+      map['plain_text'] = Variable<String>(plainText.value);
+    }
+    if (textLength.present) {
+      map['text_length'] = Variable<int>(textLength.value);
+    }
+    if (estimatedWordCount.present) {
+      map['estimated_word_count'] = Variable<int>(estimatedWordCount.value);
+    }
+    if (currentCfi.present) {
+      map['current_cfi'] = Variable<String>(currentCfi.value);
+    }
+    if (readingProgress.present) {
+      map['reading_progress'] = Variable<double>(readingProgress.value);
+    }
+    if (addedAt.present) {
+      map['added_at'] = Variable<String>(addedAt.value);
+    }
+    if (lastOpenedAt.present) {
+      map['last_opened_at'] = Variable<String>(lastOpenedAt.value);
+    }
+    if (isFinished.present) {
+      map['is_finished'] = Variable<bool>(isFinished.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ArticlesTableCompanion(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('url: $url, ')
+          ..write('resolvedUrl: $resolvedUrl, ')
+          ..write('canonicalUrl: $canonicalUrl, ')
+          ..write('author: $author, ')
+          ..write('siteName: $siteName, ')
+          ..write('hostname: $hostname, ')
+          ..write('description: $description, ')
+          ..write('imageUrl: $imageUrl, ')
+          ..write('coverImagePath: $coverImagePath, ')
+          ..write('language: $language, ')
+          ..write('contentPath: $contentPath, ')
+          ..write('plainText: $plainText, ')
+          ..write('textLength: $textLength, ')
+          ..write('estimatedWordCount: $estimatedWordCount, ')
+          ..write('currentCfi: $currentCfi, ')
+          ..write('readingProgress: $readingProgress, ')
+          ..write('addedAt: $addedAt, ')
+          ..write('lastOpenedAt: $lastOpenedAt, ')
+          ..write('isFinished: $isFinished, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $BooksTableTable extends BooksTable
     with TableInfo<$BooksTableTable, BooksTableData> {
   @override
@@ -4074,6 +5257,7 @@ class ReviewLogsTableCompanion extends UpdateCompanion<ReviewLogsTableData> {
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
+  late final $ArticlesTableTable articlesTable = $ArticlesTableTable(this);
   late final $BooksTableTable booksTable = $BooksTableTable(this);
   late final $HighlightsTableTable highlightsTable = $HighlightsTableTable(
     this,
@@ -4090,6 +5274,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ReviewLogsTableTable reviewLogsTable = $ReviewLogsTableTable(
     this,
   );
+  late final ArticlesDao articlesDao = ArticlesDao(this as AppDatabase);
   late final BooksDao booksDao = BooksDao(this as AppDatabase);
   late final HighlightsDao highlightsDao = HighlightsDao(this as AppDatabase);
   late final FlashcardsDao flashcardsDao = FlashcardsDao(this as AppDatabase);
@@ -4102,6 +5287,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
+    articlesTable,
     booksTable,
     highlightsTable,
     flashcardsTable,
@@ -4111,6 +5297,536 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   ];
 }
 
+typedef $$ArticlesTableTableCreateCompanionBuilder =
+    ArticlesTableCompanion Function({
+      required String id,
+      required String title,
+      required String url,
+      Value<String?> resolvedUrl,
+      Value<String?> canonicalUrl,
+      Value<String?> author,
+      Value<String?> siteName,
+      Value<String?> hostname,
+      Value<String?> description,
+      Value<String?> imageUrl,
+      Value<String?> coverImagePath,
+      Value<String?> language,
+      required String contentPath,
+      Value<String> plainText,
+      Value<int> textLength,
+      Value<int> estimatedWordCount,
+      Value<String?> currentCfi,
+      Value<double> readingProgress,
+      required String addedAt,
+      Value<String?> lastOpenedAt,
+      Value<bool> isFinished,
+      Value<int> rowid,
+    });
+typedef $$ArticlesTableTableUpdateCompanionBuilder =
+    ArticlesTableCompanion Function({
+      Value<String> id,
+      Value<String> title,
+      Value<String> url,
+      Value<String?> resolvedUrl,
+      Value<String?> canonicalUrl,
+      Value<String?> author,
+      Value<String?> siteName,
+      Value<String?> hostname,
+      Value<String?> description,
+      Value<String?> imageUrl,
+      Value<String?> coverImagePath,
+      Value<String?> language,
+      Value<String> contentPath,
+      Value<String> plainText,
+      Value<int> textLength,
+      Value<int> estimatedWordCount,
+      Value<String?> currentCfi,
+      Value<double> readingProgress,
+      Value<String> addedAt,
+      Value<String?> lastOpenedAt,
+      Value<bool> isFinished,
+      Value<int> rowid,
+    });
+
+class $$ArticlesTableTableFilterComposer
+    extends Composer<_$AppDatabase, $ArticlesTableTable> {
+  $$ArticlesTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get url => $composableBuilder(
+    column: $table.url,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get resolvedUrl => $composableBuilder(
+    column: $table.resolvedUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get canonicalUrl => $composableBuilder(
+    column: $table.canonicalUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get author => $composableBuilder(
+    column: $table.author,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get siteName => $composableBuilder(
+    column: $table.siteName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hostname => $composableBuilder(
+    column: $table.hostname,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get imageUrl => $composableBuilder(
+    column: $table.imageUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get coverImagePath => $composableBuilder(
+    column: $table.coverImagePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get language => $composableBuilder(
+    column: $table.language,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentPath => $composableBuilder(
+    column: $table.contentPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get plainText => $composableBuilder(
+    column: $table.plainText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get textLength => $composableBuilder(
+    column: $table.textLength,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get estimatedWordCount => $composableBuilder(
+    column: $table.estimatedWordCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get currentCfi => $composableBuilder(
+    column: $table.currentCfi,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get readingProgress => $composableBuilder(
+    column: $table.readingProgress,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastOpenedAt => $composableBuilder(
+    column: $table.lastOpenedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isFinished => $composableBuilder(
+    column: $table.isFinished,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ArticlesTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $ArticlesTableTable> {
+  $$ArticlesTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get url => $composableBuilder(
+    column: $table.url,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get resolvedUrl => $composableBuilder(
+    column: $table.resolvedUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get canonicalUrl => $composableBuilder(
+    column: $table.canonicalUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get author => $composableBuilder(
+    column: $table.author,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get siteName => $composableBuilder(
+    column: $table.siteName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hostname => $composableBuilder(
+    column: $table.hostname,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get imageUrl => $composableBuilder(
+    column: $table.imageUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get coverImagePath => $composableBuilder(
+    column: $table.coverImagePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get language => $composableBuilder(
+    column: $table.language,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentPath => $composableBuilder(
+    column: $table.contentPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get plainText => $composableBuilder(
+    column: $table.plainText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get textLength => $composableBuilder(
+    column: $table.textLength,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get estimatedWordCount => $composableBuilder(
+    column: $table.estimatedWordCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get currentCfi => $composableBuilder(
+    column: $table.currentCfi,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get readingProgress => $composableBuilder(
+    column: $table.readingProgress,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastOpenedAt => $composableBuilder(
+    column: $table.lastOpenedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isFinished => $composableBuilder(
+    column: $table.isFinished,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ArticlesTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ArticlesTableTable> {
+  $$ArticlesTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get url =>
+      $composableBuilder(column: $table.url, builder: (column) => column);
+
+  GeneratedColumn<String> get resolvedUrl => $composableBuilder(
+    column: $table.resolvedUrl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get canonicalUrl => $composableBuilder(
+    column: $table.canonicalUrl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get author =>
+      $composableBuilder(column: $table.author, builder: (column) => column);
+
+  GeneratedColumn<String> get siteName =>
+      $composableBuilder(column: $table.siteName, builder: (column) => column);
+
+  GeneratedColumn<String> get hostname =>
+      $composableBuilder(column: $table.hostname, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get imageUrl =>
+      $composableBuilder(column: $table.imageUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get coverImagePath => $composableBuilder(
+    column: $table.coverImagePath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get language =>
+      $composableBuilder(column: $table.language, builder: (column) => column);
+
+  GeneratedColumn<String> get contentPath => $composableBuilder(
+    column: $table.contentPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get plainText =>
+      $composableBuilder(column: $table.plainText, builder: (column) => column);
+
+  GeneratedColumn<int> get textLength => $composableBuilder(
+    column: $table.textLength,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get estimatedWordCount => $composableBuilder(
+    column: $table.estimatedWordCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get currentCfi => $composableBuilder(
+    column: $table.currentCfi,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get readingProgress => $composableBuilder(
+    column: $table.readingProgress,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get addedAt =>
+      $composableBuilder(column: $table.addedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get lastOpenedAt => $composableBuilder(
+    column: $table.lastOpenedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isFinished => $composableBuilder(
+    column: $table.isFinished,
+    builder: (column) => column,
+  );
+}
+
+class $$ArticlesTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ArticlesTableTable,
+          ArticlesTableData,
+          $$ArticlesTableTableFilterComposer,
+          $$ArticlesTableTableOrderingComposer,
+          $$ArticlesTableTableAnnotationComposer,
+          $$ArticlesTableTableCreateCompanionBuilder,
+          $$ArticlesTableTableUpdateCompanionBuilder,
+          (
+            ArticlesTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $ArticlesTableTable,
+              ArticlesTableData
+            >,
+          ),
+          ArticlesTableData,
+          PrefetchHooks Function()
+        > {
+  $$ArticlesTableTableTableManager(_$AppDatabase db, $ArticlesTableTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ArticlesTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ArticlesTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ArticlesTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> url = const Value.absent(),
+                Value<String?> resolvedUrl = const Value.absent(),
+                Value<String?> canonicalUrl = const Value.absent(),
+                Value<String?> author = const Value.absent(),
+                Value<String?> siteName = const Value.absent(),
+                Value<String?> hostname = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<String?> imageUrl = const Value.absent(),
+                Value<String?> coverImagePath = const Value.absent(),
+                Value<String?> language = const Value.absent(),
+                Value<String> contentPath = const Value.absent(),
+                Value<String> plainText = const Value.absent(),
+                Value<int> textLength = const Value.absent(),
+                Value<int> estimatedWordCount = const Value.absent(),
+                Value<String?> currentCfi = const Value.absent(),
+                Value<double> readingProgress = const Value.absent(),
+                Value<String> addedAt = const Value.absent(),
+                Value<String?> lastOpenedAt = const Value.absent(),
+                Value<bool> isFinished = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ArticlesTableCompanion(
+                id: id,
+                title: title,
+                url: url,
+                resolvedUrl: resolvedUrl,
+                canonicalUrl: canonicalUrl,
+                author: author,
+                siteName: siteName,
+                hostname: hostname,
+                description: description,
+                imageUrl: imageUrl,
+                coverImagePath: coverImagePath,
+                language: language,
+                contentPath: contentPath,
+                plainText: plainText,
+                textLength: textLength,
+                estimatedWordCount: estimatedWordCount,
+                currentCfi: currentCfi,
+                readingProgress: readingProgress,
+                addedAt: addedAt,
+                lastOpenedAt: lastOpenedAt,
+                isFinished: isFinished,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String title,
+                required String url,
+                Value<String?> resolvedUrl = const Value.absent(),
+                Value<String?> canonicalUrl = const Value.absent(),
+                Value<String?> author = const Value.absent(),
+                Value<String?> siteName = const Value.absent(),
+                Value<String?> hostname = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<String?> imageUrl = const Value.absent(),
+                Value<String?> coverImagePath = const Value.absent(),
+                Value<String?> language = const Value.absent(),
+                required String contentPath,
+                Value<String> plainText = const Value.absent(),
+                Value<int> textLength = const Value.absent(),
+                Value<int> estimatedWordCount = const Value.absent(),
+                Value<String?> currentCfi = const Value.absent(),
+                Value<double> readingProgress = const Value.absent(),
+                required String addedAt,
+                Value<String?> lastOpenedAt = const Value.absent(),
+                Value<bool> isFinished = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ArticlesTableCompanion.insert(
+                id: id,
+                title: title,
+                url: url,
+                resolvedUrl: resolvedUrl,
+                canonicalUrl: canonicalUrl,
+                author: author,
+                siteName: siteName,
+                hostname: hostname,
+                description: description,
+                imageUrl: imageUrl,
+                coverImagePath: coverImagePath,
+                language: language,
+                contentPath: contentPath,
+                plainText: plainText,
+                textLength: textLength,
+                estimatedWordCount: estimatedWordCount,
+                currentCfi: currentCfi,
+                readingProgress: readingProgress,
+                addedAt: addedAt,
+                lastOpenedAt: lastOpenedAt,
+                isFinished: isFinished,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ArticlesTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ArticlesTableTable,
+      ArticlesTableData,
+      $$ArticlesTableTableFilterComposer,
+      $$ArticlesTableTableOrderingComposer,
+      $$ArticlesTableTableAnnotationComposer,
+      $$ArticlesTableTableCreateCompanionBuilder,
+      $$ArticlesTableTableUpdateCompanionBuilder,
+      (
+        ArticlesTableData,
+        BaseReferences<_$AppDatabase, $ArticlesTableTable, ArticlesTableData>,
+      ),
+      ArticlesTableData,
+      PrefetchHooks Function()
+    >;
 typedef $$BooksTableTableCreateCompanionBuilder =
     BooksTableCompanion Function({
       required String id,
@@ -6113,6 +7829,8 @@ typedef $$ReviewLogsTableTableProcessedTableManager =
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
+  $$ArticlesTableTableTableManager get articlesTable =>
+      $$ArticlesTableTableTableManager(_db, _db.articlesTable);
   $$BooksTableTableTableManager get booksTable =>
       $$BooksTableTableTableManager(_db, _db.booksTable);
   $$HighlightsTableTableTableManager get highlightsTable =>

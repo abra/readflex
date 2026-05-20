@@ -1,5 +1,6 @@
 import 'dart:async' show unawaited;
 
+import 'package:article_extraction_service/article_extraction_service.dart';
 import 'package:catalog/catalog.dart';
 import 'package:dictionary/dictionary.dart';
 import 'package:domain_models/domain_models.dart';
@@ -91,7 +92,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                   fsrsRepository: deps.fsrsRepository,
                   onBookPressed: (book) => context.push(
                     AppRoutes.sourceDetails(book.id),
-                    extra: book,
+                    extra: LibrarySource.fromBook(book),
                   ),
                   onPracticePressed: () => context.go(
                     AppRoutes.practice,
@@ -106,11 +107,12 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                 path: AppRoutes.library,
                 builder: (context, state) => CatalogScreen(
                   bookRepository: deps.bookRepository,
+                  articleRepository: deps.articleRepository,
                   preferencesService: deps.preferencesService,
-                  onBookPressed: (book, {onSourceOpened}) => context.push(
-                    AppRoutes.sourceDetails(book.id),
+                  onSourcePressed: (source, {onSourceOpened}) => context.push(
+                    AppRoutes.sourceDetails(source.id),
                     extra: _SourceDetailsRouteExtra(
-                      initialSource: book,
+                      initialSource: source,
                       onSourceOpened: onSourceOpened,
                     ),
                   ),
@@ -125,6 +127,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                         logger: deps.logger,
                         onProgress: onProgress,
                       ),
+                      onImportArticle: (url) => _importArticleUrl(deps, url),
                     );
                   },
                 ),
@@ -189,14 +192,16 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
             sourceId: sourceId,
             initialSource: initialSource,
             bookRepository: deps.bookRepository,
+            articleRepository: deps.articleRepository,
             highlightRepository: deps.highlightRepository,
             flashcardRepository: deps.flashcardRepository,
             dictionaryRepository: deps.dictionaryRepository,
-            onReadPressed: (source) async {
+            onReadPressed: (source, sourceType) async {
               await context.push(
                 AppRoutes.reader(source.id),
                 extra: _ReaderRouteExtra(
                   initialSource: source,
+                  initialSourceType: sourceType,
                   onSourceOpened: onSourceOpened,
                 ),
               );
@@ -213,15 +218,17 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
         // pop the reader instead of turning the page.
         pageBuilder: (context, state) {
           final sourceId = state.pathParameters['sourceId']!;
-          final initialSource = _initialSourceFromRoute(state);
+          final initialSource = _initialReaderSourceFromRoute(state);
           return MaterialPage(
             key: state.pageKey,
             fullscreenDialog: true,
             child: ReaderScreen(
               sourceId: sourceId,
               initialSource: initialSource,
+              initialSourceType: _initialReaderSourceTypeFromRoute(state),
               serverPort: deps.readerServer.port,
               bookRepository: deps.bookRepository,
+              articleRepository: deps.articleRepository,
               highlightRepository: deps.highlightRepository,
               preferencesService: deps.preferencesService,
               screenControlService: deps.screenControlService,
@@ -290,9 +297,9 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
         builder: (context, state) => FirstImportScreen(
           onAddPressed: () async {
             // Trust the sheet's own result instead of probing the
-            // library afterwards — `bookImported` is the canonical
-            // signal that an import succeeded, and `getBooks()` would
-            // have to scan every row to answer the same question.
+            // library afterwards. The result is the canonical signal
+            // that an import succeeded, and checking repositories would
+            // have to scan rows to answer the same question.
             final result = await showImportFlowSheet(
               context,
               onPickBookFile: pickBookFile,
@@ -303,8 +310,10 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                 logger: deps.logger,
                 onProgress: onProgress,
               ),
+              onImportArticle: (url) => _importArticleUrl(deps, url),
             );
-            return result == ImportFlowResult.bookImported;
+            return result == ImportFlowResult.bookImported ||
+                result == ImportFlowResult.articleImported;
           },
           onContentAdded: () {
             deps.preferencesService.update(
@@ -335,21 +344,23 @@ class _SourceDetailsRouteExtra {
     this.onSourceOpened,
   });
 
-  final Book? initialSource;
+  final LibrarySource? initialSource;
   final VoidCallback? onSourceOpened;
 }
 
 class _ReaderRouteExtra {
   const _ReaderRouteExtra({
     this.initialSource,
+    this.initialSourceType = SourceType.book,
     this.onSourceOpened,
   });
 
   final Book? initialSource;
+  final SourceType initialSourceType;
   final VoidCallback? onSourceOpened;
 }
 
-Book? _initialSourceFromRoute(GoRouterState state) {
+LibrarySource? _initialSourceFromRoute(GoRouterState state) {
   final sourceId = state.pathParameters['sourceId'];
   final extra = state.extra;
   if (sourceId == null) {
@@ -357,9 +368,10 @@ Book? _initialSourceFromRoute(GoRouterState state) {
   }
 
   final source = switch (extra) {
-    Book source => source,
+    LibrarySource source => source,
+    Book source => LibrarySource.fromBook(source),
+    Article source => LibrarySource.fromArticle(source),
     _SourceDetailsRouteExtra(:final initialSource) => initialSource,
-    _ReaderRouteExtra(:final initialSource) => initialSource,
     _ => null,
   };
   if (source?.id != sourceId) {
@@ -368,12 +380,46 @@ Book? _initialSourceFromRoute(GoRouterState state) {
   return source;
 }
 
+Book? _initialReaderSourceFromRoute(GoRouterState state) {
+  final sourceId = state.pathParameters['sourceId'];
+  final extra = state.extra;
+  if (sourceId == null) return null;
+
+  final source = switch (extra) {
+    Book source => source,
+    _ReaderRouteExtra(:final initialSource) => initialSource,
+    _ => null,
+  };
+  if (source?.id != sourceId) return null;
+  return source;
+}
+
+SourceType _initialReaderSourceTypeFromRoute(GoRouterState state) {
+  return switch (state.extra) {
+    _ReaderRouteExtra(:final initialSourceType) => initialSourceType,
+    _ => SourceType.book,
+  };
+}
+
 VoidCallback? _onSourceOpenedFromRoute(GoRouterState state) {
   return switch (state.extra) {
     _SourceDetailsRouteExtra(:final onSourceOpened) => onSourceOpened,
     _ReaderRouteExtra(:final onSourceOpened) => onSourceOpened,
     _ => null,
   };
+}
+
+Future<Article?> _importArticleUrl(
+  DependenciesContainer deps,
+  String url,
+) async {
+  final ExtractedArticle article;
+  try {
+    article = await deps.articleExtractionService.extract(url);
+  } on ArticleExtractionException catch (e) {
+    throw ArticleImportException(e.message);
+  }
+  return deps.articleRepository.addExtractedArticle(article);
 }
 
 Future<String> _resolveEntryRoute(DependenciesContainer deps) async {
@@ -390,8 +436,11 @@ Future<String?> _redirectHomeIfNeeded(DependenciesContainer deps) async {
 
   if (!prefs.hasCompletedSetup) {
     try {
-      final books = await deps.bookRepository.getBooks();
-      if (books.isEmpty) {
+      final (books, articles) = await (
+        deps.bookRepository.getBooks(),
+        deps.articleRepository.getArticles(),
+      ).wait;
+      if (books.isEmpty && articles.isEmpty) {
         return AppRoutes.firstImport;
       }
     } catch (e, st) {

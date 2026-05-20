@@ -8,19 +8,19 @@ import 'catalog_selection_cubit.dart';
 /// Scrollable 3-column grid of book tiles.
 class CatalogGridView extends StatelessWidget {
   const CatalogGridView({
-    required this.books,
+    required this.sources,
     required this.selection,
     required this.scrollController,
-    required this.onBookPressed,
-    required this.onBookLongPressed,
+    required this.onSourcePressed,
+    required this.onSourceLongPressed,
     super.key,
   });
 
-  final List<Book> books;
+  final List<LibrarySource> sources;
   final CatalogSelectionState selection;
   final ScrollController scrollController;
-  final void Function(Book book) onBookPressed;
-  final void Function(Book book) onBookLongPressed;
+  final void Function(LibrarySource source) onSourcePressed;
+  final void Function(LibrarySource source) onSourceLongPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -41,14 +41,14 @@ class CatalogGridView extends StatelessWidget {
         crossAxisSpacing: AppSpacing.md,
         childAspectRatio: 2 / 3,
       ),
-      itemCount: books.length,
+      itemCount: sources.length,
       itemBuilder: (context, index) {
-        final book = books[index];
+        final source = sources[index];
         return BookLibraryGridTile(
-          book: book,
-          isSelected: selection.contains(book.id),
-          onTap: () => onBookPressed(book),
-          onLongPress: () => onBookLongPressed(book),
+          source: source,
+          isSelected: selection.contains(source.id),
+          onTap: () => onSourcePressed(source),
+          onLongPress: () => onSourceLongPressed(source),
         );
       },
     );

@@ -15,6 +15,8 @@ final _source = Book(
   addedAt: DateTime(2026, 1, 1),
 );
 
+LibrarySource _librarySource(Book source) => LibrarySource.fromBook(source);
+
 void main() {
   group('SourceDetailsBloc', () {
     late _FakeBookRepository repository;
@@ -44,7 +46,8 @@ void main() {
         const SourceDetailsState(status: SourceDetailsStatus.loading),
         SourceDetailsState(
           status: SourceDetailsStatus.success,
-          source: _source,
+          source: _librarySource(_source),
+          readerBook: _source,
         ),
       ],
     );
@@ -69,7 +72,8 @@ void main() {
         const SourceDetailsState(status: SourceDetailsStatus.loading),
         SourceDetailsState(
           status: SourceDetailsStatus.success,
-          source: _source,
+          source: _librarySource(_source),
+          readerBook: _source,
           reviewSummary: const SourceReviewSummary(
             highlightCount: 2,
             flashcardCount: 3,
@@ -82,10 +86,11 @@ void main() {
     blocTest<SourceDetailsBloc, SourceDetailsState>(
       'skips review summary counts for comics',
       setUp: () {
-        repository.source = _source.copyWith(
+        final comic = _source.copyWith(
           filePath: '/comic.cbz',
           format: BookFormat.cbz,
         );
+        repository.source = comic;
         highlightRepository.count = 2;
         flashcardRepository.count = 3;
         dictionaryRepository.count = 4;
@@ -102,10 +107,8 @@ void main() {
         const SourceDetailsState(status: SourceDetailsStatus.loading),
         SourceDetailsState(
           status: SourceDetailsStatus.success,
-          source: _source.copyWith(
-            filePath: '/comic.cbz',
-            format: BookFormat.cbz,
-          ),
+          source: _librarySource(repository.source!),
+          readerBook: repository.source,
         ),
       ],
       verify: (_) {
@@ -123,14 +126,15 @@ void main() {
         highlightRepository,
         flashcardRepository,
         dictionaryRepository,
-        initialSource: _source,
+        initialSource: _librarySource(_source),
       ),
       act: (bloc) => bloc.add(const SourceDetailsLoadRequested('source-1')),
       wait: const Duration(milliseconds: 10),
       expect: () => [
         SourceDetailsState(
           status: SourceDetailsStatus.success,
-          source: _source.copyWith(readingProgress: 0.4),
+          source: _librarySource(_source.copyWith(readingProgress: 0.4)),
+          readerBook: _source.copyWith(readingProgress: 0.4),
         ),
       ],
     );
@@ -173,7 +177,7 @@ SourceDetailsBloc _buildBloc(
   _FakeHighlightRepository highlightRepository,
   _FakeFlashcardRepository flashcardRepository,
   _FakeDictionaryRepository dictionaryRepository, {
-  Book? initialSource,
+  LibrarySource? initialSource,
 }) => SourceDetailsBloc(
   bookRepository: bookRepository,
   highlightRepository: highlightRepository,

@@ -5,6 +5,7 @@ void main() {
   group('SourceType.from()', () {
     test('returns correct value for known strings', () {
       expect(SourceType.from('book'), SourceType.book);
+      expect(SourceType.from('article'), SourceType.article);
     });
 
     test('returns book for unknown string', () {
