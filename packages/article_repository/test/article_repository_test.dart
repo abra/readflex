@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
@@ -43,6 +44,22 @@ void main() {
     final stored = await repository.getArticleById(article.id);
     expect(stored, isNotNull);
     expect(stored!.plainText, 'Hello world');
+  });
+
+  test('addExtractedArticle removes duplicate leading title heading', () async {
+    final article = await repository.addExtractedArticle(_extractedArticle());
+
+    final contentHtml = File(
+      p.join(p.dirname(article.contentPath), 'content.html'),
+    ).readAsStringSync();
+    expect(contentHtml, isNot(contains('<h1>Saved article</h1>')));
+
+    final archive = ZipDecoder().decodeBytes(
+      File(article.epubPath).readAsBytesSync(),
+    );
+    final chapter = _archiveText(archive, 'OEBPS/chapter1.xhtml');
+    expect(RegExp('<h1>Saved article</h1>').allMatches(chapter), hasLength(1));
+    expect(chapter, contains('<p>Hello world</p>'));
   });
 
   test('toReaderBook adapts article to existing reader contract', () async {
@@ -108,6 +125,11 @@ void main() {
       isTrue,
     );
   });
+}
+
+String _archiveText(Archive archive, String name) {
+  final file = archive.files.firstWhere((file) => file.name == name);
+  return utf8.decode(file.content as List<int>);
 }
 
 ExtractedArticle _extractedArticle({

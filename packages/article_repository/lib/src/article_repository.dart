@@ -75,7 +75,9 @@ class ArticleRepository {
       await contentFile.writeAsString(extracted.rawJson, flush: true);
 
       final baseUri = _articleBaseUri(extracted);
-      final html = _htmlForBlocks(extracted.blocks);
+      final html = _htmlForBlocks(
+        _withoutDuplicateTitleHeading(extracted.blocks, extracted.title),
+      );
       final htmlWithLocalImages = await _downloadArticleImages(
         html: html,
         articleDir: articleDir,
@@ -346,6 +348,29 @@ String _htmlForBlocks(List<ArticleBlock> blocks) {
     }
   }
   return buffer.toString();
+}
+
+List<ArticleBlock> _withoutDuplicateTitleHeading(
+  List<ArticleBlock> blocks,
+  String title,
+) {
+  if (blocks.isEmpty) return blocks;
+
+  final firstBlock = blocks.first;
+  if (firstBlock is! ArticleHeadingBlock ||
+      !_sameArticleTitle(firstBlock.text, title)) {
+    return blocks;
+  }
+
+  return blocks.skip(1).toList(growable: false);
+}
+
+bool _sameArticleTitle(String left, String right) {
+  return _normalizeTitle(left) == _normalizeTitle(right);
+}
+
+String _normalizeTitle(String value) {
+  return value.replaceAll(RegExp(r'\s+'), ' ').trim().toLowerCase();
 }
 
 Uri? _articleBaseUri(ExtractedArticle article) {
