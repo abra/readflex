@@ -95,6 +95,7 @@ class _GridTileShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final selectionColor = colors.error;
 
     return GestureDetector(
       onTap: onTap,
@@ -134,8 +135,8 @@ class _GridTileShell extends StatelessWidget {
                         borderRadius: BorderRadius.circular(
                           appSourceCoverRadius,
                         ),
-                        border: Border.all(color: colors.primary, width: 3),
-                        color: colors.primary.withValues(alpha: 0.15),
+                        border: Border.all(color: selectionColor, width: 3),
+                        color: selectionColor.withValues(alpha: 0.15),
                       ),
                     ),
                   ),
@@ -143,7 +144,7 @@ class _GridTileShell extends StatelessWidget {
                   Positioned(
                     top: AppSpacing.xs,
                     right: AppSpacing.xs,
-                    child: _SelectionCheck(color: colors.primary),
+                    child: _SelectionCheck(color: selectionColor),
                   ),
                 if (progress > 0 && !isFinished) ...[
                   const Positioned.fill(
@@ -158,8 +159,8 @@ class _GridTileShell extends StatelessWidget {
                         gradient: LinearGradient(
                           begin: Alignment.bottomCenter,
                           end: Alignment.topCenter,
-                          stops: [0.0, 0.30],
-                          colors: [Color(0x8C1B1F30), Color(0x001B1F30)],
+                          stops: [0.0, 0.20],
+                          colors: [Color(0x4D1B1F30), Color(0x001B1F30)],
                         ),
                       ),
                     ),

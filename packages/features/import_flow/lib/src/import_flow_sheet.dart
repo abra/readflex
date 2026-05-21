@@ -55,10 +55,8 @@ class _ImportFlowSheet extends StatelessWidget {
         // active.
         return SizedBox(
           height: 280,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            switchInCurve: Curves.easeOut,
-            switchOutCurve: Curves.easeIn,
+          child: _ImportFlowStepSwitcher(
+            state: state,
             child: KeyedSubtree(
               key: ValueKey(state.runtimeType),
               child: switch (state) {
@@ -78,6 +76,105 @@ class _ImportFlowSheet extends StatelessWidget {
       },
     );
   }
+}
+
+class _ImportFlowStepSwitcher extends StatefulWidget {
+  const _ImportFlowStepSwitcher({
+    required this.state,
+    required this.child,
+  });
+
+  final ImportFlowState state;
+  final Widget child;
+
+  @override
+  State<_ImportFlowStepSwitcher> createState() =>
+      _ImportFlowStepSwitcherState();
+}
+
+class _ImportFlowStepSwitcherState extends State<_ImportFlowStepSwitcher> {
+  var _slideDirection = 1;
+
+  @override
+  void didUpdateWidget(covariant _ImportFlowStepSwitcher oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.state.runtimeType != widget.state.runtimeType) {
+      _slideDirection = _transitionDirection(oldWidget.state, widget.state);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      reverseDuration: const Duration(milliseconds: 300),
+      switchInCurve: Curves.easeInOutCubic,
+      switchOutCurve: Curves.easeInOutCubic,
+      layoutBuilder: (currentChild, previousChildren) => ClipRect(
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            ...previousChildren,
+            ?currentChild,
+          ],
+        ),
+      ),
+      transitionBuilder: (child, animation) {
+        return _ImportFlowSlideTransition(
+          animation: animation,
+          direction: _slideDirection,
+          child: child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+class _ImportFlowSlideTransition extends StatelessWidget {
+  const _ImportFlowSlideTransition({
+    required this.animation,
+    required this.direction,
+    required this.child,
+  });
+
+  final Animation<double> animation;
+  final int direction;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      child: child,
+      builder: (context, child) {
+        final value = Curves.easeInOutCubic.transform(animation.value);
+        final isExiting = animation.status == AnimationStatus.reverse;
+        final sign = isExiting ? -direction : direction;
+        return FractionalTranslation(
+          translation: Offset(sign * (1 - value), 0),
+          child: child,
+        );
+      },
+    );
+  }
+}
+
+int _transitionDirection(ImportFlowState from, ImportFlowState to) {
+  final fromDepth = _navigationDepth(from);
+  final toDepth = _navigationDepth(to);
+  return toDepth < fromDepth ? -1 : 1;
+}
+
+int _navigationDepth(ImportFlowState state) {
+  return switch (state) {
+    ImportFlowMenu() => 0,
+    ImportFlowArticleUrlEntry() || ImportFlowBookUploading() => 1,
+    ImportFlowArticleUploading() ||
+    ImportFlowBookDone() ||
+    ImportFlowFailure() => 2,
+    ImportFlowArticleDone() => 3,
+  };
 }
 
 /// Initial picker — title + Upload Book tile at the top, Cancel
@@ -105,7 +202,7 @@ class _MenuView extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           AppActionCard(
-            icon: AppIcons.link,
+            icon: AppIcons.global,
             title: 'Save Article',
             subtitle: 'Paste a web URL for offline reading',
             onTap: cubit.showArticleUrlEntry,

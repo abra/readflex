@@ -9,6 +9,7 @@ const double _kListCoverWidth = 60;
 const double _kListCoverHeight = 90;
 const double _kCoverToTextGap = AppSpacing.md + AppSpacing.xxs;
 const double _kListRowHorizontalPadding = AppSpacing.xs;
+const double _kListSelectionCheckInset = AppSpacing.xs;
 
 /// List-mode row for a library source.
 ///
@@ -161,6 +162,7 @@ class _ListRowShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final selectionColor = colors.error;
     final mutedColor = colors.onSurface.withValues(alpha: _kMutedAlpha);
 
     final metaSegments = metaBuilder(context, mutedColor);
@@ -178,7 +180,7 @@ class _ListRowShell extends StatelessWidget {
               horizontal: _kListRowHorizontalPadding,
             ),
             decoration: BoxDecoration(
-              color: isSelected ? colors.primary.withValues(alpha: 0.18) : null,
+              color: isSelected ? selectionColor.withValues(alpha: 0.18) : null,
               borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
             child: Row(
@@ -199,17 +201,17 @@ class _ListRowShell extends StatelessWidget {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(AppRadius.xs),
                               border: Border.all(
-                                color: colors.primary,
+                                color: selectionColor,
                                 width: 2,
                               ),
-                              color: colors.primary.withValues(alpha: 0.15),
+                              color: selectionColor.withValues(alpha: 0.15),
                             ),
                           ),
                         ),
                         Positioned(
-                          top: 2,
-                          right: 2,
-                          child: _SelectionCheck(color: colors.primary),
+                          top: _kListSelectionCheckInset,
+                          right: _kListSelectionCheckInset,
+                          child: _SelectionCheck(color: selectionColor),
                         ),
                       ],
                     ],
@@ -278,7 +280,7 @@ class _ListRowShell extends StatelessWidget {
   }
 }
 
-/// Filled primary-colored circle with a white check icon, sitting in the
+/// Filled semantic delete-colored circle with a white check icon, sitting in the
 /// top-right corner of the cover when the row is selected. Same visual
 /// vocabulary as the grid tile's selection check so list/grid selection
 /// reads identically.
@@ -290,6 +292,7 @@ class _SelectionCheck extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      key: const ValueKey('catalogListSelectionCheck'),
       width: 18,
       height: 18,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),

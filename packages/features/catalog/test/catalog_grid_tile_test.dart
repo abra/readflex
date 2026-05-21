@@ -23,47 +23,50 @@ final _article = Article(
 );
 
 void main() {
-  testWidgets('selected grid cover border matches source cover radius', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light(),
-        home: Scaffold(
-          body: Center(
-            child: SizedBox(
-              width: 120,
-              height: 180,
-              child: BookLibraryGridTile(
-                source: LibrarySource.fromBook(_book),
-                isSelected: true,
-                onTap: () {},
+  testWidgets(
+    'selected grid cover border uses delete color and source radius',
+    (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 120,
+                height: 180,
+                child: BookLibraryGridTile(
+                  source: LibrarySource.fromBook(_book),
+                  isSelected: true,
+                  onTap: () {},
+                ),
               ),
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    final primary = Theme.of(
-      tester.element(find.byType(BookLibraryGridTile)),
-    ).colorScheme.primary;
-    final selectionDecoration = tester
-        .widgetList<DecoratedBox>(find.byType(DecoratedBox))
-        .map((box) => box.decoration)
-        .whereType<BoxDecoration>()
-        .singleWhere(
-          (decoration) =>
-              decoration.border is Border &&
-              (decoration.border! as Border).top.color == primary &&
-              (decoration.border! as Border).top.width == 3,
-        );
+      final deleteColor = Theme.of(
+        tester.element(find.byType(BookLibraryGridTile)),
+      ).colorScheme.error;
+      final selectionDecoration = tester
+          .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+          .map((box) => box.decoration)
+          .whereType<BoxDecoration>()
+          .singleWhere(
+            (decoration) =>
+                decoration.border is Border &&
+                (decoration.border! as Border).top.color == deleteColor &&
+                (decoration.border! as Border).top.width == 3,
+          );
 
-    expect(
-      selectionDecoration.borderRadius,
-      BorderRadius.circular(appSourceCoverRadius),
-    );
-  });
+      expect(
+        selectionDecoration.borderRadius,
+        BorderRadius.circular(appSourceCoverRadius),
+      );
+    },
+  );
 
   testWidgets('grid cover frame is symmetrically inset inside tap target', (
     tester,

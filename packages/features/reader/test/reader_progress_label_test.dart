@@ -30,6 +30,34 @@ void main() {
       );
     });
 
+    test('shows article section page instead of global percent', () {
+      expect(
+        readerProgressLabel(
+          sourceType: SourceType.article,
+          format: BookFormat.epub,
+          progress: 0.557,
+          chapterCurrentPage: 2,
+          chapterTotalPages: 3,
+          isDragging: false,
+        ),
+        '2 / 3',
+      );
+    });
+
+    test('previews article section page from drag progress', () {
+      expect(
+        readerProgressLabel(
+          sourceType: SourceType.article,
+          format: BookFormat.epub,
+          progress: 0.8,
+          chapterCurrentPage: 1,
+          chapterTotalPages: 3,
+          isDragging: true,
+        ),
+        '3 / 3',
+      );
+    });
+
     test('keeps comic page counters as page over total', () {
       expect(
         readerProgressLabel(
@@ -60,6 +88,57 @@ void main() {
       expect(readingPercentLabel(double.nan), '0%');
       expect(readingPercentLabel(-0.5), '0%');
       expect(readingPercentLabel(1.5), '100%');
+    });
+
+    test('uses discrete slider divisions only for articles', () {
+      expect(
+        readerSliderDivisions(
+          sourceType: SourceType.article,
+          totalPages: 3,
+        ),
+        2,
+      );
+      expect(
+        readerSliderDivisions(
+          sourceType: SourceType.book,
+          totalPages: 3,
+        ),
+        isNull,
+      );
+      expect(
+        readerSliderDivisions(
+          sourceType: SourceType.article,
+          totalPages: 1,
+        ),
+        isNull,
+      );
+    });
+
+    test('snaps seek progress only for articles', () {
+      expect(
+        snappedReaderSeekProgress(
+          sourceType: SourceType.article,
+          progress: 0.52,
+          totalPages: 3,
+        ),
+        0.5,
+      );
+      expect(
+        snappedReaderSeekProgress(
+          sourceType: SourceType.book,
+          progress: 0.52,
+          totalPages: 3,
+        ),
+        0.52,
+      );
+      expect(
+        snappedReaderSeekProgress(
+          sourceType: SourceType.article,
+          progress: 1.5,
+          totalPages: 3,
+        ),
+        1,
+      );
     });
 
     test('normalizes visual section page buffer values', () {

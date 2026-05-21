@@ -100,22 +100,17 @@ void main() {
       expect(find.text('Article Author'), findsNothing);
 
       final coverArt = tester.widget<AppCoverArt>(find.byType(AppCoverArt));
-      expect(coverArt.showTitle, isFalse);
+      expect(coverArt.showTitle, isTrue);
+      expect(coverArt.centerText, isTrue);
+      expect(coverArt.textScale, 1.3);
       expect(coverArt.showArticleBadge, isFalse);
       expect(
         find.descendant(
           of: find.byType(AppSourceCoverFrame),
           matching: find.byIcon(AppIcons.language),
         ),
-        findsOneWidget,
+        findsNothing,
       );
-      final articleIcon = tester.widget<Icon>(
-        find.descendant(
-          of: find.byType(AppSourceCoverFrame),
-          matching: find.byIcon(AppIcons.language),
-        ),
-      );
-      expect(articleIcon.size, closeTo(73.6, 0.1));
     });
 
     testWidgets('hides review section for comics', (tester) async {

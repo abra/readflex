@@ -1,6 +1,7 @@
 import 'package:domain_models/domain_models.dart';
 
 String readerProgressLabel({
+  SourceType sourceType = SourceType.book,
   required BookFormat? format,
   required double progress,
   required int? chapterCurrentPage,
@@ -17,6 +18,16 @@ String readerProgressLabel({
         '';
   }
 
+  if (sourceType == SourceType.article) {
+    return visualSectionPageLabel(
+          currentPage: isDragging
+              ? _oneIndexedPageFromProgress(progress, chapterTotalPages)
+              : chapterCurrentPage,
+          totalPages: chapterTotalPages,
+        ) ??
+        readingPercentLabel(progress);
+  }
+
   final percent = readingPercentLabel(progress);
   if (isDragging) return percent;
 
@@ -30,6 +41,33 @@ String readerProgressLabel({
 String readingPercentLabel(double progress) {
   final clamped = _clampProgress(progress);
   return '${(clamped * 100).round()}%';
+}
+
+int? readerSliderDivisions({
+  required SourceType sourceType,
+  required int? totalPages,
+}) {
+  if (sourceType != SourceType.article ||
+      totalPages == null ||
+      totalPages <= 1) {
+    return null;
+  }
+  return totalPages - 1;
+}
+
+double snappedReaderSeekProgress({
+  required SourceType sourceType,
+  required double progress,
+  required int? totalPages,
+}) {
+  final clamped = _clampProgress(progress);
+  if (sourceType != SourceType.article ||
+      totalPages == null ||
+      totalPages <= 1) {
+    return clamped;
+  }
+  final divisions = totalPages - 1;
+  return (_clampProgress((clamped * divisions).round() / divisions));
 }
 
 String? visualSectionPageLabel({
@@ -63,6 +101,12 @@ int _displayVisualSectionPage(int pageIndex, int totalPages) {
 int? _zeroIndexedPageFromProgress(double progress, int? totalPages) {
   if (totalPages == null || totalPages <= 0) return null;
   return (_clampProgress(progress) * totalPages).floor();
+}
+
+int? _oneIndexedPageFromProgress(double progress, int? totalPages) {
+  if (totalPages == null || totalPages <= 0) return null;
+  if (totalPages == 1) return 1;
+  return (_clampProgress(progress) * (totalPages - 1)).round() + 1;
 }
 
 double _clampProgress(double progress) {

@@ -17,9 +17,6 @@ const _coverMinWidth = 140.0;
 const _coverScreenWidthFactor = 0.45;
 const _coverAspectRatio = 2 / 3;
 const _coverTextScale = 1.3;
-const _articleCoverIconAlpha = 0.4;
-const _articleListCoverWidth = 60.0;
-const _articleCoverIconWidthFactor = AppIconSize.md / _articleListCoverWidth;
 const _titleMaxLines = 3;
 const _authorMaxLines = 2;
 const _metadataMaxLines = 1;
@@ -358,39 +355,19 @@ class _SourceCover extends StatelessWidget {
 
     return AppSourceCoverFrame(
       cover: isArticle
-          ? Stack(
-              children: [
-                Positioned.fill(
-                  child: AppSourceCover(
-                    title: source.title,
-                    author: source.author,
-                    source: source.sourceName,
-                    seed: source.id,
-                    isArticle: true,
-                    coverImage: coverImage,
-                    showTitle: false,
-                    showProgress: false,
-                    showMatte: false,
-                    showArticleBadge: false,
-                  ),
-                ),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final iconSize =
-                        constraints.maxWidth * _articleCoverIconWidthFactor;
-
-                    return Center(
-                      child: Icon(
-                        AppIcons.language,
-                        size: iconSize,
-                        color: Colors.white.withValues(
-                          alpha: _articleCoverIconAlpha,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
+          ? AppSourceCover(
+              title: source.title,
+              author: source.author,
+              source: source.sourceName,
+              seed: source.id,
+              isArticle: true,
+              coverImage: coverImage,
+              showTitle: true,
+              showProgress: false,
+              showMatte: false,
+              showArticleBadge: false,
+              centerText: true,
+              textScale: _coverTextScale,
             )
           : AppSourceCover(
               title: source.title,

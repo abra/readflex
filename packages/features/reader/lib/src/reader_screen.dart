@@ -1420,6 +1420,9 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
     final format = context.select<ReaderBloc, BookFormat?>(
       (b) => b.state.book?.format,
     );
+    final sourceType = context.select<ReaderBloc, SourceType>(
+      (b) => b.state.sourceType,
+    );
     final actions = readerChromeActionsForFormat(format);
     final colors = context.colors;
 
@@ -1429,6 +1432,7 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
       chapterTitle: chapterTitle,
       chapterCurrentPage: chapterCurrentPage,
       chapterTotalPages: chapterTotalPages,
+      sourceType: sourceType,
       format: format,
       panelColor: colors.surface,
       textColor: colors.onSurfaceVariant,
@@ -1461,6 +1465,7 @@ class _ReaderBottomChrome extends StatefulWidget {
     required this.chapterTitle,
     required this.chapterCurrentPage,
     required this.chapterTotalPages,
+    required this.sourceType,
     required this.format,
     required this.panelColor,
     required this.textColor,
@@ -1485,6 +1490,7 @@ class _ReaderBottomChrome extends StatefulWidget {
   final String? chapterTitle;
   final int? chapterCurrentPage;
   final int? chapterTotalPages;
+  final SourceType sourceType;
   final BookFormat? format;
   final Color panelColor;
   final Color textColor;
@@ -1541,10 +1547,23 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
     final chromeAnimCurve = widget.visible
         ? _kChromeAnimCurve
         : _kChromeHideAnimCurve;
-    final clamped = widget.progress.clamp(0.0, 1.0);
-    final sliderValue = (_dragValue ?? clamped).clamp(0.0, 1.0);
+    final clamped = snappedReaderSeekProgress(
+      sourceType: widget.sourceType,
+      progress: widget.progress,
+      totalPages: widget.chapterTotalPages,
+    );
+    final sliderValue = snappedReaderSeekProgress(
+      sourceType: widget.sourceType,
+      progress: _dragValue ?? clamped,
+      totalPages: widget.chapterTotalPages,
+    );
+    final sliderDivisions = readerSliderDivisions(
+      sourceType: widget.sourceType,
+      totalPages: widget.chapterTotalPages,
+    );
     final mutedText = widget.textColor.withValues(alpha: 0.7);
     final displayedText = readerProgressLabel(
+      sourceType: widget.sourceType,
       format: widget.format,
       progress: sliderValue,
       chapterCurrentPage: widget.chapterCurrentPage,
@@ -1642,17 +1661,33 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                               ),
                               child: Slider(
                                 value: sliderValue,
+                                divisions: sliderDivisions,
                                 onChangeStart: (v) {
+                                  final seekValue = snappedReaderSeekProgress(
+                                    sourceType: widget.sourceType,
+                                    progress: v,
+                                    totalPages: widget.chapterTotalPages,
+                                  );
                                   setState(() {
                                     _isDragging = true;
-                                    _dragValue = v;
+                                    _dragValue = seekValue;
                                   });
                                 },
                                 onChanged: (v) {
-                                  setState(() => _dragValue = v);
+                                  final seekValue = snappedReaderSeekProgress(
+                                    sourceType: widget.sourceType,
+                                    progress: v,
+                                    totalPages: widget.chapterTotalPages,
+                                  );
+                                  setState(() => _dragValue = seekValue);
                                 },
                                 onChangeEnd: (v) {
-                                  widget.onSeekFraction(v);
+                                  final seekValue = snappedReaderSeekProgress(
+                                    sourceType: widget.sourceType,
+                                    progress: v,
+                                    totalPages: widget.chapterTotalPages,
+                                  );
+                                  widget.onSeekFraction(seekValue);
                                   _dragReleaseTimer?.cancel();
                                   _dragReleaseTimer = Timer(
                                     _dragReleaseTimeout,
@@ -1666,7 +1701,7 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                                   );
                                   setState(() {
                                     _isDragging = false;
-                                    _dragValue = v;
+                                    _dragValue = seekValue;
                                   });
                                 },
                               ),

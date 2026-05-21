@@ -24,6 +24,7 @@ void main() {
 
     expect(find.text('Add to Library'), findsOneWidget);
     expect(find.text('Upload Book'), findsOneWidget);
+    expect(find.byIcon(AppIcons.global), findsOneWidget);
     expect(find.text('Cancel'), findsOneWidget);
   });
 
@@ -45,6 +46,32 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Add to Library'), findsNothing);
+  });
+
+  testWidgets('menu steps use slide transition', (tester) async {
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => null,
+          onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (_) async => null,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Article'));
+    await tester.pump();
+
+    expect(find.byType(FractionalTranslation), findsWidgets);
+    expect(find.text('Add to Library'), findsOneWidget);
+    expect(find.text('Save Article'), findsWidgets);
+
+    await tester.pumpAndSettle();
+    expect(find.text('Add to Library'), findsNothing);
+    expect(find.text('Save Article'), findsOneWidget);
   });
 
   testWidgets('cancelled book picker keeps menu open', (tester) async {

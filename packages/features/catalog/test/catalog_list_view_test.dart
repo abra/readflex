@@ -1,4 +1,5 @@
 import 'package:catalog/src/catalog_list_view.dart';
+import 'package:catalog/src/catalog_list_tile.dart';
 import 'package:catalog/src/catalog_selection_cubit.dart';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
@@ -34,6 +35,45 @@ final _article = Article(
 );
 
 void main() {
+  testWidgets('selected list cover border uses delete color', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: BookLibraryListTile(
+            source: LibrarySource.fromBook(_books.first),
+            showTopDivider: false,
+            isSelected: true,
+            onTap: () {},
+          ),
+        ),
+      ),
+    );
+
+    final deleteColor = Theme.of(
+      tester.element(find.byType(BookLibraryListTile)),
+    ).colorScheme.error;
+    final selectionDecoration = tester
+        .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+        .map((box) => box.decoration)
+        .whereType<BoxDecoration>()
+        .singleWhere(
+          (decoration) =>
+              decoration.border is Border &&
+              (decoration.border! as Border).top.color == deleteColor &&
+              (decoration.border! as Border).top.width == 2,
+        );
+
+    expect(selectionDecoration.color, deleteColor.withValues(alpha: 0.15));
+
+    final coverRect = tester.getRect(find.byType(AppSourceCoverFrame));
+    final checkRect = tester.getRect(
+      find.byKey(const ValueKey('catalogListSelectionCheck')),
+    );
+    expect(checkRect.top, coverRect.top + AppSpacing.xs);
+    expect(checkRect.right, coverRect.right - AppSpacing.xs);
+  });
+
   testWidgets('list separators span the cover column above shadows', (
     tester,
   ) async {

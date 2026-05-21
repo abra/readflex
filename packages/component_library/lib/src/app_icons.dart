@@ -36,6 +36,7 @@ abstract final class AppIcons {
   static const IconData quote = LucideIcons.quote;
   static const IconData check = LucideIcons.check;
   static const IconData clock = LucideIcons.clock;
+  static const IconData global = LucideIcons.globe;
 
   // ── Reader ────────────────────────────────────────────────
   static const IconData translate = LucideIcons.languages;
