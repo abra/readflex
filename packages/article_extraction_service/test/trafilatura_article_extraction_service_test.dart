@@ -301,6 +301,91 @@ void main() {
     },
   );
 
+  test(
+    'falls back to server-side extraction when client HTML cannot be extracted',
+    () async {
+      final paths = <String>[];
+      final service = TrafilaturaArticleExtractionService(
+        baseUri: Uri.parse('http://127.0.0.1:9090'),
+        httpClient: MockClient((request) async {
+          if (request.method == 'GET') {
+            return http.Response(
+              '<html>challenge</html>',
+              200,
+              request: request,
+            );
+          }
+
+          paths.add(request.url.path);
+          if (request.url.path == '/v1/extract-html') {
+            return http.Response(
+              jsonEncode({'detail': 'Could not extract article content'}),
+              422,
+            );
+          }
+
+          expect(request.url.path, '/v1/extract');
+          final requestBody = jsonDecode(request.body) as Map<String, Object?>;
+          expect(requestBody, isNot(contains('html_base64')));
+          return http.Response(
+            jsonEncode({
+              'requested_url': 'https://example.com/a',
+              'resolved_url': 'https://example.com/a',
+              'title': 'Server extracted article',
+              'body_format': 'blocks',
+              'body': [
+                {'type': 'paragraph', 'text': 'Server fallback worked'},
+              ],
+              'plain_text': 'Server fallback worked',
+            }),
+            200,
+          );
+        }),
+      );
+
+      final article = await service.extract('https://example.com/a');
+
+      expect(paths, ['/v1/extract-html', '/v1/extract-html', '/v1/extract']);
+      expect(article.title, 'Server extracted article');
+      expect(article.plainText, 'Server fallback worked');
+    },
+  );
+
+  test(
+    'falls back to server-side extraction when client download is forbidden',
+    () async {
+      final paths = <String>[];
+      final service = TrafilaturaArticleExtractionService(
+        baseUri: Uri.parse('http://127.0.0.1:9090'),
+        httpClient: MockClient((request) async {
+          if (request.method == 'GET') {
+            return http.Response('Forbidden', 403, request: request);
+          }
+
+          paths.add(request.url.path);
+          return http.Response(
+            jsonEncode({
+              'requested_url': 'https://example.com/a',
+              'resolved_url': 'https://example.com/a',
+              'title': 'Server extracted article',
+              'body_format': 'blocks',
+              'body': [
+                {'type': 'paragraph', 'text': 'Server fallback worked'},
+              ],
+              'plain_text': 'Server fallback worked',
+            }),
+            200,
+          );
+        }),
+      );
+
+      final article = await service.extract('https://example.com/a');
+
+      expect(paths, ['/v1/extract']);
+      expect(article.title, 'Server extracted article');
+    },
+  );
+
   test('formats FastAPI validation errors', () async {
     final service = TrafilaturaArticleExtractionService(
       baseUri: Uri.parse('http://127.0.0.1:9090'),

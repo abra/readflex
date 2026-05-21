@@ -55,6 +55,9 @@ void main() {
 
     expect(tester.brightnessIgnorePointer.ignoring, isFalse);
     expect(find.byIcon(AppIcons.deviceMode), findsOneWidget);
+    expect(find.byIcon(AppIcons.lightMode), findsOneWidget);
+    expect(find.byIcon(AppIcons.brightnessLow), findsOneWidget);
+    expect(find.byIcon(AppIcons.darkMode), findsNothing);
 
     selectionCubit.select(text: 'Selected text');
     await tester.pumpAndSettle();

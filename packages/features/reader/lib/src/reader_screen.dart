@@ -1086,7 +1086,7 @@ class _ReaderBrightnessChromeState extends State<_ReaderBrightnessChrome> {
                             ),
                             _ReaderBrightnessStepButton(
                               tooltip: 'Decrease brightness',
-                              icon: AppIcons.darkMode,
+                              icon: AppIcons.brightnessLow,
                               enabled: widget.canDecrease,
                               foreground: foreground,
                               onPressed: widget.onDecrease,

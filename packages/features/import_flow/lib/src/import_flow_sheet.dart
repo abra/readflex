@@ -93,12 +93,14 @@ class _ImportFlowStepSwitcher extends StatefulWidget {
 
 class _ImportFlowStepSwitcherState extends State<_ImportFlowStepSwitcher> {
   var _slideDirection = 1;
+  var _transitionStyle = _ImportFlowTransitionStyle.slide;
 
   @override
   void didUpdateWidget(covariant _ImportFlowStepSwitcher oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.state.runtimeType != widget.state.runtimeType) {
       _slideDirection = _transitionDirection(oldWidget.state, widget.state);
+      _transitionStyle = _transitionStyleFor(oldWidget.state, widget.state);
     }
   }
 
@@ -119,6 +121,12 @@ class _ImportFlowStepSwitcherState extends State<_ImportFlowStepSwitcher> {
         ),
       ),
       transitionBuilder: (child, animation) {
+        if (_transitionStyle == _ImportFlowTransitionStyle.status) {
+          return _ImportFlowStatusTransition(
+            animation: animation,
+            child: child,
+          );
+        }
         return _ImportFlowSlideTransition(
           animation: animation,
           direction: _slideDirection,
@@ -128,6 +136,17 @@ class _ImportFlowStepSwitcherState extends State<_ImportFlowStepSwitcher> {
       child: widget.child,
     );
   }
+}
+
+enum _ImportFlowTransitionStyle { slide, status }
+
+_ImportFlowTransitionStyle _transitionStyleFor(
+  ImportFlowState from,
+  ImportFlowState to,
+) {
+  return from is ImportFlowArticleUploading && to is ImportFlowArticleDone
+      ? _ImportFlowTransitionStyle.status
+      : _ImportFlowTransitionStyle.slide;
 }
 
 class _ImportFlowSlideTransition extends StatelessWidget {
@@ -155,6 +174,33 @@ class _ImportFlowSlideTransition extends StatelessWidget {
           child: child,
         );
       },
+    );
+  }
+}
+
+class _ImportFlowStatusTransition extends StatelessWidget {
+  const _ImportFlowStatusTransition({
+    required this.animation,
+    required this.child,
+  });
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    return FadeTransition(
+      key: const ValueKey('importFlowStatusTransition'),
+      opacity: curved,
+      child: ScaleTransition(
+        scale: Tween<double>(begin: 0.96, end: 1).animate(curved),
+        child: child,
+      ),
     );
   }
 }
@@ -461,37 +507,102 @@ class _ArticleUploadingView extends StatelessWidget {
     final colors = context.colors;
     final text = context.text;
 
+    return _StatusLayout(
+      reserveActionSpace: true,
+      content: _StatusContent(
+        icon: const CenteredCircularProgressIndicator(),
+        title: 'Saving article...',
+        detail: state.url,
+        titleStyle: text.bodyMedium.copyWith(
+          color: colors.onSurface,
+          fontWeight: FontWeight.w500,
+        ),
+        detailStyle: text.labelSmall.copyWith(
+          color: colors.onSurface.withValues(alpha: 0.55),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusLayout extends StatelessWidget {
+  const _StatusLayout({
+    required this.content,
+    this.action,
+    this.reserveActionSpace = false,
+  });
+
+  final Widget content;
+  final Widget? action;
+  final bool reserveActionSpace;
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: _kStatusViewPadding,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const CenteredCircularProgressIndicator(),
+          Expanded(child: Center(child: content)),
           const SizedBox(height: AppSpacing.md),
-          Text(
-            'Saving article...',
-            textAlign: TextAlign.center,
-            style: text.bodyMedium.copyWith(
-              color: colors.onSurface,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            state.url,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: text.labelSmall.copyWith(
-              color: colors.onSurface.withValues(alpha: 0.55),
-            ),
-          ),
+          if (action case final action?)
+            action
+          else if (reserveActionSpace)
+            const SizedBox(height: _kStatusActionHeight),
         ],
       ),
     );
   }
 }
+
+class _StatusContent extends StatelessWidget {
+  const _StatusContent({
+    required this.icon,
+    required this.title,
+    required this.detail,
+    required this.titleStyle,
+    required this.detailStyle,
+    this.subtitle,
+  });
+
+  final Widget icon;
+  final String title;
+  final String detail;
+  final TextStyle titleStyle;
+  final TextStyle detailStyle;
+  final String? subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Center(child: icon),
+        const SizedBox(height: AppSpacing.md),
+        Text(title, textAlign: TextAlign.center, style: titleStyle),
+        const SizedBox(height: 2),
+        Text(
+          detail,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: detailStyle,
+        ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            subtitle!,
+            textAlign: TextAlign.center,
+            style: detailStyle,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+const _kStatusActionHeight = 40.0;
 
 /// Insets used by the title-less status views (uploading, done,
 /// failure) so they line up with the [_MenuView]'s ActionBottomSheet
@@ -640,47 +751,21 @@ class _SuccessLayout extends StatelessWidget {
     final text = context.text;
     final muted = cs.onSurface.withValues(alpha: 0.55);
 
-    return Padding(
-      padding: _kStatusViewPadding,
-      child: Column(
-        mainAxisSize: MainAxisSize.max,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: AppSpacing.md),
-          Center(
-            child: _IconDisc(
-              child: Icon(AppIcons.check, color: cs.primary, size: 24),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: text.bodyMedium.copyWith(
-              fontWeight: FontWeight.w500,
-              color: cs.onSurface,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            detail,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: text.labelSmall.copyWith(color: muted),
-          ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 2),
-            Text(
-              subtitle!,
-              textAlign: TextAlign.center,
-              style: text.labelSmall.copyWith(color: muted),
-            ),
-          ],
-          const Spacer(),
-          FilledButton(onPressed: onDone, child: const Text('Done')),
-        ],
+    return _StatusLayout(
+      content: _StatusContent(
+        icon: _IconDisc(
+          child: Icon(AppIcons.check, color: cs.primary, size: 24),
+        ),
+        title: title,
+        detail: detail,
+        subtitle: subtitle,
+        titleStyle: text.bodyMedium.copyWith(
+          fontWeight: FontWeight.w500,
+          color: cs.onSurface,
+        ),
+        detailStyle: text.labelSmall.copyWith(color: muted),
       ),
+      action: FilledButton(onPressed: onDone, child: const Text('Done')),
     );
   }
 }

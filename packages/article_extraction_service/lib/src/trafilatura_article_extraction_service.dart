@@ -31,7 +31,16 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
 
   @override
   Future<ExtractedArticle> extract(String url) async {
-    final article = await _downloadArticle(url);
+    final _DownloadedArticleDocument article;
+    try {
+      article = await _downloadArticle(url);
+    } on ArticleExtractionException catch (e) {
+      if (_shouldFallbackToServerExtraction(e)) {
+        return _extractFromServer(url);
+      }
+      rethrow;
+    }
+
     final uri = _baseUri.resolve('/v1/extract-html');
     try {
       final response = await _postExtractHtml(
@@ -44,6 +53,48 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
         final retryResponse = await _postExtractHtml(
           uri: uri,
           article: article,
+          favorPrecision: false,
+          favorRecall: true,
+        );
+        if (_shouldFallbackToServerExtractionResponse(retryResponse)) {
+          return _extractFromServer(url);
+        }
+        return _decodeArticleResponse(retryResponse, article);
+      }
+      if (_shouldFallbackToServerExtractionResponse(response)) {
+        return _extractFromServer(url);
+      }
+      return _decodeArticleResponse(response, article);
+    } on TimeoutException {
+      throw const ArticleExtractionException(
+        'Article cleaner request timed out',
+      );
+    } on http.ClientException {
+      throw const ArticleExtractionException(
+        'Article cleaner service is unavailable',
+      );
+    }
+  }
+
+  Future<ExtractedArticle> _extractFromServer(String url) async {
+    final uri = _baseUri.resolve('/v1/extract');
+    final article = _DownloadedArticleDocument(
+      requestedUrl: url,
+      resolvedUrl: url,
+      contentType: null,
+      bodyBytes: const [],
+    );
+    try {
+      final response = await _postExtractUrl(
+        uri: uri,
+        url: url,
+        favorPrecision: true,
+        favorRecall: false,
+      );
+      if (_shouldRetryWithRecall(response)) {
+        final retryResponse = await _postExtractUrl(
+          uri: uri,
+          url: url,
           favorPrecision: false,
           favorRecall: true,
         );
@@ -145,6 +196,40 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
         .timeout(_timeout);
   }
 
+  Future<http.Response> _postExtractUrl({
+    required Uri uri,
+    required String url,
+    required bool favorPrecision,
+    required bool favorRecall,
+  }) {
+    final headers = {
+      'content-type': 'application/json',
+      'accept': 'application/json',
+    };
+    final apiKey = _apiKey;
+    if (apiKey != null && apiKey.isNotEmpty) {
+      headers['X-API-Key'] = apiKey;
+    }
+    return _httpClient
+        .post(
+          uri,
+          headers: headers,
+          body: jsonEncode({
+            'url': url,
+            'body_format': 'blocks',
+            'include_comments': false,
+            'include_tables': true,
+            'include_images': true,
+            'include_links': false,
+            'target_language': null,
+            'fast': false,
+            'favor_precision': favorPrecision,
+            'favor_recall': favorRecall,
+          }),
+        )
+        .timeout(_timeout);
+  }
+
   ExtractedArticle _decodeArticleResponse(
     http.Response response,
     _DownloadedArticleDocument article,
@@ -164,6 +249,22 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
   }
 
   bool _shouldRetryWithRecall(http.Response response) {
+    if (response.statusCode != 422) return false;
+    return _errorMessageFor(
+      response,
+    ).toLowerCase().contains('could not extract');
+  }
+
+  bool _shouldFallbackToServerExtraction(ArticleExtractionException error) {
+    return switch (error.statusCode) {
+      401 || 403 => true,
+      422 => error.message.toLowerCase().contains('could not extract'),
+      _ => false,
+    };
+  }
+
+  bool _shouldFallbackToServerExtractionResponse(http.Response response) {
+    if (response.statusCode == 401 || response.statusCode == 403) return true;
     if (response.statusCode != 422) return false;
     return _errorMessageFor(
       response,

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:component_library/component_library.dart';
@@ -209,6 +210,52 @@ void main() {
     expect(field.controller!.text, isEmpty);
   });
 
+  testWidgets('article success fades between aligned status views', (
+    tester,
+  ) async {
+    final importCompleter = Completer<Article?>();
+
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => null,
+          onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (_) => importCompleter.future,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Article'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'https://example.com/a');
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+
+    expect(find.text('Saving article...'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is Text && widget.data == 'https://example.com/a',
+      ),
+      findsOneWidget,
+    );
+
+    importCompleter.complete(_fakeArticle(title: 'Saved article'));
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('importFlowStatusTransition')),
+      findsWidgets,
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Article saved!'), findsOneWidget);
+    expect(find.text('Saved article'), findsOneWidget);
+  });
+
   testWidgets('cancelled book picker keeps menu open', (tester) async {
     var pickerCalls = 0;
     await tester.pumpWidget(
@@ -314,6 +361,14 @@ Book _fakeBook({BookFormat format = BookFormat.epub}) => Book(
   title: 'Test',
   filePath: 'book.epub',
   format: format,
+  addedAt: DateTime(2026),
+);
+
+Article _fakeArticle({String title = 'Article'}) => Article(
+  id: 'article-1',
+  title: title,
+  url: 'https://example.com/a',
+  contentPath: '/articles/article-1/article.json',
   addedAt: DateTime(2026),
 );
 

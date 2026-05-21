@@ -39,12 +39,15 @@ class ApplicationConfig {
 
   /// Base URL of the article extraction backend.
   ///
-  /// Local simulator default is intentionally `127.0.0.1`; real Android
-  /// devices must pass the host machine LAN address via dart-define.
-  String get articleCleanerBaseUrl => const String.fromEnvironment(
-    'ARTICLE_CLEANER_BASE_URL',
-    defaultValue: 'http://127.0.0.1:9090',
-  ).trim();
+  /// Explicit dart-define values always win. The checked-in default stays on
+  /// localhost; device/release builds should pass a private value with
+  /// `--dart-define=ARTICLE_CLEANER_BASE_URL=...`.
+  String get articleCleanerBaseUrl {
+    const configured = String.fromEnvironment('ARTICLE_CLEANER_BASE_URL');
+    final value = configured.trim();
+    if (value.isNotEmpty) return value;
+    return 'http://127.0.0.1:9090';
+  }
 
   /// Optional API key for the article extraction backend.
   String get articleCleanerApiKey =>

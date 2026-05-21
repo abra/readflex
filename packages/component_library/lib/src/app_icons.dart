@@ -58,6 +58,7 @@ abstract final class AppIcons {
   // ── Theme ─────────────────────────────────────────────────
   static const IconData lightMode = LucideIcons.sun;
   static const IconData darkMode = LucideIcons.moon;
+  static const IconData brightnessLow = LucideIcons.sunDim;
   static const IconData systemMode = LucideIcons.monitor;
   static const IconData deviceMode = LucideIcons.smartphone;
 
