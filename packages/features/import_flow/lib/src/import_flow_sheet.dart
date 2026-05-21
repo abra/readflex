@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/services.dart';
 
+import 'article_url_utils.dart';
 import 'import_flow_cubit.dart';
 import 'import_flow_result.dart';
 
@@ -46,13 +50,10 @@ class _ImportFlowSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<ImportFlowCubit, ImportFlowState>(
       builder: (context, state) {
-        // Hard-pin all four states to the same body height so the
+        // Hard-pin all states to the same body height so the
         // sheet never resizes between menu / uploading / done /
-        // failure. Each inner view uses a `Column.max` with one or
-        // more `Spacer`s to anchor the action button(s) to the
-        // bottom of this 200dp box, so buttons stay at a stable
-        // distance from the bottom regardless of which state is
-        // active.
+        // failure. Action-heavy states control their own spacing so
+        // controls stay visually close to their related content.
         return SizedBox(
           height: 280,
           child: _ImportFlowStepSwitcher(
@@ -242,6 +243,13 @@ class _ArticleUrlEntryView extends StatefulWidget {
 
 class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
   final _controller = TextEditingController();
+  String? _clipboardArticleUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_refreshClipboardArticleUrl());
+  }
 
   @override
   void dispose() {
@@ -249,9 +257,33 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
     super.dispose();
   }
 
+  Future<void> _refreshClipboardArticleUrl() async {
+    String? url;
+    try {
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      url = normalizeArticleUrl(data?.text ?? '');
+    } catch (_) {
+      url = null;
+    }
+    if (!mounted) return;
+    setState(() => _clipboardArticleUrl = url);
+  }
+
+  void _pasteClipboardArticleUrl() {
+    final url = _clipboardArticleUrl;
+    if (url == null) return;
+    _controller.value = TextEditingValue(
+      text: url,
+      selection: TextSelection.collapsed(offset: url.length),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<ImportFlowCubit>();
+    final colors = context.colors;
+    final pasteUrl = _clipboardArticleUrl;
+    final muted = context.colors.onSurface.withValues(alpha: 0.55);
 
     return Padding(
       padding: _kStatusViewPadding,
@@ -265,11 +297,20 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
             keyboardType: TextInputType.url,
             textInputAction: TextInputAction.done,
             autocorrect: false,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               hintText: 'https://example.com/article',
+              suffixIcon: IconButton(
+                tooltip: 'Paste URL',
+                icon: const Icon(AppIcons.paste, size: AppIconSize.sm),
+                color: colors.primary,
+                disabledColor: colors.onSurface.withValues(alpha: 0.32),
+                onPressed: pasteUrl == null ? null : _pasteClipboardArticleUrl,
+              ),
             ),
             onSubmitted: cubit.importArticle,
           ),
+          const SizedBox(height: AppSpacing.md),
+          _ArticleUrlHints(color: muted),
           const Spacer(),
           Row(
             children: [
@@ -290,6 +331,70 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ArticleUrlHints extends StatelessWidget {
+  const _ArticleUrlHints({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ArticleUrlHint(
+          text: 'Saves a clean offline reading version.',
+          color: color,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        _ArticleUrlHint(
+          text: 'Keeps article images when available.',
+          color: color,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        _ArticleUrlHint(
+          text: 'Works with public pages you can open in a browser.',
+          color: color,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        _ArticleUrlHint(
+          text: 'Paste a copied article URL when available.',
+          color: color,
+        ),
+      ],
+    );
+  }
+}
+
+class _ArticleUrlHint extends StatelessWidget {
+  const _ArticleUrlHint({required this.text, required this.color});
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 7),
+          child: DecoratedBox(
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            child: const SizedBox(width: 4, height: 4),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Text(
+            text,
+            style: context.text.labelSmall.copyWith(color: color),
+          ),
+        ),
+      ],
     );
   }
 }

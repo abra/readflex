@@ -3,10 +3,35 @@ import 'dart:io';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:import_flow/import_flow.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  String? clipboardText;
+
+  setUp(() {
+    clipboardText = null;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          switch (call.method) {
+            case 'Clipboard.getData':
+              return {'text': clipboardText};
+            case 'Clipboard.setData':
+              clipboardText = (call.arguments as Map?)?['text'] as String?;
+              return null;
+          }
+          return null;
+        });
+  });
+
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, null);
+  });
+
   testWidgets('menu state shows the Upload Book option', (tester) async {
     await tester.pumpWidget(
       _TestHost(
@@ -72,6 +97,107 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Add to Library'), findsNothing);
     expect(find.text('Save Article'), findsOneWidget);
+  });
+
+  testWidgets('article url entry shows import hints', (tester) async {
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => null,
+          onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (_) async => null,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Article'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Saves a clean offline reading version.'),
+      findsOneWidget,
+    );
+    expect(find.text('Keeps article images when available.'), findsOneWidget);
+    expect(
+      find.text('Works with public pages you can open in a browser.'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Paste a copied article URL when available.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('article url entry pastes a valid clipboard url', (
+    tester,
+  ) async {
+    clipboardText = 'example.com/article';
+
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => null,
+          onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (_) async => null,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Article'));
+    await tester.pumpAndSettle();
+
+    final pasteButtonFinder = find.widgetWithIcon(IconButton, AppIcons.paste);
+    final pasteButton = tester.widget<IconButton>(pasteButtonFinder);
+    expect(pasteButton.onPressed, isNotNull);
+    expect(
+      pasteButton.color,
+      Theme.of(tester.element(find.byType(TextField))).colorScheme.primary,
+    );
+
+    await tester.tap(pasteButtonFinder);
+    await tester.pump();
+
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.controller!.text, 'https://example.com/article');
+  });
+
+  testWidgets('article url entry disables paste for non-url clipboard text', (
+    tester,
+  ) async {
+    clipboardText = 'just words';
+
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => null,
+          onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (_) async => null,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Article'));
+    await tester.pumpAndSettle();
+
+    final pasteButton = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, AppIcons.paste),
+    );
+    final colors = Theme.of(tester.element(find.byType(TextField))).colorScheme;
+
+    expect(pasteButton.onPressed, isNull);
+    expect(
+      pasteButton.disabledColor,
+      colors.onSurface.withValues(alpha: 0.32),
+    );
   });
 
   testWidgets('cancelled book picker keeps menu open', (tester) async {
