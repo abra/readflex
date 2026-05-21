@@ -1535,7 +1535,13 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
     if (_isDragging) return;
     final dragValue = _dragValue;
     if (dragValue == null) return;
-    if ((widget.progress - dragValue).abs() <= _dragSettleEpsilon) {
+    final displayedValue = readerSliderValue(
+      sourceType: widget.sourceType,
+      progress: widget.progress,
+      currentPage: widget.chapterCurrentPage,
+      totalPages: widget.chapterTotalPages,
+    );
+    if ((displayedValue - dragValue).abs() <= _dragSettleEpsilon) {
       _dragReleaseTimer?.cancel();
       _dragReleaseTimer = null;
       setState(() => _dragValue = null);
@@ -1547,14 +1553,15 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
     final chromeAnimCurve = widget.visible
         ? _kChromeAnimCurve
         : _kChromeHideAnimCurve;
-    final clamped = snappedReaderSeekProgress(
+    final displayedValue = readerSliderValue(
       sourceType: widget.sourceType,
       progress: widget.progress,
+      currentPage: widget.chapterCurrentPage,
       totalPages: widget.chapterTotalPages,
     );
     final sliderValue = snappedReaderSeekProgress(
       sourceType: widget.sourceType,
-      progress: _dragValue ?? clamped,
+      progress: _dragValue ?? displayedValue,
       totalPages: widget.chapterTotalPages,
     );
     final sliderDivisions = readerSliderDivisions(

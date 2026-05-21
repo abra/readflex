@@ -141,6 +141,51 @@ void main() {
       );
     });
 
+    test(
+      'maps article slider value from section page, not global progress',
+      () {
+        expect(
+          readerSliderValue(
+            sourceType: SourceType.article,
+            progress: 0.557,
+            currentPage: 1,
+            totalPages: 3,
+          ),
+          0,
+        );
+        expect(
+          readerSliderValue(
+            sourceType: SourceType.article,
+            progress: 0.557,
+            currentPage: 2,
+            totalPages: 3,
+          ),
+          0.5,
+        );
+        expect(
+          readerSliderValue(
+            sourceType: SourceType.article,
+            progress: 0.557,
+            currentPage: 3,
+            totalPages: 3,
+          ),
+          1,
+        );
+      },
+    );
+
+    test('keeps non-article slider value continuous', () {
+      expect(
+        readerSliderValue(
+          sourceType: SourceType.book,
+          progress: 0.557,
+          currentPage: 1,
+          totalPages: 3,
+        ),
+        0.557,
+      );
+    });
+
     test('normalizes visual section page buffer values', () {
       expect(
         visualSectionPageLabel(currentPage: 0, totalPages: 16),

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
@@ -243,13 +241,6 @@ class _ArticleUrlEntryView extends StatefulWidget {
 
 class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
   final _controller = TextEditingController();
-  String? _clipboardArticleUrl;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(_refreshClipboardArticleUrl());
-  }
 
   @override
   void dispose() {
@@ -257,20 +248,18 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
     super.dispose();
   }
 
-  Future<void> _refreshClipboardArticleUrl() async {
-    String? url;
+  Future<String?> _readClipboardArticleUrl() async {
     try {
       final data = await Clipboard.getData(Clipboard.kTextPlain);
-      url = normalizeArticleUrl(data?.text ?? '');
+      return normalizeArticleUrl(data?.text ?? '');
     } catch (_) {
-      url = null;
+      return null;
     }
-    if (!mounted) return;
-    setState(() => _clipboardArticleUrl = url);
   }
 
-  void _pasteClipboardArticleUrl() {
-    final url = _clipboardArticleUrl;
+  Future<void> _pasteClipboardArticleUrl() async {
+    final url = await _readClipboardArticleUrl();
+    if (!mounted) return;
     if (url == null) return;
     _controller.value = TextEditingValue(
       text: url,
@@ -282,7 +271,6 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
   Widget build(BuildContext context) {
     final cubit = context.read<ImportFlowCubit>();
     final colors = context.colors;
-    final pasteUrl = _clipboardArticleUrl;
     final muted = context.colors.onSurface.withValues(alpha: 0.55);
 
     return Padding(
@@ -303,8 +291,7 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
                 tooltip: 'Paste URL',
                 icon: const Icon(AppIcons.paste, size: AppIconSize.sm),
                 color: colors.primary,
-                disabledColor: colors.onSurface.withValues(alpha: 0.32),
-                onPressed: pasteUrl == null ? null : _pasteClipboardArticleUrl,
+                onPressed: _pasteClipboardArticleUrl,
               ),
             ),
             onSubmitted: cubit.importArticle,

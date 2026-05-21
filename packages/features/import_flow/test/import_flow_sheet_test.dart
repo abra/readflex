@@ -11,13 +11,16 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   String? clipboardText;
+  var clipboardReadCount = 0;
 
   setUp(() {
     clipboardText = null;
+    clipboardReadCount = 0;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(SystemChannels.platform, (call) async {
           switch (call.method) {
             case 'Clipboard.getData':
+              clipboardReadCount += 1;
               return {'text': clipboardText};
             case 'Clipboard.setData':
               clipboardText = (call.arguments as Map?)?['text'] as String?;
@@ -167,7 +170,7 @@ void main() {
     expect(field.controller!.text, 'https://example.com/article');
   });
 
-  testWidgets('article url entry disables paste for non-url clipboard text', (
+  testWidgets('article url entry ignores non-url clipboard text', (
     tester,
   ) async {
     clipboardText = 'just words';
@@ -191,13 +194,19 @@ void main() {
     final pasteButton = tester.widget<IconButton>(
       find.widgetWithIcon(IconButton, AppIcons.paste),
     );
-    final colors = Theme.of(tester.element(find.byType(TextField))).colorScheme;
 
-    expect(pasteButton.onPressed, isNull);
+    expect(pasteButton.onPressed, isNotNull);
     expect(
-      pasteButton.disabledColor,
-      colors.onSurface.withValues(alpha: 0.32),
+      pasteButton.color,
+      Theme.of(tester.element(find.byType(TextField))).colorScheme.primary,
     );
+
+    await tester.tap(find.widgetWithIcon(IconButton, AppIcons.paste));
+    await tester.pump();
+
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(clipboardReadCount, 1);
+    expect(field.controller!.text, isEmpty);
   });
 
   testWidgets('cancelled book picker keeps menu open', (tester) async {

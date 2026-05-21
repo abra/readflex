@@ -70,6 +70,28 @@ double snappedReaderSeekProgress({
   return (_clampProgress((clamped * divisions).round() / divisions));
 }
 
+double readerSliderValue({
+  required SourceType sourceType,
+  required double progress,
+  required int? currentPage,
+  required int? totalPages,
+}) {
+  if (sourceType != SourceType.article) {
+    return _clampProgress(progress);
+  }
+  if (currentPage == null || totalPages == null || totalPages <= 0) {
+    return snappedReaderSeekProgress(
+      sourceType: sourceType,
+      progress: progress,
+      totalPages: totalPages,
+    );
+  }
+  if (totalPages == 1) return 0;
+
+  final page = _displayVisualSectionPage(currentPage, totalPages);
+  return _clampProgress((page - 1) / (totalPages - 1));
+}
+
 String? visualSectionPageLabel({
   required int? currentPage,
   required int? totalPages,
