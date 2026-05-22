@@ -21,6 +21,8 @@ class AppSourceCover extends StatelessWidget {
     this.showProgress = true,
     this.showMatte = true,
     this.centerText = false,
+    this.topAlignText = false,
+    this.topReserve = 0,
     this.bottomReserve = 0,
     this.fit = BoxFit.fill,
     this.articleBadgeAlignment = Alignment.topLeft,
@@ -41,6 +43,8 @@ class AppSourceCover extends StatelessWidget {
   final bool showProgress;
   final bool showMatte;
   final bool centerText;
+  final bool topAlignText;
+  final double topReserve;
   final double bottomReserve;
   final BoxFit fit;
   final Alignment articleBadgeAlignment;
@@ -62,6 +66,8 @@ class AppSourceCover extends StatelessWidget {
           showTitle: showTitle,
           showMatte: showMatte,
           centerText: centerText,
+          topAlignText: topAlignText,
+          topReserve: topReserve,
           bottomReserve: bottomReserve,
           articleBadgeAlignment: articleBadgeAlignment,
           showArticleBadge: showArticleBadge,

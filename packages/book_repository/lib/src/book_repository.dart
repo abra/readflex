@@ -118,18 +118,26 @@ class BookRepository {
       // Save cover image.
       String? coverFileName;
       if (coverData != null) {
-        final coverExt = _extensionForMime(coverMimeType);
+        final coverDiagnostics = _CoverDiagnostics.from(
+          mimeType: coverMimeType,
+          data: coverData,
+        );
+        final coverExt =
+            _extensionForDetectedFormat(coverDiagnostics.detectedFormat) ??
+            _extensionForMime(coverMimeType);
         _logCoverDiagnostics(
           id: id,
           title: title,
-          mimeType: coverMimeType,
+          diagnostics: coverDiagnostics,
           extension: coverExt,
           data: coverData,
         );
-        coverFileName = 'cover$coverExt';
-        await File(
-          p.join(bookDir.path, coverFileName),
-        ).writeAsBytes(coverData);
+        if (coverDiagnostics.isFlutterSupported) {
+          coverFileName = 'cover$coverExt';
+          await File(
+            p.join(bookDir.path, coverFileName),
+          ).writeAsBytes(coverData);
+        }
       }
       onProgress?.call(0.98);
 
@@ -517,15 +525,10 @@ class BookRepository {
   void _logCoverDiagnostics({
     required String id,
     required String title,
-    required String? mimeType,
+    required _CoverDiagnostics diagnostics,
     required String extension,
     required Uint8List data,
   }) {
-    final diagnostics = _CoverDiagnostics.from(
-      mimeType: mimeType,
-      extension: extension,
-      data: data,
-    );
     if (!diagnostics.isSuspicious) return;
 
     _logger?.warn(
@@ -538,22 +541,33 @@ class BookRepository {
   }
 }
 
+String? _extensionForDetectedFormat(String format) {
+  return switch (format) {
+    'jpeg' => '.jpeg',
+    'png' => '.png',
+    'gif' => '.gif',
+    'webp' => '.webp',
+    _ => null,
+  };
+}
+
 final class _CoverDiagnostics {
   const _CoverDiagnostics({
     required this.mimeType,
     required this.detectedFormat,
     required this.signature,
     required this.isSuspicious,
+    required this.isFlutterSupported,
   });
 
   final String mimeType;
   final String detectedFormat;
   final String signature;
   final bool isSuspicious;
+  final bool isFlutterSupported;
 
   static _CoverDiagnostics from({
     required String? mimeType,
-    required String extension,
     required Uint8List data,
   }) {
     final normalizedMime = _normalizedMime(mimeType) ?? '<none>';
@@ -567,12 +581,9 @@ final class _CoverDiagnostics {
       mimeType: normalizedMime,
       detectedFormat: detectedFormat,
       signature: _hexSignature(data),
+      isFlutterSupported: supportedFormat,
       isSuspicious:
-          data.isEmpty ||
-          !supportedFormat ||
-          mimeFormat == 'svg' ||
-          mismatch ||
-          _extensionLooksWrong(extension, detectedFormat),
+          data.isEmpty || !supportedFormat || mimeFormat == 'svg' || mismatch,
     );
   }
 }
@@ -596,16 +607,6 @@ String? _formatForMime(String? mime) {
 bool _isFlutterImageFormat(String format) {
   return switch (format) {
     'jpeg' || 'png' || 'gif' || 'webp' => true,
-    _ => false,
-  };
-}
-
-bool _extensionLooksWrong(String extension, String detectedFormat) {
-  return switch (detectedFormat) {
-    'jpeg' => extension != '.jpeg',
-    'png' => extension != '.png',
-    'gif' => extension != '.gif',
-    'webp' => extension != '.webp',
     _ => false,
   };
 }

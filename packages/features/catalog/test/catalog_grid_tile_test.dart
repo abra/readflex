@@ -124,4 +124,46 @@ void main() {
     expect(find.text('EXAMPLE'), findsOneWidget);
     expect(find.byType(AppSourceCoverFrame), findsOneWidget);
   });
+
+  testWidgets('grid fallback cover reserves space for progress overlay', (
+    tester,
+  ) async {
+    final openedBook = _book.copyWith(
+      readingProgress: 0.5,
+      lastOpenedAt: DateTime(2026, 1, 2),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 120,
+              height: 180,
+              child: BookLibraryGridTile(
+                source: LibrarySource.fromBook(openedBook),
+                onTap: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final sourceCover = tester.widget<AppSourceCover>(
+      find.byType(AppSourceCover),
+    );
+    expect(sourceCover.bottomReserve, 16);
+    expect(sourceCover.topAlignText, isTrue);
+    expect(sourceCover.topReserve, 24);
+
+    final coverRect = tester.getRect(find.byType(AppSourceCoverFrame));
+    final titleRect = tester.getRect(find.text('Flutter in Action'));
+    final authorRect = tester.getRect(find.text('ERIC WINDMILL'));
+    final formatBadgeRect = tester.getRect(find.text('EPUB'));
+    expect(titleRect.top, greaterThan(formatBadgeRect.bottom));
+    expect(titleRect.top, lessThan(coverRect.top + 56));
+    expect(authorRect.top, greaterThan(titleRect.bottom));
+  });
 }

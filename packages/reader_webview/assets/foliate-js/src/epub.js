@@ -1009,9 +1009,23 @@ ${doc.querySelector('parsererror').innerText}`)
     }
     async getCover() {
         const cover = this.resources?.cover
-        return cover?.href
-            ? new Blob([await this.loadBlob(cover.href)], { type: cover.mediaType })
-            : null
+        if (!cover?.href) return null
+
+        if (cover.mediaType === MIME.XHTML || cover.mediaType === MIME.HTML) {
+            const str = await this.loadText(cover.href)
+            const doc = this.parser.parseFromString(str, cover.mediaType)
+            const el = doc.querySelector('img, image')
+            const src = el?.getAttribute('src')
+                ?? el?.getAttribute('href')
+                ?? el?.getAttributeNS(NS.XLINK, 'href')
+            const href = src ? resolveURL(src, cover.href) : null
+            const image = href ? this.resources.getItemByHref(href) : null
+            if (image?.href && image.mediaType?.startsWith('image/')) {
+                return new Blob([await this.loadBlob(image.href)], { type: image.mediaType })
+            }
+        }
+
+        return new Blob([await this.loadBlob(cover.href)], { type: cover.mediaType })
     }
     async getCalibreBookmarks() {
         const txt = await this.loadText('META-INF/calibre_bookmarks.txt')

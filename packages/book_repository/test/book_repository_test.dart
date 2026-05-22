@@ -379,7 +379,7 @@ void main() {
         sourceFile: await createTempBookFile(),
         title: 'Round Trip',
         format: BookFormat.epub,
-        coverData: Uint8List.fromList([0xFF, 0xD8]),
+        coverData: Uint8List.fromList([0xFF, 0xD8, 0xFF]),
         coverMimeType: 'image/jpeg',
       );
 
@@ -612,7 +612,16 @@ void main() {
 
     test('addBook with png cover uses .png extension', () async {
       final sourceFile = await createTempBookFile();
-      final coverData = Uint8List.fromList([0x89, 0x50, 0x4E, 0x47]);
+      final coverData = Uint8List.fromList([
+        0x89,
+        0x50,
+        0x4E,
+        0x47,
+        0x0D,
+        0x0A,
+        0x1A,
+        0x0A,
+      ]);
 
       final book = await repo.addBook(
         sourceFile: sourceFile,
@@ -623,6 +632,54 @@ void main() {
       );
 
       expect(book.coverImagePath, contains('cover.png'));
+    });
+
+    test('addBook uses detected cover format when mime is wrong', () async {
+      final sourceFile = await createTempBookFile();
+      final coverData = Uint8List.fromList([
+        0x89,
+        0x50,
+        0x4E,
+        0x47,
+        0x0D,
+        0x0A,
+        0x1A,
+        0x0A,
+      ]);
+
+      final book = await repo.addBook(
+        sourceFile: sourceFile,
+        title: 'Wrong Mime Cover',
+        format: BookFormat.epub,
+        coverData: coverData,
+        coverMimeType: 'image/jpeg',
+      );
+
+      expect(book.coverImagePath, contains('cover.png'));
+      expect(File(book.coverImagePath!).existsSync(), isTrue);
+    });
+
+    test('addBook ignores unsupported cover bytes', () async {
+      final sourceFile = await createTempBookFile();
+      final coverData = Uint8List.fromList(
+        '<html>not an image</html>'.codeUnits,
+      );
+
+      final book = await repo.addBook(
+        sourceFile: sourceFile,
+        title: 'HTML Cover',
+        format: BookFormat.epub,
+        coverData: coverData,
+        coverMimeType: 'image/jpeg',
+      );
+
+      expect(book.coverImagePath, isNull);
+      expect(
+        Directory(p.dirname(book.filePath)).listSync().whereType<File>().where(
+          (file) => p.basename(file.path).startsWith('cover'),
+        ),
+        isEmpty,
+      );
     });
 
     test('addBook logs suspicious cover diagnostics', () async {

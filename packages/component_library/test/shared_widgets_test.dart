@@ -207,6 +207,92 @@ void main() {
     }
   });
 
+  testWidgets(
+    'AppCoverArt keeps fallback title above external bottom reserve',
+    (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 120,
+              height: 180,
+              child: AppCoverArt(
+                title: 'Fallback Book Title',
+                seed: 'book-1',
+                bottomReserve: 40,
+                showMatte: false,
+                height: 180,
+                width: 120,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final coverRect = tester.getRect(find.byType(AppCoverArt));
+      final titleRect = tester.getRect(find.text('Fallback Book Title'));
+
+      expect(titleRect.bottom, lessThanOrEqualTo(coverRect.bottom - 40));
+    },
+  );
+
+  testWidgets('AppCoverArt can top-align fallback title', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 120,
+            height: 180,
+            child: AppCoverArt(
+              title: 'Top Book Title',
+              seed: 'book-1',
+              topAlignText: true,
+              bottomReserve: 40,
+              showMatte: false,
+              height: 180,
+              width: 120,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final coverRect = tester.getRect(find.byType(AppCoverArt));
+    final titleRect = tester.getRect(find.text('Top Book Title'));
+
+    expect(titleRect.top, lessThan(coverRect.top + 40));
+  });
+
+  testWidgets('AppCoverArt respects external top reserve', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 120,
+            height: 180,
+            child: AppCoverArt(
+              title: 'Reserved Book Title',
+              seed: 'book-1',
+              topAlignText: true,
+              topReserve: 44,
+              bottomReserve: 40,
+              showMatte: false,
+              height: 180,
+              width: 120,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final coverRect = tester.getRect(find.byType(AppCoverArt));
+    final titleRect = tester.getRect(find.text('Reserved Book Title'));
+
+    expect(titleRect.top, greaterThanOrEqualTo(coverRect.top + 44));
+  });
+
   testWidgets('AppImageAspectRatio uses fallback ratio without image', (
     tester,
   ) async {

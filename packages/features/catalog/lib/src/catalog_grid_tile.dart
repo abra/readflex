@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 /// Alpha for the format badge background (dark overlay on cover art).
 const double _kBadgeBackgroundAlpha = 0.55;
 const double _kGridCoverInset = AppSpacing.xxs;
-const double _kArticleProgressOverlayReserve = 16.0;
+const double _kFormatBadgeTextReserve = 24.0;
+const double _kProgressOverlayReserve = 16.0;
 
 /// Grid-mode tile for a library source.
 ///
@@ -30,6 +31,8 @@ class BookLibraryGridTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final coverImage = appSourceCoverImageFromPath(source.coverImagePath);
     final isArticle = source.sourceType == SourceType.article;
+    final showsProgressOverlay =
+        source.readingProgress > 0 && !source.isFinished;
 
     return _GridTileShell(
       sourceId: source.id,
@@ -48,13 +51,17 @@ class BookLibraryGridTile extends StatelessWidget {
         // the fallback path — when a real cover image is present,
         // the image takes over and the title stays off.
         showTitle: true,
-        showAuthor: false,
+        showAuthor: !isArticle,
         showProgress: false,
         // The shared frame owns cover edges; AppCoverArt's matte would add
         // a white inner border around generated article covers.
         showMatte: false,
         centerText: isArticle,
-        bottomReserve: isArticle ? _kArticleProgressOverlayReserve : 0,
+        topAlignText: !isArticle && showsProgressOverlay,
+        topReserve: !isArticle && showsProgressOverlay
+            ? _kFormatBadgeTextReserve
+            : 0,
+        bottomReserve: showsProgressOverlay ? _kProgressOverlayReserve : 0,
         articleBadgeAlignment: isArticle
             ? Alignment.topRight
             : Alignment.topLeft,

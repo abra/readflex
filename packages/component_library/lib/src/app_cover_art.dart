@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'app_icons.dart';
@@ -35,6 +37,8 @@ class AppCoverArt extends StatelessWidget {
     this.showAuthor = true,
     this.showTitle = true,
     this.centerText = false,
+    this.topAlignText = false,
+    this.topReserve = 0,
     this.bottomReserve = 0,
     this.progress,
     this.showMatte = true,
@@ -78,16 +82,26 @@ class AppCoverArt extends StatelessWidget {
   /// explicit user request for readflex.
   final bool showTitle;
 
-  /// When true, the text column is vertically centered instead of
-  /// bottom-aligned. Used in grid-mode article tiles where the bottom
-  /// of the cover is reserved for the progress overlay.
+  /// When true, the text column is bounded between the top area and
+  /// [bottomReserve] instead of being bottom-aligned. Used in grid-mode
+  /// article tiles where the bottom of the cover is reserved for the
+  /// progress overlay.
   final bool centerText;
+
+  /// Places fallback title/meta text near the top of the cover. Useful
+  /// for generated book covers when an external progress overlay owns
+  /// the bottom edge.
+  final bool topAlignText;
+
+  /// Pixel reserve at the top of the cover for an external overlay,
+  /// such as the catalog grid format badge.
+  final double topReserve;
 
   /// Pixel reserve at the bottom of the cover for an *external* overlay
   /// that the cover itself doesn't draw — typically the grid-shell's
-  /// progress bar painted by [_GridTileShell] on top of the cover. The
+  /// progress bar painted by the catalog grid tile on top of the cover. The
   /// title-line computation subtracts this so wrapped text never extends
-  /// into the bar zone, and in [centerText] mode the text column is
+  /// into the bar zone, and in [centerText] / [topAlignText] mode the text column is
   /// physically bounded above this inset so even ellipsis-edge cases
   /// don't bleed into the bar.
   final double bottomReserve;
@@ -142,13 +156,27 @@ class AppCoverArt extends StatelessWidget {
     final progressReservedSpace = showProgress
         ? progressBarHeight + progressBottomInset + 4
         : 0.0;
+    final externalReservedSpace = math.max(0.0, bottomReserve).toDouble();
+    final textReservedSpace = math
+        .max(
+          progressReservedSpace,
+          externalReservedSpace,
+        )
+        .toDouble();
+    final externalTopReservedSpace = math.max(0.0, topReserve).toDouble();
 
-    final topInset = (centerText && isArticle && showExtendedMeta)
-        ? 8 + articleIconSize + 4
-        : contentPadding;
-    final effectiveBottomReserve = centerText
-        ? (bottomReserve > 0 ? bottomReserve : contentPadding)
-        : contentPadding + progressReservedSpace;
+    final useTopAlignedText = centerText || topAlignText;
+    final topInset = math
+        .max(
+          (useTopAlignedText && isArticle && showExtendedMeta)
+              ? 8 + articleIconSize + 4
+              : contentPadding,
+          externalTopReservedSpace,
+        )
+        .toDouble();
+    final effectiveBottomReserve = useTopAlignedText
+        ? (externalReservedSpace > 0 ? externalReservedSpace : contentPadding)
+        : contentPadding + textReservedSpace;
 
     final titleMaxLines = _computeTitleMaxLines(
       titleFontSize: titleFontSize,
@@ -195,9 +223,9 @@ class AppCoverArt extends StatelessWidget {
               source: source,
               showAuthor: effectiveShowAuthor,
               isArticle: isArticle,
-              centerText: centerText,
+              topAlignText: useTopAlignedText,
               contentPadding: contentPadding,
-              progressReservedSpace: progressReservedSpace,
+              progressReservedSpace: textReservedSpace,
               topInset: topInset,
               bottomReserve: effectiveBottomReserve,
               titleFontSize: titleFontSize,
@@ -370,7 +398,7 @@ class _CoverTextColumn extends StatelessWidget {
     required this.source,
     required this.showAuthor,
     required this.isArticle,
-    required this.centerText,
+    required this.topAlignText,
     required this.contentPadding,
     required this.progressReservedSpace,
     required this.topInset,
@@ -390,7 +418,7 @@ class _CoverTextColumn extends StatelessWidget {
   final String? source;
   final bool showAuthor;
   final bool isArticle;
-  final bool centerText;
+  final bool topAlignText;
   final double contentPadding;
   final double progressReservedSpace;
   final double topInset;
@@ -456,7 +484,7 @@ class _CoverTextColumn extends StatelessWidget {
       ],
     );
 
-    if (centerText) {
+    if (topAlignText) {
       // Bound the column between the icon (top) and the bar reserve
       // (bottom) so a worst-case wrapped source plus a long
       // ellipsised title can never paint into the external

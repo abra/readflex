@@ -169,7 +169,9 @@ void main() {
 
       expect(
         bookJs,
-        contains('content: this.#bookmarkContentFromVisibleRange(visibleRange)'),
+        contains(
+          'content: this.#bookmarkContentFromVisibleRange(visibleRange)',
+        ),
       );
       expect(bookJs, contains('#bookmarkContentFromVisibleRange(range)'));
       expect(
@@ -185,6 +187,18 @@ void main() {
 
       expect(searchJs, contains("granularity !== 'word'"));
       expect(searchJs, contains('return simpleSearch(strs, query, options)'));
+    });
+
+    test('resolves XHTML cover pages to their nested image', () {
+      final epubJs = File(
+        'assets/foliate-js/src/epub.js',
+      ).readAsStringSync();
+
+      expect(epubJs, contains('cover.mediaType === MIME.XHTML'));
+      expect(epubJs, contains("doc.querySelector('img, image')"));
+      expect(epubJs, contains("el?.getAttribute('src')"));
+      expect(epubJs, contains("el?.getAttributeNS(NS.XLINK, 'href')"));
+      expect(epubJs, contains('this.resources.getItemByHref(href)'));
     });
 
     test('applies reader background color inside the iframe document', () {
