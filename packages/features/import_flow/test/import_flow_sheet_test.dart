@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:import_flow/import_flow.dart';
+import 'package:reader_webview/reader_webview.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -156,13 +157,19 @@ void main() {
     await tester.tap(find.text('Save Article'));
     await tester.pumpAndSettle();
 
-    final pasteButtonFinder = find.widgetWithIcon(IconButton, AppIcons.paste);
-    final pasteButton = tester.widget<IconButton>(pasteButtonFinder);
-    expect(pasteButton.onPressed, isNotNull);
+    final pasteButtonFinder = find.byIcon(AppIcons.paste);
+    final pasteIcon = tester.widget<Icon>(pasteButtonFinder);
+    expect(find.widgetWithIcon(IconButton, AppIcons.paste), findsNothing);
     expect(
-      pasteButton.color,
+      pasteIcon.color,
       Theme.of(tester.element(find.byType(TextField))).colorScheme.primary,
     );
+    final fieldRect = tester.getRect(find.byType(TextField));
+    final pasteRect = tester.getRect(
+      find.byKey(const ValueKey('articleUrlPasteButton')),
+    );
+    expect(pasteRect.center.dx, greaterThan(fieldRect.center.dx));
+    expect(fieldRect.right - pasteRect.right, closeTo(AppSpacing.sm, 1));
 
     await tester.tap(pasteButtonFinder);
     await tester.pump();
@@ -192,17 +199,14 @@ void main() {
     await tester.tap(find.text('Save Article'));
     await tester.pumpAndSettle();
 
-    final pasteButton = tester.widget<IconButton>(
-      find.widgetWithIcon(IconButton, AppIcons.paste),
-    );
-
-    expect(pasteButton.onPressed, isNotNull);
+    final pasteIcon = tester.widget<Icon>(find.byIcon(AppIcons.paste));
+    expect(find.widgetWithIcon(IconButton, AppIcons.paste), findsNothing);
     expect(
-      pasteButton.color,
+      pasteIcon.color,
       Theme.of(tester.element(find.byType(TextField))).colorScheme.primary,
     );
 
-    await tester.tap(find.widgetWithIcon(IconButton, AppIcons.paste));
+    await tester.tap(find.byIcon(AppIcons.paste));
     await tester.pump();
 
     final field = tester.widget<TextField>(find.byType(TextField));
@@ -309,6 +313,44 @@ void main() {
     expect(find.text('Done'), findsOneWidget);
   });
 
+  testWidgets('book success fades between aligned status views', (
+    tester,
+  ) async {
+    final importCompleter = Completer<Book?>();
+
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => File('/tmp/Test.epub'),
+          onImportBook: (file, {onProgress}) => importCompleter.future,
+          onImportArticle: (_) async => null,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Upload Book'));
+    await tester.pump();
+
+    expect(find.text('Uploading book...'), findsOneWidget);
+    expect(find.text('Test.epub'), findsOneWidget);
+
+    importCompleter.complete(_fakeBook());
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('importFlowStatusTransition')),
+      findsWidgets,
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Book added!'), findsOneWidget);
+    expect(find.text('Test.epub'), findsOneWidget);
+  });
+
   testWidgets('successful comic import shows Comic added!', (tester) async {
     await tester.pumpWidget(
       _TestHost(
@@ -351,6 +393,48 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Failed to import the book'), findsOneWidget);
+    expect(find.text('Bad.epub'), findsOneWidget);
+    expect(find.text('Try again'), findsOneWidget);
+  });
+
+  testWidgets('book failure fades between aligned status views', (
+    tester,
+  ) async {
+    final failureCompleter = Completer<void>();
+
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => File('/tmp/Bad.epub'),
+          onImportBook: (file, {onProgress}) async {
+            await failureCompleter.future;
+            throw const BookImportException('File type not supported');
+          },
+          onImportArticle: (_) async => null,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Upload Book'));
+    await tester.pump();
+
+    expect(find.text('Uploading book...'), findsOneWidget);
+    expect(find.text('Bad.epub'), findsOneWidget);
+
+    failureCompleter.complete();
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('importFlowStatusTransition')),
+      findsWidgets,
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('File type not supported'), findsOneWidget);
     expect(find.text('Bad.epub'), findsOneWidget);
     expect(find.text('Try again'), findsOneWidget);
   });

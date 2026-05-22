@@ -144,9 +144,19 @@ _ImportFlowTransitionStyle _transitionStyleFor(
   ImportFlowState from,
   ImportFlowState to,
 ) {
-  return from is ImportFlowArticleUploading && to is ImportFlowArticleDone
-      ? _ImportFlowTransitionStyle.status
-      : _ImportFlowTransitionStyle.slide;
+  return switch ((from, to)) {
+    (ImportFlowArticleUploading(), ImportFlowArticleDone()) ||
+    (ImportFlowArticleUploading(), ImportFlowFailure()) ||
+    (
+      ImportFlowBookUploading(),
+      ImportFlowBookDone(),
+    ) ||
+    (
+      ImportFlowBookUploading(),
+      ImportFlowFailure(),
+    ) => _ImportFlowTransitionStyle.status,
+    _ => _ImportFlowTransitionStyle.slide,
+  };
 }
 
 class _ImportFlowSlideTransition extends StatelessWidget {
@@ -317,7 +327,7 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
   Widget build(BuildContext context) {
     final cubit = context.read<ImportFlowCubit>();
     final colors = context.colors;
-    final muted = context.colors.onSurface.withValues(alpha: 0.55);
+    final muted = colors.onSurface.withValues(alpha: 0.55);
 
     return Padding(
       padding: _kStatusViewPadding,
@@ -333,11 +343,12 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
             autocorrect: false,
             decoration: InputDecoration(
               hintText: 'https://example.com/article',
-              suffixIcon: IconButton(
-                tooltip: 'Paste URL',
-                icon: const Icon(AppIcons.paste, size: AppIconSize.sm),
-                color: colors.primary,
+              suffixIcon: _PasteUrlButton(
                 onPressed: _pasteClipboardArticleUrl,
+              ),
+              suffixIconConstraints: const BoxConstraints.tightFor(
+                width: 52,
+                height: 48,
               ),
             ),
             onSubmitted: cubit.importArticle,
@@ -363,6 +374,47 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PasteUrlButton extends StatelessWidget {
+  const _PasteUrlButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    return SizedBox(
+      width: 52,
+      height: 48,
+      child: Padding(
+        padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
+        child: Align(
+          alignment: AlignmentDirectional.centerEnd,
+          child: Semantics(
+            label: 'Paste URL',
+            button: true,
+            child: GestureDetector(
+              key: const ValueKey('articleUrlPasteButton'),
+              behavior: HitTestBehavior.opaque,
+              onTap: onPressed,
+              child: SizedBox.square(
+                dimension: 40,
+                child: Center(
+                  child: Icon(
+                    AppIcons.paste,
+                    size: AppIconSize.sm,
+                    color: colors.primary,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -447,52 +499,82 @@ class _BookUploadingView extends StatelessWidget {
     final muted = cs.onSurface.withValues(alpha: 0.55);
     final progress = state.progress;
 
-    return Padding(
-      padding: _kStatusViewPadding,
-      child: Column(
-        mainAxisSize: MainAxisSize.max,
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Uploading book...',
-            textAlign: TextAlign.center,
-            style: text.bodyMedium.copyWith(
-              fontWeight: FontWeight.w500,
-              color: cs.onSurface,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            state.filename,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: text.labelSmall.copyWith(color: muted),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.full),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 6,
-              backgroundColor: cs.surfaceContainerHighest,
-              color: cs.primary,
-            ),
-          ),
-          if (progress != null) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              '${(progress * 100).clamp(0, 100).toInt()}%',
-              textAlign: TextAlign.center,
-              style: text.labelSmall.copyWith(
-                fontFeatures: const [FontFeature.tabularFigures()],
-                color: muted,
-              ),
-            ),
-          ],
-        ],
+    return _StatusLayout(
+      reserveActionSpace: true,
+      content: _BookUploadStatusContent(
+        filename: state.filename,
+        progress: progress,
+        titleStyle: text.bodyMedium.copyWith(
+          fontWeight: FontWeight.w500,
+          color: cs.onSurface,
+        ),
+        detailStyle: text.labelSmall.copyWith(color: muted),
+        progressBackgroundColor: cs.surfaceContainerHighest,
+        progressColor: cs.primary,
       ),
+    );
+  }
+}
+
+class _BookUploadStatusContent extends StatelessWidget {
+  const _BookUploadStatusContent({
+    required this.filename,
+    required this.titleStyle,
+    required this.detailStyle,
+    required this.progressBackgroundColor,
+    required this.progressColor,
+    this.progress,
+  });
+
+  final String filename;
+  final double? progress;
+  final TextStyle titleStyle;
+  final TextStyle detailStyle;
+  final Color progressBackgroundColor;
+  final Color progressColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Center(child: CenteredCircularProgressIndicator()),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          'Uploading book...',
+          textAlign: TextAlign.center,
+          style: titleStyle,
+        ),
+        const SizedBox(height: 2),
+        Text(
+          filename,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: detailStyle,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.full),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 6,
+            backgroundColor: progressBackgroundColor,
+            color: progressColor,
+          ),
+        ),
+        if (progress != null) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            '${(progress! * 100).clamp(0, 100).toInt()}%',
+            textAlign: TextAlign.center,
+            style: detailStyle.copyWith(
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -567,7 +649,7 @@ class _StatusContent extends StatelessWidget {
 
   final Widget icon;
   final String title;
-  final String detail;
+  final String? detail;
   final TextStyle titleStyle;
   final TextStyle detailStyle;
   final String? subtitle;
@@ -582,13 +664,14 @@ class _StatusContent extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         Text(title, textAlign: TextAlign.center, style: titleStyle),
         const SizedBox(height: 2),
-        Text(
-          detail,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: detailStyle,
-        ),
+        if (detail != null && detail!.isNotEmpty)
+          Text(
+            detail!,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: detailStyle,
+          ),
         if (subtitle != null) ...[
           const SizedBox(height: 2),
           Text(
@@ -661,68 +744,39 @@ class _FailureView extends StatelessWidget {
     final text = context.text;
     final cubit = context.read<ImportFlowCubit>();
 
-    return Padding(
-      padding: _kStatusViewPadding,
-      child: Column(
-        mainAxisSize: MainAxisSize.max,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return _StatusLayout(
+      content: _StatusContent(
+        icon: _IconDisc(
+          tint: cs.error,
+          // Bare exclamation glyph keeps the disc as the only ring
+          // around the mark, mirroring the success view's bare check.
+          child: Text(
+            '!',
+            style: text.statusGlyph.copyWith(color: cs.error),
+          ),
+        ),
+        title: state.message,
+        detail: state.filename,
+        titleStyle: text.bodyMedium.copyWith(color: cs.onSurface),
+        detailStyle: text.labelSmall.copyWith(
+          color: cs.onSurface.withValues(alpha: 0.55),
+        ),
+      ),
+      // Side-by-side buttons keep the failure state close to the menu height.
+      action: Row(
         children: [
-          const SizedBox(height: AppSpacing.md),
-          Center(
-            child: _IconDisc(
-              tint: cs.error,
-              // Bare exclamation glyph — Lucide ships no plain "!" icon
-              // and AppIcons.error (alertCircle) double-stacks with the
-              // disc's own circle. Text keeps the disc as the only ring
-              // around the mark, mirroring the success view's bare check.
-              child: Text(
-                '!',
-                style: text.statusGlyph.copyWith(
-                  color: cs.error,
-                ),
-              ),
+          Expanded(
+            child: _PlainTextButton(
+              label: 'Cancel',
+              onPressed: () => Navigator.of(context).pop(),
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            state.message,
-            textAlign: TextAlign.center,
-            style: text.bodyMedium.copyWith(color: cs.onSurface),
-          ),
-          if (state.filename != null) ...[
-            // Same 2dp gap + muted labelSmall styling as the success
-            // view's detail line, so failure and success read as
-            // siblings.
-            const SizedBox(height: 2),
-            Text(
-              state.filename!,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: text.labelSmall.copyWith(
-                color: cs.onSurface.withValues(alpha: 0.55),
-              ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: FilledButton(
+              onPressed: cubit.retryAfterFailure,
+              child: const Text('Try again'),
             ),
-          ],
-          const Spacer(),
-          // Side-by-side buttons (instead of stacked) so failure
-          // collapses to roughly the menu state's height.
-          Row(
-            children: [
-              Expanded(
-                child: _PlainTextButton(
-                  label: 'Cancel',
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: FilledButton(
-                  onPressed: cubit.retryAfterFailure,
-                  child: const Text('Try again'),
-                ),
-              ),
-            ],
           ),
         ],
       ),

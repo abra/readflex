@@ -8,6 +8,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:readflex/utils/string_extension.dart';
 
+const _stateLogLimit = 300;
+const _newStateLogLimit = 150;
+const _eventLogLimit = 200;
+
 /// [BlocObserver] which logs all bloc state changes, errors and events.
 class AppBlocObserver extends BlocObserver {
   /// Creates an instance of [AppBlocObserver] with the provided [logger].
@@ -21,14 +25,18 @@ class AppBlocObserver extends BlocObserver {
     Bloc<Object?, Object?> bloc,
     Transition<Object?, Object?> transition,
   ) {
+    final currentState = _formatState(transition.currentState, _stateLogLimit);
+    final nextState = _formatState(transition.nextState, _stateLogLimit);
     final logMessage = StringBuffer()
       ..writeln('Bloc: ${bloc.runtimeType}')
       ..writeln('Event: ${transition.event.runtimeType}')
       ..writeln(
-        'Transition: ${transition.currentState} =>\n'
-        '           ${transition.nextState}',
+        'Transition: $currentState =>\n'
+        '           $nextState',
       )
-      ..write('New State: ${transition.nextState?.toString().limit(150)}\n');
+      ..write(
+        'New State: ${_formatState(transition.nextState, _newStateLogLimit)}\n',
+      );
 
     logger.info(logMessage.toString());
     super.onTransition(bloc, transition);
@@ -39,7 +47,7 @@ class AppBlocObserver extends BlocObserver {
     final logMessage = StringBuffer()
       ..writeln('Bloc: ${bloc.runtimeType}')
       ..writeln('Event: ${event.runtimeType}')
-      ..write('Details: ${event?.toString().limit(200)}');
+      ..write('Details: ${_formatState(event, _eventLogLimit)}');
 
     logger.info(logMessage.toString());
     super.onEvent(bloc, event);
@@ -54,4 +62,7 @@ class AppBlocObserver extends BlocObserver {
     logger.error(logMessage.toString(), error: error, stackTrace: stackTrace);
     super.onError(bloc, error, stackTrace);
   }
+
+  static String _formatState(Object? value, int limit) =>
+      value?.toString().limit(limit) ?? 'null';
 }
