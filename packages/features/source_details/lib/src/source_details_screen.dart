@@ -15,7 +15,6 @@ import 'source_details_bloc.dart';
 const _coverMaxWidth = 184.0;
 const _coverMinWidth = 140.0;
 const _coverScreenWidthFactor = 0.45;
-const _coverAspectRatio = 2 / 3;
 const _coverTextScale = 1.45;
 const _titleMaxLines = 3;
 const _authorMaxLines = 2;
@@ -307,11 +306,9 @@ class _HeroSection extends StatelessWidget {
       children: [
         SizedBox(
           width: coverWidth,
-          height: coverWidth / _coverAspectRatio,
-          child: Hero(
-            tag: sourceCoverHeroTag(source.id),
-            transitionOnUserGestures: true,
-            child: _SourceCover(
+          height: coverWidth / appSourceCoverAspectRatio,
+          child: AppSourceCoverFrame(
+            cover: _SourceCover(
               source: source,
               coverImage: coverImage,
             ),
@@ -353,33 +350,33 @@ class _SourceCover extends StatelessWidget {
   Widget build(BuildContext context) {
     final isArticle = source.sourceType == SourceType.article;
 
-    return AppSourceCoverFrame(
-      cover: isArticle
-          ? AppSourceCover(
-              title: source.title,
-              author: source.author,
-              source: source.sourceName,
-              seed: source.id,
-              isArticle: true,
-              coverImage: coverImage,
-              showTitle: true,
-              showProgress: false,
-              showMatte: false,
-              showArticleBadge: false,
-              centerText: true,
-              textScale: _coverTextScale,
-            )
-          : AppSourceCover(
-              title: source.title,
-              author: source.author,
-              source: source.sourceName,
-              seed: source.id,
-              coverImage: coverImage,
-              showProgress: false,
-              showMatte: false,
-              topAlignText: true,
-              textScale: _coverTextScale,
-            ),
+    if (isArticle) {
+      return AppSourceCover(
+        title: source.title,
+        author: source.author,
+        source: source.sourceName,
+        seed: source.id,
+        isArticle: true,
+        coverImage: coverImage,
+        showTitle: true,
+        showProgress: false,
+        showMatte: false,
+        showArticleBadge: false,
+        centerText: true,
+        textScale: _coverTextScale,
+      );
+    }
+
+    return AppSourceCover(
+      title: source.title,
+      author: source.author,
+      source: source.sourceName,
+      seed: source.id,
+      coverImage: coverImage,
+      showProgress: false,
+      showMatte: false,
+      topAlignText: true,
+      textScale: _coverTextScale,
     );
   }
 }

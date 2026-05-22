@@ -70,7 +70,7 @@ void main() {
       );
       expect(find.byIcon(AppIcons.bookmark), findsNothing);
       expect(find.byIcon(AppIcons.moreHorizontal), findsNothing);
-      expect(find.byType(Hero), findsOneWidget);
+      expect(find.byType(Hero), findsNothing);
       expect(find.text('Review'), findsOneWidget);
       expect(find.text('Highlights'), findsOneWidget);
       expect(find.text('Flashcards'), findsOneWidget);
@@ -195,7 +195,7 @@ void main() {
       expect(find.text('Continue reading'), findsOneWidget);
     });
 
-    testWidgets('keeps source cover Hero bounds at stable 2:3 ratio', (
+    testWidgets('keeps source cover frame bounds at stable 2:3 ratio', (
       tester,
     ) async {
       await tester.pumpSourceDetails(
@@ -206,10 +206,10 @@ void main() {
         initialSource: LibrarySource.fromBook(_newSource),
       );
 
-      final heroSize = tester.getSize(find.byType(Hero));
+      final coverSize = tester.getSize(find.byType(AppSourceCoverFrame));
 
-      expect(heroSize.width, 184);
-      expect(heroSize.height, 276);
+      expect(coverSize.width, 184);
+      expect(coverSize.height, 276);
     });
   });
 }

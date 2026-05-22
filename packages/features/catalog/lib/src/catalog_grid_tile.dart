@@ -117,92 +117,88 @@ class _GridTileShell extends StatelessWidget {
           scale: isSelected ? 0.92 : 1.0,
           duration: const Duration(milliseconds: 150),
           curve: Curves.easeOut,
-          child: Hero(
-            tag: sourceCoverHeroTag(sourceId),
-            transitionOnUserGestures: true,
-            child: AppSourceCoverFrame(
-              cover: cover,
-              overlays: [
-                if (formatLabel != null)
-                  Positioned(
-                    top: AppSpacing.xs,
-                    left: AppSpacing.xs,
-                    child: _FormatBadge(label: formatLabel!),
+          child: AppSourceCoverFrame(
+            cover: cover,
+            overlays: [
+              if (formatLabel != null)
+                Positioned(
+                  top: AppSpacing.xs,
+                  left: AppSpacing.xs,
+                  child: _FormatBadge(label: formatLabel!),
+                ),
+              if (isFinished)
+                const Positioned(
+                  top: AppSpacing.xs,
+                  right: AppSpacing.xs,
+                  child: _FinishedBadge(),
+                ),
+              if (isSelected)
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(
+                        appSourceCoverRadius,
+                      ),
+                      border: Border.all(color: selectionColor, width: 3),
+                      color: selectionColor.withValues(alpha: 0.15),
+                    ),
                   ),
-                if (isFinished)
-                  const Positioned(
-                    top: AppSpacing.xs,
-                    right: AppSpacing.xs,
-                    child: _FinishedBadge(),
-                  ),
-                if (isSelected)
-                  Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(
-                          appSourceCoverRadius,
+                ),
+              if (isSelected)
+                Positioned(
+                  top: AppSpacing.xs,
+                  right: AppSpacing.xs,
+                  child: _SelectionCheck(color: selectionColor),
+                ),
+              if (progress > 0 && !isFinished) ...[
+                const Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(appSourceCoverRadius - 2),
+                        bottomRight: Radius.circular(
+                          appSourceCoverRadius - 2,
                         ),
-                        border: Border.all(color: selectionColor, width: 3),
-                        color: selectionColor.withValues(alpha: 0.15),
+                      ),
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        stops: [0.0, 0.20],
+                        colors: [Color(0x4D1B1F30), Color(0x001B1F30)],
                       ),
                     ),
                   ),
-                if (isSelected)
-                  Positioned(
-                    top: AppSpacing.xs,
-                    right: AppSpacing.xs,
-                    child: _SelectionCheck(color: selectionColor),
-                  ),
-                if (progress > 0 && !isFinished) ...[
-                  const Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.only(
-                          bottomLeft: Radius.circular(appSourceCoverRadius - 2),
-                          bottomRight: Radius.circular(
-                            appSourceCoverRadius - 2,
-                          ),
-                        ),
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          stops: [0.0, 0.20],
-                          colors: [Color(0x4D1B1F30), Color(0x001B1F30)],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: 8,
-                    right: 8,
-                    bottom: 8,
-                    child: LayoutBuilder(
-                      builder: (_, constraints) => ClipRRect(
-                        borderRadius: BorderRadius.circular(AppRadius.full),
-                        child: SizedBox(
-                          height: 3,
-                          child: Stack(
-                            children: [
-                              Positioned.fill(
-                                child: ColoredBox(
-                                  color: Colors.white.withValues(alpha: 0.35),
-                                ),
+                ),
+                Positioned(
+                  left: 8,
+                  right: 8,
+                  bottom: 8,
+                  child: LayoutBuilder(
+                    builder: (_, constraints) => ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadius.full),
+                      child: SizedBox(
+                        height: 3,
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: ColoredBox(
+                                color: Colors.white.withValues(alpha: 0.35),
                               ),
-                              Container(
-                                width:
-                                    constraints.maxWidth *
-                                    progress.clamp(0.0, 1.0),
-                                color: Colors.white.withValues(alpha: 0.9),
-                              ),
-                            ],
-                          ),
+                            ),
+                            Container(
+                              width:
+                                  constraints.maxWidth *
+                                  progress.clamp(0.0, 1.0),
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
-                ],
+                ),
               ],
-            ),
+            ],
           ),
         ),
       ),

@@ -54,24 +54,20 @@ class BookLibraryListTile extends StatelessWidget {
     );
 
     return _ListRowShell(
-      cover: Hero(
-        tag: sourceCoverHeroTag(source.id),
-        transitionOnUserGestures: true,
-        child: AppSourceCoverFrame(
-          cover: isArticle
-              ? Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    sourceCover,
-                    Icon(
-                      AppIcons.language,
-                      size: AppIconSize.md,
-                      color: articleIconColor,
-                    ),
-                  ],
-                )
-              : sourceCover,
-        ),
+      cover: AppSourceCoverFrame(
+        cover: isArticle
+            ? Stack(
+                alignment: Alignment.center,
+                children: [
+                  sourceCover,
+                  Icon(
+                    AppIcons.language,
+                    size: AppIconSize.md,
+                    color: articleIconColor,
+                  ),
+                ],
+              )
+            : sourceCover,
       ),
       title: source.title,
       subtitle: subtitle,
