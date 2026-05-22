@@ -79,6 +79,10 @@ void main() {
       expect(find.text('3 cards created'), findsOneWidget);
       expect(find.text('4 words collected'), findsOneWidget);
       expect(find.byIcon(AppIcons.chevronRight), findsNWidgets(3));
+
+      final coverArt = tester.widget<AppCoverArt>(find.byType(AppCoverArt));
+      expect(coverArt.topAlignText, isTrue);
+      expect(coverArt.textScale, 1.45);
     });
 
     testWidgets('article details show source instead of article author', (
@@ -102,7 +106,7 @@ void main() {
       final coverArt = tester.widget<AppCoverArt>(find.byType(AppCoverArt));
       expect(coverArt.showTitle, isTrue);
       expect(coverArt.centerText, isTrue);
-      expect(coverArt.textScale, 1.3);
+      expect(coverArt.textScale, 1.45);
       expect(coverArt.showArticleBadge, isFalse);
       expect(
         find.descendant(

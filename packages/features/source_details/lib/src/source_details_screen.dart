@@ -16,7 +16,7 @@ const _coverMaxWidth = 184.0;
 const _coverMinWidth = 140.0;
 const _coverScreenWidthFactor = 0.45;
 const _coverAspectRatio = 2 / 3;
-const _coverTextScale = 1.3;
+const _coverTextScale = 1.45;
 const _titleMaxLines = 3;
 const _authorMaxLines = 2;
 const _metadataMaxLines = 1;
@@ -377,6 +377,7 @@ class _SourceCover extends StatelessWidget {
               coverImage: coverImage,
               showProgress: false,
               showMatte: false,
+              topAlignText: true,
               textScale: _coverTextScale,
             ),
     );
