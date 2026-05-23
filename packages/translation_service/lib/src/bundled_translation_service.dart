@@ -9,10 +9,10 @@ import 'package:sqflite/sqflite.dart';
 import 'pronunciation/pronunciation.dart';
 import 'translation_service.dart';
 
-/// Production [TranslationService] backed by bundled Wiktionary SQLite
-/// dictionaries for pronunciation lookups. Translation of arbitrary text is
-/// still a stub (echoes input) — ML Kit / AI backends slot in here later
-/// without changing the contract callers depend on.
+/// Production [TranslationService] backed by bundled SQLite dictionaries.
+/// Exact word/phrase translations are served from bundled pair packs when
+/// installed; unsupported pairs and missing rows still fall back to the
+/// development echo so the surrounding UI path remains observable.
 ///
 /// On first use each language's bundled `.db` file is copied once from the
 /// asset bundle to the app documents directory. Subsequent lookups reuse a
@@ -38,15 +38,21 @@ class BundledTranslationService implements TranslationService {
 
   /// Rootbundle prefix Flutter applies to assets declared inside a package's
   /// pubspec at build time.
-  static const _assetPrefix = 'packages/translation_service/assets/phonetic';
+  static const _phoneticAssetPrefix =
+      'packages/translation_service/assets/phonetic';
+  static const _translationAssetPrefix =
+      'packages/translation_service/assets/translation';
 
-  /// Subdirectory under app documents where dictionaries are mirrored.
-  static const _storageSubdir = 'phonetic';
+  /// Subdirectories under app documents where bundled SQLite files are copied.
+  static const _phoneticStorageSubdir = 'phonetic';
+  static const _translationStorageSubdir = 'translation';
 
   final DirectoryProvider _directoryProvider;
   final AssetLoader _assetLoader;
   final DatabaseOpener _databaseOpener;
   final Map<String, Database> _handles = {};
+  final Map<String, Database> _translationHandles = {};
+  final Set<String> _missingTranslationPairs = {};
 
   @override
   Future<TranslationResult> translate(
@@ -54,9 +60,16 @@ class BundledTranslationService implements TranslationService {
     required String fromLang,
     required String toLang,
   }) async {
+    final bundledResult = await _lookupTranslation(
+      text: text,
+      fromLang: fromLang,
+      toLang: toLang,
+    );
+    if (bundledResult != null) return bundledResult;
+
     // TODO: wire ML Kit (offline neural translation) and, when available,
-    // AI backend (remote, AI-enriched). Until then echo the input so the
-    // surrounding UI path is observable during development.
+    // AI backend (remote, AI-enriched). Until then echo misses so unsupported
+    // pairs remain visible during development instead of failing silently.
     return TranslationResult(
       originalText: text,
       translatedText: '[$toLang] $text',
@@ -86,7 +99,81 @@ class BundledTranslationService implements TranslationService {
     for (final db in _handles.values) {
       await db.close();
     }
+    for (final db in _translationHandles.values) {
+      await db.close();
+    }
     _handles.clear();
+    _translationHandles.clear();
+  }
+
+  Future<TranslationResult?> _lookupTranslation({
+    required String text,
+    required String fromLang,
+    required String toLang,
+  }) async {
+    final sourceLanguageCode = fromLang.toLowerCase();
+    final targetLanguageCode = toLang.toLowerCase();
+    final normalizedText = _normalize(text);
+    if (normalizedText.isEmpty) return null;
+
+    final db = await _openTranslationPair(
+      sourceLanguageCode,
+      targetLanguageCode,
+    );
+    if (db == null) return null;
+
+    final rows = await db.rawQuery(
+      '''
+      SELECT
+        t.translated_text,
+        t.sense,
+        t.examples_json
+      FROM entries e
+      JOIN translations t ON t.entry_id = e.id
+      WHERE e.source_language_code = ?
+        AND e.normalized_source_text = ?
+        AND t.target_language_code = ?
+      ORDER BY
+        CASE t.quality_status WHEN 'native' THEN 0 ELSE 1 END,
+        CASE
+          WHEN t.source = 'kaikki_native' THEN 0
+          WHEN t.source = 'deepseek_translate' THEN 1
+          WHEN t.source = 'reverse_kaikki_native' THEN 2
+          ELSE 3
+        END,
+        CASE
+          WHEN t.metadata_json LIKE '%"reversed":true%'
+            THEN LENGTH(t.translated_text)
+          ELSE t.id
+        END,
+        t.confidence DESC,
+        t.id ASC
+      LIMIT 3
+      ''',
+      [sourceLanguageCode, normalizedText, targetLanguageCode],
+    );
+    if (rows.isEmpty) return null;
+
+    final translations = <String>[];
+    for (final row in rows) {
+      final value = row['translated_text'];
+      if (value is! String) continue;
+      final translatedText = _stripCombiningMarks(value).trim();
+      if (translatedText.isNotEmpty && !translations.contains(translatedText)) {
+        translations.add(translatedText);
+      }
+    }
+    if (translations.isEmpty) {
+      return null;
+    }
+
+    return TranslationResult(
+      originalText: text,
+      translatedText: translations.join(', '),
+      source: TranslationSource.platform,
+      context: rows.first['sense'] as String?,
+      usageExamples: _decodeStringList(rows.first['examples_json']),
+    );
   }
 
   Future<Database?> _openLanguage(String lang) async {
@@ -94,7 +181,11 @@ class BundledTranslationService implements TranslationService {
     if (cached != null) return cached;
     if (!bundledLanguages.contains(lang)) return null;
 
-    final path = await _ensureExtracted(lang);
+    final path = await _ensureExtracted(
+      bundleKey: '$_phoneticAssetPrefix/$lang.db',
+      storageSubdir: _phoneticStorageSubdir,
+      targetFileName: '$lang.db',
+    );
     if (path == null) return null;
 
     final db = await _databaseOpener(path);
@@ -102,19 +193,45 @@ class BundledTranslationService implements TranslationService {
     return db;
   }
 
-  /// Copies the asset to app documents on first access. Returns the on-disk
-  /// path, or `null` if the bundled asset couldn't be loaded (shouldn't
-  /// happen for a declared language).
-  Future<String?> _ensureExtracted(String lang) async {
+  Future<Database?> _openTranslationPair(
+    String sourceLanguageCode,
+    String targetLanguageCode,
+  ) async {
+    final pair = '${sourceLanguageCode}_$targetLanguageCode';
+    final cached = _translationHandles[pair];
+    if (cached != null) return cached;
+    if (_missingTranslationPairs.contains(pair)) return null;
+
+    final path = await _ensureExtracted(
+      bundleKey: '$_translationAssetPrefix/$pair.sqlite',
+      storageSubdir: _translationStorageSubdir,
+      targetFileName: '$pair.sqlite',
+    );
+    if (path == null) {
+      _missingTranslationPairs.add(pair);
+      return null;
+    }
+
+    final db = await _databaseOpener(path);
+    _translationHandles[pair] = db;
+    return db;
+  }
+
+  /// Copies a bundled SQLite asset to app documents on first access. Returns
+  /// the on-disk path, or `null` if the declared asset could not be loaded.
+  Future<String?> _ensureExtracted({
+    required String bundleKey,
+    required String storageSubdir,
+    required String targetFileName,
+  }) async {
     final baseDir = await _directoryProvider();
-    final targetDir = Directory(p.join(baseDir.path, _storageSubdir));
+    final targetDir = Directory(p.join(baseDir.path, storageSubdir));
     await targetDir.create(recursive: true);
-    final targetPath = p.join(targetDir.path, '$lang.db');
+    final targetPath = p.join(targetDir.path, targetFileName);
     final targetFile = File(targetPath);
 
     if (await targetFile.exists()) return targetPath;
 
-    final bundleKey = '$_assetPrefix/$lang.db';
     try {
       final data = await _assetLoader(bundleKey);
       await targetFile.writeAsBytes(
@@ -143,6 +260,24 @@ class BundledTranslationService implements TranslationService {
       tags: tags,
     );
   }
+
+  static List<String> _decodeStringList(Object? value) {
+    if (value is! String || value.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is! List) return const [];
+      return decoded.whereType<String>().toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  static String _normalize(String value) {
+    return _stripCombiningMarks(value).toLowerCase().trim();
+  }
+
+  static String _stripCombiningMarks(String value) =>
+      value.replaceAll(RegExp(r'[\u0300-\u036f]'), '');
 
   static Future<Database> _defaultOpen(String path) =>
       openDatabase(path, readOnly: true);

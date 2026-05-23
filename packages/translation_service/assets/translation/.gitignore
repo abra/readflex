@@ -1,0 +1,3 @@
+# Keep this directory in git, but keep generated SQLite packs out.
+*
+!.gitignore

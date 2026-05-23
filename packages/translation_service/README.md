@@ -1,22 +1,23 @@
 # translation_service
 
-Translation contract plus bundled pronunciation lookup.
+Translation contract plus bundled translation and pronunciation lookup.
 
 Current production wiring uses `BundledTranslationService`: pronunciation
-lookup works from bundled SQLite dictionaries (`en` today), while arbitrary
-text translation is still a development stub that echoes input as
-`[$toLang] text`. Features call the service through the same contract now so
-ML Kit / backend translation can be added later without changing UI code.
+lookup works from bundled SQLite dictionaries (`en` today), and exact
+word/phrase translation uses bundled pair packs for every direction between
+`en`, `de`, `es`, `fr`, `pt`, `ru`, and `zh`. Missing rows and unsupported
+pairs still fall back to the development echo `[$toLang] text`. Features call
+the service through the same contract now so ML Kit / backend translation can
+be added later without changing UI code.
 
 ## Current behavior
 
 ```
 translate()
   └─ BundledTranslationService
-       └─ returns TranslationResult(
-            translatedText: '[$toLang] $text',
-            source: platform,
-          )
+       ├─ copy bundled assets/translation/<from>_<to>.sqlite to app documents
+       ├─ query exact source text match, preferring native dictionary rows
+       └─ fall back to TranslationResult(translatedText: '[$toLang] $text')
 
 lookupPronunciation()
   └─ copy bundled assets/phonetic/<lang>.db to app documents on first use
@@ -31,7 +32,7 @@ local/platform output from remote AI-enriched output.
 | Symbol                      | Type           | Purpose                                             |
 |-----------------------------|----------------|-----------------------------------------------------|
 | `TranslationService`        | abstract class | `translate(...)`, `lookupPronunciation(...)`, `dispose()` |
-| `BundledTranslationService` | concrete       | Bundled pronunciation lookup; translation echo stub |
+| `BundledTranslationService` | concrete       | Bundled exact translation and pronunciation lookup |
 | `NoopTranslationService`    | concrete       | Stub — echoes input, `source: platform`             |
 | `TranslationResult`         | data class     | `{originalText, translatedText, source, context, usageExamples}` |
 | `TranslationSource`         | enum           | `remote` / `platform`                               |

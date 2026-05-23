@@ -47,10 +47,10 @@ Props:
 Requires through constructor injection:
 
 - `TranslationService` — current production wiring uses
-  `BundledTranslationService`, where text translation is still a development
-  echo and pronunciation lookup is backed by bundled SQLite dictionaries. The
-  sheet does not know about network state; real ML Kit / backend translation
-  can replace the implementation behind the same contract later.
+  `BundledTranslationService`, where exact installed word/phrase pairs are
+  backed by bundled SQLite dictionaries and misses fall back to the development
+  echo. The sheet does not know about network state; real ML Kit / backend
+  translation can replace the implementation behind the same contract later.
 - `DictionaryRepository` — stores the saved entry.
 - `FsrsRepository` — registers the new dictionary entry in the review
   queue (`ReviewableType.dictionary`).
