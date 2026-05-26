@@ -5,6 +5,7 @@ export 'src/exceptions/not_found_exception.dart';
 export 'src/exceptions/storage_exception.dart';
 export 'src/models/article.dart';
 export 'src/models/article_block.dart';
+export 'src/models/article_text_direction.dart';
 export 'src/models/book.dart';
 export 'src/models/book_format.dart';
 export 'src/models/creation_source.dart';

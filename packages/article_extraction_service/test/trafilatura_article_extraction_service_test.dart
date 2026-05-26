@@ -72,6 +72,55 @@ void main() {
   );
 
   test(
+    'recovers language and RTL direction from downloaded HTML metadata',
+    () async {
+      late Map<String, Object?> requestBody;
+      final service = TrafilaturaArticleExtractionService(
+        baseUri: Uri.parse('http://127.0.0.1:9090'),
+        httpClient: MockClient((request) async {
+          if (request.method == 'GET') {
+            return http.Response(
+              '<!doctype html><html lang="ar" dir="rtl"><head>'
+              '<meta property="og:locale" content="ar_AR"/>'
+              '</head><body><article>مرحبا بالعالم</article></body></html>',
+              200,
+              headers: {'content-type': 'text/html; charset=utf-8'},
+              request: request,
+            );
+          }
+
+          requestBody = jsonDecode(request.body) as Map<String, Object?>;
+          return http.Response(
+            jsonEncode({
+              'requested_url': 'https://example.com/a',
+              'resolved_url': 'https://example.com/a',
+              'title': 'خبر عربي',
+              'body_format': 'blocks',
+              'body': [
+                {'type': 'paragraph', 'text': 'مرحبا بالعالم'},
+              ],
+              'plain_text': 'مرحبا بالعالم',
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }),
+      );
+
+      final article = await service.extract('https://example.com/a');
+      final postedHtml = utf8.decode(
+        base64Decode(requestBody['html_base64']! as String),
+      );
+
+      expect(postedHtml, contains('dir="rtl"'));
+      expect(article.language, 'ar');
+      expect(article.textDirection, ArticleTextDirection.rtl);
+      expect(article.rawJson, contains('"language":"ar"'));
+      expect(article.rawJson, contains('"text_direction":"rtl"'));
+    },
+  );
+
+  test(
     'recovers image blocks from JSON-LD article body markers',
     () async {
       const firstImage =

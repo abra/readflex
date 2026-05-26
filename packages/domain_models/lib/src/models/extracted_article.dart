@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart' show Equatable;
 
 import 'article_block.dart';
+import 'article_text_direction.dart';
 
 /// Clean article payload returned by the extraction backend before local
 /// persistence assigns an id and file paths.
@@ -20,6 +21,7 @@ class ExtractedArticle extends Equatable {
     this.description,
     this.imageUrl,
     this.language,
+    this.textDirection,
     this.categories = const [],
     this.tags = const [],
     this.license,
@@ -37,6 +39,7 @@ class ExtractedArticle extends Equatable {
   final String? description;
   final String? imageUrl;
   final String? language;
+  final ArticleTextDirection? textDirection;
   final List<String> categories;
   final List<String> tags;
   final String? license;
@@ -69,6 +72,7 @@ class ExtractedArticle extends Equatable {
     description,
     imageUrl,
     language,
+    textDirection,
     categories,
     tags,
     license,

@@ -45,6 +45,10 @@ final class ReaderInitialLocation {
 }
 
 @visibleForTesting
+bool isGeneratedArticleReaderPath(String path) =>
+    path.endsWith('/article.epub') && path.contains('/articles/');
+
+@visibleForTesting
 String buildReaderSearchStartScript({
   required int requestId,
   required String query,
@@ -126,6 +130,116 @@ String buildReaderCommandScript({
 ''';
 }
 
+@visibleForTesting
+String buildArticleTextDirectionPatchScript({
+  required String textAlign,
+  required bool justify,
+}) {
+  final escapedTextAlign = jsonEncode(textAlign);
+  final escapedJustify = justify ? 'true' : 'false';
+  return '''
+(() => {
+  const requestedTextAlign = $escapedTextAlign;
+  const requestedJustify = $escapedJustify;
+  const rtlSampleRegex = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/g;
+  const ltrSampleRegex = /[A-Za-z\u00C0-\u024F\u1E00-\u1EFF]/g;
+
+  const inferDirection = (doc) => {
+    const sample = (doc.body?.textContent || '').replace(/\\s+/g, ' ').slice(0, 5000);
+    if (!sample) return '';
+    const rtlCount = (sample.match(rtlSampleRegex) || []).length;
+    const ltrCount = (sample.match(ltrSampleRegex) || []).length;
+    return rtlCount > ltrCount ? 'rtl' : '';
+  };
+
+  const resolveTextAlign = () => {
+    const resolved = !requestedTextAlign || requestedTextAlign === 'auto'
+      ? (requestedJustify ? 'justify' : 'start')
+      : requestedTextAlign;
+    if (resolved === 'start') return 'right';
+    if (resolved === 'end') return 'left';
+    return resolved;
+  };
+
+  const apply = () => {
+    const view = document.querySelector('foliate-view');
+    const renderer = view?.shadowRoot?.querySelector('foliate-paginator, foliate-fxl');
+    const iframe = renderer?.shadowRoot?.querySelector('iframe');
+    const doc = iframe?.contentDocument;
+    if (!doc?.body) return false;
+
+    const direction = doc.documentElement.dataset.readflexTextDirection
+      || doc.documentElement.getAttribute('dir')
+      || doc.body.getAttribute('dir')
+      || inferDirection(doc);
+    if (direction !== 'rtl') return false;
+
+    doc.documentElement.dir = 'ltr';
+    doc.documentElement.dataset.readflexTextDirection = 'rtl';
+    doc.body.dir = 'ltr';
+
+    let style = doc.getElementById('readflex-article-text-direction-runtime');
+    if (!style) {
+      style = doc.createElement('style');
+      style.id = 'readflex-article-text-direction-runtime';
+      doc.head?.append(style);
+    }
+
+    const align = resolveTextAlign();
+    const selector = [
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'p', 'li', 'blockquote', 'dd', 'dt', 'figcaption', 'caption',
+      'section', 'article', 'main', 'div:not(.readflex-wide-table)',
+      'th', 'td',
+    ].join(',');
+    const nodes = Array.from(doc.body.querySelectorAll(selector));
+    if (nodes.length === 0) nodes.push(doc.body);
+    for (const node of nodes) {
+      node.style.setProperty('direction', 'rtl', 'important');
+      node.style.setProperty('unicode-bidi', 'plaintext');
+      node.style.setProperty('text-align', align, 'important');
+    }
+
+    style.textContent = [
+      'html[data-readflex-text-direction="rtl"] body h1,',
+      'html[data-readflex-text-direction="rtl"] body h2,',
+      'html[data-readflex-text-direction="rtl"] body h3,',
+      'html[data-readflex-text-direction="rtl"] body h4,',
+      'html[data-readflex-text-direction="rtl"] body h5,',
+      'html[data-readflex-text-direction="rtl"] body h6,',
+      'html[data-readflex-text-direction="rtl"] body p,',
+      'html[data-readflex-text-direction="rtl"] body li,',
+      'html[data-readflex-text-direction="rtl"] body blockquote,',
+      'html[data-readflex-text-direction="rtl"] body dd,',
+      'html[data-readflex-text-direction="rtl"] body dt,',
+      'html[data-readflex-text-direction="rtl"] body figcaption,',
+      'html[data-readflex-text-direction="rtl"] body caption,',
+      'html[data-readflex-text-direction="rtl"] body section,',
+      'html[data-readflex-text-direction="rtl"] body article,',
+      'html[data-readflex-text-direction="rtl"] body main,',
+      'html[data-readflex-text-direction="rtl"] body div:not(.readflex-wide-table),',
+      'html[data-readflex-text-direction="rtl"] body th,',
+      'html[data-readflex-text-direction="rtl"] body td {',
+      '  direction: rtl !important;',
+      '  unicode-bidi: plaintext;',
+      '  text-align: ' + align + ' !important;',
+      '}',
+    ].join('\\n');
+    if (!doc.documentElement.dataset.readflexRtlPatchLogged) {
+      doc.documentElement.dataset.readflexRtlPatchLogged = 'true';
+      console.log('[readflex-article-rtl] applied nodes=' + nodes.length + ' align=' + align);
+    }
+    return true;
+  };
+
+  apply();
+  setTimeout(apply, 0);
+  setTimeout(apply, 100);
+  return null;
+})()
+''';
+}
+
 /// WebView-based book reader backed by foliate-js.
 ///
 /// Loads foliate-js `index.html` from the local server's `/assets/foliate-js/`
@@ -146,6 +260,7 @@ class BookReaderWebView extends StatefulWidget {
     required this.bookFilePath,
     this.initialCfi,
     this.initialProgress,
+    this.isArticle = false,
     this.foliateStyle = const FoliateStyle(),
     this.highlights = const [],
     this.bookmarks = const [],
@@ -172,6 +287,13 @@ class BookReaderWebView extends StatefulWidget {
   /// Fractional fallback used when exact CFI restore is unavailable or when
   /// the iOS crash-recovery path intentionally drops the saved CFI.
   final double? initialProgress;
+
+  /// Whether the opened EPUB was generated from a saved web article.
+  ///
+  /// Web articles use the document language for text direction, but keep
+  /// foliate-js page progression stable instead of treating text direction as
+  /// book page-progression direction.
+  final bool isArticle;
 
   /// Book reader appearance passed to foliate-js via URL params.
   final FoliateStyle foliateStyle;
@@ -230,6 +352,9 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   // reload, then clears itself once the reload signals onLoadEnd.
   bool _recoveringFromCrash = false;
 
+  bool get _effectiveArticle =>
+      widget.isArticle || isGeneratedArticleReaderPath(widget.bookFilePath);
+
   @override
   void dispose() {
     _cancelSearchWatchdog();
@@ -246,6 +371,7 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     // both sides through jsonEncode on every parent rebuild.
     if (oldWidget.foliateStyle != widget.foliateStyle) {
       changeStyle(widget.foliateStyle);
+      _applyArticleTextDirectionPatch();
     }
 
     _syncAnnotations(oldWidget.highlights, widget.highlights);
@@ -421,6 +547,7 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       'url': jsonEncode(_bookUrl),
       'initialCfi': jsonEncode(initialLocation.cfi),
       'initialProgress': jsonEncode(initialLocation.progress),
+      'sourceType': jsonEncode(_effectiveArticle ? 'article' : 'book'),
       'style': jsonEncode(widget.foliateStyle.toMap()),
       'readingRules': jsonEncode(_defaultReadingRules),
     };
@@ -604,9 +731,24 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       _recoveringFromCrash = false;
     }
 
-    if (wasReady) return;
+    if (wasReady) {
+      _applyArticleTextDirectionPatch();
+      return;
+    }
     _renderAnnotations();
+    _applyArticleTextDirectionPatch();
     widget.onReady?.call();
+  }
+
+  void _applyArticleTextDirectionPatch() {
+    if (!_effectiveArticle) return;
+    _evaluateReaderCommand(
+      label: 'articleTextDirection',
+      expression: buildArticleTextDirectionPatchScript(
+        textAlign: widget.foliateStyle.textAlign,
+        justify: widget.foliateStyle.justify,
+      ),
+    );
   }
 
   void _renderAnnotations() {

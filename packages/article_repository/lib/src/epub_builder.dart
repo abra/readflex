@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:domain_models/domain_models.dart';
 import 'package:path/path.dart' as p;
 
 class EpubImage {
@@ -28,8 +29,12 @@ class EpubBuilder {
     required File outputFile,
     String? author,
     String? lang,
+    ArticleTextDirection? textDirection,
     List<EpubImage> images = const [],
   }) async {
+    final resolvedLang = normalizeArticleLanguage(lang) ?? 'en';
+    final resolvedDirection =
+        textDirection ?? articleTextDirectionForLanguage(resolvedLang);
     final archive = Archive()
       ..addFile(_rawFile('mimetype', 'application/epub+zip'))
       ..addFile(_textFile('META-INF/container.xml', _containerXml))
@@ -41,16 +46,21 @@ class EpubBuilder {
             id: id,
             title: title,
             author: author,
-            lang: lang ?? 'en',
+            lang: resolvedLang,
             images: images,
           ),
         ),
       )
-      ..addFile(_textFile('OEBPS/toc.xhtml', _toc(title)))
+      ..addFile(_textFile('OEBPS/toc.xhtml', _toc(title, resolvedDirection)))
       ..addFile(
         _textFile(
           'OEBPS/chapter1.xhtml',
-          _chapter(title: title, lang: lang ?? 'en', htmlBody: htmlBody),
+          _chapter(
+            title: title,
+            lang: resolvedLang,
+            textDirection: resolvedDirection,
+            htmlBody: htmlBody,
+          ),
         ),
       );
 
@@ -155,13 +165,14 @@ class EpubBuilder {
         '</package>\n';
   }
 
-  String _toc(String title) {
+  String _toc(String title, ArticleTextDirection? textDirection) {
+    final dirAttr = _dirAttr(textDirection);
     return '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<!DOCTYPE html>\n'
         '<html xmlns="http://www.w3.org/1999/xhtml" '
         'xmlns:epub="http://www.idpf.org/2007/ops">\n'
         '<head><title>Table of Contents</title></head>\n'
-        '<body><nav epub:type="toc"><ol>'
+        '<body$dirAttr><nav epub:type="toc"><ol>'
         '<li><a href="chapter1.xhtml">${_xmlText(title)}</a></li>'
         '</ol></nav></body></html>\n';
   }
@@ -169,8 +180,10 @@ class EpubBuilder {
   String _chapter({
     required String title,
     required String lang,
+    required ArticleTextDirection? textDirection,
     required String htmlBody,
   }) {
+    final dirAttr = _dirAttr(textDirection);
     return '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<!DOCTYPE html>\n'
         '<html xmlns="http://www.w3.org/1999/xhtml" '
@@ -181,11 +194,16 @@ class EpubBuilder {
         '  <link rel="stylesheet" type="text/css" href="styles.css"/>\n'
         '</head>\n'
         '<body>\n'
+        '<main class="readflex-article-content"$dirAttr>\n'
         '<h1>${_xmlText(title)}</h1>\n'
         '$htmlBody\n'
+        '</main>\n'
         '</body>\n'
         '</html>\n';
   }
+
+  static String _dirAttr(ArticleTextDirection? direction) =>
+      direction == null ? '' : ' dir="${_xmlAttr(direction.value)}"';
 
   static String _xmlText(String value) => value
       .replaceAll('&', '&amp;')

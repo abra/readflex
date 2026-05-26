@@ -288,6 +288,32 @@ class _SourceKindLabel extends StatelessWidget {
   }
 }
 
+TextDirection _sourceTextDirection(LibrarySource source) {
+  final fromLanguage = articleTextDirectionForLanguage(source.language);
+  final fromText =
+      fromLanguage ??
+      inferArticleTextDirectionFromText(
+        [source.title, source.author, source.sourceName].nonNulls.join(' '),
+      );
+
+  return switch (fromText) {
+    ArticleTextDirection.rtl => TextDirection.rtl,
+    ArticleTextDirection.ltr || null => TextDirection.ltr,
+  };
+}
+
+CrossAxisAlignment _crossAxisAlignmentFor(TextDirection textDirection) {
+  return textDirection == TextDirection.rtl
+      ? CrossAxisAlignment.end
+      : CrossAxisAlignment.start;
+}
+
+Alignment _bottomAlignmentFor(TextDirection textDirection) {
+  return textDirection == TextDirection.rtl
+      ? Alignment.bottomRight
+      : Alignment.bottomLeft;
+}
+
 class _HeroSection extends StatelessWidget {
   const _HeroSection({
     required this.source,
@@ -307,6 +333,7 @@ class _HeroSection extends StatelessWidget {
         ? source.sourceName?.trim()
         : null;
     final coverHeight = coverWidth / appSourceCoverAspectRatio;
+    final heroTextDirection = _sourceTextDirection(source);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -315,18 +342,27 @@ class _HeroSection extends StatelessWidget {
           child: SizedBox(
             height: coverHeight,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: _crossAxisAlignmentFor(heroTextDirection),
               children: [
                 if (articleSource case final value? when value.isNotEmpty) ...[
-                  _ArticleSourceLabel(sourceName: value),
+                  _ArticleSourceLabel(
+                    sourceName: value,
+                    textDirection: heroTextDirection,
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                 ],
-                Expanded(child: _AutoSizedHeroTitle(title: source.title)),
+                Expanded(
+                  child: _AutoSizedHeroTitle(
+                    title: source.title,
+                    textDirection: heroTextDirection,
+                  ),
+                ),
                 if (subtitle case final value? when value.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.md),
                   Text(
                     value,
-                    textAlign: TextAlign.left,
+                    textAlign: TextAlign.start,
+                    textDirection: heroTextDirection,
                     maxLines: _authorMaxLines,
                     overflow: TextOverflow.ellipsis,
                     style: AppTypography.serif(
@@ -359,9 +395,13 @@ class _HeroSection extends StatelessWidget {
 }
 
 class _AutoSizedHeroTitle extends StatelessWidget {
-  const _AutoSizedHeroTitle({required this.title});
+  const _AutoSizedHeroTitle({
+    required this.title,
+    required this.textDirection,
+  });
 
   final String title;
+  final TextDirection textDirection;
 
   @override
   Widget build(BuildContext context) {
@@ -385,20 +425,21 @@ class _AutoSizedHeroTitle extends StatelessWidget {
           baseStyle: baseStyle,
           maxWidth: constraints.maxWidth,
           maxHeight: constraints.maxHeight,
-          textDirection: Directionality.of(context),
+          textDirection: textDirection,
           textScaler: MediaQuery.textScalerOf(context),
         );
 
         return SizedBox.expand(
           key: const ValueKey('source-details-title-cell'),
           child: Align(
-            alignment: Alignment.bottomLeft,
+            alignment: _bottomAlignmentFor(textDirection),
             child: SizedBox(
               width: constraints.maxWidth,
               child: Text(
                 title,
                 key: const ValueKey('source-details-title'),
-                textAlign: TextAlign.left,
+                textAlign: TextAlign.start,
+                textDirection: textDirection,
                 softWrap: true,
                 maxLines: fit.maxLines,
                 overflow: fit.maxLines == null
@@ -485,9 +526,13 @@ class _HeroTitleFit {
 }
 
 class _ArticleSourceLabel extends StatelessWidget {
-  const _ArticleSourceLabel({required this.sourceName});
+  const _ArticleSourceLabel({
+    required this.sourceName,
+    required this.textDirection,
+  });
 
   final String sourceName;
+  final TextDirection textDirection;
 
   @override
   Widget build(BuildContext context) {
@@ -496,6 +541,7 @@ class _ArticleSourceLabel extends StatelessWidget {
 
     return Row(
       mainAxisSize: MainAxisSize.min,
+      textDirection: textDirection,
       children: [
         Icon(
           AppIcons.link,
@@ -506,6 +552,8 @@ class _ArticleSourceLabel extends StatelessWidget {
         Flexible(
           child: Text(
             sourceName,
+            textAlign: TextAlign.start,
+            textDirection: textDirection,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: text.labelSmall.copyWith(

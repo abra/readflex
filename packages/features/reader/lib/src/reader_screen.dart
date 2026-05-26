@@ -3053,6 +3053,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         // appearance preference instead of hard-coding here.
         maxColumnCount: 1,
       ),
+      isArticle: state.sourceType == SourceType.article,
       highlights: highlights,
       bookmarks: bookmarks,
       onReady: () {

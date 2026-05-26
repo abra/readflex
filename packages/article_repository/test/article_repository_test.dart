@@ -62,6 +62,43 @@ void main() {
     expect(chapter, contains('<p>Hello world</p>'));
   });
 
+  test('addExtractedArticle writes RTL metadata into reader epub', () async {
+    final article = await repository.addExtractedArticle(
+      _extractedArticle(
+        title: 'خبر عربي',
+        language: 'ar-EG',
+        textDirection: ArticleTextDirection.rtl,
+        plainText: 'مرحبا بالعالم',
+        blocks: const [ArticleParagraphBlock(text: 'مرحبا بالعالم')],
+      ),
+    );
+
+    final archive = ZipDecoder().decodeBytes(
+      File(article.epubPath).readAsBytesSync(),
+    );
+    final opf = _archiveText(archive, 'OEBPS/content.opf');
+    final chapter = _archiveText(archive, 'OEBPS/chapter1.xhtml');
+    final toc = _archiveText(archive, 'OEBPS/toc.xhtml');
+
+    expect(article.language, 'ar-eg');
+    expect(opf, contains('<dc:language>ar-eg</dc:language>'));
+    expect(chapter, contains('lang="ar-eg"'));
+    expect(
+      chapter,
+      isNot(
+        contains(
+          '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ar-eg" lang="ar-eg" dir="rtl"',
+        ),
+      ),
+    );
+    expect(chapter, contains('<body>'));
+    expect(
+      chapter,
+      contains('<main class="readflex-article-content" dir="rtl">'),
+    );
+    expect(toc, contains('<body dir="rtl">'));
+  });
+
   test('toReaderBook adapts article to existing reader contract', () async {
     final article = await repository.addExtractedArticle(_extractedArticle());
 
@@ -134,15 +171,21 @@ String _archiveText(Archive archive, String name) {
 
 ExtractedArticle _extractedArticle({
   String requestedUrl = 'https://example.com/article',
+  String title = 'Saved article',
+  String plainText = 'Hello world',
+  String? language,
+  ArticleTextDirection? textDirection,
   List<ArticleBlock> blocks = const [
     ArticleHeadingBlock(level: 1, text: 'Saved article'),
     ArticleParagraphBlock(text: 'Hello world'),
   ],
 }) => ExtractedArticle(
   requestedUrl: requestedUrl,
-  title: 'Saved article',
+  title: title,
   site: 'Example',
+  language: language,
+  textDirection: textDirection,
   blocks: blocks,
-  plainText: 'Hello world',
-  rawJson: '{"title":"Saved article"}',
+  plainText: plainText,
+  rawJson: jsonEncode({'title': title}),
 );

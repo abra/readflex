@@ -83,6 +83,7 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
       resolvedUrl: url,
       contentType: null,
       bodyBytes: const [],
+      metadata: const _ArticleHtmlMetadata(),
     );
     try {
       final response = await _postExtractUrl(
@@ -149,6 +150,7 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
         resolvedUrl: response.request?.url.toString() ?? url,
         contentType: response.headers['content-type'],
         bodyBytes: bytes,
+        metadata: _articleHtmlMetadataFromBytes(bytes),
       );
     } on ArticleExtractionException {
       rethrow;
@@ -245,7 +247,8 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
     if (decoded is! Map<String, dynamic>) {
       throw const ArticleExtractionException('Invalid article response');
     }
-    return _articleFromJson(_withRecoveredImageBlocks(decoded, article));
+    final recovered = _withRecoveredImageBlocks(decoded, article);
+    return _articleFromJson(_withClientMetadata(recovered, article.metadata));
   }
 
   bool _shouldRetryWithRecall(http.Response response) {
@@ -296,12 +299,127 @@ class _DownloadedArticleDocument {
     required this.resolvedUrl,
     required this.contentType,
     required this.bodyBytes,
+    required this.metadata,
   });
 
   final String requestedUrl;
   final String resolvedUrl;
   final String? contentType;
   final List<int> bodyBytes;
+  final _ArticleHtmlMetadata metadata;
+}
+
+class _ArticleHtmlMetadata {
+  const _ArticleHtmlMetadata({this.language, this.textDirection});
+
+  final String? language;
+  final ArticleTextDirection? textDirection;
+}
+
+Map<String, dynamic> _withClientMetadata(
+  Map<String, dynamic> json,
+  _ArticleHtmlMetadata metadata,
+) {
+  final language =
+      normalizeArticleLanguage(_string(json['language'])) ?? metadata.language;
+  final textDirection =
+      ArticleTextDirection.fromString(_string(json['text_direction'])) ??
+      metadata.textDirection ??
+      articleTextDirectionForLanguage(language);
+
+  if (language == null && textDirection == null) return json;
+  final normalizedJson = Map<String, dynamic>.from(json);
+  if (language != null) normalizedJson['language'] = language;
+  if (textDirection != null) {
+    normalizedJson['text_direction'] = textDirection.value;
+  }
+  return normalizedJson;
+}
+
+_ArticleHtmlMetadata _articleHtmlMetadataFromBytes(List<int> bodyBytes) {
+  if (bodyBytes.isEmpty) return const _ArticleHtmlMetadata();
+
+  final html = utf8.decode(bodyBytes, allowMalformed: true);
+  final htmlTag = _firstOpeningTag(html, 'html');
+  final bodyTag = _firstOpeningTag(html, 'body');
+  final articleTag = _firstOpeningTag(html, 'article');
+
+  final language =
+      normalizeArticleLanguage(_htmlAttr(htmlTag, 'lang')) ??
+      normalizeArticleLanguage(_htmlAttr(htmlTag, 'xml:lang')) ??
+      normalizeArticleLanguage(_htmlAttr(bodyTag, 'lang')) ??
+      normalizeArticleLanguage(_htmlAttr(articleTag, 'lang')) ??
+      _metaLanguage(html) ??
+      _alternateHrefLanguage(html);
+  final textDirection =
+      ArticleTextDirection.fromString(_htmlAttr(htmlTag, 'dir')) ??
+      ArticleTextDirection.fromString(_htmlAttr(bodyTag, 'dir')) ??
+      ArticleTextDirection.fromString(_htmlAttr(articleTag, 'dir')) ??
+      articleTextDirectionForLanguage(language);
+
+  return _ArticleHtmlMetadata(
+    language: language,
+    textDirection: textDirection,
+  );
+}
+
+String? _firstOpeningTag(String html, String tagName) {
+  return RegExp(
+    '<\\s*${RegExp.escape(tagName)}\\b[^>]*>',
+    caseSensitive: false,
+  ).firstMatch(html)?.group(0);
+}
+
+String? _htmlAttr(String? tag, String name) {
+  if (tag == null) return null;
+  final match = RegExp(
+    '(?:^|\\s)${RegExp.escape(name)}\\s*=\\s*(?:"([^"]*)"|\\\'([^\\\']*)\\\'|([^\\s>]+))',
+    caseSensitive: false,
+  ).firstMatch(tag);
+  final value = match?.group(1) ?? match?.group(2) ?? match?.group(3);
+  final decoded = value == null ? null : _decodeHtmlText(value).trim();
+  return decoded == null || decoded.isEmpty ? null : decoded;
+}
+
+String? _metaLanguage(String html) {
+  for (final match in RegExp(
+    r'<meta\b[^>]*>',
+    caseSensitive: false,
+  ).allMatches(html)) {
+    final tag = match.group(0);
+    final key =
+        (_htmlAttr(tag, 'name') ??
+                _htmlAttr(tag, 'property') ??
+                _htmlAttr(tag, 'http-equiv'))
+            ?.trim()
+            .toLowerCase();
+    if (key == null) continue;
+    if (key != 'language' &&
+        key != 'og:locale' &&
+        key != 'content-language' &&
+        key != 'dc.language') {
+      continue;
+    }
+    final language = normalizeArticleLanguage(_htmlAttr(tag, 'content'));
+    if (language != null) return language;
+  }
+  return null;
+}
+
+String? _alternateHrefLanguage(String html) {
+  for (final match in RegExp(
+    r'<link\b[^>]*>',
+    caseSensitive: false,
+  ).allMatches(html)) {
+    final tag = match.group(0);
+    final rel = _htmlAttr(tag, 'rel')?.toLowerCase();
+    if (rel == null || !rel.split(RegExp(r'\s+')).contains('alternate')) {
+      continue;
+    }
+    final language = normalizeArticleLanguage(_htmlAttr(tag, 'hreflang'));
+    if (language != null) return language;
+  }
+  return null;
 }
 
 Map<String, dynamic> _withRecoveredImageBlocks(
@@ -452,6 +570,16 @@ ExtractedArticle _articleFromJson(Map<String, dynamic> json) {
       ? body.map(ArticleBlock.fromJson).toList(growable: false)
       : const <ArticleBlock>[];
   final plainText = _string(json['plain_text']) ?? _fallbackPlainText(blocks);
+  final language = normalizeArticleLanguage(_string(json['language']));
+  final textDirection =
+      ArticleTextDirection.fromString(_string(json['text_direction'])) ??
+      articleTextDirectionForLanguage(language) ??
+      inferArticleTextDirectionFromText(plainText);
+  final normalizedJson = Map<String, dynamic>.from(json);
+  if (language != null) normalizedJson['language'] = language;
+  if (textDirection != null) {
+    normalizedJson['text_direction'] = textDirection.value;
+  }
   final fallbackTitle = blocks
       .whereType<ArticleHeadingBlock>()
       .map((block) => block.text.trim())
@@ -468,14 +596,15 @@ ExtractedArticle _articleFromJson(Map<String, dynamic> json) {
     hostname: _string(json['hostname']),
     description: _string(json['description']),
     imageUrl: _string(json['image']),
-    language: _string(json['language']),
+    language: language,
+    textDirection: textDirection,
     categories: _stringList(json['categories']),
     tags: _stringList(json['tags']),
     license: _string(json['license']),
     fingerprint: _string(json['fingerprint']),
     blocks: blocks,
     plainText: plainText,
-    rawJson: jsonEncode(json),
+    rawJson: jsonEncode(normalizedJson),
   );
 }
 

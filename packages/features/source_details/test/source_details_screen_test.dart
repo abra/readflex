@@ -183,6 +183,46 @@ void main() {
       expect(articleIcon.size, closeTo(coverSize.width * 0.40, 0.1));
     });
 
+    testWidgets('aligns RTL article hero text from article language', (
+      tester,
+    ) async {
+      final rtlArticle = Article(
+        id: 'article-rtl',
+        title: 'مكاسب مضمونة أم هروب للأمام',
+        url: 'https://example.com/ar',
+        author: 'كاتب الخبر',
+        siteName: 'الجزيرة',
+        language: 'ar',
+        contentPath: '/articles/article-rtl/article.json',
+        estimatedWordCount: 900,
+        addedAt: DateTime(2026, 1, 1),
+      );
+      repository.source = null;
+      articleRepository.article = rtlArticle;
+
+      await tester.pumpSourceDetails(
+        repository: repository,
+        articleRepository: articleRepository,
+        highlightRepository: highlightRepository,
+        flashcardRepository: flashcardRepository,
+        dictionaryRepository: dictionaryRepository,
+        initialSource: LibrarySource.fromArticle(rtlArticle),
+      );
+
+      final title = tester.widget<Text>(
+        find.byKey(const ValueKey('source-details-title')),
+      );
+      final byline = tester.widget<Text>(find.text('كاتب الخبر'));
+      final sourceLabel = tester.widget<Text>(find.text('الجزيرة'));
+
+      expect(title.textDirection, TextDirection.rtl);
+      expect(title.textAlign, TextAlign.start);
+      expect(byline.textDirection, TextDirection.rtl);
+      expect(byline.textAlign, TextAlign.start);
+      expect(sourceLabel.textDirection, TextDirection.rtl);
+      expect(sourceLabel.textAlign, TextAlign.start);
+    });
+
     testWidgets('hides review section for comics', (tester) async {
       final comicSource = _newSource.copyWith(
         title: 'Sample Comic',

@@ -50,6 +50,19 @@ void main() {
     });
   });
 
+  group('article source detection', () {
+    test('recognizes generated article epub paths', () {
+      expect(
+        isGeneratedArticleReaderPath('/app/Documents/articles/id/article.epub'),
+        isTrue,
+      );
+      expect(
+        isGeneratedArticleReaderPath('/app/Documents/books/id/book.epub'),
+        isFalse,
+      );
+    });
+  });
+
   group('foliate bootstrap', () {
     test('always uses the modern app bridge', () {
       final indexHtml = File(
@@ -71,6 +84,7 @@ void main() {
       expect(bookJs, contains('window.cancelSearch'));
       expect(bookJs, contains('window.goToBookmark'));
       expect(bookJs, contains('window.toggleBookmarkHere'));
+      expect(bookJs, contains('globalThis.readflexSourceType = sourceType'));
       expect(bookJs, contains("callFlutter('onSearch'"));
       expect(bookJs, contains("callFlutter('handleBookmark'"));
     });
@@ -160,6 +174,10 @@ void main() {
       expect(viewJs, contains('totalPages ??'));
       expect(webViewDart, contains("'progress': bookmark.progress"));
       expect(webViewDart, contains('window.refreshBookmarkState'));
+      expect(
+        webViewDart,
+        contains("'sourceType': jsonEncode(_effectiveArticle"),
+      );
     });
 
     test('bookmark drawer text comes from the visible page range', () {
@@ -216,6 +234,10 @@ void main() {
       );
       expect(
         bookJs,
+        contains('--readflex-rtl-article-text-align: \${rtlArticleTextAlign};'),
+      );
+      expect(
+        bookJs,
         contains(
           '--readflex-code-block-font-size: \${codeBlockFontSizePx}px;',
         ),
@@ -235,6 +257,49 @@ void main() {
       );
     });
 
+    test('does not dump full reader style changes to console', () {
+      final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
+
+      expect(bookJs, isNot(contains("console.log('changeStyle'")));
+      expect(bookJs, isNot(contains('JSON.stringify(style)')));
+    });
+
+    test('skips full CSS rebuild for margin-only style changes', () {
+      final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
+
+      expect(bookJs, contains('const readerCSSKeys = ['));
+      expect(
+        bookJs,
+        contains(
+          'const shouldUpdateReaderCSS = (oldStyle, nextStyle, flow) =>',
+        ),
+      );
+      expect(
+        bookJs,
+        contains(
+          "if ((oldStyle.pageTurnStyle === 'scroll') !== flow) return true",
+        ),
+      );
+      expect(bookJs, contains('readerCSSKeys.some'));
+      expect(
+        bookJs,
+        contains('const setRendererAttribute = (renderer, name, value) =>'),
+      );
+      expect(
+        bookJs,
+        contains('if (renderer.getAttribute(name) === nextValue) return'),
+      );
+      expect(bookJs, contains("setRendererAttribute(renderer, 'flow'"));
+      expect(
+        bookJs,
+        contains('if (shouldUpdateReaderCSS(oldStyle, newStyle, turn.scroll))'),
+      );
+      expect(
+        bookJs,
+        contains('reader.view.renderer.setStyles?.(getCSS(newStyle))'),
+      );
+    });
+
     test('guards pagination while iframe document body is unavailable', () {
       final paginatorJs = File(
         'assets/foliate-js/src/paginator.js',
@@ -246,6 +311,34 @@ void main() {
         contains('[readflex-paginator] visible range skipped'),
       );
       expect(paginatorJs, contains('if (!range) return'));
+    });
+
+    test('infers RTL direction when article language metadata is missing', () {
+      final viewJs = File('assets/foliate-js/src/view.js').readAsStringSync();
+
+      expect(viewJs, contains('const rtlSampleRegex'));
+      expect(viewJs, contains('const inferDocumentDirection = doc =>'));
+      expect(viewJs, contains("rtlCount > ltrCount ? 'rtl' : ''"));
+      expect(
+        viewJs,
+        contains(
+          'const direction = this.language.direction || inferDocumentDirection(doc)',
+        ),
+      );
+      expect(viewJs, contains('isReadflexArticle()'));
+      expect(viewJs, contains('applyArticleTextDirection(doc, direction)'));
+      expect(
+        viewJs,
+        contains(
+          'text-align: var(--readflex-rtl-article-text-align, right)',
+        ),
+      );
+      expect(viewJs, contains("node.style.setProperty('direction'"));
+      expect(viewJs, contains("node.style.setProperty(\n      'text-align'"));
+      expect(viewJs, contains("doc.documentElement.dir = 'ltr'"));
+      expect(viewJs, contains("if (doc.body) doc.body.dir = 'ltr'"));
+      expect(viewJs, contains('doc.documentElement.dir ||= direction'));
+      expect(viewJs, contains('if (doc.body) doc.body.dir ||= direction'));
     });
   });
 
@@ -282,6 +375,68 @@ void main() {
         contains("console.error('[readflex-eval:' + label + ']', message);"),
       );
       expect(script, contains('return null;'));
+    });
+
+    test('article RTL patch keeps pagination LTR and maps start to right', () {
+      final script = buildArticleTextDirectionPatchScript(
+        textAlign: 'start',
+        justify: false,
+      );
+
+      expect(script, contains('const requestedTextAlign = "start";'));
+      expect(script, contains("if (resolved === 'start') return 'right';"));
+      expect(script, contains("if (resolved === 'end') return 'left';"));
+      expect(script, contains("doc.documentElement.dir = 'ltr';"));
+      expect(script, contains("doc.body.dir = 'ltr';"));
+      expect(script, contains('readflex-article-text-direction-runtime'));
+      expect(script, contains("node.style.setProperty('direction'"));
+      expect(script, contains("node.style.setProperty('text-align', align"));
+      expect(script, contains('[readflex-article-rtl] applied nodes='));
+      expect(
+        script,
+        contains('html[data-readflex-text-direction="rtl"] body h1'),
+      );
+      expect(script, contains("'  text-align: ' + align + ' !important;'"));
+      expect(script, contains('setTimeout(apply, 100);'));
+    });
+
+    test('article RTL patch command is valid JavaScript', () {
+      final nodeVersion = Process.runSync('node', const ['--version']);
+      if (nodeVersion.exitCode != 0) return;
+
+      final script = buildReaderCommandScript(
+        label: 'articleTextDirection',
+        expression: buildArticleTextDirectionPatchScript(
+          textAlign: 'start',
+          justify: false,
+        ),
+      );
+      final dir = Directory.systemTemp.createTempSync('reader_rtl_patch_test_');
+      try {
+        final file = File('${dir.path}/rtl_patch.js');
+        file.writeAsStringSync(script);
+        final result = Process.runSync('node', ['--check', file.path]);
+        expect(
+          result.exitCode,
+          0,
+          reason: '${result.stdout}\n${result.stderr}',
+        );
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
+    });
+
+    test('reapplies article RTL patch after subsequent ready signals', () {
+      final webViewDart = File(
+        'lib/src/book_reader_webview.dart',
+      ).readAsStringSync();
+
+      expect(
+        webViewDart,
+        contains(
+          'if (wasReady) {\n      _applyArticleTextDirectionPatch();\n      return;\n    }',
+        ),
+      );
     });
   });
 

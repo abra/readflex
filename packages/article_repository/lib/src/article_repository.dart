@@ -95,11 +95,18 @@ class ArticleRepository {
         }
       }
 
+      final language = normalizeArticleLanguage(extracted.language);
+      final textDirection =
+          extracted.textDirection ??
+          articleTextDirectionForLanguage(language) ??
+          inferArticleTextDirectionFromText(extracted.plainText);
+
       await _epubBuilder.build(
         id: id,
         title: extracted.title,
         author: extracted.author,
-        lang: extracted.language,
+        lang: language,
+        textDirection: textDirection,
         htmlBody: htmlWithLocalImages.html,
         images: htmlWithLocalImages.images,
         outputFile: File(p.join(articleDir.path, 'article.epub')),
@@ -119,7 +126,7 @@ class ArticleRepository {
         coverImagePath: coverFilename == null
             ? null
             : p.join(articleDir.path, coverFilename),
-        language: extracted.language,
+        language: language,
         contentPath: contentFile.path,
         plainText: extracted.plainText,
         textLength: extracted.plainText.length,

@@ -576,6 +576,15 @@ const getReaderStylePrelude = ({ fontSize,
   const kbdFontSizePx = rootFontSizePx * 0.85
   const codeBlockFontSizePx = rootFontSizePx * 0.875
 
+  const resolvedTextAlign = !textAlign || textAlign === 'auto'
+    ? (justify ? 'justify' : 'start')
+    : textAlign
+  const rtlArticleTextAlign = resolvedTextAlign === 'start'
+    ? 'right'
+    : resolvedTextAlign === 'end'
+      ? 'left'
+      : resolvedTextAlign
+
   return `
     ${fontFaceDecl}
     :root {
@@ -593,7 +602,8 @@ const getReaderStylePrelude = ({ fontSize,
       --readflex-font-color: ${fontColor};
       --readflex-background-color: ${backgroundColor};
       --readflex-font-weight: ${fontWeight};
-      --readflex-text-align: ${textAlign === 'auto' ? (justify ? 'justify' : 'start') : textAlign};
+      --readflex-text-align: ${resolvedTextAlign};
+      --readflex-rtl-article-text-align: ${rtlArticleTextAlign};
       --readflex-hyphens: ${hyphenate ? 'auto' : 'manual'};
     }`
 }
@@ -1989,6 +1999,47 @@ const callFlutter = (name, data) => {
   window.flutter_inappwebview.callHandler(name, data)
 }
 
+const readerCSSKeys = [
+  'fontSize',
+  'textScale',
+  'fontName',
+  'fontPath',
+  'fontWeight',
+  'letterSpacing',
+  'spacing',
+  'paragraphSpacing',
+  'textIndent',
+  'fontColor',
+  'backgroundColor',
+  'justify',
+  'textAlign',
+  'hyphenate',
+  'writingMode',
+  'backgroundImage',
+  'customCSS',
+  'customCSSEnabled',
+  'overrideFont',
+  'overrideColor',
+  'useBookLayout',
+]
+
+const shouldUpdateReaderCSS = (oldStyle, nextStyle, flow) => {
+  if (!oldStyle) return true
+  if ((oldStyle.pageTurnStyle === 'scroll') !== flow) return true
+  return readerCSSKeys.some(key => oldStyle?.[key] !== nextStyle?.[key])
+}
+
+const setRendererAttribute = (renderer, name, value) => {
+  const nextValue = `${value ?? ''}`
+  if (renderer.getAttribute(name) === nextValue) return
+  renderer.setAttribute(name, nextValue)
+}
+
+const removeRendererAttribute = (renderer, name) => {
+  if (!renderer.hasAttribute(name)) return
+  renderer.removeAttribute(name)
+}
+
 const setStyle = (oldStyle) => {
   const turn = {
     scroll: false,
@@ -2010,16 +2061,17 @@ const setStyle = (oldStyle) => {
       break
   }
 
-  reader.view.renderer.setAttribute('flow', turn.scroll ? 'scrolled' : 'paginated')
-  reader.view.renderer.setAttribute('top-margin', `${style.topMargin}px`)
-  reader.view.renderer.setAttribute('bottom-margin', `${style.bottomMargin}px`)
-  reader.view.renderer.setAttribute('gap', `${style.sideMargin}%`)
-  reader.view.renderer.setAttribute('background-color', style.backgroundColor)
-  reader.view.renderer.setAttribute('max-column-count', style.maxColumnCount)
-  reader.view.renderer.setAttribute('bgimg-url', style.backgroundImage)
+  const renderer = reader.view.renderer
+  setRendererAttribute(renderer, 'flow', turn.scroll ? 'scrolled' : 'paginated')
+  setRendererAttribute(renderer, 'top-margin', `${style.topMargin}px`)
+  setRendererAttribute(renderer, 'bottom-margin', `${style.bottomMargin}px`)
+  setRendererAttribute(renderer, 'gap', `${style.sideMargin}%`)
+  setRendererAttribute(renderer, 'background-color', style.backgroundColor)
+  setRendererAttribute(renderer, 'max-column-count', style.maxColumnCount)
+  setRendererAttribute(renderer, 'bgimg-url', style.backgroundImage)
 
-  turn.animated ? reader.view.renderer.setAttribute('animated', 'true')
-    : reader.view.renderer.removeAttribute('animated')
+  turn.animated ? setRendererAttribute(renderer, 'animated', 'true')
+    : removeRendererAttribute(renderer, 'animated')
 
   const newStyle = {
     fontSize: style.fontSize,
@@ -2045,8 +2097,10 @@ const setStyle = (oldStyle) => {
     overrideColor: style.overrideColor,
     useBookLayout: style.useBookLayout,
   }
-  reader.view.renderer.setStyles?.(getCSS(newStyle))
-  requestAnimationFrame(() => reader.applyTextContrastGuard?.())
+  if (shouldUpdateReaderCSS(oldStyle, newStyle, turn.scroll)) {
+    reader.view.renderer.setStyles?.(getCSS(newStyle))
+    requestAnimationFrame(() => reader.applyTextContrastGuard?.())
+  }
 
   if (!oldStyle) {
     return
@@ -2150,7 +2204,6 @@ window.changeStyle = (newStyle) => {
     ...style,
     ...newStyle
   }
-  console.log('changeStyle', JSON.stringify(style))
   setStyle(oldStyle)
 }
 
@@ -2490,6 +2543,8 @@ var importing = JSON.parse(urlParams.get('importing'))
 var url = JSON.parse(urlParams.get('url'))
 var initialCfi = JSON.parse(urlParams.get('initialCfi'))
 var initialProgress = JSON.parse(urlParams.get('initialProgress'))
+var sourceType = JSON.parse(urlParams.get('sourceType') ?? '"book"')
+globalThis.readflexSourceType = sourceType
 var style = JSON.parse(urlParams.get('style'))
 var readingRules = JSON.parse(urlParams.get('readingRules'))
 // Optional caller-supplied display name. Used by formats with no embedded
