@@ -57,7 +57,17 @@ void main() {
 
       expect(find.text('Flutter Design Patterns'), findsWidgets);
       expect(find.text('Daria Orlova'), findsOneWidget);
-      expect(find.text('EPUB  •  New'), findsOneWidget);
+      final bookByline = tester.widget<Text>(find.text('Daria Orlova'));
+      expect(bookByline.style?.fontFamily, AppTypography.fontFamilySerif);
+      expect(bookByline.style?.fontStyle, FontStyle.italic);
+      expect(bookByline.style?.fontSize, 16);
+      expect(find.text('Book'), findsOneWidget);
+      expect(find.text('Format'), findsOneWidget);
+      expect(find.text('EPUB'), findsOneWidget);
+      expect(find.text('Status'), findsOneWidget);
+      expect(find.text('New'), findsOneWidget);
+      expect(find.text('Added'), findsOneWidget);
+      expect(find.text('Jan 1'), findsOneWidget);
       expect(find.text('Start reading'), findsOneWidget);
       expect(find.byIcon(AppIcons.back), findsOneWidget);
       expect(find.byType(AppBottomActionBar), findsOneWidget);
@@ -85,7 +95,48 @@ void main() {
       expect(coverArt.textScale, 1.45);
     });
 
-    testWidgets('article details show source instead of article author', (
+    testWidgets('fits long hero titles across the full title cell', (
+      tester,
+    ) async {
+      final longTitleSource = _newSource.copyWith(
+        title:
+            'Understanding Design Gaps People Keep Missing When Reading Long Articles About Typography, Spacing, and Interface Architecture',
+      );
+      repository.source = longTitleSource;
+
+      await tester.pumpSourceDetails(
+        repository: repository,
+        highlightRepository: highlightRepository,
+        flashcardRepository: flashcardRepository,
+        dictionaryRepository: dictionaryRepository,
+        initialSource: LibrarySource.fromBook(longTitleSource),
+      );
+
+      final titleFinder = find.byKey(const ValueKey('source-details-title'));
+      final title = tester.widget<Text>(titleFinder);
+      final titleSize = tester.getSize(titleFinder);
+      final titleCellSize = tester.getSize(
+        find.byKey(const ValueKey('source-details-title-cell')),
+      );
+      final coverSize = tester.getSize(find.byType(AppSourceCoverFrame));
+      final painter = TextPainter(
+        text: TextSpan(text: longTitleSource.title, style: title.style),
+        maxLines: title.maxLines,
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: titleSize.width);
+
+      expect(
+        find.ancestor(of: titleFinder, matching: find.byType(FittedBox)),
+        findsNothing,
+      );
+      expect(titleSize.width, closeTo(titleCellSize.width, 0.1));
+      expect(titleCellSize.height, lessThan(coverSize.height));
+      expect(title.style?.fontSize, lessThan(28));
+      expect(title.style?.height, greaterThanOrEqualTo(1.20));
+      expect(painter.height, lessThanOrEqualTo(titleCellSize.height + 0.1));
+    });
+
+    testWidgets('article details show source and byline', (
       tester,
     ) async {
       repository.source = null;
@@ -100,21 +151,31 @@ void main() {
       );
 
       expect(find.text('Saved Article'), findsWidgets);
+      expect(find.text('Article'), findsOneWidget);
+      expect(find.text('Type'), findsNothing);
+      expect(find.text('Source'), findsNothing);
       expect(find.text('Example'), findsOneWidget);
-      expect(find.text('Article Author'), findsNothing);
+      expect(find.text('Article Author'), findsWidgets);
+      final byline = tester.widget<Text>(find.text('Article Author'));
+      expect(byline.style?.fontFamily, AppTypography.fontFamilySerif);
+      expect(byline.style?.fontStyle, FontStyle.italic);
+      expect(byline.style?.fontSize, 16);
+      expect(find.text('Saved'), findsOneWidget);
+      expect(find.text('Jan 1'), findsOneWidget);
+      expect(find.text('Read article'), findsOneWidget);
 
       final coverArt = tester.widget<AppCoverArt>(find.byType(AppCoverArt));
-      expect(coverArt.showTitle, isTrue);
-      expect(coverArt.centerText, isTrue);
-      expect(coverArt.textScale, 1.45);
+      expect(coverArt.showTitle, isFalse);
+      expect(coverArt.showAuthor, isFalse);
       expect(coverArt.showArticleBadge, isFalse);
-      expect(
+      final articleIcon = tester.widget<Icon>(
         find.descendant(
           of: find.byType(AppSourceCoverFrame),
           matching: find.byIcon(AppIcons.language),
         ),
-        findsNothing,
       );
+      final coverSize = tester.getSize(find.byType(AppSourceCoverFrame));
+      expect(articleIcon.size, closeTo(coverSize.width * 0.40, 0.1));
     });
 
     testWidgets('hides review section for comics', (tester) async {
@@ -134,7 +195,10 @@ void main() {
       );
 
       expect(find.text('Sample Comic'), findsWidgets);
-      expect(find.text('CBZ  •  New'), findsOneWidget);
+      expect(find.text('Format'), findsOneWidget);
+      expect(find.text('CBZ'), findsOneWidget);
+      expect(find.text('Status'), findsOneWidget);
+      expect(find.text('New'), findsOneWidget);
       expect(find.text('Review'), findsNothing);
       expect(find.text('Highlights'), findsNothing);
       expect(find.text('Flashcards'), findsNothing);
@@ -208,8 +272,8 @@ void main() {
 
       final coverSize = tester.getSize(find.byType(AppSourceCoverFrame));
 
-      expect(coverSize.width, 184);
-      expect(coverSize.height, 276);
+      expect(coverSize.width, 112);
+      expect(coverSize.height, 168);
     });
   });
 }

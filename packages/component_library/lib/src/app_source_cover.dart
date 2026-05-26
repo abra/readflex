@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app_cover_art.dart';
@@ -85,13 +84,12 @@ class AppSourceCover extends StatelessWidget {
                 fit: fit,
                 width: constraints.maxWidth,
                 height: constraints.maxHeight,
-                errorBuilder: (_, error, stackTrace) {
+                errorBuilder: (_, error, _) {
                   _reportCoverDecodeFailure(
                     imageProvider: imageProvider,
                     title: title,
                     seed: seed,
                     error: error,
-                    stackTrace: stackTrace,
                   );
                   return fallback;
                 },
@@ -123,7 +121,6 @@ void _reportCoverDecodeFailure({
   required String title,
   required String seed,
   required Object error,
-  required StackTrace? stackTrace,
 }) {
   final key = '$imageProvider|$seed';
   if (!_reportedCoverDecodeFailures.add(key)) return;
@@ -131,22 +128,5 @@ void _reportCoverDecodeFailure({
   debugPrint(
     '[source-cover-decode] Failed to decode cover '
     '(sourceId=$seed, title="$title", provider=$imageProvider): $error',
-  );
-
-  FlutterError.reportError(
-    FlutterErrorDetails(
-      exception: error,
-      stack: stackTrace,
-      library: 'component_library',
-      context: ErrorDescription('while decoding a source cover image'),
-      informationCollector: () sync* {
-        yield DiagnosticsProperty<ImageProvider>(
-          'image provider',
-          imageProvider,
-        );
-        yield StringProperty('title', title);
-        yield StringProperty('source id', seed);
-      },
-    ),
   );
 }

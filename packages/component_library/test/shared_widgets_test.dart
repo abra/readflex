@@ -71,39 +71,52 @@ void main() {
     expect(coverRect, frameRect);
   });
 
-  testWidgets('AppSourceCover reports failed cover decode with context', (
-    tester,
-  ) async {
-    final previousOnError = FlutterError.onError;
-    final errors = <FlutterErrorDetails>[];
-    FlutterError.onError = errors.add;
-    addTearDown(() => FlutterError.onError = previousOnError);
+  testWidgets(
+    'AppSourceCover falls back for failed cover decode without Flutter error',
+    (tester) async {
+      final previousOnError = FlutterError.onError;
+      final previousDebugPrint = debugPrint;
+      final errors = <FlutterErrorDetails>[];
+      final logs = <String>[];
+      FlutterError.onError = errors.add;
+      debugPrint = (message, {wrapWidth}) {
+        if (message case final message?) logs.add(message);
+      };
+      addTearDown(() {
+        FlutterError.onError = previousOnError;
+        debugPrint = previousDebugPrint;
+      });
 
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: SizedBox(
-            width: 120,
-            height: 180,
-            child: AppSourceCover(
-              title: 'Broken Cover',
-              seed: 'book-1',
-              coverImage: _FailingImageProvider('cover.jpeg'),
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 120,
+              height: 180,
+              child: AppSourceCover(
+                title: 'Broken Cover',
+                seed: 'book-1',
+                coverImage: _FailingImageProvider('cover.jpeg'),
+              ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.pump();
-    FlutterError.onError = previousOnError;
+      );
+      await tester.pump();
+      FlutterError.onError = previousOnError;
+      debugPrint = previousDebugPrint;
 
-    expect(errors, hasLength(1));
-    final details = errors.single.toString();
-    expect(details, contains('while decoding a source cover'));
-    expect(details, contains('Broken Cover'));
-    expect(details, contains('book-1'));
-    expect(details, contains('cover.jpeg'));
-  });
+      expect(errors, isEmpty);
+      expect(find.byType(AppCoverArt), findsOneWidget);
+      expect(find.text('Broken Cover'), findsOneWidget);
+
+      final log = logs.join('\n');
+      expect(log, contains('[source-cover-decode]'));
+      expect(log, contains('Broken Cover'));
+      expect(log, contains('book-1'));
+      expect(log, contains('cover.jpeg'));
+    },
+  );
 
   testWidgets(
     'AppSourceCover renders article fallback instead of cover image',

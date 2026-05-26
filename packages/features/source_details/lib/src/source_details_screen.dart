@@ -12,13 +12,18 @@ import 'package:highlight_repository/highlight_repository.dart';
 
 import 'source_details_bloc.dart';
 
-const _coverMaxWidth = 184.0;
-const _coverMinWidth = 140.0;
-const _coverScreenWidthFactor = 0.45;
+const _heroCoverMaxWidth = 112.0;
+const _heroCoverMinWidth = 96.0;
+const _heroCoverScreenWidthFactor = 0.28;
 const _coverTextScale = 1.45;
-const _titleMaxLines = 3;
+const _articleCoverIconWidthFactor = 0.40;
+const _heroTitleLineHeight = 1.20;
+const _heroTitleMinFontSize = 12.0;
+const _heroTitleFontStep = 0.5;
 const _authorMaxLines = 2;
-const _metadataMaxLines = 1;
+const _authorFontSize = 16.0;
+const _authorLineHeight = 1.30;
+const _statMaxLines = 1;
 
 class SourceDetailsScreen extends StatelessWidget {
   const SourceDetailsScreen({
@@ -163,7 +168,7 @@ class _SourceDetailsBottomBar extends StatelessWidget {
                   SourceDetailsLoadRequested(source.id),
                 );
               },
-              icon: const Icon(AppIcons.book, size: AppIconSize.sm),
+              icon: Icon(_readButtonIcon(source), size: AppIconSize.sm),
               label: Text(_readButtonLabel(source)),
             ),
           ),
@@ -190,8 +195,11 @@ class _SourceDetailsContent extends StatelessWidget {
     final text = context.text;
     final screenSize = MediaQuery.sizeOf(context);
     final coverWidth = math.min(
-      _coverMaxWidth,
-      math.max(_coverMinWidth, screenSize.width * _coverScreenWidthFactor),
+      _heroCoverMaxWidth,
+      math.max(
+        _heroCoverMinWidth,
+        screenSize.width * _heroCoverScreenWidthFactor,
+      ),
     );
     final topSpacer = math.max(AppSpacing.sm, screenSize.height * 0.02);
 
@@ -204,20 +212,24 @@ class _SourceDetailsContent extends StatelessWidget {
               SizedBox(height: topSpacer),
               Padding(
                 padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
                   AppSpacing.lg,
-                  AppSpacing.lg,
-                  AppSpacing.lg,
+                  AppSpacing.xl,
                   AppSpacing.xl,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    _SourceKindLabel(source: source),
+                    const SizedBox(height: AppSpacing.lg),
                     _HeroSection(
                       source: source,
                       coverWidth: coverWidth,
                     ),
-                    const SizedBox(height: AppSpacing.lg),
-                    _SourceMetadata(source: source),
+                    const SizedBox(height: AppSpacing.xl),
+                    _SourceStats(source: source),
+                    const SizedBox(height: AppSpacing.md),
+                    _SourceProgressLine(progress: source.readingProgress),
                     if (showReviewSection) ...[
                       const SizedBox(height: AppSpacing.xl),
                       Text(
@@ -242,8 +254,8 @@ class _SourceDetailsContent extends StatelessWidget {
   }
 }
 
-class _SourceMetadata extends StatelessWidget {
-  const _SourceMetadata({required this.source});
+class _SourceKindLabel extends StatelessWidget {
+  const _SourceKindLabel({required this.source});
 
   final LibrarySource source;
 
@@ -251,38 +263,28 @@ class _SourceMetadata extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.text;
-    final items = [
-      source.typeLabel,
-      _progressLabel(source),
-    ];
+    final isArticle = source.sourceType == SourceType.article;
 
-    return Text(
-      items.join('  •  '),
-      textAlign: TextAlign.center,
-      maxLines: _metadataMaxLines,
-      overflow: TextOverflow.ellipsis,
-      style: text.labelMedium.copyWith(
-        color: colors.onSurfaceVariant,
-        fontWeight: FontWeight.w500,
-      ),
+    return Row(
+      children: [
+        Icon(
+          isArticle ? AppIcons.article : AppIcons.book,
+          size: AppIconSize.xs,
+          color: colors.onSurfaceVariant,
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        Text(
+          isArticle ? 'Article' : 'Book',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: text.labelSmall.copyWith(
+            color: colors.onSurfaceVariant,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     );
   }
-}
-
-ButtonStyle _plainIconButtonStyle(BuildContext context) {
-  final colors = context.colors;
-
-  return ButtonStyle(
-    backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
-    foregroundColor: WidgetStatePropertyAll(colors.onSurface),
-    overlayColor: WidgetStatePropertyAll(
-      colors.onSurface.withValues(alpha: 0.08),
-    ),
-    minimumSize: const WidgetStatePropertyAll(
-      Size.square(AppSizes.iconButtonSize),
-    ),
-    padding: const WidgetStatePropertyAll(EdgeInsets.all(AppSpacing.sm)),
-  );
 }
 
 class _HeroSection extends StatelessWidget {
@@ -300,13 +302,49 @@ class _HeroSection extends StatelessWidget {
     final text = context.text;
     final coverImage = _coverImageFor(source);
     final subtitle = _subtitleFor(source);
+    final articleSource = source.sourceType == SourceType.article
+        ? source.sourceName?.trim()
+        : null;
+    final coverHeight = coverWidth / appSourceCoverAspectRatio;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
+        Expanded(
+          child: SizedBox(
+            height: coverHeight,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (articleSource case final value? when value.isNotEmpty) ...[
+                  _ArticleSourceLabel(sourceName: value),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
+                Expanded(child: _AutoSizedHeroTitle(title: source.title)),
+                if (subtitle case final value? when value.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    value,
+                    textAlign: TextAlign.left,
+                    maxLines: _authorMaxLines,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.serif(
+                      textStyle: text.bodyMedium,
+                      color: colors.onSurfaceVariant,
+                      fontSize: _authorFontSize,
+                      fontStyle: FontStyle.italic,
+                      height: _authorLineHeight,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.lg),
         SizedBox(
           width: coverWidth,
-          height: coverWidth / appSourceCoverAspectRatio,
+          height: coverHeight,
           child: AppSourceCoverFrame(
             cover: _SourceCover(
               source: source,
@@ -314,24 +352,167 @@ class _HeroSection extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
-        Text(
-          source.title,
-          textAlign: TextAlign.center,
-          maxLines: _titleMaxLines,
-          overflow: TextOverflow.ellipsis,
-          style: text.titleMedium.copyWith(color: colors.onSurface),
-        ),
-        if (subtitle case final value? when value.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            value,
-            textAlign: TextAlign.center,
-            maxLines: _authorMaxLines,
-            overflow: TextOverflow.ellipsis,
-            style: text.bodyMedium.copyWith(color: colors.onSurfaceVariant),
+      ],
+    );
+  }
+}
+
+class _AutoSizedHeroTitle extends StatelessWidget {
+  const _AutoSizedHeroTitle({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final baseStyle = context.text.headlineMedium.copyWith(
+      color: colors.onSurface,
+      height: _heroTitleLineHeight,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (!constraints.hasBoundedWidth ||
+            !constraints.hasBoundedHeight ||
+            constraints.maxWidth <= 0 ||
+            constraints.maxHeight <= 0) {
+          return const SizedBox.shrink();
+        }
+
+        final fit = _fitHeroTitleLayout(
+          title: title,
+          baseStyle: baseStyle,
+          maxWidth: constraints.maxWidth,
+          maxHeight: constraints.maxHeight,
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+        );
+
+        return SizedBox.expand(
+          key: const ValueKey('source-details-title-cell'),
+          child: Align(
+            alignment: Alignment.bottomLeft,
+            child: SizedBox(
+              width: constraints.maxWidth,
+              child: Text(
+                title,
+                key: const ValueKey('source-details-title'),
+                textAlign: TextAlign.left,
+                softWrap: true,
+                maxLines: fit.maxLines,
+                overflow: fit.maxLines == null
+                    ? TextOverflow.visible
+                    : TextOverflow.ellipsis,
+                style: fit.style,
+              ),
+            ),
           ),
-        ],
+        );
+      },
+    );
+  }
+}
+
+_HeroTitleFit _fitHeroTitleLayout({
+  required String title,
+  required TextStyle baseStyle,
+  required double maxWidth,
+  required double maxHeight,
+  required TextDirection textDirection,
+  required TextScaler textScaler,
+}) {
+  final baseFontSize = baseStyle.fontSize ?? _heroTitleMinFontSize;
+  var fontSize = baseFontSize;
+
+  while (fontSize > _heroTitleMinFontSize) {
+    final style = baseStyle.copyWith(fontSize: fontSize);
+    final painter = _layoutHeroTitle(
+      title: title,
+      style: style,
+      maxWidth: maxWidth,
+      textDirection: textDirection,
+      textScaler: textScaler,
+    );
+    if (painter.height <= maxHeight) {
+      return _HeroTitleFit(style: style);
+    }
+    fontSize -= _heroTitleFontStep;
+  }
+
+  final minStyle = baseStyle.copyWith(fontSize: _heroTitleMinFontSize);
+  final lineHeight = _heroTitleLineHeightFor(
+    style: minStyle,
+    textDirection: textDirection,
+    textScaler: textScaler,
+  );
+  final maxLines = math.max(1, (maxHeight / lineHeight).floor());
+  return _HeroTitleFit(style: minStyle, maxLines: maxLines);
+}
+
+TextPainter _layoutHeroTitle({
+  required String title,
+  required TextStyle style,
+  required double maxWidth,
+  required TextDirection textDirection,
+  required TextScaler textScaler,
+}) {
+  return TextPainter(
+    text: TextSpan(text: title, style: style),
+    textDirection: textDirection,
+    textScaler: textScaler,
+  )..layout(maxWidth: maxWidth);
+}
+
+double _heroTitleLineHeightFor({
+  required TextStyle style,
+  required TextDirection textDirection,
+  required TextScaler textScaler,
+}) {
+  final painter = TextPainter(
+    text: TextSpan(text: 'Hg', style: style),
+    textDirection: textDirection,
+    textScaler: textScaler,
+  )..layout();
+  return painter.preferredLineHeight;
+}
+
+class _HeroTitleFit {
+  const _HeroTitleFit({required this.style, this.maxLines});
+
+  final TextStyle style;
+  final int? maxLines;
+}
+
+class _ArticleSourceLabel extends StatelessWidget {
+  const _ArticleSourceLabel({required this.sourceName});
+
+  final String sourceName;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = context.text;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          AppIcons.link,
+          size: AppIconSize.xs,
+          color: colors.primary,
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        Flexible(
+          child: Text(
+            sourceName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: text.labelSmall.copyWith(
+              color: colors.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -351,19 +532,32 @@ class _SourceCover extends StatelessWidget {
     final isArticle = source.sourceType == SourceType.article;
 
     if (isArticle) {
-      return AppSourceCover(
-        title: source.title,
-        author: source.author,
-        source: source.sourceName,
-        seed: source.id,
-        isArticle: true,
-        coverImage: coverImage,
-        showTitle: true,
-        showProgress: false,
-        showMatte: false,
-        showArticleBadge: false,
-        centerText: true,
-        textScale: _coverTextScale,
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final iconSize = constraints.maxWidth * _articleCoverIconWidthFactor;
+
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              AppSourceCover(
+                title: source.title,
+                seed: source.id,
+                isArticle: true,
+                coverImage: coverImage,
+                showAuthor: false,
+                showTitle: false,
+                showProgress: false,
+                showMatte: false,
+                showArticleBadge: false,
+              ),
+              Icon(
+                AppIcons.language,
+                size: iconSize,
+                color: Colors.white.withValues(alpha: 0.40),
+              ),
+            ],
+          );
+        },
       );
     }
 
@@ -377,6 +571,102 @@ class _SourceCover extends StatelessWidget {
       showMatte: false,
       topAlignText: true,
       textScale: _coverTextScale,
+    );
+  }
+}
+
+class _SourceStats extends StatelessWidget {
+  const _SourceStats({required this.source});
+
+  final LibrarySource source;
+
+  @override
+  Widget build(BuildContext context) {
+    final stats = _statsFor(source);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var index = 0; index < stats.length; index++) ...[
+          if (index > 0) const SizedBox(width: AppSpacing.md),
+          Expanded(child: _SourceStat(data: stats[index])),
+        ],
+      ],
+    );
+  }
+}
+
+class _SourceStat extends StatelessWidget {
+  const _SourceStat({required this.data});
+
+  final _SourceStatData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = context.text;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          data.label,
+          maxLines: _statMaxLines,
+          overflow: TextOverflow.ellipsis,
+          style: text.labelSmall.copyWith(
+            color: colors.onSurfaceVariant.withValues(alpha: 0.68),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          data.value,
+          maxLines: _statMaxLines,
+          overflow: TextOverflow.ellipsis,
+          style: text.labelMedium.copyWith(
+            color: data.isPrimary ? colors.primary : colors.onSurface,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SourceProgressLine extends StatelessWidget {
+  const _SourceProgressLine({required this.progress});
+
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final clampedProgress = progress.clamp(0.0, 1.0).toDouble();
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.full),
+      child: ColoredBox(
+        color: colors.surfaceContainerHighest,
+        child: SizedBox(
+          key: const ValueKey('source-details-progress-line'),
+          height: 3,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Align(
+                alignment: Alignment.centerLeft,
+                child: ColoredBox(
+                  color: colors.primary,
+                  child: SizedBox(
+                    width: constraints.maxWidth * clampedProgress,
+                    height: 3,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
 }
@@ -504,10 +794,58 @@ class _ReviewActionRow extends StatelessWidget {
   }
 }
 
-String _readButtonLabel(LibrarySource source) =>
-    source.readingProgress > 0 || source.lastOpenedAt != null
-    ? 'Continue reading'
-    : 'Start reading';
+class _SourceStatData {
+  const _SourceStatData({
+    required this.label,
+    required this.value,
+    this.isPrimary = false,
+  });
+
+  final String label;
+  final String value;
+  final bool isPrimary;
+}
+
+List<_SourceStatData> _statsFor(LibrarySource source) {
+  final stats = <_SourceStatData>[
+    if (source.sourceType != SourceType.article)
+      _SourceStatData(
+        label: 'Format',
+        value: source.typeLabel,
+      ),
+    _SourceStatData(
+      label: 'Status',
+      value: _progressLabel(source),
+      isPrimary: source.readingProgress > 0 || source.isFinished,
+    ),
+    _SourceStatData(
+      label: source.sourceType == SourceType.article ? 'Saved' : 'Added',
+      value: _shortDate(source.addedAt),
+    ),
+  ];
+
+  if (source.lastOpenedAt case final lastOpenedAt?) {
+    stats.add(
+      _SourceStatData(
+        label: 'Opened',
+        value: _shortDate(lastOpenedAt),
+      ),
+    );
+  }
+
+  return stats.take(4).toList(growable: false);
+}
+
+String _readButtonLabel(LibrarySource source) {
+  final hasProgress = source.readingProgress > 0 || source.lastOpenedAt != null;
+  if (source.sourceType == SourceType.article) {
+    return hasProgress ? 'Continue article' : 'Read article';
+  }
+  return hasProgress ? 'Continue reading' : 'Start reading';
+}
+
+IconData _readButtonIcon(LibrarySource source) =>
+    source.sourceType == SourceType.article ? AppIcons.article : AppIcons.book;
 
 String _reviewSummaryLabel(
   int count, {
@@ -524,20 +862,50 @@ String _reviewSummaryLabel(
 String _progressLabel(LibrarySource source) {
   if (source.isFinished) return 'Finished';
   final progress = (source.readingProgress * 100).round();
-  return progress > 0 ? '$progress% read' : 'New';
+  return progress > 0 ? '$progress%' : 'New';
 }
 
 String? _subtitleFor(LibrarySource source) {
-  if (source.sourceType == SourceType.article) {
-    final sourceName = source.sourceName?.trim();
-    if (sourceName != null && sourceName.isNotEmpty) return sourceName;
-    return null;
-  }
   final author = source.author?.trim();
   if (author != null && author.isNotEmpty) return author;
+  if (source.sourceType == SourceType.article) return null;
   return null;
+}
+
+String _shortDate(DateTime value) {
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${months[value.month - 1]} ${value.day}';
 }
 
 ImageProvider? _coverImageFor(LibrarySource source) {
   return appSourceCoverImageFromPath(source.coverImagePath);
+}
+
+ButtonStyle _plainIconButtonStyle(BuildContext context) {
+  final colors = context.colors;
+
+  return ButtonStyle(
+    backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
+    foregroundColor: WidgetStatePropertyAll(colors.onSurface),
+    overlayColor: WidgetStatePropertyAll(
+      colors.onSurface.withValues(alpha: 0.08),
+    ),
+    minimumSize: const WidgetStatePropertyAll(
+      Size.square(AppSizes.iconButtonSize),
+    ),
+    padding: const WidgetStatePropertyAll(EdgeInsets.all(AppSpacing.sm)),
+  );
 }
