@@ -216,5 +216,8 @@ String buildBookCustomCSS({
   buffer.writeln(
     'h4, h5, h6 { font-size: calc($proseFontSize * 1.1) !important; }',
   );
+  buffer.writeln(
+    'h1, h2, h3, h4, h5, h6 { line-height: 1.12 !important; }',
+  );
   return buffer.toString();
 }

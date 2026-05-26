@@ -808,21 +808,49 @@ class _SourceStatData {
 }
 
 List<_SourceStatData> _statsFor(LibrarySource source) {
+  if (source.sourceType == SourceType.article) {
+    return _articleStatsFor(source);
+  }
+
   final stats = <_SourceStatData>[
-    if (source.sourceType == SourceType.article)
-      _articleReadingTimeStat(source)
-    else
-      _SourceStatData(
-        label: 'Format',
-        value: source.typeLabel,
-      ),
+    _SourceStatData(
+      label: 'Format',
+      value: source.typeLabel,
+    ),
     _SourceStatData(
       label: 'Status',
       value: _progressLabel(source),
       isPrimary: source.readingProgress > 0 || source.isFinished,
     ),
     _SourceStatData(
-      label: source.sourceType == SourceType.article ? 'Saved' : 'Added',
+      label: 'Added',
+      value: _shortDate(source.addedAt),
+    ),
+  ];
+
+  if (source.lastOpenedAt case final lastOpenedAt?) {
+    stats.add(
+      _SourceStatData(
+        label: 'Opened',
+        value: _shortDate(lastOpenedAt),
+      ),
+    );
+  }
+
+  return stats.take(4).toList(growable: false);
+}
+
+List<_SourceStatData> _articleStatsFor(LibrarySource source) {
+  final stats = <_SourceStatData>[
+    _articleReadingTimeStat(source),
+    if (source.lastOpenedAt == null) _articleWordCountStat(source),
+    _SourceStatData(
+      label: 'Status',
+      value: _progressLabel(source),
+      isPrimary: source.readingProgress > 0 || source.isFinished,
+    ),
+    _SourceStatData(
+      label: 'Saved',
       value: _shortDate(source.addedAt),
     ),
   ];
@@ -858,6 +886,22 @@ _SourceStatData _articleReadingTimeStat(LibrarySource source) {
   }
 
   return _SourceStatData(label: 'Time', value: '$totalMinutes min');
+}
+
+_SourceStatData _articleWordCountStat(LibrarySource source) {
+  final wordCount = source.estimatedWordCount;
+  if (wordCount <= 0) {
+    return const _SourceStatData(label: 'Words', value: '—');
+  }
+
+  return _SourceStatData(label: 'Words', value: _compactWordCount(wordCount));
+}
+
+String _compactWordCount(int wordCount) {
+  if (wordCount < 1000) return '$wordCount';
+  final compact = wordCount / 1000;
+  if (wordCount % 1000 == 0) return '${compact.toInt()}k';
+  return '${compact.toStringAsFixed(1)}k';
 }
 
 String _readButtonLabel(LibrarySource source) {

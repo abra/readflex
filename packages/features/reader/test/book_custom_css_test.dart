@@ -159,6 +159,10 @@ void main() {
           'h4, h5, h6 { font-size: calc(var(--readflex-prose-font-size, 1em) * 1.1) !important; }',
         ),
       );
+      expect(
+        css,
+        contains('h1, h2, h3, h4, h5, h6 { line-height: 1.12 !important; }'),
+      );
     });
 
     test('does not emit image inversion in dark themes', () {
