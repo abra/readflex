@@ -66,7 +66,7 @@ class ReaderAppearanceCubit extends Cubit<ReaderAppearanceState> {
   static const double maxTextScale = 1.45;
   static const double textScaleStep = 0.05;
   static const List<double> lineHeightPresets = [1.2, 1.4, 1.6, 1.8, 2.0];
-  static const double lineHeightMatchTolerance = 0.05;
+  static const double lineHeightMatchTolerance = 0.051;
   static const double minSideMargin = 2;
   static const double maxSideMargin = 14;
   static const double sideMarginStep = 1;

@@ -711,6 +711,7 @@ class _LineHeightButton extends StatelessWidget {
         child: GestureDetector(
           onTap: onTap,
           child: Container(
+            key: ValueKey('reader-line-height-${value.toStringAsFixed(1)}'),
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
             decoration: BoxDecoration(
               color: active ? cs.onSurface : Colors.transparent,

@@ -139,7 +139,13 @@ class ReaderServer {
       return;
     }
 
-    final encodedPath = segments.sublist(1).join('/');
+    final encodedPath = path.substring('/book/'.length);
+    if (encodedPath.isEmpty) {
+      _respond(request, HttpStatus.badRequest, 'Missing book path.');
+      _logRequest('GET', path, HttpStatus.badRequest, stopwatch);
+      return;
+    }
+
     final filePath = Uri.decodeComponent(encodedPath);
     final file = File(filePath);
 

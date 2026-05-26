@@ -86,6 +86,28 @@ void main() {
       );
     });
 
+    test(
+      'streams book file with percent and unicode characters in path',
+      () async {
+        final bookFile = File(
+          '${tempDir.path}/A 100% Guide To… Robots (Joosr [Joosr]).epub',
+        );
+        await bookFile.writeAsBytes([0x50, 0x4B, 0x03, 0x04]);
+
+        final encodedPath = Uri.encodeComponent(bookFile.path);
+        final response = await client.head(
+          Uri.parse(url('/book/$encodedPath')),
+        );
+
+        expect(response.statusCode, 200);
+        expect(
+          response.headers['content-type'],
+          contains('application/epub+zip'),
+        );
+        expect(response.headers['content-length'], '4');
+      },
+    );
+
     test('returns correct content-type for pdf', () async {
       final pdfFile = File('${tempDir.path}/test.pdf');
       await pdfFile.writeAsBytes([0x25, 0x50, 0x44, 0x46]); // %PDF header

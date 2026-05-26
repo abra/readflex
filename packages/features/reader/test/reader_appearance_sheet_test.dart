@@ -65,6 +65,28 @@ void main() {
     expect(find.text('Warm'), findsOneWidget);
   });
 
+  testWidgets('selects rounded default line spacing preset', (
+    tester,
+  ) async {
+    await tester.openAppearanceSheet(cubit);
+
+    await tester.tap(find.text('Layout'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1.6'), findsNWidgets(2));
+    final activeSpacing = tester.widget<Container>(
+      find.byKey(const ValueKey('reader-line-height-1.6')),
+    );
+    final activeDecoration = activeSpacing.decoration! as BoxDecoration;
+    expect(activeDecoration.color, isNot(Colors.transparent));
+
+    final inactiveSpacing = tester.widget<Container>(
+      find.byKey(const ValueKey('reader-line-height-1.4')),
+    );
+    final inactiveDecoration = inactiveSpacing.decoration! as BoxDecoration;
+    expect(inactiveDecoration.color, Colors.transparent);
+  });
+
   testWidgets('persists text alignment from layout panel', (tester) async {
     await tester.openAppearanceSheet(cubit);
 
