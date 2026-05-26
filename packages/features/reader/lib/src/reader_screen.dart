@@ -1522,6 +1522,10 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
 
   static const Duration _dragReleaseTimeout = Duration(milliseconds: 600);
   static const double _dragSettleEpsilon = 0.005;
+  static const double _progressSliderHeight = 30;
+  static const double _progressTrackHeight = 3;
+  static const double _progressThumbRadius = 6;
+  static const double _progressOverlayRadius = 14;
 
   @override
   void dispose() {
@@ -1566,6 +1570,11 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
     );
     final sliderDivisions = readerSliderDivisions(
       sourceType: widget.sourceType,
+      totalPages: widget.chapterTotalPages,
+    );
+    final showProgressSlider = shouldShowReaderProgressSlider(
+      sourceType: widget.sourceType,
+      format: widget.format,
       totalPages: widget.chapterTotalPages,
     );
     final mutedText = widget.textColor.withValues(alpha: 0.7);
@@ -1647,73 +1656,98 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                               ],
                             ),
                           ),
-                          SizedBox(
-                            height: 30,
-                            child: SliderTheme(
-                              data: SliderThemeData(
-                                trackHeight: 3,
-                                activeTrackColor: widget.accentColor,
-                                inactiveTrackColor: widget.dividerColor,
-                                thumbColor: widget.accentColor,
-                                overlayColor: widget.accentColor.withValues(
-                                  alpha: 0.16,
+                          if (showProgressSlider)
+                            SizedBox(
+                              height: _progressSliderHeight,
+                              child: SliderTheme(
+                                data: SliderThemeData(
+                                  trackHeight: _progressTrackHeight,
+                                  activeTrackColor: widget.accentColor,
+                                  inactiveTrackColor: widget.dividerColor,
+                                  thumbColor: widget.accentColor,
+                                  overlayColor: widget.accentColor.withValues(
+                                    alpha: 0.16,
+                                  ),
+                                  thumbShape: const RoundSliderThumbShape(
+                                    enabledThumbRadius: _progressThumbRadius,
+                                  ),
+                                  overlayShape: const RoundSliderOverlayShape(
+                                    overlayRadius: _progressOverlayRadius,
+                                  ),
+                                  trackShape:
+                                      const RoundedRectSliderTrackShape(),
                                 ),
-                                thumbShape: const RoundSliderThumbShape(
-                                  enabledThumbRadius: 6,
+                                child: Slider(
+                                  value: sliderValue,
+                                  divisions: sliderDivisions,
+                                  onChangeStart: (v) {
+                                    final seekValue = snappedReaderSeekProgress(
+                                      sourceType: widget.sourceType,
+                                      progress: v,
+                                      totalPages: widget.chapterTotalPages,
+                                    );
+                                    setState(() {
+                                      _isDragging = true;
+                                      _dragValue = seekValue;
+                                    });
+                                  },
+                                  onChanged: (v) {
+                                    final seekValue = snappedReaderSeekProgress(
+                                      sourceType: widget.sourceType,
+                                      progress: v,
+                                      totalPages: widget.chapterTotalPages,
+                                    );
+                                    setState(() => _dragValue = seekValue);
+                                  },
+                                  onChangeEnd: (v) {
+                                    final seekValue = snappedReaderSeekProgress(
+                                      sourceType: widget.sourceType,
+                                      progress: v,
+                                      totalPages: widget.chapterTotalPages,
+                                    );
+                                    widget.onSeekFraction(seekValue);
+                                    _dragReleaseTimer?.cancel();
+                                    _dragReleaseTimer = Timer(
+                                      _dragReleaseTimeout,
+                                      () {
+                                        if (!mounted) return;
+                                        _dragReleaseTimer = null;
+                                        if (_dragValue != null) {
+                                          setState(() => _dragValue = null);
+                                        }
+                                      },
+                                    );
+                                    setState(() {
+                                      _isDragging = false;
+                                      _dragValue = seekValue;
+                                    });
+                                  },
                                 ),
-                                overlayShape: const RoundSliderOverlayShape(
-                                  overlayRadius: 14,
-                                ),
-                                trackShape: const RoundedRectSliderTrackShape(),
                               ),
-                              child: Slider(
-                                value: sliderValue,
-                                divisions: sliderDivisions,
-                                onChangeStart: (v) {
-                                  final seekValue = snappedReaderSeekProgress(
-                                    sourceType: widget.sourceType,
-                                    progress: v,
-                                    totalPages: widget.chapterTotalPages,
-                                  );
-                                  setState(() {
-                                    _isDragging = true;
-                                    _dragValue = seekValue;
-                                  });
-                                },
-                                onChanged: (v) {
-                                  final seekValue = snappedReaderSeekProgress(
-                                    sourceType: widget.sourceType,
-                                    progress: v,
-                                    totalPages: widget.chapterTotalPages,
-                                  );
-                                  setState(() => _dragValue = seekValue);
-                                },
-                                onChangeEnd: (v) {
-                                  final seekValue = snappedReaderSeekProgress(
-                                    sourceType: widget.sourceType,
-                                    progress: v,
-                                    totalPages: widget.chapterTotalPages,
-                                  );
-                                  widget.onSeekFraction(seekValue);
-                                  _dragReleaseTimer?.cancel();
-                                  _dragReleaseTimer = Timer(
-                                    _dragReleaseTimeout,
-                                    () {
-                                      if (!mounted) return;
-                                      _dragReleaseTimer = null;
-                                      if (_dragValue != null) {
-                                        setState(() => _dragValue = null);
-                                      }
-                                    },
-                                  );
-                                  setState(() {
-                                    _isDragging = false;
-                                    _dragValue = seekValue;
-                                  });
-                                },
+                            )
+                          else
+                            SizedBox(
+                              height: _progressSliderHeight,
+                              child: Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: _progressOverlayRadius,
+                                  ),
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    height: _progressTrackHeight,
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        color: widget.accentColor,
+                                        borderRadius: BorderRadius.circular(
+                                          _progressTrackHeight / 2,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                     ),

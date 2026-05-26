@@ -114,6 +114,41 @@ void main() {
       );
     });
 
+    test('hides progress slider for single-page page-only readers', () {
+      expect(
+        shouldShowReaderProgressSlider(
+          sourceType: SourceType.article,
+          format: BookFormat.epub,
+          totalPages: 1,
+        ),
+        isFalse,
+      );
+      expect(
+        shouldShowReaderProgressSlider(
+          sourceType: SourceType.book,
+          format: BookFormat.cbz,
+          totalPages: 1,
+        ),
+        isFalse,
+      );
+      expect(
+        shouldShowReaderProgressSlider(
+          sourceType: SourceType.article,
+          format: BookFormat.epub,
+          totalPages: 2,
+        ),
+        isTrue,
+      );
+      expect(
+        shouldShowReaderProgressSlider(
+          sourceType: SourceType.book,
+          format: BookFormat.epub,
+          totalPages: 1,
+        ),
+        isTrue,
+      );
+    });
+
     test('snaps seek progress only for articles', () {
       expect(
         snappedReaderSeekProgress(

@@ -55,6 +55,19 @@ int? readerSliderDivisions({
   return totalPages - 1;
 }
 
+bool shouldShowReaderProgressSlider({
+  required SourceType sourceType,
+  required BookFormat? format,
+  required int? totalPages,
+}) {
+  final isPageOnlyProgress =
+      sourceType == SourceType.article || format == BookFormat.cbz;
+  if (isPageOnlyProgress && totalPages != null && totalPages <= 1) {
+    return false;
+  }
+  return true;
+}
+
 double snappedReaderSeekProgress({
   required SourceType sourceType,
   required double progress,
