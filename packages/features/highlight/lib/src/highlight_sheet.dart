@@ -111,8 +111,8 @@ class _HighlightSheetView extends StatelessWidget {
                     onTap: () => context.read<HighlightCubit>().setColor(color),
                     behavior: HitTestBehavior.opaque,
                     child: SizedBox(
-                      width: 44,
-                      height: 44,
+                      width: AppSizes.buttonHeight,
+                      height: AppSizes.buttonHeight,
                       child: Center(
                         child: Container(
                           width: 32,

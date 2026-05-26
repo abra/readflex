@@ -11,7 +11,7 @@ const double _tabTrackPadding = 4;
 const double _tabContentHeight = 260;
 const double _themeCardHeight = 76;
 const double _textSizeButtonWidth = 64;
-const double _textSizeButtonHeight = 44;
+const double _textSizeButtonHeight = AppSizes.buttonHeight;
 const double _textScaleEpsilon = 0.001;
 const Duration _tabIndicatorDuration = Duration(milliseconds: 180);
 

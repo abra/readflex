@@ -1,9 +1,8 @@
 /// Standard component sizes for consistent sizing across the app.
 abstract final class AppSizes {
-  /// Minimum tap target for primary controls. 44dp matches Apple's
-  /// HIG floor and the Material 3 "comfortable" density — anything
-  /// smaller is hard to tap reliably.
-  static const double buttonHeight = 44;
+  /// Minimum tap target for primary controls. 48dp matches Material's
+  /// accessibility floor and gives thumb-first controls enough room.
+  static const double buttonHeight = 48;
   static const double inputHeight = 52;
   static const double appBarHeight = 52;
   static const double navBarHeight = 70;

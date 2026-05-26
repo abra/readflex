@@ -976,7 +976,7 @@ void main() {
     expect(taps, 1);
   });
 
-  testWidgets('SearchField clear button hit area is >= 44 wide', (
+  testWidgets('SearchField clear button hit area matches base button height', (
     tester,
   ) async {
     final controller = TextEditingController(text: 'query');
@@ -1000,8 +1000,8 @@ void main() {
     final hitArea = tester.getSize(
       find.ancestor(of: clearIcon, matching: find.byType(GestureDetector)),
     );
-    expect(hitArea.width, greaterThanOrEqualTo(44));
-    expect(hitArea.height, greaterThanOrEqualTo(44));
+    expect(hitArea.width, greaterThanOrEqualTo(AppSizes.buttonHeight));
+    expect(hitArea.height, greaterThanOrEqualTo(AppSizes.buttonHeight));
   });
 }
 

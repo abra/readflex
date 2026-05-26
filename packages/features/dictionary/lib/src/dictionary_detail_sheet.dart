@@ -356,7 +356,7 @@ class _ActionBar extends StatelessWidget {
         if (onPractice != null) ...[
           Expanded(
             child: SizedBox(
-              height: 44,
+              height: AppSizes.buttonHeight,
               child: FilledButton.icon(
                 onPressed: () {
                   Navigator.of(context).pop();
@@ -375,8 +375,8 @@ class _ActionBar extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
         ],
         SizedBox(
-          width: 44,
-          height: 44,
+          width: AppSizes.buttonHeight,
+          height: AppSizes.buttonHeight,
           child: Material(
             color: cs.error.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(AppRadius.md),

@@ -62,7 +62,7 @@ class _ThemeButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.md),
           onTap: onTap,
           child: SizedBox(
-            height: 44,
+            height: AppSizes.buttonHeight,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [

@@ -4,6 +4,7 @@ import 'app_icons.dart';
 import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_icon_size.dart';
 import 'theme/tokens/app_radius.dart';
+import 'theme/tokens/app_sizes.dart';
 import 'theme/tokens/app_spacing.dart';
 
 /// Styled search text field with prefix icon and optional clear button.
@@ -74,8 +75,8 @@ class SearchField extends StatelessWidget {
               )
             : null,
         suffixIconConstraints: const BoxConstraints(
-          minWidth: 44,
-          minHeight: 44,
+          minWidth: AppSizes.buttonHeight,
+          minHeight: AppSizes.buttonHeight,
         ),
         isDense: true,
         filled: true,
