@@ -19,6 +19,7 @@ class LibrarySource extends Equatable {
     this.sourceName,
     this.coverImagePath,
     this.readingProgress = 0.0,
+    this.estimatedWordCount = 0,
     this.lastOpenedAt,
     this.isFinished = false,
     this.isComic = false,
@@ -51,6 +52,7 @@ class LibrarySource extends Equatable {
     typeLabel: 'Article',
     addedAt: article.addedAt,
     readingProgress: article.readingProgress,
+    estimatedWordCount: article.estimatedWordCount,
     lastOpenedAt: article.lastOpenedAt,
     isFinished: article.isFinished,
     supportsReview: true,
@@ -64,6 +66,7 @@ class LibrarySource extends Equatable {
   final String? coverImagePath;
   final String typeLabel;
   final double readingProgress;
+  final int estimatedWordCount;
   final DateTime addedAt;
   final DateTime? lastOpenedAt;
   final bool isFinished;
@@ -82,6 +85,7 @@ class LibrarySource extends Equatable {
     coverImagePath,
     typeLabel,
     readingProgress,
+    estimatedWordCount,
     addedAt,
     lastOpenedAt,
     isFinished,

@@ -23,6 +23,7 @@ void main() {
       siteName: 'Example',
       contentPath: '/data/articles/a1/article.json',
       readingProgress: 0.4,
+      estimatedWordCount: 900,
       addedAt: DateTime(2026),
     );
 
@@ -33,6 +34,7 @@ void main() {
     expect(source.sourceName, 'Example');
     expect(source.typeLabel, 'Article');
     expect(source.readingProgress, 0.4);
+    expect(source.estimatedWordCount, 900);
     expect(source.supportsReview, isTrue);
   });
 }

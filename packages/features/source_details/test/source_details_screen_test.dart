@@ -25,6 +25,7 @@ final _article = Article(
   author: 'Article Author',
   siteName: 'Example',
   contentPath: '/articles/article-1/article.json',
+  estimatedWordCount: 1350,
   addedAt: DateTime(2026, 1, 1),
 );
 
@@ -160,6 +161,8 @@ void main() {
       expect(byline.style?.fontFamily, AppTypography.fontFamilySerif);
       expect(byline.style?.fontStyle, FontStyle.italic);
       expect(byline.style?.fontSize, 16);
+      expect(find.text('Time'), findsOneWidget);
+      expect(find.text('6 min'), findsOneWidget);
       expect(find.text('Saved'), findsOneWidget);
       expect(find.text('Jan 1'), findsOneWidget);
       expect(find.text('Read article'), findsOneWidget);

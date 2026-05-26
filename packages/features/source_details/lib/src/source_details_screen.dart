@@ -24,6 +24,7 @@ const _authorMaxLines = 2;
 const _authorFontSize = 16.0;
 const _authorLineHeight = 1.30;
 const _statMaxLines = 1;
+const _articleWordsPerMinute = 225;
 
 class SourceDetailsScreen extends StatelessWidget {
   const SourceDetailsScreen({
@@ -808,7 +809,9 @@ class _SourceStatData {
 
 List<_SourceStatData> _statsFor(LibrarySource source) {
   final stats = <_SourceStatData>[
-    if (source.sourceType != SourceType.article)
+    if (source.sourceType == SourceType.article)
+      _articleReadingTimeStat(source)
+    else
       _SourceStatData(
         label: 'Format',
         value: source.typeLabel,
@@ -834,6 +837,27 @@ List<_SourceStatData> _statsFor(LibrarySource source) {
   }
 
   return stats.take(4).toList(growable: false);
+}
+
+_SourceStatData _articleReadingTimeStat(LibrarySource source) {
+  final wordCount = source.estimatedWordCount;
+  if (wordCount <= 0) {
+    return const _SourceStatData(label: 'Time', value: '—');
+  }
+
+  final totalMinutes = math.max(
+    1,
+    (wordCount / _articleWordsPerMinute).ceil(),
+  );
+  if (source.readingProgress > 0 && !source.isFinished) {
+    final remainingMinutes = math.max(
+      1,
+      (totalMinutes * (1 - source.readingProgress)).ceil(),
+    );
+    return _SourceStatData(label: 'Left', value: '$remainingMinutes min');
+  }
+
+  return _SourceStatData(label: 'Time', value: '$totalMinutes min');
 }
 
 String _readButtonLabel(LibrarySource source) {
