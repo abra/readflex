@@ -266,6 +266,25 @@ void main() {
     });
   });
 
+  group('reader command script', () {
+    test('returns null and labels async command failures', () {
+      final script = buildReaderCommandScript(
+        label: 'prevPage',
+        expression: 'prevPage()',
+      );
+
+      expect(script, contains('const label = "prevPage";'));
+      expect(script, contains('const result = prevPage();'));
+      expect(script, contains("typeof result.then === 'function'"));
+      expect(script, contains('result.catch(reportError);'));
+      expect(
+        script,
+        contains("console.error('[readflex-eval:' + label + ']', message);"),
+      );
+      expect(script, contains('return null;'));
+    });
+  });
+
   group('console logging', () {
     test('keeps warning noise out of release logs', () {
       expect(

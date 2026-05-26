@@ -99,6 +99,33 @@ bool shouldLogReaderConsoleMessage({
   return level.toLowerCase().contains('error');
 }
 
+@visibleForTesting
+String buildReaderCommandScript({
+  required String label,
+  required String expression,
+}) {
+  final escapedLabel = jsonEncode(label);
+  return '''
+(() => {
+  const label = $escapedLabel;
+  const reportError = (error) => {
+    const message = error && error.stack ? error.stack : error;
+    console.error('[readflex-eval:' + label + ']', message);
+  };
+
+  try {
+    const result = $expression;
+    if (result && typeof result.then === 'function') {
+      result.catch(reportError);
+    }
+  } catch (error) {
+    reportError(error);
+  }
+  return null;
+})();
+''';
+}
+
 /// WebView-based book reader backed by foliate-js.
 ///
 /// Loads foliate-js `index.html` from the local server's `/assets/foliate-js/`
@@ -265,6 +292,26 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     }
   }
 
+  void _evaluateReaderCommand({
+    required String label,
+    required String expression,
+  }) {
+    final controller = _controller;
+    if (controller == null) return;
+    unawaited(
+      controller
+          .evaluateJavascript(
+            source: buildReaderCommandScript(
+              label: label,
+              expression: expression,
+            ),
+          )
+          .catchError((Object error) {
+            debugPrint('[reader-eval] $label failed: $error');
+          }),
+    );
+  }
+
   void _evalAddAnnotation(ReaderHighlight h) {
     if (h.cfiRange == null) return;
     final annotation = jsonEncode({
@@ -273,12 +320,18 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       'value': h.cfiRange,
       'color': h.color ?? '#FFE600',
     });
-    _controller?.evaluateJavascript(source: 'addAnnotation($annotation);');
+    _evaluateReaderCommand(
+      label: 'addAnnotation',
+      expression: 'addAnnotation($annotation)',
+    );
   }
 
   void _evalRemoveAnnotation(String cfiRange) {
     final escaped = jsonEncode(cfiRange);
-    _controller?.evaluateJavascript(source: 'removeAnnotation($escaped);');
+    _evaluateReaderCommand(
+      label: 'removeAnnotation',
+      expression: 'removeAnnotation($escaped)',
+    );
   }
 
   void _syncBookmarkAnnotations(
@@ -329,14 +382,18 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       'anchorSectionIndex': bookmark.anchorSectionIndex,
       'anchorSectionPage': bookmark.anchorSectionPage,
     });
-    _controller?.evaluateJavascript(source: 'addAnnotation($annotation);');
+    _evaluateReaderCommand(
+      label: 'addAnnotation',
+      expression: 'addAnnotation($annotation)',
+    );
   }
 
   void _evalRemoveBookmarkAnnotation(String cfiRange, {String? id}) {
     final escaped = jsonEncode(cfiRange);
     final escapedId = jsonEncode(id);
-    _controller?.evaluateJavascript(
-      source: 'removeAnnotation($escaped, false, $escapedId);',
+    _evaluateReaderCommand(
+      label: 'removeBookmarkAnnotation',
+      expression: 'removeAnnotation($escaped, false, $escapedId)',
     );
   }
 
@@ -563,16 +620,20 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   }
 
   void _refreshBookmarkState() {
-    _controller?.evaluateJavascript(
-      source:
-          "if (typeof window.refreshBookmarkState === 'function') window.refreshBookmarkState();",
+    _evaluateReaderCommand(
+      label: 'refreshBookmarkState',
+      expression:
+          "typeof window.refreshBookmarkState === 'function' ? window.refreshBookmarkState() : null",
     );
   }
 
   /// Navigate to a specific CFI position.
   void goToCfi(String cfi) {
     final escaped = jsonEncode(cfi);
-    _controller?.evaluateJavascript(source: 'goToCfi($escaped);');
+    _evaluateReaderCommand(
+      label: 'goToCfi',
+      expression: 'goToCfi($escaped)',
+    );
   }
 
   /// Navigate to a stored bookmark, preferring its visual page anchor when
@@ -590,13 +651,19 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       'anchorSectionIndex': anchorSectionIndex,
       'anchorSectionPage': anchorSectionPage,
     });
-    _controller?.evaluateJavascript(source: 'goToBookmark($payload);');
+    _evaluateReaderCommand(
+      label: 'goToBookmark',
+      expression: 'goToBookmark($payload)',
+    );
   }
 
   /// Navigate to a TOC/book href target.
   void goToHref(String href) {
     final escaped = jsonEncode(href);
-    _controller?.evaluateJavascript(source: 'goToHref($escaped);');
+    _evaluateReaderCommand(
+      label: 'goToHref',
+      expression: 'goToHref($escaped)',
+    );
   }
 
   /// Search the whole book and keep foliate-js search highlights active.
@@ -675,9 +742,10 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   /// Clear active search annotations inside foliate-js.
   void clearSearch() {
     _cancelActiveSearch();
-    _controller?.evaluateJavascript(
-      source:
-          "if (typeof window.clearSearch === 'function') window.clearSearch();",
+    _evaluateReaderCommand(
+      label: 'clearSearch',
+      expression:
+          "typeof window.clearSearch === 'function' ? window.clearSearch() : null",
     );
   }
 
@@ -705,9 +773,10 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     _cancelSearchWatchdog();
     _closeSearchEvents();
     if (requestId != null) {
-      _controller?.evaluateJavascript(
-        source:
-            "if (typeof window.cancelSearch === 'function') window.cancelSearch($requestId);",
+      _evaluateReaderCommand(
+        label: 'cancelSearch',
+        expression:
+            "typeof window.cancelSearch === 'function' ? window.cancelSearch($requestId) : null",
       );
     }
   }
@@ -723,9 +792,10 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     _searchWatchdogTimer?.cancel();
     _searchWatchdogTimer = Timer(_searchSilenceTimeout, () {
       if (_activeSearchRequestId != requestId) return;
-      _controller?.evaluateJavascript(
-        source:
-            "if (typeof window.cancelSearch === 'function') window.cancelSearch($requestId);",
+      _evaluateReaderCommand(
+        label: 'cancelSearchWatchdog',
+        expression:
+            "typeof window.cancelSearch === 'function' ? window.cancelSearch($requestId) : null",
       );
       _handleSearchEvent(
         ReaderSearchError(
@@ -746,31 +816,44 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   /// `window.goToPercent` does the actual chapter+offset resolution.
   void goToFraction(double fraction) {
     final clamped = fraction.clamp(0.0, 1.0);
-    _controller?.evaluateJavascript(source: 'goToPercent($clamped);');
+    _evaluateReaderCommand(
+      label: 'goToPercent',
+      expression: 'goToPercent($clamped)',
+    );
   }
 
   /// Go to the next page.
   void nextPage() {
-    _controller?.evaluateJavascript(source: 'nextPage();');
+    _evaluateReaderCommand(
+      label: 'nextPage',
+      expression: 'nextPage()',
+    );
   }
 
   /// Go to the previous page.
   void prevPage() {
-    _controller?.evaluateJavascript(source: 'prevPage();');
+    _evaluateReaderCommand(
+      label: 'prevPage',
+      expression: 'prevPage()',
+    );
   }
 
   /// Toggle a bookmark at the current visible page.
   void toggleBookmark() {
-    _controller?.evaluateJavascript(
-      source:
-          "if (typeof window.toggleBookmarkHere === 'function') window.toggleBookmarkHere();",
+    _evaluateReaderCommand(
+      label: 'toggleBookmarkHere',
+      expression:
+          "typeof window.toggleBookmarkHere === 'function' ? window.toggleBookmarkHere() : null",
     );
   }
 
   /// Update style from Flutter.
   void changeStyle(FoliateStyle style) {
     final json = jsonEncode(style.toMap());
-    _controller?.evaluateJavascript(source: 'changeStyle($json);');
+    _evaluateReaderCommand(
+      label: 'changeStyle',
+      expression: 'changeStyle($json)',
+    );
   }
 
   /// Add a highlight annotation.
@@ -782,16 +865,18 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       'value': highlight.cfiRange,
       'color': highlight.color ?? '#FFE600',
     });
-    _controller?.evaluateJavascript(
-      source: 'addAnnotation($annotation);',
+    _evaluateReaderCommand(
+      label: 'addAnnotation',
+      expression: 'addAnnotation($annotation)',
     );
   }
 
   /// Remove a highlight annotation by CFI.
   void removeAnnotation(String cfiRange) {
     final escaped = jsonEncode(cfiRange);
-    _controller?.evaluateJavascript(
-      source: 'removeAnnotation($escaped);',
+    _evaluateReaderCommand(
+      label: 'removeAnnotation',
+      expression: 'removeAnnotation($escaped)',
     );
   }
 }
