@@ -28,7 +28,7 @@ void main() {
       expect(prefs.readerLayoutId, 'standard');
       expect(prefs.readerTextScale, 1.0);
       expect(prefs.readerLineHeight, 1.55);
-      expect(prefs.readerSideMargin, 6.0);
+      expect(prefs.readerSideMargin, 8.0);
       expect(prefs.readerTextAlignment, ReaderTextAlignment.start);
       expect(prefs.readerInvertImagesInDark, isFalse);
       expect(prefs.readerOverrideFont, isTrue);
@@ -108,7 +108,7 @@ void main() {
       expect(map['readerFontId'], 'serif');
       expect(map['readerTextScale'], 1.0);
       expect(map['readerLineHeight'], 1.55);
-      expect(map['readerSideMargin'], 6.0);
+      expect(map['readerSideMargin'], 8.0);
     });
 
     test(
@@ -136,7 +136,7 @@ void main() {
 
         expect(prefs.themeMode, ThemeMode.dark);
         expect(prefs.readerLayoutId, 'standard');
-        expect(prefs.readerSideMargin, 6.0);
+        expect(prefs.readerSideMargin, 8.0);
         expect(prefs.readerTextAlignment, ReaderTextAlignment.start);
         expect(prefs.readerInvertImagesInDark, isFalse);
         expect(prefs.readerOverrideFont, isTrue);
@@ -303,6 +303,63 @@ void main() {
       },
     );
 
+    test(
+      'load() v7→v8 migration raises old default reader side margin',
+      () async {
+        final storage = PreferencesStorage();
+        await storage.setString(
+          _key,
+          jsonEncode(<String, Object?>{
+            '_schemaVersion': 7,
+            'readerSideMargin': 6.0,
+          }),
+        );
+
+        final repo = PreferencesRepository(storage);
+        final prefs = await repo.load(_supportedCodes);
+
+        expect(prefs.readerSideMargin, 8.0);
+      },
+    );
+
+    test(
+      'load() v7→v8 migration preserves customized reader side margin',
+      () async {
+        final storage = PreferencesStorage();
+        await storage.setString(
+          _key,
+          jsonEncode(<String, Object?>{
+            '_schemaVersion': 7,
+            'readerSideMargin': 10.0,
+          }),
+        );
+
+        final repo = PreferencesRepository(storage);
+        final prefs = await repo.load(_supportedCodes);
+
+        expect(prefs.readerSideMargin, 10.0);
+      },
+    );
+
+    test(
+      'load() preserves schema v8 reader side margin values',
+      () async {
+        final storage = PreferencesStorage();
+        await storage.setString(
+          _key,
+          jsonEncode(<String, Object?>{
+            '_schemaVersion': 8,
+            'readerSideMargin': 6.0,
+          }),
+        );
+
+        final repo = PreferencesRepository(storage);
+        final prefs = await repo.load(_supportedCodes);
+
+        expect(prefs.readerSideMargin, 6.0);
+      },
+    );
+
     test('save() writes _schemaVersion key alongside the data', () async {
       final storage = PreferencesStorage();
       final repo = PreferencesRepository(storage);
@@ -311,7 +368,7 @@ void main() {
       final raw = await storage.getString(_key);
       final map = jsonDecode(raw!) as Map<String, Object?>;
 
-      expect(map['_schemaVersion'], 7);
+      expect(map['_schemaVersion'], 8);
     });
 
     test(

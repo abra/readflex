@@ -10,7 +10,7 @@ const _baseRA = ReaderAppearancePreferences(
   layoutId: 'standard',
   textScale: 1.0,
   lineHeight: 1.55,
-  sideMargin: 6.0,
+  sideMargin: 8.0,
   textAlignment: ReaderTextAlignment.start,
   invertImagesInDark: false,
   overrideFont: true,
@@ -30,7 +30,7 @@ void main() {
       expect(prefs.readerLayoutId, 'standard');
       expect(prefs.readerTextScale, 1.0);
       expect(prefs.readerLineHeight, 1.55);
-      expect(prefs.readerSideMargin, 6.0);
+      expect(prefs.readerSideMargin, 8.0);
       expect(prefs.readerTextAlignment, ReaderTextAlignment.start);
       expect(prefs.readerInvertImagesInDark, isFalse);
       expect(prefs.readerOverrideFont, isTrue);
@@ -207,7 +207,7 @@ void main() {
         layoutId: 'standard',
         textScale: 1.0,
         lineHeight: 1.55,
-        sideMargin: 6.0,
+        sideMargin: 8.0,
         textAlignment: ReaderTextAlignment.start,
         invertImagesInDark: false,
         overrideFont: true,
@@ -228,7 +228,7 @@ void main() {
         _baseRA,
         isNot(equals(_baseRA.copyWith(invertImagesInDark: true))),
       );
-      expect(_baseRA, isNot(equals(_baseRA.copyWith(sideMargin: 8))));
+      expect(_baseRA, isNot(equals(_baseRA.copyWith(sideMargin: 10))));
       expect(
         _baseRA,
         isNot(

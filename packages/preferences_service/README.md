@@ -33,7 +33,7 @@ This is **not** where auth tokens live — those go through `auth_service` /
 | `readerLayoutId`           | `String`    | `'standard'`|
 | `readerTextScale`          | `double`    | `1.0`       |
 | `readerLineHeight`         | `double`    | `1.55`      |
-| `readerSideMargin`         | `double`    | `6.0`       |
+| `readerSideMargin`         | `double`    | `8.0`       |
 | `readerTextAlignment`      | `ReaderTextAlignment` | `start` |
 | `readerInvertImagesInDark` | `bool`      | `false`     |
 | `readerOverrideFont`       | `bool`      | `true`      |

@@ -439,7 +439,7 @@ void main() {
       expect(map['accentColor'], '#000000');
       expect(map['topMargin'], 90);
       expect(map['bottomMargin'], 50);
-      expect(map['sideMargin'], 6);
+      expect(map['sideMargin'], 8);
       expect(map['justify'], true);
       expect(map['hyphenate'], false);
       expect(map['textAlign'], '');

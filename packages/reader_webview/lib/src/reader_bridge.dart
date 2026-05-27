@@ -437,7 +437,7 @@ class FoliateStyle {
     this.accentColor = '#000000',
     this.topMargin = 90,
     this.bottomMargin = 50,
-    this.sideMargin = 6,
+    this.sideMargin = 8,
     this.justify = true,
     this.hyphenate = false,
     this.textAlign = '',

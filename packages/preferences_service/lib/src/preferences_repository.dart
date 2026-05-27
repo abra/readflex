@@ -32,7 +32,8 @@ class PreferencesRepository {
   ///   5: add readerBrightnessOverride for temporary reader brightness.
   ///   6: add readerTextAlignment for left/justified book text.
   ///   7: move reader brightness into per-source reader appearance overrides.
-  static const _currentSchemaVersion = 7;
+  ///   8: raise the default reader side margin from 6% to 8%.
+  static const _currentSchemaVersion = 8;
 
   final PreferencesStorage _storage;
 
@@ -52,6 +53,12 @@ class PreferencesRepository {
       final readerTextScale = storedVersion < 4
           ? 1.0
           : (map['readerTextScale'] as num?)?.toDouble() ?? 1.0;
+      final readerSideMarginRaw = (map['readerSideMargin'] as num?)?.toDouble();
+      final readerSideMargin =
+          storedVersion < 8 &&
+              (readerSideMarginRaw == null || readerSideMarginRaw == 6.0)
+          ? 8.0
+          : readerSideMarginRaw ?? 8.0;
       return Preferences(
         themeMode: ThemeMode.values.byName(
           map['themeMode'] as String? ?? 'system',
@@ -63,7 +70,7 @@ class PreferencesRepository {
         readerLayoutId: map['readerLayoutId'] as String? ?? 'standard',
         readerTextScale: readerTextScale,
         readerLineHeight: (map['readerLineHeight'] as num?)?.toDouble() ?? 1.55,
-        readerSideMargin: (map['readerSideMargin'] as num?)?.toDouble() ?? 6.0,
+        readerSideMargin: readerSideMargin,
         readerTextAlignment: _readReaderTextAlignment(
           map['readerTextAlignment'],
         ),

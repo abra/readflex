@@ -30,7 +30,7 @@ void main() {
         expect(cubit.state.hasOverride, isFalse);
         expect(cubit.state.effectiveAppearance.fontId, 'serif');
         expect(cubit.state.effectiveAppearance.themeId, 'paper');
-        expect(cubit.state.effectiveAppearance.sideMargin, 6);
+        expect(cubit.state.effectiveAppearance.sideMargin, 8);
         expect(
           cubit.state.effectiveAppearance.textAlignment,
           ReaderTextAlignment.start,
