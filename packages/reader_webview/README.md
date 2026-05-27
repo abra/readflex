@@ -32,6 +32,17 @@ Shared selection/click handlers are registered by
 `registerSharedReaderHandlers` so the widget body stays focused on
 position + annotation glue.
 
+## Reader document normalization
+
+Loaded iframe documents are treated as untrusted, publisher-controlled HTML.
+`readflex_document_normalizer.js` applies small runtime fixes after foliate-js
+loads a section: language/direction metadata is normalized, wide tables are
+wrapped in a scroll container, inline images
+with text siblings are marked so prose CSS does not treat them as image-only
+paragraphs, and code-like blocks get a stable class for reader styling. The
+normalizer mutates only the live WebView document; it does not rewrite the
+user's original EPUB files or saved article files on disk.
+
 ## Dependencies
 
 - `domain_models` — shared reader style and enum types

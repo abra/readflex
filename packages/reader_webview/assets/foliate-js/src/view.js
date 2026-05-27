@@ -3,6 +3,7 @@ import { TOCProgress, SectionProgress } from './progress.js'
 import { Overlayer } from './overlayer.js'
 import { textWalker } from './text-walker.js'
 import { Translator, TranslationMode } from './translator.js'
+import { languageInfo, normalizeDocumentLanguageAndDirection } from './readflex_document_normalizer.js'
 const { TTS } = await import('./tts.js')
 
 const SEARCH_PREFIX = 'foliate-search:'
@@ -51,78 +52,6 @@ class History extends EventTarget {
     this.#arr = []
     this.#index = -1
   }
-}
-
-const languageInfo = lang => {
-  if (!lang) return {}
-  try {
-    const canonical = Intl.getCanonicalLocales(lang)[0] ?? 'en'
-    const locale = new Intl.Locale(canonical)
-    const isCJK = ['zh', 'ja', 'kr'].includes(locale.language)
-    const direction = (locale.getTextInfo?.() ?? locale.textInfo)?.direction
-    return { canonical, locale, isCJK, direction }
-  } catch (e) {
-    console.warn(e)
-    return {}
-  }
-}
-
-const rtlSampleRegex = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/g
-const ltrSampleRegex = /[A-Za-z\u00C0-\u024F\u1E00-\u1EFF]/g
-
-const inferDocumentDirection = doc => {
-  const sample = (doc.body?.textContent ?? '')
-    .replace(/\s+/g, ' ')
-    .slice(0, 5000)
-  if (!sample) return ''
-
-  const rtlCount = sample.match(rtlSampleRegex)?.length ?? 0
-  const ltrCount = sample.match(ltrSampleRegex)?.length ?? 0
-  return rtlCount > ltrCount ? 'rtl' : ''
-}
-
-const isReadflexArticle = () => globalThis.readflexSourceType === 'article'
-
-const applyArticleTextDirection = (doc, direction) => {
-  if (!direction) return
-
-  doc.documentElement.dir = 'ltr'
-  doc.documentElement.dataset.readflexTextDirection = direction
-  if (doc.body) doc.body.dir = 'ltr'
-
-  const selector = [
-    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-    'p', 'li', 'blockquote', 'dd', 'dt', 'figcaption', 'caption',
-    'section', 'article', 'main', 'div:not(.readflex-wide-table)',
-    'th', 'td',
-  ].join(',')
-  const nodes = Array.from(doc.body?.querySelectorAll(selector) ?? [])
-  if (nodes.length === 0 && doc.body) nodes.push(doc.body)
-  for (const node of nodes) {
-    node.style.setProperty('direction', direction, 'important')
-    node.style.setProperty('unicode-bidi', 'plaintext')
-    node.style.setProperty(
-      'text-align',
-      'var(--readflex-rtl-article-text-align, right)',
-      'important'
-    )
-  }
-
-  if (doc.getElementById('readflex-article-text-direction')) return
-
-  const style = doc.createElement('style')
-  style.id = 'readflex-article-text-direction'
-  style.textContent = [
-    'body > h1, body > h2, body > h3, body > h4, body > h5, body > h6,',
-    'body > p, body > ul, body > ol, body > blockquote,',
-    'body > section, body > article, body > main,',
-    'body > div:not(.readflex-wide-table), li, dd, dt, figcaption, th, td {',
-    '  direction: ' + direction + ' !important;',
-    '  unicode-bidi: plaintext;',
-    '  text-align: var(--readflex-rtl-article-text-align, right) !important;',
-    '}',
-  ].join('\n')
-  doc.head?.append(style)
 }
 
 export class View extends HTMLElement {
@@ -267,17 +196,10 @@ export class View extends HTMLElement {
   }
 
   #onLoad({ doc, index }) {
-    // set language and dir if not already set
-    doc.documentElement.lang ||= this.language.canonical ?? ''
-    if (!this.language.isCJK) {
-      const direction = this.language.direction || inferDocumentDirection(doc)
-      if (direction === 'rtl' && isReadflexArticle()) {
-        applyArticleTextDirection(doc, direction)
-      } else {
-        doc.documentElement.dir ||= direction
-        if (doc.body) doc.body.dir ||= direction
-      }
-    }
+    normalizeDocumentLanguageAndDirection(doc, {
+      language: this.language,
+      sourceType: globalThis.readflexSourceType,
+    })
 
     this.#handleLinks(doc, index)
     this.#handleClick(doc)

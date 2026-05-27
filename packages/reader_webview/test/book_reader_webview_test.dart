@@ -85,6 +85,7 @@ void main() {
       expect(bookJs, contains('window.goToBookmark'));
       expect(bookJs, contains('window.toggleBookmarkHere'));
       expect(bookJs, contains('globalThis.readflexSourceType = sourceType'));
+      expect(bookJs, contains('normalizeLoadedDocument(doc)'));
       expect(bookJs, contains("callFlutter('onSearch'"));
       expect(bookJs, contains("callFlutter('handleBookmark'"));
     });
@@ -257,6 +258,33 @@ void main() {
       );
     });
 
+    test('extracts and uses the document normalizer asset', () {
+      final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
+      final normalizerJs = File(
+        'assets/foliate-js/src/readflex_document_normalizer.js',
+      ).readAsStringSync();
+      final assetExtractor = File(
+        'lib/src/asset_extractor.dart',
+      ).readAsStringSync();
+
+      expect(
+        bookJs,
+        contains(
+          "import { normalizeLoadedDocument } from './readflex_document_normalizer.js'",
+        ),
+      );
+      expect(bookJs, contains('normalizeLoadedDocument(doc)'));
+      expect(
+        normalizerJs,
+        contains('export const normalizeLoadedDocument = doc =>'),
+      );
+      expect(normalizerJs, contains('markInlineImages(doc)'));
+      expect(normalizerJs, contains('wrapWideTables(doc)'));
+      expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
+      expect(assetExtractor, contains('readflex_document_normalizer.js'));
+      expect(assetExtractor, contains("reader_webview_assets_22"));
+    });
+
     test('does not dump full reader style changes to console', () {
       final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
 
@@ -315,30 +343,39 @@ void main() {
 
     test('infers RTL direction when article language metadata is missing', () {
       final viewJs = File('assets/foliate-js/src/view.js').readAsStringSync();
+      final normalizerJs = File(
+        'assets/foliate-js/src/readflex_document_normalizer.js',
+      ).readAsStringSync();
 
-      expect(viewJs, contains('const rtlSampleRegex'));
-      expect(viewJs, contains('const inferDocumentDirection = doc =>'));
-      expect(viewJs, contains("rtlCount > ltrCount ? 'rtl' : ''"));
       expect(
         viewJs,
         contains(
-          'const direction = this.language.direction || inferDocumentDirection(doc)',
+          "import { languageInfo, normalizeDocumentLanguageAndDirection } from './readflex_document_normalizer.js'",
         ),
       );
-      expect(viewJs, contains('isReadflexArticle()'));
-      expect(viewJs, contains('applyArticleTextDirection(doc, direction)'));
+      expect(viewJs, contains('normalizeDocumentLanguageAndDirection(doc, {'));
+      expect(viewJs, contains('sourceType: globalThis.readflexSourceType'));
+      expect(normalizerJs, contains('const rtlSampleRegex'));
       expect(
-        viewJs,
+        normalizerJs,
+        contains('export const inferDocumentDirection = doc =>'),
+      );
+      expect(normalizerJs, contains("rtlCount > ltrCount ? 'rtl' : ''"));
+      expect(normalizerJs, contains('export const applyArticleTextDirection'));
+      expect(
+        normalizerJs,
         contains(
           'text-align: var(--readflex-rtl-article-text-align, right)',
         ),
       );
-      expect(viewJs, contains("node.style.setProperty('direction'"));
-      expect(viewJs, contains("node.style.setProperty(\n      'text-align'"));
-      expect(viewJs, contains("doc.documentElement.dir = 'ltr'"));
-      expect(viewJs, contains("if (doc.body) doc.body.dir = 'ltr'"));
-      expect(viewJs, contains('doc.documentElement.dir ||= direction'));
-      expect(viewJs, contains('if (doc.body) doc.body.dir ||= direction'));
+      expect(normalizerJs, contains("node.style.setProperty('direction'"));
+      expect(normalizerJs, contains("doc.documentElement.dir = 'ltr'"));
+      expect(normalizerJs, contains("if (doc.body) doc.body.dir = 'ltr'"));
+      expect(normalizerJs, contains('doc.documentElement.dir ||= direction'));
+      expect(
+        normalizerJs,
+        contains('if (doc.body) doc.body.dir ||= direction'),
+      );
     });
   });
 

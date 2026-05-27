@@ -9,6 +9,7 @@ import {
   registerGesture as readflexRegisterGesture,
 } from './readflex_gestures.js'
 import { applyTextContrastGuard } from './readflex_contrast_guard.js'
+import { normalizeLoadedDocument } from './readflex_document_normalizer.js'
 const { configure, ZipReader, BlobReader, TextWriter, BlobWriter } =
   await import('./vendor/zip.js')
 const { EPUB } = await import('./epub.js')
@@ -76,66 +77,6 @@ const getSelectionRange = (selection) => {
 };
 
 const unwrapCFI = cfi => cfi?.match(/^epubcfi\((.+)\)$/)?.[1] ?? cfi
-
-const wrapWideTables = doc => {
-  for (const table of doc.querySelectorAll('table')) {
-    if (table.closest('.readflex-wide-table')) continue
-    const wrapper = doc.createElement('div')
-    wrapper.className = 'readflex-wide-table'
-    table.before(wrapper)
-    wrapper.append(table)
-  }
-}
-
-const CODE_BLOCK_CLASS_PATTERN =
-  /(?:^|[-_\s])(?:programcode|paratypeprogramcode|programlisting|screen|sourcecode|source|codeblock|listing|literal|literallayout|verbatim|console|terminal|cmd|shell|highlight|hljs)(?:$|[-_\s])/i
-const CODE_CLASS_FRAGMENT_PATTERN =
-  /(?:program|source|sample|example|syntax|highlight)?code(?:block|listing|sample|example|snippet|source|area|container|fragment|line|text)?/i
-const NON_CODE_CLASS_FRAGMENT_PATTERN =
-  /(?:decode|encode|unicode|barcode|postcode|zipcode|classificationcode)/i
-const MONOSPACE_FONT_PATTERN =
-  /\b(?:mono|menlo|monaco|consolas|courier|source code|jetbrains|fira code|cascadia|ui-monospace)\b/i
-const CODE_TEXT_PATTERN =
-  /[{};<>]|(?:^|\s)(?:import|package|public|private|protected|class|interface|return|throw|new|if|else|for|while|try|catch|@Bean|@Configuration)\b/
-const CODE_BLOCK_MIN_TEXT_LENGTH = 80
-
-const hasCodeLikeClass = element => {
-  const classAndId = `${element.className || ''} ${element.id || ''}`
-  if (CODE_BLOCK_CLASS_PATTERN.test(classAndId)) return true
-
-  return classAndId
-    .split(/\s+/)
-    .filter(Boolean)
-    .some(token =>
-      CODE_CLASS_FRAGMENT_PATTERN.test(token)
-      && !NON_CODE_CLASS_FRAGMENT_PATTERN.test(token)
-    )
-}
-
-const normalizeCodeLikeBlocks = doc => {
-  const win = doc.defaultView
-  if (!win) return
-
-  const candidates = doc.querySelectorAll('div, p, section, article, li')
-  for (const element of candidates) {
-    if (element.closest('pre, .readflex-code-block')) continue
-
-    const text = element.textContent?.trim() ?? ''
-    if (text.length < CODE_BLOCK_MIN_TEXT_LENGTH) continue
-
-    const style = win.getComputedStyle(element)
-    const isBlockish = /block|flow-root|list-item|table/.test(style.display)
-    if (!isBlockish) continue
-
-    const hasCodeClass = hasCodeLikeClass(element)
-    const hasMonospaceFont = MONOSPACE_FONT_PATTERN.test(style.fontFamily)
-    const preservesWhitespace = /pre|nowrap/.test(style.whiteSpace)
-
-    if (hasCodeClass || (hasMonospaceFont && (preservesWhitespace || CODE_TEXT_PATTERN.test(text)))) {
-      element.classList.add('readflex-code-block')
-    }
-  }
-}
 
 const CONTEXT_WINDOW_CHARS = 120;
 const MAX_CONTEXT_CHARS = 600;
@@ -1668,8 +1609,7 @@ class Reader {
     // them regardless of which renderer (paginator / fixed-layout) loaded
     // the iframe.
     readflexAttachGestures(doc)
-    wrapWideTables(doc)
-    normalizeCodeLikeBlocks(doc)
+    normalizeLoadedDocument(doc)
 
     // if (!this.#originalContent) {
     // console.log('Saving original content', doc);
