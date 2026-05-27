@@ -130,4 +130,46 @@ void main() {
     expect(find.text('Article'), findsWidgets);
     expect(find.text('Example'), findsWidgets);
   });
+
+  testWidgets('RTL list row aligns source info to the right edge', (
+    tester,
+  ) async {
+    final rtlArticle = Article(
+      id: 'a-rtl',
+      title: 'مقال عربي',
+      url: 'https://example.com/ar',
+      siteName: 'الجزيرة',
+      language: 'ar',
+      contentPath: '/articles/a-rtl/article.json',
+      addedAt: DateTime(2026),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: SizedBox(
+            width: 320,
+            child: BookLibraryListTile(
+              source: LibrarySource.fromArticle(rtlArticle),
+              showTopDivider: false,
+              onTap: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final title = tester.widget<Text>(find.text(rtlArticle.title));
+    final metaRow = tester.widget<Row>(
+      find.byKey(const ValueKey('catalogListRowMeta')),
+    );
+    final rowRect = tester.getRect(find.byType(GestureDetector));
+    final titleRect = tester.getRect(find.text(rtlArticle.title));
+
+    expect(title.textDirection, TextDirection.rtl);
+    expect(title.textAlign, TextAlign.start);
+    expect(metaRow.textDirection, TextDirection.rtl);
+    expect(titleRect.right, closeTo(rowRect.right - AppSpacing.xs, 1));
+  });
 }

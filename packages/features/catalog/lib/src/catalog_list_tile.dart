@@ -73,6 +73,7 @@ class BookLibraryListTile extends StatelessWidget {
       ),
       title: source.title,
       subtitle: subtitle,
+      textDirection: coverTextDirection,
       showTopDivider: showTopDivider,
       isSelected: isSelected,
       onTap: onTap,
@@ -147,6 +148,7 @@ class _ListRowShell extends StatelessWidget {
     required this.cover,
     required this.title,
     required this.subtitle,
+    required this.textDirection,
     required this.metaBuilder,
     required this.showTopDivider,
     required this.onTap,
@@ -157,6 +159,7 @@ class _ListRowShell extends StatelessWidget {
   final Widget cover;
   final String title;
   final String? subtitle;
+  final TextDirection textDirection;
   final List<Widget> Function(BuildContext context, Color mutedColor)
   metaBuilder;
   final bool showTopDivider;
@@ -172,6 +175,7 @@ class _ListRowShell extends StatelessWidget {
 
     final metaSegments = metaBuilder(context, mutedColor);
     final hasSubtitle = subtitle != null && subtitle!.isNotEmpty;
+    final isRtl = textDirection == TextDirection.rtl;
 
     return GestureDetector(
       onTap: onTap,
@@ -228,11 +232,15 @@ class _ListRowShell extends StatelessWidget {
                 const SizedBox(width: _kCoverToTextGap),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: isRtl
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         title,
+                        textAlign: TextAlign.start,
+                        textDirection: textDirection,
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         style: context.text.sourceListTitle.copyWith(
@@ -242,22 +250,29 @@ class _ListRowShell extends StatelessWidget {
                       // Demo uses 6dp title-to-meta gap (between xs=4 and
                       // sm=8). Composed from xs + xxs to stay token-based.
                       const SizedBox(height: AppSpacing.xs + AppSpacing.xxs),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (hasSubtitle) ...[
-                            Flexible(
-                              child: Text(
-                                subtitle!,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: _metaStyle(context, mutedColor),
+                      Directionality(
+                        textDirection: textDirection,
+                        child: Row(
+                          key: const ValueKey('catalogListRowMeta'),
+                          textDirection: textDirection,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (hasSubtitle) ...[
+                              Flexible(
+                                child: Text(
+                                  subtitle!,
+                                  textAlign: TextAlign.start,
+                                  textDirection: textDirection,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: _metaStyle(context, mutedColor),
+                                ),
                               ),
-                            ),
-                            _MetaDot(mutedColor: mutedColor),
+                              _MetaDot(mutedColor: mutedColor),
+                            ],
+                            ...metaSegments,
                           ],
-                          ...metaSegments,
-                        ],
+                        ),
                       ),
                     ],
                   ),

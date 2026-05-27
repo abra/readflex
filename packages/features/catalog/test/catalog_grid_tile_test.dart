@@ -158,10 +158,18 @@ void main() {
 
     final cover = tester.widget<AppSourceCover>(find.byType(AppSourceCover));
     final title = tester.widget<Text>(find.text(rtlArticle.title));
+    final source = tester.widget<Text>(find.text('الجزيرة'));
+    final coverRect = tester.getRect(find.byType(AppSourceCoverFrame));
+    final titleRect = tester.getRect(find.text(rtlArticle.title));
+    final sourceRect = tester.getRect(find.text('الجزيرة'));
 
     expect(cover.textDirection, TextDirection.rtl);
     expect(title.textDirection, TextDirection.rtl);
     expect(title.textAlign, TextAlign.start);
+    expect(source.textDirection, TextDirection.rtl);
+    expect(source.textAlign, TextAlign.start);
+    expect(titleRect.right, closeTo(coverRect.right - 12, 1));
+    expect(sourceRect.right, closeTo(coverRect.right - 12, 1));
   });
 
   testWidgets('grid fallback cover reserves space for progress overlay', (

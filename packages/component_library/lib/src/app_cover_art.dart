@@ -447,9 +447,7 @@ class _CoverTextColumn extends StatelessWidget {
     final textColumn = Directionality(
       textDirection: textDirection,
       child: Column(
-        crossAxisAlignment: isRtl
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
