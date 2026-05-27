@@ -199,6 +199,31 @@ class BookPosition {
   }
 }
 
+/// Flattens a raw foliate-js TOC tree into drawer-ready items.
+List<ReaderTocItem> readerTocItemsFromBridge(Object? value) {
+  final rawItems = readerBridgeList(value) ?? const [];
+  final items = <ReaderTocItem>[];
+
+  void collect(Object? raw, int parentLevel) {
+    final data = readerBridgeMap(raw);
+    if (data == null) return;
+
+    final level = _int(data['level']) ?? parentLevel + 1;
+    items.add(ReaderTocItem.fromMap({...data, 'level': level}));
+
+    final subitems = readerBridgeList(data['subitems']);
+    if (subitems == null) return;
+    for (final subitem in subitems) {
+      collect(subitem, level);
+    }
+  }
+
+  for (final rawItem in rawItems) {
+    collect(rawItem, 0);
+  }
+  return items;
+}
+
 /// Table-of-contents item emitted by foliate-js.
 ///
 /// [href] is the navigation target accepted by `goToHref(...)`; [level]

@@ -18,6 +18,16 @@ class EpubImage {
   final String mimeType;
 }
 
+class EpubTocEntry {
+  const EpubTocEntry({
+    required this.title,
+    required this.href,
+  });
+
+  final String title;
+  final String href;
+}
+
 /// Builds a minimal single-chapter EPUB for cleaned web articles.
 class EpubBuilder {
   const EpubBuilder();
@@ -31,6 +41,7 @@ class EpubBuilder {
     String? lang,
     ArticleTextDirection? textDirection,
     List<EpubImage> images = const [],
+    List<EpubTocEntry> tocEntries = const [],
   }) async {
     final resolvedLang = normalizeArticleLanguage(lang) ?? 'en';
     final resolvedDirection =
@@ -51,7 +62,12 @@ class EpubBuilder {
           ),
         ),
       )
-      ..addFile(_textFile('OEBPS/toc.xhtml', _toc(title, resolvedDirection)))
+      ..addFile(
+        _textFile(
+          'OEBPS/toc.xhtml',
+          _toc(title, resolvedDirection, tocEntries),
+        ),
+      )
       ..addFile(
         _textFile(
           'OEBPS/chapter1.xhtml',
@@ -165,17 +181,27 @@ class EpubBuilder {
         '</package>\n';
   }
 
-  String _toc(String title, ArticleTextDirection? textDirection) {
+  String _toc(
+    String title,
+    ArticleTextDirection? textDirection,
+    List<EpubTocEntry> entries,
+  ) {
     final dirAttr = _dirAttr(textDirection);
+    final sections = entries.isEmpty
+        ? ''
+        : '<ol>${entries.map(_tocEntry).join()}</ol>';
     return '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<!DOCTYPE html>\n'
         '<html xmlns="http://www.w3.org/1999/xhtml" '
         'xmlns:epub="http://www.idpf.org/2007/ops">\n'
         '<head><title>Table of Contents</title></head>\n'
         '<body$dirAttr><nav epub:type="toc"><ol>'
-        '<li><a href="chapter1.xhtml">${_xmlText(title)}</a></li>'
+        '<li><a href="chapter1.xhtml">${_xmlText(title)}</a>$sections</li>'
         '</ol></nav></body></html>\n';
   }
+
+  String _tocEntry(EpubTocEntry entry) =>
+      '<li><a href="${_xmlAttr(entry.href)}">${_xmlText(entry.title)}</a></li>';
 
   String _chapter({
     required String title,

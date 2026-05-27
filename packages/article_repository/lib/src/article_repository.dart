@@ -75,11 +75,11 @@ class ArticleRepository {
       await contentFile.writeAsString(extracted.rawJson, flush: true);
 
       final baseUri = _articleBaseUri(extracted);
-      final html = _htmlForBlocks(
+      final articleHtml = _htmlForBlocks(
         _withoutDuplicateTitleHeading(extracted.blocks, extracted.title),
       );
       final htmlWithLocalImages = await _downloadArticleImages(
-        html: html,
+        html: articleHtml.html,
         articleDir: articleDir,
         baseUri: baseUri,
       );
@@ -109,6 +109,7 @@ class ArticleRepository {
         textDirection: textDirection,
         htmlBody: htmlWithLocalImages.html,
         images: htmlWithLocalImages.images,
+        tocEntries: articleHtml.tocEntries,
         outputFile: File(p.join(articleDir.path, 'article.epub')),
       );
 
@@ -297,20 +298,36 @@ class _DownloadedArticleImages {
   final List<EpubImage> images;
 }
 
+class _ArticleHtml {
+  const _ArticleHtml({required this.html, required this.tocEntries});
+
+  final String html;
+  final List<EpubTocEntry> tocEntries;
+}
+
 final _imgSrcRegex = RegExp(
   r'''<img[^>]+src=["']([^"']+)["']''',
   caseSensitive: false,
 );
 
-String _htmlForBlocks(List<ArticleBlock> blocks) {
+_ArticleHtml _htmlForBlocks(List<ArticleBlock> blocks) {
   final buffer = StringBuffer();
+  final tocEntries = <EpubTocEntry>[];
   for (final block in blocks) {
     switch (block) {
       case ArticleParagraphBlock(:final text):
         if (text.trim().isNotEmpty) buffer.writeln('<p>${_text(text)}</p>');
       case ArticleHeadingBlock(:final level, :final text):
-        if (text.trim().isNotEmpty) {
-          buffer.writeln('<h$level>${_text(text)}</h$level>');
+        final title = text.trim();
+        if (title.isNotEmpty) {
+          final id = 'section-${tocEntries.length + 1}';
+          final safeLevel = _safeHeadingLevel(level);
+          tocEntries.add(
+            EpubTocEntry(title: title, href: 'chapter1.xhtml#$id'),
+          );
+          buffer.writeln(
+            '<h$safeLevel id="${_attr(id)}">${_text(title)}</h$safeLevel>',
+          );
         }
       case ArticleImageBlock(:final src, :final alt, :final title):
         if (src.trim().isNotEmpty) {
@@ -354,8 +371,13 @@ String _htmlForBlocks(List<ArticleBlock> blocks) {
         }
     }
   }
-  return buffer.toString();
+  return _ArticleHtml(
+    html: buffer.toString(),
+    tocEntries: List.unmodifiable(tocEntries),
+  );
 }
+
+int _safeHeadingLevel(int level) => level.clamp(1, 6).toInt();
 
 List<ArticleBlock> _withoutDuplicateTitleHeading(
   List<ArticleBlock> blocks,

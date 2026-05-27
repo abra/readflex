@@ -671,13 +671,7 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       handlerName: 'onSetToc',
       callback: (args) {
         if (args.isEmpty) return;
-        final rawItems = readerBridgeList(args.first) ?? const [];
-        final items = [
-          for (final raw in rawItems)
-            if (readerBridgeMap(raw) case final data?)
-              ReaderTocItem.fromMap(data),
-        ];
-        widget.onTocChanged?.call(items);
+        widget.onTocChanged?.call(readerTocItemsFromBridge(args.first));
       },
     );
 

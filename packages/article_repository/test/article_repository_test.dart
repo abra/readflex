@@ -62,6 +62,57 @@ void main() {
     expect(chapter, contains('<p>Hello world</p>'));
   });
 
+  test(
+    'addExtractedArticle maps headings into epub table of contents',
+    () async {
+      final article = await repository.addExtractedArticle(
+        _extractedArticle(
+          blocks: const [
+            ArticleHeadingBlock(level: 1, text: 'Saved article'),
+            ArticleParagraphBlock(text: 'Intro'),
+            ArticleHeadingBlock(level: 2, text: 'First section'),
+            ArticleParagraphBlock(text: 'Body'),
+            ArticleHeadingBlock(level: 3, text: 'Second & final'),
+          ],
+        ),
+      );
+
+      final contentHtml = File(
+        p.join(p.dirname(article.contentPath), 'content.html'),
+      ).readAsStringSync();
+      expect(contentHtml, contains('<h2 id="section-1">First section</h2>'));
+      expect(
+        contentHtml,
+        contains('<h3 id="section-2">Second &amp; final</h3>'),
+      );
+
+      final archive = ZipDecoder().decodeBytes(
+        File(article.epubPath).readAsBytesSync(),
+      );
+      final chapter = _archiveText(archive, 'OEBPS/chapter1.xhtml');
+      final toc = _archiveText(archive, 'OEBPS/toc.xhtml');
+
+      expect(chapter, contains('<h2 id="section-1">First section</h2>'));
+      expect(chapter, contains('<h3 id="section-2">Second &amp; final</h3>'));
+      expect(
+        toc,
+        contains('<li><a href="chapter1.xhtml">Saved article</a><ol>'),
+      );
+      expect(
+        toc,
+        contains(
+          '<li><a href="chapter1.xhtml#section-1">First section</a></li>',
+        ),
+      );
+      expect(
+        toc,
+        contains(
+          '<li><a href="chapter1.xhtml#section-2">Second &amp; final</a></li>',
+        ),
+      );
+    },
+  );
+
   test('addExtractedArticle writes RTL metadata into reader epub', () async {
     final article = await repository.addExtractedArticle(
       _extractedArticle(

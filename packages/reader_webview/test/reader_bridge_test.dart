@@ -187,6 +187,46 @@ void main() {
   });
 
   group('ReaderTocItem', () {
+    test('readerTocItemsFromBridge flattens nested foliate toc items', () {
+      final items = readerTocItemsFromBridge([
+        {
+          'label': 'Part One',
+          'href': 'part.xhtml',
+          'subitems': [
+            {
+              'label': 'Chapter One',
+              'href': 'part.xhtml#chapter-one',
+              'subitems': [
+                {
+                  'label': 'Scene',
+                  'href': 'part.xhtml#scene',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          'label': 'Appendix',
+          'href': 'appendix.xhtml',
+          'level': 1,
+        },
+      ]);
+
+      expect(items.map((item) => item.label), [
+        'Part One',
+        'Chapter One',
+        'Scene',
+        'Appendix',
+      ]);
+      expect(items.map((item) => item.href), [
+        'part.xhtml',
+        'part.xhtml#chapter-one',
+        'part.xhtml#scene',
+        'appendix.xhtml',
+      ]);
+      expect(items.map((item) => item.level), [1, 2, 3, 1]);
+    });
+
     test('fromMap parses foliate toc item', () {
       final item = ReaderTocItem.fromMap({
         'label': 'Chapter 7',
