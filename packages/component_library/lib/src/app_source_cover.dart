@@ -26,6 +26,7 @@ class AppSourceCover extends StatelessWidget {
     this.fit = BoxFit.fill,
     this.articleBadgeAlignment = Alignment.topLeft,
     this.showArticleBadge = true,
+    this.textDirection,
     this.textScale = 1,
     super.key,
   });
@@ -48,6 +49,7 @@ class AppSourceCover extends StatelessWidget {
   final BoxFit fit;
   final Alignment articleBadgeAlignment;
   final bool showArticleBadge;
+  final TextDirection? textDirection;
   final double textScale;
 
   @override
@@ -70,6 +72,7 @@ class AppSourceCover extends StatelessWidget {
           bottomReserve: bottomReserve,
           articleBadgeAlignment: articleBadgeAlignment,
           showArticleBadge: showArticleBadge,
+          textDirection: textDirection,
           textScale: textScale,
           height: constraints.maxHeight,
           width: constraints.maxWidth,

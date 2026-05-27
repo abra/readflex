@@ -223,6 +223,28 @@ void main() {
       expect(sourceLabel.textAlign, TextAlign.start);
     });
 
+    testWidgets('passes RTL direction to fallback book cover text', (
+      tester,
+    ) async {
+      final rtlBook = _newSource.copyWith(
+        title: 'الأزمة الاقتصادية تتصدر الاهتمامات',
+        author: 'كاتب الخبر',
+      );
+      repository.source = rtlBook;
+
+      await tester.pumpSourceDetails(
+        repository: repository,
+        highlightRepository: highlightRepository,
+        flashcardRepository: flashcardRepository,
+        dictionaryRepository: dictionaryRepository,
+        initialSource: LibrarySource.fromBook(rtlBook),
+      );
+
+      final cover = tester.widget<AppSourceCover>(find.byType(AppSourceCover));
+
+      expect(cover.textDirection, TextDirection.rtl);
+    });
+
     testWidgets('hides review section for comics', (tester) async {
       final comicSource = _newSource.copyWith(
         title: 'Sample Comic',

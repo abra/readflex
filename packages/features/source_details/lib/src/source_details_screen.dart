@@ -289,14 +289,7 @@ class _SourceKindLabel extends StatelessWidget {
 }
 
 TextDirection _sourceTextDirection(LibrarySource source) {
-  final fromLanguage = articleTextDirectionForLanguage(source.language);
-  final fromText =
-      fromLanguage ??
-      inferArticleTextDirectionFromText(
-        [source.title, source.author, source.sourceName].nonNulls.join(' '),
-      );
-
-  return switch (fromText) {
+  return switch (source.inferredTextDirection) {
     ArticleTextDirection.rtl => TextDirection.rtl,
     ArticleTextDirection.ltr || null => TextDirection.ltr,
   };
@@ -386,6 +379,7 @@ class _HeroSection extends StatelessWidget {
             cover: _SourceCover(
               source: source,
               coverImage: coverImage,
+              textDirection: heroTextDirection,
             ),
           ),
         ),
@@ -571,10 +565,12 @@ class _SourceCover extends StatelessWidget {
   const _SourceCover({
     required this.source,
     required this.coverImage,
+    required this.textDirection,
   });
 
   final LibrarySource source;
   final ImageProvider? coverImage;
+  final TextDirection textDirection;
 
   @override
   Widget build(BuildContext context) {
@@ -593,6 +589,7 @@ class _SourceCover extends StatelessWidget {
                 seed: source.id,
                 isArticle: true,
                 coverImage: coverImage,
+                textDirection: textDirection,
                 showAuthor: false,
                 showTitle: false,
                 showProgress: false,
@@ -616,6 +613,7 @@ class _SourceCover extends StatelessWidget {
       source: source.sourceName,
       seed: source.id,
       coverImage: coverImage,
+      textDirection: textDirection,
       showProgress: false,
       showMatte: false,
       topAlignText: true,

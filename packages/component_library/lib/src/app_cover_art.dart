@@ -44,6 +44,7 @@ class AppCoverArt extends StatelessWidget {
     this.showMatte = true,
     this.articleBadgeAlignment = Alignment.topLeft,
     this.showArticleBadge = true,
+    this.textDirection,
     this.textScale = 1,
     super.key,
   });
@@ -125,6 +126,9 @@ class AppCoverArt extends StatelessWidget {
   /// Whether to draw the built-in article corner icon.
   final bool showArticleBadge;
 
+  /// Direction used for fallback cover title/meta text.
+  final TextDirection? textDirection;
+
   /// Multiplier for fallback cover typography. Keep at `1` for dense
   /// library tiles; larger standalone covers can opt into more legible text.
   final double textScale;
@@ -138,6 +142,8 @@ class AppCoverArt extends StatelessWidget {
     // not "clean up" these magic values; they were tuned together and
     // the visual falls apart quickly if you round them.
     final contentPadding = (height * 0.075).clamp(6.0, 12.0).toDouble();
+    final effectiveTextDirection =
+        textDirection ?? Directionality.maybeOf(context) ?? TextDirection.ltr;
     final effectiveTextScale = textScale.clamp(0.75, 1.6).toDouble();
     final titleFontSize =
         (height * 0.06875).clamp(6.0, 11.0).toDouble() * effectiveTextScale;
@@ -235,6 +241,7 @@ class AppCoverArt extends StatelessWidget {
               textColor: textColor,
               metaColor: metaColor,
               sourceColor: sourceColor,
+              textDirection: effectiveTextDirection,
               showExtendedMeta: showExtendedMeta,
             ),
           if (isArticle && showArticleBadge && showExtendedMeta)
@@ -410,6 +417,7 @@ class _CoverTextColumn extends StatelessWidget {
     required this.textColor,
     required this.metaColor,
     required this.sourceColor,
+    required this.textDirection,
     required this.showExtendedMeta,
   });
 
@@ -430,58 +438,71 @@ class _CoverTextColumn extends StatelessWidget {
   final Color textColor;
   final Color metaColor;
   final Color sourceColor;
+  final TextDirection textDirection;
   final bool showExtendedMeta;
 
   @override
   Widget build(BuildContext context) {
-    final textColumn = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          title,
-          maxLines: titleMaxLines,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            inherit: false,
-            fontSize: titleFontSize,
-            fontWeight: FontWeight.w600,
-            color: textColor,
-            height: 1.2,
-            decoration: TextDecoration.none,
-          ),
-        ),
-        if (showAuthor && author != null && showExtendedMeta) ...[
-          const SizedBox(height: 4),
+    final isRtl = textDirection == TextDirection.rtl;
+    final textColumn = Directionality(
+      textDirection: textDirection,
+      child: Column(
+        crossAxisAlignment: isRtl
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
           Text(
-            author!.toUpperCase(),
-            maxLines: 1,
+            title,
+            textAlign: TextAlign.start,
+            textDirection: textDirection,
+            maxLines: titleMaxLines,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               inherit: false,
-              fontSize: authorFontSize,
-              color: metaColor,
-              letterSpacing: 1,
+              fontSize: titleFontSize,
+              fontWeight: FontWeight.w600,
+              color: textColor,
+              height: 1.2,
               decoration: TextDecoration.none,
             ),
           ),
-        ],
-        if (isArticle && source != null && showExtendedMeta) ...[
-          const SizedBox(height: 8),
-          Text(
-            source!.toUpperCase(),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              inherit: false,
-              fontSize: sourceFontSize,
-              color: sourceColor,
-              letterSpacing: 1,
-              decoration: TextDecoration.none,
+          if (showAuthor && author != null && showExtendedMeta) ...[
+            const SizedBox(height: 4),
+            Text(
+              author!.toUpperCase(),
+              textAlign: TextAlign.start,
+              textDirection: textDirection,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                inherit: false,
+                fontSize: authorFontSize,
+                color: metaColor,
+                letterSpacing: 1,
+                decoration: TextDecoration.none,
+              ),
             ),
-          ),
+          ],
+          if (isArticle && source != null && showExtendedMeta) ...[
+            const SizedBox(height: 8),
+            Text(
+              source!.toUpperCase(),
+              textAlign: TextAlign.start,
+              textDirection: textDirection,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                inherit: false,
+                fontSize: sourceFontSize,
+                color: sourceColor,
+                letterSpacing: 1,
+                decoration: TextDecoration.none,
+              ),
+            ),
+          ],
         ],
-      ],
+      ),
     );
 
     if (topAlignText) {
@@ -497,7 +518,7 @@ class _CoverTextColumn extends StatelessWidget {
         top: topInset,
         bottom: bottomReserve,
         child: Align(
-          alignment: Alignment.topLeft,
+          alignment: isRtl ? Alignment.topRight : Alignment.topLeft,
           child: textColumn,
         ),
       );

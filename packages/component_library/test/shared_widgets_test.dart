@@ -181,6 +181,42 @@ void main() {
     expect(find.text('ARTICLE AUTHOR'), findsNothing);
   });
 
+  testWidgets('AppCoverArt applies RTL direction to fallback cover text', (
+    tester,
+  ) async {
+    const title = 'الأزمة الاقتصادية تتصدر الاهتمامات';
+    const source = 'الجزيرة';
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 120,
+            height: 180,
+            child: AppCoverArt(
+              title: title,
+              source: source,
+              seed: 'article-rtl',
+              isArticle: true,
+              centerText: true,
+              textDirection: TextDirection.rtl,
+              height: 180,
+              width: 120,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final titleText = tester.widget<Text>(find.text(title));
+    final sourceText = tester.widget<Text>(find.text(source));
+
+    expect(titleText.textDirection, TextDirection.rtl);
+    expect(titleText.textAlign, TextAlign.start);
+    expect(sourceText.textDirection, TextDirection.rtl);
+    expect(sourceText.textAlign, TextAlign.start);
+  });
+
   testWidgets('AppCoverArt text does not inherit Hero overlay fallback style', (
     tester,
   ) async {

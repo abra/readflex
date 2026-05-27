@@ -38,6 +38,7 @@ class BookLibraryListTile extends StatelessWidget {
     final coverImage = appSourceCoverImageFromPath(source.coverImagePath);
     final isArticle = source.sourceType == SourceType.article;
     final subtitle = _subtitleFor(source);
+    final coverTextDirection = _sourceTextDirection(source);
     final articleIconColor = Colors.white.withValues(alpha: _kArticleIconAlpha);
     final sourceCover = AppSourceCover(
       title: source.title,
@@ -46,6 +47,7 @@ class BookLibraryListTile extends StatelessWidget {
       seed: source.id,
       isArticle: isArticle,
       coverImage: coverImage,
+      textDirection: coverTextDirection,
       progress: source.readingProgress > 0 ? source.readingProgress : null,
       showAuthor: false,
       showTitle: false,
@@ -133,6 +135,13 @@ class BookLibraryListTile extends StatelessWidget {
 /// Layout: up-to-3-line title on top, single combined meta strip
 /// underneath (subtitle prepended in front of the type-specific
 /// segments). Top hairline drawn for all rows except the first.
+TextDirection _sourceTextDirection(LibrarySource source) {
+  return switch (source.inferredTextDirection) {
+    ArticleTextDirection.rtl => TextDirection.rtl,
+    ArticleTextDirection.ltr || null => TextDirection.ltr,
+  };
+}
+
 class _ListRowShell extends StatelessWidget {
   const _ListRowShell({
     required this.cover,

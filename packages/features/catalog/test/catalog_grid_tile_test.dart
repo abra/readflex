@@ -125,6 +125,45 @@ void main() {
     expect(find.byType(AppSourceCoverFrame), findsOneWidget);
   });
 
+  testWidgets('article grid fallback cover uses RTL text direction', (
+    tester,
+  ) async {
+    final rtlArticle = Article(
+      id: 'a-rtl',
+      title: 'الأزمة الاقتصادية تتصدر الاهتمامات',
+      url: 'https://example.com/ar',
+      siteName: 'الجزيرة',
+      language: 'ar',
+      contentPath: '/articles/a-rtl/article.json',
+      addedAt: DateTime(2026),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 120,
+              height: 180,
+              child: BookLibraryGridTile(
+                source: LibrarySource.fromArticle(rtlArticle),
+                onTap: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final cover = tester.widget<AppSourceCover>(find.byType(AppSourceCover));
+    final title = tester.widget<Text>(find.text(rtlArticle.title));
+
+    expect(cover.textDirection, TextDirection.rtl);
+    expect(title.textDirection, TextDirection.rtl);
+    expect(title.textAlign, TextAlign.start);
+  });
+
   testWidgets('grid fallback cover reserves space for progress overlay', (
     tester,
   ) async {

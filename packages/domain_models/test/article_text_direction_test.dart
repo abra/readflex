@@ -32,5 +32,32 @@ void main() {
         ArticleTextDirection.ltr,
       );
     });
+
+    test('library source infers direction from language or title text', () {
+      final article = Article(
+        id: 'article-rtl',
+        title: 'Neutral title',
+        url: 'https://example.com/ar',
+        language: 'ar',
+        contentPath: '/articles/article-rtl/article.json',
+        addedAt: DateTime(2026),
+      );
+      final book = Book(
+        id: 'book-rtl',
+        title: 'الأزمة الاقتصادية تتصدر الاهتمامات',
+        filePath: '/books/book.epub',
+        format: BookFormat.epub,
+        addedAt: DateTime(2026),
+      );
+
+      expect(
+        LibrarySource.fromArticle(article).inferredTextDirection,
+        ArticleTextDirection.rtl,
+      );
+      expect(
+        LibrarySource.fromBook(book).inferredTextDirection,
+        ArticleTextDirection.rtl,
+      );
+    });
   });
 }

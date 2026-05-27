@@ -33,6 +33,7 @@ class BookLibraryGridTile extends StatelessWidget {
     final isArticle = source.sourceType == SourceType.article;
     final showsProgressOverlay =
         source.readingProgress > 0 && !source.isFinished;
+    final coverTextDirection = _sourceTextDirection(source);
 
     return _GridTileShell(
       sourceId: source.id,
@@ -43,6 +44,7 @@ class BookLibraryGridTile extends StatelessWidget {
         seed: source.id,
         isArticle: isArticle,
         coverImage: coverImage,
+        textDirection: coverTextDirection,
         progress: source.readingProgress > 0 ? source.readingProgress : null,
         // Show the title on the fallback cover art so any format
         // that doesn't ship an embedded cover (a CBZ without a
@@ -74,6 +76,13 @@ class BookLibraryGridTile extends StatelessWidget {
       onLongPress: onLongPress,
     );
   }
+}
+
+TextDirection _sourceTextDirection(LibrarySource source) {
+  return switch (source.inferredTextDirection) {
+    ArticleTextDirection.rtl => TextDirection.rtl,
+    ArticleTextDirection.ltr || null => TextDirection.ltr,
+  };
 }
 
 /// Layout scaffold for the grid-mode tile. Owns the geometry —

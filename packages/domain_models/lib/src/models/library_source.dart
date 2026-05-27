@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart' show Equatable;
 
 import 'article.dart';
+import 'article_text_direction.dart';
 import 'book.dart';
 import 'book_format.dart';
 import 'source_type.dart';
@@ -77,6 +78,13 @@ class LibrarySource extends Equatable {
   final bool supportsReview;
 
   bool get isNew => lastOpenedAt == null && readingProgress == 0;
+
+  ArticleTextDirection? get inferredTextDirection {
+    return articleTextDirectionForLanguage(language) ??
+        inferArticleTextDirectionFromText(
+          [title, author, sourceName].nonNulls.join(' '),
+        );
+  }
 
   @override
   List<Object?> get props => [
