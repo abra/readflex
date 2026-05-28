@@ -361,6 +361,37 @@ void main() {
       );
 
       blocTest<ReaderBloc, ReaderState>(
+        'emits page progression direction even when position is unchanged',
+        setUp: () => bookRepository.seedBook(
+          testBook.copyWith(currentCfi: 'epubcfi(/6/4)', readingProgress: 0.1),
+        ),
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          title: testBook.title,
+          book: testBook.copyWith(
+            currentCfi: 'epubcfi(/6/4)',
+            readingProgress: 0.1,
+          ),
+          pageProgressionRtl: false,
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/4)',
+            progress: 0.1,
+            pageProgressionRtl: true,
+          ),
+        ),
+        expect: () => [
+          isA<ReaderState>().having(
+            (s) => s.pageProgressionRtl,
+            'pageProgressionRtl',
+            true,
+          ),
+        ],
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
         'surfaces current page bookmark state',
         setUp: () => bookRepository.seedBook(testBook),
         build: buildBloc,

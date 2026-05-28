@@ -977,6 +977,22 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     );
   }
 
+  /// Turn toward the physical left side of the page.
+  void pageLeft() {
+    _evaluateReaderCommand(
+      label: 'pageLeft',
+      expression: 'pageLeft()',
+    );
+  }
+
+  /// Turn toward the physical right side of the page.
+  void pageRight() {
+    _evaluateReaderCommand(
+      label: 'pageRight',
+      expression: 'pageRight()',
+    );
+  }
+
   /// Toggle a bookmark at the current visible page.
   void toggleBookmark() {
     _evaluateReaderCommand(

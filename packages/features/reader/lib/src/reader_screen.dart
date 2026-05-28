@@ -20,8 +20,10 @@ import 'reader_bookmark_filter.dart';
 import 'reader_bloc.dart';
 import 'reader_brightness_cubit.dart';
 import 'reader_chrome_actions.dart';
+import 'reader_chrome_progress_layout.dart';
 import 'reader_color_utils.dart';
 import 'reader_device_font_scale.dart';
+import 'reader_directional_layout.dart';
 import 'reader_loading_indicator_style.dart';
 import 'reader_progress_label.dart';
 import 'reader_review_reminder_cubit.dart';
@@ -792,6 +794,9 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     final uiState = context.select<ReaderUiCubit, ReaderUiState>(
       (c) => c.state,
     );
+    final pageProgressionRtl = context.select<ReaderBloc, bool>(
+      (b) => b.state.pageProgressionRtl,
+    );
     // Reader theme drives the book *page* — WebView background and
     // foliate-js customCSS. Chrome (passed-through Stack siblings)
     // pulls colours from the app theme themselves; they don't take
@@ -841,12 +846,14 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
             const _ReviewReminderDriver(),
             _ReaderTocDrawerDriver(
               visible: uiState.tocDrawerVisible,
+              pageProgressionRtl: pageProgressionRtl,
               onClose: _closeTocDrawer,
               onItemSelected: _goToTocItem,
               onBookmarkSelected: _goToBookmark,
             ),
             _ReaderSearchDrawer(
               visible: uiState.searchDrawerVisible,
+              pageProgressionRtl: pageProgressionRtl,
               onClose: _closeSearchDrawer,
               onSearch: _searchBook,
               onClearSearch: _clearDrawerSearch,
@@ -1558,6 +1565,55 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
     }
   }
 
+  List<Widget> _buildProgressHeaderChildren({
+    required TextStyle titleStyle,
+    required TextStyle numberStyle,
+    required String displayedText,
+  }) {
+    final chapterTitle = Expanded(
+      child: Directionality(
+        textDirection: readerChromeChapterTitleDirection(
+          pageProgressionRtl: widget.pageProgressionRtl,
+        ),
+        child: Text(
+          widget.chapterTitle ?? '',
+          textAlign: readerChromeChapterTitleAlign(
+            pageProgressionRtl: widget.pageProgressionRtl,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: titleStyle,
+        ),
+      ),
+    );
+    final pageIndicator = Directionality(
+      textDirection: TextDirection.ltr,
+      child: Text(
+        displayedText,
+        textAlign: TextAlign.right,
+        style: numberStyle,
+      ),
+    );
+    final children = <Widget>[];
+    final slots = readerChromeProgressSlots(
+      pageProgressionRtl: widget.pageProgressionRtl,
+    );
+
+    for (final slot in slots) {
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(width: AppSpacing.sm));
+      }
+      switch (slot) {
+        case ReaderChromeProgressSlot.chapterTitle:
+          children.add(chapterTitle);
+        case ReaderChromeProgressSlot.pageIndicator:
+          children.add(pageIndicator);
+      }
+    }
+
+    return children;
+  }
+
   @override
   Widget build(BuildContext context) {
     final chromeAnimCurve = widget.visible
@@ -1639,27 +1695,14 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                               horizontal: AppSpacing.sm,
                             ),
                             child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    widget.chapterTitle ?? '',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: context.text.readerChromeLabel
-                                        .copyWith(
-                                          color: mutedText,
-                                        ),
-                                  ),
-                                ),
-                                const SizedBox(width: AppSpacing.sm),
-                                Text(
-                                  displayedText,
-                                  style: context.text.readerChromeNumber
-                                      .copyWith(
-                                        color: mutedText,
-                                      ),
-                                ),
-                              ],
+                              textDirection: TextDirection.ltr,
+                              children: _buildProgressHeaderChildren(
+                                titleStyle: context.text.readerChromeLabel
+                                    .copyWith(color: mutedText),
+                                numberStyle: context.text.readerChromeNumber
+                                    .copyWith(color: mutedText),
+                                displayedText: displayedText,
+                              ),
                             ),
                           ),
                           if (showProgressSlider)
@@ -1859,12 +1902,14 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
 class _ReaderTocDrawerDriver extends StatelessWidget {
   const _ReaderTocDrawerDriver({
     required this.visible,
+    required this.pageProgressionRtl,
     required this.onClose,
     required this.onItemSelected,
     required this.onBookmarkSelected,
   });
 
   final bool visible;
+  final bool pageProgressionRtl;
   final VoidCallback onClose;
   final ValueChanged<ReaderTocItem> onItemSelected;
   final ValueChanged<SourceBookmark> onBookmarkSelected;
@@ -1881,6 +1926,7 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
 
     return _ReaderTocDrawer(
       visible: visible,
+      pageProgressionRtl: pageProgressionRtl,
       tocItems: tocItems,
       bookmarks: bookmarks,
       panelColor: colors.surface,
@@ -1895,6 +1941,7 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
 class _ReaderTocDrawer extends StatelessWidget {
   const _ReaderTocDrawer({
     required this.visible,
+    required this.pageProgressionRtl,
     required this.tocItems,
     required this.bookmarks,
     required this.panelColor,
@@ -1905,6 +1952,7 @@ class _ReaderTocDrawer extends StatelessWidget {
   });
 
   final bool visible;
+  final bool pageProgressionRtl;
   final List<ReaderTocItem> tocItems;
   final List<SourceBookmark> bookmarks;
   final Color panelColor;
@@ -1928,6 +1976,7 @@ class _ReaderTocDrawer extends StatelessWidget {
             child: SafeArea(
               bottom: false,
               child: _ReaderTocDrawerContent(
+                pageProgressionRtl: pageProgressionRtl,
                 tocItems: tocItems,
                 bookmarks: bookmarks,
                 onClose: onClose,
@@ -1944,6 +1993,7 @@ class _ReaderTocDrawer extends StatelessWidget {
 
 class _ReaderTocDrawerContent extends StatefulWidget {
   const _ReaderTocDrawerContent({
+    required this.pageProgressionRtl,
     required this.tocItems,
     required this.bookmarks,
     required this.onClose,
@@ -1951,6 +2001,7 @@ class _ReaderTocDrawerContent extends StatefulWidget {
     required this.onBookmarkSelected,
   });
 
+  final bool pageProgressionRtl;
   final List<ReaderTocItem> tocItems;
   final List<SourceBookmark> bookmarks;
   final VoidCallback onClose;
@@ -2025,6 +2076,7 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
               children: [
                 _ReaderTocTab(
                   controller: _chaptersSearchController,
+                  pageProgressionRtl: widget.pageProgressionRtl,
                   query: _chaptersQuery,
                   hintText: 'Search chapters',
                   items: widget.tocItems,
@@ -2035,6 +2087,7 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
                 ),
                 _ReaderBookmarksTab(
                   controller: _bookmarksSearchController,
+                  pageProgressionRtl: widget.pageProgressionRtl,
                   query: _bookmarksQuery,
                   bookmarks: widget.bookmarks,
                   onQueryChanged: (value) {
@@ -2054,6 +2107,7 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
 class _ReaderTocTab extends StatelessWidget {
   const _ReaderTocTab({
     required this.controller,
+    required this.pageProgressionRtl,
     required this.query,
     required this.hintText,
     required this.items,
@@ -2062,6 +2116,7 @@ class _ReaderTocTab extends StatelessWidget {
   });
 
   final TextEditingController controller;
+  final bool pageProgressionRtl;
   final String query;
   final String hintText;
   final List<ReaderTocItem> items;
@@ -2105,6 +2160,7 @@ class _ReaderTocTab extends StatelessWidget {
                         final item = filteredItems[index];
                         return _ReaderTocListTile(
                           item: item,
+                          pageProgressionRtl: pageProgressionRtl,
                           onTap: () => onItemSelected(item),
                         );
                       },
@@ -2120,28 +2176,37 @@ class _ReaderTocTab extends StatelessWidget {
 class _ReaderTocListTile extends StatelessWidget {
   const _ReaderTocListTile({
     required this.item,
+    required this.pageProgressionRtl,
     required this.onTap,
   });
 
   final ReaderTocItem item;
+  final bool pageProgressionRtl;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final leftInset =
+    final levelInset =
         AppSpacing.md + (item.level - 1).clamp(0, 4) * AppSpacing.md;
 
     return ListTile(
-      contentPadding: EdgeInsets.only(
-        left: leftInset.toDouble(),
-        right: AppSpacing.md,
+      contentPadding: readerDirectionalContentPadding(
+        pageProgressionRtl: pageProgressionRtl,
+        start: levelInset.toDouble(),
+        end: AppSpacing.md,
         top: AppSpacing.xxs,
         bottom: AppSpacing.xxs,
       ),
       minVerticalPadding: AppSpacing.xs,
       title: Text(
         item.label.isEmpty ? 'Untitled chapter' : item.label,
+        textAlign: readerDirectionalTextAlign(
+          pageProgressionRtl: pageProgressionRtl,
+        ),
+        textDirection: readerDirectionalTextDirection(
+          pageProgressionRtl: pageProgressionRtl,
+        ),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: context.text.bodyMedium.copyWith(color: colors.onSurface),
@@ -2154,6 +2219,7 @@ class _ReaderTocListTile extends StatelessWidget {
 class _ReaderBookmarksTab extends StatelessWidget {
   const _ReaderBookmarksTab({
     required this.controller,
+    required this.pageProgressionRtl,
     required this.query,
     required this.bookmarks,
     required this.onQueryChanged,
@@ -2161,6 +2227,7 @@ class _ReaderBookmarksTab extends StatelessWidget {
   });
 
   final TextEditingController controller;
+  final bool pageProgressionRtl;
   final String query;
   final List<SourceBookmark> bookmarks;
   final ValueChanged<String> onQueryChanged;
@@ -2197,6 +2264,7 @@ class _ReaderBookmarksTab extends StatelessWidget {
                         final bookmark = filteredBookmarks[index];
                         return _ReaderBookmarkListTile(
                           bookmark: bookmark,
+                          pageProgressionRtl: pageProgressionRtl,
                           onTap: () => onBookmarkSelected(bookmark),
                         );
                       },
@@ -2212,10 +2280,12 @@ class _ReaderBookmarksTab extends StatelessWidget {
 class _ReaderBookmarkListTile extends StatelessWidget {
   const _ReaderBookmarkListTile({
     required this.bookmark,
+    required this.pageProgressionRtl,
     required this.onTap,
   });
 
   final SourceBookmark bookmark;
+  final bool pageProgressionRtl;
   final VoidCallback onTap;
 
   @override
@@ -2238,6 +2308,12 @@ class _ReaderBookmarkListTile extends StatelessWidget {
       ),
       title: Text(
         content.isEmpty ? 'Bookmarked page' : content,
+        textAlign: readerDirectionalTextAlign(
+          pageProgressionRtl: pageProgressionRtl,
+        ),
+        textDirection: readerDirectionalTextDirection(
+          pageProgressionRtl: pageProgressionRtl,
+        ),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: context.text.bodyMedium.copyWith(color: colors.onSurface),
@@ -2249,6 +2325,12 @@ class _ReaderBookmarkListTile extends StatelessWidget {
             if (chapterTitle != null && chapterTitle.isNotEmpty) chapterTitle,
             '$percentage%',
           ].join(' · '),
+          textAlign: readerDirectionalTextAlign(
+            pageProgressionRtl: pageProgressionRtl,
+          ),
+          textDirection: readerDirectionalTextDirection(
+            pageProgressionRtl: pageProgressionRtl,
+          ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: context.text.bodySmall.copyWith(
@@ -2264,6 +2346,7 @@ class _ReaderBookmarkListTile extends StatelessWidget {
 class _ReaderSearchDrawer extends StatelessWidget {
   const _ReaderSearchDrawer({
     required this.visible,
+    required this.pageProgressionRtl,
     required this.onClose,
     required this.onSearch,
     required this.onClearSearch,
@@ -2271,6 +2354,7 @@ class _ReaderSearchDrawer extends StatelessWidget {
   });
 
   final bool visible;
+  final bool pageProgressionRtl;
   final VoidCallback onClose;
   final Stream<ReaderSearchEvent> Function(String query) onSearch;
   final VoidCallback onClearSearch;
@@ -2294,6 +2378,7 @@ class _ReaderSearchDrawer extends StatelessWidget {
               bottom: false,
               child: _ReaderSearchDrawerContent(
                 visible: visible,
+                pageProgressionRtl: pageProgressionRtl,
                 onClose: onClose,
                 onSearch: onSearch,
                 onClearSearch: onClearSearch,
@@ -2310,6 +2395,7 @@ class _ReaderSearchDrawer extends StatelessWidget {
 class _ReaderSearchDrawerContent extends StatefulWidget {
   const _ReaderSearchDrawerContent({
     required this.visible,
+    required this.pageProgressionRtl,
     required this.onClose,
     required this.onSearch,
     required this.onClearSearch,
@@ -2317,6 +2403,7 @@ class _ReaderSearchDrawerContent extends StatefulWidget {
   });
 
   final bool visible;
+  final bool pageProgressionRtl;
   final VoidCallback onClose;
   final Stream<ReaderSearchEvent> Function(String query) onSearch;
   final VoidCallback onClearSearch;
@@ -2444,6 +2531,7 @@ class _ReaderSearchDrawerContentState
                       ? query.isEmpty && state.recentQueries.isNotEmpty
                             ? _ReaderRecentSearchesList(
                                 queries: state.recentQueries,
+                                pageProgressionRtl: widget.pageProgressionRtl,
                                 bottomPadding: listBottomPadding,
                                 onQuerySelected: _selectRecentQuery,
                                 onQueryRemoved: _removeRecentQuery,
@@ -2465,6 +2553,7 @@ class _ReaderSearchDrawerContentState
                               final result = state.results[index];
                               return _ReaderSearchResultTile(
                                 result: result,
+                                pageProgressionRtl: widget.pageProgressionRtl,
                                 onTap: () => widget.onResultSelected(result),
                               );
                             },
@@ -2483,12 +2572,14 @@ class _ReaderSearchDrawerContentState
 class _ReaderRecentSearchesList extends StatelessWidget {
   const _ReaderRecentSearchesList({
     required this.queries,
+    required this.pageProgressionRtl,
     required this.bottomPadding,
     required this.onQuerySelected,
     required this.onQueryRemoved,
   });
 
   final List<String> queries;
+  final bool pageProgressionRtl;
   final double bottomPadding;
   final ValueChanged<String> onQuerySelected;
   final ValueChanged<String> onQueryRemoved;
@@ -2533,6 +2624,12 @@ class _ReaderRecentSearchesList extends StatelessWidget {
             ),
             title: Text(
               query,
+              textAlign: readerDirectionalTextAlign(
+                pageProgressionRtl: pageProgressionRtl,
+              ),
+              textDirection: readerDirectionalTextDirection(
+                pageProgressionRtl: pageProgressionRtl,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: context.text.bodyMedium.copyWith(
@@ -2556,10 +2653,12 @@ class _ReaderRecentSearchesList extends StatelessWidget {
 class _ReaderSearchResultTile extends StatelessWidget {
   const _ReaderSearchResultTile({
     required this.result,
+    required this.pageProgressionRtl,
     required this.onTap,
   });
 
   final ReaderSearchResult result;
+  final bool pageProgressionRtl;
   final VoidCallback onTap;
 
   @override
@@ -2577,6 +2676,12 @@ class _ReaderSearchResultTile extends StatelessWidget {
         chapterTitle == null || chapterTitle.isEmpty
             ? 'Search result'
             : chapterTitle,
+        textAlign: readerDirectionalTextAlign(
+          pageProgressionRtl: pageProgressionRtl,
+        ),
+        textDirection: readerDirectionalTextDirection(
+          pageProgressionRtl: pageProgressionRtl,
+        ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: context.text.bodySmall.copyWith(
@@ -2586,6 +2691,12 @@ class _ReaderSearchResultTile extends StatelessWidget {
       subtitle: Padding(
         padding: const EdgeInsets.only(top: AppSpacing.xs),
         child: RichText(
+          textAlign: readerDirectionalTextAlign(
+            pageProgressionRtl: pageProgressionRtl,
+          ),
+          textDirection: readerDirectionalTextDirection(
+            pageProgressionRtl: pageProgressionRtl,
+          ),
           maxLines: 3,
           overflow: TextOverflow.ellipsis,
           text: TextSpan(
@@ -3000,12 +3111,11 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       switch (readerTapActionFor(
         x: x,
         chromeVisible: uiCubit.state.chromeVisible,
-        rtl: state.pageProgressionRtl,
       )) {
-        case ReaderTapAction.previousPage:
-          widget.webViewKey?.currentState?.prevPage();
-        case ReaderTapAction.nextPage:
-          widget.webViewKey?.currentState?.nextPage();
+        case ReaderTapAction.leftPage:
+          widget.webViewKey?.currentState?.pageLeft();
+        case ReaderTapAction.rightPage:
+          widget.webViewKey?.currentState?.pageRight();
         case ReaderTapAction.toggleChrome:
           uiCubit.toggleChrome();
       }

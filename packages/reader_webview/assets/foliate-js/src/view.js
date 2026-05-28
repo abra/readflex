@@ -3,13 +3,84 @@ import { TOCProgress, SectionProgress } from './progress.js'
 import { Overlayer } from './overlayer.js'
 import { textWalker } from './text-walker.js'
 import { Translator, TranslationMode } from './translator.js'
-import { languageInfo, normalizeDocumentLanguageAndDirection } from './readflex_document_normalizer.js'
+import { directionCountsFromText, languageInfo, normalizeDocumentLanguageAndDirection } from './readflex_document_normalizer.js'
 const { TTS } = await import('./tts.js')
 
 const SEARCH_PREFIX = 'foliate-search:'
 const SEARCH_HIGHLIGHT_COLOR = '#00d4d8'
 const SEARCH_HIGHLIGHT_OPACITY = '.68'
 const SEARCH_HIGHLIGHT_PADDING = 1
+const BOOK_DIRECTION_SAMPLE_SECTION_LIMIT = 12
+const SECTION_DIRECTION_SAMPLE_CHAR_LIMIT = 5000
+const SECTION_DIRECTION_SAMPLE_SLICE_LIMIT = 3
+
+const directionSampleText = text => {
+  const normalized = (text ?? '').replace(/\s+/g, ' ')
+  if (normalized.length <= SECTION_DIRECTION_SAMPLE_CHAR_LIMIT) return normalized
+
+  const maxStart = Math.max(0, normalized.length - SECTION_DIRECTION_SAMPLE_CHAR_LIMIT)
+  const starts = new Set([
+    0,
+    Math.floor(maxStart / 2),
+    maxStart,
+  ])
+  return [...starts]
+    .slice(0, SECTION_DIRECTION_SAMPLE_SLICE_LIMIT)
+    .map(start => normalized.slice(
+      start,
+      start + SECTION_DIRECTION_SAMPLE_CHAR_LIMIT
+    ))
+    .join(' ')
+}
+
+const directionSampleSections = sections => {
+  const linearSections = (sections ?? [])
+    .filter(section => section?.linear !== 'no' && section?.createDocument)
+  const count = linearSections.length
+  if (count <= BOOK_DIRECTION_SAMPLE_SECTION_LIMIT) return linearSections
+
+  const indexes = new Set([0, 1, 2, Math.floor((count - 1) / 2), count - 1])
+  for (let slot = 0; indexes.size < BOOK_DIRECTION_SAMPLE_SECTION_LIMIT; slot += 1) {
+    const index = Math.round(
+      slot * (count - 1) / (BOOK_DIRECTION_SAMPLE_SECTION_LIMIT - 1)
+    )
+    indexes.add(index)
+  }
+
+  return [...indexes]
+    .filter(index => index >= 0 && index < count)
+    .sort((a, b) => a - b)
+    .map(index => linearSections[index])
+}
+
+const inferBookPageProgressionDirection = async (book, language = {}) => {
+  const configuredDirection = globalThis.readflexPageProgressionDirection
+  if (configuredDirection === 'rtl' || configuredDirection === 'ltr') {
+    return configuredDirection
+  }
+  if (book?.dir === 'rtl') return 'rtl'
+  if (language.direction === 'rtl') return 'rtl'
+
+  let rtlCount = 0
+  let ltrCount = 0
+
+  for (const section of directionSampleSections(book?.sections)) {
+    try {
+      const doc = await section.createDocument()
+      const sample = directionSampleText(doc.body?.textContent)
+      const counts = directionCountsFromText(sample)
+      rtlCount += counts.rtl
+      ltrCount += counts.ltr
+    } catch (e) {
+      console.warn('[readflex-direction] Could not sample section direction', e)
+    }
+  }
+
+  if (rtlCount === 0 && ltrCount === 0) {
+    return book?.dir === 'ltr' ? 'ltr' : ''
+  }
+  return rtlCount > ltrCount ? 'rtl' : 'ltr'
+}
 
 class History extends EventTarget {
   #arr = []
@@ -75,9 +146,13 @@ export class View extends HTMLElement {
   }
   async open(book) {
     this.book = book
-    if (!this.book.dir && globalThis.readflexPageProgressionDirection)
-      this.book.dir = globalThis.readflexPageProgressionDirection
     this.language = languageInfo(book.metadata?.language)
+    const inferredPageProgressionDirection =
+      await inferBookPageProgressionDirection(book, this.language)
+    if (inferredPageProgressionDirection) {
+      this.book.dir = inferredPageProgressionDirection
+      globalThis.readflexPageProgressionDirection ||= inferredPageProgressionDirection
+    }
 
     if (book.splitTOCHref && book.getTOCFragment) {
       const ids = book.sections.map(s => s.id)

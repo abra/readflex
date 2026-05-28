@@ -84,6 +84,10 @@ void main() {
       expect(bookJs, contains('window.cancelSearch'));
       expect(bookJs, contains('window.goToBookmark'));
       expect(bookJs, contains('window.toggleBookmarkHere'));
+      expect(bookJs, contains('window.pageLeft'));
+      expect(bookJs, contains('window.pageRight'));
+      expect(bookJs, contains('reader.view.goLeft()'));
+      expect(bookJs, contains('reader.view.goRight()'));
       expect(bookJs, contains('globalThis.readflexSourceType = sourceType'));
       expect(bookJs, contains('normalizeLoadedDocument(doc)'));
       expect(bookJs, contains("callFlutter('onSearch'"));
@@ -282,7 +286,7 @@ void main() {
       expect(normalizerJs, contains('wrapWideTables(doc)'));
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_22"));
+      expect(assetExtractor, contains("reader_webview_assets_32"));
     });
 
     test('does not dump full reader style changes to console', () {
@@ -350,15 +354,15 @@ void main() {
         'assets/foliate-js/src/paginator.js',
       ).readAsStringSync();
 
-      expect(
-        viewJs,
-        contains(
-          "import { languageInfo, normalizeDocumentLanguageAndDirection } from './readflex_document_normalizer.js'",
-        ),
-      );
+      expect(viewJs, contains('directionCountsFromText'));
+      expect(viewJs, contains('normalizeDocumentLanguageAndDirection'));
       expect(viewJs, contains('normalizeDocumentLanguageAndDirection(doc, {'));
       expect(viewJs, contains('sourceType: globalThis.readflexSourceType'));
       expect(normalizerJs, contains('const rtlSampleRegex'));
+      expect(
+        normalizerJs,
+        contains('export const directionCountsFromText = text =>'),
+      );
       expect(
         normalizerJs,
         contains('export const inferDocumentDirection = doc =>'),
@@ -385,6 +389,79 @@ void main() {
       );
     });
 
+    test('stabilizes inferred page progression for mixed-language books', () {
+      final viewJs = File('assets/foliate-js/src/view.js').readAsStringSync();
+      final paginatorJs = File(
+        'assets/foliate-js/src/paginator.js',
+      ).readAsStringSync();
+
+      expect(
+        viewJs,
+        contains('const inferBookPageProgressionDirection = async'),
+      );
+      expect(viewJs, contains('const directionSampleSections = sections =>'));
+      expect(viewJs, contains('BOOK_DIRECTION_SAMPLE_SECTION_LIMIT = 12'));
+      expect(viewJs, contains('SECTION_DIRECTION_SAMPLE_SLICE_LIMIT = 3'));
+      expect(viewJs, contains('const directionSampleText = text =>'));
+      expect(viewJs, contains('Math.floor((count - 1) / 2)'));
+      expect(
+        viewJs,
+        contains('const counts = directionCountsFromText(sample)'),
+      );
+      expect(
+        viewJs,
+        isNot(contains("book?.dir === 'rtl' || book?.dir === 'ltr'")),
+      );
+      expect(
+        viewJs,
+        contains("return rtlCount > ltrCount ? 'rtl' : 'ltr'"),
+      );
+      expect(
+        viewJs,
+        contains('this.book.dir = inferredPageProgressionDirection'),
+      );
+      expect(
+        viewJs,
+        contains(
+          'globalThis.readflexPageProgressionDirection ||= inferredPageProgressionDirection',
+        ),
+      );
+      expect(
+        paginatorJs,
+        contains('const explicitPageProgressionDirection'),
+      );
+      expect(
+        paginatorJs,
+        contains("explicitPageProgressionDirection === 'rtl'"),
+      );
+      expect(paginatorJs, contains(': rtl'));
+    });
+
+    test('guards NCX TOC items without direct hrefs', () {
+      final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
+      final epubJs = File('assets/foliate-js/src/epub.js').readAsStringSync();
+
+      expect(epubJs, contains('const firstNavigableHref = items => items'));
+      expect(epubJs, contains(r"$content?.getAttribute('src')"));
+      expect(
+        epubJs,
+        contains('href: href || firstNavigableHref(subitems)'),
+      );
+      expect(
+        bookJs,
+        contains("tocItem?.href?.split('#')[0]"),
+      );
+      expect(
+        bookJs,
+        contains("if (typeof href !== 'string' || !href) return null"),
+      );
+      expect(
+        bookJs,
+        contains("href: typeof item.href === 'string' ? item.href : ''"),
+      );
+      expect(bookJs, contains('startPage: startPercentage == null'));
+    });
+
     test('surfaces page progression direction to Dart', () {
       final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
       final viewJs = File('assets/foliate-js/src/view.js').readAsStringSync();
@@ -398,6 +475,10 @@ void main() {
         'lib/src/book_reader_webview.dart',
       ).readAsStringSync();
 
+      expect(webViewDart, contains('void pageLeft()'));
+      expect(webViewDart, contains("expression: 'pageLeft()'"));
+      expect(webViewDart, contains('void pageRight()'));
+      expect(webViewDart, contains("expression: 'pageRight()'"));
       expect(
         webViewDart,
         contains("'pageProgressionDirection': jsonEncode("),
@@ -422,10 +503,52 @@ void main() {
       );
       expect(viewJs, contains('get pageProgressionDirection()'));
       expect(viewJs, contains('globalThis.readflexPageProgressionDirection'));
-      expect(viewJs, contains("this.pageProgressionDirection === 'rtl'"));
+      expect(viewJs, contains("return direction === 'rtl' ? 'rtl' : 'ltr'"));
+      expect(viewJs, contains('goLeft()'));
+      expect(
+        viewJs,
+        contains(
+          "return this.pageProgressionDirection === 'rtl' ? this.next() : this.prev()",
+        ),
+      );
+      expect(viewJs, contains('goRight()'));
+      expect(
+        viewJs,
+        contains(
+          "return this.pageProgressionDirection === 'rtl' ? this.prev() : this.next()",
+        ),
+      );
       expect(paginatorJs, contains('get pageProgressionDirection()'));
       expect(paginatorJs, contains('#pageProgressionRtl'));
       expect(paginatorJs, contains('const pageVelocity'));
+      expect(
+        paginatorJs,
+        contains(
+          'const pageVelocity = this.#pageProgressionRtl && !this.#vertical',
+        ),
+      );
+      expect(
+        paginatorJs,
+        contains('this.#container.scrollLeft = startScroll - deltaX'),
+      );
+      expect(paginatorJs, contains('WebKit/Chromium scrollLeft direction'));
+      expect(paginatorJs, contains('if (this.#locked) return'));
+      expect(paginatorJs, contains('finally {'));
+      expect(paginatorJs, contains('this.#locked = false'));
+      expect(
+        paginatorJs,
+        contains('if (page <= 0) return this.#adjacentIndex(-1) != null'),
+      );
+      expect(
+        paginatorJs,
+        contains(
+          'if (page >= pages - 1) return this.#adjacentIndex(1) != null',
+        ),
+      );
+      expect(paginatorJs, contains('return !this.atStart'));
+      expect(paginatorJs, contains('return !this.atEnd'));
+      expect(paginatorJs, isNot(contains('const animateScroll = (element,')));
+      expect(paginatorJs, isNot(contains('useTransformAnimation')));
       expect(paginatorJs, contains('this.#rtl = pageProgressionRtl'));
       expect(paginatorJs, contains("this.#scrollToPage(page, 'snap'"));
       expect(

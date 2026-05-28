@@ -685,9 +685,11 @@ export class Paginator extends HTMLElement {
   }
   #beforeRender({ vertical, rtl }) {
     this.#vertical = vertical
-    const pageProgressionRtl = rtl
-      || this.bookDir === 'rtl'
-      || globalThis.readflexPageProgressionDirection === 'rtl'
+    const explicitPageProgressionDirection =
+      globalThis.readflexPageProgressionDirection || this.bookDir
+    const pageProgressionRtl = explicitPageProgressionDirection
+      ? explicitPageProgressionDirection === 'rtl'
+      : rtl
     this.#rtl = pageProgressionRtl
     this.#pageProgressionRtl = pageProgressionRtl
     this.#top.classList.toggle('vertical', vertical)
@@ -835,7 +837,9 @@ export class Paginator extends HTMLElement {
   snap(vx, vy, touchState) {
     const state = touchState ?? this.#touchState
     const velocity = this.#vertical ? vy : vx
-    const pageVelocity = velocity
+    const pageVelocity = this.#pageProgressionRtl && !this.#vertical
+      ? -velocity
+      : velocity
     const { pages, size } = this
     if (!pages || size === 0) {
       this.#restoreMomentum()
@@ -1003,7 +1007,15 @@ export class Paginator extends HTMLElement {
 
     if (horizontalDrag && horizontalAxis) {
       this.#touchScrolled = true
-      // rely on native scrolling for horizontal paging
+      if (this.#pageProgressionRtl) {
+        e.preventDefault()
+        this.#disableMomentum()
+        const startScroll = state.startScroll ?? this.#container.scrollLeft
+        this.#container.scrollLeft = startScroll - deltaX
+      }
+      // LTR relies on native scrolling for horizontal paging. RTL is handled
+      // manually above because WebKit/Chromium scrollLeft direction differs
+      // from physical page progression for right-to-left books.
     }
   }
   #onTouchEnd(e) {
@@ -1366,23 +1378,25 @@ export class Paginator extends HTMLElement {
     if (this.scrolled) {
       if (this.start > 0) return this.#scrollTo(
         Math.max(0, this.start - (distance ?? this.size)), null, { animate: true })
-      return true
+      return !this.atStart
     }
-    if (this.atStart) return
+    if (this.atStart) return false
     const page = this.page - 1
-    return this.#scrollToPage(page, 'page', { animate: true }).then(() => page <= 0)
+    if (page <= 0) return this.#adjacentIndex(-1) != null
+    return this.#scrollToPage(page, 'page', { animate: true }).then(() => false)
   }
   #scrollNext(distance) {
     if (!this.#view) return true
     if (this.scrolled) {
       if (this.viewSize - this.end > 2) return this.#scrollTo(
         Math.min(this.viewSize, distance ? this.start + distance : this.end), null, { animate: true })
-      return true
+      return !this.atEnd
     }
-    if (this.atEnd) return
+    if (this.atEnd) return false
     const page = this.page + 1
     const pages = this.pages
-    return this.#scrollToPage(page, 'page', { animate: true }).then(() => page >= pages - 1)
+    if (page >= pages - 1) return this.#adjacentIndex(1) != null
+    return this.#scrollToPage(page, 'page', { animate: true }).then(() => false)
   }
   get atStart() {
     return this.#adjacentIndex(-1) == null && this.page <= 1
@@ -1395,17 +1409,20 @@ export class Paginator extends HTMLElement {
       if (this.sections[index]?.linear !== 'no') return index
   }
   async #turnPage(dir, distance) {
-    // if (this.#locked) return
+    if (this.#locked) return
     this.#locked = true
-    const prev = dir === -1
-    const shouldGo = await (prev ? this.#scrollPrev(distance) : this.#scrollNext(distance))
-    
-    if (shouldGo) await this.#goTo({
-      index: this.#adjacentIndex(dir),
-      anchor: prev ? () => 1 : () => 0,
-    })
-    if (shouldGo || !this.hasAttribute('animated')) await wait(100)
-    this.#locked = false
+    try {
+      const prev = dir === -1
+      const shouldGo = await (prev ? this.#scrollPrev(distance) : this.#scrollNext(distance))
+
+      if (shouldGo) await this.#goTo({
+        index: this.#adjacentIndex(dir),
+        anchor: prev ? () => 1 : () => 0,
+      })
+      if (shouldGo || !this.hasAttribute('animated')) await wait(100)
+    } finally {
+      this.#locked = false
+    }
   }
   prev(distance) {
     return this.#turnPage(-1, distance)

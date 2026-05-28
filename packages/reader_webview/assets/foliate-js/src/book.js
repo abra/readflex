@@ -1888,7 +1888,7 @@ class Reader {
 
   get toc() {
     const sectionFractions = this.view.getSectionFractions()
-    const currentHref = this.view.lastLocation?.tocItem?.href.split('#')[0] ?? 'Not Found'
+    const currentHref = this.view.lastLocation?.tocItem?.href?.split('#')[0] ?? 'Not Found'
     let currentChapterIndex = sectionFractions.findIndex(s => s.href === currentHref)
     if (currentChapterIndex === -1) {
       currentChapterIndex = 0;
@@ -1900,21 +1900,27 @@ class Reader {
     const totalPages = currentSectionPages / (nextSectionStart - currentSectionStart)
 
     const getFractionByHref = (href) => {
+      if (typeof href !== 'string' || !href) return null
       href = href.split('#')[0]
       const section = sectionFractions.find(s => s.href === href)
-      return section ? section.fraction : 0
+      return section ? section.fraction : null
     }
 
-    const buildItems = (item, level) => {
-      return item?.map(item => ({
-        label: item.label,
-        href: item.href,
-        id: item.id,
-        level,
-        startPercentage: getFractionByHref(item.href),
-        startPage: Math.ceil(getFractionByHref(item.href) * totalPages),
-        subitems: buildItems(item.subitems, level + 1)
-      })) || [];
+    const buildItems = (items, level) => {
+      return items?.map(item => {
+        const startPercentage = getFractionByHref(item.href)
+        return {
+          label: item.label,
+          href: typeof item.href === 'string' ? item.href : '',
+          id: item.id,
+          level,
+          startPercentage,
+          startPage: startPercentage == null
+            ? null
+            : Math.ceil(startPercentage * totalPages),
+          subitems: buildItems(item.subitems, level + 1)
+        }
+      }) || [];
     }
     return buildItems(this.view.book.toc, 1)
   }
@@ -2159,6 +2165,10 @@ window.goToBookmark = target => reader.goToBookmark(target)
 window.nextPage = () => reader.view.next()
 
 window.prevPage = () => reader.view.prev()
+
+window.pageLeft = () => reader.view.goLeft()
+
+window.pageRight = () => reader.view.goRight()
 
 window.setScroll = () => {
   style.scroll = true

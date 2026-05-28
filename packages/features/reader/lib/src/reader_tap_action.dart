@@ -1,24 +1,19 @@
 enum ReaderTapAction {
-  previousPage,
-  nextPage,
+  leftPage,
+  rightPage,
   toggleChrome,
 }
 
-const readerPreviousTapZoneEnd = 0.28;
-const readerNextTapZoneStart = 0.62;
+const readerLeftTapZoneEnd = 0.28;
+const readerRightTapZoneStart = 0.62;
 
 ReaderTapAction readerTapActionFor({
   required double x,
   required bool chromeVisible,
-  bool rtl = false,
 }) {
   if (chromeVisible) return ReaderTapAction.toggleChrome;
-  if (x <= readerPreviousTapZoneEnd) {
-    return rtl ? ReaderTapAction.nextPage : ReaderTapAction.previousPage;
-  }
-  if (x >= readerNextTapZoneStart) {
-    return rtl ? ReaderTapAction.previousPage : ReaderTapAction.nextPage;
-  }
+  if (x <= readerLeftTapZoneEnd) return ReaderTapAction.leftPage;
+  if (x >= readerRightTapZoneStart) return ReaderTapAction.rightPage;
   return ReaderTapAction.toggleChrome;
 }
 

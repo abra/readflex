@@ -3,10 +3,10 @@ import 'package:reader/src/reader_tap_action.dart';
 
 void main() {
   group('readerTapActionFor', () {
-    test('uses left and right tap zones when chrome is hidden', () {
+    test('uses physical left and right tap zones when chrome is hidden', () {
       expect(
         readerTapActionFor(x: 0.10, chromeVisible: false),
-        ReaderTapAction.previousPage,
+        ReaderTapAction.leftPage,
       );
       expect(
         readerTapActionFor(x: 0.50, chromeVisible: false),
@@ -14,7 +14,7 @@ void main() {
       );
       expect(
         readerTapActionFor(x: 0.90, chromeVisible: false),
-        ReaderTapAction.nextPage,
+        ReaderTapAction.rightPage,
       );
     });
 
@@ -31,23 +31,12 @@ void main() {
 
     test('keeps zone boundaries inclusive', () {
       expect(
-        readerTapActionFor(x: readerPreviousTapZoneEnd, chromeVisible: false),
-        ReaderTapAction.previousPage,
+        readerTapActionFor(x: readerLeftTapZoneEnd, chromeVisible: false),
+        ReaderTapAction.leftPage,
       );
       expect(
-        readerTapActionFor(x: readerNextTapZoneStart, chromeVisible: false),
-        ReaderTapAction.nextPage,
-      );
-    });
-
-    test('mirrors side zones for rtl page progression', () {
-      expect(
-        readerTapActionFor(x: 0.10, chromeVisible: false, rtl: true),
-        ReaderTapAction.nextPage,
-      );
-      expect(
-        readerTapActionFor(x: 0.90, chromeVisible: false, rtl: true),
-        ReaderTapAction.previousPage,
+        readerTapActionFor(x: readerRightTapZoneStart, chromeVisible: false),
+        ReaderTapAction.rightPage,
       );
     });
 

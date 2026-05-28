@@ -33,14 +33,18 @@ export const languageInfo = lang => {
 const rtlSampleRegex = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/g
 const ltrSampleRegex = /[A-Za-z\u00C0-\u024F\u1E00-\u1EFF]/g
 
+export const directionCountsFromText = text => ({
+  rtl: text?.match(rtlSampleRegex)?.length ?? 0,
+  ltr: text?.match(ltrSampleRegex)?.length ?? 0,
+})
+
 export const inferDocumentDirection = doc => {
   const sample = (doc.body?.textContent ?? '')
     .replace(/\s+/g, ' ')
     .slice(0, 5000)
   if (!sample) return ''
 
-  const rtlCount = sample.match(rtlSampleRegex)?.length ?? 0
-  const ltrCount = sample.match(ltrSampleRegex)?.length ?? 0
+  const { rtl: rtlCount, ltr: ltrCount } = directionCountsFromText(sample)
   return rtlCount > ltrCount ? 'rtl' : ''
 }
 
@@ -91,7 +95,11 @@ export const normalizeDocumentLanguageAndDirection = (doc, { language = {}, sour
   doc.documentElement.lang ||= language.canonical ?? ''
   if (language.isCJK) return
 
-  const direction = language.direction || inferDocumentDirection(doc)
+  const explicitDirection = doc.documentElement.dir || doc.body?.dir || ''
+  const inferredDirection = inferDocumentDirection(doc)
+  const direction = explicitDirection
+    || (language.direction === 'rtl' ? 'rtl' : inferredDirection)
+    || language.direction
   if (direction === 'rtl' && sourceType === 'article') {
     applyArticleTextDirection(doc, direction)
   } else {

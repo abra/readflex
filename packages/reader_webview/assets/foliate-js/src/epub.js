@@ -243,14 +243,18 @@ const parseNav = (doc, resolve = f => f) => {
 const parseNCX = (doc, resolve = f => f) => {
     const { $, $$ } = childGetter(doc, NS.NCX)
     const resolveHref = href => href ? decodeURI(resolve(href)) : null
+    const firstNavigableHref = items => items
+        ?.map(item => item.href || firstNavigableHref(item.subitems))
+        .find(Boolean)
     const parseItem = el => {
         const $label = $(el, 'navLabel')
         const $content = $(el, 'content')
         const label = getElementText($label)
-        const href = resolveHref($content.getAttribute('src'))
+        const href = resolveHref($content?.getAttribute('src'))
         if (el.localName === 'navPoint') {
             const els = $$(el, 'navPoint')
-            return { label, href, subitems: els.length ? els.map(parseItem) : null }
+            const subitems = els.length ? els.map(parseItem) : null
+            return { label, href: href || firstNavigableHref(subitems), subitems }
         }
         return { label, href }
     }

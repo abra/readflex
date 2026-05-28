@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
+  directionCountsFromText,
   inferDocumentDirection,
   markInlineImages,
   normalizeCodeLikeBlocks,
@@ -236,6 +237,15 @@ test('normalizeLoadedDocument runs the full safe post-load pipeline', () => {
   assert.equal(code.classList.contains('readflex-code-block'), true)
 })
 
+test('directionCountsFromText counts rtl and ltr scripts', () => {
+  const counts = directionCountsFromText(
+    'intro text ' + '\u0627\u0644\u0639\u0631\u0628\u064a\u0629'.repeat(3),
+  )
+
+  assert.ok(counts.rtl > counts.ltr)
+  assert.ok(counts.ltr > 0)
+})
+
 test('inferDocumentDirection returns rtl when rtl script dominates', () => {
   const doc = new FakeDocument([
     new FakeElement('p', { text: '\u0645\u0631\u062d\u0628\u0627 \u0647\u0630\u0627 \u0646\u0635 \u0639\u0631\u0628\u064a \u0637\u0648\u064a\u0644' }),
@@ -259,7 +269,21 @@ test('normalizeDocumentLanguageAndDirection applies book rtl direction to the do
   assert.equal(paragraph.style.getPropertyValue('direction'), '')
 })
 
-test('normalizeDocumentLanguageAndDirection keeps rtl article pagination ltr', () => {
+test('normalizeDocumentLanguageAndDirection infers rtl book sections despite ltr metadata', () => {
+  const paragraph = new FakeElement('p', { text: '\u0627\u0644\u062d\u0645\u062f \u0644\u0644\u0647 \u0631\u0628 \u0627\u0644\u0639\u0627\u0644\u0645\u064a\u0646' })
+  const doc = new FakeDocument([paragraph])
+
+  normalizeDocumentLanguageAndDirection(doc, {
+    language: { canonical: 'ms', isCJK: false, direction: 'ltr' },
+    sourceType: 'book',
+  })
+
+  assert.equal(doc.documentElement.lang, 'ms')
+  assert.equal(doc.documentElement.dir, 'rtl')
+  assert.equal(doc.body.dir, 'rtl')
+})
+
+test('normalizeDocumentLanguageAndDirection applies rtl article direction', () => {
   const heading = new FakeElement('h1', { text: '\u0639\u0646\u0648\u0627\u0646' })
   const paragraph = new FakeElement('p', { text: '\u0645\u0631\u062d\u0628\u0627' })
   const doc = new FakeDocument([heading, paragraph])
@@ -270,8 +294,8 @@ test('normalizeDocumentLanguageAndDirection keeps rtl article pagination ltr', (
   })
 
   assert.equal(doc.documentElement.lang, 'ar')
-  assert.equal(doc.documentElement.dir, 'ltr')
-  assert.equal(doc.body.dir, 'ltr')
+  assert.equal(doc.documentElement.dir, 'rtl')
+  assert.equal(doc.body.dir, 'rtl')
   assert.equal(doc.documentElement.dataset.readflexTextDirection, 'rtl')
   assert.equal(paragraph.style.getPropertyValue('direction'), 'rtl')
   assert.equal(paragraph.style.getPropertyPriority('direction'), 'important')
