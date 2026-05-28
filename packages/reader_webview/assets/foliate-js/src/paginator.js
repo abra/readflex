@@ -450,6 +450,7 @@ export class Paginator extends HTMLElement {
   #view
   #vertical = false
   #rtl = false
+  #pageProgressionRtl = false
   #margin = 0
   #index = -1
   #anchor = 0 // anchor view to a fraction (0-1), Range, or Element
@@ -667,6 +668,7 @@ export class Paginator extends HTMLElement {
   }
   open(book) {
     this.bookDir = book.dir
+    this.#pageProgressionRtl = book.dir === 'rtl'
     this.sections = book.sections
   }
   #createView() {
@@ -683,7 +685,11 @@ export class Paginator extends HTMLElement {
   }
   #beforeRender({ vertical, rtl }) {
     this.#vertical = vertical
-    this.#rtl = rtl
+    const pageProgressionRtl = rtl
+      || this.bookDir === 'rtl'
+      || globalThis.readflexPageProgressionDirection === 'rtl'
+    this.#rtl = pageProgressionRtl
+    this.#pageProgressionRtl = pageProgressionRtl
     this.#top.classList.toggle('vertical', vertical)
 
     // set background to `doc` background
@@ -752,7 +758,7 @@ export class Paginator extends HTMLElement {
       : maxColumnCount
 
     const columnWidth = (size / divisor) - gap
-    this.setAttribute('dir', rtl ? 'rtl' : 'ltr')
+    this.setAttribute('dir', this.#rtl ? 'rtl' : 'ltr')
 
     const marginalDivisor = vertical
       ? Math.min(2, Math.ceil(width / maxInlineSize))
@@ -760,7 +766,7 @@ export class Paginator extends HTMLElement {
     const marginalStyle = {
       gridTemplateColumns: `repeat(${marginalDivisor}, 1fr)`,
       gap: `${gap}px`,
-      direction: this.bookDir === 'rtl' ? 'rtl' : 'ltr',
+      direction: this.#pageProgressionRtl ? 'rtl' : 'ltr',
     }
     // Object.assign(this.#header.style, marginalStyle)
     // Object.assign(this.#footer.style, marginalStyle)
@@ -797,6 +803,9 @@ export class Paginator extends HTMLElement {
   get vertical() {
     return this.#vertical
   }
+  get pageProgressionDirection() {
+    return this.#pageProgressionRtl ? 'rtl' : 'ltr'
+  }
   get size() {
     return this.#container.getBoundingClientRect()[this.sideProp]
   }
@@ -826,6 +835,7 @@ export class Paginator extends HTMLElement {
   snap(vx, vy, touchState) {
     const state = touchState ?? this.#touchState
     const velocity = this.#vertical ? vy : vx
+    const pageVelocity = velocity
     const { pages, size } = this
     if (!pages || size === 0) {
       this.#restoreMomentum()
@@ -835,8 +845,8 @@ export class Paginator extends HTMLElement {
     const signedOffset = this.#rtl ? -currentOffset : currentOffset
     let page = Math.round(signedOffset / size)
     const velocityThreshold = 0.25
-    if (Math.abs(velocity) > velocityThreshold)
-      page += velocity > 0 ? 1 : -1
+    if (Math.abs(pageVelocity) > velocityThreshold)
+      page += pageVelocity > 0 ? 1 : -1
     const originPage = state?.startPage ?? this.page
     if (!this.scrolled) {
       const deltaPages = page - originPage
@@ -865,9 +875,8 @@ export class Paginator extends HTMLElement {
     const duration = Math.max(260, Math.min(380,
       baseDuration * (distance / (size || 1) + 0.2)))
 
-    const pageArg = this.#rtl ? -page : page
     this.#disableMomentum()
-    return this.#scrollToPage(pageArg, 'snap', { animate: true, duration, restoreMomentum: true, momentumDelay: 20, initialVelocity: velocity }).then(() => {
+    return this.#scrollToPage(page, 'snap', { animate: true, duration, restoreMomentum: true, momentumDelay: 20, initialVelocity: velocity }).then(() => {
       const dir = page <= 0 ? -1 : page >= pages - 1 ? 1 : null
       if (dir) return this.#goTo({
         index: this.#adjacentIndex(dir),

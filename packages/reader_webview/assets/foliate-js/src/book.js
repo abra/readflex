@@ -2105,6 +2105,7 @@ const onRelocated = (currentInfo) => {
     atStart,
     bookmark: currentInfo.bookmark,
     writingMode: reader.view.renderer.writingMode,
+    pageProgressionDirection: reader.view.pageProgressionDirection,
   })
 }
 
@@ -2485,6 +2486,11 @@ var initialCfi = JSON.parse(urlParams.get('initialCfi'))
 var initialProgress = JSON.parse(urlParams.get('initialProgress'))
 var sourceType = JSON.parse(urlParams.get('sourceType') ?? '"book"')
 globalThis.readflexSourceType = sourceType
+var pageProgressionDirection = JSON.parse(
+  urlParams.get('pageProgressionDirection') ?? 'null'
+)
+globalThis.readflexPageProgressionDirection =
+  pageProgressionDirection === 'rtl' ? 'rtl' : ''
 var style = JSON.parse(urlParams.get('style'))
 var readingRules = JSON.parse(urlParams.get('readingRules'))
 // Optional caller-supplied display name. Used by formats with no embedded

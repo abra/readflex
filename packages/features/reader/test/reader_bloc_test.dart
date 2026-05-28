@@ -109,6 +109,39 @@ void main() {
       );
 
       blocTest<ReaderBloc, ReaderState>(
+        'infers rtl page progression for saved articles',
+        setUp: () {},
+        build: () {
+          final articleRepository = FakeArticleRepository();
+          articleRepository.seedArticle(
+            Article(
+              id: 'article-rtl',
+              title: 'عنوان عربي',
+              url: 'https://example.com/article',
+              siteName: 'Example',
+              language: 'ar',
+              contentPath: '/articles/article-rtl/article.json',
+              addedAt: DateTime(2024, 1, 1),
+            ),
+          );
+          return ReaderBloc(
+            bookRepository: bookRepository,
+            articleRepository: articleRepository,
+            highlightRepository: highlightRepository,
+          );
+        },
+        act: (bloc) =>
+            bloc.add(const ReaderSourceLoadRequested(sourceId: 'article-rtl')),
+        expect: () => [
+          const ReaderState(status: ReaderStatus.loading),
+          isA<ReaderState>()
+              .having((s) => s.status, 'status', ReaderStatus.ready)
+              .having((s) => s.sourceType, 'sourceType', SourceType.article)
+              .having((s) => s.pageProgressionRtl, 'pageProgressionRtl', true),
+        ],
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
         'refreshes initial source without returning to loading',
         setUp: () {
           bookRepository.seedBook(testBook.copyWith(readingProgress: 0.4));
@@ -302,6 +335,28 @@ void main() {
         wait: const Duration(seconds: 3),
         verify: (bloc) {
           expect(bloc.state.sizeTotal, 480000);
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'updates page progression direction from WebView position',
+        setUp: () => bookRepository.seedBook(testBook),
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          title: testBook.title,
+          book: testBook,
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/4!/4/2)',
+            progress: 0.2,
+            pageProgressionRtl: true,
+          ),
+        ),
+        wait: const Duration(milliseconds: 50),
+        verify: (bloc) {
+          expect(bloc.state.pageProgressionRtl, isTrue);
         },
       );
 

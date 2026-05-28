@@ -1423,6 +1423,9 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
     final sourceType = context.select<ReaderBloc, SourceType>(
       (b) => b.state.sourceType,
     );
+    final pageProgressionRtl = context.select<ReaderBloc, bool>(
+      (b) => b.state.pageProgressionRtl,
+    );
     final actions = readerChromeActionsForFormat(format);
     final colors = context.colors;
 
@@ -1433,6 +1436,7 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
       chapterCurrentPage: chapterCurrentPage,
       chapterTotalPages: chapterTotalPages,
       sourceType: sourceType,
+      pageProgressionRtl: pageProgressionRtl,
       format: format,
       panelColor: colors.surface,
       textColor: colors.onSurfaceVariant,
@@ -1466,6 +1470,7 @@ class _ReaderBottomChrome extends StatefulWidget {
     required this.chapterCurrentPage,
     required this.chapterTotalPages,
     required this.sourceType,
+    required this.pageProgressionRtl,
     required this.format,
     required this.panelColor,
     required this.textColor,
@@ -1491,6 +1496,7 @@ class _ReaderBottomChrome extends StatefulWidget {
   final int? chapterCurrentPage;
   final int? chapterTotalPages;
   final SourceType sourceType;
+  final bool pageProgressionRtl;
   final BookFormat? format;
   final Color panelColor;
   final Color textColor;
@@ -1677,51 +1683,62 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                                   trackShape:
                                       const RoundedRectSliderTrackShape(),
                                 ),
-                                child: Slider(
-                                  value: sliderValue,
-                                  divisions: sliderDivisions,
-                                  onChangeStart: (v) {
-                                    final seekValue = snappedReaderSeekProgress(
-                                      sourceType: widget.sourceType,
-                                      progress: v,
-                                      totalPages: widget.chapterTotalPages,
-                                    );
-                                    setState(() {
-                                      _isDragging = true;
-                                      _dragValue = seekValue;
-                                    });
-                                  },
-                                  onChanged: (v) {
-                                    final seekValue = snappedReaderSeekProgress(
-                                      sourceType: widget.sourceType,
-                                      progress: v,
-                                      totalPages: widget.chapterTotalPages,
-                                    );
-                                    setState(() => _dragValue = seekValue);
-                                  },
-                                  onChangeEnd: (v) {
-                                    final seekValue = snappedReaderSeekProgress(
-                                      sourceType: widget.sourceType,
-                                      progress: v,
-                                      totalPages: widget.chapterTotalPages,
-                                    );
-                                    widget.onSeekFraction(seekValue);
-                                    _dragReleaseTimer?.cancel();
-                                    _dragReleaseTimer = Timer(
-                                      _dragReleaseTimeout,
-                                      () {
-                                        if (!mounted) return;
-                                        _dragReleaseTimer = null;
-                                        if (_dragValue != null) {
-                                          setState(() => _dragValue = null);
-                                        }
-                                      },
-                                    );
-                                    setState(() {
-                                      _isDragging = false;
-                                      _dragValue = seekValue;
-                                    });
-                                  },
+                                child: Directionality(
+                                  textDirection: widget.pageProgressionRtl
+                                      ? TextDirection.rtl
+                                      : TextDirection.ltr,
+                                  child: Slider(
+                                    value: sliderValue,
+                                    divisions: sliderDivisions,
+                                    onChangeStart: (v) {
+                                      final seekValue =
+                                          snappedReaderSeekProgress(
+                                            sourceType: widget.sourceType,
+                                            progress: v,
+                                            totalPages:
+                                                widget.chapterTotalPages,
+                                          );
+                                      setState(() {
+                                        _isDragging = true;
+                                        _dragValue = seekValue;
+                                      });
+                                    },
+                                    onChanged: (v) {
+                                      final seekValue =
+                                          snappedReaderSeekProgress(
+                                            sourceType: widget.sourceType,
+                                            progress: v,
+                                            totalPages:
+                                                widget.chapterTotalPages,
+                                          );
+                                      setState(() => _dragValue = seekValue);
+                                    },
+                                    onChangeEnd: (v) {
+                                      final seekValue =
+                                          snappedReaderSeekProgress(
+                                            sourceType: widget.sourceType,
+                                            progress: v,
+                                            totalPages:
+                                                widget.chapterTotalPages,
+                                          );
+                                      widget.onSeekFraction(seekValue);
+                                      _dragReleaseTimer?.cancel();
+                                      _dragReleaseTimer = Timer(
+                                        _dragReleaseTimeout,
+                                        () {
+                                          if (!mounted) return;
+                                          _dragReleaseTimer = null;
+                                          if (_dragValue != null) {
+                                            setState(() => _dragValue = null);
+                                          }
+                                        },
+                                      );
+                                      setState(() {
+                                        _isDragging = false;
+                                        _dragValue = seekValue;
+                                      });
+                                    },
+                                  ),
                                 ),
                               ),
                             )
@@ -2983,6 +3000,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       switch (readerTapActionFor(
         x: x,
         chromeVisible: uiCubit.state.chromeVisible,
+        rtl: state.pageProgressionRtl,
       )) {
         case ReaderTapAction.previousPage:
           widget.webViewKey?.currentState?.prevPage();
@@ -3054,6 +3072,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         maxColumnCount: 1,
       ),
       isArticle: state.sourceType == SourceType.article,
+      pageProgressionRtl: state.pageProgressionRtl,
       highlights: highlights,
       bookmarks: bookmarks,
       onReady: () {
@@ -3072,6 +3091,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
             chapterCurrentPage: position.chapterCurrentPage,
             chapterTotalPages: position.chapterTotalPages,
             sizeTotal: position.sizeTotal,
+            pageProgressionRtl: position.pageProgressionRtl,
             atEnd: position.atEnd,
             currentPageBookmarked: position.bookmarkExists,
             currentPageBookmarkCfi: position.bookmarkCfi,

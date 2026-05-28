@@ -47,9 +47,10 @@ export const inferDocumentDirection = doc => {
 export const applyArticleTextDirection = (doc, direction) => {
   if (!direction) return
 
-  doc.documentElement.dir = 'ltr'
+  // Keep the root RTL too: CSS columns use it for physical page order.
+  doc.documentElement.dir = direction
   doc.documentElement.dataset.readflexTextDirection = direction
-  if (doc.body) doc.body.dir = 'ltr'
+  if (doc.body) doc.body.dir = direction
 
   const selector = [
     'h1', 'h2', 'h3', 'h4', 'h5', 'h6',

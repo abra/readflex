@@ -79,6 +79,7 @@ void main() {
         'bookTotalPages': 200,
         'sizeTotal': 480000,
         'reason': 'page',
+        'pageProgressionDirection': 'rtl',
         'atEnd': false,
         'atStart': false,
         'bookmark': {
@@ -97,6 +98,7 @@ void main() {
       expect(position.bookTotalPages, 200);
       expect(position.sizeTotal, 480000);
       expect(position.relocationReason, 'page');
+      expect(position.pageProgressionRtl, isTrue);
       expect(position.atEnd, isFalse);
       expect(position.atStart, isFalse);
       expect(position.bookmarkExists, isTrue);
@@ -118,6 +120,7 @@ void main() {
       expect(position.bookCurrentPage, isNull);
       expect(position.bookTotalPages, isNull);
       expect(position.sizeTotal, isNull);
+      expect(position.pageProgressionRtl, isNull);
       // atEnd / atStart default to false so old payloads (or fixtures
       // that haven't added the field) keep working without coercion.
       expect(position.atEnd, isFalse);

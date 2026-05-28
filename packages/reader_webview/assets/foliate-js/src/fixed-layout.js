@@ -251,6 +251,9 @@ export class FixedLayout extends HTMLElement {
             return arr
         }, [{}])
     }
+    get pageProgressionDirection() {
+        return this.rtl ? 'rtl' : 'ltr'
+    }
     get index() {
         const spread = this.#spreads[this.#index]
         // Upstream foliate-js writes `this.side` here, but the property is

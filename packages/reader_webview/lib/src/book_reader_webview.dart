@@ -174,9 +174,9 @@ String buildArticleTextDirectionPatchScript({
       || inferDirection(doc);
     if (direction !== 'rtl') return false;
 
-    doc.documentElement.dir = 'ltr';
+    doc.documentElement.dir = 'rtl';
     doc.documentElement.dataset.readflexTextDirection = 'rtl';
-    doc.body.dir = 'ltr';
+    doc.body.dir = 'rtl';
 
     let style = doc.getElementById('readflex-article-text-direction-runtime');
     if (!style) {
@@ -261,6 +261,7 @@ class BookReaderWebView extends StatefulWidget {
     this.initialCfi,
     this.initialProgress,
     this.isArticle = false,
+    this.pageProgressionRtl = false,
     this.foliateStyle = const FoliateStyle(),
     this.highlights = const [],
     this.bookmarks = const [],
@@ -289,11 +290,10 @@ class BookReaderWebView extends StatefulWidget {
   final double? initialProgress;
 
   /// Whether the opened EPUB was generated from a saved web article.
-  ///
-  /// Web articles use the document language for text direction, but keep
-  /// foliate-js page progression stable instead of treating text direction as
-  /// book page-progression direction.
   final bool isArticle;
+
+  /// Initial page progression hint when source metadata is missing or wrong.
+  final bool pageProgressionRtl;
 
   /// Book reader appearance passed to foliate-js via URL params.
   final FoliateStyle foliateStyle;
@@ -548,6 +548,9 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       'initialCfi': jsonEncode(initialLocation.cfi),
       'initialProgress': jsonEncode(initialLocation.progress),
       'sourceType': jsonEncode(_effectiveArticle ? 'article' : 'book'),
+      'pageProgressionDirection': jsonEncode(
+        widget.pageProgressionRtl ? 'rtl' : null,
+      ),
       'style': jsonEncode(widget.foliateStyle.toMap()),
       'readingRules': jsonEncode(_defaultReadingRules),
     };

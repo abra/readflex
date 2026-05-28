@@ -346,6 +346,9 @@ void main() {
       final normalizerJs = File(
         'assets/foliate-js/src/readflex_document_normalizer.js',
       ).readAsStringSync();
+      final paginatorJs = File(
+        'assets/foliate-js/src/paginator.js',
+      ).readAsStringSync();
 
       expect(
         viewJs,
@@ -369,13 +372,67 @@ void main() {
         ),
       );
       expect(normalizerJs, contains("node.style.setProperty('direction'"));
-      expect(normalizerJs, contains("doc.documentElement.dir = 'ltr'"));
-      expect(normalizerJs, contains("if (doc.body) doc.body.dir = 'ltr'"));
+      expect(normalizerJs, contains('doc.documentElement.dir = direction'));
+      expect(normalizerJs, contains('if (doc.body) doc.body.dir = direction'));
       expect(normalizerJs, contains('doc.documentElement.dir ||= direction'));
       expect(
         normalizerJs,
         contains('if (doc.body) doc.body.dir ||= direction'),
       );
+      expect(
+        paginatorJs,
+        isNot(contains('doc.documentElement.dataset.readflexTextDirection')),
+      );
+    });
+
+    test('surfaces page progression direction to Dart', () {
+      final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
+      final viewJs = File('assets/foliate-js/src/view.js').readAsStringSync();
+      final paginatorJs = File(
+        'assets/foliate-js/src/paginator.js',
+      ).readAsStringSync();
+      final fixedLayoutJs = File(
+        'assets/foliate-js/src/fixed-layout.js',
+      ).readAsStringSync();
+      final webViewDart = File(
+        'lib/src/book_reader_webview.dart',
+      ).readAsStringSync();
+
+      expect(
+        webViewDart,
+        contains("'pageProgressionDirection': jsonEncode("),
+      );
+      expect(
+        bookJs,
+        contains('globalThis.readflexPageProgressionDirection'),
+      );
+      expect(
+        bookJs,
+        contains("pageProgressionDirection === 'rtl' ? 'rtl' : ''"),
+      );
+      expect(
+        bookJs,
+        isNot(contains("sourceType === 'article' && pageProgressionDirection")),
+      );
+      expect(
+        bookJs,
+        contains(
+          'pageProgressionDirection: reader.view.pageProgressionDirection',
+        ),
+      );
+      expect(viewJs, contains('get pageProgressionDirection()'));
+      expect(viewJs, contains('globalThis.readflexPageProgressionDirection'));
+      expect(viewJs, contains("this.pageProgressionDirection === 'rtl'"));
+      expect(paginatorJs, contains('get pageProgressionDirection()'));
+      expect(paginatorJs, contains('#pageProgressionRtl'));
+      expect(paginatorJs, contains('const pageVelocity'));
+      expect(paginatorJs, contains('this.#rtl = pageProgressionRtl'));
+      expect(paginatorJs, contains("this.#scrollToPage(page, 'snap'"));
+      expect(
+        paginatorJs,
+        isNot(contains('const pageArg = this.#rtl ? -page : page')),
+      );
+      expect(fixedLayoutJs, contains('get pageProgressionDirection()'));
     });
   });
 
@@ -414,7 +471,7 @@ void main() {
       expect(script, contains('return null;'));
     });
 
-    test('article RTL patch keeps pagination LTR and maps start to right', () {
+    test('article RTL patch keeps pagination RTL and maps start to right', () {
       final script = buildArticleTextDirectionPatchScript(
         textAlign: 'start',
         justify: false,
@@ -423,8 +480,8 @@ void main() {
       expect(script, contains('const requestedTextAlign = "start";'));
       expect(script, contains("if (resolved === 'start') return 'right';"));
       expect(script, contains("if (resolved === 'end') return 'left';"));
-      expect(script, contains("doc.documentElement.dir = 'ltr';"));
-      expect(script, contains("doc.body.dir = 'ltr';"));
+      expect(script, contains("doc.documentElement.dir = 'rtl';"));
+      expect(script, contains("doc.body.dir = 'rtl';"));
       expect(script, contains('readflex-article-text-direction-runtime'));
       expect(script, contains("node.style.setProperty('direction'"));
       expect(script, contains("node.style.setProperty('text-align', align"));

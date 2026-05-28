@@ -75,6 +75,8 @@ export class View extends HTMLElement {
   }
   async open(book) {
     this.book = book
+    if (!this.book.dir && globalThis.readflexPageProgressionDirection)
+      this.book.dir = globalThis.readflexPageProgressionDirection
     this.language = languageInfo(book.metadata?.language)
 
     if (book.splitTOCHref && book.getTOCFragment) {
@@ -517,6 +519,12 @@ export class View extends HTMLElement {
       console.error(`Could not get ${target}`)
     }
   }
+  get pageProgressionDirection() {
+    const direction = globalThis.readflexPageProgressionDirection
+      || this.book?.dir
+      || this.renderer?.pageProgressionDirection
+    return direction === 'rtl' ? 'rtl' : 'ltr'
+  }
   async prev(distance) {
     await this.renderer.prev(distance)
   }
@@ -524,10 +532,10 @@ export class View extends HTMLElement {
     await this.renderer.next(distance)
   }
   goLeft() {
-    return this.book.dir === 'rtl' ? this.next() : this.prev()
+    return this.pageProgressionDirection === 'rtl' ? this.next() : this.prev()
   }
   goRight() {
-    return this.book.dir === 'rtl' ? this.prev() : this.next()
+    return this.pageProgressionDirection === 'rtl' ? this.prev() : this.next()
   }
   async * #searchSection(matcher, query, index) {
     const doc = await this.book.sections[index].createDocument()

@@ -128,6 +128,7 @@ class BookPosition {
     this.bookTotalPages,
     this.sizeTotal,
     this.relocationReason,
+    this.pageProgressionRtl,
     this.atEnd = false,
     this.atStart = false,
     this.bookmarkExists = false,
@@ -161,6 +162,11 @@ class BookPosition {
   /// `page`, `scroll`, or `snap`; programmatic jumps may omit it.
   final String? relocationReason;
 
+  /// True when the publication progresses right-to-left. Text direction and
+  /// page progression are separate: saved articles keep their iframe root LTR
+  /// for stable pagination, but can still read forward from right to left.
+  final bool? pageProgressionRtl;
+
   /// `true` when the paginator reports we are on its trailing "blank
   /// buffer" pages past the actual content. foliate-js still emits
   /// onRelocated with `fraction=0` / `bookCurrentPage=0` on those
@@ -180,6 +186,7 @@ class BookPosition {
 
   factory BookPosition.fromMap(Map<String, dynamic> map) {
     final bookmark = readerBridgeMap(map['bookmark']) ?? const {};
+    final pageProgressionDirection = _string(map['pageProgressionDirection']);
     return BookPosition(
       cfi: _string(map['cfi']) ?? '',
       fraction: _double(map['percentage']) ?? 0,
@@ -190,6 +197,9 @@ class BookPosition {
       bookTotalPages: _int(map['bookTotalPages']),
       sizeTotal: _int(map['sizeTotal']),
       relocationReason: _string(map['reason']),
+      pageProgressionRtl: pageProgressionDirection == null
+          ? null
+          : pageProgressionDirection == 'rtl',
       atEnd: _bool(map['atEnd']) ?? false,
       atStart: _bool(map['atStart']) ?? false,
       bookmarkExists: _bool(bookmark['exists']) ?? false,

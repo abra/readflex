@@ -42,6 +42,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
                  title: initialSource.title,
                  book: initialSource,
                  sourceType: initialSourceType,
+                 pageProgressionRtl: _inferredBookPageProgressionRtl(
+                   initialSource,
+                 ),
                ),
        ) {
     on<ReaderSourceLoadRequested>(_onSourceLoadRequested);
@@ -116,6 +119,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             title: updatedBook.title,
             book: updatedBook,
             sourceType: SourceType.book,
+            pageProgressionRtl: _inferredBookPageProgressionRtl(updatedBook),
             highlights: highlights,
             bookmarks: bookmarks,
           ),
@@ -138,6 +142,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             title: readerBook.title,
             book: readerBook,
             sourceType: SourceType.article,
+            pageProgressionRtl: _inferredArticlePageProgressionRtl(
+              updatedArticle,
+            ),
             highlights: highlights,
             bookmarks: bookmarks,
           ),
@@ -221,6 +228,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         chapterCurrentPage: event.chapterCurrentPage,
         chapterTotalPages: event.chapterTotalPages,
         sizeTotal: nextSizeTotal,
+        pageProgressionRtl: event.pageProgressionRtl,
         currentPageBookmarked: event.currentPageBookmarked,
         currentPageBookmarkCfi: event.currentPageBookmarkCfi,
         currentPageBookmarkId: event.currentPageBookmarkId,
@@ -400,4 +408,25 @@ int? _positivePageTotal(int? value) {
 int? _visibleArticlePage(int? value) {
   if (value == null) return null;
   return value < 1 ? 1 : value;
+}
+
+bool _inferredBookPageProgressionRtl(Book book) {
+  return inferArticleTextDirectionFromText(
+        [book.title, book.author].nonNulls.join(' '),
+      ) ==
+      ArticleTextDirection.rtl;
+}
+
+bool _inferredArticlePageProgressionRtl(Article article) {
+  return (articleTextDirectionForLanguage(article.language) ??
+          inferArticleTextDirectionFromText(
+            [
+              article.title,
+              article.author,
+              article.siteName,
+              article.hostname,
+              article.plainText,
+            ].nonNulls.join(' '),
+          )) ==
+      ArticleTextDirection.rtl;
 }

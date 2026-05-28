@@ -36,6 +36,7 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
     this.chapterCurrentPage,
     this.chapterTotalPages,
     this.sizeTotal,
+    this.pageProgressionRtl,
     this.atEnd = false,
     this.currentPageBookmarked = false,
     this.currentPageBookmarkCfi,
@@ -59,6 +60,11 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
   /// Total byte size of all linear sections. See [BookPosition.sizeTotal]
   /// for the full rationale.
   final int? sizeTotal;
+
+  /// True when foliate-js reports right-to-left page progression. Null means
+  /// this event does not know and the current state should be preserved.
+  final bool? pageProgressionRtl;
+
   final bool atEnd;
   final bool currentPageBookmarked;
   final String? currentPageBookmarkCfi;
@@ -74,6 +80,7 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
     chapterCurrentPage,
     chapterTotalPages,
     sizeTotal,
+    pageProgressionRtl,
     atEnd,
     currentPageBookmarked,
     currentPageBookmarkCfi,
