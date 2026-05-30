@@ -1019,6 +1019,15 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     );
   }
 
+  /// Clear the active WebView text selection, if any.
+  void clearSelection() {
+    _evaluateReaderCommand(
+      label: 'clearSelection',
+      expression:
+          "typeof window.clearSelection === 'function' ? window.clearSelection() : null",
+    );
+  }
+
   /// Update style from Flutter.
   void changeStyle(FoliateStyle style) {
     final json = jsonEncode(style.toMap());

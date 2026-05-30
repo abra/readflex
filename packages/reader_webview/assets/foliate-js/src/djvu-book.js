@@ -2,6 +2,13 @@ const DJVU_SCRIPT_URL = new URL('./vendor/djvu.js', import.meta.url).href
 const SEARCH_UNAVAILABLE_MESSAGE = 'This DjVu file has no searchable text layer.'
 const BITMAP_PAGE_CACHE_LIMIT = 7
 const IMAGE_DATA_PAGE_CACHE_LIMIT = 3
+const AUTO_CROP_MAX_EDGE = 560
+const AUTO_CROP_EDGE_DENSITY = 0.012
+const AUTO_CROP_MIN_REMOVED_RATIO = 0.045
+const AUTO_CROP_PADDING_RATIO = 0.014
+const AUTO_CROP_COLOR_DISTANCE = 70
+const AUTO_CROP_LUMA_DISTANCE = 24
+const DJVU_CANVAS_FILTER = 'contrast(1.22) brightness(0.98) saturate(0.95)'
 
 let djvuLibraryPromise
 
@@ -48,6 +55,7 @@ canvas {
     display: block;
     width: ${width}px;
     height: ${height}px;
+    filter: ${DJVU_CANVAS_FILTER};
 }
 </style>
 <canvas id="page" width="${width}" height="${height}" aria-hidden="true"></canvas>
@@ -63,9 +71,151 @@ const imageDataToBitmap = async imageData => {
     }
 }
 
+const luma = (r, g, b) => 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+const estimateBackgroundColor = (data, width, height, step) => {
+    let red = 0
+    let green = 0
+    let blue = 0
+    let count = 0
+    const sample = (x, y) => {
+        const offset = (y * width + x) * 4
+        const alpha = data[offset + 3]
+        if (alpha < 12) return
+        red += data[offset]
+        green += data[offset + 1]
+        blue += data[offset + 2]
+        count += 1
+    }
+
+    for (let x = 0; x < width; x += step) {
+        sample(x, 0)
+        sample(x, height - 1)
+    }
+    for (let y = 0; y < height; y += step) {
+        sample(0, y)
+        sample(width - 1, y)
+    }
+
+    if (!count) return { r: 255, g: 255, b: 255, luma: 255 }
+    const r = red / count
+    const g = green / count
+    const b = blue / count
+    return { r, g, b, luma: luma(r, g, b) }
+}
+
+const isForegroundPixel = (data, offset, background) => {
+    const alpha = data[offset + 3]
+    if (alpha < 12) return false
+    const red = data[offset]
+    const green = data[offset + 1]
+    const blue = data[offset + 2]
+    const colorDistance = Math.abs(red - background.r)
+        + Math.abs(green - background.g)
+        + Math.abs(blue - background.b)
+    return colorDistance > AUTO_CROP_COLOR_DISTANCE
+        || Math.abs(luma(red, green, blue) - background.luma) > AUTO_CROP_LUMA_DISTANCE
+}
+
+const hasForegroundInSampleBlock = (data, width, height, x, y, sampleStep, background) => {
+    const right = Math.min(width, x + sampleStep)
+    const bottom = Math.min(height, y + sampleStep)
+    const blockStep = sampleStep <= 8 ? 1 : Math.max(1, Math.floor(sampleStep / 4))
+
+    for (let yy = y; yy < bottom; yy += blockStep) {
+        for (let xx = x; xx < right; xx += blockStep) {
+            const offset = (yy * width + xx) * 4
+            if (isForegroundPixel(data, offset, background)) return true
+        }
+    }
+
+    const lastOffset = ((bottom - 1) * width + right - 1) * 4
+    return isForegroundPixel(data, lastOffset, background)
+}
+
+const findContentStart = (counts, crossLength) => {
+    const windowSize = Math.max(3, Math.round(counts.length * 0.012))
+    const threshold = Math.max(2, Math.floor(crossLength * windowSize * AUTO_CROP_EDGE_DENSITY))
+    let sum = 0
+    for (let i = 0; i < counts.length; i += 1) {
+        sum += counts[i]
+        if (i >= windowSize) sum -= counts[i - windowSize]
+        if (i >= windowSize - 1 && sum >= threshold) return i - windowSize + 1
+    }
+    return 0
+}
+
+const findContentEnd = (counts, crossLength) => {
+    const windowSize = Math.max(3, Math.round(counts.length * 0.012))
+    const threshold = Math.max(2, Math.floor(crossLength * windowSize * AUTO_CROP_EDGE_DENSITY))
+    let sum = 0
+    for (let i = counts.length - 1; i >= 0; i -= 1) {
+        sum += counts[i]
+        if (i + windowSize < counts.length) sum -= counts[i + windowSize]
+        if (counts.length - i >= windowSize && sum >= threshold) return i + windowSize
+    }
+    return counts.length
+}
+
+// Runtime-only crop hint: the original DjVu bytes stay untouched.
+const detectPageCrop = imageData => {
+    const width = Math.max(1, Number(imageData?.width) || 1)
+    const height = Math.max(1, Number(imageData?.height) || 1)
+    const data = imageData?.data
+    if (!data || width < 64 || height < 64) return null
+
+    // Projection stays small even for large scans, keeping page changes cheap.
+    // Each projected cell preserves thin rules, so table borders are not cut.
+    const sampleStep = Math.max(1, Math.ceil(Math.max(width, height) / AUTO_CROP_MAX_EDGE))
+    const lowWidth = Math.ceil(width / sampleStep)
+    const lowHeight = Math.ceil(height / sampleStep)
+    const columnCounts = new Uint16Array(lowWidth)
+    const background = estimateBackgroundColor(data, width, height, sampleStep)
+    let foregroundCount = 0
+
+    for (let lowY = 0; lowY < lowHeight; lowY += 1) {
+        const y = Math.min(height - 1, lowY * sampleStep)
+        for (let lowX = 0; lowX < lowWidth; lowX += 1) {
+            const x = Math.min(width - 1, lowX * sampleStep)
+            if (!hasForegroundInSampleBlock(
+                data,
+                width,
+                height,
+                x,
+                y,
+                sampleStep,
+                background,
+            )) continue
+            columnCounts[lowX] += 1
+            foregroundCount += 1
+        }
+    }
+
+    if (foregroundCount < lowWidth * lowHeight * 0.0005) return null
+
+    const lowLeft = findContentStart(columnCounts, lowHeight)
+    const lowRight = findContentEnd(columnCounts, lowHeight)
+    if (lowRight <= lowLeft) return null
+
+    const padX = Math.round(width * AUTO_CROP_PADDING_RATIO)
+    const left = Math.max(0, lowLeft * sampleStep - padX)
+    const right = Math.min(width, lowRight * sampleStep + padX)
+    const cropWidth = right - left
+
+    if (cropWidth < width * 0.35) return null
+
+    const removedX = left + (width - right)
+    if (removedX < width * AUTO_CROP_MIN_REMOVED_RATIO) return null
+
+    // Keep vertical geometry intact: page numbers, headers, and table borders
+    // near the top/bottom are more valuable than the small vertical zoom gain.
+    return { left, top: 0, right, bottom: height }
+}
+
 const imageDataToCanvasEntry = async imageData => {
     const width = Math.max(1, Number(imageData.width) || 1)
     const height = Math.max(1, Number(imageData.height) || 1)
+    const crop = detectPageCrop(imageData)
     const bitmap = await imageDataToBitmap(imageData)
     const retainedImageData = bitmap ? null : imageData
 
@@ -81,6 +231,7 @@ const imageDataToCanvasEntry = async imageData => {
         kind: 'canvas-image',
         width,
         height,
+        crop,
         usesImageBitmap: Boolean(bitmap),
         draw(doc) {
             const canvas = doc.getElementById('page')

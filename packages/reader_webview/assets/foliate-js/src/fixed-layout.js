@@ -36,6 +36,20 @@ const getViewport = (doc, viewport) => {
 const isCanvasImageSource = src =>
     src && typeof src === 'object' && src.kind === 'canvas-image'
 
+// Crop is a renderer hint; the iframe document keeps its original size.
+const normalizeCrop = (crop, width, height) => {
+    if (!crop || !Number.isFinite(width) || !Number.isFinite(height)) return null
+    const left = Math.max(0, Math.min(width - 1, Math.round(Number(crop.left) || 0)))
+    const top = Math.max(0, Math.min(height - 1, Math.round(Number(crop.top) || 0)))
+    const right = Math.max(left + 1, Math.min(width, Math.round(Number(crop.right) || width)))
+    const bottom = Math.max(top + 1, Math.min(height, Math.round(Number(crop.bottom) || height)))
+    const cropWidth = right - left
+    const cropHeight = bottom - top
+
+    if (cropWidth < width * 0.35 || cropHeight < height * 0.35) return null
+    return { left, top, right, bottom, width: cropWidth, height: cropHeight }
+}
+
 const writeCanvasImageDocument = (iframe, src) => {
     const doc = iframe.contentDocument
     doc.open()
@@ -176,6 +190,7 @@ export class FixedLayout extends HTMLElement {
                 element, iframe,
                 width: src.width,
                 height: src.height,
+                crop: src.crop,
             }
         }
         return new Promise(resolve => {
@@ -230,30 +245,54 @@ export class FixedLayout extends HTMLElement {
         this.#portrait = portrait
         const blankWidth = left.width ?? right.width
         const blankHeight = left.height ?? right.height
+        const renderSize = frame => {
+            const sourceWidth = frame.width ?? blankWidth
+            const sourceHeight = frame.height ?? blankHeight
+            const crop = normalizeCrop(frame.crop, sourceWidth, sourceHeight)
+            return {
+                width: crop?.width ?? sourceWidth,
+                height: crop?.height ?? sourceHeight,
+            }
+        }
+        const targetSize = renderSize(target)
+        const leftSize = renderSize(left)
+        const rightSize = renderSize(right)
 
         const scale = portrait || this.#center
             ? Math.min(
-                width / (target.width ?? blankWidth),
-                height / (target.height ?? blankHeight))
+                width / targetSize.width,
+                height / targetSize.height)
             : Math.min(
-                width / ((left.width ?? blankWidth) + (right.width ?? blankWidth)),
-                height / Math.max(
-                    left.height ?? blankHeight,
-                    right.height ?? blankHeight))
+                width / (leftSize.width + rightSize.width),
+                height / Math.max(leftSize.height, rightSize.height))
 
         const transform = frame => {
             const { element, iframe, width, height, blank } = frame
+            const sourceWidth = width ?? blankWidth
+            const sourceHeight = height ?? blankHeight
+            const crop = normalizeCrop(frame.crop, sourceWidth, sourceHeight)
+            const renderWidth = crop?.width ?? sourceWidth
+            const renderHeight = crop?.height ?? sourceHeight
+            const pageTransform = crop
+                ? `translate(${-crop.left * scale}px, ${-crop.top * scale}px) scale(${scale})`
+                : `scale(${scale})`
             iframe.contentDocument.scale = scale
+            iframe.contentDocument.readflexVisibleRect = {
+                left: crop?.left ?? 0,
+                top: crop?.top ?? 0,
+                width: renderWidth,
+                height: renderHeight,
+            }
             Object.assign(iframe.style, {
-                width: `${width}px`,
-                height: `${height}px`,
-                transform: `scale(${scale})`,
+                width: `${sourceWidth}px`,
+                height: `${sourceHeight}px`,
+                transform: pageTransform,
                 transformOrigin: 'top left',
                 display: blank ? 'none' : 'block',
             })
             Object.assign(element.style, {
-                width: `${(width ?? blankWidth) * scale}px`,
-                height: `${(height ?? blankHeight) * scale}px`,
+                width: `${renderWidth * scale}px`,
+                height: `${renderHeight * scale}px`,
                 overflow: 'hidden',
                 display: 'block',
             })

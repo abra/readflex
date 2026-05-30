@@ -304,7 +304,7 @@ void main() {
       expect(normalizerJs, contains('wrapWideTables(doc)'));
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_33"));
+      expect(assetExtractor, contains("reader_webview_assets_40"));
     });
 
     test('does not dump full reader style changes to console', () {
@@ -337,6 +337,18 @@ void main() {
       expect(djvuBookJs, isNot(contains('createPngObjectUrl()')));
       expect(djvuBookJs, contains('getImageData().run()'));
       expect(djvuBookJs, contains("kind: 'canvas-image'"));
+      expect(djvuBookJs, contains('detectPageCrop(imageData)'));
+      expect(djvuBookJs, contains('AUTO_CROP_MIN_REMOVED_RATIO'));
+      expect(djvuBookJs, contains('DJVU_CANVAS_FILTER'));
+      expect(djvuBookJs, contains(r'filter: ${DJVU_CANVAS_FILTER};'));
+      expect(djvuBookJs, contains('hasForegroundInSampleBlock'));
+      expect(djvuBookJs, contains('table borders are not cut'));
+      expect(
+        djvuBookJs,
+        contains('return { left, top: 0, right, bottom: height }'),
+      );
+      expect(fixedLayoutJs, contains('normalizeCrop(frame.crop'));
+      expect(fixedLayoutJs, contains(r'translate(${-crop.left * scale}px'));
       expect(djvuBookJs, contains('prefetchAround(pageNumber)'));
       expect(djvuBookJs, contains('pending = new Map()'));
       expect(
@@ -353,6 +365,10 @@ void main() {
       expect(djvuBookJs, contains('PAGE_CACHE_LIMIT'));
       expect(djvuBookJs, contains('worker.terminate?.()'));
       expect(viewJs, contains("this.book?.features?.format === 'djvu'"));
+      expect(viewJs, contains('parentElement?.getBoundingClientRect'));
+      expect(viewJs, contains('crop/scale do not shift tap zones'));
+      expect(viewJs, contains('doc.readflexVisibleRect'));
+      expect(fixedLayoutJs, contains('readflexVisibleRect'));
       expect(fixedLayoutJs, contains('isCanvasImageSource'));
       expect(fixedLayoutJs, contains('writeCanvasImageDocument'));
       expect(fixedLayoutJs, contains('Promise.all(['));
@@ -767,6 +783,21 @@ void main() {
         webViewDart,
         contains(
           'if (wasReady) {\n      _applyArticleTextDirectionPatch();\n      return;\n    }',
+        ),
+      );
+    });
+
+    test('exposes a guarded clear-selection command', () {
+      final webViewDart = File(
+        'lib/src/book_reader_webview.dart',
+      ).readAsStringSync();
+
+      expect(webViewDart, contains('void clearSelection()'));
+      expect(webViewDart, contains("label: 'clearSelection'"));
+      expect(
+        webViewDart,
+        contains(
+          "typeof window.clearSelection === 'function' ? window.clearSelection() : null",
         ),
       );
     });

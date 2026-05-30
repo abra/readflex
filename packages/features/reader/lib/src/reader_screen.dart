@@ -37,6 +37,13 @@ import 'reader_ui_cubit.dart';
 /// Approximate height of the context panel, used to offset the review banner.
 const _kContextPanelHeight = 80.0;
 
+// Temporarily disabled: selection actions can trap the reader chrome on image
+// formats. Keep the wiring in place so the feature can be restored safely.
+const _kTextSelectionActionsEnabled = false;
+
+bool _selectionActionsVisible(bool hasSelection) =>
+    _kTextSelectionActionsEnabled && hasSelection;
+
 /// Duration and curve for the reader chrome slide animation.
 const _kChromeAnimDuration = Duration(milliseconds: 200);
 const _kChromeAnimCurve = Curves.easeOutCubic;
@@ -904,7 +911,7 @@ class _ReaderChromeDismissBarrierDriver extends StatelessWidget {
     final shouldBlockPage = shouldBlockReaderPageInput(
       chromeVisible: uiState.chromeVisible,
       overlayVisible: uiState.overlay != ReaderOverlay.none,
-      hasSelection: hasSelection,
+      hasSelection: _selectionActionsVisible(hasSelection),
     );
 
     return Positioned.fill(
@@ -943,7 +950,7 @@ class ReaderBrightnessChromeDriver extends StatelessWidget {
     final visible =
         uiState.chromeVisible &&
         uiState.overlay == ReaderOverlay.none &&
-        !hasSelection;
+        !_selectionActionsVisible(hasSelection);
     double brightnessAfterDelta(double delta) {
       return (brightnessState.sliderValue + delta)
           .clamp(
@@ -1246,7 +1253,10 @@ class _ReaderPageBookmarkIndicatorDriver extends StatelessWidget {
     final layoutId = context.select<ReaderAppearanceCubit, String>(
       (c) => c.state.effectiveAppearance.layoutId,
     );
-    final visible = bookmarked && uiState.contentOnlyVisible && !hasSelection;
+    final visible =
+        bookmarked &&
+        uiState.contentOnlyVisible &&
+        !_selectionActionsVisible(hasSelection);
     final topOffset =
         BookLayoutPreset.fromId(layoutId).data.topMargin -
         _kReaderPageBookmarkIndicatorLift;
@@ -1314,7 +1324,7 @@ class _ReaderTopChromeDriver extends StatelessWidget {
     final colors = context.colors;
 
     return _ReaderTopChrome(
-      visible: chromeVisible && !hasSelection,
+      visible: chromeVisible && !_selectionActionsVisible(hasSelection),
       title: title,
       panelColor: colors.surface,
       titleColor: colors.onSurface,
@@ -1459,7 +1469,7 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
     final colors = context.colors;
 
     return _ReaderBottomChrome(
-      visible: chromeVisible && !hasSelection,
+      visible: chromeVisible && !_selectionActionsVisible(hasSelection),
       progress: progress,
       chapterTitle: chapterTitle,
       chapterCurrentPage: chapterCurrentPage,
@@ -2841,7 +2851,7 @@ class _ContextPanelDriver extends StatelessWidget {
       (b) => b.state.sourceId,
     );
 
-    if (!sel.hasSelection || sourceId == null) {
+    if (!_selectionActionsVisible(sel.hasSelection) || sourceId == null) {
       return const SizedBox.shrink();
     }
 
@@ -2900,7 +2910,9 @@ class _ReviewReminderDriver extends StatelessWidget {
     return Positioned(
       left: AppSpacing.md,
       right: AppSpacing.md,
-      bottom: hasSelection ? _kContextPanelHeight : AppSpacing.md,
+      bottom: _selectionActionsVisible(hasSelection)
+          ? _kContextPanelHeight
+          : AppSpacing.md,
       child: _ReviewReminderBanner(
         onReview: () {
           reminderCubit.dismiss();
@@ -2948,7 +2960,9 @@ class _ComicProgressOverlayDriver extends StatelessWidget {
     final hasSelection = context.select<ReaderSelectionCubit, bool>(
       (c) => c.state.hasSelection,
     );
-    if (chromeVisible || hasSelection) return const SizedBox.shrink();
+    if (chromeVisible || _selectionActionsVisible(hasSelection)) {
+      return const SizedBox.shrink();
+    }
 
     final current = context.select<ReaderBloc, int?>(
       (b) => b.state.chapterCurrentPage,
@@ -3294,6 +3308,11 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         );
       },
       onTextSelected: (selection) {
+        if (!_kTextSelectionActionsEnabled) {
+          selectionCubit.deselect();
+          widget.webViewKey?.currentState?.clearSelection();
+          return;
+        }
         uiCubit.hideChrome();
         selectionCubit.select(
           text: selection.text,

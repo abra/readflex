@@ -377,19 +377,34 @@ export class View extends HTMLElement {
         return
 
       const position = doc.position
-      const scale = doc.scale
+      const scale = doc.scale ?? 1
       let { clientX, clientY } = e
       
-      // if the position is not null, it is fixed layout
+      // Fixed-layout documents live inside transformed iframes. Map through
+      // the visible frame element so crop/scale do not shift tap zones.
       if (position) {
-        clientX *= scale
-        clientY *= scale
-
-        const docWidth = doc.documentElement.getBoundingClientRect().width * scale
-        if (position === 'right' && docWidth * 2.2 < window.innerWidth) {
-          clientX += window.innerWidth * 0.5
+        const iframe = doc.defaultView?.frameElement
+        const rect = iframe?.parentElement?.getBoundingClientRect?.()
+        const visible = doc.readflexVisibleRect
+        if (rect && visible) {
+          const visibleX = Math.min(
+            Math.max(clientX - visible.left, 0),
+            visible.width,
+          )
+          const visibleY = Math.min(
+            Math.max(clientY - visible.top, 0),
+            visible.height,
+          )
+          const scaleX = visible.width > 0 ? rect.width / visible.width : scale
+          const scaleY = visible.height > 0 ? rect.height / visible.height : scale
+          this.#emit('click-view', {
+            x: rect.left + visibleX * scaleX,
+            y: rect.top + visibleY * scaleY,
+          })
+          return
         }
-        this.#emit('click-view', { x: clientX, y: clientY })
+
+        this.#emit('click-view', { x: clientX * scale, y: clientY * scale })
         return
       }
       
