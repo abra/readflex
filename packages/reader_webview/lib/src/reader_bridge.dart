@@ -58,6 +58,32 @@ double? _double(Object? value) => value is num ? value.toDouble() : null;
 
 bool? _bool(Object? value) => value is bool ? value : null;
 
+/// Document-level capabilities reported by the reader runtime.
+///
+/// Some formats expose optional structures: DjVu may have a NAVM table of
+/// contents and a TXTa/TXTz OCR text layer, but both are absent in many
+/// scanned files. Flutter treats null as "not detected yet".
+class ReaderDocumentFeatures {
+  const ReaderDocumentFeatures({
+    required this.format,
+    this.hasTableOfContents,
+    this.hasSearchableText,
+  });
+
+  final String? format;
+  final bool? hasTableOfContents;
+  final bool? hasSearchableText;
+
+  factory ReaderDocumentFeatures.fromMap(Map<String, dynamic> map) {
+    return ReaderDocumentFeatures(
+      format: _string(map['format']),
+      hasTableOfContents: _bool(map['hasToc']),
+      hasSearchableText:
+          _bool(map['hasSearchableText']) ?? _bool(map['hasTextLayer']),
+    );
+  }
+}
+
 enum ReaderBookmarkChangeSource { unknown, pullDown, chrome }
 
 ReaderBookmarkChangeSource _bookmarkChangeSource(Object? value) {

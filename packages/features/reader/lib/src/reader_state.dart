@@ -14,6 +14,7 @@ class ReaderState extends Equatable {
     this.highlights = const [],
     this.bookmarks = const [],
     this.tocItems = const [],
+    this.documentFeatures,
     this.chapterTitle,
     this.bookCurrentPage,
     this.bookTotalPages,
@@ -33,6 +34,7 @@ class ReaderState extends Equatable {
   final List<Highlight> highlights;
   final List<SourceBookmark> bookmarks;
   final List<ReaderTocItem> tocItems;
+  final ReaderDocumentFeatures? documentFeatures;
 
   /// Live chapter / page metrics surfaced by foliate-js on every page
   /// turn. Not persisted — they're recomputed on every reader open.
@@ -71,6 +73,7 @@ class ReaderState extends Equatable {
     List<Highlight>? highlights,
     List<SourceBookmark>? bookmarks,
     List<ReaderTocItem>? tocItems,
+    Object? documentFeatures = _absent,
     Object? chapterTitle = _absent,
     Object? bookCurrentPage = _absent,
     Object? bookTotalPages = _absent,
@@ -89,6 +92,9 @@ class ReaderState extends Equatable {
     highlights: highlights ?? this.highlights,
     bookmarks: bookmarks ?? this.bookmarks,
     tocItems: tocItems ?? this.tocItems,
+    documentFeatures: documentFeatures == _absent
+        ? this.documentFeatures
+        : documentFeatures as ReaderDocumentFeatures?,
     chapterTitle: chapterTitle == _absent
         ? this.chapterTitle
         : chapterTitle as String?,
@@ -124,6 +130,7 @@ class ReaderState extends Equatable {
     highlights,
     bookmarks,
     tocItems,
+    documentFeatures,
     chapterTitle,
     bookCurrentPage,
     bookTotalPages,

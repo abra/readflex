@@ -23,6 +23,7 @@ import 'reader_chrome_actions.dart';
 import 'reader_chrome_progress_layout.dart';
 import 'reader_color_utils.dart';
 import 'reader_device_font_scale.dart';
+import 'reader_drawer_messages.dart';
 import 'reader_directional_layout.dart';
 import 'reader_loading_indicator_style.dart';
 import 'reader_progress_label.dart';
@@ -769,6 +770,18 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   }
 
   Stream<ReaderSearchEvent> _searchBook(String query) {
+    final readerState = context.read<ReaderBloc>().state;
+    final searchEnabled = readerSearchActionEnabled(
+      format: readerState.book?.format,
+      documentFeatures: readerState.documentFeatures,
+    );
+    if (!searchEnabled) {
+      final message = readerState.documentFeatures?.hasSearchableText == false
+          ? 'This DjVu file has no searchable text layer.'
+          : 'DjVu text layer check is still running.';
+      return Stream.value(ReaderSearchError(requestId: -1, message: message));
+    }
+
     final webView = _webViewKey.currentState;
     if (webView == null) {
       return Stream.value(
@@ -796,6 +809,9 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     );
     final pageProgressionRtl = context.select<ReaderBloc, bool>(
       (b) => b.state.pageProgressionRtl,
+    );
+    final format = context.select<ReaderBloc, BookFormat?>(
+      (b) => b.state.book?.format,
     );
     // Reader theme drives the book *page* — WebView background and
     // foliate-js customCSS. Chrome (passed-through Stack siblings)
@@ -846,6 +862,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
             const _ReviewReminderDriver(),
             _ReaderTocDrawerDriver(
               visible: uiState.tocDrawerVisible,
+              format: format,
               pageProgressionRtl: pageProgressionRtl,
               onClose: _closeTocDrawer,
               onItemSelected: _goToTocItem,
@@ -853,6 +870,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
             ),
             _ReaderSearchDrawer(
               visible: uiState.searchDrawerVisible,
+              format: format,
               pageProgressionRtl: pageProgressionRtl,
               onClose: _closeSearchDrawer,
               onSearch: _searchBook,
@@ -1433,6 +1451,10 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
     final pageProgressionRtl = context.select<ReaderBloc, bool>(
       (b) => b.state.pageProgressionRtl,
     );
+    final documentFeatures = context
+        .select<ReaderBloc, ReaderDocumentFeatures?>(
+          (b) => b.state.documentFeatures,
+        );
     final actions = readerChromeActionsForFormat(format);
     final colors = context.colors;
 
@@ -1455,6 +1477,14 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
       showFontAction: actions.contains(ReaderChromeAction.textAppearance),
       showBookmarkAction: actions.contains(ReaderChromeAction.bookmark),
       showSearchAction: actions.contains(ReaderChromeAction.textSearch),
+      searchActionEnabled: readerSearchActionEnabled(
+        format: format,
+        documentFeatures: documentFeatures,
+      ),
+      searchActionTooltip: readerSearchActionTooltip(
+        format: format,
+        documentFeatures: documentFeatures,
+      ),
       onBack: () => Navigator.of(context).maybePop(),
       onTocPressed: onTocPressed,
       onFontPressed: onFontPressed,
@@ -1489,6 +1519,8 @@ class _ReaderBottomChrome extends StatefulWidget {
     required this.showFontAction,
     required this.showBookmarkAction,
     required this.showSearchAction,
+    required this.searchActionEnabled,
+    required this.searchActionTooltip,
     this.onBack,
     this.onTocPressed,
     this.onFontPressed,
@@ -1515,6 +1547,8 @@ class _ReaderBottomChrome extends StatefulWidget {
   final bool showFontAction;
   final bool showBookmarkAction;
   final bool showSearchAction;
+  final bool searchActionEnabled;
+  final String searchActionTooltip;
   final VoidCallback? onBack;
   final VoidCallback? onTocPressed;
   final VoidCallback? onFontPressed;
@@ -1527,13 +1561,12 @@ class _ReaderBottomChrome extends StatefulWidget {
 }
 
 class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
-  /// Local override for smooth drag and for the short post-release window
-  /// before foliate-js reports the new snapped location back to the bloc.
+  /// Local override for smooth drag and for the post-release window before
+  /// foliate-js reports the new snapped location back to the bloc.
   double? _dragValue;
   bool _isDragging = false;
   Timer? _dragReleaseTimer;
 
-  static const Duration _dragReleaseTimeout = Duration(milliseconds: 600);
   static const double _dragSettleEpsilon = 0.005;
   static const double _progressSliderHeight = 30;
   static const double _progressTrackHeight = 3;
@@ -1554,6 +1587,7 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
     if (dragValue == null) return;
     final displayedValue = readerSliderValue(
       sourceType: widget.sourceType,
+      format: widget.format,
       progress: widget.progress,
       currentPage: widget.chapterCurrentPage,
       totalPages: widget.chapterTotalPages,
@@ -1621,17 +1655,20 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
         : _kChromeHideAnimCurve;
     final displayedValue = readerSliderValue(
       sourceType: widget.sourceType,
+      format: widget.format,
       progress: widget.progress,
       currentPage: widget.chapterCurrentPage,
       totalPages: widget.chapterTotalPages,
     );
     final sliderValue = snappedReaderSeekProgress(
       sourceType: widget.sourceType,
+      format: widget.format,
       progress: _dragValue ?? displayedValue,
       totalPages: widget.chapterTotalPages,
     );
     final sliderDivisions = readerSliderDivisions(
       sourceType: widget.sourceType,
+      format: widget.format,
       totalPages: widget.chapterTotalPages,
     );
     final showProgressSlider = shouldShowReaderProgressSlider(
@@ -1737,6 +1774,7 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                                       final seekValue =
                                           snappedReaderSeekProgress(
                                             sourceType: widget.sourceType,
+                                            format: widget.format,
                                             progress: v,
                                             totalPages:
                                                 widget.chapterTotalPages,
@@ -1750,6 +1788,7 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                                       final seekValue =
                                           snappedReaderSeekProgress(
                                             sourceType: widget.sourceType,
+                                            format: widget.format,
                                             progress: v,
                                             totalPages:
                                                 widget.chapterTotalPages,
@@ -1760,6 +1799,7 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                                       final seekValue =
                                           snappedReaderSeekProgress(
                                             sourceType: widget.sourceType,
+                                            format: widget.format,
                                             progress: v,
                                             totalPages:
                                                 widget.chapterTotalPages,
@@ -1767,7 +1807,9 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                                       widget.onSeekFraction(seekValue);
                                       _dragReleaseTimer?.cancel();
                                       _dragReleaseTimer = Timer(
-                                        _dragReleaseTimeout,
+                                        readerSeekSettleTimeout(
+                                          format: widget.format,
+                                        ),
                                         () {
                                           if (!mounted) return;
                                           _dragReleaseTimer = null;
@@ -1888,9 +1930,9 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
       addButton(
         _ReaderChromeIconButton(
           icon: AppIcons.search,
-          tooltip: 'Search',
+          tooltip: widget.searchActionTooltip,
           foregroundColor: widget.foregroundColor,
-          onPressed: widget.onSearchPressed,
+          onPressed: widget.searchActionEnabled ? widget.onSearchPressed : null,
         ),
       );
     }
@@ -1902,6 +1944,7 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
 class _ReaderTocDrawerDriver extends StatelessWidget {
   const _ReaderTocDrawerDriver({
     required this.visible,
+    required this.format,
     required this.pageProgressionRtl,
     required this.onClose,
     required this.onItemSelected,
@@ -1909,6 +1952,7 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
   });
 
   final bool visible;
+  final BookFormat? format;
   final bool pageProgressionRtl;
   final VoidCallback onClose;
   final ValueChanged<ReaderTocItem> onItemSelected;
@@ -1926,6 +1970,7 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
 
     return _ReaderTocDrawer(
       visible: visible,
+      format: format,
       pageProgressionRtl: pageProgressionRtl,
       tocItems: tocItems,
       bookmarks: bookmarks,
@@ -1941,6 +1986,7 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
 class _ReaderTocDrawer extends StatelessWidget {
   const _ReaderTocDrawer({
     required this.visible,
+    required this.format,
     required this.pageProgressionRtl,
     required this.tocItems,
     required this.bookmarks,
@@ -1952,6 +1998,7 @@ class _ReaderTocDrawer extends StatelessWidget {
   });
 
   final bool visible;
+  final BookFormat? format;
   final bool pageProgressionRtl;
   final List<ReaderTocItem> tocItems;
   final List<SourceBookmark> bookmarks;
@@ -1976,6 +2023,7 @@ class _ReaderTocDrawer extends StatelessWidget {
             child: SafeArea(
               bottom: false,
               child: _ReaderTocDrawerContent(
+                format: format,
                 pageProgressionRtl: pageProgressionRtl,
                 tocItems: tocItems,
                 bookmarks: bookmarks,
@@ -1993,6 +2041,7 @@ class _ReaderTocDrawer extends StatelessWidget {
 
 class _ReaderTocDrawerContent extends StatefulWidget {
   const _ReaderTocDrawerContent({
+    required this.format,
     required this.pageProgressionRtl,
     required this.tocItems,
     required this.bookmarks,
@@ -2001,6 +2050,7 @@ class _ReaderTocDrawerContent extends StatefulWidget {
     required this.onBookmarkSelected,
   });
 
+  final BookFormat? format;
   final bool pageProgressionRtl;
   final List<ReaderTocItem> tocItems;
   final List<SourceBookmark> bookmarks;
@@ -2076,6 +2126,7 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
               children: [
                 _ReaderTocTab(
                   controller: _chaptersSearchController,
+                  format: widget.format,
                   pageProgressionRtl: widget.pageProgressionRtl,
                   query: _chaptersQuery,
                   hintText: 'Search chapters',
@@ -2107,6 +2158,7 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
 class _ReaderTocTab extends StatelessWidget {
   const _ReaderTocTab({
     required this.controller,
+    required this.format,
     required this.pageProgressionRtl,
     required this.query,
     required this.hintText,
@@ -2116,6 +2168,7 @@ class _ReaderTocTab extends StatelessWidget {
   });
 
   final TextEditingController controller;
+  final BookFormat? format;
   final bool pageProgressionRtl;
   final String query;
   final String hintText;
@@ -2148,9 +2201,10 @@ class _ReaderTocTab extends StatelessWidget {
           child: _ReaderDrawerContentFrame(
             child: filteredItems.isEmpty
                 ? _ReaderDrawerEmptyState(
-                    message: items.isEmpty
-                        ? 'No chapters found'
-                        : 'No matching chapters',
+                    message: readerTocEmptyMessage(
+                      format: format,
+                      hasSourceItems: items.isNotEmpty,
+                    ),
                   )
                 : ScrollEdgeFadeStack(
                     child: ListView.builder(
@@ -2346,6 +2400,7 @@ class _ReaderBookmarkListTile extends StatelessWidget {
 class _ReaderSearchDrawer extends StatelessWidget {
   const _ReaderSearchDrawer({
     required this.visible,
+    required this.format,
     required this.pageProgressionRtl,
     required this.onClose,
     required this.onSearch,
@@ -2354,6 +2409,7 @@ class _ReaderSearchDrawer extends StatelessWidget {
   });
 
   final bool visible;
+  final BookFormat? format;
   final bool pageProgressionRtl;
   final VoidCallback onClose;
   final Stream<ReaderSearchEvent> Function(String query) onSearch;
@@ -2378,6 +2434,7 @@ class _ReaderSearchDrawer extends StatelessWidget {
               bottom: false,
               child: _ReaderSearchDrawerContent(
                 visible: visible,
+                format: format,
                 pageProgressionRtl: pageProgressionRtl,
                 onClose: onClose,
                 onSearch: onSearch,
@@ -2395,6 +2452,7 @@ class _ReaderSearchDrawer extends StatelessWidget {
 class _ReaderSearchDrawerContent extends StatefulWidget {
   const _ReaderSearchDrawerContent({
     required this.visible,
+    required this.format,
     required this.pageProgressionRtl,
     required this.onClose,
     required this.onSearch,
@@ -2403,6 +2461,7 @@ class _ReaderSearchDrawerContent extends StatefulWidget {
   });
 
   final bool visible;
+  final BookFormat? format;
   final bool pageProgressionRtl;
   final VoidCallback onClose;
   final Stream<ReaderSearchEvent> Function(String query) onSearch;
@@ -2536,8 +2595,10 @@ class _ReaderSearchDrawerContentState
                                 onQuerySelected: _selectRecentQuery,
                                 onQueryRemoved: _removeRecentQuery,
                               )
-                            : const _ReaderDrawerEmptyState(
-                                message: 'Type at least 2 characters to search',
+                            : _ReaderDrawerEmptyState(
+                                message: readerSearchPromptMessage(
+                                  widget.format,
+                                ),
                               )
                       : state.results.isEmpty && !state.isLoading
                       ? const _ReaderDrawerEmptyState(
@@ -2853,13 +2914,13 @@ class _ReviewReminderDriver extends StatelessWidget {
   }
 }
 
-/// Always-on "page X / Y" indicator for comics — CBZ readers expect a
+/// Always-on "page X / Y" indicator for image-page books — CBZ and DjVu readers expect a
 /// constant pager hint, and tapping chrome for every page-turn is friction.
 ///
 /// Subscribes only to the chapter-page pair (which for CBZ maps 1:1
 /// to comic page index / total) and a couple of visibility gates.
 /// Renders nothing when:
-///   * the format isn't CBZ — books and PDFs do not need the comic page
+///   * the format is not image-page based — text books and PDFs do not need the page
 ///     counter,
 ///   * the chrome panel is visible — the action bar should own the bottom
 ///     visual area,
@@ -2879,7 +2940,7 @@ class _ComicProgressOverlayDriver extends StatelessWidget {
     final format = context.select<ReaderBloc, BookFormat?>(
       (b) => b.state.book?.format,
     );
-    if (format != BookFormat.cbz) return const SizedBox.shrink();
+    if (!isImagePageFormat(format)) return const SizedBox.shrink();
 
     final chromeVisible = context.select<ReaderUiCubit, bool>(
       (c) => c.state.chromeVisible,
@@ -3212,6 +3273,9 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       },
       onTocChanged: (items) {
         bloc.add(ReaderTocUpdated(items: items));
+      },
+      onDocumentFeaturesChanged: (features) {
+        bloc.add(ReaderDocumentFeaturesUpdated(features: features));
       },
       onBookmarkChanged: (change) {
         bloc.add(

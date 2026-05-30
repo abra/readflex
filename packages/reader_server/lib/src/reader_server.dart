@@ -374,6 +374,7 @@ class ReaderServer {
       '.json' => ContentType('application', 'json', charset: 'utf-8'),
       '.epub' => ContentType('application', 'epub+zip'),
       '.pdf' => ContentType('application', 'pdf'),
+      '.djvu' || '.djv' => ContentType('image', 'vnd.djvu'),
       '.mobi' => ContentType('application', 'x-mobipocket-ebook'),
       '.fb2' => ContentType('application', 'xml', charset: 'utf-8'),
       '.png' => ContentType('image', 'png'),

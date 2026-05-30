@@ -14,14 +14,21 @@ const _textReaderActions = {
   ReaderChromeAction.textSearch,
 };
 
-const _comicReaderActions = {
+const _imagePageReaderActions = {
   ReaderChromeAction.contents,
   ReaderChromeAction.bookmark,
 };
 
+const _djvuReaderActions = {
+  ReaderChromeAction.contents,
+  ReaderChromeAction.bookmark,
+  ReaderChromeAction.textSearch,
+};
+
 Set<ReaderChromeAction> readerChromeActionsForFormat(BookFormat? format) {
   return switch (format) {
-    BookFormat.cbz => _comicReaderActions,
+    BookFormat.cbz => _imagePageReaderActions,
+    BookFormat.djvu => _djvuReaderActions,
     _ => _textReaderActions,
   };
 }

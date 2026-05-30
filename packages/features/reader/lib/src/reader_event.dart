@@ -104,6 +104,17 @@ final class ReaderTocUpdated extends ReaderEvent {
   List<Object?> get props => [items];
 }
 
+/// foliate-js reported optional document capabilities such as embedded TOC or
+/// searchable OCR/text layer availability.
+final class ReaderDocumentFeaturesUpdated extends ReaderEvent {
+  const ReaderDocumentFeaturesUpdated({required this.features});
+
+  final ReaderDocumentFeatures features;
+
+  @override
+  List<Object?> get props => [features];
+}
+
 /// foliate-js requested adding/removing a bookmark at the current page.
 final class ReaderBookmarkChanged extends ReaderEvent {
   const ReaderBookmarkChanged({

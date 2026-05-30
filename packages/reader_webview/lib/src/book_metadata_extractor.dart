@@ -130,7 +130,7 @@ class BookMetadataExtractor {
   String _buildUrl(String filePath) {
     final bookUrl = Uri.encodeComponent(filePath);
     // Original filename WITH extension. foliate-js uses `RemoteFile.name`
-    // both for format detection (`isCBZ`/`isFBZ` match by the file's name
+    // both for format detection (`isCBZ`/`isFBZ`/DjVu match by the file's name
     // suffix) and as a metadata fallback for formats without embedded
     // metadata (CBZ sets `book.metadata.title = file.name`). Stripping the
     // extension here would make foliate-js mis-detect CBZ as EPUB and

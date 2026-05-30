@@ -5,7 +5,8 @@ enum BookFormat {
   mobi,
   pdf,
   azw3,
-  cbz
+  cbz,
+  djvu
   ;
 
   /// Parses a [BookFormat] from its stored [name]. Falls back to [epub] on
@@ -16,6 +17,7 @@ enum BookFormat {
   /// Parses a [BookFormat] from a file extension (e.g. '.epub').
   static BookFormat? fromExtension(String extension) {
     final key = extension.toLowerCase().replaceFirst('.', '');
+    if (key == 'djv') return djvu;
     return values.asNameMap()[key];
   }
 }

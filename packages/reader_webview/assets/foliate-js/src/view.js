@@ -209,6 +209,7 @@ export class View extends HTMLElement {
   close() {
     this.renderer?.destroy()
     this.renderer?.remove()
+    this.book?.destroy?.()
     this.#sectionProgress = null
     this.#tocProgress = null
     this.#pageProgress = null
@@ -612,10 +613,14 @@ export class View extends HTMLElement {
   goRight() {
     return this.pageProgressionDirection === 'rtl' ? this.prev() : this.next()
   }
+  #getSearchResultCFI(index, range) {
+    if (this.book?.features?.format === 'djvu') return this.getCFI(index)
+    return this.getCFI(index, range)
+  }
   async * #searchSection(matcher, query, index) {
     const doc = await this.book.sections[index].createDocument()
     for (const { range, excerpt } of matcher(doc, query))
-      yield { cfi: this.getCFI(index, range), excerpt }
+      yield { cfi: this.#getSearchResultCFI(index, range), excerpt }
   }
   async * #searchBook(matcher, query) {
     const { sections } = this.book
@@ -623,7 +628,7 @@ export class View extends HTMLElement {
       if (!createDocument) continue
       const doc = await createDocument()
       const subitems = Array.from(matcher(doc, query), ({ range, excerpt }) =>
-        ({ cfi: this.getCFI(index, range), excerpt }))
+        ({ cfi: this.#getSearchResultCFI(index, range), excerpt }))
       const progress = (index + 1) / sections.length
       yield { progress }
       if (subitems.length) yield { index, subitems }
@@ -632,6 +637,14 @@ export class View extends HTMLElement {
   async * search(opts) {
     console.log('search', opts)
     this.clearSearch()
+    if (this.book?.features?.format === 'djvu' &&
+      typeof this.book.hasTextLayer === 'function') {
+      const hasTextLayer = await this.book.hasTextLayer()
+      if (!hasTextLayer) {
+        throw new Error(this.book.features.searchUnavailableMessage ||
+          'This DjVu file has no searchable text layer.')
+      }
+    }
     const { searchMatcher } = await import('./search.js')
     const { query, index } = opts
     const matcher = searchMatcher(textWalker,
@@ -641,6 +654,7 @@ export class View extends HTMLElement {
       : this.#searchBook(matcher, query)
 
     const list = []
+    const canHighlightSearchResults = this.book?.features?.format !== 'djvu'
     this.#searchResults.set(index, list)
 
     for await (const result of iter) {
@@ -648,7 +662,9 @@ export class View extends HTMLElement {
         const list = result.subitems
           .map(({ cfi }) => ({ value: SEARCH_PREFIX + cfi }))
         this.#searchResults.set(result.index, list)
-        for (const item of list) this.addAnnotation(item)
+        if (canHighlightSearchResults) {
+          for (const item of list) this.addAnnotation(item)
+        }
         yield {
           label: this.#tocProgress.getProgress(result.index)?.label ?? '',
           subitems: result.subitems,
@@ -658,7 +674,7 @@ export class View extends HTMLElement {
         if (result.cfi) {
           const item = { value: SEARCH_PREFIX + result.cfi }
           list.push(item)
-          this.addAnnotation(item)
+          if (canHighlightSearchResults) this.addAnnotation(item)
         }
         yield result
       }

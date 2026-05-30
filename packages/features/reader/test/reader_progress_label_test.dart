@@ -84,16 +84,54 @@ void main() {
       );
     });
 
+    test('keeps comic drag preview aligned with slider divisions', () {
+      expect(
+        readerProgressLabel(
+          format: BookFormat.cbz,
+          progress: 22 / 24,
+          chapterCurrentPage: 22,
+          chapterTotalPages: 25,
+          isDragging: true,
+        ),
+        '23 / 25',
+      );
+      expect(
+        readerProgressLabel(
+          format: BookFormat.cbz,
+          progress: 23 / 25,
+          chapterCurrentPage: 22,
+          chapterTotalPages: 25,
+          isDragging: true,
+        ),
+        '23 / 25',
+      );
+    });
+
+    test('keeps DjVu page counters as page over total', () {
+      expect(
+        readerProgressLabel(
+          format: BookFormat.djvu,
+          progress: 0.2,
+          chapterCurrentPage: 4,
+          chapterTotalPages: 12,
+          isDragging: false,
+        ),
+        '5 / 12',
+      );
+      expect(isImagePageFormat(BookFormat.djvu), isTrue);
+    });
+
     test('clamps non-finite and out-of-range progress', () {
       expect(readingPercentLabel(double.nan), '0%');
       expect(readingPercentLabel(-0.5), '0%');
       expect(readingPercentLabel(1.5), '100%');
     });
 
-    test('uses discrete slider divisions only for articles', () {
+    test('uses discrete slider divisions for page-only readers', () {
       expect(
         readerSliderDivisions(
           sourceType: SourceType.article,
+          format: BookFormat.epub,
           totalPages: 3,
         ),
         2,
@@ -101,6 +139,23 @@ void main() {
       expect(
         readerSliderDivisions(
           sourceType: SourceType.book,
+          format: BookFormat.cbz,
+          totalPages: 25,
+        ),
+        24,
+      );
+      expect(
+        readerSliderDivisions(
+          sourceType: SourceType.book,
+          format: BookFormat.djvu,
+          totalPages: 12,
+        ),
+        11,
+      );
+      expect(
+        readerSliderDivisions(
+          sourceType: SourceType.book,
+          format: BookFormat.epub,
           totalPages: 3,
         ),
         isNull,
@@ -108,6 +163,7 @@ void main() {
       expect(
         readerSliderDivisions(
           sourceType: SourceType.article,
+          format: BookFormat.epub,
           totalPages: 1,
         ),
         isNull,
@@ -149,10 +205,11 @@ void main() {
       );
     });
 
-    test('snaps seek progress only for articles', () {
+    test('snaps seek progress for page-only readers', () {
       expect(
         snappedReaderSeekProgress(
           sourceType: SourceType.article,
+          format: BookFormat.epub,
           progress: 0.52,
           totalPages: 3,
         ),
@@ -161,6 +218,16 @@ void main() {
       expect(
         snappedReaderSeekProgress(
           sourceType: SourceType.book,
+          format: BookFormat.cbz,
+          progress: 0.9,
+          totalPages: 25,
+        ),
+        22 / 24,
+      );
+      expect(
+        snappedReaderSeekProgress(
+          sourceType: SourceType.book,
+          format: BookFormat.epub,
           progress: 0.52,
           totalPages: 3,
         ),
@@ -169,6 +236,7 @@ void main() {
       expect(
         snappedReaderSeekProgress(
           sourceType: SourceType.article,
+          format: BookFormat.epub,
           progress: 1.5,
           totalPages: 3,
         ),
@@ -182,6 +250,7 @@ void main() {
         expect(
           readerSliderValue(
             sourceType: SourceType.article,
+            format: BookFormat.epub,
             progress: 0.557,
             currentPage: 1,
             totalPages: 3,
@@ -191,6 +260,7 @@ void main() {
         expect(
           readerSliderValue(
             sourceType: SourceType.article,
+            format: BookFormat.epub,
             progress: 0.557,
             currentPage: 2,
             totalPages: 3,
@@ -200,6 +270,7 @@ void main() {
         expect(
           readerSliderValue(
             sourceType: SourceType.article,
+            format: BookFormat.epub,
             progress: 0.557,
             currentPage: 3,
             totalPages: 3,
@@ -209,15 +280,54 @@ void main() {
       },
     );
 
-    test('keeps non-article slider value continuous', () {
+    test('maps image-page slider value from zero-indexed page', () {
       expect(
         readerSliderValue(
           sourceType: SourceType.book,
+          format: BookFormat.cbz,
+          progress: 23 / 25,
+          currentPage: 22,
+          totalPages: 25,
+        ),
+        22 / 24,
+      );
+      expect(
+        readerSliderValue(
+          sourceType: SourceType.book,
+          format: BookFormat.djvu,
+          progress: 5 / 12,
+          currentPage: 4,
+          totalPages: 12,
+        ),
+        4 / 11,
+      );
+    });
+
+    test('keeps non-article text-book slider value continuous', () {
+      expect(
+        readerSliderValue(
+          sourceType: SourceType.book,
+          format: BookFormat.epub,
           progress: 0.557,
           currentPage: 1,
           totalPages: 3,
         ),
         0.557,
+      );
+    });
+
+    test('keeps image-page seek previews longer while render catches up', () {
+      expect(
+        readerSeekSettleTimeout(format: BookFormat.epub),
+        readerDefaultSeekSettleTimeout,
+      );
+      expect(
+        readerSeekSettleTimeout(format: BookFormat.cbz),
+        readerImagePageSeekSettleTimeout,
+      );
+      expect(
+        readerSeekSettleTimeout(format: BookFormat.djvu),
+        readerImagePageSeekSettleTimeout,
       );
     });
 

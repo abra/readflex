@@ -10,7 +10,16 @@ import 'package:reader_webview/reader_webview.dart';
 /// formats foliate-js (the in-app reader) can actually render — the
 /// list and `BookFormat` must stay in sync, otherwise the picker
 /// would let the user import a file that can never actually open.
-const bookExtensions = ['epub', 'fb2', 'mobi', 'pdf', 'azw3', 'cbz'];
+const bookExtensions = [
+  'epub',
+  'fb2',
+  'mobi',
+  'pdf',
+  'azw3',
+  'cbz',
+  'djvu',
+  'djv',
+];
 
 /// Opens the platform file picker filtered to [bookExtensions]. Returns
 /// the selected [File] or `null` when the user cancels (or picks a file

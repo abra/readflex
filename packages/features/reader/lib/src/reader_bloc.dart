@@ -51,6 +51,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     on<ReaderBookPositionUpdated>(_onBookPositionUpdated);
     on<ReaderHighlightsRefreshed>(_onHighlightsRefreshed);
     on<ReaderTocUpdated>(_onTocUpdated);
+    on<ReaderDocumentFeaturesUpdated>(_onDocumentFeaturesUpdated);
     on<ReaderBookmarkChanged>(_onBookmarkChanged);
   }
 
@@ -122,6 +123,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             pageProgressionRtl: _inferredBookPageProgressionRtl(updatedBook),
             highlights: highlights,
             bookmarks: bookmarks,
+            documentFeatures: null,
           ),
         );
         return;
@@ -147,6 +149,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             ),
             highlights: highlights,
             bookmarks: bookmarks,
+            documentFeatures: null,
           ),
         );
         return;
@@ -306,6 +309,13 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
 
   void _onTocUpdated(ReaderTocUpdated event, Emitter<ReaderState> emit) {
     emit(state.copyWith(tocItems: event.items));
+  }
+
+  void _onDocumentFeaturesUpdated(
+    ReaderDocumentFeaturesUpdated event,
+    Emitter<ReaderState> emit,
+  ) {
+    emit(state.copyWith(documentFeatures: event.features));
   }
 
   Future<void> _onBookmarkChanged(

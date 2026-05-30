@@ -419,6 +419,11 @@ const isFBZ = ({ name, type }) =>
   type === 'application/x-zip-compressed-fb2'
   || name.endsWith('.fb2.zip') || name.endsWith('.fbz')
 
+const isDjVuFile = async file => {
+  const { isDjVu } = await import('./djvu-book.js')
+  return isDjVu(file)
+}
+
 const getView = async file => {
   let book
   if (file.isDirectory) {
@@ -446,6 +451,10 @@ const getView = async file => {
     isPdf = true;
     const { makePDF } = await import('./pdf.js')
     book = await makePDF(file)
+  }
+  else if (await isDjVuFile(file)) {
+    const { makeDjVuBook } = await import('./djvu-book.js')
+    book = await makeDjVuBook(file)
   }
   else {
     const { isMOBI, MOBI } = await import('./mobi.js')
@@ -1058,8 +1067,10 @@ class Reader {
   }
 
   addAnnotation(annotation) {
+    annotation = this.#normalizedBookmarkAnnotation(annotation)
     const { value } = annotation
-    const spineCode = (value.split('/')[2].split('!')[0] - 2) / 2
+    const spineCode = this.#annotationSpineIndex(annotation)
+    if (spineCode == null) return
 
     const list = this.annotations.get(spineCode)
     if (list) list.push(annotation)
@@ -1084,9 +1095,12 @@ class Reader {
   }
 
   #checkCurrentPageBookmark() {
-    const spineCode = this.#index
-    const list = this.annotations.get(spineCode)
-    const currentAnchor = this.#bookmarkAnchorFromLocation(this.view.lastLocation)
+    const currentLocation = this.view.lastLocation
+    const currentAnchor = this.#bookmarkAnchorFromLocation(currentLocation)
+    const spineCode = this.#isBookmarkAnchorInteger(currentAnchor?.anchorSectionIndex)
+      ? Number(currentAnchor.anchorSectionIndex)
+      : this.#bookmarkSectionIndexFromLocation(currentLocation)
+    const list = spineCode == null ? null : this.annotations.get(spineCode)
     let found = false
     let bookmark = null
     if (list && currentAnchor) {
@@ -1129,6 +1143,46 @@ class Reader {
     const left = unwrapCFI(a)
     const right = unwrapCFI(b)
     return Boolean(left && right && left === right)
+  }
+
+  #normalizedBookmarkAnnotation(annotation) {
+    if (annotation?.type !== 'bookmark') return annotation
+
+    const cfiIndex = this.#annotationCfiSpineIndex(annotation)
+    if (cfiIndex == null || !this.#hasBookmarkVisualPageAnchor(annotation)) {
+      return annotation
+    }
+
+    const anchorIndex = Number(annotation.anchorSectionIndex)
+    if (anchorIndex === cfiIndex) return annotation
+
+    const anchorPage = Number(annotation.anchorSectionPage)
+    return {
+      ...annotation,
+      anchorSectionIndex: cfiIndex,
+      anchorSectionPage: anchorPage === anchorIndex
+        ? cfiIndex
+        : annotation.anchorSectionPage,
+    }
+  }
+
+  #annotationSpineIndex(annotation) {
+    const cfiIndex = this.#annotationCfiSpineIndex(annotation)
+    if (cfiIndex != null) return cfiIndex
+
+    if (this.#isBookmarkAnchorInteger(annotation?.anchorSectionIndex)) {
+      return Number(annotation.anchorSectionIndex)
+    }
+
+    return null
+  }
+
+  #annotationCfiSpineIndex(annotation) {
+    const cfi = unwrapCFI(annotation?.value)
+    const match = typeof cfi === 'string' ? cfi.match(/^\/\d+\/(\d+)/) : null
+    const spinePosition = match ? Number(match[1]) : NaN
+    const index = (spinePosition - 2) / 2
+    return Number.isInteger(index) && index >= 0 ? index : null
   }
 
   #hasBookmarkTextAnchor(bookmark) {
@@ -1220,17 +1274,36 @@ class Reader {
   }
 
   #bookmarkAnchorFromLocation(location) {
-    const visibleRange = location?.range
-    if (!visibleRange || !this.#doc || this.#index == null) return null
+    if (!location) return null
+    const sectionIndex = this.#bookmarkSectionIndexFromLocation(location)
+    if (sectionIndex == null) return null
+
+    const visibleRange = location.range
+    const pageAnchor = this.#bookmarkVisualPageAnchorFromLocation(
+      location,
+      sectionIndex,
+    )
+    let cfi = location.cfi
+    if (!cfi) {
+      cfi = this.view.getCFI(sectionIndex)
+    }
+
+    if (!visibleRange || !this.#doc) {
+      if (!cfi) return null
+      return {
+        cfi,
+        ...pageAnchor,
+        content: this.#bookmarkVisualContentFromLocation(location),
+      }
+    }
 
     try {
       // Prefer a word from the visual viewport. The location DOM range can span
       // multiple CSS columns, so its midpoint may belong to a later page.
       const anchorRange = this.#visibleViewportBookmarkRange(visibleRange)
       if (!anchorRange) return null
-      let cfi = location?.cfi
       try {
-        cfi = this.view.getCFI(this.#index, anchorRange) ?? cfi
+        cfi = this.view.getCFI(sectionIndex, anchorRange) ?? cfi
       } catch (_) {
         // Some non-EPUB renderers expose a visual range but cannot produce a
         // precise CFI for it. Keep the page CFI for navigation and rely on the
@@ -1238,7 +1311,6 @@ class Reader {
       }
       if (!cfi) return null
       const selector = this.#bookmarkSelectorFromRange(anchorRange)
-      const pageAnchor = this.#bookmarkVisualPageAnchorFromLocation(location)
       return {
         cfi,
         ...selector,
@@ -1250,12 +1322,27 @@ class Reader {
     }
   }
 
-  #bookmarkVisualPageAnchorFromLocation(location) {
+  #bookmarkSectionIndexFromLocation(location) {
+    const index = location?.section?.current
+    if (this.#isBookmarkAnchorInteger(index)) return Number(index)
+    return Number.isInteger(this.#index) ? this.#index : null
+  }
+
+  #bookmarkVisualPageAnchorFromLocation(location, sectionIndex) {
     const page = location?.chapterLocation?.current
     return {
-      anchorSectionIndex: Number.isInteger(this.#index) ? this.#index : null,
+      anchorSectionIndex: Number.isInteger(sectionIndex) ? sectionIndex : null,
       anchorSectionPage: Number.isInteger(page) ? page : null,
     }
+  }
+
+  #bookmarkVisualContentFromLocation(location) {
+    const page = location?.chapterLocation?.current
+    const total = location?.chapterLocation?.total
+    if (Number.isInteger(page) && Number.isInteger(total) && total > 0) {
+      return `Page ${Math.min(total, Math.max(1, page + 1))} / ${total}`
+    }
+    return ''
   }
 
   #visibleViewportBookmarkRange(visibleRange) {
@@ -1580,9 +1667,9 @@ class Reader {
       : this.annotationsByValue.get(cfi)
     if (!annotation) return
     const { value } = annotation
-    const spineCode = (value.split('/')[2].split('!')[0] - 2) / 2
+    const spineCode = this.#annotationSpineIndex(annotation)
 
-    const list = this.annotations.get(spineCode)
+    const list = spineCode == null ? null : this.annotations.get(spineCode)
     if (list) {
       const index = list.findIndex(a => a.id === annotation.id)
       if (index !== -1) list.splice(index, 1)
@@ -1863,8 +1950,20 @@ class Reader {
   }
 
   goToBookmark = async target => {
-    const sectionIndex = target?.anchorSectionIndex
-    const sectionPage = target?.anchorSectionPage
+    let sectionIndex = target?.anchorSectionIndex
+    let sectionPage = target?.anchorSectionPage
+    const cfiSectionIndex = this.#annotationCfiSpineIndex({ value: target?.cfi })
+    if (cfiSectionIndex != null &&
+      this.#isBookmarkAnchorInteger(sectionIndex) &&
+      Number(sectionIndex) !== cfiSectionIndex) {
+      const previousSectionIndex = Number(sectionIndex)
+      sectionIndex = cfiSectionIndex
+      if (this.#isBookmarkAnchorInteger(sectionPage) &&
+        Number(sectionPage) === previousSectionIndex) {
+        sectionPage = cfiSectionIndex
+      }
+    }
+
     if (this.#isBookmarkAnchorInteger(sectionIndex) &&
       this.#isBookmarkAnchorInteger(sectionPage)) {
       try {
@@ -1942,6 +2041,7 @@ const open = async (file, cfi, progress) => {
   if (!importing) {
     callFlutter('onLoadEnd')
     onSetToc()
+    scheduleDocumentFeatureDetection()
     callFlutter('renderAnnotations')
   }
   else { getMetadata() }
@@ -1951,6 +2051,32 @@ const open = async (file, cfi, progress) => {
 const callFlutter = (name, data) => {
   // console.log('callFlutter', name, data)
   window.flutter_inappwebview.callHandler(name, data)
+}
+
+const emitDocumentFeatures = () => {
+  const features = reader?.view?.book?.features
+  if (!features) return
+  callFlutter('onDocumentFeatures', features)
+}
+
+const refreshDocumentFeatures = async () => {
+  const book = reader?.view?.book
+  if (!book?.features) return
+  if (book.features.format === 'djvu' && typeof book.hasTextLayer === 'function') {
+    try {
+      book.features.hasTextLayer = await book.hasTextLayer()
+    } catch (_) {
+      book.features.hasTextLayer = false
+    }
+  }
+  emitDocumentFeatures()
+}
+
+const scheduleDocumentFeatureDetection = () => {
+  emitDocumentFeatures()
+  setTimeout(() => {
+    refreshDocumentFeatures()
+  }, 250)
 }
 
 const readerCSSKeys = [

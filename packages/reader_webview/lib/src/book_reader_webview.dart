@@ -249,7 +249,7 @@ String buildArticleTextDirectionPatchScript({
 /// Communication:
 ///   JS → Flutter: `onReady`, `onRelocated`, `onSelectionEnd`,
 ///                  `onSelectionCleared`, `onAnnotationClick`, `onSetToc`,
-///                  `onSearch`, `handleBookmark`
+///                  `onDocumentFeatures`, `onSearch`, `handleBookmark`
 ///   Flutter → JS: `goToCfi`, `goToHref`, `startSearch`, `cancelSearch`,
 ///                  `searchBook`, `clearSearch`, `nextPage`, `prevPage`,
 ///                  `changeStyle`, `addAnnotation`, `removeAnnotation`,
@@ -271,6 +271,7 @@ class BookReaderWebView extends StatefulWidget {
     this.onTextDeselected,
     this.onHighlightTapped,
     this.onTocChanged,
+    this.onDocumentFeaturesChanged,
     this.onBookmarkChanged,
     this.onTapped,
     super.key,
@@ -321,6 +322,10 @@ class BookReaderWebView extends StatefulWidget {
 
   /// Fires when foliate-js has parsed the book's table of contents.
   final void Function(List<ReaderTocItem> items)? onTocChanged;
+
+  /// Fires when the runtime has detected optional document capabilities.
+  final void Function(ReaderDocumentFeatures features)?
+  onDocumentFeaturesChanged;
 
   /// Fires when foliate-js requests adding/removing a bookmark.
   final void Function(ReaderBookmarkChange change)? onBookmarkChanged;
@@ -675,6 +680,18 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       callback: (args) {
         if (args.isEmpty) return;
         widget.onTocChanged?.call(readerTocItemsFromBridge(args.first));
+      },
+    );
+
+    controller.addJavaScriptHandler(
+      handlerName: 'onDocumentFeatures',
+      callback: (args) {
+        if (args.isEmpty) return;
+        final data = readerBridgeMap(args.first);
+        if (data == null) return;
+        widget.onDocumentFeaturesChanged?.call(
+          ReaderDocumentFeatures.fromMap(data),
+        );
       },
     );
 

@@ -2,6 +2,32 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:reader_webview/reader_webview.dart';
 
 void main() {
+  group('ReaderDocumentFeatures', () {
+    test('fromMap parses DjVu optional capabilities', () {
+      final features = ReaderDocumentFeatures.fromMap({
+        'format': 'djvu',
+        'hasToc': false,
+        'hasTextLayer': true,
+      });
+
+      expect(features.format, 'djvu');
+      expect(features.hasTableOfContents, isFalse);
+      expect(features.hasSearchableText, isTrue);
+    });
+
+    test('fromMap tolerates unknown capability values', () {
+      final features = ReaderDocumentFeatures.fromMap({
+        'format': 'djvu',
+        'hasToc': 'no',
+        'hasTextLayer': null,
+      });
+
+      expect(features.format, 'djvu');
+      expect(features.hasTableOfContents, isNull);
+      expect(features.hasSearchableText, isNull);
+    });
+  });
+
   group('ReaderBookmarkChange', () {
     test('fromMap parses add event', () {
       final change = ReaderBookmarkChange.fromMap({

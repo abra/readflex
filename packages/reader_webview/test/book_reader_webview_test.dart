@@ -91,6 +91,7 @@ void main() {
       expect(bookJs, contains('globalThis.readflexSourceType = sourceType'));
       expect(bookJs, contains('normalizeLoadedDocument(doc)'));
       expect(bookJs, contains("callFlutter('onSearch'"));
+      expect(bookJs, contains("callFlutter('onDocumentFeatures'"));
       expect(bookJs, contains("callFlutter('handleBookmark'"));
     });
 
@@ -140,8 +141,23 @@ void main() {
       expect(bookJs, contains('#bookmarkSelectorFromRange(anchorRange)'));
       expect(
         bookJs,
-        contains('#bookmarkVisualPageAnchorFromLocation(location)'),
+        contains('#bookmarkVisualPageAnchorFromLocation('),
       );
+      expect(bookJs, contains('#bookmarkSectionIndexFromLocation(location)'));
+      expect(bookJs, contains('location?.section?.current'));
+      expect(
+        bookJs,
+        contains('#bookmarkVisualContentFromLocation(location)'),
+      );
+      expect(bookJs, contains('#normalizedBookmarkAnnotation(annotation)'));
+      expect(bookJs, contains('#annotationSpineIndex(annotation)'));
+      expect(bookJs, contains('#annotationCfiSpineIndex(annotation)'));
+      expect(
+        bookJs,
+        contains('annotation?.anchorSectionIndex'),
+      );
+      expect(bookJs, contains('if (!visibleRange || !this.#doc)'));
+      expect(bookJs, contains('cfi = this.view.getCFI(sectionIndex)'));
       expect(bookJs, contains('anchorExact: anchor?.anchorExact'));
       expect(bookJs, contains('anchorSectionPage: anchor?.anchorSectionPage'));
       expect(webViewDart, contains("'anchorExact': bookmark.anchorExact"));
@@ -157,6 +173,7 @@ void main() {
       expect(bookJs, isNot(contains('anchor?.cfi ?? location?.cfi')));
       expect(bookJs, contains('#bookmarkAnchorFromLocation(location)'));
       expect(bookJs, contains('goToBookmark = async target'));
+      expect(bookJs, contains('const cfiSectionIndex ='));
       expect(
         bookJs,
         contains('this.view.goToSectionPage(sectionIndex, sectionPage)'),
@@ -167,7 +184,8 @@ void main() {
       expect(bookJs, contains('#rangeViewportScore('));
       expect(bookJs, contains('caretRangeFromPoint'));
       expect(bookJs, contains('caretPositionFromPoint'));
-      expect(bookJs, contains('this.view.getCFI(this.#index, anchorRange)'));
+      expect(bookJs, contains('this.view.getCFI(sectionIndex, anchorRange)'));
+      expect(bookJs, contains('currentAnchor?.anchorSectionIndex'));
       expect(viewJs, isNot(contains("if (cfi && (!this.#lastCfi")));
       expect(viewJs, contains('#lastRelocateKey'));
       expect(viewJs, contains('async goToSectionPage(index, page)'));
@@ -286,7 +304,7 @@ void main() {
       expect(normalizerJs, contains('wrapWideTables(doc)'));
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_32"));
+      expect(assetExtractor, contains("reader_webview_assets_33"));
     });
 
     test('does not dump full reader style changes to console', () {
@@ -294,6 +312,65 @@ void main() {
 
       expect(bookJs, isNot(contains("console.log('changeStyle'")));
       expect(bookJs, isNot(contains('JSON.stringify(style)')));
+    });
+
+    test('registers DjVu format adapter and assets', () {
+      final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
+      final djvuBookJs = File(
+        'assets/foliate-js/src/djvu-book.js',
+      ).readAsStringSync();
+      final viewJs = File('assets/foliate-js/src/view.js').readAsStringSync();
+      final fixedLayoutJs = File(
+        'assets/foliate-js/src/fixed-layout.js',
+      ).readAsStringSync();
+      final assetExtractor = File(
+        'lib/src/asset_extractor.dart',
+      ).readAsStringSync();
+
+      expect(bookJs, contains("await import('./djvu-book.js')"));
+      expect(bookJs, contains('await isDjVuFile(file)'));
+      expect(bookJs, contains('scheduleDocumentFeatureDetection()'));
+      expect(bookJs, contains("callFlutter('onDocumentFeatures'"));
+      expect(djvuBookJs, contains('export const isDjVu = async'));
+      expect(djvuBookJs, contains("new DjVu.Worker(DJVU_SCRIPT_URL)"));
+      expect(djvuBookJs, contains("rendition: { layout: 'pre-paginated' }"));
+      expect(djvuBookJs, isNot(contains('createPngObjectUrl()')));
+      expect(djvuBookJs, contains('getImageData().run()'));
+      expect(djvuBookJs, contains("kind: 'canvas-image'"));
+      expect(djvuBookJs, contains('prefetchAround(pageNumber)'));
+      expect(djvuBookJs, contains('pending = new Map()'));
+      expect(
+        djvuBookJs,
+        contains('createDocument: async () => makeTextDocument'),
+      );
+      expect(djvuBookJs, contains('getText().run()'));
+      expect(djvuBookJs, contains('hasTextLayer'));
+      expect(djvuBookJs, contains('hasTextLayer: null'));
+      expect(
+        djvuBookJs,
+        contains('This DjVu file has no searchable text layer.'),
+      );
+      expect(djvuBookJs, contains('PAGE_CACHE_LIMIT'));
+      expect(djvuBookJs, contains('worker.terminate?.()'));
+      expect(viewJs, contains("this.book?.features?.format === 'djvu'"));
+      expect(fixedLayoutJs, contains('isCanvasImageSource'));
+      expect(fixedLayoutJs, contains('writeCanvasImageDocument'));
+      expect(fixedLayoutJs, contains('Promise.all(['));
+      expect(viewJs, contains('this.book.hasTextLayer()'));
+      expect(viewJs, contains('#getSearchResultCFI'));
+      expect(viewJs, contains('canHighlightSearchResults'));
+      expect(assetExtractor, contains('assets/foliate-js/src/djvu-book.js'));
+      expect(assetExtractor, contains('assets/foliate-js/src/vendor/djvu.js'));
+      expect(
+        assetExtractor,
+        contains('assets/foliate-js/src/vendor/djvujs.LICENSE.md'),
+      );
+    });
+
+    test('closes foliate book resources when view is closed', () {
+      final viewJs = File('assets/foliate-js/src/view.js').readAsStringSync();
+
+      expect(viewJs, contains('this.book?.destroy?.()'));
     });
 
     test('fixed-layout animates page turns when animation is enabled', () {

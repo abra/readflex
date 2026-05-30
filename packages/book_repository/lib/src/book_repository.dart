@@ -22,7 +22,7 @@ const _uuid = Uuid();
 ///
 /// ```
 /// books/<uuid>/
-///   book.<ext>    — the book file (epub, fb2, mobi, pdf)
+///   book.<ext>    — the book file (epub, fb2, mobi, pdf, djvu)
 ///   cover.<ext>   — extracted cover image (if available)
 /// ```
 ///

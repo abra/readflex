@@ -24,9 +24,25 @@ const getViewport = (doc, viewport) => {
     const img = doc.querySelector('img')
     if (img) return { width: img.naturalWidth, height: img.naturalHeight }
 
+    // get generated canvas size for DjVu canvas pages
+    const canvas = doc.querySelector('canvas')
+    if (canvas) return { width: canvas.width, height: canvas.height }
+
     // just show *something*, i guess...
     console.warn(new Error('Missing viewport properties'))
     return { width: 1000, height: 2000 }
+}
+
+const isCanvasImageSource = src =>
+    src && typeof src === 'object' && src.kind === 'canvas-image'
+
+const writeCanvasImageDocument = (iframe, src) => {
+    const doc = iframe.contentDocument
+    doc.open()
+    doc.write(src.html)
+    doc.close()
+    src.draw?.(doc)
+    return doc
 }
 
 export class FixedLayout extends HTMLElement {
@@ -152,18 +168,25 @@ export class FixedLayout extends HTMLElement {
         iframe.setAttribute('part', 'filter')
         parent.append(element)
         if (!src) return { blank: true, element, iframe }
+        if (isCanvasImageSource(src)) {
+            const doc = writeCanvasImageDocument(iframe, src)
+            doc.position = position
+            this.dispatchEvent(new CustomEvent('load', { detail: { doc, index } }))
+            return {
+                element, iframe,
+                width: src.width,
+                height: src.height,
+            }
+        }
         return new Promise(resolve => {
             const onload = () => {
                 iframe.removeEventListener('load', onload)
                 const doc = iframe.contentDocument
                 doc.position = position
                 this.dispatchEvent(new CustomEvent('load', { detail: { doc, index } }))
-                // CBZ pages are an HTML blob containing a single <img>;
-                // the iframe `load` event can fire before the image
-                // bitmap is decoded, leaving naturalWidth/Height at 0.
-                // getViewport then falls back to its 1000×2000 default
-                // and the page renders at the wrong scale. Wait for the
-                // image to finish loading before measuring viewport.
+                // Image-backed fixed pages can fire iframe `load` before
+                // the image bitmap is decoded, leaving naturalWidth/Height
+                // at 0. Wait before measuring viewport so scaling is stable.
                 const finish = () => {
                     const { width, height } = getViewport(doc, this.defaultViewport)
                     resolve({
@@ -389,8 +412,10 @@ export class FixedLayout extends HTMLElement {
         } else {
             const indexL = this.book.sections.indexOf(spread.left)
             const indexR = this.book.sections.indexOf(spread.right)
-            const srcL = await spread.left?.load?.()
-            const srcR = await spread.right?.load?.()
+            const [srcL, srcR] = await Promise.all([
+                spread.left?.load?.(),
+                spread.right?.load?.(),
+            ])
             const left = { index: indexL, src: srcL }
             const right = { index: indexR, src: srcR }
             await this.#showSpread({ left, right, side, direction })

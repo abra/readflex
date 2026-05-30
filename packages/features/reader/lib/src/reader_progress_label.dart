@@ -8,7 +8,7 @@ String readerProgressLabel({
   required int? chapterTotalPages,
   required bool isDragging,
 }) {
-  if (format == BookFormat.cbz) {
+  if (isImagePageFormat(format)) {
     return comicPageLabel(
           currentPage: isDragging
               ? _zeroIndexedPageFromProgress(progress, chapterTotalPages)
@@ -38,6 +38,18 @@ String readerProgressLabel({
   return sectionPage == null ? percent : '$percent · $sectionPage';
 }
 
+bool isImagePageFormat(BookFormat? format) {
+  return format == BookFormat.cbz || format == BookFormat.djvu;
+}
+
+const readerDefaultSeekSettleTimeout = Duration(milliseconds: 600);
+const readerImagePageSeekSettleTimeout = Duration(seconds: 3);
+
+Duration readerSeekSettleTimeout({required BookFormat? format}) {
+  if (isImagePageFormat(format)) return readerImagePageSeekSettleTimeout;
+  return readerDefaultSeekSettleTimeout;
+}
+
 String readingPercentLabel(double progress) {
   final clamped = _clampProgress(progress);
   return '${(clamped * 100).round()}%';
@@ -45,11 +57,12 @@ String readingPercentLabel(double progress) {
 
 int? readerSliderDivisions({
   required SourceType sourceType,
+  required BookFormat? format,
   required int? totalPages,
 }) {
-  if (sourceType != SourceType.article ||
-      totalPages == null ||
-      totalPages <= 1) {
+  final hasDiscretePages =
+      sourceType == SourceType.article || isImagePageFormat(format);
+  if (!hasDiscretePages || totalPages == null || totalPages <= 1) {
     return null;
   }
   return totalPages - 1;
@@ -61,7 +74,7 @@ bool shouldShowReaderProgressSlider({
   required int? totalPages,
 }) {
   final isPageOnlyProgress =
-      sourceType == SourceType.article || format == BookFormat.cbz;
+      sourceType == SourceType.article || isImagePageFormat(format);
   if (isPageOnlyProgress && totalPages != null && totalPages <= 1) {
     return false;
   }
@@ -70,13 +83,14 @@ bool shouldShowReaderProgressSlider({
 
 double snappedReaderSeekProgress({
   required SourceType sourceType,
+  required BookFormat? format,
   required double progress,
   required int? totalPages,
 }) {
   final clamped = _clampProgress(progress);
-  if (sourceType != SourceType.article ||
-      totalPages == null ||
-      totalPages <= 1) {
+  final hasDiscretePages =
+      sourceType == SourceType.article || isImagePageFormat(format);
+  if (!hasDiscretePages || totalPages == null || totalPages <= 1) {
     return clamped;
   }
   final divisions = totalPages - 1;
@@ -85,23 +99,29 @@ double snappedReaderSeekProgress({
 
 double readerSliderValue({
   required SourceType sourceType,
+  required BookFormat? format,
   required double progress,
   required int? currentPage,
   required int? totalPages,
 }) {
-  if (sourceType != SourceType.article) {
+  final usesPagePosition =
+      sourceType == SourceType.article || isImagePageFormat(format);
+  if (!usesPagePosition) {
     return _clampProgress(progress);
   }
   if (currentPage == null || totalPages == null || totalPages <= 0) {
     return snappedReaderSeekProgress(
       sourceType: sourceType,
+      format: format,
       progress: progress,
       totalPages: totalPages,
     );
   }
   if (totalPages == 1) return 0;
 
-  final page = _displayVisualSectionPage(currentPage, totalPages);
+  final page = isImagePageFormat(format)
+      ? displayZeroIndexedPage(currentPage, totalPages)
+      : _displayVisualSectionPage(currentPage, totalPages);
   return _clampProgress((page - 1) / (totalPages - 1));
 }
 
@@ -135,7 +155,8 @@ int _displayVisualSectionPage(int pageIndex, int totalPages) {
 
 int? _zeroIndexedPageFromProgress(double progress, int? totalPages) {
   if (totalPages == null || totalPages <= 0) return null;
-  return (_clampProgress(progress) * totalPages).floor();
+  if (totalPages == 1) return 0;
+  return (_clampProgress(progress) * (totalPages - 1)).round();
 }
 
 int? _oneIndexedPageFromProgress(double progress, int? totalPages) {

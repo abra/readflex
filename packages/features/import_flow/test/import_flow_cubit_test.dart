@@ -10,6 +10,12 @@ import 'package:reader_webview/reader_webview.dart';
 /// Cubit tests. Fakes record callback invocations so we assert state
 /// transitions without touching the real file picker or repository.
 void main() {
+  group('bookExtensions', () {
+    test('includes DjVu aliases', () {
+      expect(bookExtensions, containsAll(['djvu', 'djv']));
+    });
+  });
+
   group('ImportFlowCubit', () {
     blocTest<ImportFlowCubit, ImportFlowState>(
       'starts in menu',

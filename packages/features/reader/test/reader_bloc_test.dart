@@ -2,6 +2,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_bloc.dart';
+import 'package:reader_webview/reader_webview.dart';
 
 import 'helpers/fake_article_repository.dart';
 import 'helpers/fake_book_repository.dart';
@@ -69,6 +70,23 @@ void main() {
         expect(bloc.state.status, ReaderStatus.initial);
         expect(bloc.state.title, '');
         expect(bloc.state.book, isNull);
+      },
+    );
+
+    blocTest<ReaderBloc, ReaderState>(
+      'stores document feature updates',
+      build: () => buildBlocWithInitialSource(testBook),
+      act: (bloc) => bloc.add(
+        const ReaderDocumentFeaturesUpdated(
+          features: ReaderDocumentFeatures(
+            format: 'djvu',
+            hasSearchableText: false,
+          ),
+        ),
+      ),
+      verify: (bloc) {
+        expect(bloc.state.documentFeatures?.format, 'djvu');
+        expect(bloc.state.documentFeatures?.hasSearchableText, isFalse);
       },
     );
 
