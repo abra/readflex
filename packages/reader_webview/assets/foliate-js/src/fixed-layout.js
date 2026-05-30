@@ -24,7 +24,7 @@ const getViewport = (doc, viewport) => {
     const img = doc.querySelector('img')
     if (img) return { width: img.naturalWidth, height: img.naturalHeight }
 
-    // get generated canvas size for DjVu canvas pages
+    // get generated canvas size for canvas-backed fixed-layout pages
     const canvas = doc.querySelector('canvas')
     if (canvas) return { width: canvas.width, height: canvas.height }
 

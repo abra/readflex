@@ -41,8 +41,7 @@ class LibrarySource extends Equatable {
     lastOpenedAt: book.lastOpenedAt,
     isFinished: book.isFinished,
     isComic: book.format == BookFormat.cbz,
-    supportsReview:
-        book.format != BookFormat.cbz && book.format != BookFormat.djvu,
+    supportsReview: book.format != BookFormat.cbz,
   );
 
   factory LibrarySource.fromArticle(Article article) => LibrarySource(

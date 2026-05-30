@@ -6,7 +6,7 @@ void main() {
   group('readerChromeActionsForFormat', () {
     test('keeps text-reader controls for regular books', () {
       for (final format in BookFormat.values.where(
-        (f) => f != BookFormat.cbz && f != BookFormat.djvu,
+        (f) => f != BookFormat.cbz,
       )) {
         final actions = readerChromeActionsForFormat(format);
 
@@ -24,15 +24,6 @@ void main() {
       expect(actions, contains(ReaderChromeAction.bookmark));
       expect(actions, isNot(contains(ReaderChromeAction.textAppearance)));
       expect(actions, isNot(contains(ReaderChromeAction.textSearch)));
-    });
-
-    test('keeps DjVu search but hides text appearance controls', () {
-      final actions = readerChromeActionsForFormat(BookFormat.djvu);
-
-      expect(actions, contains(ReaderChromeAction.contents));
-      expect(actions, contains(ReaderChromeAction.bookmark));
-      expect(actions, contains(ReaderChromeAction.textSearch));
-      expect(actions, isNot(contains(ReaderChromeAction.textAppearance)));
     });
 
     test('defaults to text-reader controls before format is known', () {

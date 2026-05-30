@@ -109,14 +109,11 @@ void main() {
   });
 
   group('LibrarySource.fromBook', () {
-    test('marks image-only formats as not reviewable', () {
+    test('marks comics as not reviewable', () {
       final comic = LibrarySource.fromBook(_book(format: BookFormat.cbz));
-      final djvu = LibrarySource.fromBook(_book(format: BookFormat.djvu));
 
       expect(comic.isComic, isTrue);
       expect(comic.supportsReview, isFalse);
-      expect(djvu.isComic, isFalse);
-      expect(djvu.supportsReview, isFalse);
     });
   });
 }

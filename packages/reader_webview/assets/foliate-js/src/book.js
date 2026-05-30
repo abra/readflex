@@ -419,11 +419,6 @@ const isFBZ = ({ name, type }) =>
   type === 'application/x-zip-compressed-fb2'
   || name.endsWith('.fb2.zip') || name.endsWith('.fbz')
 
-const isDjVuFile = async file => {
-  const { isDjVu } = await import('./djvu-book.js')
-  return isDjVu(file)
-}
-
 const getView = async file => {
   let book
   if (file.isDirectory) {
@@ -451,10 +446,6 @@ const getView = async file => {
     isPdf = true;
     const { makePDF } = await import('./pdf.js')
     book = await makePDF(file)
-  }
-  else if (await isDjVuFile(file)) {
-    const { makeDjVuBook } = await import('./djvu-book.js')
-    book = await makeDjVuBook(file)
   }
   else {
     const { isMOBI, MOBI } = await import('./mobi.js')
@@ -849,10 +840,30 @@ const readingFeaturesDocHandler = (doc) => {
 
 const footnoteDialog = document.getElementById('footnote-dialog')
 footnoteDialog.style.display = 'none'
-footnoteDialog.addEventListener('click', () => {
-  // display none
+
+const isFootnoteDialogOpen = () =>
+  footnoteDialog.style.display === 'block' || footnoteDialog.hasAttribute('open')
+
+const openFootnoteDialog = () => {
+  if (typeof footnoteDialog.showModal === 'function') {
+    if (!footnoteDialog.open) footnoteDialog.showModal()
+  } else {
+    footnoteDialog.setAttribute('open', '')
+  }
+  footnoteDialog.style.display = 'block'
+}
+
+const closeFootnoteDialog = () => {
+  if (typeof footnoteDialog.close === 'function' && footnoteDialog.open) {
+    footnoteDialog.close()
+  }
+  footnoteDialog.removeAttribute('open')
   footnoteDialog.style.display = 'none'
   callFlutter("onFootnoteClose")
+}
+
+footnoteDialog.addEventListener('click', e => {
+  if (e.target === footnoteDialog) closeFootnoteDialog()
 })
 
 const replaceFootnote = (view) => {
@@ -875,7 +886,7 @@ const replaceFootnote = (view) => {
         .shadowRoot.querySelector("foliate-paginator")
         .shadowRoot.querySelector("#container > div > iframe")
 
-      dialog.style.display = 'block'
+      openFootnoteDialog()
 
       // dialog.style.width = 'auto'
       // dialog.style.height = 'auto'
@@ -928,8 +939,6 @@ const replaceFootnote = (view) => {
   // if #rrggbbaa, replace aa to ee
   footnoteDialog.style.backgroundColor = style.backgroundColor.slice(0, 7) + '33'
 }
-footnoteDialog.addEventListener('click', e =>
-  e.target === footnoteDialog ? footnoteDialog.close() : null)
 
 class Reader {
   annotations = new Map()
@@ -954,7 +963,7 @@ class Reader {
     })
     this.#footnoteHandler.addEventListener('render', e => {
       const { view } = e.detail
-      footnoteDialog.showModal()
+      openFootnoteDialog()
     })
     this.#originalContent = null
   }
@@ -2060,15 +2069,6 @@ const emitDocumentFeatures = () => {
 }
 
 const refreshDocumentFeatures = async () => {
-  const book = reader?.view?.book
-  if (!book?.features) return
-  if (book.features.format === 'djvu' && typeof book.hasTextLayer === 'function') {
-    try {
-      book.features.hasTextLayer = await book.hasTextLayer()
-    } catch (_) {
-      book.features.hasTextLayer = false
-    }
-  }
   emitDocumentFeatures()
 }
 
@@ -2577,13 +2577,9 @@ window.getChapterContentByHref = async (href, opts) =>
 
 // window.bionicReading = (enable) => reader.bionicReading(enable)
 
-window.isFootNoteOpen = () => footnoteDialog.getAttribute('style').includes('display: block')
+window.isFootNoteOpen = () => isFootnoteDialogOpen()
 
-window.closeFootNote = () => {
-  // set zindex to 0
-  footnoteDialog.style.display = 'none'
-  callFlutter("onFootnoteClose")
-}
+window.closeFootNote = () => closeFootnoteDialog()
 
 window.readingFeatures = (rules) => {
   readingRules = { ...readingRules, ...rules }

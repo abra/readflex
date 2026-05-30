@@ -60,9 +60,8 @@ bool? _bool(Object? value) => value is bool ? value : null;
 
 /// Document-level capabilities reported by the reader runtime.
 ///
-/// Some formats expose optional structures: DjVu may have a NAVM table of
-/// contents and a TXTa/TXTz OCR text layer, but both are absent in many
-/// scanned files. Flutter treats null as "not detected yet".
+/// Some formats expose optional structures such as a table of contents.
+/// Flutter treats null as "not detected yet".
 class ReaderDocumentFeatures {
   const ReaderDocumentFeatures({
     required this.format,

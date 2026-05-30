@@ -86,13 +86,42 @@ void main() {
       expect(bookJs, contains('window.toggleBookmarkHere'));
       expect(bookJs, contains('window.pageLeft'));
       expect(bookJs, contains('window.pageRight'));
-      expect(bookJs, contains('reader.view.goLeft()'));
-      expect(bookJs, contains('reader.view.goRight()'));
+      expect(bookJs, contains('window.pageLeft = () => reader.view.goLeft()'));
+      expect(
+        bookJs,
+        contains('window.pageRight = () => reader.view.goRight()'),
+      );
       expect(bookJs, contains('globalThis.readflexSourceType = sourceType'));
       expect(bookJs, contains('normalizeLoadedDocument(doc)'));
       expect(bookJs, contains("callFlutter('onSearch'"));
       expect(bookJs, contains("callFlutter('onDocumentFeatures'"));
       expect(bookJs, contains("callFlutter('handleBookmark'"));
+    });
+
+    test('uses a safe footnote dialog fallback on Android WebView', () {
+      final bookJs = File(
+        'assets/foliate-js/src/book.js',
+      ).readAsStringSync();
+
+      expect(bookJs, contains('const openFootnoteDialog = () =>'));
+      expect(
+        bookJs,
+        contains("typeof footnoteDialog.showModal === 'function'"),
+      );
+      expect(bookJs, contains("footnoteDialog.setAttribute('open', '')"));
+      expect(bookJs, contains('const closeFootnoteDialog = () =>'));
+      expect(
+        bookJs,
+        contains('window.isFootNoteOpen = () => isFootnoteDialogOpen()'),
+      );
+      expect(
+        bookJs,
+        contains('window.closeFootNote = () => closeFootnoteDialog()'),
+      );
+      expect(
+        bookJs,
+        isNot(contains('e.target === footnoteDialog ? footnoteDialog.close()')),
+      );
     });
 
     test('pull-down bookmark does not render transient feedback icon', () {
@@ -304,7 +333,7 @@ void main() {
       expect(normalizerJs, contains('wrapWideTables(doc)'));
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_40"));
+      expect(assetExtractor, contains("reader_webview_assets_47"));
     });
 
     test('does not dump full reader style changes to console', () {
@@ -314,73 +343,15 @@ void main() {
       expect(bookJs, isNot(contains('JSON.stringify(style)')));
     });
 
-    test('registers DjVu format adapter and assets', () {
-      final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
-      final djvuBookJs = File(
-        'assets/foliate-js/src/djvu-book.js',
-      ).readAsStringSync();
-      final viewJs = File('assets/foliate-js/src/view.js').readAsStringSync();
-      final fixedLayoutJs = File(
-        'assets/foliate-js/src/fixed-layout.js',
-      ).readAsStringSync();
+    test('bundles only supported format adapters', () {
       final assetExtractor = File(
         'lib/src/asset_extractor.dart',
       ).readAsStringSync();
 
-      expect(bookJs, contains("await import('./djvu-book.js')"));
-      expect(bookJs, contains('await isDjVuFile(file)'));
-      expect(bookJs, contains('scheduleDocumentFeatureDetection()'));
-      expect(bookJs, contains("callFlutter('onDocumentFeatures'"));
-      expect(djvuBookJs, contains('export const isDjVu = async'));
-      expect(djvuBookJs, contains("new DjVu.Worker(DJVU_SCRIPT_URL)"));
-      expect(djvuBookJs, contains("rendition: { layout: 'pre-paginated' }"));
-      expect(djvuBookJs, isNot(contains('createPngObjectUrl()')));
-      expect(djvuBookJs, contains('getImageData().run()'));
-      expect(djvuBookJs, contains("kind: 'canvas-image'"));
-      expect(djvuBookJs, contains('detectPageCrop(imageData)'));
-      expect(djvuBookJs, contains('AUTO_CROP_MIN_REMOVED_RATIO'));
-      expect(djvuBookJs, contains('DJVU_CANVAS_FILTER'));
-      expect(djvuBookJs, contains(r'filter: ${DJVU_CANVAS_FILTER};'));
-      expect(djvuBookJs, contains('hasForegroundInSampleBlock'));
-      expect(djvuBookJs, contains('table borders are not cut'));
-      expect(
-        djvuBookJs,
-        contains('return { left, top: 0, right, bottom: height }'),
-      );
-      expect(fixedLayoutJs, contains('normalizeCrop(frame.crop'));
-      expect(fixedLayoutJs, contains(r'translate(${-crop.left * scale}px'));
-      expect(djvuBookJs, contains('prefetchAround(pageNumber)'));
-      expect(djvuBookJs, contains('pending = new Map()'));
-      expect(
-        djvuBookJs,
-        contains('createDocument: async () => makeTextDocument'),
-      );
-      expect(djvuBookJs, contains('getText().run()'));
-      expect(djvuBookJs, contains('hasTextLayer'));
-      expect(djvuBookJs, contains('hasTextLayer: null'));
-      expect(
-        djvuBookJs,
-        contains('This DjVu file has no searchable text layer.'),
-      );
-      expect(djvuBookJs, contains('PAGE_CACHE_LIMIT'));
-      expect(djvuBookJs, contains('worker.terminate?.()'));
-      expect(viewJs, contains("this.book?.features?.format === 'djvu'"));
-      expect(viewJs, contains('parentElement?.getBoundingClientRect'));
-      expect(viewJs, contains('crop/scale do not shift tap zones'));
-      expect(viewJs, contains('doc.readflexVisibleRect'));
-      expect(fixedLayoutJs, contains('readflexVisibleRect'));
-      expect(fixedLayoutJs, contains('isCanvasImageSource'));
-      expect(fixedLayoutJs, contains('writeCanvasImageDocument'));
-      expect(fixedLayoutJs, contains('Promise.all(['));
-      expect(viewJs, contains('this.book.hasTextLayer()'));
-      expect(viewJs, contains('#getSearchResultCFI'));
-      expect(viewJs, contains('canHighlightSearchResults'));
-      expect(assetExtractor, contains('assets/foliate-js/src/djvu-book.js'));
-      expect(assetExtractor, contains('assets/foliate-js/src/vendor/djvu.js'));
-      expect(
-        assetExtractor,
-        contains('assets/foliate-js/src/vendor/djvujs.LICENSE.md'),
-      );
+      expect(assetExtractor, contains('assets/foliate-js/src/pdf.js'));
+      expect(assetExtractor, contains('assets/foliate-js/src/fb2.js'));
+      expect(assetExtractor, contains('assets/foliate-js/src/mobi.js'));
+      expect(assetExtractor, contains('assets/foliate-js/src/comic-book.js'));
     });
 
     test('closes foliate book resources when view is closed', () {

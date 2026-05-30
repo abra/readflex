@@ -629,7 +629,6 @@ export class View extends HTMLElement {
     return this.pageProgressionDirection === 'rtl' ? this.prev() : this.next()
   }
   #getSearchResultCFI(index, range) {
-    if (this.book?.features?.format === 'djvu') return this.getCFI(index)
     return this.getCFI(index, range)
   }
   async * #searchSection(matcher, query, index) {
@@ -652,14 +651,6 @@ export class View extends HTMLElement {
   async * search(opts) {
     console.log('search', opts)
     this.clearSearch()
-    if (this.book?.features?.format === 'djvu' &&
-      typeof this.book.hasTextLayer === 'function') {
-      const hasTextLayer = await this.book.hasTextLayer()
-      if (!hasTextLayer) {
-        throw new Error(this.book.features.searchUnavailableMessage ||
-          'This DjVu file has no searchable text layer.')
-      }
-    }
     const { searchMatcher } = await import('./search.js')
     const { query, index } = opts
     const matcher = searchMatcher(textWalker,
@@ -669,7 +660,6 @@ export class View extends HTMLElement {
       : this.#searchBook(matcher, query)
 
     const list = []
-    const canHighlightSearchResults = this.book?.features?.format !== 'djvu'
     this.#searchResults.set(index, list)
 
     for await (const result of iter) {
@@ -677,9 +667,7 @@ export class View extends HTMLElement {
         const list = result.subitems
           .map(({ cfi }) => ({ value: SEARCH_PREFIX + cfi }))
         this.#searchResults.set(result.index, list)
-        if (canHighlightSearchResults) {
-          for (const item of list) this.addAnnotation(item)
-        }
+        for (const item of list) this.addAnnotation(item)
         yield {
           label: this.#tocProgress.getProgress(result.index)?.label ?? '',
           subitems: result.subitems,
@@ -689,7 +677,7 @@ export class View extends HTMLElement {
         if (result.cfi) {
           const item = { value: SEARCH_PREFIX + result.cfi }
           list.push(item)
-          if (canHighlightSearchResults) this.addAnnotation(item)
+          this.addAnnotation(item)
         }
         yield result
       }

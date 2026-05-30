@@ -3,26 +3,26 @@ import 'package:reader_webview/reader_webview.dart';
 
 void main() {
   group('ReaderDocumentFeatures', () {
-    test('fromMap parses DjVu optional capabilities', () {
+    test('fromMap parses optional capabilities', () {
       final features = ReaderDocumentFeatures.fromMap({
-        'format': 'djvu',
+        'format': 'pdf',
         'hasToc': false,
         'hasTextLayer': true,
       });
 
-      expect(features.format, 'djvu');
+      expect(features.format, 'pdf');
       expect(features.hasTableOfContents, isFalse);
       expect(features.hasSearchableText, isTrue);
     });
 
     test('fromMap tolerates unknown capability values', () {
       final features = ReaderDocumentFeatures.fromMap({
-        'format': 'djvu',
+        'format': 'pdf',
         'hasToc': 'no',
         'hasTextLayer': null,
       });
 
-      expect(features.format, 'djvu');
+      expect(features.format, 'pdf');
       expect(features.hasTableOfContents, isNull);
       expect(features.hasSearchableText, isNull);
     });

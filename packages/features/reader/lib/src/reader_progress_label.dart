@@ -39,7 +39,7 @@ String readerProgressLabel({
 }
 
 bool isImagePageFormat(BookFormat? format) {
-  return format == BookFormat.cbz || format == BookFormat.djvu;
+  return format == BookFormat.cbz;
 }
 
 const readerDefaultSeekSettleTimeout = Duration(milliseconds: 600);

@@ -79,13 +79,13 @@ void main() {
       act: (bloc) => bloc.add(
         const ReaderDocumentFeaturesUpdated(
           features: ReaderDocumentFeatures(
-            format: 'djvu',
+            format: 'pdf',
             hasSearchableText: false,
           ),
         ),
       ),
       verify: (bloc) {
-        expect(bloc.state.documentFeatures?.format, 'djvu');
+        expect(bloc.state.documentFeatures?.format, 'pdf');
         expect(bloc.state.documentFeatures?.hasSearchableText, isFalse);
       },
     );

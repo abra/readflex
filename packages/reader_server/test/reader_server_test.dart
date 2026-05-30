@@ -121,32 +121,6 @@ void main() {
       expect(response.headers['content-type'], contains('application/pdf'));
     });
 
-    test('returns correct content-type for djvu', () async {
-      final djvuFile = File('${tempDir.path}/test.djvu');
-      await djvuFile.writeAsBytes([
-        0x46,
-        0x4f,
-        0x52,
-        0x4d,
-        0,
-        0,
-        0,
-        0,
-        0x44,
-        0x4a,
-        0x56,
-        0x55,
-      ]);
-
-      final encodedPath = Uri.encodeComponent(djvuFile.path);
-      final response = await client.get(
-        Uri.parse(url('/book/$encodedPath')),
-      );
-
-      expect(response.statusCode, 200);
-      expect(response.headers['content-type'], contains('image/vnd.djvu'));
-    });
-
     test('returns 404 for missing book', () async {
       final encodedPath = Uri.encodeComponent('/nonexistent/book.epub');
       final response = await client.get(

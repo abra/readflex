@@ -11,8 +11,8 @@ import 'package:reader_webview/reader_webview.dart';
 /// transitions without touching the real file picker or repository.
 void main() {
   group('bookExtensions', () {
-    test('includes DjVu aliases', () {
-      expect(bookExtensions, containsAll(['djvu', 'djv']));
+    test('matches reader-supported import formats', () {
+      expect(bookExtensions, ['epub', 'fb2', 'mobi', 'pdf', 'azw3', 'cbz']);
     });
   });
 

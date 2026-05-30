@@ -21,6 +21,7 @@ import 'reader_bloc.dart';
 import 'reader_brightness_cubit.dart';
 import 'reader_chrome_actions.dart';
 import 'reader_chrome_progress_layout.dart';
+import 'reader_image_page_progress_overlay.dart';
 import 'reader_color_utils.dart';
 import 'reader_device_font_scale.dart';
 import 'reader_drawer_messages.dart';
@@ -783,10 +784,12 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
       documentFeatures: readerState.documentFeatures,
     );
     if (!searchEnabled) {
-      final message = readerState.documentFeatures?.hasSearchableText == false
-          ? 'This DjVu file has no searchable text layer.'
-          : 'DjVu text layer check is still running.';
-      return Stream.value(ReaderSearchError(requestId: -1, message: message));
+      return Stream.value(
+        const ReaderSearchError(
+          requestId: -1,
+          message: 'Book search is unavailable',
+        ),
+      );
     }
 
     final webView = _webViewKey.currentState;
@@ -864,7 +867,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
               onSearchPressed: _openSearchDrawer,
               onSeekFraction: _seekFraction,
             ),
-            const _ComicProgressOverlayDriver(),
+            const _ReaderImagePageProgressOverlayDriver(),
             _ContextPanelDriver(textActions: widget.textActions),
             const _ReviewReminderDriver(),
             _ReaderTocDrawerDriver(
@@ -2926,137 +2929,33 @@ class _ReviewReminderDriver extends StatelessWidget {
   }
 }
 
-/// Always-on "page X / Y" indicator for image-page books — CBZ and DjVu readers expect a
-/// constant pager hint, and tapping chrome for every page-turn is friction.
-///
-/// Subscribes only to the chapter-page pair (which for CBZ maps 1:1
-/// to comic page index / total) and a couple of visibility gates.
-/// Renders nothing when:
-///   * the format is not image-page based — text books and PDFs do not need the page
-///     counter,
-///   * the chrome panel is visible — the action bar should own the bottom
-///     visual area,
-///   * a text selection is active — the context panel takes the
-///     bottom of the screen and the overlay would clutter it,
-///   * page metrics haven't arrived yet (first `onRelocated` not
-///     fired).
-///
-/// Position: anchored near the bottom safe area while chrome is hidden.
-/// When chrome is shown, the overlay is hidden so it does not compete with
-/// the bottom action bar.
-class _ComicProgressOverlayDriver extends StatelessWidget {
-  const _ComicProgressOverlayDriver();
+class _ReaderImagePageProgressOverlayDriver extends StatelessWidget {
+  const _ReaderImagePageProgressOverlayDriver();
 
   @override
   Widget build(BuildContext context) {
     final format = context.select<ReaderBloc, BookFormat?>(
       (b) => b.state.book?.format,
     );
-    if (!isImagePageFormat(format)) return const SizedBox.shrink();
-
     final chromeVisible = context.select<ReaderUiCubit, bool>(
       (c) => c.state.chromeVisible,
     );
     final hasSelection = context.select<ReaderSelectionCubit, bool>(
       (c) => c.state.hasSelection,
     );
-    if (chromeVisible || _selectionActionsVisible(hasSelection)) {
-      return const SizedBox.shrink();
-    }
-
     final current = context.select<ReaderBloc, int?>(
       (b) => b.state.chapterCurrentPage,
     );
     final total = context.select<ReaderBloc, int?>(
       (b) => b.state.chapterTotalPages,
     );
-    if (current == null || total == null || total <= 0) {
-      return const SizedBox.shrink();
-    }
 
-    final displayed = displayZeroIndexedPage(current, total);
-    final colors = context.colors;
-    final bottomInset = appBottomSafeInset(context);
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: bottomInset + AppSpacing.md,
-      child: Center(
-        child: _ComicProgressOverlay(
-          text: '$displayed / $total',
-          // Worst-case width: when current reaches the last page the
-          // string is "total / total" — wider than any earlier
-          // page. We hand it down so the overlay can reserve the
-          // right amount of space up front.
-          maxText: '$total / $total',
-          panelColor: colors.surface,
-          textColor: colors.onSurfaceVariant,
-          dividerColor: colors.outlineVariant,
-        ),
-      ),
-    );
-  }
-}
-
-/// Pill-shaped read-only "X / Y" badge for the comic-progress overlay.
-/// Themed off the reader's panel/divider colours so it sits naturally
-/// against any of the page backgrounds (sepia, dark, paper).
-///
-/// Width is reserved for the worst-case content (`maxText`, e.g. "30 /
-/// 30") via an invisible placeholder layered behind the live text.
-/// Tabular figures alone aren't enough — they equalise digit widths but
-/// not digit *counts*, so "1 / 30" is one glyph narrower than "30 /
-/// 30" and the pill would visibly grow as the user moves through the
-/// comic. Placeholder + `Stack` is the Flutter-idiomatic "size to max
-/// content" pattern: width comes from real text measurement, not from
-/// a hand-picked SizedBox value that would drift out of sync with the
-/// font.
-class _ComicProgressOverlay extends StatelessWidget {
-  const _ComicProgressOverlay({
-    required this.text,
-    required this.maxText,
-    required this.panelColor,
-    required this.textColor,
-    required this.dividerColor,
-  });
-
-  final String text;
-  final String maxText;
-  final Color panelColor;
-  final Color textColor;
-  final Color dividerColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final style = context.text.readerChromeNumber.copyWith(
-      color: textColor,
-    );
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        // Slightly translucent so the comic page peeks through —
-        // overlay reads as "info chrome" rather than a solid panel.
-        color: panelColor.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(AppRadius.full),
-        border: Border.all(color: dividerColor),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Invisible width-reservation. `Visibility.maintain*` would
-          // also work but Opacity is the lighter option here since we
-          // never want it to participate in semantics or hit-testing.
-          Opacity(
-            opacity: 0,
-            child: ExcludeSemantics(child: Text(maxText, style: style)),
-          ),
-          Text(text, style: style),
-        ],
-      ),
+    return ReaderImagePageProgressOverlay(
+      format: format,
+      chromeVisible: chromeVisible,
+      selectionActionsVisible: _selectionActionsVisible(hasSelection),
+      currentPage: current,
+      totalPages: total,
     );
   }
 }

@@ -17,8 +17,6 @@ const bookExtensions = [
   'pdf',
   'azw3',
   'cbz',
-  'djvu',
-  'djv',
 ];
 
 /// Opens the platform file picker filtered to [bookExtensions]. Returns

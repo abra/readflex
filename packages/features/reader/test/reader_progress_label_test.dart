@@ -107,20 +107,6 @@ void main() {
       );
     });
 
-    test('keeps DjVu page counters as page over total', () {
-      expect(
-        readerProgressLabel(
-          format: BookFormat.djvu,
-          progress: 0.2,
-          chapterCurrentPage: 4,
-          chapterTotalPages: 12,
-          isDragging: false,
-        ),
-        '5 / 12',
-      );
-      expect(isImagePageFormat(BookFormat.djvu), isTrue);
-    });
-
     test('clamps non-finite and out-of-range progress', () {
       expect(readingPercentLabel(double.nan), '0%');
       expect(readingPercentLabel(-0.5), '0%');
@@ -143,14 +129,6 @@ void main() {
           totalPages: 25,
         ),
         24,
-      );
-      expect(
-        readerSliderDivisions(
-          sourceType: SourceType.book,
-          format: BookFormat.djvu,
-          totalPages: 12,
-        ),
-        11,
       );
       expect(
         readerSliderDivisions(
@@ -291,16 +269,6 @@ void main() {
         ),
         22 / 24,
       );
-      expect(
-        readerSliderValue(
-          sourceType: SourceType.book,
-          format: BookFormat.djvu,
-          progress: 5 / 12,
-          currentPage: 4,
-          totalPages: 12,
-        ),
-        4 / 11,
-      );
     });
 
     test('keeps non-article text-book slider value continuous', () {
@@ -323,10 +291,6 @@ void main() {
       );
       expect(
         readerSeekSettleTimeout(format: BookFormat.cbz),
-        readerImagePageSeekSettleTimeout,
-      );
-      expect(
-        readerSeekSettleTimeout(format: BookFormat.djvu),
         readerImagePageSeekSettleTimeout,
       );
     });
