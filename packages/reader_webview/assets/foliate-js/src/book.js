@@ -791,6 +791,14 @@ const applyReaderContrastGuard = doc => {
   })
 }
 
+const rendererWritingMode = () => {
+  const value = reader?.view?.renderer?.writingMode
+  return typeof value === 'string' && value ? value : 'horizontal-tb'
+}
+
+const isVerticalWritingMode = value =>
+  typeof value === 'string' && value.startsWith('vertical')
+
 const readingFeaturesDocHandler = (doc) => {
   if (readingRules.convertChineseMode !== 'none') {
     convertChineseHandler(readingRules.convertChineseMode, doc)
@@ -811,7 +819,7 @@ const readingFeaturesDocHandler = (doc) => {
   }
 
   // handle vertical writing mode, replace “”‘’ with 『』「」
-  if (style.writingMode.startsWith('vertical') || reader.view.renderer.writingMode.startsWith('vertical')) {
+  if (isVerticalWritingMode(style.writingMode) || isVerticalWritingMode(rendererWritingMode())) {
     const replaceQuotes = (node) => {
       if (node.nodeType === Node.TEXT_NODE) {
         node.textContent = node.textContent
@@ -985,7 +993,7 @@ class Reader {
     view.addEventListener('draw-annotation', e => {
       const { draw, annotation } = e.detail
       const { color, type } = annotation
-      const opts = { color, writingMode: this.view.renderer.writingMode }
+      const opts = { color, writingMode: rendererWritingMode() }
       if (type === 'highlight') draw(Overlayer.highlight, { ...opts })
       else if (type === 'underline') draw(Overlayer.underline, { ...opts })
     })
@@ -2110,7 +2118,7 @@ const onRelocated = (currentInfo) => {
     atEnd,
     atStart,
     bookmark: currentInfo.bookmark,
-    writingMode: reader.view.renderer.writingMode,
+    writingMode: rendererWritingMode(),
     pageProgressionDirection: reader.view.pageProgressionDirection,
   })
 }

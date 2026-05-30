@@ -34,6 +34,8 @@ export class FixedLayout extends HTMLElement {
     #observer = new ResizeObserver(() => this.#render())
     #spreads
     #index = -1
+    #currentSpread
+    #locked = false
     defaultViewport
     spread
     #portrait = false
@@ -52,11 +54,89 @@ export class FixedLayout extends HTMLElement {
             display: flex;
             justify-content: center;
             align-items: center;
+            overflow: hidden;
+            position: relative;
+            contain: layout paint;
+        }
+        .spread {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            will-change: transform, opacity;
+        }
+        .spread.current {
+            pointer-events: auto;
         }`)
 
         this.#observer.observe(this)
     }
-    async #createFrame(position, { index, src }) {
+    #shouldAnimate(direction) {
+        if (!direction || !this.hasAttribute('animated')) return false
+        return !globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+    }
+    #turnAnimation(element, keyframes) {
+        const animation = element.animate?.(keyframes, {
+            duration: 180,
+            easing: 'cubic-bezier(.2, .8, .2, 1)',
+            fill: 'both',
+        })
+        const finished = animation?.finished?.catch(() => {})
+        return finished?.finally(() => animation.cancel()) ?? Promise.resolve()
+    }
+    async #animateSpreadTurn(previousSpread, nextSpread, direction) {
+        if (!this.#shouldAnimate(direction) || !previousSpread) return
+        const enterX = direction > 0 ? '18%' : '-18%'
+        const exitX = direction > 0 ? '-18%' : '18%'
+        await Promise.all([
+            this.#turnAnimation(nextSpread, [
+                { transform: `translate3d(${enterX}, 0, 0)`, opacity: 0.35 },
+                { transform: 'translate3d(0, 0, 0)', opacity: 1 },
+            ]),
+            this.#turnAnimation(previousSpread, [
+                { transform: 'translate3d(0, 0, 0)', opacity: 1 },
+                { transform: `translate3d(${exitX}, 0, 0)`, opacity: 0.35 },
+            ]),
+        ])
+    }
+    async #animateSideTurn(fromFrame, toFrame, direction) {
+        if (!this.#shouldAnimate(direction) || !fromFrame?.element || !toFrame?.element) return
+        const enterX = direction > 0 ? '18%' : '-18%'
+        const exitX = direction > 0 ? '-18%' : '18%'
+        const frames = [fromFrame.element, toFrame.element]
+        for (const element of frames) {
+            Object.assign(element.style, {
+                display: 'block',
+                position: 'absolute',
+                left: '50%',
+                top: '50%',
+                transform: 'translate3d(-50%, -50%, 0)',
+                willChange: 'transform, opacity',
+            })
+        }
+        await Promise.all([
+            this.#turnAnimation(toFrame.element, [
+                { transform: `translate3d(calc(-50% + ${enterX}), -50%, 0)`, opacity: 0.35 },
+                { transform: 'translate3d(-50%, -50%, 0)', opacity: 1 },
+            ]),
+            this.#turnAnimation(fromFrame.element, [
+                { transform: 'translate3d(-50%, -50%, 0)', opacity: 1 },
+                { transform: `translate3d(calc(-50% + ${exitX}), -50%, 0)`, opacity: 0.35 },
+            ]),
+        ])
+        for (const element of frames) {
+            element.style.position = ''
+            element.style.left = ''
+            element.style.top = ''
+            element.style.transform = ''
+            element.style.willChange = ''
+            element.style.opacity = ''
+        }
+        this.#render()
+    }
+    async #createFrame(position, { index, src }, parent = this.#root) {
         const element = document.createElement('div')
         const iframe = document.createElement('iframe')
         element.append(iframe)
@@ -70,7 +150,7 @@ export class FixedLayout extends HTMLElement {
         iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts')
         iframe.setAttribute('scrolling', 'no')
         iframe.setAttribute('part', 'filter')
-        this.#root.append(element)
+        parent.append(element)
         if (!src) return { blank: true, element, iframe }
         return new Promise(resolve => {
             const onload = () => {
@@ -165,43 +245,57 @@ export class FixedLayout extends HTMLElement {
             transform(right)
         }
     }
-    async #showSpread({ left, right, center, side }) {
-        this.#root.replaceChildren()
+    async #showSpread({ left, right, center, side, direction = 0 }) {
+        const previousSpread = this.#currentSpread
+        const nextSpread = document.createElement('div')
+        nextSpread.className = 'spread'
+        nextSpread.style.visibility = 'hidden'
+        this.#root.append(nextSpread)
         this.#left = null
         this.#right = null
         this.#center = null
         if (center) {
-            this.#center = await this.#createFrame('center', center)
+            this.#center = await this.#createFrame('center', center, nextSpread)
             this.#side = 'center'
             this.#render()
         } else {
-            this.#left = await this.#createFrame('left', left)
-            this.#right = await this.#createFrame('right', right)
+            this.#left = await this.#createFrame('left', left, nextSpread)
+            this.#right = await this.#createFrame('right', right, nextSpread)
             this.#side = this.#left.blank ? 'right'
                 : this.#right.blank ? 'left' : side
             this.#render()
         }
+        nextSpread.style.visibility = ''
+        nextSpread.classList.add('current')
+        this.#currentSpread = nextSpread
+        previousSpread?.classList.remove('current')
+        await this.#animateSpreadTurn(previousSpread, nextSpread, direction)
+        previousSpread?.remove()
     }
     // Following readest's pattern: instead of toggling display values
     // manually here, set `#side` and re-run `#render()` so display state
     // has a single source of truth. Manual toggling kept getting out of
     // sync with the rendered state on back navigation, leaving both
     // halves of a spread visible at once.
-    #goLeft() {
+    async #goLeft() {
         if (this.#center || this.#left?.blank) return
         if (this.#portrait && this.#left?.element?.style?.display === 'none') {
+            const previousFrame = this.#right
             this.#side = 'left'
             this.#render()
             this.#reportLocation('page')
+            await this.#animateSideTurn(previousFrame, this.#left, -1)
             return true
         }
     }
-    #goRight() {
+    async #goRight() {
         if (this.#center || this.#right?.blank) return
         if (this.#portrait && this.#right?.element?.style?.display === 'none') {
+            const previousFrame = this.#left
             this.#side = 'right'
             this.#render()
             this.#reportLocation('page')
+            await this.#animateSideTurn(previousFrame, this.#right, 1)
             return true
         }
     }
@@ -280,7 +374,7 @@ export class FixedLayout extends HTMLElement {
             if (center === section) return { index, side: 'center' }
         }
     }
-    async goToSpread(index, side, reason) {
+    async goToSpread(index, side, reason, direction = 0) {
         if (index < 0 || index > this.#spreads.length - 1) return
         if (index === this.#index) {
             this.#render(side)
@@ -291,7 +385,7 @@ export class FixedLayout extends HTMLElement {
         if (spread.center) {
             const index = this.book.sections.indexOf(spread.center)
             const src = await spread.center?.load?.()
-            await this.#showSpread({ center: { index, src } })
+            await this.#showSpread({ center: { index, src }, direction })
         } else {
             const indexL = this.book.sections.indexOf(spread.left)
             const indexR = this.book.sections.indexOf(spread.right)
@@ -299,7 +393,7 @@ export class FixedLayout extends HTMLElement {
             const srcR = await spread.right?.load?.()
             const left = { index: indexL, src: srcL }
             const right = { index: indexR, src: srcR }
-            await this.#showSpread({ left, right, side })
+            await this.#showSpread({ left, right, side, direction })
         }
         this.#reportLocation(reason)
     }
@@ -316,12 +410,38 @@ export class FixedLayout extends HTMLElement {
         await this.goToSpread(index, side)
     }
     async next() {
-        const s = this.rtl ? this.#goLeft() : this.#goRight()
-        if (!s) return this.goToSpread(this.#index + 1, this.rtl ? 'right' : 'left', 'page')
+        if (this.#locked) return
+        this.#locked = true
+        try {
+            const s = await (this.rtl ? this.#goLeft() : this.#goRight())
+            if (!s) {
+                await this.goToSpread(
+                    this.#index + 1,
+                    this.rtl ? 'right' : 'left',
+                    'page',
+                    this.rtl ? -1 : 1
+                )
+            }
+        } finally {
+            this.#locked = false
+        }
     }
     async prev() {
-        const s = this.rtl ? this.#goRight() : this.#goLeft()
-        if (!s) return this.goToSpread(this.#index - 1, this.rtl ? 'left' : 'right', 'page')
+        if (this.#locked) return
+        this.#locked = true
+        try {
+            const s = await (this.rtl ? this.#goRight() : this.#goLeft())
+            if (!s) {
+                await this.goToSpread(
+                    this.#index - 1,
+                    this.rtl ? 'left' : 'right',
+                    'page',
+                    this.rtl ? 1 : -1
+                )
+            }
+        } finally {
+            this.#locked = false
+        }
     }
     getContents() {
         return Array.from(this.#root.querySelectorAll('iframe'), frame => ({
@@ -331,6 +451,7 @@ export class FixedLayout extends HTMLElement {
     }
     destroy() {
         this.#observer.unobserve(this)
+        this.#currentSpread = null
     }
 }
 

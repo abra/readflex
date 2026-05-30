@@ -296,6 +296,44 @@ void main() {
       expect(bookJs, isNot(contains('JSON.stringify(style)')));
     });
 
+    test('fixed-layout animates page turns when animation is enabled', () {
+      final fixedLayoutJs = File(
+        'assets/foliate-js/src/fixed-layout.js',
+      ).readAsStringSync();
+
+      expect(fixedLayoutJs, contains('#shouldAnimate(direction)'));
+      expect(fixedLayoutJs, contains("this.hasAttribute('animated')"));
+      expect(fixedLayoutJs, contains('#animateSpreadTurn'));
+      expect(fixedLayoutJs, contains('#animateSideTurn'));
+      expect(fixedLayoutJs, contains('previousSpread?.remove()'));
+      expect(fixedLayoutJs, contains('this.#locked = true'));
+      expect(fixedLayoutJs, contains('this.rtl ? -1 : 1'));
+      expect(fixedLayoutJs, contains('this.rtl ? 1 : -1'));
+    });
+
+    test('comic fixed-layout renderer gets a safe horizontal writing mode', () {
+      final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
+
+      expect(bookJs, contains('const rendererWritingMode = () => {'));
+      expect(
+        bookJs,
+        contains(
+          "return typeof value === 'string' && value ? value : 'horizontal-tb'",
+        ),
+      );
+      expect(
+        bookJs,
+        contains(
+          'isVerticalWritingMode(style.writingMode) || isVerticalWritingMode(rendererWritingMode())',
+        ),
+      );
+      expect(bookJs, contains('writingMode: rendererWritingMode()'));
+      expect(
+        bookJs,
+        isNot(contains('reader.view.renderer.writingMode.startsWith')),
+      );
+    });
+
     test('skips full CSS rebuild for margin-only style changes', () {
       final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
 
