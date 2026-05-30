@@ -21,6 +21,15 @@ void main() {
       await expectLater(service.setApplicationBrightness(0.4), completes);
     });
 
+    test('readApplicationBrightness returns null', () async {
+      const service = NoopScreenControlService();
+
+      await expectLater(
+        service.readApplicationBrightness(),
+        completion(isNull),
+      );
+    });
+
     test('resetApplicationBrightness completes without error', () async {
       const service = NoopScreenControlService();
 

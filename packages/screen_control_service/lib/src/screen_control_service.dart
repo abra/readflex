@@ -9,6 +9,9 @@ abstract class ScreenControlService {
   /// Sets temporary application brightness for the current app session.
   Future<void> setApplicationBrightness(double brightness);
 
+  /// Reads the current application brightness when the platform exposes it.
+  Future<double?> readApplicationBrightness();
+
   /// Resets application brightness back to the platform/system value.
   Future<void> resetApplicationBrightness();
 }
@@ -25,6 +28,9 @@ class NoopScreenControlService implements ScreenControlService {
 
   @override
   Future<void> setApplicationBrightness(double brightness) async {}
+
+  @override
+  Future<double?> readApplicationBrightness() async => null;
 
   @override
   Future<void> resetApplicationBrightness() async {}

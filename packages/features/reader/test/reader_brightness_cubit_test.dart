@@ -35,6 +35,8 @@ void main() {
     await Future<void>.delayed(Duration.zero);
 
     expect(cubit.state.usesSystemBrightness, isTrue);
+    expect(cubit.state.systemBrightness, 0.4);
+    expect(cubit.state.sliderValue, 0.4);
     expect(screenControlService.calls, const ['resetBrightness']);
   });
 
@@ -116,10 +118,29 @@ void main() {
     cubit.activate();
     await Future<void>.delayed(Duration.zero);
 
+    expect(cubit.state.systemBrightness, 0.4);
     expect(
       screenControlService.calls,
       const ['set:0.40', 'resetBrightness', 'set:0.40'],
     );
+  });
+
+  test('first custom step can start from captured system brightness', () async {
+    final cubit = buildCubit();
+    addTearDown(cubit.close);
+
+    cubit.activate();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(cubit.state.usesSystemBrightness, isTrue);
+    expect(cubit.state.sliderValue, 0.4);
+
+    cubit.previewBrightness(cubit.state.sliderValue + 0.05);
+    cubit.commitBrightness(cubit.state.sliderValue);
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+
+    expect(cubit.state.brightnessOverride, closeTo(0.45, 0.001));
+    expect(preferencesService.readerBrightnessOverrideFor(sourceId), 0.45);
   });
 }
 
@@ -135,6 +156,9 @@ class _FakeScreenControlService implements ScreenControlService {
   Future<void> allowSleep() async {
     calls.add('allowSleep');
   }
+
+  @override
+  Future<double?> readApplicationBrightness() async => 0.4;
 
   @override
   Future<void> setApplicationBrightness(double brightness) async {

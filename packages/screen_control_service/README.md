@@ -9,8 +9,10 @@ chrome, drawer, or bottom sheet is visible, and releases it on controls,
 route disposal, or app backgrounding.
 
 Production uses `screen_brightness` for temporary application brightness
-overrides. This does not write the device's system brightness; the reader resets
-application brightness when the route closes or the app goes into background.
+overrides. This does not write the device's system brightness; the reader reads
+the current application brightness as the baseline for reader controls and
+resets application brightness when the route closes or the app goes into
+background.
 
 ## Public API
 

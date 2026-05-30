@@ -39,31 +39,34 @@ void main() {
     await brightnessCubit.close();
   });
 
-  testWidgets('brightness chrome follows reader chrome visibility', (
-    tester,
-  ) async {
-    await tester.pumpBrightnessChrome(
-      uiCubit: uiCubit,
-      selectionCubit: selectionCubit,
-      brightnessCubit: brightnessCubit,
-    );
+  testWidgets(
+    'brightness chrome follows reader chrome visibility while selection actions are disabled',
+    (
+      tester,
+    ) async {
+      await tester.pumpBrightnessChrome(
+        uiCubit: uiCubit,
+        selectionCubit: selectionCubit,
+        brightnessCubit: brightnessCubit,
+      );
 
-    expect(tester.brightnessIgnorePointer.ignoring, isTrue);
+      expect(tester.brightnessIgnorePointer.ignoring, isTrue);
 
-    uiCubit.showChrome();
-    await tester.pumpAndSettle();
+      uiCubit.showChrome();
+      await tester.pumpAndSettle();
 
-    expect(tester.brightnessIgnorePointer.ignoring, isFalse);
-    expect(find.byIcon(AppIcons.deviceMode), findsOneWidget);
-    expect(find.byIcon(AppIcons.lightMode), findsOneWidget);
-    expect(find.byIcon(AppIcons.brightnessLow), findsOneWidget);
-    expect(find.byIcon(AppIcons.darkMode), findsNothing);
+      expect(tester.brightnessIgnorePointer.ignoring, isFalse);
+      expect(find.byIcon(AppIcons.deviceMode), findsOneWidget);
+      expect(find.byIcon(AppIcons.lightMode), findsOneWidget);
+      expect(find.byIcon(AppIcons.brightnessLow), findsOneWidget);
+      expect(find.byIcon(AppIcons.darkMode), findsNothing);
 
-    selectionCubit.select(text: 'Selected text');
-    await tester.pumpAndSettle();
+      selectionCubit.select(text: 'Selected text');
+      await tester.pumpAndSettle();
 
-    expect(tester.brightnessIgnorePointer.ignoring, isTrue);
-  });
+      expect(tester.brightnessIgnorePointer.ignoring, isFalse);
+    },
+  );
 
   testWidgets('center label clears custom brightness override', (tester) async {
     await tester.pumpBrightnessChrome(
@@ -87,38 +90,43 @@ void main() {
     expect(preferencesService.readerBrightnessOverrideFor(sourceId), isNull);
   });
 
-  testWidgets('brightness buttons adjust custom override in steps', (
-    tester,
-  ) async {
-    await tester.pumpBrightnessChrome(
-      uiCubit: uiCubit,
-      selectionCubit: selectionCubit,
-      brightnessCubit: brightnessCubit,
-    );
+  testWidgets(
+    'brightness buttons adjust custom override from system brightness',
+    (
+      tester,
+    ) async {
+      await tester.pumpBrightnessChrome(
+        uiCubit: uiCubit,
+        selectionCubit: selectionCubit,
+        brightnessCubit: brightnessCubit,
+      );
 
-    uiCubit.showChrome();
-    await tester.pumpAndSettle();
+      brightnessCubit.activate();
+      await tester.pump();
+      uiCubit.showChrome();
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Increase brightness'));
-    await tester.pump(const Duration(milliseconds: 250));
+      await tester.tap(find.byTooltip('Increase brightness'));
+      await tester.pump(const Duration(milliseconds: 250));
 
-    expect(find.text('75%'), findsOneWidget);
-    expect(brightnessCubit.state.brightnessOverride, closeTo(0.75, 0.001));
-    expect(
-      preferencesService.readerBrightnessOverrideFor(sourceId),
-      closeTo(0.75, 0.001),
-    );
+      expect(find.text('45%'), findsOneWidget);
+      expect(brightnessCubit.state.brightnessOverride, closeTo(0.45, 0.001));
+      expect(
+        preferencesService.readerBrightnessOverrideFor(sourceId),
+        closeTo(0.45, 0.001),
+      );
 
-    await tester.tap(find.byTooltip('Decrease brightness'));
-    await tester.pump(const Duration(milliseconds: 250));
+      await tester.tap(find.byTooltip('Decrease brightness'));
+      await tester.pump(const Duration(milliseconds: 250));
 
-    expect(find.text('70%'), findsOneWidget);
-    expect(brightnessCubit.state.brightnessOverride, closeTo(0.7, 0.001));
-    expect(
-      preferencesService.readerBrightnessOverrideFor(sourceId),
-      closeTo(0.7, 0.001),
-    );
-  });
+      expect(find.text('40%'), findsOneWidget);
+      expect(brightnessCubit.state.brightnessOverride, closeTo(0.4, 0.001));
+      expect(
+        preferencesService.readerBrightnessOverrideFor(sourceId),
+        closeTo(0.4, 0.001),
+      );
+    },
+  );
 
   testWidgets('dragging brightness chrome previews and persists override', (
     tester,
@@ -129,6 +137,8 @@ void main() {
       brightnessCubit: brightnessCubit,
     );
 
+    brightnessCubit.activate();
+    await tester.pump();
     uiCubit.showChrome();
     await tester.pumpAndSettle();
 
@@ -139,7 +149,7 @@ void main() {
     await tester.pump();
 
     expect(brightnessCubit.state.usesSystemBrightness, isFalse);
-    expect(brightnessCubit.state.brightnessOverride, greaterThan(0.7));
+    expect(brightnessCubit.state.brightnessOverride, greaterThan(0.4));
     expect(preferencesService.readerBrightnessOverrideFor(sourceId), isNull);
 
     await tester.pump(const Duration(milliseconds: 250));
@@ -193,6 +203,9 @@ class _FakeScreenControlService implements ScreenControlService {
 
   @override
   Future<void> allowSleep() async {}
+
+  @override
+  Future<double?> readApplicationBrightness() async => 0.4;
 
   @override
   Future<void> setApplicationBrightness(double brightness) async {}

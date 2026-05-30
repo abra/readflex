@@ -181,6 +181,9 @@ class _FakeScreenControlService implements ScreenControlService {
   }
 
   @override
+  Future<double?> readApplicationBrightness() async => 0.4;
+
+  @override
   Future<void> setApplicationBrightness(double brightness) async {
     calls.add('setBrightness');
   }

@@ -6,19 +6,25 @@ import 'package:preferences_service/preferences_service.dart';
 import 'package:screen_control_service/screen_control_service.dart';
 
 class ReaderBrightnessState extends Equatable {
-  const ReaderBrightnessState({required this.brightnessOverride});
+  const ReaderBrightnessState({
+    required this.brightnessOverride,
+    this.systemBrightness,
+  });
 
   final double? brightnessOverride;
+  final double? systemBrightness;
 
   bool get usesSystemBrightness => brightnessOverride == null;
 
   double get sliderValue =>
-      brightnessOverride ?? ReaderBrightnessCubit.defaultCustomBrightness;
+      brightnessOverride ??
+      systemBrightness ??
+      ReaderBrightnessCubit.defaultCustomBrightness;
 
   int get percent => (sliderValue * 100).round();
 
   @override
-  List<Object?> get props => [brightnessOverride];
+  List<Object?> get props => [brightnessOverride, systemBrightness];
 }
 
 class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
@@ -55,7 +61,17 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
   void activate() {
     if (_active) return;
     _active = true;
-    unawaited(_syncPlatform());
+    unawaited(_activate());
+  }
+
+  Future<void> _activate() async {
+    if (state.usesSystemBrightness) {
+      await _resetPlatform();
+      await _readPlatformBrightness();
+      return;
+    }
+    await _readPlatformBrightness();
+    await _syncPlatform();
   }
 
   Future<void> deactivate() async {
@@ -67,7 +83,12 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
   void previewBrightness(double value) {
     final nextValue = _clampBrightness(value);
     if (state.brightnessOverride == nextValue) return;
-    emit(ReaderBrightnessState(brightnessOverride: nextValue));
+    emit(
+      ReaderBrightnessState(
+        brightnessOverride: nextValue,
+        systemBrightness: state.systemBrightness,
+      ),
+    );
     unawaited(_syncPlatform());
   }
 
@@ -81,11 +102,20 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
     _pendingBrightness = null;
     _commitTimer?.cancel();
     _commitTimer = null;
+    final currentSystemBrightness = state.systemBrightness;
     if (!state.usesSystemBrightness) {
-      emit(const ReaderBrightnessState(brightnessOverride: null));
+      emit(
+        ReaderBrightnessState(
+          brightnessOverride: null,
+          systemBrightness: currentSystemBrightness,
+        ),
+      );
     }
     await _preferencesService.setReaderBrightnessOverride(_sourceId, null);
-    await _syncPlatform();
+    await _resetPlatform();
+    if (currentSystemBrightness == null) {
+      await _readPlatformBrightness();
+    }
   }
 
   void _onPreferencesChanged(Preferences prefs) {
@@ -93,6 +123,7 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
     if (prefs != _preferencesService.current) return;
     final next = ReaderBrightnessState(
       brightnessOverride: prefs.readerBrightnessOverrideFor(_sourceId),
+      systemBrightness: state.systemBrightness,
     );
     if (next == state) return;
     emit(next);
@@ -112,6 +143,23 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
     final value = state.brightnessOverride;
     if (value == null) return _resetPlatform();
     return _setPlatformBrightness(value);
+  }
+
+  Future<void> _readPlatformBrightness() async {
+    if (!_active || isClosed) return;
+    try {
+      final brightness = await _screenControlService
+          .readApplicationBrightness();
+      if (brightness == null || isClosed) return;
+      final next = ReaderBrightnessState(
+        brightnessOverride: state.brightnessOverride,
+        systemBrightness: _clampBrightness(brightness),
+      );
+      if (next == state) return;
+      emit(next);
+    } catch (e, st) {
+      addError(e, st);
+    }
   }
 
   Future<void> _setPlatformBrightness(double value) async {

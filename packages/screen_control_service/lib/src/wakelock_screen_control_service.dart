@@ -21,6 +21,12 @@ class WakelockScreenControlService implements ScreenControlService {
   }
 
   @override
+  Future<double?> readApplicationBrightness() async {
+    final brightness = await ScreenBrightness.instance.application;
+    return brightness.clamp(0.0, 1.0).toDouble();
+  }
+
+  @override
   Future<void> resetApplicationBrightness() {
     return ScreenBrightness.instance.resetApplicationScreenBrightness();
   }
