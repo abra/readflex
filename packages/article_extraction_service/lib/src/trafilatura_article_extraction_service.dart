@@ -167,18 +167,10 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
     required bool favorPrecision,
     required bool favorRecall,
   }) {
-    final headers = {
-      'content-type': 'application/json',
-      'accept': 'application/json',
-    };
-    final apiKey = _apiKey;
-    if (apiKey != null && apiKey.isNotEmpty) {
-      headers['X-API-Key'] = apiKey;
-    }
     return _httpClient
         .post(
           uri,
-          headers: headers,
+          headers: _cleanerHeaders(_apiKey),
           body: jsonEncode({
             'url': article.requestedUrl,
             'resolved_url': article.resolvedUrl,
@@ -204,18 +196,10 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
     required bool favorPrecision,
     required bool favorRecall,
   }) {
-    final headers = {
-      'content-type': 'application/json',
-      'accept': 'application/json',
-    };
-    final apiKey = _apiKey;
-    if (apiKey != null && apiKey.isNotEmpty) {
-      headers['X-API-Key'] = apiKey;
-    }
     return _httpClient
         .post(
           uri,
-          headers: headers,
+          headers: _cleanerHeaders(_apiKey),
           body: jsonEncode({
             'url': url,
             'body_format': 'blocks',
@@ -259,6 +243,12 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
   }
 
   bool _shouldFallbackToServerExtraction(ArticleExtractionException error) {
+    if (error.statusCode == null) {
+      final message = error.message.toLowerCase();
+      return message == 'could not download article url' ||
+          message == 'article url download timed out';
+    }
+
     return switch (error.statusCode) {
       401 || 403 => true,
       422 => error.message.toLowerCase().contains('could not extract'),
@@ -278,6 +268,20 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
   void dispose() {
     if (_ownsClient) _httpClient.close();
   }
+}
+
+Map<String, String> _cleanerHeaders(String? apiKey) {
+  final headers = {
+    'content-type': 'application/json',
+    'accept': 'application/json',
+    // Ignored by normal servers; prevents ngrok free tunnels from returning
+    // an HTML browser-warning page to API clients.
+    'ngrok-skip-browser-warning': 'true',
+  };
+  if (apiKey != null && apiKey.isNotEmpty) {
+    headers['X-API-Key'] = apiKey;
+  }
+  return headers;
 }
 
 Map<String, String> _downloadHeaders() {

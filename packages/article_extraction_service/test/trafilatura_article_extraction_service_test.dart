@@ -30,6 +30,7 @@ void main() {
           expect(request.method, 'POST');
           expect(request.url.path, '/v1/extract-html');
           expect(request.headers['X-API-Key'], 'secret');
+          expect(request.headers['ngrok-skip-browser-warning'], 'true');
           requestBody = jsonDecode(request.body) as Map<String, Object?>;
           return http.Response(
             jsonEncode({
@@ -412,6 +413,42 @@ void main() {
           }
 
           paths.add(request.url.path);
+          return http.Response(
+            jsonEncode({
+              'requested_url': 'https://example.com/a',
+              'resolved_url': 'https://example.com/a',
+              'title': 'Server extracted article',
+              'body_format': 'blocks',
+              'body': [
+                {'type': 'paragraph', 'text': 'Server fallback worked'},
+              ],
+              'plain_text': 'Server fallback worked',
+            }),
+            200,
+          );
+        }),
+      );
+
+      final article = await service.extract('https://example.com/a');
+
+      expect(paths, ['/v1/extract']);
+      expect(article.title, 'Server extracted article');
+    },
+  );
+
+  test(
+    'falls back to server-side extraction when client cannot download article',
+    () async {
+      final paths = <String>[];
+      final service = TrafilaturaArticleExtractionService(
+        baseUri: Uri.parse('https://cleaner.example.test'),
+        httpClient: MockClient((request) async {
+          if (request.method == 'GET') {
+            throw http.ClientException('connection reset', request.url);
+          }
+
+          paths.add(request.url.path);
+          expect(request.headers['ngrok-skip-browser-warning'], 'true');
           return http.Response(
             jsonEncode({
               'requested_url': 'https://example.com/a',
