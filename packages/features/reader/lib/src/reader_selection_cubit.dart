@@ -4,8 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 /// Current in-WebView text selection, mirrored into Flutter so the context
 /// panel can drive its show/hide animation and pass position metadata to
 /// TextAction handlers. [cfiRange] is populated whenever [hasSelection] is
-/// true; [pageNumber] and [scrollOffset] are vestigial from the removed
-/// article reader and stay `null`.
+/// true; [pageNumber] and [scrollOffset] are legacy optional position fields.
 class ReaderSelectionState extends Equatable {
   const ReaderSelectionState({
     this.selectedText = '',
@@ -20,10 +19,10 @@ class ReaderSelectionState extends Equatable {
   /// CFI range of the selected text.
   final String? cfiRange;
 
-  /// Vestigial — was used by the removed article reader.
+  /// Legacy optional page position.
   final int? pageNumber;
 
-  /// Vestigial — was used by the removed article reader.
+  /// Legacy optional scroll position.
   final double? scrollOffset;
 
   final bool hasSelection;

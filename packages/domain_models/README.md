@@ -14,8 +14,13 @@ from Dart names) a `toStorageString()` helper.
 
 | Model             | Represents                                                |
 |-------------------|-----------------------------------------------------------|
-| `Book`            | A book in the library (file path, reading progress, CFI)  |
-| `Highlight`       | Text highlight attached to a book                         |
+| `Book`            | A file-backed source in the library (books, PDFs, comics) |
+| `Article`         | A saved web article with local content and reader state   |
+| `ArticleBlock`    | Structured article content returned by the cleaner        |
+| `ExtractedArticle` | Cleaner response before local persistence assigns paths  |
+| `LibrarySource`   | Unified catalog/details projection for books and articles |
+| `SourceBookmark`  | Bookmark anchored to a source with CFI/page metadata      |
+| `Highlight`       | Text highlight attached to a reading source               |
 | `Flashcard`       | Flashcard with front/back and creation source             |
 | `DictionaryEntry` | Saved word or phrase with translation and usage examples  |
 | `ReviewItem`      | FSRS state for a reviewable item (flashcard/highlight/…)  |
@@ -24,15 +29,16 @@ from Dart names) a `toStorageString()` helper.
 
 ## Enums
 
-| Enum             | Values                                       |
-|------------------|----------------------------------------------|
-| `SourceType`     | `book` (single value — `article` was removed) |
-| `BookFormat`     | `epub`, `fb2`, `mobi`, `pdf`, `azw3`, `cbz`  |
-| `HighlightColor` | `yellow`, `green`, `blue`, `pink`, `purple`  |
-| `ReviewableType` | `flashcard`, `highlight`, `dictionary`       |
-| `FsrsState`      | `newCard`, `learning`, `review`, `relearning` |
-| `Rating`         | `again`, `hard`, `good`, `easy`              |
-| `CreationSource` | `manual`, `aiHighlight`, `aiSelection`       |
+| Enum                   | Values                                        |
+|------------------------|-----------------------------------------------|
+| `SourceType`           | `book`, `article`                             |
+| `BookFormat`           | `epub`, `fb2`, `mobi`, `pdf`, `azw3`, `cbz`   |
+| `ArticleTextDirection` | `ltr`, `rtl`                                  |
+| `HighlightColor`       | `yellow`, `green`, `blue`, `pink`, `purple`   |
+| `ReviewableType`       | `flashcard`, `highlight`, `dictionary`        |
+| `FsrsState`            | `newCard`, `learning`, `review`, `relearning` |
+| `Rating`               | `again`, `hard`, `good`, `easy`               |
+| `CreationSource`       | `manual`, `aiHighlight`, `aiSelection`        |
 
 ## Exceptions
 

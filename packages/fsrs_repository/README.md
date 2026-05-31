@@ -38,7 +38,7 @@ encounter content that was not pre-registered.
 | `getReviewStates(itemIds)`                                    | Batch FSRS state lookup                          |
 | `getMasteredItemIds({type, limit, offset})`                   | IDs of items that reached the `review` phase     |
 | `getDueItems({type, limit, offset})`                          | All items due now, mixed across types            |
-| `getDueItemsBySource(sourceId, {type, limit, offset})`        | Due items from one book                          |
+| `getDueItemsBySource(sourceId, {type, limit, offset})`        | Due items from one source                        |
 | `recordReview({itemId, itemType, rating, sourceId, reviewDurationMs})` | Apply a rating; returns updated FSRS state |
 
 Follows the standard repository pattern: receives `AppDatabase` via its

@@ -3,11 +3,10 @@ import 'package:equatable/equatable.dart' show Equatable;
 import 'highlight_color.dart';
 import 'source_type.dart';
 
-/// A text highlight from a book.
+/// A text highlight from a reading source.
 ///
-/// [pageNumber] and [scrollOffset] are vestigial fields from the removed
-/// article reader — new highlights leave them `null`. They will be removed
-/// once the storage column is dropped.
+/// [pageNumber] and [scrollOffset] are legacy positional fields kept for old
+/// rows and tests. Current reader selections are anchored by [cfiRange].
 class Highlight extends Equatable {
   const Highlight({
     required this.id,

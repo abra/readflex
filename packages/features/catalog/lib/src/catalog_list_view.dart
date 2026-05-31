@@ -5,12 +5,12 @@ import 'package:flutter/material.dart';
 import 'catalog_list_tile.dart';
 import 'catalog_selection_cubit.dart';
 
-/// Vertically scrolling list of book rows.
+/// Vertically scrolling list of library source rows.
 ///
 /// Each row is one tile; per-row top hairlines are drawn by the tile
 /// itself (see `showTopDivider`) so cover shadows cannot cover separators.
 /// Rows are wrapped in [Dismissible] so a single right-to-left swipe deletes
-/// one book — matched to the demo's iOS-mail style swipe.
+/// one source — matched to the demo's iOS-mail style swipe.
 /// Swipe is suppressed while a multi-select is active to avoid two
 /// destructive paths competing for the same gesture.
 ///

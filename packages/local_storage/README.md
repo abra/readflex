@@ -16,6 +16,7 @@ Barrel exports `AppDatabase` and every DAO:
 |-------------------|------------|--------------------------------------------------------|
 | `AppDatabase`     | class      | The single Drift database (`@DriftDatabase`)           |
 | `BooksDao`        | DAO        | CRUD for books                                         |
+| `ArticlesDao`     | DAO        | CRUD for saved web articles                            |
 | `HighlightsDao`   | DAO        | CRUD for highlights                                    |
 | `FlashcardsDao`   | DAO        | CRUD for flashcards                                    |
 | `DictionaryDao`   | DAO        | CRUD for dictionary entries                            |
@@ -29,9 +30,9 @@ and companions are also reachable through the DAO exports.
 ## Tables
 
 ```
-books_table              highlights_table        flashcards_table
-dictionary_table         review_items_table      review_logs_table
-bookmarks_table
+books_table              articles_table          highlights_table
+flashcards_table         dictionary_table        review_items_table
+review_logs_table        bookmarks_table
 ```
 
 All FSRS state (stability, difficulty, due date, reps, lapses) is
@@ -46,9 +47,11 @@ do not need cross-feature query composition yet. It stores both the navigation
 CFI plus optional text and visual-page anchor fields so readers can
 distinguish pages when a book format reports coarse section-level CFI values.
 
-`articles_table` existed in earlier schemas but was dropped in v13 when the
-article reader was removed. Migrations v5–v12 still touch it for upgrade
-fidelity from old installs; the table is gone after v13 runs.
+`articles_table` stores saved web-article metadata and reader state. Heavy
+article payloads stay on disk under `articles/<id>/`; the row stores local
+filenames/paths plus extracted metadata such as language, author, site, CFI,
+and reading progress. Older migrations still contain the historical
+article-table removal step from v13; v18 creates the current article schema.
 
 ## Migrations
 
@@ -121,7 +124,7 @@ in-memory executor.
 local_storage → drift, sqlite3_flutter_libs, path_provider, path
         ▲
         │
-        ├── book_repository, highlight_repository
+        ├── article_repository, book_repository, highlight_repository
         ├── flashcard_repository, dictionary_repository
         └── fsrs_repository
 ```

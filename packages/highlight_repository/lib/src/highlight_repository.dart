@@ -132,7 +132,7 @@ class HighlightRepository {
   }
 
   /// Bulk-deletes every highlight attached to [sourceId] together with
-  /// their FSRS review rows. Called when the parent book is removed so
+  /// their FSRS review rows. Called when the parent source is removed so
   /// neither the highlights table nor `review_items_table` accumulates
   /// orphans.
   Future<void> deleteHighlightsBySource(String sourceId) async {

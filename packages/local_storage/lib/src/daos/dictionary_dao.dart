@@ -50,13 +50,13 @@ class DictionaryDao extends DatabaseAccessor<AppDatabase>
       (delete(dictionaryTable)..where((t) => t.id.equals(id))).go();
 
   /// Bulk-removes every saved word that points at [sourceId]. Used when
-  /// the parent book is deleted with the "delete everything" scope.
+  /// the parent source is deleted with the "delete everything" scope.
   Future<void> deleteEntriesBySource(String sourceId) =>
       (delete(dictionaryTable)..where((t) => t.sourceId.equals(sourceId))).go();
 
   /// Detaches saved words from their source by nulling out [sourceId].
   /// Used by the "keep learning data" delete scope so the words survive
-  /// the book deletion without dangling references to a now-missing row.
+  /// the source deletion without dangling references to a now-missing row.
   Future<void> clearSourceForEntries(String sourceId) =>
       (update(
         dictionaryTable,

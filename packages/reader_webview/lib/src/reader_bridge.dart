@@ -449,8 +449,8 @@ class ReaderSearchExcerpt {
 }
 
 /// User text selection surfaced from the reader WebView. The CFI range is
-/// the anchor used to restore highlights later. [scrollOffset] is
-/// vestigial from the removed article reader.
+/// the anchor used to restore highlights later. [scrollOffset] is a legacy
+/// optional position field kept for compatibility with existing contracts.
 class ReaderSelection {
   const ReaderSelection({
     required this.text,
@@ -463,7 +463,7 @@ class ReaderSelection {
   /// CFI range of the selection.
   final String? cfiRange;
 
-  /// Vestigial — was emitted by the removed article reader.
+  /// Legacy optional scroll position.
   final double? scrollOffset;
 
   factory ReaderSelection.fromMap(Map<String, dynamic> map) {

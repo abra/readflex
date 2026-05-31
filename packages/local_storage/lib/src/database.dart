@@ -251,9 +251,9 @@ class AppDatabase extends _$AppDatabase {
         );
       }
       if (from < 6) {
-        // Rebuild articles_table: cleanedHtml TEXT was replaced by
-        // contentPath pointing to a file on disk. Now obsolete (articles
-        // are removed in v13), but kept for upgrade fidelity from v5.
+        // Historical article schema: cleanedHtml TEXT was replaced by
+        // contentPath pointing to a file on disk. Keep this step for
+        // upgrade fidelity from v5.
         await customStatement('DROP TABLE IF EXISTS articles_table');
         await customStatement('''
           CREATE TABLE articles_table (
@@ -278,8 +278,8 @@ class AppDatabase extends _$AppDatabase {
         ''');
       }
       if (from < 7) {
-        // articles_table.contentPath / coverImagePath flipped from absolute
-        // paths to filenames only. Now obsolete (v13 drops the table).
+        // Historical article schema: contentPath / coverImagePath flipped
+        // from absolute paths to filenames only.
         await customStatement('DROP TABLE IF EXISTS articles_table');
         await customStatement('''
           CREATE TABLE articles_table (
@@ -341,17 +341,16 @@ class AppDatabase extends _$AppDatabase {
         await _createIndexes();
       }
       if (from < 12) {
-        // Articles used to render through foliate-js with a CFI restore
-        // column. Obsolete in v13 but kept here so that upgrades from
-        // <12 still execute the historical schema before v13 drops it.
+        // Historical article schema added a CFI restore column. Keep this
+        // step so upgrades from <12 pass through the expected versioned
+        // shape before later migrations rebuild the current article table.
         await customStatement(
           'ALTER TABLE articles_table ADD COLUMN current_cfi TEXT',
         );
       }
       if (from < 13) {
-        // Articles feature removed. Drop the table entirely; safe to
-        // skip if the user never had article data (e.g. clean install
-        // that goes through onCreate instead).
+        // Legacy article-table reset from v13. Safe to skip if the user
+        // never had article data; v18 creates the current article schema.
         await customStatement('DROP TABLE IF EXISTS articles_table');
       }
       if (from < 14) {

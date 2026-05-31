@@ -142,7 +142,7 @@ class ReaderAppearancePreferences {
 /// Optional per-source reader appearance overrides.
 ///
 /// `null` means "inherit the global reader preference". This keeps Profile as
-/// the global default while allowing an individual book/comic to override only
+/// the global default while allowing an individual source to override only
 /// the fields the user changed from the in-reader `T` controls.
 class ReaderAppearanceOverride {
   const ReaderAppearanceOverride({

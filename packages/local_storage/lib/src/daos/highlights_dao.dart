@@ -6,7 +6,7 @@ import '../tables/highlights_table.dart';
 part 'highlights_dao.g.dart';
 
 /// CRUD access to [HighlightsTable] with by-source / by-ids filters and a
-/// bulk by-source delete used when the parent book is removed. Consumed by
+/// bulk by-source delete used when the parent source is removed. Consumed by
 /// `HighlightRepository`, which wraps errors in `StorageException`.
 @DriftAccessor(tables: [HighlightsTable])
 class HighlightsDao extends DatabaseAccessor<AppDatabase>
