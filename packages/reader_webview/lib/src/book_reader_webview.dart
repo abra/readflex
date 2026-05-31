@@ -356,6 +356,9 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   // This flag overrides the URL-built initialCfi during the recovery
   // reload, then clears itself once the reload signals onLoadEnd.
   bool _recoveringFromCrash = false;
+  int _webContentRecoveryAttempts = 0;
+
+  static const _maxWebContentRecoveryAttempts = 1;
 
   bool get _effectiveArticle =>
       widget.isArticle || isGeneratedArticleReaderPath(widget.bookFilePath);
@@ -370,6 +373,11 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   @override
   void didUpdateWidget(covariant BookReaderWebView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.bookFilePath != widget.bookFilePath ||
+        oldWidget.initialCfi != widget.initialCfi) {
+      _recoveringFromCrash = false;
+      _webContentRecoveryAttempts = 0;
+    }
     if (!_isReady) return;
 
     // Value-compare via FoliateStyle's `==` instead of double-encoding
@@ -593,6 +601,23 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   /// its branch in [_indexUrl]) once foliate-js / our integration handles
   /// deep-CFI restoration without crashing the WebContent process.
   void _onContentProcessTerminated(InAppWebViewController controller) {
+    final initialCfi = widget.initialCfi?.trim();
+    if (initialCfi == null || initialCfi.isEmpty) {
+      debugPrint(
+        '[reader-recovery] WebContent process died without initial CFI; '
+        'skipping reload to avoid a recovery loop',
+      );
+      return;
+    }
+
+    if (_webContentRecoveryAttempts >= _maxWebContentRecoveryAttempts) {
+      debugPrint(
+        '[reader-recovery] WebContent process died after recovery attempt; '
+        'skipping reload to avoid a recovery loop',
+      );
+      return;
+    }
+
     // Avoid re-entering recovery if a second crash arrives before the
     // first reload finishes. If we hit this twice, something else is
     // wrong and reloading again will only spin.
@@ -607,6 +632,7 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       '[reader-recovery] WebContent process died (cfi=${widget.initialCfi}), '
       'reloading with cfi=null',
     );
+    _webContentRecoveryAttempts += 1;
     setState(() {
       _recoveringFromCrash = true;
       _isReady = false;

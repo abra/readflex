@@ -40,7 +40,7 @@ void main() {
   });
 
   testWidgets(
-    'brightness chrome follows reader chrome visibility while selection actions are disabled',
+    'brightness chrome hides while text selection actions are visible',
     (
       tester,
     ) async {
@@ -64,7 +64,7 @@ void main() {
       selectionCubit.select(text: 'Selected text');
       await tester.pumpAndSettle();
 
-      expect(tester.brightnessIgnorePointer.ignoring, isFalse);
+      expect(tester.brightnessIgnorePointer.ignoring, isTrue);
     },
   );
 

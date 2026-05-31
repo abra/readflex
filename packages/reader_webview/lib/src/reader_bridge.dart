@@ -454,11 +454,31 @@ class ReaderSearchExcerpt {
 class ReaderSelection {
   const ReaderSelection({
     required this.text,
+    this.normalizedText,
+    this.selectionKind,
+    this.contextText,
+    this.markedContextText,
+    this.normalizedMarkedContextText,
     this.cfiRange,
     this.scrollOffset,
   });
 
   final String text;
+
+  /// Selection expanded to complete word boundaries for lexical actions.
+  final String? normalizedText;
+
+  /// Reader-side selection shape, e.g. exact, partial_word, partial_span.
+  final String? selectionKind;
+
+  /// Surrounding sentence/paragraph excerpt for context-aware translation.
+  final String? contextText;
+
+  /// Same excerpt with the exact selected range wrapped in [[...]].
+  final String? markedContextText;
+
+  /// Same excerpt with the normalized lexical range wrapped in [[...]].
+  final String? normalizedMarkedContextText;
 
   /// CFI range of the selection.
   final String? cfiRange;
@@ -469,6 +489,11 @@ class ReaderSelection {
   factory ReaderSelection.fromMap(Map<String, dynamic> map) {
     return ReaderSelection(
       text: _string(map['text']) ?? '',
+      normalizedText: _string(map['normalizedText']),
+      selectionKind: _string(map['selectionKind']),
+      contextText: _string(map['contextText']),
+      markedContextText: _string(map['markedContextText']),
+      normalizedMarkedContextText: _string(map['normalizedMarkedContextText']),
       cfiRange: _string(map['cfi']),
       scrollOffset: _double(map['scrollOffset']),
     );

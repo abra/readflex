@@ -7,10 +7,23 @@ void main() {
       final selection = parseReaderSelectionPayload({
         'text': 'Selected text',
         'cfi': 'epubcfi(/6/4)',
+        'normalizedText': 'Selected text',
+        'selectionKind': 'partial_word',
+        'contextText': 'Before selected text after.',
+        'markedContextText': 'Before [[selected text]] after.',
+        'normalizedMarkedContextText': 'Before [[Selected text]] after.',
       });
 
       expect(selection, isNotNull);
       expect(selection!.text, 'Selected text');
+      expect(selection.normalizedText, 'Selected text');
+      expect(selection.selectionKind, 'partial_word');
+      expect(selection.contextText, 'Before selected text after.');
+      expect(selection.markedContextText, 'Before [[selected text]] after.');
+      expect(
+        selection.normalizedMarkedContextText,
+        'Before [[Selected text]] after.',
+      );
       expect(selection.cfiRange, 'epubcfi(/6/4)');
     });
 

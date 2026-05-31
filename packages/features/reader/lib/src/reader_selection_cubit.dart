@@ -3,11 +3,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Current in-WebView text selection, mirrored into Flutter so the context
 /// panel can drive its show/hide animation and pass position metadata to
-/// TextAction handlers. [cfiRange] is populated whenever [hasSelection] is
+/// TextAction handlers. [contextText] carries surrounding text for
+/// contextual translation. [cfiRange] is populated whenever [hasSelection] is
 /// true; [pageNumber] and [scrollOffset] are legacy optional position fields.
 class ReaderSelectionState extends Equatable {
   const ReaderSelectionState({
     this.selectedText = '',
+    this.normalizedSelectedText,
+    this.selectionKind,
+    this.contextText,
+    this.markedContextText,
+    this.normalizedMarkedContextText,
     this.cfiRange,
     this.pageNumber,
     this.scrollOffset,
@@ -15,6 +21,21 @@ class ReaderSelectionState extends Equatable {
   });
 
   final String selectedText;
+
+  /// Selection expanded to complete word boundaries for lexical actions.
+  final String? normalizedSelectedText;
+
+  /// Reader-side selection shape, e.g. exact, partial_word, partial_span.
+  final String? selectionKind;
+
+  /// Surrounding sentence/paragraph excerpt for context-aware actions.
+  final String? contextText;
+
+  /// Same excerpt with the exact selected range wrapped in [[...]].
+  final String? markedContextText;
+
+  /// Same excerpt with the normalized lexical range wrapped in [[...]].
+  final String? normalizedMarkedContextText;
 
   /// CFI range of the selected text.
   final String? cfiRange;
@@ -31,12 +52,32 @@ class ReaderSelectionState extends Equatable {
 
   ReaderSelectionState copyWith({
     String? selectedText,
+    Object? normalizedSelectedText = _absent,
+    Object? selectionKind = _absent,
+    Object? contextText = _absent,
+    Object? markedContextText = _absent,
+    Object? normalizedMarkedContextText = _absent,
     Object? cfiRange = _absent,
     Object? pageNumber = _absent,
     Object? scrollOffset = _absent,
     bool? hasSelection,
   }) => ReaderSelectionState(
     selectedText: selectedText ?? this.selectedText,
+    normalizedSelectedText: normalizedSelectedText == _absent
+        ? this.normalizedSelectedText
+        : normalizedSelectedText as String?,
+    selectionKind: selectionKind == _absent
+        ? this.selectionKind
+        : selectionKind as String?,
+    contextText: contextText == _absent
+        ? this.contextText
+        : contextText as String?,
+    markedContextText: markedContextText == _absent
+        ? this.markedContextText
+        : markedContextText as String?,
+    normalizedMarkedContextText: normalizedMarkedContextText == _absent
+        ? this.normalizedMarkedContextText
+        : normalizedMarkedContextText as String?,
     cfiRange: cfiRange == _absent ? this.cfiRange : cfiRange as String?,
     pageNumber: pageNumber == _absent ? this.pageNumber : pageNumber as int?,
     scrollOffset: scrollOffset == _absent
@@ -48,6 +89,11 @@ class ReaderSelectionState extends Equatable {
   @override
   List<Object?> get props => [
     selectedText,
+    normalizedSelectedText,
+    selectionKind,
+    contextText,
+    markedContextText,
+    normalizedMarkedContextText,
     cfiRange,
     pageNumber,
     scrollOffset,
@@ -63,6 +109,11 @@ class ReaderSelectionCubit extends Cubit<ReaderSelectionState> {
 
   void select({
     required String text,
+    String? normalizedText,
+    String? selectionKind,
+    String? contextText,
+    String? markedContextText,
+    String? normalizedMarkedContextText,
     String? cfiRange,
     int? pageNumber,
     double? scrollOffset,
@@ -70,6 +121,11 @@ class ReaderSelectionCubit extends Cubit<ReaderSelectionState> {
     emit(
       ReaderSelectionState(
         selectedText: text,
+        normalizedSelectedText: normalizedText,
+        selectionKind: selectionKind,
+        contextText: contextText,
+        markedContextText: markedContextText,
+        normalizedMarkedContextText: normalizedMarkedContextText,
         cfiRange: cfiRange,
         pageNumber: pageNumber,
         scrollOffset: scrollOffset,

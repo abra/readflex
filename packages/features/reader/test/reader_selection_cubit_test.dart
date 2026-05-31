@@ -10,6 +10,9 @@ void main() {
       final cubit = buildCubit();
       expect(cubit.state.hasSelection, isFalse);
       expect(cubit.state.selectedText, '');
+      expect(cubit.state.normalizedSelectedText, isNull);
+      expect(cubit.state.selectionKind, isNull);
+      expect(cubit.state.contextText, isNull);
       expect(cubit.state.cfiRange, isNull);
       expect(cubit.state.pageNumber, isNull);
       expect(cubit.state.scrollOffset, isNull);
@@ -20,14 +23,40 @@ void main() {
         'sets book selection fields',
         build: buildCubit,
         act: (c) => c.select(
-          text: 'Hello world',
+          text: 'Hello wor',
+          normalizedText: 'Hello world',
+          selectionKind: 'partial_word',
+          contextText: 'Say Hello world again.',
+          markedContextText: 'Say [[Hello wor]] again.',
+          normalizedMarkedContextText: 'Say [[Hello world]] again.',
           cfiRange: 'epubcfi(/6/4)',
           pageNumber: 42,
         ),
         expect: () => [
           isA<ReaderSelectionState>()
               .having((s) => s.hasSelection, 'hasSelection', isTrue)
-              .having((s) => s.selectedText, 'selectedText', 'Hello world')
+              .having((s) => s.selectedText, 'selectedText', 'Hello wor')
+              .having(
+                (s) => s.normalizedSelectedText,
+                'normalizedSelectedText',
+                'Hello world',
+              )
+              .having((s) => s.selectionKind, 'selectionKind', 'partial_word')
+              .having(
+                (s) => s.contextText,
+                'contextText',
+                'Say Hello world again.',
+              )
+              .having(
+                (s) => s.markedContextText,
+                'markedContextText',
+                'Say [[Hello wor]] again.',
+              )
+              .having(
+                (s) => s.normalizedMarkedContextText,
+                'normalizedMarkedContextText',
+                'Say [[Hello world]] again.',
+              )
               .having((s) => s.cfiRange, 'cfiRange', 'epubcfi(/6/4)')
               .having((s) => s.pageNumber, 'pageNumber', 42)
               .having((s) => s.scrollOffset, 'scrollOffset', isNull),
@@ -54,7 +83,11 @@ void main() {
         'clears all selection fields',
         build: buildCubit,
         seed: () => const ReaderSelectionState(
-          selectedText: 'Some text',
+          selectedText: 'Some te',
+          normalizedSelectedText: 'Some text',
+          selectionKind: 'partial_word',
+          contextText: 'Some text in context.',
+          normalizedMarkedContextText: '[[Some text]] in context.',
           cfiRange: 'epubcfi(/6/4)',
           pageNumber: 10,
           hasSelection: true,
@@ -86,12 +119,22 @@ void main() {
 
       test('copyWith preserves unset fields', () {
         const state = ReaderSelectionState(
-          selectedText: 'text',
+          selectedText: 'tex',
+          normalizedSelectedText: 'text',
+          selectionKind: 'partial_word',
+          contextText: 'context',
+          markedContextText: '[[tex]]',
+          normalizedMarkedContextText: '[[text]]',
           cfiRange: 'cfi',
           hasSelection: true,
         );
         final copy = state.copyWith(pageNumber: 5);
-        expect(copy.selectedText, 'text');
+        expect(copy.selectedText, 'tex');
+        expect(copy.normalizedSelectedText, 'text');
+        expect(copy.selectionKind, 'partial_word');
+        expect(copy.contextText, 'context');
+        expect(copy.markedContextText, '[[tex]]');
+        expect(copy.normalizedMarkedContextText, '[[text]]');
         expect(copy.cfiRange, 'cfi');
         expect(copy.hasSelection, isTrue);
         expect(copy.pageNumber, 5);

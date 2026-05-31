@@ -11,9 +11,9 @@ part 'translate_state.dart';
 ///
 /// Triggers a translation through [TranslationService] and, on demand,
 /// persists the result as a [DictionaryEntry] plus a matching FSRS review row
-/// so the word enters the practice queue. The currently wired production
-/// service echoes text for translation; real ML Kit / backend translation can
-/// replace it behind the same contract.
+/// so the word enters the practice queue. The production translation service
+/// owns the actual source choice: bundled SQLite, direct online enrichment, or
+/// a future on-device adapter.
 ///
 /// FSRS registration failure is treated as non-fatal — the entry is
 /// still saved and the error is surfaced through [addError].
@@ -35,14 +35,32 @@ class TranslateCubit extends Cubit<TranslateState> {
     required String text,
     required String fromLang,
     required String toLang,
+    String? contextText,
+    String? markedContextText,
   }) async {
-    emit(state.copyWith(status: TranslateStatus.translating));
+    final normalizedContextText = contextText?.trim();
+    final normalizedMarkedContextText = markedContextText?.trim();
+    final translationContextText =
+        normalizedMarkedContextText == null ||
+            normalizedMarkedContextText.isEmpty
+        ? normalizedContextText
+        : normalizedMarkedContextText;
+    emit(
+      state.copyWith(
+        status: TranslateStatus.translating,
+        selectionContextText:
+            normalizedContextText == null || normalizedContextText.isEmpty
+            ? null
+            : normalizedContextText,
+      ),
+    );
 
     try {
       final result = await _translationService.translate(
         text,
         fromLang: fromLang,
         toLang: toLang,
+        contextText: translationContextText,
       );
       // Sheet may be dismissed while the network call is in flight; the
       // cubit is then closed and emit would throw StateError. Bail out
@@ -53,7 +71,16 @@ class TranslateCubit extends Cubit<TranslateState> {
           status: TranslateStatus.translated,
           translatedText: result.translatedText,
           source: result.source,
+          answerType: result.answerType,
+          confidence: result.confidence,
+          sense: result.sense,
+          expression: result.expression,
+          context: result.context,
           usageExamples: result.usageExamples,
+          naturalEquivalents: result.naturalEquivalents,
+          literalTranslation: result.literalTranslation,
+          suggestedFullPhrase: result.suggestedFullPhrase,
+          notes: result.notes,
         ),
       );
     } catch (e, st) {
@@ -83,6 +110,11 @@ class TranslateCubit extends Cubit<TranslateState> {
         translation: state.translatedText,
         sourceId: sourceId,
         sourceType: sourceType,
+        pronunciation:
+            state.sense?.transcription ?? state.sense?.lemmaTranscription,
+        partOfSpeech:
+            state.sense?.partOfSpeech ?? state.expression?.partOfSpeech,
+        context: state.selectionContextText ?? state.context,
         usageExamples: state.usageExamples,
       );
       // Same isClosed-after-await guard as in `translate`: the user can

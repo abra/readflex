@@ -29,14 +29,21 @@ abstract class TextAction {
 
 ### TextSelectionContext
 
-| Field          | Type         | Notes                                |
-|----------------|--------------|--------------------------------------|
-| `selectedText` | `String`     | Text the user highlighted            |
-| `sourceId`     | `String`     | Book ID                              |
-| `sourceType`   | `SourceType` | Always `book` — legacy enum          |
-| `cfiRange`     | `String?`    | EPUB CFI range                       |
-| `pageNumber`   | `int?`       | Vestigial — was used for articles    |
-| `scrollOffset` | `double?`    | Vestigial — was used for articles    |
+| Field / getter                    | Type         | Notes                                           |
+|-----------------------------------|--------------|-------------------------------------------------|
+| `selectedText`                    | `String`     | Exact text the user highlighted                 |
+| `normalizedSelectedText`          | `String?`    | Selection expanded to complete lexical tokens   |
+| `selectionKind`                   | `String?`    | Reader-side shape: `exact`, `partial_word`, etc |
+| `contextText`                     | `String?`    | Plain surrounding reader context                |
+| `markedContextText`               | `String?`    | Context with the exact selection marked         |
+| `normalizedMarkedContextText`     | `String?`    | Context with the normalized selection marked    |
+| `textForTranslation`              | `String`     | Normalized text when present, otherwise exact   |
+| `markedContextTextForTranslation` | `String?`    | Normalized marked context when present          |
+| `sourceId`                        | `String`     | Source ID                                       |
+| `sourceType`                      | `SourceType` | Book, article, comic, etc.                      |
+| `cfiRange`                        | `String?`    | EPUB CFI range                                  |
+| `pageNumber`                      | `int?`       | Legacy optional page position                   |
+| `scrollOffset`                    | `double?`    | Legacy optional scroll position                 |
 
 ---
 

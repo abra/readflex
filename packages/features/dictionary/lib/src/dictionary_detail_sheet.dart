@@ -257,12 +257,19 @@ class _SourceQuote extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            quote,
+          MarkedText(
+            text: quote,
             style: text.bodyMedium.copyWith(
               fontFamily: AppTypography.fontFamilySerif,
               fontStyle: FontStyle.italic,
               color: cs.onSurface.withValues(alpha: 0.9),
+              height: 1.55,
+            ),
+            highlightStyle: text.bodyMedium.copyWith(
+              fontFamily: AppTypography.fontFamilySerif,
+              fontStyle: FontStyle.italic,
+              fontWeight: FontWeight.w700,
+              color: cs.primary,
               height: 1.55,
             ),
           ),

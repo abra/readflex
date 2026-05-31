@@ -271,6 +271,24 @@ void main() {
       expect(epubJs, contains('this.resources.getItemByHref(href)'));
     });
 
+    test(
+      'keeps preformatted content wrapped without aggressive word breaks',
+      () {
+        final bookJs = File(
+          'assets/foliate-js/src/book.js',
+        ).readAsStringSync();
+
+        expect(bookJs, contains('pre {'));
+        expect(bookJs, contains('white-space: pre-wrap !important;'));
+        expect(bookJs, contains('inline-size: 100%;'));
+        expect(bookJs, contains('max-inline-size: 100%;'));
+        expect(bookJs, contains('overflow-x: hidden !important;'));
+        expect(bookJs, contains('overflow-wrap: break-word !important;'));
+        expect(bookJs, contains('word-break: normal !important;'));
+        expect(bookJs, isNot(contains('-webkit-overflow-scrolling: touch;')));
+      },
+    );
+
     test('applies reader background color inside the iframe document', () {
       final bookJs = File(
         'assets/foliate-js/src/book.js',
@@ -324,7 +342,14 @@ void main() {
           "import { normalizeLoadedDocument } from './readflex_document_normalizer.js'",
         ),
       );
+      expect(
+        bookJs,
+        contains(
+          "import { normalizeSelectionRange } from './readflex_selection_normalizer.js'",
+        ),
+      );
       expect(bookJs, contains('normalizeLoadedDocument(doc)'));
+      expect(bookJs, contains('normalizeSelectionRange(range)'));
       expect(
         normalizerJs,
         contains('export const normalizeLoadedDocument = doc =>'),
@@ -333,7 +358,8 @@ void main() {
       expect(normalizerJs, contains('wrapWideTables(doc)'));
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_47"));
+      expect(assetExtractor, contains('readflex_selection_normalizer.js'));
+      expect(assetExtractor, contains("reader_webview_assets_50"));
     });
 
     test('does not dump full reader style changes to console', () {
@@ -341,6 +367,24 @@ void main() {
 
       expect(bookJs, isNot(contains("console.log('changeStyle'")));
       expect(bookJs, isNot(contains('JSON.stringify(style)')));
+    });
+
+    test('limits WebContent crash recovery to saved CFI restores', () {
+      final webViewDart = File(
+        'lib/src/book_reader_webview.dart',
+      ).readAsStringSync();
+
+      expect(webViewDart, contains('_maxWebContentRecoveryAttempts = 1'));
+      expect(
+        webViewDart,
+        contains('initialCfi == null || initialCfi.isEmpty'),
+      );
+      expect(
+        webViewDart,
+        contains('skipping reload to avoid a recovery loop'),
+      );
+      expect(webViewDart, contains('_webContentRecoveryAttempts += 1'));
+      expect(webViewDart, contains('_webContentRecoveryAttempts = 0'));
     });
 
     test('bundles only supported format adapters', () {

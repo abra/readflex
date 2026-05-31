@@ -5,26 +5,62 @@ import 'package:flutter/widgets.dart';
 /// reader — the selected string plus a CFI range for the action to save an
 /// anchor back to the source.
 ///
-/// [pageNumber] and [scrollOffset] are legacy optional position fields.
-/// Current text-reader selections primarily use [cfiRange].
+/// [contextText] is the surrounding sentence/paragraph excerpt supplied by
+/// the reader runtime for contextual translation. [pageNumber] and
+/// [scrollOffset] are legacy optional position fields. Current text-reader
+/// selections primarily use [cfiRange].
 class TextSelectionContext {
   const TextSelectionContext({
     required this.selectedText,
     required this.sourceId,
     required this.sourceType,
+    this.normalizedSelectedText,
+    this.selectionKind,
+    this.contextText,
+    this.markedContextText,
+    this.normalizedMarkedContextText,
     this.cfiRange,
     this.pageNumber,
     this.scrollOffset,
   });
 
-  /// The text the user selected.
+  /// The exact text the user selected.
   final String selectedText;
+
+  /// Selection expanded to complete word boundaries for lexical actions.
+  final String? normalizedSelectedText;
+
+  /// Reader-side selection shape, e.g. exact, partial_word, partial_span.
+  final String? selectionKind;
 
   /// ID of the reading source.
   final String sourceId;
 
   /// Source type used by actions that persist source-scoped rows.
   final SourceType sourceType;
+
+  /// Surrounding sentence/paragraph excerpt for context-aware actions.
+  final String? contextText;
+
+  /// Same excerpt with the exact selected range wrapped in [[...]].
+  final String? markedContextText;
+
+  /// Same excerpt with the normalized lexical range wrapped in [[...]].
+  final String? normalizedMarkedContextText;
+
+  /// Text that translation should use when selection was partial.
+  String get textForTranslation {
+    final normalized = normalizedSelectedText?.trim();
+    return normalized == null || normalized.isEmpty ? selectedText : normalized;
+  }
+
+  /// Marked context that translation should use when selection was partial.
+  String? get markedContextTextForTranslation {
+    final normalized = normalizedMarkedContextText?.trim();
+    return normalized == null || normalized.isEmpty
+        ? markedContextText
+        : normalized;
+  }
 
   /// CFI range for the text-reader selection.
   final String? cfiRange;

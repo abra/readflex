@@ -39,18 +39,43 @@ Props:
   saving → saved` (with `failure` branching from the working states).
   Failures to register an FSRS row after a successful save are non-fatal
   and are only logged.
-- `TranslateState` — carries `translatedText`, `usageExamples`, the
-  `TranslationSource` (remote vs platform) and the last error message.
+- `TranslateState` — carries `translatedText`, `TranslationSource`, optional
+  contextual fields for the selected word/expression, `usageExamples`,
+  `naturalEquivalents`, and the last error message. DeepSeek returns
+  source-language `marked_sentence`/`usage_examples` values with `[[...]]`; the
+  sheet renders those markers as highlighted text.
+
+## UI response contract
+
+The sheet follows the same minimal order as the LLM contract:
+
+- One ordinary word: selected word, word translation, source/target definition,
+  and the source sentence with the word highlighted.
+- One word inside a larger unit: selected word and its direct translation first,
+  then a short note about the larger unit, source/target definition, and the
+  source sentence with the larger unit highlighted.
+- Selected n-word expression: selected text, translation, expression type,
+  source/target definition, and the highlighted source sentence.
+- Selected n-word non-expression: selected text, translation, and the
+  highlighted source sentence.
+
+When available, the sheet also shows source-language usage variants and compact
+`Related` term pairs in `source — target` form after the core answer.
+
+The key invariant is: exact selection first, larger contextual unit second only
+when it exists. If the reader reports a partial-word selection, the sheet still
+previews the exact user selection but sends and saves the normalized lexical
+selection (`TextSelectionContext.textForTranslation`).
 
 ## Dependencies
 
 Requires through constructor injection:
 
-- `TranslationService` — current production wiring uses
-  `BundledTranslationService`, where exact installed word/phrase pairs are
-  backed by bundled SQLite dictionaries and misses fall back to the development
-  echo. The sheet does not know about network state; real ML Kit / backend
-  translation can replace the implementation behind the same contract later.
+- `TranslationService` — production wiring uses `BundledTranslationService`.
+  It first checks exact bundled SQLite pair packs, can call a temporary direct
+  DeepSeek client when `DEEPSEEK_API_KEY` is set, and has an on-device adapter slot for
+  future offline translation. The sheet does not know about
+  network state or provider details.
 - `DictionaryRepository` — stores the saved entry.
 - `FsrsRepository` — registers the new dictionary entry in the review
   queue (`ReviewableType.dictionary`).
@@ -71,3 +96,13 @@ ReaderScreen(
   ],
 )
 ```
+
+
+## Backend handoff
+
+Direct DeepSeek calls are a temporary development/internal path. Before a public
+release, replace the direct client with a Readflex backend that owns the API key
+and accepts queued enrichment requests. The intended offline flow is: save the
+on-device translation with source metadata, keep it marked as temporary, then
+send selected text plus nearby sentence context to the backend when connectivity
+is available. The queue and temporary/enriched status fields are future work.

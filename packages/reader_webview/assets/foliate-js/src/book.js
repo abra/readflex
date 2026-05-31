@@ -10,6 +10,7 @@ import {
 } from './readflex_gestures.js'
 import { applyTextContrastGuard } from './readflex_contrast_guard.js'
 import { normalizeLoadedDocument } from './readflex_document_normalizer.js'
+import { normalizeSelectionRange } from './readflex_selection_normalizer.js'
 const { configure, ZipReader, BlobReader, TextWriter, BlobWriter } =
   await import('./vendor/zip.js')
 const { EPUB } = await import('./epub.js')
@@ -78,7 +79,7 @@ const getSelectionRange = (selection) => {
 
 const unwrapCFI = cfi => cfi?.match(/^epubcfi\((.+)\)$/)?.[1] ?? cfi
 
-const CONTEXT_WINDOW_CHARS = 120;
+const CONTEXT_WINDOW_CHARS = 200;
 const MAX_CONTEXT_CHARS = 600;
 
 const _collapseWhitespace = (text) =>
@@ -91,6 +92,14 @@ const _sliceWithWindow = (text, start, end) => {
   const safeStart = Math.max(0, Math.min(text.length, start));
   const safeEnd = Math.max(safeStart, Math.min(text.length, end));
   return text.slice(safeStart, safeEnd);
+};
+
+const _limitContext = (text) => {
+  const contextText = _collapseWhitespace(text);
+  if (contextText.length > MAX_CONTEXT_CHARS) {
+    return contextText.slice(0, MAX_CONTEXT_CHARS);
+  }
+  return contextText;
 };
 
 const buildRangeContextText = (range) => {
@@ -134,17 +143,52 @@ const buildRangeContextText = (range) => {
     contextText = parts.join(' ');
   }
 
-  if (!contextText && selectionText) {
-    contextText = selectionText;
+  return _limitContext(contextText || selectionText);
+};
+
+const buildMarkedRangeContextText = (range) => {
+  if (!range) return '';
+
+  const selectionText = range.toString().trim();
+  const startNode = range.startContainer;
+  const endNode = range.endContainer;
+  const startText = startNode?.textContent ?? '';
+  const endText = endNode?.textContent ?? '';
+
+  if (startNode === endNode) {
+    const segmentStart = Math.max(0, range.startOffset - CONTEXT_WINDOW_CHARS);
+    const segmentEnd = Math.min(
+      startText.length,
+      range.endOffset + CONTEXT_WINDOW_CHARS
+    );
+    const before = _sliceWithWindow(startText, segmentStart, range.startOffset);
+    const selected = _sliceWithWindow(
+      startText,
+      range.startOffset,
+      range.endOffset
+    );
+    const after = _sliceWithWindow(startText, range.endOffset, segmentEnd);
+    return _limitContext(`${before} [[${selected}]] ${after}`);
   }
 
-  contextText = _collapseWhitespace(contextText);
-
-  if (contextText.length > MAX_CONTEXT_CHARS) {
-    return contextText.slice(0, MAX_CONTEXT_CHARS);
-  }
-
-  return contextText;
+  const startSegment = _collapseWhitespace(
+    _sliceWithWindow(
+      startText,
+      range.startOffset - CONTEXT_WINDOW_CHARS,
+      range.startOffset + CONTEXT_WINDOW_CHARS
+    )
+  );
+  const endSegment = _collapseWhitespace(
+    _sliceWithWindow(
+      endText,
+      range.endOffset - CONTEXT_WINDOW_CHARS,
+      range.endOffset + CONTEXT_WINDOW_CHARS
+    )
+  );
+  const markedSelection = selectionText ? `[[${selectionText}]]` : '';
+  return _limitContext(
+    [startSegment, markedSelection, endSegment].filter(Boolean).join(' ')
+  );
 };
 
 const handleSelection = (view, doc, index) => {
@@ -165,7 +209,12 @@ const handleSelection = (view, doc, index) => {
     text = newSelection.toString();
   }
 
-  const contextText = buildRangeContextText(range);
+  const normalizedSelection = normalizeSelectionRange(range);
+  const normalizedRange = normalizedSelection?.range ?? range;
+  const contextText = buildRangeContextText(normalizedRange);
+  const markedContextText = buildMarkedRangeContextText(range);
+  const normalizedMarkedContextText =
+    buildMarkedRangeContextText(normalizedRange);
 
   onSelectionEnd({
     index,
@@ -174,7 +223,11 @@ const handleSelection = (view, doc, index) => {
     cfi,
     pos: position,
     text,
-    contextText
+    normalizedText: normalizedSelection?.normalizedText ?? text,
+    selectionKind: normalizedSelection?.selectionKind ?? 'exact',
+    contextText,
+    markedContextText,
+    normalizedMarkedContextText
   });
 };
 
@@ -740,6 +793,13 @@ const getCSS = style => {
 
     pre {
         white-space: pre-wrap !important;
+        inline-size: 100%;
+        max-inline-size: 100%;
+        min-inline-size: 0;
+        overflow-x: hidden !important;
+        overflow-y: visible;
+        overflow-wrap: break-word !important;
+        word-break: normal !important;
     }
     aside[epub|type~="endnote"],
     aside[epub|type~="footnote"],

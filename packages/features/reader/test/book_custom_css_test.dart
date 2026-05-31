@@ -76,8 +76,10 @@ void main() {
       expect(css, contains('white-space: pre-wrap !important'));
       expect(css, contains('.readflex-code-block'));
       expect(css, contains('.ProgramCode { white-space: normal !important; }'));
-      expect(css, contains('overflow-wrap: anywhere !important'));
-      expect(css, contains('word-break: break-word !important'));
+      expect(css, contains('inline-size: 100%'));
+      expect(css, contains('overflow-x: hidden !important'));
+      expect(css, contains('overflow-wrap: break-word !important'));
+      expect(css, contains('word-break: normal !important'));
       expect(
         css,
         contains('font-size: var(--readflex-inline-code-font-size, 0.9em)'),
@@ -102,16 +104,18 @@ void main() {
       expect(css, contains('.readflex-code-block .LineGroup + .LineGroup'));
     });
 
-    test('emits safe word wrapping and wraps code blocks inside columns', () {
+    test('emits safe prose wrapping and whitespace-wrapped pre blocks', () {
       final css = buildBookCustomCSS(theme: lightTheme);
       expect(css, contains('-webkit-text-size-adjust: 100% !important'));
+      expect(css, contains('text-rendering: auto !important'));
       expect(css, contains('body, p, li, blockquote, figcaption'));
       expect(css, contains('var(--readflex-prose-font-size, 1em)'));
       expect(css, contains('white-space: normal !important'));
       expect(css, contains('overflow-wrap: anywhere !important'));
       expect(css, contains('word-break: break-word !important'));
       expect(css, contains('min-width: 0 !important'));
-      expect(css, contains('a, code, kbd, samp, td, th'));
+      expect(css, contains('a, :not(pre) > code, :not(pre) > kbd'));
+      expect(css, contains('pre code, pre kbd, pre samp'));
       expect(css, contains('white-space: inherit !important'));
       expect(css, contains('overflow-wrap: inherit !important'));
       expect(css, contains('word-break: inherit !important'));
@@ -196,9 +200,11 @@ void main() {
       },
     );
 
-    test('keeps code block wrapping for pre descendants', () {
+    test('keeps pre descendants on the block wrapping contract', () {
       final css = buildBookCustomCSS(theme: lightTheme);
       expect(css, contains('pre code, pre kbd, pre samp'));
+      expect(css, contains('white-space: inherit !important'));
+      expect(css, contains('overflow-wrap: inherit !important'));
       expect(css, contains('word-break: inherit !important'));
     });
   });

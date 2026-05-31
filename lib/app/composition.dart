@@ -145,7 +145,18 @@ Future<DependenciesContainer> createDependenciesContainer(
 
   // TODO: replace Noop stubs with real implementations.
   final authService = NoopAuthService();
-  final translationService = BundledTranslationService();
+  final remoteTranslationClient = config.enableDirectDeepSeekTranslation
+      ? DeepSeekDirectTranslationClient(
+          apiKey: config.deepSeekApiKey,
+          baseUri: Uri.parse(config.deepSeekBaseUrl),
+          model: config.deepSeekModel,
+        )
+      : null;
+  final translationService = BundledTranslationService(
+    remoteTranslationClient: remoteTranslationClient,
+    preferRemoteTranslation: remoteTranslationClient != null,
+    enableDevelopmentEchoFallback: false,
+  );
   const aiService = NoopAiService();
   const subscriptionService = NoopSubscriptionService();
   final connectivityService = await ConnectivityPlusService.create();

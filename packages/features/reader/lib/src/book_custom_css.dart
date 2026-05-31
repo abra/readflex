@@ -28,7 +28,8 @@ String buildBookCustomCSS({
   // Default `auto` already enables ligatures/kerning at body sizes.
   buffer.writeln(
     'html, body { -webkit-text-size-adjust: 100% !important; '
-    'text-size-adjust: 100% !important; }',
+    'text-size-adjust: 100% !important; '
+    'text-rendering: auto !important; }',
   );
   buffer.writeln(
     'body, p, li, blockquote, figcaption, div:not(.readflex-wide-table) { '
@@ -37,7 +38,7 @@ String buildBookCustomCSS({
     'max-width: 100% !important; }',
   );
   buffer.writeln(
-    'a, code, kbd, samp, td, th { '
+    'a, :not(pre) > code, :not(pre) > kbd, :not(pre) > samp, td, th { '
     'white-space: normal !important; overflow-wrap: anywhere !important; '
     'word-break: break-word !important; min-width: 0 !important; '
     'max-width: 100% !important; }',
@@ -108,20 +109,19 @@ String buildBookCustomCSS({
     'font-family: ui-monospace, Menlo, monospace !important; '
     'font-size: $kbdFontSize !important; font-weight: 600; }',
   );
-  // Code block: smaller font + tighter line-height than prose (mono looks
-  // dense and refined that way), plus a contour bordered card. Springer
-  // EPUBs often encode listings as div.ProgramCode/div.FixedLine tables;
-  // table layout in paginated WebKit columns can paint long lines into
-  // the next page, so those publisher classes share this block treatment.
+  // Code blocks must wrap instead of becoming inner scroll containers: iOS
+  // WebKit can crash or paginate into blank columns when a <pre> scrolls
+  // inside foliate's column layout.
   buffer.writeln(
     'pre, .readflex-code-block, .ProgramCode, .ParaTypeProgramcode { '
     'background: $panel !important; border: 1px solid $divider; '
     'padding: 0.85em 1em !important; border-radius: 6px; '
-    'display: block !important; box-sizing: border-box; max-width: 100%; '
-    'overflow-x: hidden; overflow-y: visible; '
+    'display: block !important; box-sizing: border-box; '
+    'inline-size: 100%; max-inline-size: 100%; min-inline-size: 0; '
+    'overflow-x: hidden !important; overflow-y: visible; '
     'break-inside: auto !important; text-indent: 0 !important; '
     'text-align: start !important; '
-    'overflow-wrap: anywhere !important; word-break: break-word !important; '
+    'overflow-wrap: break-word !important; word-break: normal !important; '
     'font-family: ui-monospace, Menlo, monospace !important; '
     'font-size: $codeBlockFontSize !important; '
     'line-height: 1.45 !important; }',
@@ -129,11 +129,6 @@ String buildBookCustomCSS({
   buffer.writeln(
     'pre, .readflex-code-block, .ParaTypeProgramcode { white-space: pre-wrap !important; } '
     '.ProgramCode { white-space: normal !important; }',
-  );
-  buffer.writeln(
-    'pre::-webkit-scrollbar { height: 6px; } '
-    'pre::-webkit-scrollbar-track { background: transparent; } '
-    'pre::-webkit-scrollbar-thumb { background: $divider; border-radius: 3px; }',
   );
   // Inside a <pre>, any nested code/kbd/samp inherits the block's font
   // and styling — strip their pill/border/shadow so they don't paint a
@@ -143,8 +138,8 @@ String buildBookCustomCSS({
     'border: 0 !important; box-shadow: none !important; '
     'padding: 0 !important; font-size: inherit !important; '
     'white-space: inherit !important; overflow-wrap: inherit !important; '
-    'word-break: inherit !important; min-width: auto !important; '
-    'max-width: none !important; }',
+    'word-break: inherit !important; min-width: 0 !important; '
+    'max-width: 100% !important; }',
   );
   buffer.writeln(
     '.readflex-code-block * { font-family: inherit !important; '

@@ -5,6 +5,8 @@ import 'package:translation_service/translation_service.dart';
 class FakeTranslationService implements TranslationService {
   bool shouldThrow = false;
   TranslationResult? resultOverride;
+  String? lastText;
+  String? lastContextText;
 
   /// When set, `translate` blocks on this completer's future before
   /// resolving. Tests that need to simulate "user dismissed the sheet
@@ -17,7 +19,10 @@ class FakeTranslationService implements TranslationService {
     String text, {
     required String fromLang,
     required String toLang,
+    String? contextText,
   }) async {
+    lastText = text;
+    lastContextText = contextText;
     if (awaitGate != null) await awaitGate!.future;
     if (shouldThrow) throw const TranslationException('Translation failed');
 

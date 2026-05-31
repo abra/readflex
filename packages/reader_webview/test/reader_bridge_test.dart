@@ -467,11 +467,24 @@ void main() {
       final selection = ReaderSelection.fromMap({
         'text': 'Both fields',
         'cfi': 'epubcfi(/6/4)',
+        'normalizedText': 'Both fields normalized',
+        'selectionKind': 'partial_span',
+        'contextText': 'Both fields in context.',
+        'markedContextText': '[[Both fields]] in context.',
+        'normalizedMarkedContextText': '[[Both fields normalized]] in context.',
         'scrollOffset': 0.3,
       });
 
       expect(selection.text, 'Both fields');
+      expect(selection.normalizedText, 'Both fields normalized');
+      expect(selection.selectionKind, 'partial_span');
       expect(selection.cfiRange, 'epubcfi(/6/4)');
+      expect(selection.contextText, 'Both fields in context.');
+      expect(selection.markedContextText, '[[Both fields]] in context.');
+      expect(
+        selection.normalizedMarkedContextText,
+        '[[Both fields normalized]] in context.',
+      );
       expect(selection.scrollOffset, 0.3);
     });
 

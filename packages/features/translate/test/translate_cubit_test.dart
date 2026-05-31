@@ -58,13 +58,29 @@ void main() {
     );
 
     blocTest<TranslateCubit, TranslateState>(
-      'translate preserves usage examples from remote',
+      'translate preserves structured context from remote',
       build: () {
         translationService.resultOverride = const TranslationResult(
           originalText: 'hello',
           translatedText: 'привет',
           source: TranslationSource.remote,
-          usageExamples: ['Hello, world!', 'Say hello'],
+          answerType: TranslationAnswerType.wordTranslation,
+          confidence: TranslationConfidence.high,
+          sense: TranslationSense(
+            partOfSpeech: 'interjection',
+            transcription: '/həˈloʊ/',
+            sourceDefinition: 'A greeting.',
+            targetDefinition: 'Приветствие.',
+          ),
+          expression: TranslationExpression(
+            term: 'hello',
+            expressionType: 'single_word',
+          ),
+          context: 'friendly greeting',
+          usageExamples: ['[[Hello]], world!', 'Say [[hello]]'],
+          naturalEquivalents: ['здравствуй'],
+          literalTranslation: 'привет',
+          notes: TranslationTextPair(target: 'Обычное приветствие.'),
         );
         return TranslateCubit(
           translationService: translationService,
@@ -83,9 +99,92 @@ void main() {
           status: TranslateStatus.translated,
           translatedText: 'привет',
           source: TranslationSource.remote,
-          usageExamples: ['Hello, world!', 'Say hello'],
+          answerType: TranslationAnswerType.wordTranslation,
+          confidence: TranslationConfidence.high,
+          sense: TranslationSense(
+            partOfSpeech: 'interjection',
+            transcription: '/həˈloʊ/',
+            sourceDefinition: 'A greeting.',
+            targetDefinition: 'Приветствие.',
+          ),
+          expression: TranslationExpression(
+            term: 'hello',
+            expressionType: 'single_word',
+          ),
+          context: 'friendly greeting',
+          usageExamples: ['[[Hello]], world!', 'Say [[hello]]'],
+          naturalEquivalents: ['здравствуй'],
+          literalTranslation: 'привет',
+          notes: TranslationTextPair(target: 'Обычное приветствие.'),
         ),
       ],
+    );
+
+    blocTest<TranslateCubit, TranslateState>(
+      'translate forwards surrounding reader context',
+      build: () => TranslateCubit(
+        translationService: translationService,
+        dictionaryRepository: dictionaryRepository,
+        fsrsRepository: fsrsRepository,
+      ),
+      act: (cubit) => cubit.translate(
+        text: 'hello',
+        fromLang: 'en',
+        toLang: 'ru',
+        contextText: '  She said hello before leaving.  ',
+      ),
+      expect: () => [
+        const TranslateState(
+          status: TranslateStatus.translating,
+          selectionContextText: 'She said hello before leaving.',
+        ),
+        const TranslateState(
+          status: TranslateStatus.translated,
+          translatedText: '[ru] hello',
+          source: TranslationSource.platform,
+          selectionContextText: 'She said hello before leaving.',
+        ),
+      ],
+      verify: (_) {
+        expect(
+          translationService.lastContextText,
+          'She said hello before leaving.',
+        );
+      },
+    );
+
+    blocTest<TranslateCubit, TranslateState>(
+      'translate sends marked context while storing plain reader context',
+      build: () => TranslateCubit(
+        translationService: translationService,
+        dictionaryRepository: dictionaryRepository,
+        fsrsRepository: fsrsRepository,
+      ),
+      act: (cubit) => cubit.translate(
+        text: 'of',
+        fromLang: 'en',
+        toLang: 'ru',
+        contextText: 'length of time; out of service',
+        markedContextText: 'length of time; out [[of]] service',
+      ),
+      expect: () => [
+        const TranslateState(
+          status: TranslateStatus.translating,
+          selectionContextText: 'length of time; out of service',
+        ),
+        const TranslateState(
+          status: TranslateStatus.translated,
+          translatedText: '[ru] of',
+          source: TranslationSource.platform,
+          selectionContextText: 'length of time; out of service',
+        ),
+      ],
+      verify: (_) {
+        expect(
+          translationService.lastContextText,
+          'length of time; out [[of]] service',
+        );
+      },
     );
 
     blocTest<TranslateCubit, TranslateState>(
@@ -136,6 +235,10 @@ void main() {
       seed: () => const TranslateState(
         status: TranslateStatus.translated,
         translatedText: 'привет',
+        sense: TranslationSense(
+          partOfSpeech: 'interjection',
+          transcription: '/həˈloʊ/',
+        ),
       ),
       act: (cubit) => cubit.saveToDictionary(
         word: 'hello',
@@ -146,17 +249,96 @@ void main() {
         const TranslateState(
           status: TranslateStatus.saving,
           translatedText: 'привет',
+          sense: TranslationSense(
+            partOfSpeech: 'interjection',
+            transcription: '/həˈloʊ/',
+          ),
         ),
         const TranslateState(
           status: TranslateStatus.saved,
           translatedText: 'привет',
+          sense: TranslationSense(
+            partOfSpeech: 'interjection',
+            transcription: '/həˈloʊ/',
+          ),
         ),
       ],
       verify: (_) {
         expect(dictionaryRepository.entries, hasLength(1));
         expect(dictionaryRepository.entries.first.word, 'hello');
         expect(dictionaryRepository.entries.first.translation, 'привет');
+        expect(dictionaryRepository.entries.first.pronunciation, '/həˈloʊ/');
+        expect(dictionaryRepository.entries.first.partOfSpeech, 'interjection');
         expect(dictionaryRepository.entries.first.sourceId, 'book-1');
+      },
+    );
+
+    blocTest<TranslateCubit, TranslateState>(
+      'saveToDictionary falls back to lemma transcription',
+      build: () => TranslateCubit(
+        translationService: translationService,
+        dictionaryRepository: dictionaryRepository,
+        fsrsRepository: fsrsRepository,
+      ),
+      seed: () => const TranslateState(
+        status: TranslateStatus.translated,
+        translatedText: 'заинтересованные стороны',
+        sense: TranslationSense(
+          partOfSpeech: 'noun',
+          lemma: 'stakeholder',
+          lemmaTranscription: '/ˈsteɪkˌhoʊldər/',
+          grammaticalForm: 'plural',
+        ),
+      ),
+      act: (cubit) => cubit.saveToDictionary(word: 'stakeholders'),
+      verify: (_) {
+        expect(dictionaryRepository.entries, hasLength(1));
+        expect(
+          dictionaryRepository.entries.first.pronunciation,
+          '/ˈsteɪkˌhoʊldər/',
+        );
+      },
+    );
+
+    blocTest<TranslateCubit, TranslateState>(
+      'saveToDictionary persists translation context',
+      build: () => TranslateCubit(
+        translationService: translationService,
+        dictionaryRepository: dictionaryRepository,
+        fsrsRepository: fsrsRepository,
+      ),
+      seed: () => const TranslateState(
+        status: TranslateStatus.translated,
+        translatedText: 'привет',
+        context: 'friendly greeting',
+      ),
+      act: (cubit) => cubit.saveToDictionary(word: 'hello'),
+      verify: (_) {
+        expect(dictionaryRepository.entries, hasLength(1));
+        expect(dictionaryRepository.entries.first.context, 'friendly greeting');
+      },
+    );
+
+    blocTest<TranslateCubit, TranslateState>(
+      'saveToDictionary prefers reader context over model explanation',
+      build: () => TranslateCubit(
+        translationService: translationService,
+        dictionaryRepository: dictionaryRepository,
+        fsrsRepository: fsrsRepository,
+      ),
+      seed: () => const TranslateState(
+        status: TranslateStatus.translated,
+        translatedText: 'привет',
+        context: 'friendly greeting',
+        selectionContextText: 'She said hello before leaving.',
+      ),
+      act: (cubit) => cubit.saveToDictionary(word: 'hello'),
+      verify: (_) {
+        expect(dictionaryRepository.entries, hasLength(1));
+        expect(
+          dictionaryRepository.entries.first.context,
+          'She said hello before leaving.',
+        );
       },
     );
 

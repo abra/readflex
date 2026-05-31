@@ -38,12 +38,10 @@ import 'reader_ui_cubit.dart';
 /// Approximate height of the context panel, used to offset the review banner.
 const _kContextPanelHeight = 80.0;
 
-// Temporarily disabled: selection actions can trap the reader chrome on image
-// formats. Keep the wiring in place so the feature can be restored safely.
-const _kTextSelectionActionsEnabled = false;
-
-bool _selectionActionsVisible(bool hasSelection) =>
-    _kTextSelectionActionsEnabled && hasSelection;
+// Text actions are shown only after the WebView reports an actual text
+// selection. Image-page formats are filtered in the selection callback so they
+// cannot trap the reader chrome with a stale action panel.
+bool _selectionActionsVisible(bool hasSelection) => hasSelection;
 
 /// Duration and curve for the reader chrome slide animation.
 const _kChromeAnimDuration = Duration(milliseconds: 200);
@@ -2853,6 +2851,9 @@ class _ContextPanelDriver extends StatelessWidget {
     final sourceId = context.select<ReaderBloc, String?>(
       (b) => b.state.sourceId,
     );
+    final sourceType = context.select<ReaderBloc, SourceType>(
+      (b) => b.state.sourceType,
+    );
 
     if (!_selectionActionsVisible(sel.hasSelection) || sourceId == null) {
       return const SizedBox.shrink();
@@ -2867,7 +2868,13 @@ class _ContextPanelDriver extends StatelessWidget {
       bottom: 0,
       child: _ContextPanel(
         selectedText: sel.selectedText,
+        normalizedSelectedText: sel.normalizedSelectedText,
+        selectionKind: sel.selectionKind,
+        contextText: sel.contextText,
+        markedContextText: sel.markedContextText,
+        normalizedMarkedContextText: sel.normalizedMarkedContextText,
         sourceId: sourceId,
+        sourceType: sourceType,
         selectionCfiRange: sel.cfiRange,
         selectionPageNumber: sel.pageNumber,
         selectionScrollOffset: sel.scrollOffset,
@@ -3207,7 +3214,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         );
       },
       onTextSelected: (selection) {
-        if (!_kTextSelectionActionsEnabled) {
+        if (isImagePageFormat(bloc.state.book?.format)) {
           selectionCubit.deselect();
           widget.webViewKey?.currentState?.clearSelection();
           return;
@@ -3215,6 +3222,11 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         uiCubit.hideChrome();
         selectionCubit.select(
           text: selection.text,
+          normalizedText: selection.normalizedText,
+          selectionKind: selection.selectionKind,
+          contextText: selection.contextText,
+          markedContextText: selection.markedContextText,
+          normalizedMarkedContextText: selection.normalizedMarkedContextText,
           cfiRange: selection.cfiRange,
         );
       },
@@ -3279,6 +3291,12 @@ class _ContextPanel extends StatelessWidget {
   const _ContextPanel({
     required this.selectedText,
     required this.sourceId,
+    required this.sourceType,
+    this.normalizedSelectedText,
+    this.selectionKind,
+    this.contextText,
+    this.markedContextText,
+    this.normalizedMarkedContextText,
     required this.textActions,
     required this.panelColor,
     required this.iconColor,
@@ -3292,6 +3310,12 @@ class _ContextPanel extends StatelessWidget {
 
   final String selectedText;
   final String sourceId;
+  final SourceType sourceType;
+  final String? normalizedSelectedText;
+  final String? selectionKind;
+  final String? contextText;
+  final String? markedContextText;
+  final String? normalizedMarkedContextText;
   final List<TextAction> textActions;
   final Color panelColor;
   final Color iconColor;
@@ -3329,8 +3353,14 @@ class _ContextPanel extends StatelessWidget {
                         context,
                         TextSelectionContext(
                           selectedText: selectedText,
+                          normalizedSelectedText: normalizedSelectedText,
+                          selectionKind: selectionKind,
+                          contextText: contextText,
+                          markedContextText: markedContextText,
+                          normalizedMarkedContextText:
+                              normalizedMarkedContextText,
                           sourceId: sourceId,
-                          sourceType: SourceType.book,
+                          sourceType: sourceType,
                           cfiRange: selectionCfiRange,
                           pageNumber: selectionPageNumber,
                           scrollOffset: selectionScrollOffset,

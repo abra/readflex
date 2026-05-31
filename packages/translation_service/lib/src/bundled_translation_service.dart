@@ -6,35 +6,49 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
+import 'on_device_translation_client.dart';
 import 'pronunciation/pronunciation.dart';
+import 'remote_translation_client.dart';
 import 'translation_service.dart';
 
-/// Production [TranslationService] backed by bundled SQLite dictionaries.
-/// Exact word/phrase translations are served from bundled pair packs when
-/// installed; unsupported pairs and missing rows still fall back to the
-/// development echo so the surrounding UI path remains observable.
+/// Production [TranslationService] with layered translation sources.
 ///
-/// On first use each language's bundled `.db` file is copied once from the
-/// asset bundle to the app documents directory. Subsequent lookups reuse a
-/// lazily-opened read-only [Database] handle per language. Missing languages
-/// produce an empty result instead of throwing — "dictionary not installed"
-/// looks the same as "word not found" to callers.
+/// Exact word/phrase translations are served from bundled SQLite pair packs
+/// when installed. Misses can then go to an optional online enricher
+/// ([RemoteTranslationClient]) and/or a future on-device adapter
+/// ([OnDeviceTranslationClient]). The final development echo remains opt-in
+/// so unsupported pairs are visible during local development instead of
+/// failing silently.
 ///
-/// Threading: [sqflite] executes queries on a background isolate, so the
-/// service is safe to call from UI isolate code.
+/// On first use each bundled `.db` file is copied once from the asset bundle
+/// to the app documents directory. Subsequent lookups reuse lazily-opened
+/// read-only [Database] handles. Missing assets return null instead of
+/// throwing — "dictionary not installed" looks the same as "word not found"
+/// to callers.
+///
+/// Threading: [sqflite] executes queries on a background isolate; remote and
+/// optional adapters own their async work, so callers can invoke this
+/// service from UI isolate code.
 class BundledTranslationService implements TranslationService {
   BundledTranslationService({
     DirectoryProvider? directoryProvider,
     AssetLoader? assetLoader,
     DatabaseOpener? databaseOpener,
+    OnDeviceTranslationClient? onDeviceTranslationClient,
+    RemoteTranslationClient? remoteTranslationClient,
+    bool preferRemoteTranslation = false,
+    bool enableDevelopmentEchoFallback = true,
   }) : _directoryProvider =
            directoryProvider ?? getApplicationDocumentsDirectory,
        _assetLoader = assetLoader ?? rootBundle.load,
-       _databaseOpener = databaseOpener ?? _defaultOpen;
+       _databaseOpener = databaseOpener ?? _defaultOpen,
+       _onDeviceTranslationClient = onDeviceTranslationClient,
+       _remoteTranslationClient = remoteTranslationClient,
+       _preferRemoteTranslation = preferRemoteTranslation,
+       _enableDevelopmentEchoFallback = enableDevelopmentEchoFallback;
 
-  /// Languages whose `.db` ships inside `assets/phonetic/`. Each entry must
-  /// match a file declared in pubspec.yaml.
-  static const bundledLanguages = {'en'};
+  /// No phonetic SQLite databases ship in the app bundle.
+  static const bundledLanguages = <String>{};
 
   /// Rootbundle prefix Flutter applies to assets declared inside a package's
   /// pubspec at build time.
@@ -50,6 +64,10 @@ class BundledTranslationService implements TranslationService {
   final DirectoryProvider _directoryProvider;
   final AssetLoader _assetLoader;
   final DatabaseOpener _databaseOpener;
+  final OnDeviceTranslationClient? _onDeviceTranslationClient;
+  final RemoteTranslationClient? _remoteTranslationClient;
+  final bool _preferRemoteTranslation;
+  final bool _enableDevelopmentEchoFallback;
   final Map<String, Database> _handles = {};
   final Map<String, Database> _translationHandles = {};
   final Set<String> _missingTranslationPairs = {};
@@ -59,6 +77,7 @@ class BundledTranslationService implements TranslationService {
     String text, {
     required String fromLang,
     required String toLang,
+    String? contextText,
   }) async {
     final bundledResult = await _lookupTranslation(
       text: text,
@@ -67,14 +86,43 @@ class BundledTranslationService implements TranslationService {
     );
     if (bundledResult != null) return bundledResult;
 
-    // TODO: wire ML Kit (offline neural translation) and, when available,
-    // AI backend (remote, AI-enriched). Until then echo misses so unsupported
-    // pairs remain visible during development instead of failing silently.
-    return TranslationResult(
-      originalText: text,
-      translatedText: '[$toLang] $text',
-      source: TranslationSource.platform,
+    if (_preferRemoteTranslation) {
+      final remoteResult = await _lookupRemoteTranslation(
+        text: text,
+        fromLang: fromLang,
+        toLang: toLang,
+        contextText: contextText,
+      );
+      if (remoteResult != null) return remoteResult;
+    }
+
+    final onDeviceResult = await _lookupOnDeviceTranslation(
+      text: text,
+      fromLang: fromLang,
+      toLang: toLang,
+      contextText: contextText,
     );
+    if (onDeviceResult != null) return onDeviceResult;
+
+    if (!_preferRemoteTranslation) {
+      final remoteResult = await _lookupRemoteTranslation(
+        text: text,
+        fromLang: fromLang,
+        toLang: toLang,
+        contextText: contextText,
+      );
+      if (remoteResult != null) return remoteResult;
+    }
+
+    if (_enableDevelopmentEchoFallback) {
+      return TranslationResult(
+        originalText: text,
+        translatedText: '[$toLang] $text',
+        source: TranslationSource.platform,
+      );
+    }
+
+    throw const TranslationException('Translation is unavailable');
   }
 
   @override
@@ -102,8 +150,58 @@ class BundledTranslationService implements TranslationService {
     for (final db in _translationHandles.values) {
       await db.close();
     }
+    await _onDeviceTranslationClient?.dispose();
+    await _remoteTranslationClient?.dispose();
     _handles.clear();
     _translationHandles.clear();
+  }
+
+  Future<TranslationResult?> _lookupRemoteTranslation({
+    required String text,
+    required String fromLang,
+    required String toLang,
+    String? contextText,
+  }) async {
+    final client = _remoteTranslationClient;
+    if (client == null) return null;
+    try {
+      return await client.translate(
+        text,
+        fromLang: fromLang,
+        toLang: toLang,
+        contextText: contextText,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<TranslationResult?> _lookupOnDeviceTranslation({
+    required String text,
+    required String fromLang,
+    required String toLang,
+    String? contextText,
+  }) async {
+    final client = _onDeviceTranslationClient;
+    if (client == null) return null;
+    try {
+      final translatedText = await client.translate(
+        text,
+        fromLang: fromLang,
+        toLang: toLang,
+        contextText: contextText,
+      );
+      if (translatedText == null || translatedText.trim().isEmpty) {
+        return null;
+      }
+      return TranslationResult(
+        originalText: text,
+        translatedText: translatedText.trim(),
+        source: TranslationSource.platform,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<TranslationResult?> _lookupTranslation({

@@ -33,6 +33,11 @@ Shared selection/click handlers are registered by
 `registerSharedReaderHandlers` so the widget body stays focused on
 position + annotation glue.
 
+`onSelectionEnd` carries both the exact selected text and, when the user
+selects only part of a word/span, a lexical `normalizedText` expanded to
+complete word boundaries. Text actions can preserve the exact selection for
+highlights while using the normalized fields for translation.
+
 ## Reader document normalization
 
 Loaded iframe documents are treated as untrusted, publisher-controlled HTML.

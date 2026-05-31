@@ -1039,6 +1039,37 @@ void main() {
     expect(hitArea.width, greaterThanOrEqualTo(AppSizes.buttonHeight));
     expect(hitArea.height, greaterThanOrEqualTo(AppSizes.buttonHeight));
   });
+
+  testWidgets(
+    'MarkedText renders marked ranges without marker brackets',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: const Scaffold(
+            body: MarkedText(text: 'She [[looked up]] the word.'),
+          ),
+        ),
+      );
+
+      final richText = tester.widget<RichText>(find.byType(RichText));
+      expect(richText.text.toPlainText(), 'She looked up the word.');
+      expect(
+        MarkedText.stripMarkers('She [[looked up]] the word.'),
+        'She looked up the word.',
+      );
+
+      final rootSpan = richText.text as TextSpan;
+      TextSpan? markedSpan;
+      rootSpan.visitChildren((span) {
+        if (span is TextSpan && span.text == 'looked up') {
+          markedSpan = span;
+        }
+        return true;
+      });
+      expect(markedSpan?.style?.fontWeight, FontWeight.w700);
+    },
+  );
 }
 
 void _noop() {}
