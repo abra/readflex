@@ -2,12 +2,16 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
+  applyWideTableGestureGuard,
   directionCountsFromText,
+  findScrollableWideTable,
   inferDocumentDirection,
   markInlineImages,
   normalizeCodeLikeBlocks,
   normalizeDocumentLanguageAndDirection,
   normalizeLoadedDocument,
+  shouldWideTableConsumeTouch,
+  shouldWideTableConsumeWheel,
   wrapWideTables,
 } from '../assets/foliate-js/src/readflex_document_normalizer.js'
 
@@ -61,6 +65,7 @@ class FakeElement {
     this.dir = ''
     this.lang = ''
     this.dataset = {}
+    this.attributes = new Map()
     this.style = new FakeStyle()
     this.classList = new FakeClassList()
     this.computedStyle = {
@@ -77,12 +82,28 @@ class FakeElement {
     if (text) this.append(textNode(text))
   }
 
+  get parentElement() {
+    return this.parentNode?.nodeType === Node.ELEMENT_NODE ? this.parentNode : null
+  }
+
   get textContent() {
     return this.childNodes.map(node => node.textContent ?? '').join('')
   }
 
   set textContent(value) {
     this.childNodes = [textNode(value)]
+  }
+
+  setAttribute(name, value = '') {
+    this.attributes.set(name, String(value))
+  }
+
+  getAttribute(name) {
+    return this.attributes.has(name) ? this.attributes.get(name) : null
+  }
+
+  hasAttribute(name) {
+    return this.attributes.has(name)
   }
 
   append(child) {
@@ -93,6 +114,15 @@ class FakeElement {
     }
     child.parentNode = this
     this.childNodes.push(child)
+  }
+
+  contains(node) {
+    let current = node
+    while (current) {
+      if (current === this) return true
+      current = current.parentNode
+    }
+    return false
   }
 
   before(node) {
@@ -161,11 +191,18 @@ class FakeDocument {
     this.documentElement.append(this.head)
     this.documentElement.append(this.body)
     for (const element of elements) this.body.append(element)
+    this.listeners = new Map()
     this.defaultView = {
       getComputedStyle(element) {
         return element.computedStyle
       },
     }
+  }
+
+  addEventListener(type, listener, options) {
+    const listeners = this.listeners.get(type) ?? []
+    listeners.push({ listener, options })
+    this.listeners.set(type, listeners)
   }
 
   createElement(tagName) {
@@ -190,7 +227,41 @@ test('wrapWideTables wraps tables once', () => {
   wrapWideTables(doc)
 
   assert.equal(table.parentNode.className, 'readflex-wide-table')
+  assert.equal(table.parentNode.hasAttribute('cfi-skip'), true)
   assert.equal(doc.body.childNodes.filter(node => node.className === 'readflex-wide-table').length, 1)
+})
+
+test('wide table gesture guard only consumes scrollable wrapper gestures', () => {
+  const table = new FakeElement('table')
+  const doc = new FakeDocument([table])
+  wrapWideTables(doc)
+  const wrapper = table.parentNode
+  wrapper.clientWidth = 100
+  wrapper.scrollWidth = 180
+  wrapper.clientHeight = 100
+  wrapper.scrollHeight = 100
+
+  assert.equal(findScrollableWideTable(table), wrapper)
+  assert.equal(shouldWideTableConsumeTouch(wrapper, 12, 2), true)
+  assert.equal(shouldWideTableConsumeTouch(wrapper, 2, 12), false)
+  assert.equal(shouldWideTableConsumeWheel(wrapper, 9, 1), true)
+  assert.equal(shouldWideTableConsumeWheel(wrapper, 1, 9), false)
+
+  wrapper.scrollWidth = 102
+  assert.equal(findScrollableWideTable(table), null)
+})
+
+test('applyWideTableGestureGuard installs capture listeners once', () => {
+  const table = new FakeElement('table')
+  const doc = new FakeDocument([table])
+
+  applyWideTableGestureGuard(doc)
+  applyWideTableGestureGuard(doc)
+
+  assert.equal(doc.documentElement.getAttribute('data-readflex-wide-table-gesture-guard'), 'true')
+  assert.equal(doc.listeners.get('touchstart').length, 1)
+  assert.equal(doc.listeners.get('touchmove').length, 1)
+  assert.equal(doc.listeners.get('wheel').length, 1)
 })
 
 test('markInlineImages preserves inline image paragraphs from image-only CSS', () => {

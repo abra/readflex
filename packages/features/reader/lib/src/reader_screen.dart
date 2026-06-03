@@ -33,6 +33,7 @@ import 'reader_search_cubit.dart';
 import 'reader_selection_cubit.dart';
 import 'reader_system_ui_overlay.dart';
 import 'reader_tap_action.dart';
+import 'reader_toc_active_index.dart';
 import 'reader_ui_cubit.dart';
 
 /// Approximate height of the context panel, used to offset the review banner.
@@ -56,6 +57,8 @@ const _kReaderBrightnessChromeWidth = 56.0;
 const _kReaderBrightnessChromeHeight = 190.0;
 const _kReaderBrightnessChromeDragHeight =
     _kReaderBrightnessChromeHeight - AppSpacing.sm * 2;
+
+const _kReaderTocTileEstimatedHeight = 60.0;
 
 final _readerDrawerCloseButtonStyle = IconButton.styleFrom(
   backgroundColor: Colors.transparent,
@@ -1977,6 +1980,12 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
     final bookmarks = context.select<ReaderBloc, List<SourceBookmark>>(
       (b) => b.state.bookmarks,
     );
+    final currentProgress = context.select<ReaderBloc, double?>(
+      (b) => b.state.book?.readingProgress,
+    );
+    final currentChapterTitle = context.select<ReaderBloc, String?>(
+      (b) => b.state.chapterTitle,
+    );
     final colors = context.colors;
 
     return _ReaderTocDrawer(
@@ -1985,6 +1994,8 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
       pageProgressionRtl: pageProgressionRtl,
       tocItems: tocItems,
       bookmarks: bookmarks,
+      currentProgress: currentProgress,
+      currentChapterTitle: currentChapterTitle,
       panelColor: colors.surface,
       dividerColor: colors.outlineVariant,
       onClose: onClose,
@@ -2001,6 +2012,8 @@ class _ReaderTocDrawer extends StatelessWidget {
     required this.pageProgressionRtl,
     required this.tocItems,
     required this.bookmarks,
+    required this.currentProgress,
+    required this.currentChapterTitle,
     required this.panelColor,
     required this.dividerColor,
     required this.onClose,
@@ -2013,6 +2026,8 @@ class _ReaderTocDrawer extends StatelessWidget {
   final bool pageProgressionRtl;
   final List<ReaderTocItem> tocItems;
   final List<SourceBookmark> bookmarks;
+  final double? currentProgress;
+  final String? currentChapterTitle;
   final Color panelColor;
   final Color dividerColor;
   final VoidCallback onClose;
@@ -2035,9 +2050,12 @@ class _ReaderTocDrawer extends StatelessWidget {
               bottom: false,
               child: _ReaderTocDrawerContent(
                 format: format,
+                visible: visible,
                 pageProgressionRtl: pageProgressionRtl,
                 tocItems: tocItems,
                 bookmarks: bookmarks,
+                currentProgress: currentProgress,
+                currentChapterTitle: currentChapterTitle,
                 onClose: onClose,
                 onItemSelected: onItemSelected,
                 onBookmarkSelected: onBookmarkSelected,
@@ -2053,18 +2071,24 @@ class _ReaderTocDrawer extends StatelessWidget {
 class _ReaderTocDrawerContent extends StatefulWidget {
   const _ReaderTocDrawerContent({
     required this.format,
+    required this.visible,
     required this.pageProgressionRtl,
     required this.tocItems,
     required this.bookmarks,
+    required this.currentProgress,
+    required this.currentChapterTitle,
     required this.onClose,
     required this.onItemSelected,
     required this.onBookmarkSelected,
   });
 
   final BookFormat? format;
+  final bool visible;
   final bool pageProgressionRtl;
   final List<ReaderTocItem> tocItems;
   final List<SourceBookmark> bookmarks;
+  final double? currentProgress;
+  final String? currentChapterTitle;
   final VoidCallback onClose;
   final ValueChanged<ReaderTocItem> onItemSelected;
   final ValueChanged<SourceBookmark> onBookmarkSelected;
@@ -2137,8 +2161,11 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
               children: [
                 _ReaderTocTab(
                   controller: _chaptersSearchController,
+                  visible: widget.visible,
                   format: widget.format,
                   pageProgressionRtl: widget.pageProgressionRtl,
+                  currentProgress: widget.currentProgress,
+                  currentChapterTitle: widget.currentChapterTitle,
                   query: _chaptersQuery,
                   hintText: 'Search chapters',
                   items: widget.tocItems,
@@ -2166,11 +2193,14 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
   }
 }
 
-class _ReaderTocTab extends StatelessWidget {
+class _ReaderTocTab extends StatefulWidget {
   const _ReaderTocTab({
     required this.controller,
+    required this.visible,
     required this.format,
     required this.pageProgressionRtl,
+    required this.currentProgress,
+    required this.currentChapterTitle,
     required this.query,
     required this.hintText,
     required this.items,
@@ -2179,8 +2209,11 @@ class _ReaderTocTab extends StatelessWidget {
   });
 
   final TextEditingController controller;
+  final bool visible;
   final BookFormat? format;
   final bool pageProgressionRtl;
+  final double? currentProgress;
+  final String? currentChapterTitle;
   final String query;
   final String hintText;
   final List<ReaderTocItem> items;
@@ -2188,24 +2221,129 @@ class _ReaderTocTab extends StatelessWidget {
   final ValueChanged<ReaderTocItem> onItemSelected;
 
   @override
+  State<_ReaderTocTab> createState() => _ReaderTocTabState();
+}
+
+class _ReaderTocTabState extends State<_ReaderTocTab> {
+  final _scrollController = ScrollController();
+  final _activeItemKey = GlobalKey();
+  bool _autoScrolledForOpen = false;
+  bool _autoScrollScheduled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.visible) _scheduleAutoScrollToActiveItem();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ReaderTocTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.visible) {
+      _autoScrolledForOpen = false;
+      _autoScrollScheduled = false;
+      return;
+    }
+
+    final becameVisible = widget.visible && !oldWidget.visible;
+    final activeInputsChanged =
+        oldWidget.items != widget.items ||
+        oldWidget.currentProgress != widget.currentProgress ||
+        oldWidget.currentChapterTitle != widget.currentChapterTitle ||
+        oldWidget.query != widget.query;
+    if (becameVisible || (!_autoScrolledForOpen && activeInputsChanged)) {
+      _scheduleAutoScrollToActiveItem();
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  List<({int sourceIndex, ReaderTocItem item})> _filteredItems() {
+    final normalizedQuery = widget.query.trim().toLowerCase();
+    return [
+      for (var index = 0; index < widget.items.length; index += 1)
+        if (normalizedQuery.isEmpty ||
+            widget.items[index].label.toLowerCase().contains(normalizedQuery))
+          (sourceIndex: index, item: widget.items[index]),
+    ];
+  }
+
+  int? _activeSourceIndex() {
+    return readerActiveTocIndex(
+      items: widget.items,
+      readingProgress: widget.currentProgress,
+      chapterTitle: widget.currentChapterTitle,
+    );
+  }
+
+  int? _activeFilteredIndex(
+    List<({int sourceIndex, ReaderTocItem item})> filteredItems,
+    int? activeSourceIndex,
+  ) {
+    if (activeSourceIndex == null) return null;
+    final index = filteredItems.indexWhere(
+      (entry) => entry.sourceIndex == activeSourceIndex,
+    );
+    return index == -1 ? null : index;
+  }
+
+  void _scheduleAutoScrollToActiveItem() {
+    if (_autoScrolledForOpen ||
+        _autoScrollScheduled ||
+        widget.query.trim().isNotEmpty) {
+      return;
+    }
+    final filteredItems = _filteredItems();
+    final activeFilteredIndex = _activeFilteredIndex(
+      filteredItems,
+      _activeSourceIndex(),
+    );
+    if (activeFilteredIndex == null) return;
+
+    _autoScrollScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoScrollScheduled = false;
+      if (!mounted || !_scrollController.hasClients) return;
+      _autoScrolledForOpen = true;
+
+      final maxScrollExtent = _scrollController.position.maxScrollExtent;
+      final targetOffset =
+          (activeFilteredIndex * _kReaderTocTileEstimatedHeight - AppSpacing.lg)
+              .clamp(0.0, maxScrollExtent)
+              .toDouble();
+      _scrollController.jumpTo(targetOffset);
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final context = _activeItemKey.currentContext;
+        if (context == null) return;
+        Scrollable.ensureVisible(
+          context,
+          alignment: 0.25,
+          duration: Duration.zero,
+        );
+      });
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final normalizedQuery = query.trim().toLowerCase();
     final listBottomPadding = _readerDrawerListBottomPadding(context);
-    final filteredItems = normalizedQuery.isEmpty
-        ? items
-        : [
-            for (final item in items)
-              if (item.label.toLowerCase().contains(normalizedQuery)) item,
-          ];
+    final filteredItems = _filteredItems();
+    final activeSourceIndex = _activeSourceIndex();
 
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: SearchField(
-            controller: controller,
-            hintText: hintText,
-            onChanged: onQueryChanged,
+            controller: widget.controller,
+            hintText: widget.hintText,
+            onChanged: widget.onQueryChanged,
           ),
         ),
         Expanded(
@@ -2213,20 +2351,24 @@ class _ReaderTocTab extends StatelessWidget {
             child: filteredItems.isEmpty
                 ? _ReaderDrawerEmptyState(
                     message: readerTocEmptyMessage(
-                      format: format,
-                      hasSourceItems: items.isNotEmpty,
+                      format: widget.format,
+                      hasSourceItems: widget.items.isNotEmpty,
                     ),
                   )
                 : ScrollEdgeFadeStack(
                     child: ListView.builder(
+                      controller: _scrollController,
                       padding: EdgeInsets.only(bottom: listBottomPadding),
                       itemCount: filteredItems.length,
                       itemBuilder: (context, index) {
-                        final item = filteredItems[index];
+                        final entry = filteredItems[index];
+                        final isActive = entry.sourceIndex == activeSourceIndex;
                         return _ReaderTocListTile(
-                          item: item,
-                          pageProgressionRtl: pageProgressionRtl,
-                          onTap: () => onItemSelected(item),
+                          key: isActive ? _activeItemKey : null,
+                          item: entry.item,
+                          pageProgressionRtl: widget.pageProgressionRtl,
+                          isActive: isActive,
+                          onTap: () => widget.onItemSelected(entry.item),
                         );
                       },
                     ),
@@ -2240,13 +2382,16 @@ class _ReaderTocTab extends StatelessWidget {
 
 class _ReaderTocListTile extends StatelessWidget {
   const _ReaderTocListTile({
+    super.key,
     required this.item,
     required this.pageProgressionRtl,
+    required this.isActive,
     required this.onTap,
   });
 
   final ReaderTocItem item;
   final bool pageProgressionRtl;
+  final bool isActive;
   final VoidCallback onTap;
 
   @override
@@ -2255,7 +2400,12 @@ class _ReaderTocListTile extends StatelessWidget {
     final levelInset =
         AppSpacing.md + (item.level - 1).clamp(0, 4) * AppSpacing.md;
 
+    final titleColor = isActive ? colors.primary : colors.onSurface;
+
     return ListTile(
+      selected: isActive,
+      selectedTileColor: colors.primary.withValues(alpha: 0.10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       contentPadding: readerDirectionalContentPadding(
         pageProgressionRtl: pageProgressionRtl,
         start: levelInset.toDouble(),
@@ -2274,7 +2424,7 @@ class _ReaderTocListTile extends StatelessWidget {
         ),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
-        style: context.text.bodyMedium.copyWith(color: colors.onSurface),
+        style: context.text.bodyMedium.copyWith(color: titleColor),
       ),
       onTap: onTap,
     );

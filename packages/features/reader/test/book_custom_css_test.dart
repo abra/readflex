@@ -125,6 +125,7 @@ void main() {
       final css = buildBookCustomCSS(theme: lightTheme);
       expect(css, contains('table {'));
       expect(css, contains('.readflex-wide-table'));
+      expect(css, contains('touch-action: pan-x pan-y'));
       expect(css, contains('figure {'));
       expect(css, contains('figcaption {'));
       expect(css, contains('break-inside: avoid'));

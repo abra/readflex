@@ -187,17 +187,29 @@ export const compare = (a, b) => {
 
 const isTextNode = ({ nodeType }) => nodeType === 3 || nodeType === 4
 const isElementNode = ({ nodeType }) => nodeType === 1
+const isCfiInertNode = node => node.hasAttribute?.('cfi-inert')
+const isCfiSkipNode = node => isElementNode(node) && node.hasAttribute?.('cfi-skip')
 
 const getChildNodes = (node, filter) => {
     const nodes = Array.from(node.childNodes)
         // "content other than element and character data is ignored"
         .filter(node => isTextNode(node) || isElementNode(node))
-    return filter ? nodes.map(node => {
+    return nodes.map(node => {
+        if (isCfiInertNode(node)) return null
+        if (isCfiSkipNode(node)) return getChildNodes(node, filter)
+        if (!filter) return node
+
         const accept = filter(node)
         if (accept === NodeFilter.FILTER_REJECT) return null
         else if (accept === NodeFilter.FILTER_SKIP) return getChildNodes(node, filter)
         else return node
-    }).flat().filter(x => x) : nodes
+    }).flat().filter(x => x)
+}
+
+const logicalParentNode = node => {
+    let parentNode = node.parentNode
+    while (parentNode && isCfiSkipNode(parentNode)) parentNode = parentNode.parentNode
+    return parentNode
 }
 
 // child nodes are organized such that the result is always
@@ -258,7 +270,8 @@ const partsToNode = (node, parts, filter) => {
 }
 
 const nodeToParts = (node, offset, filter) => {
-    const { parentNode, id } = node
+    const { id } = node
+    const parentNode = logicalParentNode(node)
     const indexed = indexChildNodes(parentNode, filter)
     const index = indexed.findIndex(x =>
         Array.isArray(x) ? x.some(x => x === node) : x === node)

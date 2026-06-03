@@ -356,10 +356,12 @@ void main() {
       );
       expect(normalizerJs, contains('markInlineImages(doc)'));
       expect(normalizerJs, contains('wrapWideTables(doc)'));
+      expect(normalizerJs, contains("wrapper.setAttribute('cfi-skip', '')"));
+      expect(normalizerJs, contains('applyWideTableGestureGuard(doc)'));
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_50"));
+      expect(assetExtractor, contains("reader_webview_assets_52"));
     });
 
     test('does not dump full reader style changes to console', () {
@@ -595,7 +597,11 @@ void main() {
       );
       expect(
         bookJs,
-        contains("tocItem?.href?.split('#')[0]"),
+        contains('this.view.lastLocation?.section?.current'),
+      );
+      expect(
+        bookJs,
+        contains('this.view.resolveNavigation?.(href)'),
       );
       expect(
         bookJs,

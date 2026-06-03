@@ -2064,21 +2064,34 @@ class Reader {
 
   get toc() {
     const sectionFractions = this.view.getSectionFractions()
-    const currentHref = this.view.lastLocation?.tocItem?.href?.split('#')[0] ?? 'Not Found'
-    let currentChapterIndex = sectionFractions.findIndex(s => s.href === currentHref)
-    if (currentChapterIndex === -1) {
-      currentChapterIndex = 0;
-    }
-    const currentSectionStart = sectionFractions[currentChapterIndex]?.fraction || 0
-    const nextSectionStart = sectionFractions[currentChapterIndex + 1]?.fraction || 1
-    const currentSectionPages = this.view.lastLocation?.chapterLocation.total || 1
-
-    const totalPages = currentSectionPages / (nextSectionStart - currentSectionStart)
+    const lastSectionIndex = this.view.lastLocation?.section?.current
+    const currentChapterIndex = Number.isInteger(lastSectionIndex)
+      ? lastSectionIndex
+      : 0
+    const currentSectionStart = sectionFractions[currentChapterIndex]?.fraction ?? 0
+    const nextSectionStart = sectionFractions[currentChapterIndex + 1]?.fraction ?? 1
+    const currentSectionPages = this.view.lastLocation?.chapterLocation?.total || 1
+    const currentSectionSpan = nextSectionStart - currentSectionStart
+    const totalPages = currentSectionSpan > 0
+      ? currentSectionPages / currentSectionSpan
+      : currentSectionPages
 
     const getFractionByHref = (href) => {
       if (typeof href !== 'string' || !href) return null
-      href = href.split('#')[0]
-      const section = sectionFractions.find(s => s.href === href)
+
+      try {
+        const resolved = this.view.resolveNavigation?.(href)
+        const index = resolved?.index
+        if (Number.isInteger(index)) {
+          const section = sectionFractions.find(s => s.index === index)
+          return section ? section.fraction : null
+        }
+      } catch (_) {
+        // Fall through to the legacy section-id comparison below.
+      }
+
+      const sectionId = href.split('#')[0]
+      const section = sectionFractions.find(s => s.href === sectionId)
       return section ? section.fraction : null
     }
 

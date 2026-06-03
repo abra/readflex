@@ -170,8 +170,8 @@ String buildBookCustomCSS({
   buffer.writeln(
     '.readflex-wide-table { max-width: 100%; overflow-x: auto; '
     'overflow-y: hidden; -webkit-overflow-scrolling: touch; '
-    'overscroll-behavior-inline: contain; box-sizing: border-box; '
-    'break-inside: avoid; }',
+    'overscroll-behavior-inline: contain; touch-action: pan-x pan-y; '
+    'box-sizing: border-box; break-inside: avoid; }',
   );
   // Keep the table intrinsic width inside the scroll wrapper.
   // We deliberately omit the Readest pattern of

@@ -15,6 +15,93 @@ const MONOSPACE_FONT_PATTERN =
 const CODE_TEXT_PATTERN =
   /[{};<>]|(?:^|\s)(?:import|package|public|private|protected|class|interface|return|throw|new|if|else|for|while|try|catch|@Bean|@Configuration)\b/
 const CODE_BLOCK_MIN_TEXT_LENGTH = 80
+const WIDE_TABLE_CLASS = 'readflex-wide-table'
+const WIDE_TABLE_GESTURE_GUARD_FLAG = 'data-readflex-wide-table-gesture-guard'
+const SCROLL_TOLERANCE_PX = 4
+
+const canScrollX = element =>
+  (element?.scrollWidth ?? 0) - (element?.clientWidth ?? 0) > SCROLL_TOLERANCE_PX
+
+const canScrollY = element =>
+  (element?.scrollHeight ?? 0) - (element?.clientHeight ?? 0) > SCROLL_TOLERANCE_PX
+
+export const findScrollableWideTable = target => {
+  if (!target || typeof target.closest !== 'function') return null
+
+  let element = target.closest(`.${WIDE_TABLE_CLASS}`)
+  while (element) {
+    if (canScrollX(element) || canScrollY(element)) return element
+    element = element.parentElement?.closest?.(`.${WIDE_TABLE_CLASS}`) ?? null
+  }
+  return null
+}
+
+export const shouldWideTableConsumeTouch = (wrapper, dx, dy) => {
+  if (Math.abs(dx) > Math.abs(dy)) {
+    return Math.abs(dx) >= 8 && canScrollX(wrapper)
+  }
+  return Math.abs(dy) >= 8 && canScrollY(wrapper)
+}
+
+export const shouldWideTableConsumeWheel = (wrapper, deltaX, deltaY) => {
+  if (Math.abs(deltaX) > Math.abs(deltaY)) return canScrollX(wrapper)
+  return canScrollY(wrapper)
+}
+
+export const applyWideTableGestureGuard = doc => {
+  const root = doc.documentElement
+  if (!root || root.getAttribute?.(WIDE_TABLE_GESTURE_GUARD_FLAG) === 'true') {
+    return
+  }
+  root.setAttribute(WIDE_TABLE_GESTURE_GUARD_FLAG, 'true')
+
+  let touchStartX = 0
+  let touchStartY = 0
+  let activeWrapper = null
+
+  const onTouchStart = event => {
+    activeWrapper = findScrollableWideTable(event.target)
+    if (!activeWrapper) return
+
+    const touch = event.changedTouches?.[0]
+    if (!touch) return
+    touchStartX = touch.screenX
+    touchStartY = touch.screenY
+  }
+
+  const onTouchMove = event => {
+    if (!activeWrapper) return
+    if (!activeWrapper.contains?.(event.target)) return
+
+    const touch = event.changedTouches?.[0]
+    if (!touch) return
+
+    const dx = touch.screenX - touchStartX
+    const dy = touch.screenY - touchStartY
+    if (!shouldWideTableConsumeTouch(activeWrapper, dx, dy)) return
+
+    event.stopImmediatePropagation?.()
+  }
+
+  const onTouchEnd = () => {
+    activeWrapper = null
+  }
+
+  const onWheel = event => {
+    const wrapper = findScrollableWideTable(event.target)
+    if (!wrapper) return
+    if (!shouldWideTableConsumeWheel(wrapper, event.deltaX, event.deltaY)) return
+
+    event.stopImmediatePropagation?.()
+  }
+
+  const touchOptions = { capture: true, passive: false }
+  doc.addEventListener('touchstart', onTouchStart, touchOptions)
+  doc.addEventListener('touchmove', onTouchMove, touchOptions)
+  doc.addEventListener('touchend', onTouchEnd, touchOptions)
+  doc.addEventListener('touchcancel', onTouchEnd, touchOptions)
+  doc.addEventListener('wheel', onWheel, { capture: true, passive: true })
+}
 
 export const languageInfo = lang => {
   if (!lang) return {}
@@ -110,9 +197,10 @@ export const normalizeDocumentLanguageAndDirection = (doc, { language = {}, sour
 
 export const wrapWideTables = doc => {
   for (const table of doc.querySelectorAll('table')) {
-    if (table.closest('.readflex-wide-table')) continue
+    if (table.closest(`.${WIDE_TABLE_CLASS}`)) continue
     const wrapper = doc.createElement('div')
-    wrapper.className = 'readflex-wide-table'
+    wrapper.className = WIDE_TABLE_CLASS
+    wrapper.setAttribute('cfi-skip', '')
     table.before(wrapper)
     wrapper.append(table)
   }
@@ -177,6 +265,7 @@ export const normalizeCodeLikeBlocks = doc => {
 
 export const normalizeLoadedDocument = doc => {
   wrapWideTables(doc)
+  applyWideTableGestureGuard(doc)
   markInlineImages(doc)
   normalizeCodeLikeBlocks(doc)
 }
