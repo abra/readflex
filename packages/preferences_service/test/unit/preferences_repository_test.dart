@@ -34,6 +34,7 @@ void main() {
       expect(prefs.readerOverrideFont, isTrue);
       expect(prefs.readerOverrideColor, isTrue);
       expect(prefs.readerUseBookLayout, isTrue);
+      expect(prefs.readerPageTurnStyle, ReaderPageTurnStyle.horizontal);
       expect(prefs.readerSearchHistory, isEmpty);
       expect(prefs.readerAppearanceOverrides, isEmpty);
       expect(prefs.onboardingCompleted, isFalse);
@@ -57,6 +58,7 @@ void main() {
         readerOverrideFont: false,
         readerOverrideColor: false,
         readerUseBookLayout: false,
+        readerPageTurnStyle: ReaderPageTurnStyle.vertical,
         readerSearchHistory: ['design patterns', 'bloc'],
         readerAppearanceOverrides: {
           'source-1': ReaderAppearanceOverride(
@@ -66,6 +68,7 @@ void main() {
             lineHeight: 1.8,
             sideMargin: 9,
             textAlignment: ReaderTextAlignment.justify,
+            pageTurnStyle: ReaderPageTurnStyle.horizontal,
             brightnessOverride: 0.42,
           ),
         },
@@ -89,6 +92,7 @@ void main() {
         readerOverrideFont: false,
         readerOverrideColor: false,
         readerUseBookLayout: false,
+        readerPageTurnStyle: ReaderPageTurnStyle.vertical,
       );
 
       await repo.save(prefs);
@@ -101,6 +105,7 @@ void main() {
       expect(map['readerOverrideFont'], isFalse);
       expect(map['readerOverrideColor'], isFalse);
       expect(map['readerUseBookLayout'], isFalse);
+      expect(map['readerPageTurnStyle'], 'vertical');
       expect(map.containsKey('readerBrightnessOverride'), isFalse);
       expect(map['readerSearchHistory'], isEmpty);
       expect(map['readerAppearanceOverrides'], isEmpty);
@@ -142,6 +147,7 @@ void main() {
         expect(prefs.readerOverrideFont, isTrue);
         expect(prefs.readerOverrideColor, isTrue);
         expect(prefs.readerUseBookLayout, isTrue);
+        expect(prefs.readerPageTurnStyle, ReaderPageTurnStyle.horizontal);
         expect(prefs.readerSearchHistory, isEmpty);
         expect(prefs.readerAppearanceOverrides, isEmpty);
       },

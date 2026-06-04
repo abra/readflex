@@ -55,6 +55,7 @@ void main() {
     expect(find.text('SPACING'), findsOneWidget);
     expect(find.text('MARGINS'), findsOneWidget);
     expect(find.text('ALIGNMENT'), findsOneWidget);
+    expect(find.text('TURNING'), findsOneWidget);
     expect(find.text('TYPEFACE'), findsNothing);
 
     await tester.tap(find.text('Theme'));
@@ -118,6 +119,28 @@ void main() {
     expect(
       preferencesService.readerAppearanceOverrideFor(_sourceId)?.textAlignment,
       ReaderTextAlignment.justify,
+    );
+  });
+
+  testWidgets('persists page turn style from layout panel', (tester) async {
+    await tester.openAppearanceSheet(cubit);
+
+    await tester.tap(find.text('Layout'));
+    await tester.pumpAndSettle();
+    expect(find.text('Horizontal'), findsOneWidget);
+    expect(find.text('Vertical'), findsOneWidget);
+    expect(find.text('Instant'), findsNothing);
+
+    await tester.tap(find.text('Vertical'));
+    await tester.pumpAndSettle();
+
+    expect(
+      cubit.state.effectiveAppearance.pageTurnStyle,
+      ReaderPageTurnStyle.vertical,
+    );
+    expect(
+      preferencesService.readerAppearanceOverrideFor(_sourceId)?.pageTurnStyle,
+      ReaderPageTurnStyle.vertical,
     );
   });
 

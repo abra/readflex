@@ -775,9 +775,9 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
 
     registerSharedReaderHandlers(
       controller,
-      onTextSelected: widget.onTextSelected,
-      onTextDeselected: widget.onTextDeselected,
-      onTapped: widget.onTapped,
+      onTextSelected: (selection) => widget.onTextSelected?.call(selection),
+      onTextDeselected: () => widget.onTextDeselected?.call(),
+      onTapped: (x, y) => widget.onTapped?.call(x, y),
     );
   }
 

@@ -3337,11 +3337,21 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     final state = bloc.state;
     final highlights = _readerHighlightsFor(highlightsState);
     final bookmarks = _readerBookmarksFor(bookmarksState);
+    final appearance = context
+        .select<ReaderAppearanceCubit, ReaderAppearancePreferences>(
+          (c) => c.state.effectiveAppearance,
+        );
 
-    void onTapped(double x, double _) {
+    final tapAxis = appearance.pageTurnStyle == ReaderPageTurnStyle.vertical
+        ? ReaderTapAxis.vertical
+        : ReaderTapAxis.horizontal;
+
+    void onTapped(double x, double y) {
       switch (readerTapActionFor(
         x: x,
+        y: y,
         chromeVisible: uiCubit.state.chromeVisible,
+        axis: tapAxis,
       )) {
         case ReaderTapAction.leftPage:
           widget.webViewKey?.currentState?.pageLeft();
@@ -3352,10 +3362,6 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       }
     }
 
-    final appearance = context
-        .select<ReaderAppearanceCubit, ReaderAppearancePreferences>(
-          (c) => c.state.effectiveAppearance,
-        );
     final fontPreset = ReaderFontPreset.fromId(appearance.fontId);
     final layout = BookLayoutPreset.fromId(appearance.layoutId).data;
     final deviceFontScale = readerDeviceFontScale(
@@ -3395,6 +3401,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         justify: appearance.textAlignment == ReaderTextAlignment.justify,
         hyphenate: layout.hyphenate,
         textAlign: appearance.textAlignment.id,
+        pageTurnStyle: appearance.pageTurnStyle.id,
         fontColor: colorToHex(widget.readerTheme.primaryTextColor),
         backgroundColor: colorToHex(widget.readerTheme.backgroundColor),
         accentColor: colorToHex(context.colors.primary),

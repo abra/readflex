@@ -32,6 +32,10 @@ void main() {
         expect(cubit.state.effectiveAppearance.themeId, 'paper');
         expect(cubit.state.effectiveAppearance.sideMargin, 8);
         expect(
+          cubit.state.effectiveAppearance.pageTurnStyle,
+          ReaderPageTurnStyle.horizontal,
+        );
+        expect(
           cubit.state.effectiveAppearance.textAlignment,
           ReaderTextAlignment.start,
         );
@@ -123,6 +127,30 @@ void main() {
               .readerAppearanceOverrideFor(_sourceId)
               ?.textAlignment,
           ReaderTextAlignment.end,
+        );
+      },
+    );
+
+    blocTest<ReaderAppearanceCubit, ReaderAppearanceState>(
+      'setPageTurnStyle persists a source-specific override',
+      build: () => ReaderAppearanceCubit(
+        preferencesService: preferencesService,
+        sourceId: _sourceId,
+      ),
+      act: (cubit) => cubit.setPageTurnStyle(ReaderPageTurnStyle.vertical),
+      expect: () => [
+        isA<ReaderAppearanceState>().having(
+          (s) => s.effectiveAppearance.pageTurnStyle,
+          'pageTurnStyle',
+          ReaderPageTurnStyle.vertical,
+        ),
+      ],
+      verify: (_) {
+        expect(
+          preferencesService
+              .readerAppearanceOverrideFor(_sourceId)
+              ?.pageTurnStyle,
+          ReaderPageTurnStyle.vertical,
         );
       },
     );

@@ -117,6 +117,15 @@ class ReaderAppearanceCubit extends Cubit<ReaderAppearanceState> {
     await _persistOverride(next);
   }
 
+  Future<void> setPageTurnStyle(ReaderPageTurnStyle style) async {
+    final next = state.sourceOverride.copyWith(
+      pageTurnStyle: style == state.globalAppearance.pageTurnStyle
+          ? null
+          : style,
+    );
+    await _persistOverride(next);
+  }
+
   void previewTextScale(double value) {
     final nextValue = value.clamp(minTextScale, maxTextScale).toDouble();
     final next = state.sourceOverride.copyWith(

@@ -50,6 +50,20 @@ void main() {
     });
   });
 
+  group('reader bridge callbacks', () {
+    test('shared tap handler forwards to the current widget callback', () {
+      final webViewDart = File(
+        'lib/src/book_reader_webview.dart',
+      ).readAsStringSync();
+
+      expect(
+        webViewDart,
+        contains('onTapped: (x, y) => widget.onTapped?.call(x, y)'),
+      );
+      expect(webViewDart, isNot(contains('onTapped: widget.onTapped')));
+    });
+  });
+
   group('article source detection', () {
     test('recognizes generated article epub paths', () {
       expect(
@@ -537,6 +551,10 @@ void main() {
       expect(bookJs, contains("setRendererAttribute(renderer, 'flow'"));
       expect(
         bookJs,
+        contains("setRendererAttribute(renderer, 'no-continuous-scroll'"),
+      );
+      expect(
+        bookJs,
         contains('if (shouldUpdateReaderCSS(oldStyle, newStyle, turn.scroll))'),
       );
       expect(
@@ -545,6 +563,64 @@ void main() {
       );
     });
 
+    test("keeps vertical page turn on the paginated layout", () {
+      final bookJs = File("assets/foliate-js/src/book.js").readAsStringSync();
+      final paginatorJs = File(
+        "assets/foliate-js/src/paginator.js",
+      ).readAsStringSync();
+
+      expect(bookJs, contains("case 'vertical':"));
+      expect(bookJs, contains("turn.scroll = false"));
+      expect(
+        bookJs,
+        contains("setRendererAttribute(renderer, 'page-turn-axis'"),
+      );
+      expect(
+        bookJs,
+        contains(
+          "style.pageTurnStyle === 'vertical' ? 'vertical' : 'horizontal'",
+        ),
+      );
+      expect(bookJs, contains("|| this.view.renderer.pageTurnAxisVertical"));
+      expect(paginatorJs, contains("'page-turn-axis'"));
+      expect(
+        paginatorJs,
+        contains("case 'page-turn-axis':\n        this.render()"),
+      );
+      expect(paginatorJs, contains("get pageTurnAxisVertical()"));
+      expect(
+        paginatorJs,
+        contains("const verticalTurn = this.pageTurnAxisVertical"),
+      );
+      expect(paginatorJs, contains("} else if (this.pageTurnAxisVertical) {"));
+      expect(
+        paginatorJs,
+        contains("this.#container.style.overflowX = 'hidden'"),
+      );
+      expect(
+        paginatorJs,
+        contains(
+          "if (horizontalDrag && horizontalAxis && this.pageTurnAxisVertical)",
+        ),
+      );
+      expect(
+        paginatorJs,
+        contains("const horizontalLocked = state?.direction === 'horizontal'"),
+      );
+      expect(
+        paginatorJs,
+        contains(
+          "this.pageTurnAxisVertical && (reason === 'page' || reason === 'snap')",
+        ),
+      );
+      expect(paginatorJs, contains("const outDuration = Math.max(90"));
+      expect(paginatorJs, contains("viewElement.style.transform"));
+      expect(paginatorJs, contains("element[scrollProp] = offset"));
+      expect(
+        paginatorJs,
+        isNot(contains("const pageStepColumnWidth = Math.max(0, size - gap)")),
+      );
+    });
     test('guards pagination while iframe document body is unavailable', () {
       final paginatorJs = File(
         'assets/foliate-js/src/paginator.js',
@@ -741,7 +817,7 @@ void main() {
       expect(
         paginatorJs,
         contains(
-          'const pageVelocity = this.#pageProgressionRtl && !this.#vertical',
+          'const invertProgression = this.#pageProgressionRtl && !this.#vertical && !pageStepVertical',
         ),
       );
       expect(

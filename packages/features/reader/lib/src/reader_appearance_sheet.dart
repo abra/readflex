@@ -8,7 +8,7 @@ import 'reader_appearance_cubit.dart';
 const double _sizeButtonSize = 36;
 const double _tabButtonHeight = 40;
 const double _tabTrackPadding = 4;
-const double _tabContentHeight = 260;
+const double _tabContentHeight = 360;
 const double _themeCardHeight = 76;
 const double _textSizeButtonWidth = 64;
 const double _textSizeButtonHeight = AppSizes.buttonHeight;
@@ -285,6 +285,10 @@ class _LayoutPanel extends StatelessWidget {
         _PanelHeader(title: 'ALIGNMENT'),
         SizedBox(height: AppSpacing.sm),
         _AlignmentControl(),
+        SizedBox(height: AppSpacing.md),
+        _PanelHeader(title: 'TURNING'),
+        SizedBox(height: AppSpacing.sm),
+        _PageTurnControl(),
       ],
     );
   }
@@ -412,6 +416,32 @@ class _AlignmentControl extends StatelessWidget {
             active: alignment == ReaderTextAlignment.justify,
             onTap: () => cubit.setTextAlignment(ReaderTextAlignment.justify),
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PageTurnControl extends StatelessWidget {
+  const _PageTurnControl();
+
+  @override
+  Widget build(BuildContext context) {
+    final style = context.select<ReaderAppearanceCubit, ReaderPageTurnStyle>(
+      (c) => c.state.effectiveAppearance.pageTurnStyle,
+    );
+    final cubit = context.read<ReaderAppearanceCubit>();
+    return _ControlGrid(
+      children: [
+        _ChoiceButton(
+          label: 'Horizontal',
+          active: style == ReaderPageTurnStyle.horizontal,
+          onTap: () => cubit.setPageTurnStyle(ReaderPageTurnStyle.horizontal),
+        ),
+        _ChoiceButton(
+          label: 'Vertical',
+          active: style == ReaderPageTurnStyle.vertical,
+          onTap: () => cubit.setPageTurnStyle(ReaderPageTurnStyle.vertical),
         ),
       ],
     );

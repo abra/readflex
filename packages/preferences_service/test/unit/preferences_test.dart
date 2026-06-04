@@ -16,6 +16,7 @@ const _baseRA = ReaderAppearancePreferences(
   overrideFont: true,
   overrideColor: true,
   useBookLayout: true,
+  pageTurnStyle: ReaderPageTurnStyle.horizontal,
 );
 
 void main() {
@@ -36,6 +37,7 @@ void main() {
       expect(prefs.readerOverrideFont, isTrue);
       expect(prefs.readerOverrideColor, isTrue);
       expect(prefs.readerUseBookLayout, isTrue);
+      expect(prefs.readerPageTurnStyle, ReaderPageTurnStyle.horizontal);
       expect(prefs.readerSearchHistory, isEmpty);
       expect(prefs.readerAppearanceOverrides, isEmpty);
       expect(prefs.onboardingCompleted, isFalse);
@@ -48,6 +50,7 @@ void main() {
         themeMode: ThemeMode.dark,
         locale: const Locale('ru'),
         catalogLayoutMode: 'list',
+        readerPageTurnStyle: ReaderPageTurnStyle.vertical,
         readerSearchHistory: const ['design patterns', 'bloc'],
         readerAppearanceOverrides: const {
           'source-1': ReaderAppearanceOverride(
@@ -61,6 +64,7 @@ void main() {
       expect(updated.themeMode, ThemeMode.dark);
       expect(updated.locale, const Locale('ru'));
       expect(updated.catalogLayoutMode, 'list');
+      expect(updated.readerPageTurnStyle, ReaderPageTurnStyle.vertical);
       expect(updated.readerSearchHistory, ['design patterns', 'bloc']);
       expect(updated.readerAppearanceOverrides['source-1']?.fontId, 'sans');
       expect(updated.readerBrightnessOverrideFor('source-1'), 0.42);
@@ -184,6 +188,7 @@ void main() {
         textAlignment: ReaderTextAlignment.justify,
         invertImagesInDark: false,
         overrideFont: false,
+        pageTurnStyle: ReaderPageTurnStyle.vertical,
       );
 
       expect(updated.themeId, 'night');
@@ -197,6 +202,7 @@ void main() {
       expect(updated.overrideFont, isFalse);
       expect(updated.overrideColor, isTrue);
       expect(updated.useBookLayout, isTrue);
+      expect(updated.pageTurnStyle, ReaderPageTurnStyle.vertical);
     });
 
     test('equality', () {
@@ -213,6 +219,7 @@ void main() {
         overrideFont: true,
         overrideColor: true,
         useBookLayout: true,
+        pageTurnStyle: ReaderPageTurnStyle.horizontal,
       );
       expect(a, equals(b));
       expect(a.hashCode, b.hashCode);
@@ -240,6 +247,12 @@ void main() {
       expect(_baseRA, isNot(equals(_baseRA.copyWith(overrideFont: false))));
       expect(_baseRA, isNot(equals(_baseRA.copyWith(overrideColor: false))));
       expect(_baseRA, isNot(equals(_baseRA.copyWith(useBookLayout: false))));
+      expect(
+        _baseRA,
+        isNot(
+          equals(_baseRA.copyWith(pageTurnStyle: ReaderPageTurnStyle.vertical)),
+        ),
+      );
     });
 
     test('ReaderTextAlignment parses start end and justify IDs', () {

@@ -280,6 +280,8 @@ class View {
     setStylesImportant(doc.body, {
       [vertical ? 'max-height' : 'max-width']: `${columnWidth}px`,
       'margin': 'auto',
+      'padding': '0',
+      'position': 'static',
     })
     this.setImageSize()
     this.expand()
@@ -429,7 +431,7 @@ class View {
 export class Paginator extends HTMLElement {
   static observedAttributes = [
     'flow', 'gap', 'top-margin', 'bottom-margin', 'background-color',
-    'max-inline-size', 'max-block-size', 'max-column-count',
+    'max-inline-size', 'max-block-size', 'max-column-count', 'page-turn-axis',
   ]
   #root = this.attachShadow({ mode: 'open' })
   // Readflex patch: same rAF coalescing as View#observer above.
@@ -511,7 +513,6 @@ export class Paginator extends HTMLElement {
         }
         :host, #top {
             box-sizing: border-box;
-            position: relative;
             overflow: hidden;
             width: 100%;
             height: 100%;
@@ -573,6 +574,9 @@ export class Paginator extends HTMLElement {
             grid-column: 1 / -1;
             grid-row: 2;
             overflow: auto;
+        }
+        :host([flow='scrolled'][no-continuous-scroll]) #container {
+            overflow: hidden;
         }
         #header {
             grid-column: 3 / 4;
@@ -649,6 +653,9 @@ export class Paginator extends HTMLElement {
   attributeChangedCallback(name, _, value) {
     switch (name) {
       case 'flow':
+        this.render()
+        break
+      case 'page-turn-axis':
         this.render()
         break
       case 'top-margin':
@@ -732,11 +739,15 @@ export class Paginator extends HTMLElement {
 
     const flow = this.getAttribute('flow')
     if (flow === 'scrolled') {
-      this.#container.style.overflowX = 'auto'
-      this.#container.style.overflowY = 'auto'
+      const overflow = this.noContinuousScroll ? 'hidden' : 'auto'
+      this.#container.style.overflowX = overflow
+      this.#container.style.overflowY = overflow
     } else if (vertical) {
       this.#container.style.overflowX = 'hidden'
       this.#container.style.overflowY = 'auto'
+    } else if (this.pageTurnAxisVertical) {
+      this.#container.style.overflowX = 'hidden'
+      this.#container.style.overflowY = 'hidden'
     } else {
       this.#container.style.overflowX = 'auto'
       this.#container.style.overflowY = 'hidden'
@@ -792,6 +803,14 @@ export class Paginator extends HTMLElement {
   get scrolled() {
     return this.getAttribute('flow') === 'scrolled'
   }
+  get noContinuousScroll() {
+    return this.scrolled && this.hasAttribute('no-continuous-scroll')
+  }
+  get pageTurnAxisVertical() {
+    return !this.scrolled
+      && !this.#vertical
+      && this.getAttribute('page-turn-axis') === 'vertical'
+  }
   get scrollProp() {
     const { scrolled } = this
     return this.#vertical ? (scrolled ? 'scrollLeft' : 'scrollTop')
@@ -826,6 +845,21 @@ export class Paginator extends HTMLElement {
   get pages() {
     return Math.round(this.viewSize / this.size)
   }
+  #scrollPageStepBy(dx, dy, state) {
+    const prop = this.scrollProp
+    const delta = prop === 'scrollLeft' ? dx : dy
+    const originPage = state?.startPage ?? this.page
+    const maxBookPage = Math.max(0, this.pages - 1)
+    const minPage = Math.max(0, originPage - 1)
+    const maxPage = Math.min(maxBookPage, originPage + 1)
+    const invertOffset = this.#rtl && prop === "scrollLeft"
+    const minOffset = this.size * (invertOffset ? -maxPage : minPage)
+    const maxOffset = this.size * (invertOffset ? -minPage : maxPage)
+    const lower = Math.min(minOffset, maxOffset)
+    const upper = Math.max(minOffset, maxOffset)
+    const nextOffset = this.#container[prop] + delta
+    this.#container[prop] = Math.max(lower, Math.min(upper, nextOffset))
+  }
   scrollBy(dx, dy) {
     const element = this.#container
     const prop = this.scrollProp
@@ -836,8 +870,12 @@ export class Paginator extends HTMLElement {
   }
   snap(vx, vy, touchState) {
     const state = touchState ?? this.#touchState
-    const velocity = this.#vertical ? vy : vx
-    const pageVelocity = this.#pageProgressionRtl && !this.#vertical
+    const pageStep = this.noContinuousScroll
+    const pageStepVertical = pageStep && this.scrollProp === "scrollTop"
+    const verticalTurn = this.pageTurnAxisVertical
+    const velocity = pageStep ? (pageStepVertical ? vy : vx) : verticalTurn || this.#vertical ? vy : vx
+    const invertProgression = this.#pageProgressionRtl && !this.#vertical && !pageStepVertical
+    const pageVelocity = invertProgression
       ? -velocity
       : velocity
     const { pages, size } = this
@@ -846,12 +884,38 @@ export class Paginator extends HTMLElement {
       return
     }
     const currentOffset = this.#container[this.scrollProp]
-    const signedOffset = this.#rtl ? -currentOffset : currentOffset
+    const invertOffset = this.#rtl && this.scrollProp === "scrollLeft"
+    const signedOffset = invertOffset ? -currentOffset : currentOffset
     let page = Math.round(signedOffset / size)
     const velocityThreshold = 0.25
     if (Math.abs(pageVelocity) > velocityThreshold)
       page += pageVelocity > 0 ? 1 : -1
     const originPage = state?.startPage ?? this.page
+    if (pageStep) {
+      const deltaPages = page - originPage
+      if (deltaPages > 1) page = originPage + 1
+      else if (deltaPages < -1) page = originPage - 1
+      const dir = page < 0 ? -1 : page >= pages ? 1 : null
+      const adjacent = dir ? this.#adjacentIndex(dir) : null
+      if (adjacent != null) return this.#goTo({
+        index: adjacent,
+        anchor: dir < 0 ? () => 1 : () => 0,
+      })
+      page = Math.max(0, Math.min(pages - 1, page))
+      const targetOffset = page * size
+      const distance = Math.abs(targetOffset - signedOffset)
+      const baseDuration = 450
+      const duration = Math.max(260, Math.min(380,
+        baseDuration * (distance / (size || 1) + 0.2)))
+      this.#disableMomentum()
+      return this.#scrollToPage(page, "snap", {
+        animate: true,
+        duration,
+        restoreMomentum: true,
+        momentumDelay: 20,
+        initialVelocity: velocity,
+      })
+    }
     if (!this.scrolled) {
       const deltaPages = page - originPage
       if (deltaPages > 1) page = originPage + 1
@@ -989,13 +1053,35 @@ export class Paginator extends HTMLElement {
     state.vx = stepX / dt
     state.vy = stepY / dt
 
+    if (this.noContinuousScroll) {
+      const pageStepDrag = horizontalAxis && horizontalDrag
+        || verticalAxis && verticalDrag
+      if (pageStepDrag) {
+        e.preventDefault()
+        this.#touchScrolled = true
+        this.#disableMomentum()
+        this.#scrollPageStepBy(stepX, stepY, state)
+      }
+      return
+    }
+
     if (this.scrolled) return
+
+    if (horizontalDrag && horizontalAxis && this.pageTurnAxisVertical) {
+      e.preventDefault()
+      this.#disableMomentum()
+      if (state.lockedOffset == null)
+        state.lockedOffset = state.startScroll ?? this.#container.scrollLeft
+      this.#container.scrollLeft = state.lockedOffset
+      return
+    }
 
     if (verticalDrag && horizontalAxis) {
       e.preventDefault()
       this.#disableMomentum()
       if (state.lockedOffset == null)
         state.lockedOffset = state.startScroll ?? this.#container.scrollLeft
+      this.#touchScrolled = this.pageTurnAxisVertical
       this.#container.scrollLeft = state.lockedOffset
       return
     }
@@ -1030,7 +1116,7 @@ export class Paginator extends HTMLElement {
     }))
 
     this.#touchScrolled = false
-    if (this.scrolled) {
+    if (this.scrolled && !this.noContinuousScroll) {
       this.#touchState = null
       return
     }
@@ -1039,7 +1125,12 @@ export class Paginator extends HTMLElement {
       && state.axis === 'scrollLeft'
       && state.lockedOffset != null
 
-    if (verticalLocked) {
+    const horizontalLocked = state?.direction === 'horizontal'
+      && state.axis === 'scrollLeft'
+      && state.lockedOffset != null
+      && this.pageTurnAxisVertical
+
+    if ((verticalLocked && !this.pageTurnAxisVertical) || horizontalLocked) {
       // restore original horizontal position and skip snapping to avoid accidental page turns
       this.#container.scrollLeft = state.lockedOffset
       this.#restoreMomentum()
@@ -1146,6 +1237,52 @@ export class Paginator extends HTMLElement {
         ? Math.min(0.45, (initialSpeed / averageSpeed) * 0.2)
         : 0
 
+      if (this.pageTurnAxisVertical && (reason === 'page' || reason === 'snap')) {
+        const startOffset = element[scrollProp]
+        const direction = offset > startOffset ? 1 : -1
+        const viewElement = this.#view?.element
+        if (viewElement) {
+          this.#justAnchored = true
+          viewElement.style.willChange = 'transform'
+
+          const outDuration = Math.max(90, Math.round(adaptiveDuration * 0.42))
+          const inDuration = Math.max(140, adaptiveDuration - outDuration)
+
+          return animate(
+            0,
+            -direction * size,
+            outDuration,
+            easing,
+            y => viewElement.style.transform = `translateY(${y}px)`,
+            { initialProgress },
+          ).then(() => {
+            element[scrollProp] = offset
+            viewElement.style.transform = `translateY(${direction * size}px)`
+            return animate(
+              direction * size,
+              0,
+              inDuration,
+              easing,
+              y => viewElement.style.transform = `translateY(${y}px)`,
+            )
+          }).then(() => {
+            viewElement.style.transform = ''
+            viewElement.style.willChange = ''
+            return wait(10)
+          }).then(() => {
+            finish()
+            element.style.scrollBehavior = previousBehavior
+          }).catch(err => {
+            viewElement.style.transform = ''
+            viewElement.style.willChange = ''
+            this.#ignoreNativeScroll = false
+            this.#restoreMomentum()
+            element.style.scrollBehavior = previousBehavior
+            throw err
+          })
+        }
+      }
+
       // Prefer native smooth scroll (runs on compositor and can keep 120Hz on Safari)
       const isSafari = /^(?!.*(Chrome|CriOS|Edg|Edge)).*AppleWebKit/i.test(navigator.userAgent)
       const supportsSmooth = 'scrollBehavior' in document.documentElement.style && isSafari
@@ -1202,7 +1339,8 @@ export class Paginator extends HTMLElement {
     }
   }
   async #scrollToPage(page, reason, smooth) {
-    const offset = this.size * (this.#rtl ? -page : page)
+    const invertOffset = this.#rtl && this.scrollProp === "scrollLeft"
+    const offset = this.size * (invertOffset ? -page : page)
     return this.#scrollTo(offset, reason, smooth)
   }
   async scrollToAnchor(anchor, select) {

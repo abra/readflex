@@ -29,6 +29,29 @@ enum ReaderTextAlignment {
   };
 }
 
+enum ReaderPageTurnStyle {
+  horizontal('slide'),
+  vertical('vertical')
+  ;
+
+  const ReaderPageTurnStyle(this.id);
+
+  final String id;
+
+  static ReaderPageTurnStyle fromId(String? value) => switch (value) {
+    'vertical' => vertical,
+    'scroll' => vertical,
+    _ => horizontal,
+  };
+
+  static ReaderPageTurnStyle? tryFromId(String? value) => switch (value) {
+    'slide' => horizontal,
+    'vertical' => vertical,
+    'scroll' => vertical,
+    _ => null,
+  };
+}
+
 /// Reader-scoped appearance slice of [Preferences] (theme / font / layout
 /// IDs plus per-trait toggles). Exposed separately so widgets that only
 /// care about reader look can subscribe via
@@ -47,6 +70,7 @@ class ReaderAppearancePreferences {
     required this.overrideFont,
     required this.overrideColor,
     required this.useBookLayout,
+    required this.pageTurnStyle,
   });
 
   static const defaults = ReaderAppearancePreferences(
@@ -61,6 +85,7 @@ class ReaderAppearancePreferences {
     overrideFont: true,
     overrideColor: true,
     useBookLayout: true,
+    pageTurnStyle: ReaderPageTurnStyle.horizontal,
   );
 
   final String themeId;
@@ -81,6 +106,8 @@ class ReaderAppearancePreferences {
   /// When `false`, publisher line-height / indent / hyphenation / margins win.
   final bool useBookLayout;
 
+  final ReaderPageTurnStyle pageTurnStyle;
+
   ReaderAppearancePreferences copyWith({
     String? themeId,
     String? fontId,
@@ -93,6 +120,7 @@ class ReaderAppearancePreferences {
     bool? overrideFont,
     bool? overrideColor,
     bool? useBookLayout,
+    ReaderPageTurnStyle? pageTurnStyle,
   }) => ReaderAppearancePreferences(
     themeId: themeId ?? this.themeId,
     fontId: fontId ?? this.fontId,
@@ -105,6 +133,7 @@ class ReaderAppearancePreferences {
     overrideFont: overrideFont ?? this.overrideFont,
     overrideColor: overrideColor ?? this.overrideColor,
     useBookLayout: useBookLayout ?? this.useBookLayout,
+    pageTurnStyle: pageTurnStyle ?? this.pageTurnStyle,
   );
 
   @override
@@ -121,7 +150,8 @@ class ReaderAppearancePreferences {
           invertImagesInDark == other.invertImagesInDark &&
           overrideFont == other.overrideFont &&
           overrideColor == other.overrideColor &&
-          useBookLayout == other.useBookLayout;
+          useBookLayout == other.useBookLayout &&
+          pageTurnStyle == other.pageTurnStyle;
 
   @override
   int get hashCode => Object.hash(
@@ -136,6 +166,7 @@ class ReaderAppearancePreferences {
     overrideFont,
     overrideColor,
     useBookLayout,
+    pageTurnStyle,
   );
 }
 
@@ -157,6 +188,7 @@ class ReaderAppearanceOverride {
     this.overrideFont,
     this.overrideColor,
     this.useBookLayout,
+    this.pageTurnStyle,
     this.brightnessOverride,
   });
 
@@ -171,6 +203,7 @@ class ReaderAppearanceOverride {
   final bool? overrideFont;
   final bool? overrideColor;
   final bool? useBookLayout;
+  final ReaderPageTurnStyle? pageTurnStyle;
   final double? brightnessOverride;
 
   bool get isEmpty =>
@@ -185,6 +218,7 @@ class ReaderAppearanceOverride {
       overrideFont == null &&
       overrideColor == null &&
       useBookLayout == null &&
+      pageTurnStyle == null &&
       brightnessOverride == null;
 
   ReaderAppearancePreferences applyTo(ReaderAppearancePreferences base) =>
@@ -200,6 +234,7 @@ class ReaderAppearanceOverride {
         overrideFont: overrideFont,
         overrideColor: overrideColor,
         useBookLayout: useBookLayout,
+        pageTurnStyle: pageTurnStyle,
       );
 
   ReaderAppearanceOverride copyWith({
@@ -214,6 +249,7 @@ class ReaderAppearanceOverride {
     Object? overrideFont = _unset,
     Object? overrideColor = _unset,
     Object? useBookLayout = _unset,
+    Object? pageTurnStyle = _unset,
     Object? brightnessOverride = _unset,
   }) => ReaderAppearanceOverride(
     themeId: identical(themeId, _unset) ? this.themeId : themeId as String?,
@@ -237,6 +273,9 @@ class ReaderAppearanceOverride {
     useBookLayout: identical(useBookLayout, _unset)
         ? this.useBookLayout
         : useBookLayout as bool?,
+    pageTurnStyle: identical(pageTurnStyle, _unset)
+        ? this.pageTurnStyle
+        : pageTurnStyle as ReaderPageTurnStyle?,
     brightnessOverride: _copyOptionalDouble(
       brightnessOverride,
       this.brightnessOverride,
@@ -255,6 +294,7 @@ class ReaderAppearanceOverride {
     if (overrideFont != null) 'overrideFont': overrideFont,
     if (overrideColor != null) 'overrideColor': overrideColor,
     if (useBookLayout != null) 'useBookLayout': useBookLayout,
+    if (pageTurnStyle != null) 'pageTurnStyle': pageTurnStyle!.id,
     if (brightnessOverride != null) 'brightnessOverride': brightnessOverride,
   };
 
@@ -271,6 +311,7 @@ class ReaderAppearanceOverride {
       overrideFont: _readBool(json['overrideFont']),
       overrideColor: _readBool(json['overrideColor']),
       useBookLayout: _readBool(json['useBookLayout']),
+      pageTurnStyle: _readPageTurnStyle(json['pageTurnStyle']),
       brightnessOverride: _readBrightness(json['brightnessOverride']),
     );
   }
@@ -297,6 +338,11 @@ class ReaderAppearanceOverride {
     return ReaderTextAlignment.tryFromId(value);
   }
 
+  static ReaderPageTurnStyle? _readPageTurnStyle(Object? value) {
+    if (value is! String || value.isEmpty) return null;
+    return ReaderPageTurnStyle.tryFromId(value);
+  }
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -312,6 +358,7 @@ class ReaderAppearanceOverride {
           overrideFont == other.overrideFont &&
           overrideColor == other.overrideColor &&
           useBookLayout == other.useBookLayout &&
+          pageTurnStyle == other.pageTurnStyle &&
           brightnessOverride == other.brightnessOverride;
 
   @override
@@ -327,6 +374,7 @@ class ReaderAppearanceOverride {
     overrideFont,
     overrideColor,
     useBookLayout,
+    pageTurnStyle,
     brightnessOverride,
   );
 }
@@ -351,6 +399,7 @@ class Preferences {
     this.readerOverrideFont = true,
     this.readerOverrideColor = true,
     this.readerUseBookLayout = true,
+    this.readerPageTurnStyle = ReaderPageTurnStyle.horizontal,
     this.readerSearchHistory = const [],
     this.readerAppearanceOverrides = const {},
     this.onboardingCompleted = false,
@@ -371,6 +420,7 @@ class Preferences {
   final bool readerOverrideFont;
   final bool readerOverrideColor;
   final bool readerUseBookLayout;
+  final ReaderPageTurnStyle readerPageTurnStyle;
   final List<String> readerSearchHistory;
   final Map<String, ReaderAppearanceOverride> readerAppearanceOverrides;
 
@@ -393,6 +443,7 @@ class Preferences {
         overrideFont: readerOverrideFont,
         overrideColor: readerOverrideColor,
         useBookLayout: readerUseBookLayout,
+        pageTurnStyle: readerPageTurnStyle,
       );
 
   ReaderAppearanceOverride? readerAppearanceOverrideFor(String sourceId) {
@@ -425,6 +476,7 @@ class Preferences {
     bool? readerOverrideFont,
     bool? readerOverrideColor,
     bool? readerUseBookLayout,
+    ReaderPageTurnStyle? readerPageTurnStyle,
     List<String>? readerSearchHistory,
     Map<String, ReaderAppearanceOverride>? readerAppearanceOverrides,
     bool? onboardingCompleted,
@@ -445,6 +497,7 @@ class Preferences {
     readerOverrideFont: readerOverrideFont ?? this.readerOverrideFont,
     readerOverrideColor: readerOverrideColor ?? this.readerOverrideColor,
     readerUseBookLayout: readerUseBookLayout ?? this.readerUseBookLayout,
+    readerPageTurnStyle: readerPageTurnStyle ?? this.readerPageTurnStyle,
     readerSearchHistory: readerSearchHistory ?? this.readerSearchHistory,
     readerAppearanceOverrides:
         readerAppearanceOverrides ?? this.readerAppearanceOverrides,
@@ -470,6 +523,7 @@ class Preferences {
           readerOverrideFont == other.readerOverrideFont &&
           readerOverrideColor == other.readerOverrideColor &&
           readerUseBookLayout == other.readerUseBookLayout &&
+          readerPageTurnStyle == other.readerPageTurnStyle &&
           listEquals(readerSearchHistory, other.readerSearchHistory) &&
           mapEquals(
             readerAppearanceOverrides,
@@ -494,6 +548,7 @@ class Preferences {
     readerOverrideFont,
     readerOverrideColor,
     readerUseBookLayout,
+    readerPageTurnStyle,
     Object.hashAll(readerSearchHistory),
     _hashReaderAppearanceOverrides(readerAppearanceOverrides),
     onboardingCompleted,

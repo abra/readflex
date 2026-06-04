@@ -570,7 +570,7 @@ class FoliateStyle {
   final bool hyphenate;
   final String textAlign;
 
-  /// `'slide'`, `'scroll'`, or `'noAnimation'`.
+  /// `'slide'` for horizontal turns or `'vertical'` for vertical turns.
   final String pageTurnStyle;
   final int maxColumnCount;
 

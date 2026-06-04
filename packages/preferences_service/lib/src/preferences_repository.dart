@@ -79,6 +79,9 @@ class PreferencesRepository {
         readerOverrideFont: map['readerOverrideFont'] as bool? ?? true,
         readerOverrideColor: map['readerOverrideColor'] as bool? ?? true,
         readerUseBookLayout: map['readerUseBookLayout'] as bool? ?? true,
+        readerPageTurnStyle: _readReaderPageTurnStyle(
+          map['readerPageTurnStyle'],
+        ),
         readerSearchHistory: _readStringList(map['readerSearchHistory']),
         readerAppearanceOverrides: _readReaderAppearanceOverrides(
           map['readerAppearanceOverrides'],
@@ -116,6 +119,7 @@ class PreferencesRepository {
       'readerOverrideFont': prefs.readerOverrideFont,
       'readerOverrideColor': prefs.readerOverrideColor,
       'readerUseBookLayout': prefs.readerUseBookLayout,
+      'readerPageTurnStyle': prefs.readerPageTurnStyle.id,
       'readerSearchHistory': prefs.readerSearchHistory,
       'readerAppearanceOverrides': _writeReaderAppearanceOverrides(
         prefs.readerAppearanceOverrides,
@@ -144,6 +148,11 @@ class PreferencesRepository {
   static ReaderTextAlignment _readReaderTextAlignment(Object? value) {
     if (value is! String) return ReaderTextAlignment.start;
     return ReaderTextAlignment.fromId(value);
+  }
+
+  static ReaderPageTurnStyle _readReaderPageTurnStyle(Object? value) {
+    if (value is! String) return ReaderPageTurnStyle.horizontal;
+    return ReaderPageTurnStyle.fromId(value);
   }
 
   static Map<String, ReaderAppearanceOverride> _readReaderAppearanceOverrides(

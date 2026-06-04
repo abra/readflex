@@ -1928,6 +1928,7 @@ class Reader {
 
   #ignoreTouch = () => {
     return this.view.renderer.scrollProp === 'scrollTop'
+      || this.view.renderer.pageTurnAxisVertical
   }
 
 
@@ -2196,7 +2197,8 @@ const removeRendererAttribute = (renderer, name) => {
 const setStyle = (oldStyle) => {
   const turn = {
     scroll: false,
-    animated: true
+    animated: true,
+    pageStep: false,
   }
 
   switch (style.pageTurnStyle) {
@@ -2207,6 +2209,11 @@ const setStyle = (oldStyle) => {
     case 'scroll':
       turn.scroll = true
       turn.animated = true
+      turn.pageStep = false
+      break
+    case 'vertical':
+      turn.scroll = false
+      turn.animated = true
       break
     case "noAnimation":
       turn.scroll = false
@@ -2215,6 +2222,9 @@ const setStyle = (oldStyle) => {
   }
 
   const renderer = reader.view.renderer
+  turn.pageStep ? setRendererAttribute(renderer, 'no-continuous-scroll', 'true')
+    : removeRendererAttribute(renderer, 'no-continuous-scroll')
+  setRendererAttribute(renderer, 'page-turn-axis', style.pageTurnStyle === 'vertical' ? 'vertical' : 'horizontal')
   setRendererAttribute(renderer, 'flow', turn.scroll ? 'scrolled' : 'paginated')
   setRendererAttribute(renderer, 'top-margin', `${style.topMargin}px`)
   setRendererAttribute(renderer, 'bottom-margin', `${style.bottomMargin}px`)
@@ -2260,7 +2270,7 @@ const setStyle = (oldStyle) => {
   }
 
   if (oldStyle?.writingMode !== style.writingMode ||
-    oldStyle?.pageTurnStyle !== style.pageTurnStyle && [oldStyle?.pageTurnStyle, style.pageTurnStyle].includes('scroll')
+    oldStyle?.pageTurnStyle !== style.pageTurnStyle && [oldStyle?.pageTurnStyle, style.pageTurnStyle].some(value => value === 'scroll')
   ) {
     refreshLayout()
   }

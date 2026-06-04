@@ -558,7 +558,7 @@ void main() {
         fontColor: '#FFFFFF',
         backgroundColor: '#1A1A1A',
         accentColor: '#9B1C31',
-        pageTurnStyle: 'scroll',
+        pageTurnStyle: 'vertical',
         topMargin: 40,
         bottomMargin: 30,
         sideMargin: 8,
@@ -571,7 +571,7 @@ void main() {
       expect(map['fontColor'], '#FFFFFF');
       expect(map['backgroundColor'], '#1A1A1A');
       expect(map['accentColor'], '#9B1C31');
-      expect(map['pageTurnStyle'], 'scroll');
+      expect(map['pageTurnStyle'], 'vertical');
       expect(map['topMargin'], 40);
       expect(map['bottomMargin'], 30);
       expect(map['sideMargin'], 8);
