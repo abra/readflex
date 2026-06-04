@@ -850,6 +850,12 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     final pageProgressionRtl = context.select<ReaderBloc, bool>(
       (b) => b.state.pageProgressionRtl,
     );
+    final canGoPrevious = context.select<ReaderBloc, bool>(
+      (b) => !b.state.atStart,
+    );
+    final canGoNext = context.select<ReaderBloc, bool>(
+      (b) => !b.state.atEnd,
+    );
     final format = context.select<ReaderBloc, BookFormat?>(
       (b) => b.state.book?.format,
     );
@@ -888,6 +894,13 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
             ),
             ReaderTapZoneHintDriver(readerTheme: readerTheme),
             const _ReaderChromeDismissBarrierDriver(),
+            ReaderTapEdgeIndicator(
+              readerTheme: readerTheme,
+              axis: _readerTapAxisForPageTurnStyle(appearance.pageTurnStyle),
+              pageProgressionRtl: pageProgressionRtl,
+              canGoPrevious: canGoPrevious,
+              canGoNext: canGoNext,
+            ),
             const _ReaderTopChromeDriver(),
             const _ReaderPageBookmarkIndicatorDriver(),
             const ReaderBrightnessChromeDriver(),
@@ -3460,6 +3473,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
             chapterTotalPages: position.chapterTotalPages,
             sizeTotal: position.sizeTotal,
             pageProgressionRtl: position.pageProgressionRtl,
+            atStart: position.atStart,
             atEnd: position.atEnd,
             currentPageBookmarked: position.bookmarkExists,
             currentPageBookmarkCfi: position.bookmarkCfi,

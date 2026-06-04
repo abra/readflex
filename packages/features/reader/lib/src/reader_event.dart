@@ -37,6 +37,7 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
     this.chapterTotalPages,
     this.sizeTotal,
     this.pageProgressionRtl,
+    this.atStart = false,
     this.atEnd = false,
     this.currentPageBookmarked = false,
     this.currentPageBookmarkCfi,
@@ -65,6 +66,7 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
   /// this event does not know and the current state should be preserved.
   final bool? pageProgressionRtl;
 
+  final bool atStart;
   final bool atEnd;
   final bool currentPageBookmarked;
   final String? currentPageBookmarkCfi;
@@ -81,6 +83,7 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
     chapterTotalPages,
     sizeTotal,
     pageProgressionRtl,
+    atStart,
     atEnd,
     currentPageBookmarked,
     currentPageBookmarkCfi,

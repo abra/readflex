@@ -9,6 +9,119 @@ import 'reader_ui_cubit.dart';
 
 const _kReaderTapZoneHintVisibleDuration = Duration(milliseconds: 1700);
 const _kReaderTapZoneHintFadeDuration = Duration(milliseconds: 180);
+const _kReaderTapEdgeThickness = 2.0;
+const _kReaderTapEdgeInset = 4.0;
+const _kReaderTapEdgeMinLength = 18.0;
+const _kReaderTapEdgeMaxLength = 28.0;
+
+class ReaderTapEdgeIndicator extends StatelessWidget {
+  const ReaderTapEdgeIndicator({
+    required this.readerTheme,
+    required this.axis,
+    required this.pageProgressionRtl,
+    required this.canGoPrevious,
+    required this.canGoNext,
+    super.key,
+  });
+
+  final ReaderThemeData readerTheme;
+  final ReaderTapAxis axis;
+  final bool pageProgressionRtl;
+  final bool canGoPrevious;
+  final bool canGoNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = readerTheme.primaryTextColor.withValues(alpha: 0.35);
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final height = constraints.maxHeight;
+            return Stack(
+              children: axis == ReaderTapAxis.vertical
+                  ? _verticalLines(width, height, color)
+                  : _horizontalLines(width, height, color),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _verticalLines(double width, double height, Color color) {
+    final lineWidth = (width * 0.07)
+        .clamp(_kReaderTapEdgeMinLength, _kReaderTapEdgeMaxLength)
+        .toDouble();
+    final lineLeft = (width - lineWidth) / 2;
+    return [
+      if (canGoPrevious)
+        Positioned(
+          key: const Key('readerTapEdgeTop'),
+          left: lineLeft,
+          top: _kReaderTapEdgeInset,
+          width: lineWidth,
+          height: _kReaderTapEdgeThickness,
+          child: _ReaderTapEdgeLine(color: color),
+        ),
+      if (canGoNext)
+        Positioned(
+          key: const Key('readerTapEdgeBottom'),
+          left: lineLeft,
+          bottom: _kReaderTapEdgeInset,
+          width: lineWidth,
+          height: _kReaderTapEdgeThickness,
+          child: _ReaderTapEdgeLine(color: color),
+        ),
+    ];
+  }
+
+  List<Widget> _horizontalLines(double width, double height, Color color) {
+    final canGoLeft = pageProgressionRtl ? canGoNext : canGoPrevious;
+    final canGoRight = pageProgressionRtl ? canGoPrevious : canGoNext;
+    final lineHeight = (height * 0.05)
+        .clamp(_kReaderTapEdgeMinLength, _kReaderTapEdgeMaxLength)
+        .toDouble();
+    final lineTop = (height - lineHeight) / 2;
+    return [
+      if (canGoLeft)
+        Positioned(
+          key: const Key('readerTapEdgeLeft'),
+          left: _kReaderTapEdgeInset,
+          top: lineTop,
+          width: _kReaderTapEdgeThickness,
+          height: lineHeight,
+          child: _ReaderTapEdgeLine(color: color),
+        ),
+      if (canGoRight)
+        Positioned(
+          key: const Key('readerTapEdgeRight'),
+          right: _kReaderTapEdgeInset,
+          top: lineTop,
+          width: _kReaderTapEdgeThickness,
+          height: lineHeight,
+          child: _ReaderTapEdgeLine(color: color),
+        ),
+    ];
+  }
+}
+
+class _ReaderTapEdgeLine extends StatelessWidget {
+  const _ReaderTapEdgeLine({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(_kReaderTapEdgeThickness),
+      ),
+    );
+  }
+}
 
 class ReaderTapZoneHintDriver extends StatefulWidget {
   const ReaderTapZoneHintDriver({required this.readerTheme, super.key});
@@ -105,11 +218,9 @@ class _ReaderTapZoneHintOverlay extends StatelessWidget {
           children: axis == ReaderTapAxis.vertical
               ? [
                   Positioned(
-                    left: width * readerLeftTapZoneEnd,
+                    left: 0,
                     top: 0,
-                    width:
-                        width *
-                        (readerRightTapZoneStart - readerLeftTapZoneEnd),
+                    width: width,
                     height: height * readerTopTapZoneEnd,
                     child: _ReaderTapZoneHintPanel(
                       icon: Icons.keyboard_arrow_up_rounded,
@@ -119,11 +230,9 @@ class _ReaderTapZoneHintOverlay extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    left: width * readerLeftTapZoneEnd,
+                    left: 0,
                     bottom: 0,
-                    width:
-                        width *
-                        (readerRightTapZoneStart - readerLeftTapZoneEnd),
+                    width: width,
                     height: height * (1 - readerBottomTapZoneStart),
                     child: _ReaderTapZoneHintPanel(
                       icon: Icons.keyboard_arrow_down_rounded,

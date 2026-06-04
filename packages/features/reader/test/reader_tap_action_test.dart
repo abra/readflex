@@ -6,8 +6,8 @@ void main() {
     test('uses horizontal symmetric zones and vertical weighted zones', () {
       expect(readerLeftTapZoneEnd, 0.30);
       expect(readerRightTapZoneStart, 0.70);
-      expect(readerTopTapZoneEnd, 0.20);
-      expect(readerBottomTapZoneStart, 0.50);
+      expect(readerTopTapZoneEnd, 0.50);
+      expect(readerBottomTapZoneStart, 0.80);
     });
 
     test('uses physical left and right tap zones when chrome is hidden', () {
@@ -55,62 +55,65 @@ void main() {
       );
     });
 
-    test('uses physical top and bottom tap zones for vertical page turns', () {
-      expect(
-        readerTapActionFor(
-          x: 0.10,
-          y: 0.50,
-          chromeVisible: false,
-          axis: ReaderTapAxis.vertical,
-        ),
-        ReaderTapAction.toggleChrome,
-      );
-      expect(
-        readerTapActionFor(
-          x: 0.90,
-          y: 0.50,
-          chromeVisible: false,
-          axis: ReaderTapAxis.vertical,
-        ),
-        ReaderTapAction.toggleChrome,
-      );
-      expect(
-        readerTapActionFor(
-          x: 0.10,
-          y: 0.10,
-          chromeVisible: false,
-          axis: ReaderTapAxis.vertical,
-        ),
-        ReaderTapAction.toggleChrome,
-      );
-      expect(
-        readerTapActionFor(
-          x: 0.90,
-          y: 0.90,
-          chromeVisible: false,
-          axis: ReaderTapAxis.vertical,
-        ),
-        ReaderTapAction.toggleChrome,
-      );
-      expect(
-        readerTapActionFor(
-          x: 0.50,
-          y: 0.10,
-          chromeVisible: false,
-          axis: ReaderTapAxis.vertical,
-        ),
-        ReaderTapAction.leftPage,
-      );
-      expect(
-        readerTapActionFor(
-          x: 0.50,
-          y: 0.90,
-          chromeVisible: false,
-          axis: ReaderTapAxis.vertical,
-        ),
-        ReaderTapAction.rightPage,
-      );
-    });
+    test(
+      'uses full-width top and bottom tap zones for vertical page turns',
+      () {
+        expect(
+          readerTapActionFor(
+            x: 0.10,
+            y: 0.10,
+            chromeVisible: false,
+            axis: ReaderTapAxis.vertical,
+          ),
+          ReaderTapAction.leftPage,
+        );
+        expect(
+          readerTapActionFor(
+            x: 0.90,
+            y: 0.10,
+            chromeVisible: false,
+            axis: ReaderTapAxis.vertical,
+          ),
+          ReaderTapAction.leftPage,
+        );
+        expect(
+          readerTapActionFor(
+            x: 0.10,
+            y: 0.90,
+            chromeVisible: false,
+            axis: ReaderTapAxis.vertical,
+          ),
+          ReaderTapAction.rightPage,
+        );
+        expect(
+          readerTapActionFor(
+            x: 0.90,
+            y: 0.90,
+            chromeVisible: false,
+            axis: ReaderTapAxis.vertical,
+          ),
+          ReaderTapAction.rightPage,
+        );
+        expect(
+          readerTapActionFor(
+            x: 0.10,
+            y: 0.60,
+            chromeVisible: false,
+            axis: ReaderTapAxis.vertical,
+          ),
+          ReaderTapAction.toggleChrome,
+        );
+        expect(
+          readerTapActionFor(
+            x: 0.90,
+            y: 0.60,
+            chromeVisible: false,
+            axis: ReaderTapAxis.vertical,
+          ),
+          ReaderTapAction.toggleChrome,
+        );
+      },
+    );
 
     test('maps vertical taps to logical previous and next commands', () {
       expect(

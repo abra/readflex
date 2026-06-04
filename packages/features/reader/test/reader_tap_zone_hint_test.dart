@@ -53,5 +53,84 @@ void main() {
       expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsNothing);
       expect(find.text('TAP AREA'), findsNWidgets(2));
     });
+
+    testWidgets('shows persistent vertical edge lines only when available', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 300,
+            height: 600,
+            child: Stack(
+              children: [
+                ReaderTapEdgeIndicator(
+                  readerTheme: ReaderThemePreset.paper.data,
+                  axis: ReaderTapAxis.vertical,
+                  pageProgressionRtl: false,
+                  canGoPrevious: false,
+                  canGoNext: true,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byKey(const Key('readerTapEdgeTop')), findsNothing);
+      expect(find.byKey(const Key('readerTapEdgeBottom')), findsOneWidget);
+      expect(find.byKey(const Key('readerTapEdgeLeft')), findsNothing);
+      expect(find.byKey(const Key('readerTapEdgeRight')), findsNothing);
+
+      final bottomLine = tester.widget<Positioned>(
+        find.byKey(const Key('readerTapEdgeBottom')),
+      );
+      expect(bottomLine.bottom, 4.0);
+      expect(bottomLine.left, 386.0);
+      expect(bottomLine.width, 28.0);
+      expect(bottomLine.height, 2.0);
+    });
+
+    testWidgets(
+      'maps persistent horizontal edge lines through RTL progression',
+      (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: SizedBox(
+              width: 300,
+              height: 600,
+              child: Stack(
+                children: [
+                  ReaderTapEdgeIndicator(
+                    readerTheme: ReaderThemePreset.paper.data,
+                    axis: ReaderTapAxis.horizontal,
+                    pageProgressionRtl: true,
+                    canGoPrevious: false,
+                    canGoNext: true,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        expect(find.byKey(const Key('readerTapEdgeLeft')), findsOneWidget);
+        expect(find.byKey(const Key('readerTapEdgeRight')), findsNothing);
+        expect(find.byKey(const Key('readerTapEdgeTop')), findsNothing);
+        expect(find.byKey(const Key('readerTapEdgeBottom')), findsNothing);
+
+        final leftLine = tester.widget<Positioned>(
+          find.byKey(const Key('readerTapEdgeLeft')),
+        );
+        expect(leftLine.left, 4.0);
+        expect(leftLine.top, 286.0);
+        expect(leftLine.width, 2.0);
+        expect(leftLine.height, 28.0);
+      },
+    );
   });
 }

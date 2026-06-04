@@ -357,6 +357,30 @@ void main() {
       );
 
       blocTest<ReaderBloc, ReaderState>(
+        'surfaces page boundary flags into state',
+        setUp: () => bookRepository.seedBook(testBook),
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          title: testBook.title,
+          book: testBook,
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/4!/4/2)',
+            progress: 0.0,
+            atStart: true,
+            atEnd: false,
+          ),
+        ),
+        wait: const Duration(seconds: 3),
+        verify: (bloc) {
+          expect(bloc.state.atStart, isTrue);
+          expect(bloc.state.atEnd, isFalse);
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
         'updates page progression direction from WebView position',
         setUp: () => bookRepository.seedBook(testBook),
         build: buildBloc,

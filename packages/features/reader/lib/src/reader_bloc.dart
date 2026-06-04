@@ -216,6 +216,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         state.sizeTotal != nextSizeTotal ||
         (event.pageProgressionRtl != null &&
             state.pageProgressionRtl != event.pageProgressionRtl) ||
+        state.atStart != event.atStart ||
+        state.atEnd != event.atEnd ||
         state.currentPageBookmarked != event.currentPageBookmarked ||
         state.currentPageBookmarkCfi != event.currentPageBookmarkCfi ||
         state.currentPageBookmarkId != event.currentPageBookmarkId;
@@ -234,6 +236,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         chapterTotalPages: event.chapterTotalPages,
         sizeTotal: nextSizeTotal,
         pageProgressionRtl: event.pageProgressionRtl,
+        atStart: event.atStart,
+        atEnd: event.atEnd,
         currentPageBookmarked: event.currentPageBookmarked,
         currentPageBookmarkCfi: event.currentPageBookmarkCfi,
         currentPageBookmarkId: event.currentPageBookmarkId,
