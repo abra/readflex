@@ -224,6 +224,69 @@ class View {
   get document() {
     return this.#iframe.contentDocument
   }
+  createPagePreview(scrollOffset) {
+    const doc = this.document
+    if (!doc?.documentElement) return null
+
+    const root = doc.documentElement.cloneNode(true)
+    const head = root.querySelector('head')
+    if (head && doc.baseURI) {
+      const base = document.createElement('base')
+      base.href = doc.baseURI
+      head.prepend(base)
+    }
+
+    const wrapper = document.createElement('div')
+    const element = document.createElement('div')
+    const frame = document.createElement('iframe')
+
+    Object.assign(wrapper.style, {
+      position: 'absolute',
+      inset: '0',
+      overflow: 'hidden',
+      pointerEvents: 'none',
+      contain: 'layout paint size',
+      zIndex: '2',
+      willChange: 'transform',
+    })
+    Object.assign(element.style, {
+      boxSizing: 'content-box',
+      position: 'absolute',
+      left: '0',
+      top: '0',
+      overflow: 'hidden',
+      width: this.#element.style.width || `${this.#element.getBoundingClientRect().width}px`,
+      height: this.#element.style.height || '100%',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      contain: 'layout paint size',
+      pointerEvents: 'none',
+      willChange: 'transform',
+    })
+    Object.assign(frame.style, {
+      overflow: 'hidden',
+      border: '0',
+      display: 'block',
+      width: this.#iframe.style.width || `${this.#iframe.getBoundingClientRect().width}px`,
+      height: this.#iframe.style.height || '100%',
+      pointerEvents: 'none',
+    })
+    frame.setAttribute('sandbox', 'allow-same-origin')
+    frame.setAttribute('scrolling', 'no')
+    frame.srcdoc = `<!doctype html>${root.outerHTML}`
+
+    element.append(frame)
+    wrapper.append(element)
+    this.setPagePreviewScrollOffset(wrapper, scrollOffset)
+    return wrapper
+  }
+  setPagePreviewScrollOffset(wrapper, scrollOffset) {
+    const element = wrapper?.firstElementChild
+    if (!element) return
+    const offset = Number.isFinite(scrollOffset) ? scrollOffset : 0
+    element.style.transform = `translateX(${-offset}px)`
+  }
   async load(src, afterLoad, beforeRender) {
     if (typeof src !== 'string') throw new Error(`${src} is not string`)
     return new Promise(resolve => {
@@ -474,6 +537,7 @@ export class Paginator extends HTMLElement {
   #prevOverflowY = ''
   #momentumTimer = null
   #pendingRelocate = null
+  #verticalDragPreview = null
   #cancelMomentumTimer() {
     if (this.#momentumTimer) {
       clearTimeout(this.#momentumTimer)
@@ -679,6 +743,7 @@ export class Paginator extends HTMLElement {
     this.sections = book.sections
   }
   #createView() {
+    this.#clearVerticalDragPreview()
     if (this.#view) {
       this.#view.destroy()
       this.#container.removeChild(this.#view.element)
@@ -867,6 +932,134 @@ export class Paginator extends HTMLElement {
     const delta = horizontal ? dx : dy
     if (horizontal) element.scrollBy({ left: delta, top: 0, behavior: 'auto' })
     else element.scrollBy({ left: 0, top: delta, behavior: 'auto' })
+  }
+  #pageOffset(page) {
+    const invertOffset = this.#rtl && this.scrollProp === 'scrollLeft'
+    return this.size * (invertOffset ? -page : page)
+  }
+  #clearVerticalDragPreview({ resetCurrent = true } = {}) {
+    this.#verticalDragPreview?.layer?.remove()
+    this.#verticalDragPreview = null
+    if (resetCurrent && this.#view?.element) {
+      this.#view.element.style.transform = ''
+      this.#view.element.style.willChange = ''
+    }
+  }
+  #verticalDragPreviewExtent() {
+    return this.#container.getBoundingClientRect().height
+  }
+  #verticalDragTargetPage(direction, startPage) {
+    if (!direction || !this.pages) return null
+    if (direction < 0 && this.atStart) return null
+    if (direction > 0 && this.atEnd) return null
+    const targetPage = startPage + direction
+    return targetPage >= 0 && targetPage < this.pages ? targetPage : null
+  }
+  #ensureVerticalDragPreview(direction, targetPage) {
+    if (this.#verticalDragPreview?.direction === direction
+      && this.#verticalDragPreview?.targetPage === targetPage)
+      return this.#verticalDragPreview
+
+    this.#clearVerticalDragPreview({ resetCurrent: false })
+    const layer = this.#view?.createPagePreview(this.#pageOffset(targetPage))
+    if (!layer) return null
+
+    this.#top.append(layer)
+    this.#view.element.style.willChange = 'transform'
+    this.#verticalDragPreview = { direction, targetPage, layer }
+    return this.#verticalDragPreview
+  }
+  #updateVerticalDragPreview(deltaY, state) {
+    const extent = this.#verticalDragPreviewExtent()
+    if (!extent || !this.#view?.element) return false
+
+    const clampedDelta = Math.max(-extent, Math.min(extent, deltaY))
+    const direction = clampedDelta < 0 ? 1 : clampedDelta > 0 ? -1 : 0
+    if (!direction) {
+      this.#clearVerticalDragPreview()
+      state.verticalPreview = null
+      return true
+    }
+
+    const targetPage = this.#verticalDragTargetPage(
+      direction,
+      state.startPage ?? this.page,
+    )
+    const canCommit = targetPage != null
+    const visualDelta = canCommit ? clampedDelta : clampedDelta * 0.24
+    const preview = canCommit
+      ? this.#ensureVerticalDragPreview(direction, targetPage)
+      : null
+
+    this.#view.element.style.willChange = 'transform'
+    this.#view.element.style.transform = `translateY(${visualDelta}px)`
+    if (preview?.layer) {
+      preview.layer.style.transform = `translateY(${direction * extent + visualDelta}px)`
+    }
+
+    state.verticalPreview = {
+      direction,
+      targetPage,
+      deltaY: visualDelta,
+      canCommit,
+    }
+    return true
+  }
+  #finishVerticalDragPreview(state) {
+    const info = state?.verticalPreview
+    const extent = this.#verticalDragPreviewExtent()
+    const viewElement = this.#view?.element
+    if (!info || !viewElement || !extent) {
+      this.#clearVerticalDragPreview()
+      this.#restoreMomentum()
+      return Promise.resolve()
+    }
+
+    const { direction, targetPage, deltaY, canCommit } = info
+    const progress = Math.min(1, Math.abs(deltaY) / extent)
+    const velocity = state?.vy ?? 0
+    const velocityCommits = direction > 0
+      ? velocity > 0.25
+      : velocity < -0.25
+    const shouldCommit = canCommit && targetPage != null
+      && (progress >= 0.35 || velocityCommits)
+
+    const preview = this.#verticalDragPreview
+    const targetLayer = preview?.layer
+    const targetStart = direction * extent + deltaY
+    const currentEnd = shouldCommit ? -direction * extent : 0
+    const targetEnd = shouldCommit ? 0 : direction * extent
+    const duration = Math.max(140, Math.min(260, 240 * (shouldCommit
+      ? Math.max(0.25, 1 - progress)
+      : Math.max(0.35, progress))))
+
+    return animate(0, 1, duration, easeOutSine, t => {
+      const currentY = lerp(deltaY, currentEnd, t)
+      const targetY = lerp(targetStart, targetEnd, t)
+      viewElement.style.transform = `translateY(${currentY}px)`
+      if (targetLayer) targetLayer.style.transform = `translateY(${targetY}px)`
+    }).then(() => {
+      if (shouldCommit) {
+        this.#ignoreNativeScroll = true
+        this.#container[this.scrollProp] = this.#pageOffset(targetPage)
+        this.#ignoreNativeScroll = false
+      }
+      this.#clearVerticalDragPreview()
+      this.#restoreMomentum()
+      if (!shouldCommit) return
+
+      this.#afterScroll('snap')
+      const dir = targetPage <= 0 ? -1 : targetPage >= this.pages - 1 ? 1 : null
+      if (dir) return this.#goTo({
+        index: this.#adjacentIndex(dir),
+        anchor: dir < 0 ? () => 1 : () => 0,
+      })
+    }).catch(err => {
+      this.#clearVerticalDragPreview()
+      this.#ignoreNativeScroll = false
+      this.#restoreMomentum()
+      throw err
+    })
   }
   snap(vx, vy, touchState) {
     const state = touchState ?? this.#touchState
@@ -1083,6 +1276,9 @@ export class Paginator extends HTMLElement {
         state.lockedOffset = state.startScroll ?? this.#container.scrollLeft
       this.#touchScrolled = this.pageTurnAxisVertical
       this.#container.scrollLeft = state.lockedOffset
+      if (this.pageTurnAxisVertical) {
+        this.#updateVerticalDragPreview(deltaY, state)
+      }
       return
     }
 
@@ -1140,6 +1336,12 @@ export class Paginator extends HTMLElement {
         this.#pendingRelocate = null
         this.dispatchEvent(new CustomEvent('relocate', { detail }))
       }
+      return
+    }
+
+    if (this.pageTurnAxisVertical && state?.verticalPreview) {
+      Promise.resolve(this.#finishVerticalDragPreview(state))
+        .finally(() => { this.#touchState = null })
       return
     }
 
@@ -1339,9 +1541,7 @@ export class Paginator extends HTMLElement {
     }
   }
   async #scrollToPage(page, reason, smooth) {
-    const invertOffset = this.#rtl && this.scrollProp === "scrollLeft"
-    const offset = this.size * (invertOffset ? -page : page)
-    return this.#scrollTo(offset, reason, smooth)
+    return this.#scrollTo(this.#pageOffset(page), reason, smooth)
   }
   async scrollToAnchor(anchor, select) {
     this.#anchor = anchor
@@ -1610,6 +1810,7 @@ export class Paginator extends HTMLElement {
     return this.#view?.writingMode
   }
   destroy() {
+    this.#clearVerticalDragPreview()
     this.#observer.unobserve(this)
     this.#view.destroy()
     this.#view = null

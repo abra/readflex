@@ -616,6 +616,26 @@ void main() {
       expect(paginatorJs, contains("const outDuration = Math.max(90"));
       expect(paginatorJs, contains("viewElement.style.transform"));
       expect(paginatorJs, contains("element[scrollProp] = offset"));
+      expect(paginatorJs, contains("createPagePreview(scrollOffset)"));
+      expect(paginatorJs, contains("frame.srcdoc = `<!doctype html>"));
+      expect(
+        paginatorJs,
+        contains("frame.setAttribute('sandbox', 'allow-same-origin')"),
+      );
+      expect(
+        paginatorJs,
+        contains("this.#updateVerticalDragPreview(deltaY, state)"),
+      );
+      expect(
+        paginatorJs,
+        contains("this.#finishVerticalDragPreview(state)"),
+      );
+      expect(
+        paginatorJs,
+        contains(
+          "this.#container[this.scrollProp] = this.#pageOffset(targetPage)",
+        ),
+      );
       expect(
         paginatorJs,
         isNot(contains("const pageStepColumnWidth = Math.max(0, size - gap)")),
