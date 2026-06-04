@@ -770,6 +770,18 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     _closeTocDrawer(restoreChrome: false);
   }
 
+  void _deleteBookmark(SourceBookmark bookmark) {
+    context.read<ReaderBloc>().add(
+      ReaderBookmarkChanged(
+        remove: true,
+        id: bookmark.id,
+        cfi: bookmark.cfi,
+        content: '',
+        progress: bookmark.progress,
+      ),
+    );
+  }
+
   void _goToSearchResult(ReaderSearchResult result) {
     if (result.cfi.isEmpty) return;
     context.read<ReaderSearchCubit>().resultSelected();
@@ -878,6 +890,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
               onClose: _closeTocDrawer,
               onItemSelected: _goToTocItem,
               onBookmarkSelected: _goToBookmark,
+              onBookmarkDeleted: _deleteBookmark,
             ),
             _ReaderSearchDrawer(
               visible: uiState.searchDrawerVisible,
@@ -1963,6 +1976,7 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
     required this.onClose,
     required this.onItemSelected,
     required this.onBookmarkSelected,
+    required this.onBookmarkDeleted,
   });
 
   final bool visible;
@@ -1971,6 +1985,7 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
   final VoidCallback onClose;
   final ValueChanged<ReaderTocItem> onItemSelected;
   final ValueChanged<SourceBookmark> onBookmarkSelected;
+  final ValueChanged<SourceBookmark> onBookmarkDeleted;
 
   @override
   Widget build(BuildContext context) {
@@ -2001,6 +2016,7 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
       onClose: onClose,
       onItemSelected: onItemSelected,
       onBookmarkSelected: onBookmarkSelected,
+      onBookmarkDeleted: onBookmarkDeleted,
     );
   }
 }
@@ -2019,6 +2035,7 @@ class _ReaderTocDrawer extends StatelessWidget {
     required this.onClose,
     required this.onItemSelected,
     required this.onBookmarkSelected,
+    required this.onBookmarkDeleted,
   });
 
   final bool visible;
@@ -2033,6 +2050,7 @@ class _ReaderTocDrawer extends StatelessWidget {
   final VoidCallback onClose;
   final ValueChanged<ReaderTocItem> onItemSelected;
   final ValueChanged<SourceBookmark> onBookmarkSelected;
+  final ValueChanged<SourceBookmark> onBookmarkDeleted;
 
   @override
   Widget build(BuildContext context) {
@@ -2059,6 +2077,7 @@ class _ReaderTocDrawer extends StatelessWidget {
                 onClose: onClose,
                 onItemSelected: onItemSelected,
                 onBookmarkSelected: onBookmarkSelected,
+                onBookmarkDeleted: onBookmarkDeleted,
               ),
             ),
           ),
@@ -2080,6 +2099,7 @@ class _ReaderTocDrawerContent extends StatefulWidget {
     required this.onClose,
     required this.onItemSelected,
     required this.onBookmarkSelected,
+    required this.onBookmarkDeleted,
   });
 
   final BookFormat? format;
@@ -2092,6 +2112,7 @@ class _ReaderTocDrawerContent extends StatefulWidget {
   final VoidCallback onClose;
   final ValueChanged<ReaderTocItem> onItemSelected;
   final ValueChanged<SourceBookmark> onBookmarkSelected;
+  final ValueChanged<SourceBookmark> onBookmarkDeleted;
 
   @override
   State<_ReaderTocDrawerContent> createState() =>
@@ -2149,8 +2170,18 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
           ),
           TabBar(
             tabs: const [
-              Tab(text: 'Chapters'),
-              Tab(text: 'Bookmarks'),
+              Tab(
+                child: _ReaderDrawerTabLabel(
+                  icon: AppIcons.toc,
+                  label: 'Chapters',
+                ),
+              ),
+              Tab(
+                child: _ReaderDrawerTabLabel(
+                  icon: AppIcons.bookmark,
+                  label: 'Bookmarks',
+                ),
+              ),
             ],
             labelColor: colors.onSurface,
             unselectedLabelColor: colors.onSurfaceVariant,
@@ -2183,12 +2214,42 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
                     setState(() => _bookmarksQuery = value);
                   },
                   onBookmarkSelected: widget.onBookmarkSelected,
+                  onBookmarkDeleted: widget.onBookmarkDeleted,
                 ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ReaderDrawerTabLabel extends StatelessWidget {
+  const _ReaderDrawerTabLabel({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: AppIconSize.sm),
+        const SizedBox(width: AppSpacing.xs),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -2350,6 +2411,9 @@ class _ReaderTocTabState extends State<_ReaderTocTab> {
           child: _ReaderDrawerContentFrame(
             child: filteredItems.isEmpty
                 ? _ReaderDrawerEmptyState(
+                    icon: widget.items.isEmpty
+                        ? AppIcons.toc
+                        : AppIcons.searchOff,
                     message: readerTocEmptyMessage(
                       format: widget.format,
                       hasSourceItems: widget.items.isNotEmpty,
@@ -2439,6 +2503,7 @@ class _ReaderBookmarksTab extends StatelessWidget {
     required this.bookmarks,
     required this.onQueryChanged,
     required this.onBookmarkSelected,
+    required this.onBookmarkDeleted,
   });
 
   final TextEditingController controller;
@@ -2447,6 +2512,7 @@ class _ReaderBookmarksTab extends StatelessWidget {
   final List<SourceBookmark> bookmarks;
   final ValueChanged<String> onQueryChanged;
   final ValueChanged<SourceBookmark> onBookmarkSelected;
+  final ValueChanged<SourceBookmark> onBookmarkDeleted;
 
   @override
   Widget build(BuildContext context) {
@@ -2467,6 +2533,9 @@ class _ReaderBookmarksTab extends StatelessWidget {
           child: _ReaderDrawerContentFrame(
             child: filteredBookmarks.isEmpty
                 ? _ReaderDrawerEmptyState(
+                    icon: bookmarks.isEmpty
+                        ? AppIcons.bookmark
+                        : AppIcons.searchOff,
                     message: bookmarks.isEmpty
                         ? 'No bookmarks yet'
                         : 'No matching bookmarks',
@@ -2481,6 +2550,7 @@ class _ReaderBookmarksTab extends StatelessWidget {
                           bookmark: bookmark,
                           pageProgressionRtl: pageProgressionRtl,
                           onTap: () => onBookmarkSelected(bookmark),
+                          onDelete: () => onBookmarkDeleted(bookmark),
                         );
                       },
                     ),
@@ -2497,11 +2567,13 @@ class _ReaderBookmarkListTile extends StatelessWidget {
     required this.bookmark,
     required this.pageProgressionRtl,
     required this.onTap,
+    required this.onDelete,
   });
 
   final SourceBookmark bookmark;
   final bool pageProgressionRtl;
   final VoidCallback onTap;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -2552,6 +2624,17 @@ class _ReaderBookmarkListTile extends StatelessWidget {
             color: colors.onSurfaceVariant,
           ),
         ),
+      ),
+      trailing: IconButton(
+        tooltip: 'Delete bookmark',
+        visualDensity: VisualDensity.compact,
+        style: _readerDrawerCloseButtonStyle,
+        icon: Icon(
+          AppIcons.close,
+          size: AppIconSize.xs,
+          color: colors.onSurfaceVariant,
+        ),
+        onPressed: onDelete,
       ),
       onTap: onTap,
     );
@@ -2964,9 +3047,13 @@ class _ReaderDrawerContentFrame extends StatelessWidget {
 }
 
 class _ReaderDrawerEmptyState extends StatelessWidget {
-  const _ReaderDrawerEmptyState({required this.message});
+  const _ReaderDrawerEmptyState({
+    required this.message,
+    this.icon,
+  });
 
   final String message;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -2974,12 +3061,25 @@ class _ReaderDrawerEmptyState extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Text(
-          message,
-          textAlign: TextAlign.center,
-          style: context.text.bodyMedium.copyWith(
-            color: colors.onSurfaceVariant,
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: AppIconSize.lg,
+                color: colors.onSurfaceVariant.withValues(alpha: 0.72),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: context.text.bodyMedium.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+          ],
         ),
       ),
     );

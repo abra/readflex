@@ -323,12 +323,15 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     Emitter<ReaderState> emit,
   ) async {
     final book = state.book;
-    if (book == null || event.cfi.isEmpty) return;
+    if (book == null) return;
 
     try {
       if (event.remove) {
         final bookmarkId = event.id;
-        if (bookmarkId != null && bookmarkId.isNotEmpty) {
+        final hasBookmarkId = bookmarkId != null && bookmarkId.isNotEmpty;
+        if (!hasBookmarkId && event.cfi.isEmpty) return;
+
+        if (hasBookmarkId) {
           await _bookRepository.deleteBookmarkById(book.id, bookmarkId);
         } else {
           await _bookRepository.deleteBookmarkBySourceAndCfi(
@@ -336,22 +339,34 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             event.cfi,
           );
         }
+
+        final removedCurrentBookmark = hasBookmarkId
+            ? state.currentPageBookmarkId == bookmarkId
+            : state.currentPageBookmarkCfi == event.cfi;
         emit(
           state.copyWith(
             bookmarks: [
               for (final bookmark in state.bookmarks)
-                if (bookmarkId != null && bookmarkId.isNotEmpty
+                if (hasBookmarkId
                     ? bookmark.id != bookmarkId
                     : bookmark.cfi != event.cfi)
                   bookmark,
             ],
-            currentPageBookmarked: false,
-            currentPageBookmarkCfi: null,
-            currentPageBookmarkId: null,
+            currentPageBookmarked: removedCurrentBookmark
+                ? false
+                : state.currentPageBookmarked,
+            currentPageBookmarkCfi: removedCurrentBookmark
+                ? null
+                : state.currentPageBookmarkCfi,
+            currentPageBookmarkId: removedCurrentBookmark
+                ? null
+                : state.currentPageBookmarkId,
           ),
         );
         return;
       }
+
+      if (event.cfi.isEmpty) return;
 
       final bookmark = await _bookRepository.addBookmark(
         sourceId: book.id,

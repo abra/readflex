@@ -968,6 +968,7 @@ void main() {
           bookmarks: [testBookmark],
           currentPageBookmarked: true,
           currentPageBookmarkCfi: testBookmark.cfi,
+          currentPageBookmarkId: testBookmark.id,
         ),
         act: (bloc) => bloc.add(
           ReaderBookmarkChanged(
@@ -993,7 +994,72 @@ void main() {
       );
 
       blocTest<ReaderBloc, ReaderState>(
-        'ignores malformed bookmark event without cfi',
+        'removing a different bookmark preserves current page bookmark state',
+        setUp: () {
+          final otherBookmark = SourceBookmark(
+            id: 'bm-2',
+            sourceId: 'book-1',
+            sourceType: SourceType.book,
+            cfi: 'epubcfi(/6/8)',
+            content: 'Another page',
+            progress: 0.4,
+            createdAt: DateTime(2024, 1, 4),
+          );
+          bookRepository.seedBook(testBook);
+          bookRepository.seedBookmarks('book-1', [testBookmark, otherBookmark]);
+        },
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          book: testBook,
+          bookmarks: [
+            testBookmark,
+            SourceBookmark(
+              id: 'bm-2',
+              sourceId: 'book-1',
+              sourceType: SourceType.book,
+              cfi: 'epubcfi(/6/8)',
+              content: 'Another page',
+              progress: 0.4,
+              createdAt: DateTime(2024, 1, 4),
+            ),
+          ],
+          currentPageBookmarked: true,
+          currentPageBookmarkCfi: testBookmark.cfi,
+          currentPageBookmarkId: testBookmark.id,
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderBookmarkChanged(
+            remove: true,
+            id: 'bm-2',
+            cfi: 'epubcfi(/6/8)',
+            content: '',
+            progress: 0.4,
+          ),
+        ),
+        expect: () => [
+          isA<ReaderState>()
+              .having((s) => s.bookmarks, 'bookmarks', hasLength(1))
+              .having(
+                (s) => s.bookmarks.single.id,
+                'remaining bookmark id',
+                testBookmark.id,
+              )
+              .having(
+                (s) => s.currentPageBookmarked,
+                'current page bookmarked',
+                isTrue,
+              )
+              .having(
+                (s) => s.currentPageBookmarkId,
+                'current page bookmark id',
+                testBookmark.id,
+              ),
+        ],
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'ignores malformed add bookmark event without cfi',
         build: buildBloc,
         seed: () => ReaderState(status: ReaderStatus.ready, book: testBook),
         act: (bloc) => bloc.add(
