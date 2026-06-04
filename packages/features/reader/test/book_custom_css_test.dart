@@ -49,7 +49,14 @@ void main() {
     test('does not force dark text normalization in light themes', () {
       final css = buildBookCustomCSS(theme: lightTheme);
       expect(css, isNot(contains('color-scheme: dark')));
-      expect(css, isNot(contains('color: #2a221b !important')));
+      expect(
+        css,
+        isNot(
+          contains(
+            'html, body { color-scheme: dark; color: #2a221b !important; }',
+          ),
+        ),
+      );
     });
 
     test('emits blockquote rule with divider color', () {
@@ -140,6 +147,14 @@ void main() {
 
     test('emits heading size rules', () {
       final css = buildBookCustomCSS(theme: lightTheme);
+      expect(
+        css,
+        contains(
+          'h1 *, h2 *, h3 *, h4 *, h5 *, h6 *, [epub|type~="title"], [epub|type~="subtitle"]',
+        ),
+      );
+      expect(css, contains('color: #2a221b !important;'));
+      expect(css, contains('font-style: normal !important;'));
       expect(
         css,
         contains(

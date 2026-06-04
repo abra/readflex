@@ -199,6 +199,14 @@ String buildBookCustomCSS({
     'overflow-y: hidden; -webkit-overflow-scrolling: touch; '
     'box-sizing: border-box; }',
   );
+  // Keep structural headings on the reader theme; inline emphasis still uses em/i.
+  buffer.writeln(
+    'h1, h2, h3, h4, h5, h6, '
+    'h1 *, h2 *, h3 *, h4 *, h5 *, h6 *, '
+    '[epub|type~="title"], [epub|type~="subtitle"], '
+    '[role="doc-title"], [role="doc-subtitle"] { '
+    'color: $primaryText !important; font-style: normal !important; }',
+  );
   buffer.writeln(
     'h1 { font-size: calc($proseFontSize * 1.8) !important; }',
   );
