@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:reader/src/reader_tap_action.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
 
 void main() {
@@ -69,6 +70,18 @@ void main() {
       cubit.appearanceSheetHidden();
       expect(cubit.state.chromeVisible, isTrue);
       expect(cubit.state.overlay, ReaderOverlay.none);
+    });
+
+    test('showTapZoneHint records axis and increments signal token', () {
+      final cubit = buildCubit();
+
+      cubit.showTapZoneHint(ReaderTapAxis.vertical);
+      expect(cubit.state.tapZoneHintAxis, ReaderTapAxis.vertical);
+      expect(cubit.state.tapZoneHintToken, 1);
+
+      cubit.showTapZoneHint(ReaderTapAxis.vertical);
+      expect(cubit.state.tapZoneHintAxis, ReaderTapAxis.vertical);
+      expect(cubit.state.tapZoneHintToken, 2);
     });
   });
 }

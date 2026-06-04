@@ -17,10 +17,10 @@ enum ReaderTapAxis {
   vertical,
 }
 
-const readerLeftTapZoneEnd = 0.28;
-const readerRightTapZoneStart = 0.62;
-const readerTopTapZoneEnd = 0.28;
-const readerBottomTapZoneStart = 0.62;
+const readerLeftTapZoneEnd = 0.30;
+const readerRightTapZoneStart = 0.70;
+const readerTopTapZoneEnd = 0.20;
+const readerBottomTapZoneStart = 0.50;
 
 ReaderTapAction readerTapActionFor({
   required double x,

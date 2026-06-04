@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'reader_tap_action.dart';
+
 enum ReaderOverlay { none, toc, search, appearance }
 
 class ReaderUiState extends Equatable {
@@ -10,6 +12,8 @@ class ReaderUiState extends Equatable {
     this.searchHighlightVisible = false,
     this.ignoreNextSearchRelocation = false,
     this.clearSearchToken = 0,
+    this.tapZoneHintAxis,
+    this.tapZoneHintToken = 0,
   });
 
   final bool chromeVisible;
@@ -19,6 +23,9 @@ class ReaderUiState extends Equatable {
 
   /// Incremented when foliate-js search annotations must be cleared.
   final int clearSearchToken;
+
+  final ReaderTapAxis? tapZoneHintAxis;
+  final int tapZoneHintToken;
 
   bool get tocDrawerVisible => overlay == ReaderOverlay.toc;
 
@@ -35,6 +42,8 @@ class ReaderUiState extends Equatable {
     bool? searchHighlightVisible,
     bool? ignoreNextSearchRelocation,
     int? clearSearchToken,
+    ReaderTapAxis? tapZoneHintAxis,
+    int? tapZoneHintToken,
   }) {
     return ReaderUiState(
       chromeVisible: chromeVisible ?? this.chromeVisible,
@@ -44,6 +53,8 @@ class ReaderUiState extends Equatable {
       ignoreNextSearchRelocation:
           ignoreNextSearchRelocation ?? this.ignoreNextSearchRelocation,
       clearSearchToken: clearSearchToken ?? this.clearSearchToken,
+      tapZoneHintAxis: tapZoneHintAxis ?? this.tapZoneHintAxis,
+      tapZoneHintToken: tapZoneHintToken ?? this.tapZoneHintToken,
     );
   }
 
@@ -54,6 +65,8 @@ class ReaderUiState extends Equatable {
     searchHighlightVisible,
     ignoreNextSearchRelocation,
     clearSearchToken,
+    tapZoneHintAxis,
+    tapZoneHintToken,
   ];
 }
 
@@ -174,6 +187,15 @@ class ReaderUiCubit extends Cubit<ReaderUiState> {
     if (_userRelocationReasons.contains(relocationReason)) {
       clearReaderSearch();
     }
+  }
+
+  void showTapZoneHint(ReaderTapAxis axis) {
+    emit(
+      state.copyWith(
+        tapZoneHintAxis: axis,
+        tapZoneHintToken: state.tapZoneHintToken + 1,
+      ),
+    );
   }
 
   void showChrome() {

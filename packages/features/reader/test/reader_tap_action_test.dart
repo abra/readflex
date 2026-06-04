@@ -3,6 +3,13 @@ import 'package:reader/src/reader_tap_action.dart';
 
 void main() {
   group('readerTapActionFor', () {
+    test('uses horizontal symmetric zones and vertical weighted zones', () {
+      expect(readerLeftTapZoneEnd, 0.30);
+      expect(readerRightTapZoneStart, 0.70);
+      expect(readerTopTapZoneEnd, 0.20);
+      expect(readerBottomTapZoneStart, 0.50);
+    });
+
     test('uses physical left and right tap zones when chrome is hidden', () {
       expect(
         readerTapActionFor(x: 0.10, y: 0.50, chromeVisible: false),

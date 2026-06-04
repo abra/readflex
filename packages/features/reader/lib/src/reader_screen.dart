@@ -33,6 +33,7 @@ import 'reader_search_cubit.dart';
 import 'reader_selection_cubit.dart';
 import 'reader_system_ui_overlay.dart';
 import 'reader_tap_action.dart';
+import 'reader_tap_zone_hint.dart';
 import 'reader_toc_active_index.dart';
 import 'reader_ui_cubit.dart';
 
@@ -72,6 +73,12 @@ double _readerDrawerListBottomPadding(BuildContext context) {
   return MediaQuery.viewInsetsOf(context).bottom +
       MediaQuery.paddingOf(context).bottom +
       AppSpacing.lg;
+}
+
+ReaderTapAxis _readerTapAxisForPageTurnStyle(ReaderPageTurnStyle style) {
+  return style == ReaderPageTurnStyle.vertical
+      ? ReaderTapAxis.vertical
+      : ReaderTapAxis.horizontal;
 }
 
 /// Carries the optional mini-review callback down the reader widget tree.
@@ -717,6 +724,9 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
 
   Future<void> _openAppearanceSheet() async {
     final uiCubit = context.read<ReaderUiCubit>();
+    final appearanceCubit = context.read<ReaderAppearanceCubit>();
+    final initialPageTurnStyle =
+        appearanceCubit.state.effectiveAppearance.pageTurnStyle;
     final wasChromeVisible = uiCubit.state.chromeVisible;
     if (!uiCubit.beginAppearanceSheet()) return;
     if (wasChromeVisible) {
@@ -727,7 +737,14 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
       context,
       onFullyHidden: () {
         if (!mounted) return;
-        context.read<ReaderUiCubit>().appearanceSheetHidden();
+        final nextPageTurnStyle =
+            appearanceCubit.state.effectiveAppearance.pageTurnStyle;
+        uiCubit.appearanceSheetHidden();
+        if (nextPageTurnStyle != initialPageTurnStyle) {
+          uiCubit.showTapZoneHint(
+            _readerTapAxisForPageTurnStyle(nextPageTurnStyle),
+          );
+        }
       },
     );
   }
@@ -869,6 +886,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                 onPositionChanged: _handleReaderPositionChanged,
               ),
             ),
+            ReaderTapZoneHintDriver(readerTheme: readerTheme),
             const _ReaderChromeDismissBarrierDriver(),
             const _ReaderTopChromeDriver(),
             const _ReaderPageBookmarkIndicatorDriver(),
@@ -3342,9 +3360,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
           (c) => c.state.effectiveAppearance,
         );
 
-    final tapAxis = appearance.pageTurnStyle == ReaderPageTurnStyle.vertical
-        ? ReaderTapAxis.vertical
-        : ReaderTapAxis.horizontal;
+    final tapAxis = _readerTapAxisForPageTurnStyle(appearance.pageTurnStyle);
 
     void onTapped(double x, double y) {
       switch (readerTapCommandFor(
