@@ -63,6 +63,73 @@ void main() {
     });
   });
 
+  group('shouldAttemptWebContentRecovery', () {
+    test('allows one retry for saved CFI restores', () {
+      expect(
+        shouldAttemptWebContentRecovery(
+          initialCfi: 'epubcfi(/6/14!/4/2)',
+          isArticle: false,
+          recoveryAttempts: 0,
+          maxRecoveryAttempts: 1,
+          recoveryInProgress: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('allows one retry for fresh articles without a saved CFI', () {
+      expect(
+        shouldAttemptWebContentRecovery(
+          initialCfi: null,
+          isArticle: true,
+          recoveryAttempts: 0,
+          maxRecoveryAttempts: 1,
+          recoveryInProgress: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('does not retry non-article opens without a saved CFI', () {
+      expect(
+        shouldAttemptWebContentRecovery(
+          initialCfi: null,
+          isArticle: false,
+          recoveryAttempts: 0,
+          maxRecoveryAttempts: 1,
+          recoveryInProgress: false,
+        ),
+        isFalse,
+      );
+    });
+
+    test('does not retry after the attempt budget is exhausted', () {
+      expect(
+        shouldAttemptWebContentRecovery(
+          initialCfi: 'epubcfi(/6/14!/4/2)',
+          isArticle: true,
+          recoveryAttempts: 1,
+          maxRecoveryAttempts: 1,
+          recoveryInProgress: false,
+        ),
+        isFalse,
+      );
+    });
+
+    test('does not retry while a recovery reload is already in progress', () {
+      expect(
+        shouldAttemptWebContentRecovery(
+          initialCfi: 'epubcfi(/6/14!/4/2)',
+          isArticle: true,
+          recoveryAttempts: 0,
+          maxRecoveryAttempts: 1,
+          recoveryInProgress: true,
+        ),
+        isFalse,
+      );
+    });
+  });
+
   group('foliate bootstrap', () {
     test('always uses the modern app bridge', () {
       final indexHtml = File(
@@ -371,16 +438,14 @@ void main() {
       expect(bookJs, isNot(contains('JSON.stringify(style)')));
     });
 
-    test('limits WebContent crash recovery to saved CFI restores', () {
+    test('limits WebContent crash recovery to one eligible reload', () {
       final webViewDart = File(
         'lib/src/book_reader_webview.dart',
       ).readAsStringSync();
 
       expect(webViewDart, contains('_maxWebContentRecoveryAttempts = 1'));
-      expect(
-        webViewDart,
-        contains('initialCfi == null || initialCfi.isEmpty'),
-      );
+      expect(webViewDart, contains('shouldAttemptWebContentRecovery('));
+      expect(webViewDart, contains('article without initial CFI'));
       expect(
         webViewDart,
         contains('skipping reload to avoid a recovery loop'),

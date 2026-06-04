@@ -37,6 +37,24 @@ ReaderInitialLocation resolveInitialReaderLocation({
 }
 
 @visibleForTesting
+bool shouldAttemptWebContentRecovery({
+  required String? initialCfi,
+  required bool isArticle,
+  required int recoveryAttempts,
+  required int maxRecoveryAttempts,
+  required bool recoveryInProgress,
+}) {
+  if (recoveryInProgress) return false;
+  if (recoveryAttempts >= maxRecoveryAttempts) return false;
+
+  final hasInitialCfi = switch (initialCfi?.trim()) {
+    final String value when value.isNotEmpty => true,
+    _ => false,
+  };
+  return hasInitialCfi || isArticle;
+}
+
+@visibleForTesting
 final class ReaderInitialLocation {
   const ReaderInitialLocation({required this.cfi, required this.progress});
 
@@ -596,16 +614,21 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     debugPrint('[reader-console] $level: ${message.message}');
   }
 
-  /// TEMP WORKAROUND for the WKWebView deep-CFI restore crash.
+  /// TEMP WORKAROUND for WKWebView content-process crashes while opening.
   /// Remove this handler (and the [_recoveringFromCrash] state field plus
   /// its branch in [_indexUrl]) once foliate-js / our integration handles
-  /// deep-CFI restoration without crashing the WebContent process.
+  /// CFI/progress restoration and article pagination without crashing the
+  /// WebContent process.
   void _onContentProcessTerminated(InAppWebViewController controller) {
     final initialCfi = widget.initialCfi?.trim();
-    if (initialCfi == null || initialCfi.isEmpty) {
+
+    // Avoid re-entering recovery if a second crash arrives before the
+    // first reload finishes. If we hit this twice, something else is
+    // wrong and reloading again will only spin.
+    if (_recoveringFromCrash) {
       debugPrint(
-        '[reader-recovery] WebContent process died without initial CFI; '
-        'skipping reload to avoid a recovery loop',
+        '[reader-recovery] second WebContent crash before first reload '
+        'finished — skipping to avoid loop',
       );
       return;
     }
@@ -618,18 +641,25 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       return;
     }
 
-    // Avoid re-entering recovery if a second crash arrives before the
-    // first reload finishes. If we hit this twice, something else is
-    // wrong and reloading again will only spin.
-    if (_recoveringFromCrash) {
+    if (!shouldAttemptWebContentRecovery(
+      initialCfi: initialCfi,
+      isArticle: _effectiveArticle,
+      recoveryAttempts: _webContentRecoveryAttempts,
+      maxRecoveryAttempts: _maxWebContentRecoveryAttempts,
+      recoveryInProgress: _recoveringFromCrash,
+    )) {
       debugPrint(
-        '[reader-recovery] second WebContent crash before first reload '
-        'finished — skipping to avoid loop',
+        '[reader-recovery] WebContent process died without an initial CFI '
+        'or article fallback; skipping reload to avoid a recovery loop',
       );
       return;
     }
+
+    final recoveryTarget = initialCfi == null || initialCfi.isEmpty
+        ? 'article without initial CFI'
+        : 'cfi=${widget.initialCfi}';
     debugPrint(
-      '[reader-recovery] WebContent process died (cfi=${widget.initialCfi}), '
+      '[reader-recovery] WebContent process died ($recoveryTarget), '
       'reloading with cfi=null',
     );
     _webContentRecoveryAttempts += 1;
