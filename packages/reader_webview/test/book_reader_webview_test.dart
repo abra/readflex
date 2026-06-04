@@ -613,6 +613,11 @@ void main() {
           "this.pageTurnAxisVertical && (reason === 'page' || reason === 'snap')",
         ),
       );
+      expect(paginatorJs, contains("opts.verticalPageDirection"));
+      expect(
+        paginatorJs,
+        contains("const extent = this.#verticalDragPreviewExtent() || size"),
+      );
       expect(paginatorJs, contains("const outDuration = Math.max(90"));
       expect(paginatorJs, contains("viewElement.style.transform"));
       expect(paginatorJs, contains("element[scrollProp] = offset"));
@@ -636,6 +641,7 @@ void main() {
           "this.#container[this.scrollProp] = this.#pageOffset(targetPage)",
         ),
       );
+      expect(paginatorJs, contains("opts.verticalPageDirection = direction"));
       expect(
         paginatorJs,
         isNot(contains("const pageStepColumnWidth = Math.max(0, size - gap)")),
@@ -837,7 +843,7 @@ void main() {
       expect(
         paginatorJs,
         contains(
-          'const invertProgression = this.#pageProgressionRtl && !this.#vertical && !pageStepVertical',
+          'const invertProgression = this.#pageProgressionRtl && !verticalTurn && !this.#vertical && !pageStepVertical',
         ),
       );
       expect(

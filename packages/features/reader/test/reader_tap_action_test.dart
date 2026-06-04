@@ -105,6 +105,47 @@ void main() {
       );
     });
 
+    test('maps vertical taps to logical previous and next commands', () {
+      expect(
+        readerTapCommandFor(x: 0.50, y: 0.10, chromeVisible: false),
+        ReaderTapCommand.toggleChrome,
+      );
+      expect(
+        readerTapCommandFor(
+          x: 0.10,
+          y: 0.50,
+          chromeVisible: false,
+        ),
+        ReaderTapCommand.physicalLeftPage,
+      );
+      expect(
+        readerTapCommandFor(
+          x: 0.90,
+          y: 0.50,
+          chromeVisible: false,
+        ),
+        ReaderTapCommand.physicalRightPage,
+      );
+      expect(
+        readerTapCommandFor(
+          x: 0.50,
+          y: 0.10,
+          chromeVisible: false,
+          axis: ReaderTapAxis.vertical,
+        ),
+        ReaderTapCommand.previousPage,
+      );
+      expect(
+        readerTapCommandFor(
+          x: 0.50,
+          y: 0.90,
+          chromeVisible: false,
+          axis: ReaderTapAxis.vertical,
+        ),
+        ReaderTapCommand.nextPage,
+      );
+    });
+
     test('blocks page input only while reader chrome is visible', () {
       expect(
         shouldBlockReaderPageInput(

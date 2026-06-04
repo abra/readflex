@@ -1067,7 +1067,7 @@ export class Paginator extends HTMLElement {
     const pageStepVertical = pageStep && this.scrollProp === "scrollTop"
     const verticalTurn = this.pageTurnAxisVertical
     const velocity = pageStep ? (pageStepVertical ? vy : vx) : verticalTurn || this.#vertical ? vy : vx
-    const invertProgression = this.#pageProgressionRtl && !this.#vertical && !pageStepVertical
+    const invertProgression = this.#pageProgressionRtl && !verticalTurn && !this.#vertical && !pageStepVertical
     const pageVelocity = invertProgression
       ? -velocity
       : velocity
@@ -1441,7 +1441,9 @@ export class Paginator extends HTMLElement {
 
       if (this.pageTurnAxisVertical && (reason === 'page' || reason === 'snap')) {
         const startOffset = element[scrollProp]
-        const direction = offset > startOffset ? 1 : -1
+        const direction = opts.verticalPageDirection
+          || (offset > startOffset ? 1 : -1)
+        const extent = this.#verticalDragPreviewExtent() || size
         const viewElement = this.#view?.element
         if (viewElement) {
           this.#justAnchored = true
@@ -1452,16 +1454,16 @@ export class Paginator extends HTMLElement {
 
           return animate(
             0,
-            -direction * size,
+            -direction * extent,
             outDuration,
             easing,
             y => viewElement.style.transform = `translateY(${y}px)`,
             { initialProgress },
           ).then(() => {
             element[scrollProp] = offset
-            viewElement.style.transform = `translateY(${direction * size}px)`
+            viewElement.style.transform = `translateY(${direction * extent}px)`
             return animate(
-              direction * size,
+              direction * extent,
               0,
               inDuration,
               easing,
@@ -1541,7 +1543,13 @@ export class Paginator extends HTMLElement {
     }
   }
   async #scrollToPage(page, reason, smooth) {
-    return this.#scrollTo(this.#pageOffset(page), reason, smooth)
+    const opts = typeof smooth === 'object' ? { ...smooth } : smooth
+    if (this.pageTurnAxisVertical && opts && typeof opts === 'object') {
+      const currentPage = this.page
+      const direction = page > currentPage ? 1 : page < currentPage ? -1 : 0
+      if (direction) opts.verticalPageDirection = direction
+    }
+    return this.#scrollTo(this.#pageOffset(page), reason, opts)
   }
   async scrollToAnchor(anchor, select) {
     this.#anchor = anchor

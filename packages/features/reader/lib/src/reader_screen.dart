@@ -3347,17 +3347,21 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         : ReaderTapAxis.horizontal;
 
     void onTapped(double x, double y) {
-      switch (readerTapActionFor(
+      switch (readerTapCommandFor(
         x: x,
         y: y,
         chromeVisible: uiCubit.state.chromeVisible,
         axis: tapAxis,
       )) {
-        case ReaderTapAction.leftPage:
+        case ReaderTapCommand.physicalLeftPage:
           widget.webViewKey?.currentState?.pageLeft();
-        case ReaderTapAction.rightPage:
+        case ReaderTapCommand.physicalRightPage:
           widget.webViewKey?.currentState?.pageRight();
-        case ReaderTapAction.toggleChrome:
+        case ReaderTapCommand.previousPage:
+          widget.webViewKey?.currentState?.prevPage();
+        case ReaderTapCommand.nextPage:
+          widget.webViewKey?.currentState?.nextPage();
+        case ReaderTapCommand.toggleChrome:
           uiCubit.toggleChrome();
       }
     }

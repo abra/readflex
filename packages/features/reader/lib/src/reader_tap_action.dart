@@ -4,6 +4,14 @@ enum ReaderTapAction {
   toggleChrome,
 }
 
+enum ReaderTapCommand {
+  physicalLeftPage,
+  physicalRightPage,
+  previousPage,
+  nextPage,
+  toggleChrome,
+}
+
 enum ReaderTapAxis {
   horizontal,
   vertical,
@@ -32,6 +40,31 @@ ReaderTapAction readerTapActionFor({
   if (x <= readerLeftTapZoneEnd) return ReaderTapAction.leftPage;
   if (x >= readerRightTapZoneStart) return ReaderTapAction.rightPage;
   return ReaderTapAction.toggleChrome;
+}
+
+ReaderTapCommand readerTapCommandFor({
+  required double x,
+  required double y,
+  required bool chromeVisible,
+  ReaderTapAxis axis = ReaderTapAxis.horizontal,
+}) {
+  final action = readerTapActionFor(
+    x: x,
+    y: y,
+    chromeVisible: chromeVisible,
+    axis: axis,
+  );
+  return switch ((axis, action)) {
+    (_, ReaderTapAction.toggleChrome) => ReaderTapCommand.toggleChrome,
+    (ReaderTapAxis.vertical, ReaderTapAction.leftPage) =>
+      ReaderTapCommand.previousPage,
+    (ReaderTapAxis.vertical, ReaderTapAction.rightPage) =>
+      ReaderTapCommand.nextPage,
+    (ReaderTapAxis.horizontal, ReaderTapAction.leftPage) =>
+      ReaderTapCommand.physicalLeftPage,
+    (ReaderTapAxis.horizontal, ReaderTapAction.rightPage) =>
+      ReaderTapCommand.physicalRightPage,
+  };
 }
 
 bool shouldBlockReaderPageInput({
