@@ -7,6 +7,7 @@ const double _kBadgeBackgroundAlpha = 0.55;
 const double _kGridCoverInset = AppSpacing.xxs;
 const double _kFormatBadgeTextReserve = 24.0;
 const double _kProgressOverlayReserve = 16.0;
+const double _kProgressOverlayInset = AppSpacing.xxs;
 
 /// Grid-mode tile for a library source.
 ///
@@ -179,13 +180,14 @@ class _GridTileShell extends StatelessWidget {
                   ),
                 ),
                 Positioned(
-                  left: 8,
-                  right: 8,
-                  bottom: 8,
+                  left: _kProgressOverlayInset,
+                  right: _kProgressOverlayInset,
+                  bottom: _kProgressOverlayInset,
                   child: LayoutBuilder(
                     builder: (_, constraints) => ClipRRect(
                       borderRadius: BorderRadius.circular(AppRadius.full),
                       child: SizedBox(
+                        key: const Key('catalogGridProgressBar'),
                         height: 3,
                         child: Stack(
                           children: [

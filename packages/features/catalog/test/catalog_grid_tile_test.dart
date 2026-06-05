@@ -172,6 +172,41 @@ void main() {
     expect(sourceRect.right, closeTo(coverRect.right - 12, 1));
   });
 
+  testWidgets('grid progress bar uses equal compact edge insets', (
+    tester,
+  ) async {
+    final openedBook = _book.copyWith(
+      readingProgress: 0.5,
+      lastOpenedAt: DateTime(2026, 1, 2),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 120,
+              height: 180,
+              child: BookLibraryGridTile(
+                source: LibrarySource.fromBook(openedBook),
+                onTap: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final coverRect = tester.getRect(find.byType(AppSourceCoverFrame));
+    final progressRect = tester.getRect(
+      find.byKey(const Key('catalogGridProgressBar')),
+    );
+    expect(progressRect.left, coverRect.left + AppSpacing.xxs);
+    expect(progressRect.right, coverRect.right - AppSpacing.xxs);
+    expect(progressRect.bottom, coverRect.bottom - AppSpacing.xxs);
+  });
+
   testWidgets('grid fallback cover reserves space for progress overlay', (
     tester,
   ) async {
