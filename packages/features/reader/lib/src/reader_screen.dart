@@ -699,6 +699,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   /// book open, so it's always fresh.
   final GlobalKey<BookReaderWebViewState> _webViewKey =
       GlobalKey<BookReaderWebViewState>();
+  String? _webViewReadySourceId;
 
   void _seekFraction(double fraction) {
     context.read<ReaderUiCubit>().clearReaderSearch();
@@ -859,6 +860,10 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     final format = context.select<ReaderBloc, BookFormat?>(
       (b) => b.state.book?.format,
     );
+    final sourceId = context.select<ReaderBloc, String?>(
+      (b) => b.state.sourceId,
+    );
+    final webViewReady = sourceId != null && _webViewReadySourceId == sourceId;
     // Reader theme drives the book *page* — WebView background and
     // foliate-js customCSS. Chrome (passed-through Stack siblings)
     // pulls colours from the app theme themselves; they don't take
@@ -887,10 +892,17 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
             ColoredBox(
               color: readerTheme.backgroundColor,
               child: _ReaderWebViewBody(
+                sourceId: sourceId,
                 serverPort: widget.serverPort,
                 readerTheme: readerTheme,
                 webViewKey: _webViewKey,
                 onPositionChanged: _handleReaderPositionChanged,
+                onReady: () {
+                  if (!mounted) return;
+                  final sourceId = context.read<ReaderBloc>().state.sourceId;
+                  if (_webViewReadySourceId == sourceId) return;
+                  setState(() => _webViewReadySourceId = sourceId);
+                },
               ),
             ),
             ReaderTapZoneHintDriver(readerTheme: readerTheme),
@@ -904,6 +916,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
               contentTopMargin: layout.topMargin,
               contentBottomMargin: layout.bottomMargin,
               contentSideMargin: appearance.sideMargin,
+              visible: webViewReady,
             ),
             const _ReaderTopChromeDriver(),
             const _ReaderPageBookmarkIndicatorDriver(),
@@ -3254,12 +3267,15 @@ class _ReaderImagePageProgressOverlayDriver extends StatelessWidget {
 
 class _ReaderWebViewBody extends StatefulWidget {
   const _ReaderWebViewBody({
+    required this.sourceId,
     required this.serverPort,
     required this.readerTheme,
     this.webViewKey,
     this.onPositionChanged,
+    this.onReady,
   });
 
+  final String? sourceId;
   final int serverPort;
   final ReaderThemeData readerTheme;
 
@@ -3270,6 +3286,8 @@ class _ReaderWebViewBody extends StatefulWidget {
   /// Side-effect hook for UI-only reader chrome state. Bloc persistence stays
   /// inside this widget; parent uses this to clear transient search overlays.
   final ValueChanged<BookPosition>? onPositionChanged;
+
+  final VoidCallback? onReady;
 
   @override
   State<_ReaderWebViewBody> createState() => _ReaderWebViewBodyState();
@@ -3299,6 +3317,14 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
   List<ReaderHighlight>? _cachedReaderHighlights;
   List<SourceBookmark>? _lastBookmarksRef;
   List<ReaderBookmark>? _cachedReaderBookmarks;
+
+  @override
+  void didUpdateWidget(covariant _ReaderWebViewBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.sourceId != widget.sourceId) {
+      _foliateReady = false;
+    }
+  }
 
   List<ReaderHighlight> _readerHighlightsFor(List<Highlight> source) {
     final cached = _cachedReaderHighlights;
@@ -3463,6 +3489,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       onReady: () {
         if (mounted && !_foliateReady) {
           setState(() => _foliateReady = true);
+          widget.onReady?.call();
         }
       },
       onPositionChanged: (position) {

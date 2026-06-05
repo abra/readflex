@@ -24,6 +24,7 @@ class ReaderTapEdgeIndicator extends StatelessWidget {
     required this.contentTopMargin,
     required this.contentBottomMargin,
     required this.contentSideMargin,
+    this.visible = true,
     super.key,
   });
 
@@ -35,9 +36,11 @@ class ReaderTapEdgeIndicator extends StatelessWidget {
   final double contentTopMargin;
   final double contentBottomMargin;
   final double contentSideMargin;
+  final bool visible;
 
   @override
   Widget build(BuildContext context) {
+    if (!visible) return const SizedBox.shrink();
     final color = readerTheme.primaryTextColor.withValues(alpha: 0.35);
     return Positioned.fill(
       child: IgnorePointer(

@@ -95,6 +95,40 @@ void main() {
       expect(bottomLine.height, 2.0);
     });
 
+    testWidgets('hides persistent edge lines while reader page is not ready', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 300,
+            height: 600,
+            child: Stack(
+              children: [
+                ReaderTapEdgeIndicator(
+                  readerTheme: ReaderThemePreset.paper.data,
+                  axis: ReaderTapAxis.vertical,
+                  pageProgressionRtl: false,
+                  canGoPrevious: true,
+                  canGoNext: true,
+                  contentTopMargin: 65,
+                  contentBottomMargin: 35,
+                  contentSideMargin: 8,
+                  visible: false,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byKey(const Key('readerTapEdgeTop')), findsNothing);
+      expect(find.byKey(const Key('readerTapEdgeBottom')), findsNothing);
+      expect(find.byKey(const Key('readerTapEdgeLeft')), findsNothing);
+      expect(find.byKey(const Key('readerTapEdgeRight')), findsNothing);
+    });
+
     testWidgets(
       'maps persistent horizontal edge lines through RTL progression',
       (
