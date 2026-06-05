@@ -19,7 +19,7 @@ enum ReaderTapAxis {
 
 const readerLeftTapZoneEnd = 0.30;
 const readerRightTapZoneStart = 0.70;
-const readerTopTapZoneEnd = 0.50;
+const readerTopTapZoneEnd = 0.40;
 const readerBottomTapZoneStart = 0.80;
 
 ReaderTapAction readerTapActionFor({

@@ -6,7 +6,7 @@ void main() {
     test('uses horizontal symmetric zones and vertical weighted zones', () {
       expect(readerLeftTapZoneEnd, 0.30);
       expect(readerRightTapZoneStart, 0.70);
-      expect(readerTopTapZoneEnd, 0.50);
+      expect(readerTopTapZoneEnd, 0.40);
       expect(readerBottomTapZoneStart, 0.80);
     });
 
@@ -97,7 +97,7 @@ void main() {
         expect(
           readerTapActionFor(
             x: 0.10,
-            y: 0.60,
+            y: 0.45,
             chromeVisible: false,
             axis: ReaderTapAxis.vertical,
           ),

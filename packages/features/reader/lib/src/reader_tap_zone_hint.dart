@@ -21,6 +21,9 @@ class ReaderTapEdgeIndicator extends StatelessWidget {
     required this.pageProgressionRtl,
     required this.canGoPrevious,
     required this.canGoNext,
+    required this.contentTopMargin,
+    required this.contentBottomMargin,
+    required this.contentSideMargin,
     super.key,
   });
 
@@ -29,6 +32,9 @@ class ReaderTapEdgeIndicator extends StatelessWidget {
   final bool pageProgressionRtl;
   final bool canGoPrevious;
   final bool canGoNext;
+  final double contentTopMargin;
+  final double contentBottomMargin;
+  final double contentSideMargin;
 
   @override
   Widget build(BuildContext context) {
@@ -39,10 +45,17 @@ class ReaderTapEdgeIndicator extends StatelessWidget {
           builder: (context, constraints) {
             final width = constraints.maxWidth;
             final height = constraints.maxHeight;
+            final metrics = _ReaderTapEdgeMetrics(
+              width: width,
+              height: height,
+              topMargin: contentTopMargin,
+              bottomMargin: contentBottomMargin,
+              sideMarginPercent: contentSideMargin,
+            );
             return Stack(
               children: axis == ReaderTapAxis.vertical
-                  ? _verticalLines(width, height, color)
-                  : _horizontalLines(width, height, color),
+                  ? _verticalLines(metrics, color)
+                  : _horizontalLines(metrics, color),
             );
           },
         ),
@@ -50,17 +63,18 @@ class ReaderTapEdgeIndicator extends StatelessWidget {
     );
   }
 
-  List<Widget> _verticalLines(double width, double height, Color color) {
-    final lineWidth = (width * 0.07)
+  List<Widget> _verticalLines(_ReaderTapEdgeMetrics metrics, Color color) {
+    final lineWidth = (metrics.contentWidth * 0.07)
         .clamp(_kReaderTapEdgeMinLength, _kReaderTapEdgeMaxLength)
         .toDouble();
-    final lineLeft = (width - lineWidth) / 2;
+    final lineLeft =
+        metrics.contentLeft + (metrics.contentWidth - lineWidth) / 2;
     return [
       if (canGoPrevious)
         Positioned(
           key: const Key('readerTapEdgeTop'),
           left: lineLeft,
-          top: _kReaderTapEdgeInset,
+          top: metrics.topLineInset,
           width: lineWidth,
           height: _kReaderTapEdgeThickness,
           child: _ReaderTapEdgeLine(color: color),
@@ -69,7 +83,7 @@ class ReaderTapEdgeIndicator extends StatelessWidget {
         Positioned(
           key: const Key('readerTapEdgeBottom'),
           left: lineLeft,
-          bottom: _kReaderTapEdgeInset,
+          bottom: metrics.bottomLineInset,
           width: lineWidth,
           height: _kReaderTapEdgeThickness,
           child: _ReaderTapEdgeLine(color: color),
@@ -77,13 +91,14 @@ class ReaderTapEdgeIndicator extends StatelessWidget {
     ];
   }
 
-  List<Widget> _horizontalLines(double width, double height, Color color) {
+  List<Widget> _horizontalLines(_ReaderTapEdgeMetrics metrics, Color color) {
     final canGoLeft = pageProgressionRtl ? canGoNext : canGoPrevious;
     final canGoRight = pageProgressionRtl ? canGoPrevious : canGoNext;
-    final lineHeight = (height * 0.05)
+    final lineHeight = (metrics.contentHeight * 0.05)
         .clamp(_kReaderTapEdgeMinLength, _kReaderTapEdgeMaxLength)
         .toDouble();
-    final lineTop = (height - lineHeight) / 2;
+    final lineTop =
+        metrics.contentTop + (metrics.contentHeight - lineHeight) / 2;
     return [
       if (canGoLeft)
         Positioned(
@@ -105,6 +120,47 @@ class ReaderTapEdgeIndicator extends StatelessWidget {
         ),
     ];
   }
+}
+
+class _ReaderTapEdgeMetrics {
+  _ReaderTapEdgeMetrics({
+    required this.width,
+    required this.height,
+    required double topMargin,
+    required double bottomMargin,
+    required double sideMarginPercent,
+  }) : contentTop = topMargin.clamp(0.0, height).toDouble(),
+       contentBottom = bottomMargin.clamp(0.0, height).toDouble(),
+       contentLeft = (width * sideMarginPercent / 100)
+           .clamp(0.0, width / 2)
+           .toDouble();
+
+  final double width;
+  final double height;
+  final double contentTop;
+  final double contentBottom;
+  final double contentLeft;
+
+  double get contentRight => contentLeft;
+
+  double get contentWidth =>
+      (width - contentLeft - contentRight).clamp(0.0, width).toDouble();
+
+  double get contentHeight =>
+      (height - contentTop - contentBottom).clamp(0.0, height).toDouble();
+
+  double get topLineInset => _lineInsetForMargin(contentTop);
+
+  double get bottomLineInset => _lineInsetForMargin(contentBottom);
+
+  double get leftLineInset => _lineInsetForMargin(contentLeft);
+
+  double get rightLineInset => _lineInsetForMargin(contentRight);
+
+  static double _lineInsetForMargin(double margin) =>
+      (margin - _kReaderTapEdgeInset - _kReaderTapEdgeThickness)
+          .clamp(0.0, margin)
+          .toDouble();
 }
 
 class _ReaderTapEdgeLine extends StatelessWidget {
@@ -207,9 +263,9 @@ class _ReaderTapZoneHintOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fill = readerTheme.accentColor.withValues(alpha: 0.12);
-    final border = readerTheme.accentColor.withValues(alpha: 0.30);
-    final icon = readerTheme.accentColor.withValues(alpha: 0.88);
+    final fill = readerTheme.accentColor.withValues(alpha: 0.45);
+    final border = readerTheme.accentColor.withValues(alpha: 0.65);
+    final icon = readerTheme.accentColor.withValues(alpha: 0.95);
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;

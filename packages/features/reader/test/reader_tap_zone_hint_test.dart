@@ -71,6 +71,9 @@ void main() {
                   pageProgressionRtl: false,
                   canGoPrevious: false,
                   canGoNext: true,
+                  contentTopMargin: 65,
+                  contentBottomMargin: 35,
+                  contentSideMargin: 8,
                 ),
               ],
             ),
@@ -86,7 +89,7 @@ void main() {
       final bottomLine = tester.widget<Positioned>(
         find.byKey(const Key('readerTapEdgeBottom')),
       );
-      expect(bottomLine.bottom, 4.0);
+      expect(bottomLine.bottom, 29.0);
       expect(bottomLine.left, 386.0);
       expect(bottomLine.width, 28.0);
       expect(bottomLine.height, 2.0);
@@ -111,6 +114,9 @@ void main() {
                     pageProgressionRtl: true,
                     canGoPrevious: false,
                     canGoNext: true,
+                    contentTopMargin: 65,
+                    contentBottomMargin: 35,
+                    contentSideMargin: 8,
                   ),
                 ],
               ),
@@ -127,9 +133,9 @@ void main() {
           find.byKey(const Key('readerTapEdgeLeft')),
         );
         expect(leftLine.left, 4.0);
-        expect(leftLine.top, 286.0);
+        expect(leftLine.top, 302.5);
         expect(leftLine.width, 2.0);
-        expect(leftLine.height, 28.0);
+        expect(leftLine.height, 25.0);
       },
     );
   });

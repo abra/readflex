@@ -863,6 +863,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     // foliate-js customCSS. Chrome (passed-through Stack siblings)
     // pulls colours from the app theme themselves; they don't take
     // a `readerTheme` prop any more.
+    final layout = BookLayoutPreset.fromId(appearance.layoutId).data;
     final readerTheme = ReaderThemePreset.fromId(appearance.themeId).data;
     final systemUiStyle = readerSystemUiOverlayStyle(
       readerTheme: readerTheme,
@@ -900,6 +901,9 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
               pageProgressionRtl: pageProgressionRtl,
               canGoPrevious: canGoPrevious,
               canGoNext: canGoNext,
+              contentTopMargin: layout.topMargin,
+              contentBottomMargin: layout.bottomMargin,
+              contentSideMargin: appearance.sideMargin,
             ),
             const _ReaderTopChromeDriver(),
             const _ReaderPageBookmarkIndicatorDriver(),
