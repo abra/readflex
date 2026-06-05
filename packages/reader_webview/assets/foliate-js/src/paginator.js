@@ -352,7 +352,7 @@ class View {
   scrolled({ gap, columnWidth }) {
     const vertical = this.#vertical
     const doc = this.document
-    if (!doc) return
+    if (!doc?.documentElement || !doc.body) return
     setStylesImportant(doc.documentElement, {
       'box-sizing': 'border-box',
       'padding': vertical ? `${gap}px 0` : `0 ${gap}px`,
@@ -374,6 +374,7 @@ class View {
     this.#size = vertical ? height : width
 
     const doc = this.document
+    if (!doc?.documentElement || !doc.body) return
 
     const verticlePadding = `${gap / 2}px ${topMargin}px ${gap / 2}px ${bottomMargin}px`
     const horizontalPadding = `${topMargin}px ${gap / 2}px ${bottomMargin}px ${gap / 2}px`
@@ -442,16 +443,13 @@ class View {
     }
   }
   expand() {
-    // Readflex patch: bail when iframe is mid-transition. With our rAF
-    // coalescing on the ResizeObserver below, expand() can fire one
-    // frame after the iframe was unloaded for chapter swap, at which
-    // point `this.document` is null and the destructure throws.
-    if (!this.document) return
-    const { documentElement } = this.document
+    // Readflex: ResizeObserver can fire while the iframe document is replacing.
+    const { documentElement, body } = this.document ?? {}
+    if (!documentElement || !body || body.nodeType !== 1) return
     if (this.#column) {
       const side = this.#vertical ? 'height' : 'width'
       const otherSide = this.#vertical ? 'width' : 'height'
-      this.#contentRange.selectNodeContents(this.document.body)
+      this.#contentRange.selectNodeContents(body)
       const contentRect = this.#contentRange.getBoundingClientRect()
       const rootRect = documentElement.getBoundingClientRect()
       // offset caused by column break at the start of the page
