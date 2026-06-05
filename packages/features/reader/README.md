@@ -55,7 +55,7 @@ abstract class TextAction {
 | `ReaderSearchCubit`           | Book-search debounce, streamed results, progress and recent queries        |
 | `ReaderSelectionCubit`        | Current text selection (text + `cfiRange`)                                 |
 | `ReaderAppearanceCubit`       | Per-source reader appearance overrides over global preferences             |
-| `ReaderBrightnessCubit`       | Temporary application brightness override for active reader sessions       |
+| `ReaderBrightnessCubit`       | System/custom reader brightness state and active window override lifecycle |
 | `ReaderReviewReminderCubit`   | Periodic timer; flips `showReminder` when `onCheckDueItems` returns > 0    |
 
 `ReaderBloc.reportError(e, st)` is a public facade over the protected
@@ -100,7 +100,7 @@ composition root.
 - `book_repository`, `highlight_repository` — content, bookmark and highlight
   persistence
 - `preferences_service` — global reader appearance, per-source overrides,
-  search history, and brightness preference persistence
+  search history, and global reader brightness preference persistence
 - `screen_control_service` — content-only keep-awake plus temporary
   application brightness control
 - `reader_webview` — `BookReaderWebView`, `FoliateStyle`, `ReaderHighlight`

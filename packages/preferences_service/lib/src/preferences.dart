@@ -401,6 +401,8 @@ class Preferences {
     this.readerUseBookLayout = true,
     this.readerPageTurnStyle = ReaderPageTurnStyle.horizontal,
     this.readerSearchHistory = const [],
+    this.readerBrightness,
+    this.readerLastCustomBrightness = 0.7,
     this.readerAppearanceOverrides = const {},
     this.onboardingCompleted = false,
     this.hasCompletedSetup = false,
@@ -422,6 +424,8 @@ class Preferences {
   final bool readerUseBookLayout;
   final ReaderPageTurnStyle readerPageTurnStyle;
   final List<String> readerSearchHistory;
+  final double? readerBrightness;
+  final double readerLastCustomBrightness;
   final Map<String, ReaderAppearanceOverride> readerAppearanceOverrides;
 
   /// Whether the user has completed the onboarding flow.
@@ -478,6 +482,8 @@ class Preferences {
     bool? readerUseBookLayout,
     ReaderPageTurnStyle? readerPageTurnStyle,
     List<String>? readerSearchHistory,
+    Object? readerBrightness = _unset,
+    double? readerLastCustomBrightness,
     Map<String, ReaderAppearanceOverride>? readerAppearanceOverrides,
     bool? onboardingCompleted,
     bool? hasCompletedSetup,
@@ -499,6 +505,12 @@ class Preferences {
     readerUseBookLayout: readerUseBookLayout ?? this.readerUseBookLayout,
     readerPageTurnStyle: readerPageTurnStyle ?? this.readerPageTurnStyle,
     readerSearchHistory: readerSearchHistory ?? this.readerSearchHistory,
+    readerBrightness: identical(readerBrightness, _unset)
+        ? this.readerBrightness
+        : _copyReaderBrightness(readerBrightness),
+    readerLastCustomBrightness: _clampReaderBrightness(
+      readerLastCustomBrightness ?? this.readerLastCustomBrightness,
+    ),
     readerAppearanceOverrides:
         readerAppearanceOverrides ?? this.readerAppearanceOverrides,
     onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
@@ -525,6 +537,8 @@ class Preferences {
           readerUseBookLayout == other.readerUseBookLayout &&
           readerPageTurnStyle == other.readerPageTurnStyle &&
           listEquals(readerSearchHistory, other.readerSearchHistory) &&
+          readerBrightness == other.readerBrightness &&
+          readerLastCustomBrightness == other.readerLastCustomBrightness &&
           mapEquals(
             readerAppearanceOverrides,
             other.readerAppearanceOverrides,
@@ -550,6 +564,8 @@ class Preferences {
     readerUseBookLayout,
     readerPageTurnStyle,
     Object.hashAll(readerSearchHistory),
+    readerBrightness,
+    readerLastCustomBrightness,
     _hashReaderAppearanceOverrides(readerAppearanceOverrides),
     onboardingCompleted,
     hasCompletedSetup,
@@ -568,4 +584,13 @@ double? _copyOptionalDouble(Object? value, double? current) {
   if (identical(value, _unset)) return current;
   if (value == null) return null;
   return (value as num).toDouble();
+}
+
+double? _copyReaderBrightness(Object? value) {
+  if (value == null) return null;
+  return _clampReaderBrightness((value as num).toDouble());
+}
+
+double _clampReaderBrightness(double value) {
+  return value.clamp(0.05, 1.0).toDouble();
 }

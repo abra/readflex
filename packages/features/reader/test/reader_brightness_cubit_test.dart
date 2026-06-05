@@ -35,59 +35,99 @@ void main() {
     await Future<void>.delayed(Duration.zero);
 
     expect(cubit.state.usesSystemBrightness, isTrue);
-    expect(cubit.state.systemBrightness, 0.4);
-    expect(cubit.state.sliderValue, 0.4);
+    expect(cubit.state.systemBrightness, closeTo(0.4, 0.001));
+    expect(cubit.state.sliderValue, closeTo(0.4, 0.001));
+    expect(preferencesService.readerBrightness, isNull);
     expect(screenControlService.calls, const ['resetBrightness']);
   });
 
-  test('preview applies custom brightness and commit persists it', () async {
+  test(
+    'preview applies custom brightness and commit stores it globally',
+    () async {
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+
+      cubit.activate();
+      await Future<void>.delayed(Duration.zero);
+
+      cubit.previewBrightness(0.6);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(cubit.state.brightnessOverride, 0.6);
+      expect(preferencesService.readerBrightness, isNull);
+      expect(screenControlService.calls, [
+        'resetBrightness',
+        'set:${_controlToPlatform(0.6).toStringAsFixed(2)}',
+      ]);
+
+      cubit.commitBrightness(0.6);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(preferencesService.readerBrightness, 0.6);
+      expect(preferencesService.readerLastCustomBrightness, 0.6);
+      expect(preferencesService.readerBrightnessOverrideFor(sourceId), isNull);
+      expect(
+        preferencesService.readerBrightnessOverrideFor(otherSourceId),
+        isNull,
+      );
+    },
+  );
+
+  test(
+    'useSystemBrightness clears global custom value and resets platform',
+    () async {
+      await preferencesService.setReaderBrightness(0.55);
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+
+      cubit.activate();
+      await Future<void>.delayed(Duration.zero);
+      await cubit.useSystemBrightness();
+
+      expect(cubit.state.usesSystemBrightness, isTrue);
+      expect(preferencesService.readerBrightness, isNull);
+      expect(preferencesService.readerLastCustomBrightness, 0.55);
+      expect(screenControlService.calls, const ['set:0.55', 'resetBrightness']);
+    },
+  );
+
+  test('stored global brightness is applied on activate', () async {
+    await preferencesService.setReaderBrightness(0.55);
     final cubit = buildCubit();
     addTearDown(cubit.close);
 
     cubit.activate();
     await Future<void>.delayed(Duration.zero);
 
-    cubit.previewBrightness(0.6);
-    cubit.commitBrightness(0.6);
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-
-    expect(cubit.state.brightnessOverride, 0.6);
-    expect(preferencesService.readerBrightnessOverrideFor(sourceId), 0.6);
-    expect(
-      preferencesService.readerBrightnessOverrideFor(otherSourceId),
-      isNull,
-    );
-    expect(screenControlService.calls, const ['resetBrightness', 'set:0.60']);
+    expect(cubit.state.usesSystemBrightness, isFalse);
+    expect(cubit.state.brightnessOverride, 0.55);
+    expect(cubit.state.controlValue, 0.55);
+    expect(screenControlService.calls, const ['set:0.55']);
   });
 
-  test('useSystemBrightness clears preference and resets platform', () async {
-    await preferencesService.setReaderBrightnessOverride(sourceId, 0.5);
-    await preferencesService.setReaderBrightnessOverride(otherSourceId, 0.8);
-    final cubit = buildCubit();
-    addTearDown(cubit.close);
+  test(
+    'legacy per-source brightness is ignored and cleared on activate',
+    () async {
+      await preferencesService.setReaderBrightnessOverride(sourceId, 0.12);
+      await preferencesService.setReaderBrightnessOverride(otherSourceId, 0.8);
+      screenControlService.brightness = _controlToPlatform(0.5);
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
 
-    cubit.activate();
-    await Future<void>.delayed(Duration.zero);
-    await cubit.useSystemBrightness();
+      cubit.activate();
+      await Future<void>.delayed(Duration.zero);
 
-    expect(cubit.state.usesSystemBrightness, isTrue);
-    expect(preferencesService.readerBrightnessOverrideFor(sourceId), isNull);
-    expect(preferencesService.readerBrightnessOverrideFor(otherSourceId), 0.8);
-    expect(screenControlService.calls, const ['set:0.50', 'resetBrightness']);
-  });
-
-  test('source brightness is isolated per book', () async {
-    await preferencesService.setReaderBrightnessOverride(sourceId, 0.6);
-    await preferencesService.setReaderBrightnessOverride(otherSourceId, 0.8);
-
-    final cubit = buildCubit();
-    final otherCubit = buildCubit(id: otherSourceId);
-    addTearDown(cubit.close);
-    addTearDown(otherCubit.close);
-
-    expect(cubit.state.brightnessOverride, 0.6);
-    expect(otherCubit.state.brightnessOverride, 0.8);
-  });
+      expect(cubit.state.usesSystemBrightness, isTrue);
+      expect(cubit.state.systemBrightness, closeTo(0.5, 0.001));
+      expect(cubit.state.controlValue, closeTo(0.5, 0.001));
+      expect(preferencesService.readerBrightnessOverrideFor(sourceId), isNull);
+      expect(
+        preferencesService.readerBrightnessOverrideFor(otherSourceId),
+        0.8,
+      );
+      expect(screenControlService.calls, const ['resetBrightness']);
+    },
+  );
 
   test('clearing brightness preserves other appearance overrides', () async {
     await preferencesService.setReaderAppearanceOverride(
@@ -107,21 +147,45 @@ void main() {
     expect(override?.brightnessOverride, isNull);
   });
 
-  test('deactivate resets and activate reapplies custom brightness', () async {
-    await preferencesService.setReaderBrightnessOverride(sourceId, 0.4);
+  test('deactivate resets platform but preserves saved custom value', () async {
+    final cubit = buildCubit();
+    addTearDown(cubit.close);
+
+    cubit.activate();
+    await Future<void>.delayed(Duration.zero);
+    cubit.previewBrightness(0.45);
+    cubit.commitBrightness(0.45);
+    await Future<void>.delayed(Duration.zero);
+    await cubit.deactivate();
+
+    expect(cubit.state.usesSystemBrightness, isFalse);
+    expect(cubit.state.brightnessOverride, closeTo(0.45, 0.001));
+    expect(preferencesService.readerBrightness, closeTo(0.45, 0.001));
+    expect(screenControlService.calls, [
+      'resetBrightness',
+      'set:${_controlToPlatform(0.45).toStringAsFixed(2)}',
+      'resetBrightness',
+    ]);
+  });
+
+  test('reactivate in system mode reads the new platform brightness', () async {
     final cubit = buildCubit();
     addTearDown(cubit.close);
 
     cubit.activate();
     await Future<void>.delayed(Duration.zero);
     await cubit.deactivate();
+
+    screenControlService.brightness = 1.0;
     cubit.activate();
     await Future<void>.delayed(Duration.zero);
 
-    expect(cubit.state.systemBrightness, 0.4);
+    expect(cubit.state.usesSystemBrightness, isTrue);
+    expect(cubit.state.systemBrightness, 1.0);
+    expect(cubit.state.controlValue, 1.0);
     expect(
       screenControlService.calls,
-      const ['set:0.40', 'resetBrightness', 'set:0.40'],
+      const ['resetBrightness', 'resetBrightness', 'resetBrightness'],
     );
   });
 
@@ -133,19 +197,73 @@ void main() {
     await Future<void>.delayed(Duration.zero);
 
     expect(cubit.state.usesSystemBrightness, isTrue);
-    expect(cubit.state.sliderValue, 0.4);
+    expect(cubit.state.sliderValue, closeTo(0.4, 0.001));
 
     cubit.previewBrightness(cubit.state.sliderValue + 0.05);
     cubit.commitBrightness(cubit.state.sliderValue);
-    await Future<void>.delayed(const Duration(milliseconds: 250));
+    await Future<void>.delayed(Duration.zero);
 
     expect(cubit.state.brightnessOverride, closeTo(0.45, 0.001));
-    expect(preferencesService.readerBrightnessOverrideFor(sourceId), 0.45);
+    expect(preferencesService.readerBrightness, closeTo(0.45, 0.001));
   });
+
+  test(
+    'first custom step falls back to last custom when platform is unavailable',
+    () async {
+      await preferencesService.setReaderBrightness(0.6);
+      await preferencesService.setReaderBrightness(null);
+      screenControlService.brightness = null;
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+
+      cubit.activate();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(cubit.state.usesSystemBrightness, isTrue);
+      expect(cubit.state.systemBrightness, isNull);
+      expect(cubit.state.sliderValue, 0.6);
+
+      cubit.previewBrightness(cubit.state.sliderValue - 0.05);
+      cubit.commitBrightness(cubit.state.sliderValue);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(cubit.state.brightnessOverride, closeTo(0.55, 0.001));
+      expect(preferencesService.readerBrightness, closeTo(0.55, 0.001));
+    },
+  );
+
+  test(
+    'manual controls use low platform brightness as current value',
+    () async {
+      screenControlService.brightness = _controlToPlatform(0.29);
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+
+      cubit.activate();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(cubit.state.usesSystemBrightness, isTrue);
+      expect(cubit.state.systemBrightness, closeTo(0.29, 0.001));
+      expect(cubit.state.sliderValue, closeTo(0.29, 0.001));
+      expect(cubit.state.controlValue, closeTo(0.29, 0.001));
+
+      cubit.previewBrightness(cubit.state.controlValue - 0.05);
+      cubit.commitBrightness(cubit.state.controlValue);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(cubit.state.brightnessOverride, closeTo(0.24, 0.001));
+      expect(preferencesService.readerBrightness, closeTo(0.24, 0.001));
+    },
+  );
 }
+
+double _controlToPlatform(double value) =>
+    value.clamp(ReaderBrightnessCubit.minBrightness, 1.0).toDouble();
 
 class _FakeScreenControlService implements ScreenControlService {
   final List<String> calls = [];
+  final List<double> writes = [];
+  double? brightness = _controlToPlatform(0.4);
 
   @override
   Future<void> keepAwake() async {
@@ -158,10 +276,11 @@ class _FakeScreenControlService implements ScreenControlService {
   }
 
   @override
-  Future<double?> readApplicationBrightness() async => 0.4;
+  Future<double?> readApplicationBrightness() async => brightness;
 
   @override
   Future<void> setApplicationBrightness(double brightness) async {
+    writes.add(brightness);
     calls.add('set:${brightness.toStringAsFixed(2)}');
   }
 

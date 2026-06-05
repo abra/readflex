@@ -39,7 +39,8 @@ This is **not** where auth tokens live — those go through `auth_service` /
 | `readerOverrideFont`       | `bool`      | `true`      |
 | `readerOverrideColor`      | `bool`      | `true`      |
 | `readerUseBookLayout`      | `bool`      | `true`      |
-| `readerBrightnessOverride` | `double?`   | `null`      |
+| `readerBrightness`         | `double?`   | `null`      |
+| `readerLastCustomBrightness` | `double`  | `0.7`       |
 | `readerSearchHistory`      | `List<String>` | `[]`     |
 | `readerAppearanceOverrides`| `Map<String, ReaderAppearanceOverride>` | `{}` |
 | `onboardingCompleted`      | `bool`      | `false`     |

@@ -39,6 +39,8 @@ void main() {
       expect(prefs.readerUseBookLayout, isTrue);
       expect(prefs.readerPageTurnStyle, ReaderPageTurnStyle.horizontal);
       expect(prefs.readerSearchHistory, isEmpty);
+      expect(prefs.readerBrightness, isNull);
+      expect(prefs.readerLastCustomBrightness, 0.7);
       expect(prefs.readerAppearanceOverrides, isEmpty);
       expect(prefs.onboardingCompleted, isFalse);
       expect(prefs.hasCompletedSetup, isFalse);
@@ -52,6 +54,8 @@ void main() {
         catalogLayoutMode: 'list',
         readerPageTurnStyle: ReaderPageTurnStyle.vertical,
         readerSearchHistory: const ['design patterns', 'bloc'],
+        readerBrightness: 0.55,
+        readerLastCustomBrightness: 0.8,
         readerAppearanceOverrides: const {
           'source-1': ReaderAppearanceOverride(
             fontId: 'sans',
@@ -66,6 +70,8 @@ void main() {
       expect(updated.catalogLayoutMode, 'list');
       expect(updated.readerPageTurnStyle, ReaderPageTurnStyle.vertical);
       expect(updated.readerSearchHistory, ['design patterns', 'bloc']);
+      expect(updated.readerBrightness, 0.55);
+      expect(updated.readerLastCustomBrightness, 0.8);
       expect(updated.readerAppearanceOverrides['source-1']?.fontId, 'sans');
       expect(updated.readerBrightnessOverrideFor('source-1'), 0.42);
       expect(updated.onboardingCompleted, isTrue);
@@ -88,6 +94,14 @@ void main() {
       expect(a.hashCode, b.hashCode);
     });
 
+    test('copyWith can clear reader brightness', () {
+      const prefs = Preferences(readerBrightness: 0.55);
+      final updated = prefs.copyWith(readerBrightness: null);
+
+      expect(updated.readerBrightness, isNull);
+      expect(updated.readerLastCustomBrightness, 0.7);
+    });
+
     test('equality compares readerAppearanceOverrides by value', () {
       const a = Preferences(
         readerAppearanceOverrides: {
@@ -107,6 +121,11 @@ void main() {
       const a = Preferences();
       final b = a.copyWith(themeMode: ThemeMode.dark);
       expect(a, isNot(equals(b)));
+      expect(a, isNot(equals(a.copyWith(readerBrightness: 0.55))));
+      expect(
+        a,
+        isNot(equals(a.copyWith(readerLastCustomBrightness: 0.55))),
+      );
     });
 
     test('readerBrightnessOverrideFor reads source-specific override', () {

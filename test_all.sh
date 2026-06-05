@@ -41,6 +41,7 @@ run "auth_service"                 "flutter test test/" "$SCRIPT_DIR/packages/au
 run "connectivity_service"         "flutter test test/" "$SCRIPT_DIR/packages/connectivity_service"
 run "subscription_service"         "flutter test test/" "$SCRIPT_DIR/packages/subscription_service"
 run "notification_service"         "flutter test test/" "$SCRIPT_DIR/packages/notification_service"
+run "device_screen_brightness"    "flutter test test/" "$SCRIPT_DIR/packages/device_screen_brightness"
 run "screen_control_service"       "flutter test test/" "$SCRIPT_DIR/packages/screen_control_service"
 run "preferences_service"         "flutter test test/" "$SCRIPT_DIR/packages/preferences_service"
 run "reader_server"               "flutter test test/" "$SCRIPT_DIR/packages/reader_server"

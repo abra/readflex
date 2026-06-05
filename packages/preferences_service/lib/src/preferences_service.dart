@@ -63,6 +63,21 @@ class PreferencesService {
   double? readerBrightnessOverrideFor(String sourceId) =>
       _current.readerBrightnessOverrideFor(sourceId);
 
+  double? get readerBrightness => _current.readerBrightness;
+
+  double get readerLastCustomBrightness => _current.readerLastCustomBrightness;
+
+  Future<void> setReaderBrightness(double? brightness) async {
+    await update((prefs) {
+      final nextBrightness = _normalizeReaderBrightness(brightness);
+      return prefs.copyWith(
+        readerBrightness: nextBrightness,
+        readerLastCustomBrightness:
+            nextBrightness ?? prefs.readerLastCustomBrightness,
+      );
+    });
+  }
+
   Future<void> setReaderAppearanceOverride(
     String sourceId,
     ReaderAppearanceOverride override,
@@ -132,4 +147,9 @@ class PreferencesService {
   }
 
   Future<void> dispose() => _controller.close();
+}
+
+double? _normalizeReaderBrightness(double? value) {
+  if (value == null) return null;
+  return value.clamp(0.05, 1.0).toDouble();
 }

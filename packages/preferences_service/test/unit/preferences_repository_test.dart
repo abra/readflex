@@ -36,6 +36,8 @@ void main() {
       expect(prefs.readerUseBookLayout, isTrue);
       expect(prefs.readerPageTurnStyle, ReaderPageTurnStyle.horizontal);
       expect(prefs.readerSearchHistory, isEmpty);
+      expect(prefs.readerBrightness, isNull);
+      expect(prefs.readerLastCustomBrightness, 0.7);
       expect(prefs.readerAppearanceOverrides, isEmpty);
       expect(prefs.onboardingCompleted, isFalse);
       expect(prefs.hasCompletedSetup, isFalse);
@@ -60,6 +62,8 @@ void main() {
         readerUseBookLayout: false,
         readerPageTurnStyle: ReaderPageTurnStyle.vertical,
         readerSearchHistory: ['design patterns', 'bloc'],
+        readerBrightness: 0.65,
+        readerLastCustomBrightness: 0.8,
         readerAppearanceOverrides: {
           'source-1': ReaderAppearanceOverride(
             themeId: 'night',
@@ -107,6 +111,8 @@ void main() {
       expect(map['readerUseBookLayout'], isFalse);
       expect(map['readerPageTurnStyle'], 'vertical');
       expect(map.containsKey('readerBrightnessOverride'), isFalse);
+      expect(map['readerBrightness'], isNull);
+      expect(map['readerLastCustomBrightness'], 0.7);
       expect(map['readerSearchHistory'], isEmpty);
       expect(map['readerAppearanceOverrides'], isEmpty);
       expect(map['readerThemeId'], 'paper');
@@ -149,6 +155,8 @@ void main() {
         expect(prefs.readerUseBookLayout, isTrue);
         expect(prefs.readerPageTurnStyle, ReaderPageTurnStyle.horizontal);
         expect(prefs.readerSearchHistory, isEmpty);
+        expect(prefs.readerBrightness, isNull);
+        expect(prefs.readerLastCustomBrightness, 0.7);
         expect(prefs.readerAppearanceOverrides, isEmpty);
       },
     );
@@ -167,6 +175,24 @@ void main() {
       final prefs = await repo.load(_supportedCodes);
 
       expect(prefs.readerSearchHistory, ['flutter', 'bloc']);
+    });
+
+    test('load() clamps global reader brightness from JSON', () async {
+      final storage = PreferencesStorage();
+      await storage.setString(
+        _key,
+        jsonEncode(<String, Object?>{
+          '_schemaVersion': 9,
+          'readerBrightness': 2.0,
+          'readerLastCustomBrightness': 0.0,
+        }),
+      );
+
+      final repo = PreferencesRepository(storage);
+      final prefs = await repo.load(_supportedCodes);
+
+      expect(prefs.readerBrightness, 1.0);
+      expect(prefs.readerLastCustomBrightness, 0.05);
     });
 
     test('load() clamps source reader brightness override from JSON', () async {
@@ -374,7 +400,7 @@ void main() {
       final raw = await storage.getString(_key);
       final map = jsonDecode(raw!) as Map<String, Object?>;
 
-      expect(map['_schemaVersion'], 8);
+      expect(map['_schemaVersion'], 9);
     });
 
     test(

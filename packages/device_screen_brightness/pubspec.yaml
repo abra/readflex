@@ -1,0 +1,47 @@
+name: device_screen_brightness
+description: >-
+  Control the screen brightness from Flutter. Provides getBrightness,
+  setBrightness, incrementBrightness, decrementBrightness and
+  streamBrightness with synchronous and compute-based async variants.
+  Uses JNIgen on Android and FFI + FFIgen on iOS, macOS, Linux and Windows.
+version: 0.3.1
+homepage: https://github.com/arcas0803/device_screen_brightness
+repository: https://github.com/arcas0803/device_screen_brightness
+issue_tracker: https://github.com/arcas0803/device_screen_brightness/issues
+topics:
+  - brightness
+  - screen
+  - ffi
+  - platform
+
+environment:
+  sdk: ^3.11.3
+  flutter: ">=3.3.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  plugin_platform_interface: ^2.1.8
+  jni: ^1.0.0
+
+dev_dependencies:
+  ffi: ^2.2.0
+  ffigen: ^20.1.1
+  jnigen: ^0.16.0
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        ffiPlugin: true
+      ios:
+        ffiPlugin: true
+      macos:
+        ffiPlugin: true
+      linux:
+        ffiPlugin: true
+      windows:
+        ffiPlugin: true

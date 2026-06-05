@@ -188,6 +188,26 @@ void main() {
       expect(service2.readerBrightnessOverrideFor('source-2'), isNull);
     });
 
+    test('reader brightness persists globally with system reset', () async {
+      final service = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+
+      await service.setReaderBrightness(0.55);
+
+      final service2 = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+
+      expect(service2.readerBrightness, 0.55);
+      expect(service2.readerLastCustomBrightness, 0.55);
+
+      await service2.setReaderBrightness(null);
+
+      expect(service2.readerBrightness, isNull);
+      expect(service2.readerLastCustomBrightness, 0.55);
+    });
+
     test('reader brightness clear preserves other source overrides', () async {
       final service = await PreferencesService.create(
         supportedCodes: _supportedCodes,

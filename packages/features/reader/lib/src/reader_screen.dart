@@ -61,6 +61,32 @@ const _kReaderBrightnessChromeDragHeight =
 
 const _kReaderTocTileEstimatedHeight = 60.0;
 
+double _snapReaderBrightnessButtonValue(double value, double delta) {
+  final percent = value * 100;
+  final stepPercent = _kReaderBrightnessStep * 100;
+  final steppedPercent = delta.isNegative
+      ? ((percent - _kReaderBrightnessEpsilon) / stepPercent).floor() *
+            stepPercent
+      : ((percent + _kReaderBrightnessEpsilon) / stepPercent).ceil() *
+            stepPercent;
+  return (steppedPercent / 100)
+      .clamp(
+        ReaderBrightnessCubit.minBrightness,
+        ReaderBrightnessCubit.maxBrightness,
+      )
+      .toDouble();
+}
+
+String _readerBrightnessDebugValue(double? value) {
+  if (value == null) return 'null';
+  return '${(value * 100).round()}% (${value.toStringAsFixed(3)})';
+}
+
+String _readerBrightnessLabel(ReaderBrightnessState state) {
+  if (!state.usesSystemBrightness) return '${state.percent}%';
+  return 'System';
+}
+
 final _readerDrawerCloseButtonStyle = IconButton.styleFrom(
   backgroundColor: Colors.transparent,
   disabledBackgroundColor: Colors.transparent,
@@ -1016,33 +1042,38 @@ class ReaderBrightnessChromeDriver extends StatelessWidget {
         uiState.chromeVisible &&
         uiState.overlay == ReaderOverlay.none &&
         !_selectionActionsVisible(hasSelection);
-    double brightnessAfterDelta(double delta) {
-      return (brightnessState.sliderValue + delta)
-          .clamp(
-            ReaderBrightnessCubit.minBrightness,
-            ReaderBrightnessCubit.maxBrightness,
-          )
-          .toDouble();
+    final controlValue = brightnessState.controlValue;
+    double brightnessAfterDelta(double value, double delta) {
+      return _snapReaderBrightnessButtonValue(value, delta);
     }
 
     void changeBrightnessBy(double delta) {
-      final nextValue = brightnessAfterDelta(delta);
+      final currentValue = cubit.state.controlValue;
+      final nextValue = brightnessAfterDelta(currentValue, delta);
+      debugPrint(
+        '[reader-brightness] widget-button '
+        'delta=${_readerBrightnessDebugValue(delta)} '
+        'from=${_readerBrightnessDebugValue(currentValue)} '
+        'to=${_readerBrightnessDebugValue(nextValue)} '
+        'system=${_readerBrightnessDebugValue(cubit.state.systemBrightness)} '
+        'override=${_readerBrightnessDebugValue(cubit.state.brightnessOverride)}',
+      );
       cubit.previewBrightness(nextValue);
       cubit.commitBrightness(nextValue);
     }
 
     return _ReaderBrightnessChrome(
       visible: visible,
-      value: brightnessState.sliderValue,
-      label: brightnessState.usesSystemBrightness
-          ? 'System'
-          : '${brightnessState.percent}%',
+      value: controlValue,
+      systemValue: brightnessState.systemBrightness,
+      overrideValue: brightnessState.brightnessOverride,
+      label: _readerBrightnessLabel(brightnessState),
       usesSystemBrightness: brightnessState.usesSystemBrightness,
       canIncrease:
-          brightnessState.sliderValue <
+          controlValue <
           ReaderBrightnessCubit.maxBrightness - _kReaderBrightnessEpsilon,
       canDecrease:
-          brightnessState.sliderValue >
+          controlValue >
           ReaderBrightnessCubit.minBrightness + _kReaderBrightnessEpsilon,
       onIncrease: () => changeBrightnessBy(_kReaderBrightnessStep),
       onDecrease: () => changeBrightnessBy(-_kReaderBrightnessStep),
@@ -1057,6 +1088,8 @@ class _ReaderBrightnessChrome extends StatefulWidget {
   const _ReaderBrightnessChrome({
     required this.visible,
     required this.value,
+    required this.systemValue,
+    required this.overrideValue,
     required this.label,
     required this.usesSystemBrightness,
     required this.canIncrease,
@@ -1070,6 +1103,8 @@ class _ReaderBrightnessChrome extends StatefulWidget {
 
   final bool visible;
   final double value;
+  final double? systemValue;
+  final double? overrideValue;
   final String label;
   final bool usesSystemBrightness;
   final bool canIncrease;
@@ -1087,6 +1122,40 @@ class _ReaderBrightnessChrome extends StatefulWidget {
 
 class _ReaderBrightnessChromeState extends State<_ReaderBrightnessChrome> {
   double? _dragPreviewValue;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.visible) {
+      _logWidgetBrightness('visible');
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _ReaderBrightnessChrome oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.visible) return;
+    final becameVisible = !oldWidget.visible;
+    final valueChanged =
+        oldWidget.value != widget.value ||
+        oldWidget.systemValue != widget.systemValue ||
+        oldWidget.overrideValue != widget.overrideValue ||
+        oldWidget.usesSystemBrightness != widget.usesSystemBrightness;
+    if (becameVisible || valueChanged) {
+      _logWidgetBrightness(becameVisible ? 'visible' : 'update');
+    }
+  }
+
+  void _logWidgetBrightness(String event) {
+    debugPrint(
+      '[reader-brightness] widget-$event '
+      'mode=${widget.usesSystemBrightness ? 'system' : 'custom'} '
+      'widget=${_readerBrightnessDebugValue(widget.value)} '
+      'system=${_readerBrightnessDebugValue(widget.systemValue)} '
+      'override=${_readerBrightnessDebugValue(widget.overrideValue)} '
+      'label=${widget.label}',
+    );
+  }
 
   void _handleVerticalDragUpdate(DragUpdateDetails details) {
     final dy = details.primaryDelta;
@@ -1110,6 +1179,12 @@ class _ReaderBrightnessChromeState extends State<_ReaderBrightnessChrome> {
     final value = _dragPreviewValue;
     if (value == null) return;
     _dragPreviewValue = null;
+    debugPrint(
+      '[reader-brightness] widget-drag-end '
+      'value=${_readerBrightnessDebugValue(value)} '
+      'system=${_readerBrightnessDebugValue(widget.systemValue)} '
+      'override=${_readerBrightnessDebugValue(widget.overrideValue)}',
+    );
     widget.onDragEnd(value);
   }
 
@@ -1140,56 +1215,58 @@ class _ReaderBrightnessChromeState extends State<_ReaderBrightnessChrome> {
                 offset: widget.visible ? Offset.zero : const Offset(0.18, 0),
                 duration: _kChromeAnimDuration,
                 curve: curve,
-                child: GestureDetector(
-                  key: const ValueKey('readerBrightnessChromeDragArea'),
-                  behavior: HitTestBehavior.opaque,
-                  onVerticalDragUpdate: _handleVerticalDragUpdate,
-                  onVerticalDragEnd: (_) => _flushDrag(),
-                  onVerticalDragCancel: _flushDrag,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: cs.surface,
-                      borderRadius: BorderRadius.circular(AppRadius.full),
-                      border: Border.all(
-                        color: borderColor,
-                        width: 1 / MediaQuery.devicePixelRatioOf(context),
-                      ),
-                      boxShadow: AppShadows.panelUp,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: cs.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                    border: Border.all(
+                      color: borderColor,
+                      width: 1 / MediaQuery.devicePixelRatioOf(context),
                     ),
-                    child: SizedBox(
-                      width: _kReaderBrightnessChromeWidth,
-                      height: _kReaderBrightnessChromeHeight,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.xs,
-                          vertical: AppSpacing.sm,
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            _ReaderBrightnessStepButton(
-                              tooltip: 'Increase brightness',
-                              icon: AppIcons.lightMode,
-                              enabled: widget.canIncrease,
-                              foreground: foreground,
-                              onPressed: widget.onIncrease,
+                    boxShadow: AppShadows.panelUp,
+                  ),
+                  child: SizedBox(
+                    width: _kReaderBrightnessChromeWidth,
+                    height: _kReaderBrightnessChromeHeight,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xs,
+                        vertical: AppSpacing.sm,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _ReaderBrightnessStepButton(
+                            tooltip: 'Increase brightness',
+                            icon: AppIcons.lightMode,
+                            enabled: widget.canIncrease,
+                            foreground: foreground,
+                            onPressed: widget.onIncrease,
+                          ),
+                          GestureDetector(
+                            key: const ValueKey(
+                              'readerBrightnessChromeDragArea',
                             ),
-                            _ReaderBrightnessValueButton(
+                            behavior: HitTestBehavior.opaque,
+                            onVerticalDragUpdate: _handleVerticalDragUpdate,
+                            onVerticalDragEnd: (_) => _flushDrag(),
+                            onVerticalDragCancel: _flushDrag,
+                            child: _ReaderBrightnessValueButton(
                               widget.label,
                               usesSystemBrightness: widget.usesSystemBrightness,
                               onPressed: widget.usesSystemBrightness
                                   ? null
                                   : widget.onUseSystem,
                             ),
-                            _ReaderBrightnessStepButton(
-                              tooltip: 'Decrease brightness',
-                              icon: AppIcons.brightnessLow,
-                              enabled: widget.canDecrease,
-                              foreground: foreground,
-                              onPressed: widget.onDecrease,
-                            ),
-                          ],
-                        ),
+                          ),
+                          _ReaderBrightnessStepButton(
+                            tooltip: 'Decrease brightness',
+                            icon: AppIcons.brightnessLow,
+                            enabled: widget.canDecrease,
+                            foreground: foreground,
+                            onPressed: widget.onDecrease,
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -1261,7 +1338,7 @@ class _ReaderBrightnessValueButton extends StatelessWidget {
       button: true,
       enabled: onPressed != null,
       label: usesSystemBrightness
-          ? 'Using system brightness'
+          ? 'Using system brightness: $label'
           : 'Use system brightness',
       child: Material(
         color: active
@@ -1277,21 +1354,15 @@ class _ReaderBrightnessValueButton extends StatelessWidget {
             child: Center(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
-                child: usesSystemBrightness
-                    ? Icon(
-                        AppIcons.deviceMode,
-                        size: AppIconSize.sm,
-                        color: cs.onSurface,
-                      )
-                    : Text(
-                        label,
-                        maxLines: 1,
-                        style: text.labelSmall.copyWith(
-                          color: cs.primary,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.1,
-                        ),
-                      ),
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: text.labelSmall.copyWith(
+                    color: active ? cs.primary : cs.onSurface,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.1,
+                  ),
+                ),
               ),
             ),
           ),

@@ -1,0 +1,8 @@
+name: DeviceScreenBrightnessBindings
+description: Bindings for device_screen_brightness native library.
+output: "lib/device_screen_brightness_bindings_generated.dart"
+headers:
+  entry-points:
+    - "src/device_screen_brightness.h"
+  include-directives:
+    - "src/device_screen_brightness.h"

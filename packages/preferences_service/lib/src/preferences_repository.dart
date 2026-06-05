@@ -33,7 +33,8 @@ class PreferencesRepository {
   ///   6: add readerTextAlignment for left/justified book text.
   ///   7: move reader brightness into per-source reader appearance overrides.
   ///   8: raise the default reader side margin from 6% to 8%.
-  static const _currentSchemaVersion = 8;
+  ///   9: add global reader brightness with system/default represented by null.
+  static const _currentSchemaVersion = 9;
 
   final PreferencesStorage _storage;
 
@@ -83,6 +84,9 @@ class PreferencesRepository {
           map['readerPageTurnStyle'],
         ),
         readerSearchHistory: _readStringList(map['readerSearchHistory']),
+        readerBrightness: _readReaderBrightness(map['readerBrightness']),
+        readerLastCustomBrightness:
+            _readReaderBrightness(map['readerLastCustomBrightness']) ?? 0.7,
         readerAppearanceOverrides: _readReaderAppearanceOverrides(
           map['readerAppearanceOverrides'],
         ),
@@ -121,6 +125,8 @@ class PreferencesRepository {
       'readerUseBookLayout': prefs.readerUseBookLayout,
       'readerPageTurnStyle': prefs.readerPageTurnStyle.id,
       'readerSearchHistory': prefs.readerSearchHistory,
+      'readerBrightness': prefs.readerBrightness,
+      'readerLastCustomBrightness': prefs.readerLastCustomBrightness,
       'readerAppearanceOverrides': _writeReaderAppearanceOverrides(
         prefs.readerAppearanceOverrides,
       ),
@@ -143,6 +149,11 @@ class PreferencesRepository {
   static List<String> _readStringList(Object? value) {
     if (value is! List) return const [];
     return value.whereType<String>().toList(growable: false);
+  }
+
+  static double? _readReaderBrightness(Object? value) {
+    if (value is! num) return null;
+    return value.toDouble().clamp(0.05, 1.0).toDouble();
   }
 
   static ReaderTextAlignment _readReaderTextAlignment(Object? value) {

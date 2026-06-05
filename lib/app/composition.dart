@@ -161,7 +161,7 @@ Future<DependenciesContainer> createDependenciesContainer(
   const subscriptionService = NoopSubscriptionService();
   final connectivityService = await ConnectivityPlusService.create();
   const notificationService = NoopNotificationService();
-  const screenControlService = WakelockScreenControlService();
+  final screenControlService = WakelockScreenControlService();
   final articleExtractionService = TrafilaturaArticleExtractionService(
     baseUri: Uri.parse(config.articleCleanerBaseUrl),
     apiKey: config.articleCleanerApiKey.isEmpty

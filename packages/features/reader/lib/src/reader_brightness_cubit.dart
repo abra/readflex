@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:screen_control_service/screen_control_service.dart';
@@ -8,23 +9,29 @@ import 'package:screen_control_service/screen_control_service.dart';
 class ReaderBrightnessState extends Equatable {
   const ReaderBrightnessState({
     required this.brightnessOverride,
+    required this.lastCustomBrightness,
     this.systemBrightness,
   });
 
   final double? brightnessOverride;
+  final double lastCustomBrightness;
   final double? systemBrightness;
 
   bool get usesSystemBrightness => brightnessOverride == null;
 
   double get sliderValue =>
-      brightnessOverride ??
-      systemBrightness ??
-      ReaderBrightnessCubit.defaultCustomBrightness;
+      brightnessOverride ?? systemBrightness ?? lastCustomBrightness;
+
+  double get controlValue => sliderValue;
 
   int get percent => (sliderValue * 100).round();
 
   @override
-  List<Object?> get props => [brightnessOverride, systemBrightness];
+  List<Object?> get props => [
+    brightnessOverride,
+    lastCustomBrightness,
+    systemBrightness,
+  ];
 }
 
 class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
@@ -37,25 +44,22 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
        _sourceId = sourceId,
        super(
          ReaderBrightnessState(
-           brightnessOverride: preferencesService.readerBrightnessOverrideFor(
-             sourceId,
+           brightnessOverride: _storedBrightness(
+             preferencesService.readerBrightness,
+           ),
+           lastCustomBrightness: _clampBrightness(
+             preferencesService.readerLastCustomBrightness,
            ),
          ),
-       ) {
-    _prefsSub = _preferencesService.stream.listen(_onPreferencesChanged);
-  }
+       );
 
   static const double minBrightness = 0.05;
   static const double maxBrightness = 1.0;
   static const double defaultCustomBrightness = 0.7;
-  static const _commitDebounce = Duration(milliseconds: 200);
 
   final PreferencesService _preferencesService;
   final ScreenControlService _screenControlService;
   final String _sourceId;
-  late final StreamSubscription<Preferences> _prefsSub;
-  Timer? _commitTimer;
-  double? _pendingBrightness;
   bool _active = false;
 
   void activate() {
@@ -65,6 +69,8 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
   }
 
   Future<void> _activate() async {
+    await _clearLegacySourceBrightnessOverride();
+    _refreshStoredBrightness();
     if (state.usesSystemBrightness) {
       await _resetPlatform();
       await _readPlatformBrightness();
@@ -82,60 +88,62 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
 
   void previewBrightness(double value) {
     final nextValue = _clampBrightness(value);
-    if (state.brightnessOverride == nextValue) return;
-    emit(
-      ReaderBrightnessState(
-        brightnessOverride: nextValue,
-        systemBrightness: state.systemBrightness,
-      ),
+    final next = ReaderBrightnessState(
+      brightnessOverride: nextValue,
+      lastCustomBrightness: nextValue,
+      systemBrightness: state.systemBrightness,
     );
+    if (state != next) emit(next);
     unawaited(_syncPlatform());
   }
 
   void commitBrightness(double value) {
-    _pendingBrightness = _clampBrightness(value);
-    _commitTimer?.cancel();
-    _commitTimer = Timer(_commitDebounce, _flushBrightness);
+    final nextValue = _clampBrightness(value);
+    if (state.brightnessOverride != nextValue) {
+      previewBrightness(nextValue);
+    }
+    unawaited(_storeCustomBrightness(nextValue));
   }
 
   Future<void> useSystemBrightness() async {
-    _pendingBrightness = null;
-    _commitTimer?.cancel();
-    _commitTimer = null;
-    final currentSystemBrightness = state.systemBrightness;
+    await _clearLegacySourceBrightnessOverride();
     if (!state.usesSystemBrightness) {
       emit(
         ReaderBrightnessState(
           brightnessOverride: null,
-          systemBrightness: currentSystemBrightness,
+          lastCustomBrightness: state.lastCustomBrightness,
+          systemBrightness: state.systemBrightness,
         ),
       );
     }
-    await _preferencesService.setReaderBrightnessOverride(_sourceId, null);
+    await _preferencesService.setReaderBrightness(null);
     await _resetPlatform();
-    if (currentSystemBrightness == null) {
-      await _readPlatformBrightness();
-    }
+    await _readPlatformBrightness();
   }
 
-  void _onPreferencesChanged(Preferences prefs) {
+  void _refreshStoredBrightness() {
     if (isClosed) return;
-    if (prefs != _preferencesService.current) return;
     final next = ReaderBrightnessState(
-      brightnessOverride: prefs.readerBrightnessOverrideFor(_sourceId),
+      brightnessOverride: _storedBrightness(
+        _preferencesService.readerBrightness,
+      ),
+      lastCustomBrightness: _clampBrightness(
+        _preferencesService.readerLastCustomBrightness,
+      ),
       systemBrightness: state.systemBrightness,
     );
-    if (next == state) return;
-    emit(next);
-    unawaited(_syncPlatform());
+    if (state != next) emit(next);
   }
 
-  Future<void> _flushBrightness() async {
-    _commitTimer = null;
-    final value = _pendingBrightness;
-    if (value == null) return;
-    _pendingBrightness = null;
-    await _preferencesService.setReaderBrightnessOverride(_sourceId, value);
+  Future<void> _storeCustomBrightness(double value) async {
+    await _preferencesService.setReaderBrightness(_clampBrightness(value));
+  }
+
+  Future<void> _clearLegacySourceBrightnessOverride() async {
+    if (_preferencesService.readerBrightnessOverrideFor(_sourceId) == null) {
+      return;
+    }
+    await _preferencesService.setReaderBrightnessOverride(_sourceId, null);
   }
 
   Future<void> _syncPlatform() {
@@ -151,9 +159,16 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
       final brightness = await _screenControlService
           .readApplicationBrightness();
       if (brightness == null || isClosed) return;
+      final systemBrightness = _platformToControlBrightness(brightness);
+      _logBrightness(
+        'read-platform',
+        platformBrightness: brightness,
+        systemBrightness: systemBrightness,
+      );
       final next = ReaderBrightnessState(
         brightnessOverride: state.brightnessOverride,
-        systemBrightness: _clampBrightness(brightness),
+        lastCustomBrightness: state.lastCustomBrightness,
+        systemBrightness: systemBrightness,
       );
       if (next == state) return;
       emit(next);
@@ -164,7 +179,13 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
 
   Future<void> _setPlatformBrightness(double value) async {
     try {
-      await _screenControlService.setApplicationBrightness(value);
+      final platformBrightness = _controlToPlatformBrightness(value);
+      _logBrightness(
+        'set-platform',
+        targetBrightness: value,
+        platformBrightness: platformBrightness,
+      );
+      await _screenControlService.setApplicationBrightness(platformBrightness);
     } catch (e, st) {
       addError(e, st);
     }
@@ -172,23 +193,55 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
 
   Future<void> _resetPlatform() async {
     try {
+      _logBrightness('reset-platform');
       await _screenControlService.resetApplicationBrightness();
     } catch (e, st) {
       addError(e, st);
     }
   }
 
+  void _logBrightness(
+    String event, {
+    double? systemBrightness,
+    double? targetBrightness,
+    double? platformBrightness,
+  }) {
+    debugPrint(
+      '[reader-brightness] $event '
+      'mode=${state.usesSystemBrightness ? 'system' : 'custom'} '
+      'widget=${_debugBrightness(state.controlValue)} '
+      'system=${_debugBrightness(systemBrightness ?? state.systemBrightness)} '
+      'override=${_debugBrightness(state.brightnessOverride)} '
+      'last=${_debugBrightness(state.lastCustomBrightness)} '
+      'target=${_debugBrightness(targetBrightness)} '
+      'platform=${_debugBrightness(platformBrightness)}',
+    );
+  }
+
+  static double? _storedBrightness(double? value) {
+    if (value == null) return null;
+    return _clampBrightness(value);
+  }
+
   static double _clampBrightness(double value) =>
       value.clamp(minBrightness, maxBrightness).toDouble();
 
+  static double _platformToControlBrightness(double value) =>
+      value.clamp(0.0, 1.0).toDouble();
+
+  static double _controlToPlatformBrightness(double value) =>
+      _clampBrightness(value);
+
+  static String _debugBrightness(double? value) {
+    if (value == null) return 'null';
+    return '${(value * 100).round()}% (${value.toStringAsFixed(3)})';
+  }
+
   @override
   Future<void> close() async {
-    _commitTimer?.cancel();
-    await _flushBrightness();
     if (_active) {
       await deactivate();
     }
-    await _prefsSub.cancel();
     return super.close();
   }
 }
