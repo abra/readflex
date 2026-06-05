@@ -66,6 +66,45 @@ void main() {
     expect(find.text('Warm'), findsOneWidget);
   });
 
+  testWidgets('keeps appearance sheet height stable across tabs', (
+    tester,
+  ) async {
+    await tester.openAppearanceSheet(cubit);
+
+    final fontHeight = tester
+        .getSize(find.byType(ActionBottomSheetLayout))
+        .height;
+
+    await tester.tap(find.text('Layout'));
+    await tester.pumpAndSettle();
+    final layoutHeight = tester
+        .getSize(find.byType(ActionBottomSheetLayout))
+        .height;
+
+    await tester.tap(find.text('Theme'));
+    await tester.pumpAndSettle();
+    final themeHeight = tester
+        .getSize(find.byType(ActionBottomSheetLayout))
+        .height;
+
+    expect(layoutHeight, fontHeight);
+    expect(themeHeight, fontHeight);
+  });
+
+  testWidgets('appearance tabs do not reserve fixed empty body height', (
+    tester,
+  ) async {
+    await tester.openAppearanceSheet(cubit);
+
+    expect(_fixedTabBodyHeightFinder(), findsNothing);
+
+    await tester.tap(find.text('Theme'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('READING THEME'), findsOneWidget);
+    expect(_fixedTabBodyHeightFinder(), findsNothing);
+  });
+
   testWidgets('selects rounded default line spacing preset', (
     tester,
   ) async {
@@ -266,6 +305,13 @@ void main() {
     expect(uiCubit.state.chromeVisible, isTrue);
     expect(uiCubit.state.overlay, ReaderOverlay.none);
   });
+}
+
+Finder _fixedTabBodyHeightFinder() {
+  return find.byWidgetPredicate(
+    (widget) => widget is SizedBox && widget.height == 360,
+    description: 'fixed 360px appearance tab body',
+  );
 }
 
 extension on WidgetTester {

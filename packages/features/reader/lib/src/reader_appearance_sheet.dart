@@ -8,7 +8,6 @@ import 'reader_appearance_cubit.dart';
 const double _sizeButtonSize = 36;
 const double _tabButtonHeight = 40;
 const double _tabTrackPadding = 4;
-const double _tabContentHeight = 360;
 const double _themeCardHeight = 76;
 const double _textSizeButtonWidth = 64;
 const double _textSizeButtonHeight = AppSizes.buttonHeight;
@@ -102,13 +101,13 @@ class _TabbedAppearanceControlsState extends State<_TabbedAppearanceControls> {
           },
         ),
         const SizedBox(height: AppSpacing.lg),
-        SizedBox(
-          height: _tabContentHeight,
-          child: switch (_selectedTab) {
-            _AppearanceTab.font => const _FontPanel(),
-            _AppearanceTab.layout => const _LayoutPanel(),
-            _AppearanceTab.theme => const _ThemePanel(),
-          },
+        IndexedStack(
+          index: _selectedTab.index,
+          children: const [
+            _FontPanel(),
+            _LayoutPanel(),
+            _ThemePanel(),
+          ],
         ),
       ],
     );
