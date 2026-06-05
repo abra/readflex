@@ -2,6 +2,7 @@ const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 const lerp = (min, max, x) => x * (max - min) + min
 const easeOutSine = x => Math.sin((x * Math.PI) / 2)
+const easeInOutSine = x => -(Math.cos(Math.PI * x) - 1) / 2
 // const easeOutSine = x => 1 - (1 - x) * (1 - x);
 const animate = (a, b, duration, ease, render, { initialProgress = 0 } = {}) => new Promise(resolve => {
   let start
@@ -1394,7 +1395,7 @@ export class Paginator extends HTMLElement {
     this.#ignoreNativeScroll = true
     const opts = typeof smooth === 'object' ? smooth ?? {} : {}
     const shouldAnimate = opts.animate ?? (reason === 'snap' || smooth === true)
-    const easing = opts.easing ?? easeOutSine
+    const easing = opts.easing ?? (reason === 'page' ? easeInOutSine : easeOutSine)
     const finish = () => {
       this.#afterScroll(reason)
       this.#ignoreNativeScroll = false
@@ -1425,10 +1426,12 @@ export class Paginator extends HTMLElement {
 
     if (useAnimation) {
       const distance = Math.abs(element[scrollProp] - offset)
-      const baseDuration = 300
+      const baseDuration = reason === 'page' ? 360 : 300
+      const minDuration = reason === 'page' ? 260 : 200
+      const maxDuration = reason === 'page' ? 460 : 400
       const adaptiveDuration = opts.duration ?? Math.min(
-        400,
-        Math.max(200, baseDuration * (distance / (size || 1)))
+        maxDuration,
+        Math.max(minDuration, baseDuration * (distance / (size || 1)))
       )
 
       // Give the snap animation an initial kick based on release velocity so it
@@ -1445,33 +1448,21 @@ export class Paginator extends HTMLElement {
           || (offset > startOffset ? 1 : -1)
         const extent = this.#verticalDragPreviewExtent() || size
         const viewElement = this.#view?.element
-        if (viewElement) {
+        const targetLayer = this.#view?.createPagePreview(offset)
+        if (viewElement && targetLayer) {
           this.#justAnchored = true
           viewElement.style.willChange = 'transform'
+          targetLayer.style.transform = `translateY(${direction * extent}px)`
+          this.#top.append(targetLayer)
 
-          const outDuration = Math.max(90, Math.round(adaptiveDuration * 0.42))
-          const inDuration = Math.max(140, adaptiveDuration - outDuration)
-
-          return animate(
-            0,
-            -direction * extent,
-            outDuration,
-            easing,
-            y => viewElement.style.transform = `translateY(${y}px)`,
-            { initialProgress },
-          ).then(() => {
+          return animate(0, 1, adaptiveDuration, easing, t => {
+            viewElement.style.transform = `translateY(${lerp(0, -direction * extent, t)}px)`
+            targetLayer.style.transform = `translateY(${lerp(direction * extent, 0, t)}px)`
+          }, { initialProgress }).then(() => {
             element[scrollProp] = offset
-            viewElement.style.transform = `translateY(${direction * extent}px)`
-            return animate(
-              direction * extent,
-              0,
-              inDuration,
-              easing,
-              y => viewElement.style.transform = `translateY(${y}px)`,
-            )
-          }).then(() => {
             viewElement.style.transform = ''
             viewElement.style.willChange = ''
+            targetLayer.remove()
             return wait(10)
           }).then(() => {
             finish()
@@ -1479,6 +1470,7 @@ export class Paginator extends HTMLElement {
           }).catch(err => {
             viewElement.style.transform = ''
             viewElement.style.willChange = ''
+            targetLayer.remove()
             this.#ignoreNativeScroll = false
             this.#restoreMomentum()
             element.style.scrollBehavior = previousBehavior
@@ -1490,7 +1482,7 @@ export class Paginator extends HTMLElement {
       // Prefer native smooth scroll (runs on compositor and can keep 120Hz on Safari)
       const isSafari = /^(?!.*(Chrome|CriOS|Edg|Edge)).*AppleWebKit/i.test(navigator.userAgent)
       const supportsSmooth = 'scrollBehavior' in document.documentElement.style && isSafari
-      if (supportsSmooth && !opts.forceJsAnimation) {
+      if (supportsSmooth && reason !== 'page' && !opts.forceJsAnimation) {
         this.#justAnchored = true
         element.style.scrollBehavior = 'smooth'
         element.scrollTo({ [propKey]: offset, behavior: 'smooth' })

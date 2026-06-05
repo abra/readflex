@@ -618,10 +618,16 @@ void main() {
         paginatorJs,
         contains("const extent = this.#verticalDragPreviewExtent() || size"),
       );
-      expect(paginatorJs, contains("const outDuration = Math.max(90"));
-      expect(paginatorJs, contains("viewElement.style.transform"));
-      expect(paginatorJs, contains("element[scrollProp] = offset"));
-      expect(paginatorJs, contains("createPagePreview(scrollOffset)"));
+      expect(paginatorJs, contains('const easeInOutSine = x =>'));
+      expect(
+        paginatorJs,
+        contains('const targetLayer = this.#view?.createPagePreview(offset)'),
+      );
+      expect(paginatorJs, contains('this.#top.append(targetLayer)'));
+      expect(paginatorJs, contains('viewElement.style.transform'));
+      expect(paginatorJs, contains('targetLayer.style.transform'));
+      expect(paginatorJs, contains('element[scrollProp] = offset'));
+      expect(paginatorJs, contains('createPagePreview(scrollOffset)'));
       expect(paginatorJs, contains("frame.srcdoc = `<!doctype html>"));
       expect(
         paginatorJs,
@@ -642,6 +648,12 @@ void main() {
         ),
       );
       expect(paginatorJs, contains("opts.verticalPageDirection = direction"));
+      expect(
+        paginatorJs,
+        contains(
+          "supportsSmooth && reason !== 'page' && !opts.forceJsAnimation",
+        ),
+      );
       expect(
         paginatorJs,
         isNot(contains("const pageStepColumnWidth = Math.max(0, size - gap)")),
