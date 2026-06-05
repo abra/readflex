@@ -442,7 +442,7 @@ void main() {
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_52"));
+      expect(assetExtractor, contains("reader_webview_assets_59"));
     });
 
     test('does not dump full reader style changes to console', () {
@@ -627,11 +627,39 @@ void main() {
       expect(paginatorJs, contains('viewElement.style.transform'));
       expect(paginatorJs, contains('targetLayer.style.transform'));
       expect(paginatorJs, contains('element[scrollProp] = offset'));
+      expect(
+        paginatorJs,
+        contains('const preventDefaultIfCancelable = event =>'),
+      );
+      expect(paginatorJs, contains('if (!event?.cancelable) return false'));
+      expect(
+        paginatorJs,
+        contains('preventDefault: () => preventDefaultIfCancelable(e)'),
+      );
+      expect(
+        paginatorJs,
+        isNot(contains('preventDefault: () => e.preventDefault()')),
+      );
       expect(paginatorJs, contains('createPagePreview(scrollOffset)'));
+      expect(
+        paginatorJs,
+        contains('element.style.cssText = this.#element.style.cssText'),
+      );
+      expect(
+        paginatorJs,
+        contains('frame.style.cssText = this.#iframe.style.cssText'),
+      );
+      expect(paginatorJs, contains('const sanitizePagePreview = root =>'));
+      expect(paginatorJs, contains('sanitizePagePreview(root)'));
+      expect(paginatorJs, contains("name === 'srcdoc'"));
+      expect(paginatorJs, contains("name.startsWith('on')"));
+      expect(paginatorJs, contains("value.startsWith('javascript:')"));
       expect(paginatorJs, contains("frame.srcdoc = `<!doctype html>"));
       expect(
         paginatorJs,
-        contains("frame.setAttribute('sandbox', 'allow-same-origin')"),
+        contains(
+          "frame.setAttribute('sandbox', 'allow-same-origin allow-scripts')",
+        ),
       );
       expect(
         paginatorJs,
@@ -664,7 +692,8 @@ void main() {
         'assets/foliate-js/src/paginator.js',
       ).readAsStringSync();
 
-      expect(paginatorJs, contains('if (!doc?.body)'));
+      expect(paginatorJs, contains('if (!doc?.body) return'));
+      expect(paginatorJs, contains('if (!el?.style) return'));
       expect(
         paginatorJs,
         contains('[readflex-paginator] visible range skipped'),

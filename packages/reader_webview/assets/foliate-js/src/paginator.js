@@ -159,8 +159,29 @@ const makeMarginals = (length, part) => Array.from({ length }, () => {
 })
 
 const setStylesImportant = (el, styles) => {
+  if (!el?.style) return
   const { style } = el
   for (const [k, v] of Object.entries(styles)) style.setProperty(k, v, 'important')
+}
+
+const preventDefaultIfCancelable = event => {
+  // Android WebView logs preventDefault() on non-cancelable touchmove as ERROR.
+  if (!event?.cancelable) return false
+  event.preventDefault()
+  return true
+}
+
+const sanitizePagePreview = root => {
+  for (const script of root.querySelectorAll('script')) script.remove()
+  for (const el of root.querySelectorAll('*')) {
+    for (const attr of [...el.attributes]) {
+      const name = attr.name.toLowerCase()
+      const value = attr.value.trim().toLowerCase()
+      if (name === 'srcdoc' || name.startsWith('on') || value.startsWith('javascript:')) {
+        el.removeAttribute(attr.name)
+      }
+    }
+  }
 }
 
 class View {
@@ -230,6 +251,7 @@ class View {
     if (!doc?.documentElement) return null
 
     const root = doc.documentElement.cloneNode(true)
+    sanitizePagePreview(root)
     const head = root.querySelector('head')
     if (head && doc.baseURI) {
       const base = document.createElement('base')
@@ -250,30 +272,27 @@ class View {
       zIndex: '2',
       willChange: 'transform',
     })
+    // Mirror the live layout wrappers. Rebuilding a similar style object here
+    // lets the srcdoc preview reflow with different side margins on Android.
+    element.style.cssText = this.#element.style.cssText
+    frame.style.cssText = this.#iframe.style.cssText
     Object.assign(element.style, {
-      boxSizing: 'content-box',
       position: 'absolute',
       left: '0',
       top: '0',
       overflow: 'hidden',
-      width: this.#element.style.width || `${this.#element.getBoundingClientRect().width}px`,
-      height: this.#element.style.height || '100%',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      contain: 'layout paint size',
       pointerEvents: 'none',
       willChange: 'transform',
     })
     Object.assign(frame.style, {
-      overflow: 'hidden',
       border: '0',
       display: 'block',
-      width: this.#iframe.style.width || `${this.#iframe.getBoundingClientRect().width}px`,
-      height: this.#iframe.style.height || '100%',
+      overflow: 'hidden',
       pointerEvents: 'none',
     })
-    frame.setAttribute('sandbox', 'allow-same-origin')
+    // The preview document is sanitized before `srcdoc`; Android WebView still
+    // reports blocked-script warnings unless this mirrors the main reader iframe.
+    frame.setAttribute('sandbox', 'allow-same-origin allow-scripts')
     frame.setAttribute('scrolling', 'no')
     frame.srcdoc = `<!doctype html>${root.outerHTML}`
 
@@ -404,6 +423,7 @@ class View {
     const { width, height, margin } = this.#layout
     const vertical = this.#vertical
     const doc = this.document
+    if (!doc?.body) return
     for (const el of doc.body.querySelectorAll('img, svg, video')) {
       // preserve max size if they are already set
       const { maxHeight, maxWidth } = doc.defaultView.getComputedStyle(el)
@@ -1223,7 +1243,7 @@ export class Paginator extends HTMLElement {
         touch,
         touchState: state,
       },
-      preventDefault: () => e.preventDefault(),
+      preventDefault: () => preventDefaultIfCancelable(e),
       bubbles: true,
       composed: true
     })
@@ -1234,7 +1254,7 @@ export class Paginator extends HTMLElement {
     if (state.pinched) return
 
     if (e.touches.length > 1) {
-      if (this.#touchScrolled) e.preventDefault()
+      if (this.#touchScrolled) preventDefaultIfCancelable(e)
       return
     }
 
@@ -1251,7 +1271,7 @@ export class Paginator extends HTMLElement {
       const pageStepDrag = horizontalAxis && horizontalDrag
         || verticalAxis && verticalDrag
       if (pageStepDrag) {
-        e.preventDefault()
+        preventDefaultIfCancelable(e)
         this.#touchScrolled = true
         this.#disableMomentum()
         this.#scrollPageStepBy(stepX, stepY, state)
@@ -1262,7 +1282,7 @@ export class Paginator extends HTMLElement {
     if (this.scrolled) return
 
     if (horizontalDrag && horizontalAxis && this.pageTurnAxisVertical) {
-      e.preventDefault()
+      preventDefaultIfCancelable(e)
       this.#disableMomentum()
       if (state.lockedOffset == null)
         state.lockedOffset = state.startScroll ?? this.#container.scrollLeft
@@ -1271,7 +1291,7 @@ export class Paginator extends HTMLElement {
     }
 
     if (verticalDrag && horizontalAxis) {
-      e.preventDefault()
+      preventDefaultIfCancelable(e)
       this.#disableMomentum()
       if (state.lockedOffset == null)
         state.lockedOffset = state.startScroll ?? this.#container.scrollLeft
@@ -1291,7 +1311,7 @@ export class Paginator extends HTMLElement {
     if (horizontalDrag && horizontalAxis) {
       this.#touchScrolled = true
       if (this.#pageProgressionRtl) {
-        e.preventDefault()
+        preventDefaultIfCancelable(e)
         this.#disableMomentum()
         const startScroll = state.startScroll ?? this.#container.scrollLeft
         this.#container.scrollLeft = startScroll - deltaX
