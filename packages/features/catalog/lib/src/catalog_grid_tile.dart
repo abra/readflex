@@ -191,7 +191,7 @@ class _GridTileShell extends StatelessWidget {
                           children: [
                             Positioned.fill(
                               child: ColoredBox(
-                                color: Colors.white.withValues(alpha: 0.35),
+                                color: Colors.white.withValues(alpha: 0.50),
                               ),
                             ),
                             Container(
