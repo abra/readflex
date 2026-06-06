@@ -12,6 +12,7 @@ void main() {
 
         expect(actions, contains(ReaderChromeAction.contents));
         expect(actions, contains(ReaderChromeAction.textAppearance));
+        expect(actions, isNot(contains(ReaderChromeAction.pageTurn)));
         expect(actions, contains(ReaderChromeAction.bookmark));
         expect(actions, contains(ReaderChromeAction.textSearch));
       }
@@ -21,6 +22,7 @@ void main() {
       final actions = readerChromeActionsForFormat(BookFormat.cbz);
 
       expect(actions, contains(ReaderChromeAction.contents));
+      expect(actions, contains(ReaderChromeAction.pageTurn));
       expect(actions, contains(ReaderChromeAction.bookmark));
       expect(actions, isNot(contains(ReaderChromeAction.textAppearance)));
       expect(actions, isNot(contains(ReaderChromeAction.textSearch)));

@@ -495,10 +495,66 @@ void main() {
       expect(fixedLayoutJs, contains("this.hasAttribute('animated')"));
       expect(fixedLayoutJs, contains('#animateSpreadTurn'));
       expect(fixedLayoutJs, contains('#animateSideTurn'));
+      expect(fixedLayoutJs, contains('get pageTurnAxisVertical()'));
+      expect(
+        fixedLayoutJs,
+        contains("this.getAttribute('page-turn-axis') === 'vertical'"),
+      );
+      expect(fixedLayoutJs, contains('#spreadTurnTransform(offset)'));
+      expect(fixedLayoutJs, contains('#frameTurnTransform(offset)'));
+      expect(fixedLayoutJs, contains(r'translate3d(0, ${offset}, 0)'));
+      expect(
+        fixedLayoutJs,
+        contains(r'translate3d(-50%, calc(-50% + ${offset}), 0)'),
+      );
+      expect(fixedLayoutJs, contains('#nextTurnDirection()'));
+      expect(fixedLayoutJs, contains('#prevTurnDirection()'));
+      expect(
+        fixedLayoutJs,
+        contains('return this.pageTurnAxisVertical ? 1 : this.rtl ? -1 : 1'),
+      );
+      expect(
+        fixedLayoutJs,
+        contains('return this.pageTurnAxisVertical ? -1 : this.rtl ? 1 : -1'),
+      );
+      expect(fixedLayoutJs, contains('this.#nextTurnDirection()'));
+      expect(fixedLayoutJs, contains('this.#prevTurnDirection()'));
+      expect(fixedLayoutJs, contains('get atStart()'));
+      expect(fixedLayoutJs, contains('get atEnd()'));
+      expect(fixedLayoutJs, contains('#canGoLeftWithinSpread()'));
+      expect(fixedLayoutJs, contains('#canGoRightWithinSpread()'));
+      expect(
+        fixedLayoutJs,
+        contains('return !canGoWithinSpread && this.#index >= lastIndex'),
+      );
       expect(fixedLayoutJs, contains('previousSpread?.remove()'));
       expect(fixedLayoutJs, contains('this.#locked = true'));
-      expect(fixedLayoutJs, contains('this.rtl ? -1 : 1'));
-      expect(fixedLayoutJs, contains('this.rtl ? 1 : -1'));
+    });
+
+    test('fixed-layout swipe follows the configured page-turn axis', () {
+      final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
+
+      expect(bookJs, contains('swipe-flip-fixed-layout'));
+      expect(
+        bookJs,
+        contains('const verticalTurn = renderer.pageTurnAxisVertical === true'),
+      );
+      expect(
+        bookJs,
+        contains('const primaryDelta = verticalTurn ? deltaY : deltaX'),
+      );
+      expect(
+        bookJs,
+        contains('const crossDelta = verticalTurn ? deltaX : deltaY'),
+      );
+      expect(
+        bookJs,
+        contains('Math.abs(primaryDelta) <= Math.abs(crossDelta)'),
+      );
+      expect(bookJs, contains('Math.abs(primaryDelta) < 30'));
+      expect(bookJs, contains('primaryDelta / (deltaT || 1)'));
+      expect(bookJs, contains('if (primaryDelta > 0) renderer.prev?.()'));
+      expect(bookJs, isNot(contains('Math.abs(deltaX) <= Math.abs(deltaY)')));
     });
 
     test('comic fixed-layout renderer gets a safe horizontal writing mode', () {

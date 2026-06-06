@@ -3,6 +3,7 @@ import 'package:domain_models/domain_models.dart';
 enum ReaderChromeAction {
   contents,
   textAppearance,
+  pageTurn,
   bookmark,
   textSearch,
 }
@@ -16,6 +17,7 @@ const _textReaderActions = {
 
 const _imagePageReaderActions = {
   ReaderChromeAction.contents,
+  ReaderChromeAction.pageTurn,
   ReaderChromeAction.bookmark,
 };
 

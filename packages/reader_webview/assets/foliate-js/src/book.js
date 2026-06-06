@@ -2673,11 +2673,12 @@ window.pullUp = () => {
   callFlutter('onPullUp')
 }
 
-// Page-flip on horizontal swipe for fixed-layout books (CBZ, fixed-layout
+// Page-flip on the configured axis for fixed-layout books (CBZ, fixed-layout
 // EPUB). Reflowable formats are excluded — paginator.js' built-in
 // touch+snap handler already owns swipes there. Thresholds mirror
-// readest's: ≥30px horizontal, dominance over vertical, ≥0.2 px/ms
-// release velocity (`apps/readest-app/src/app/reader/hooks/usePagination.ts`).
+// readest's: ≥30px primary-axis drag, dominance over the cross axis,
+// ≥0.2 px/ms release velocity
+// (`apps/readest-app/src/app/reader/hooks/usePagination.ts`).
 readflexRegisterGesture(
   'swipe-flip-fixed-layout',
   detail =>
@@ -2685,16 +2686,18 @@ readflexRegisterGesture(
     && globalThis.reader?.view?.isFixedLayout === true,
   detail => {
     const { deltaX, deltaY, deltaT } = detail
-    if (Math.abs(deltaX) <= Math.abs(deltaY)) return false
-    if (Math.abs(deltaX) < 30) return false
-    const vx = Math.abs(deltaX / (deltaT || 1))
-    if (vx < 0.2) return false
     const renderer = globalThis.reader?.view?.renderer
     if (!renderer) return false
-    // dx > 0 → swipe right → previous page in LTR (next in RTL); the
-    // renderer's own next/prev already accounts for the book's reading
-    // direction internally.
-    if (deltaX > 0) renderer.prev?.()
+    const verticalTurn = renderer.pageTurnAxisVertical === true
+    const primaryDelta = verticalTurn ? deltaY : deltaX
+    const crossDelta = verticalTurn ? deltaX : deltaY
+    if (Math.abs(primaryDelta) <= Math.abs(crossDelta)) return false
+    if (Math.abs(primaryDelta) < 30) return false
+    const velocity = Math.abs(primaryDelta / (deltaT || 1))
+    if (velocity < 0.2) return false
+    // Positive primary delta means swipe right/down → previous page. The
+    // renderer's own next/prev already accounts for reading direction.
+    if (primaryDelta > 0) renderer.prev?.()
     else renderer.next?.()
     return true
   },

@@ -116,25 +116,50 @@ export class FixedLayout extends HTMLElement {
         const finished = animation?.finished?.catch(() => {})
         return finished?.finally(() => animation.cancel()) ?? Promise.resolve()
     }
+    get pageTurnAxisVertical() {
+        return this.getAttribute('page-turn-axis') === 'vertical'
+    }
+    #spreadTurnTransform(offset) {
+        return this.pageTurnAxisVertical
+            ? `translate3d(0, ${offset}, 0)`
+            : `translate3d(${offset}, 0, 0)`
+    }
+    #frameTurnTransform(offset) {
+        return this.pageTurnAxisVertical
+            ? `translate3d(-50%, calc(-50% + ${offset}), 0)`
+            : `translate3d(calc(-50% + ${offset}), -50%, 0)`
+    }
+    #nextTurnDirection() {
+        return this.pageTurnAxisVertical ? 1 : this.rtl ? -1 : 1
+    }
+    #prevTurnDirection() {
+        return this.pageTurnAxisVertical ? -1 : this.rtl ? 1 : -1
+    }
+    #leftTurnDirection() {
+        return this.rtl ? this.#nextTurnDirection() : this.#prevTurnDirection()
+    }
+    #rightTurnDirection() {
+        return this.rtl ? this.#prevTurnDirection() : this.#nextTurnDirection()
+    }
     async #animateSpreadTurn(previousSpread, nextSpread, direction) {
         if (!this.#shouldAnimate(direction) || !previousSpread) return
-        const enterX = direction > 0 ? '18%' : '-18%'
-        const exitX = direction > 0 ? '-18%' : '18%'
+        const enterOffset = direction > 0 ? '18%' : '-18%'
+        const exitOffset = direction > 0 ? '-18%' : '18%'
         await Promise.all([
             this.#turnAnimation(nextSpread, [
-                { transform: `translate3d(${enterX}, 0, 0)`, opacity: 0.35 },
+                { transform: this.#spreadTurnTransform(enterOffset), opacity: 0.35 },
                 { transform: 'translate3d(0, 0, 0)', opacity: 1 },
             ]),
             this.#turnAnimation(previousSpread, [
                 { transform: 'translate3d(0, 0, 0)', opacity: 1 },
-                { transform: `translate3d(${exitX}, 0, 0)`, opacity: 0.35 },
+                { transform: this.#spreadTurnTransform(exitOffset), opacity: 0.35 },
             ]),
         ])
     }
     async #animateSideTurn(fromFrame, toFrame, direction) {
         if (!this.#shouldAnimate(direction) || !fromFrame?.element || !toFrame?.element) return
-        const enterX = direction > 0 ? '18%' : '-18%'
-        const exitX = direction > 0 ? '-18%' : '18%'
+        const enterOffset = direction > 0 ? '18%' : '-18%'
+        const exitOffset = direction > 0 ? '-18%' : '18%'
         const frames = [fromFrame.element, toFrame.element]
         for (const element of frames) {
             Object.assign(element.style, {
@@ -148,12 +173,12 @@ export class FixedLayout extends HTMLElement {
         }
         await Promise.all([
             this.#turnAnimation(toFrame.element, [
-                { transform: `translate3d(calc(-50% + ${enterX}), -50%, 0)`, opacity: 0.35 },
+                { transform: this.#frameTurnTransform(enterOffset), opacity: 0.35 },
                 { transform: 'translate3d(-50%, -50%, 0)', opacity: 1 },
             ]),
             this.#turnAnimation(fromFrame.element, [
                 { transform: 'translate3d(-50%, -50%, 0)', opacity: 1 },
-                { transform: `translate3d(calc(-50% + ${exitX}), -50%, 0)`, opacity: 0.35 },
+                { transform: this.#frameTurnTransform(exitOffset), opacity: 0.35 },
             ]),
         ])
         for (const element of frames) {
@@ -346,7 +371,7 @@ export class FixedLayout extends HTMLElement {
             this.#side = 'left'
             this.#render()
             this.#reportLocation('page')
-            await this.#animateSideTurn(previousFrame, this.#left, -1)
+            await this.#animateSideTurn(previousFrame, this.#left, this.#leftTurnDirection())
             return true
         }
     }
@@ -357,7 +382,7 @@ export class FixedLayout extends HTMLElement {
             this.#side = 'right'
             this.#render()
             this.#reportLocation('page')
-            await this.#animateSideTurn(previousFrame, this.#right, 1)
+            await this.#animateSideTurn(previousFrame, this.#right, this.#rightTurnDirection())
             return true
         }
     }
@@ -409,6 +434,29 @@ export class FixedLayout extends HTMLElement {
     }
     get pageProgressionDirection() {
         return this.rtl ? 'rtl' : 'ltr'
+    }
+    #canGoLeftWithinSpread() {
+        if (this.#center || this.#left?.blank) return false
+        return this.#portrait && this.#left?.element?.style?.display === 'none'
+    }
+    #canGoRightWithinSpread() {
+        if (this.#center || this.#right?.blank) return false
+        return this.#portrait && this.#right?.element?.style?.display === 'none'
+    }
+    get atStart() {
+        if (this.#index < 0) return true
+        const canGoWithinSpread = this.rtl
+            ? this.#canGoRightWithinSpread()
+            : this.#canGoLeftWithinSpread()
+        return !canGoWithinSpread && this.#index <= 0
+    }
+    get atEnd() {
+        if (this.#index < 0) return true
+        const lastIndex = (this.#spreads?.length ?? 0) - 1
+        const canGoWithinSpread = this.rtl
+            ? this.#canGoLeftWithinSpread()
+            : this.#canGoRightWithinSpread()
+        return !canGoWithinSpread && this.#index >= lastIndex
     }
     get index() {
         const spread = this.#spreads[this.#index]
@@ -483,7 +531,7 @@ export class FixedLayout extends HTMLElement {
                     this.#index + 1,
                     this.rtl ? 'right' : 'left',
                     'page',
-                    this.rtl ? -1 : 1
+                    this.#nextTurnDirection()
                 )
             }
         } finally {
@@ -500,7 +548,7 @@ export class FixedLayout extends HTMLElement {
                     this.#index - 1,
                     this.rtl ? 'left' : 'right',
                     'page',
-                    this.rtl ? 1 : -1
+                    this.#prevTurnDirection()
                 )
             }
         } finally {

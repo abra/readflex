@@ -721,6 +721,7 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
   const _ReaderBottomChromeDriver({
     required this.onTocPressed,
     required this.onFontPressed,
+    required this.onPageTurnPressed,
     required this.onBookmarkPressed,
     required this.onSearchPressed,
     required this.onSeekFraction,
@@ -728,6 +729,7 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
 
   final VoidCallback onTocPressed;
   final VoidCallback onFontPressed;
+  final VoidCallback onPageTurnPressed;
   final VoidCallback onBookmarkPressed;
   final VoidCallback onSearchPressed;
 
@@ -772,6 +774,10 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
         .select<ReaderBloc, ReaderDocumentFeatures?>(
           (b) => b.state.documentFeatures,
         );
+    final pageTurnStyle = context
+        .select<ReaderAppearanceCubit, ReaderPageTurnStyle>(
+          (c) => c.state.effectiveAppearance.pageTurnStyle,
+        );
     final actions = readerChromeActionsForFormat(format);
     final colors = context.colors;
 
@@ -792,8 +798,10 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
       bookmarkActive: currentPageBookmarked,
       showTocAction: actions.contains(ReaderChromeAction.contents),
       showFontAction: actions.contains(ReaderChromeAction.textAppearance),
+      showPageTurnAction: actions.contains(ReaderChromeAction.pageTurn),
       showBookmarkAction: actions.contains(ReaderChromeAction.bookmark),
       showSearchAction: actions.contains(ReaderChromeAction.textSearch),
+      pageTurnStyle: pageTurnStyle,
       searchActionEnabled: readerSearchActionEnabled(
         format: format,
         documentFeatures: documentFeatures,
@@ -805,6 +813,7 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
       onBack: () => Navigator.of(context).maybePop(),
       onTocPressed: onTocPressed,
       onFontPressed: onFontPressed,
+      onPageTurnPressed: onPageTurnPressed,
       onBookmarkPressed: onBookmarkPressed,
       onSearchPressed: onSearchPressed,
       onSeekFraction: onSeekFraction,
@@ -834,13 +843,16 @@ class _ReaderBottomChrome extends StatefulWidget {
     required this.bookmarkActive,
     required this.showTocAction,
     required this.showFontAction,
+    required this.showPageTurnAction,
     required this.showBookmarkAction,
     required this.showSearchAction,
+    required this.pageTurnStyle,
     required this.searchActionEnabled,
     required this.searchActionTooltip,
     this.onBack,
     this.onTocPressed,
     this.onFontPressed,
+    this.onPageTurnPressed,
     this.onBookmarkPressed,
     this.onSearchPressed,
     required this.onSeekFraction,
@@ -862,13 +874,16 @@ class _ReaderBottomChrome extends StatefulWidget {
   final bool bookmarkActive;
   final bool showTocAction;
   final bool showFontAction;
+  final bool showPageTurnAction;
   final bool showBookmarkAction;
   final bool showSearchAction;
+  final ReaderPageTurnStyle pageTurnStyle;
   final bool searchActionEnabled;
   final String searchActionTooltip;
   final VoidCallback? onBack;
   final VoidCallback? onTocPressed;
   final VoidCallback? onFontPressed;
+  final VoidCallback? onPageTurnPressed;
   final VoidCallback? onBookmarkPressed;
   final VoidCallback? onSearchPressed;
   final ValueChanged<double> onSeekFraction;
@@ -1227,6 +1242,21 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
           tooltip: 'Font',
           foregroundColor: widget.foregroundColor,
           onPressed: widget.onFontPressed,
+        ),
+      );
+    }
+
+    if (widget.showPageTurnAction) {
+      addButton(
+        _ReaderChromeIconButton(
+          icon: widget.pageTurnStyle == ReaderPageTurnStyle.vertical
+              ? AppIcons.pageTurnVertical
+              : AppIcons.pageTurnHorizontal,
+          tooltip: widget.pageTurnStyle == ReaderPageTurnStyle.vertical
+              ? 'Page turn: Vertical'
+              : 'Page turn: Horizontal',
+          foregroundColor: widget.accentColor,
+          onPressed: widget.onPageTurnPressed,
         ),
       );
     }

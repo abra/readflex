@@ -174,6 +174,18 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     );
   }
 
+  Future<void> _togglePageTurnStyle() async {
+    final appearanceCubit = context.read<ReaderAppearanceCubit>();
+    final uiCubit = context.read<ReaderUiCubit>();
+    final current = appearanceCubit.state.effectiveAppearance.pageTurnStyle;
+    final next = current == ReaderPageTurnStyle.vertical
+        ? ReaderPageTurnStyle.horizontal
+        : ReaderPageTurnStyle.vertical;
+    await appearanceCubit.setPageTurnStyle(next);
+    if (!mounted) return;
+    uiCubit.showTapZoneHint(_readerTapAxisForPageTurnStyle(next));
+  }
+
   void _closeSearchDrawer({
     bool restoreChrome = true,
     bool clearSearch = true,
@@ -348,6 +360,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
             _ReaderBottomChromeDriver(
               onTocPressed: _openTocDrawer,
               onFontPressed: _openAppearanceSheet,
+              onPageTurnPressed: _togglePageTurnStyle,
               onBookmarkPressed: _toggleBookmark,
               onSearchPressed: _openSearchDrawer,
               onSeekFraction: _seekFraction,
