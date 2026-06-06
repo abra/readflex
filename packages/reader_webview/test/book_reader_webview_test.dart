@@ -3,6 +3,13 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader_webview/reader_webview.dart';
 
+String readBookReaderWebViewLibrarySource() => [
+  'lib/src/book_reader_webview.dart',
+  'lib/src/book_reader_webview_helpers.dart',
+  'lib/src/book_reader_webview_widget.dart',
+  'lib/src/book_reader_webview_state.dart',
+].map((path) => File(path).readAsStringSync()).join('\n');
+
 void main() {
   group('resolveInitialReaderLocation', () {
     test('prefers exact CFI on normal load', () {
@@ -52,9 +59,7 @@ void main() {
 
   group('reader bridge callbacks', () {
     test('shared tap handler forwards to the current widget callback', () {
-      final webViewDart = File(
-        'lib/src/book_reader_webview.dart',
-      ).readAsStringSync();
+      final webViewDart = readBookReaderWebViewLibrarySource();
 
       expect(
         webViewDart,
@@ -222,9 +227,7 @@ void main() {
       final viewJs = File(
         'assets/foliate-js/src/view.js',
       ).readAsStringSync();
-      final webViewDart = File(
-        'lib/src/book_reader_webview.dart',
-      ).readAsStringSync();
+      final webViewDart = readBookReaderWebViewLibrarySource();
 
       expect(bookJs, contains('window.refreshBookmarkState'));
       expect(bookJs, contains("reason = 'bookmark-sync'"));
@@ -453,9 +456,7 @@ void main() {
     });
 
     test('limits WebContent crash recovery to one eligible reload', () {
-      final webViewDart = File(
-        'lib/src/book_reader_webview.dart',
-      ).readAsStringSync();
+      final webViewDart = readBookReaderWebViewLibrarySource();
 
       expect(webViewDart, contains('_maxWebContentRecoveryAttempts = 1'));
       expect(webViewDart, contains('shouldAttemptWebContentRecovery('));
@@ -831,9 +832,7 @@ void main() {
       final fixedLayoutJs = File(
         'assets/foliate-js/src/fixed-layout.js',
       ).readAsStringSync();
-      final webViewDart = File(
-        'lib/src/book_reader_webview.dart',
-      ).readAsStringSync();
+      final webViewDart = readBookReaderWebViewLibrarySource();
 
       expect(webViewDart, contains('void pageLeft()'));
       expect(webViewDart, contains("expression: 'pageLeft()'"));
@@ -1004,9 +1003,7 @@ void main() {
     });
 
     test('reapplies article RTL patch after subsequent ready signals', () {
-      final webViewDart = File(
-        'lib/src/book_reader_webview.dart',
-      ).readAsStringSync();
+      final webViewDart = readBookReaderWebViewLibrarySource();
 
       expect(
         webViewDart,
@@ -1017,9 +1014,7 @@ void main() {
     });
 
     test('exposes a guarded clear-selection command', () {
-      final webViewDart = File(
-        'lib/src/book_reader_webview.dart',
-      ).readAsStringSync();
+      final webViewDart = readBookReaderWebViewLibrarySource();
 
       expect(webViewDart, contains('void clearSelection()'));
       expect(webViewDart, contains("label: 'clearSelection'"));
