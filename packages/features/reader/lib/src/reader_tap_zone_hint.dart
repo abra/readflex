@@ -268,7 +268,7 @@ class _ReaderTapZoneHintOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final fill = readerTheme.accentColor.withValues(alpha: 0.45);
     final border = readerTheme.accentColor.withValues(alpha: 0.65);
-    final icon = readerTheme.accentColor.withValues(alpha: 0.95);
+    final icon = Colors.white;
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
