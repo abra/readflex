@@ -286,9 +286,9 @@ class _SourceKindLabel extends StatelessWidget {
     final colors = context.colors;
     final text = context.text;
     final isArticle = source.sourceType == SourceType.article;
+    final sourceName = isArticle ? source.sourceName?.trim() : null;
 
     return Row(
-      mainAxisSize: MainAxisSize.min,
       textDirection: textDirection,
       children: [
         Icon(
@@ -308,6 +308,30 @@ class _SourceKindLabel extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
+        if (sourceName != null && sourceName.isNotEmpty) ...[
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            '·',
+            textDirection: textDirection,
+            style: text.labelSmall.copyWith(
+              color: colors.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Flexible(
+            child: Text(
+              sourceName,
+              textAlign: TextAlign.start,
+              textDirection: textDirection,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: text.labelSmall.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

@@ -155,7 +155,7 @@ void main() {
       expect(find.text('Article'), findsOneWidget);
       expect(find.text('Type'), findsNothing);
       expect(find.text('Source'), findsNothing);
-      expect(find.text('Example'), findsNothing);
+      expect(find.text('Example'), findsOneWidget);
       expect(find.text('Article Author'), findsWidgets);
       final byline = tester.widget<Text>(find.text('Article Author'));
       expect(byline.style?.fontFamily, AppTypography.fontFamilySerif);
@@ -323,6 +323,7 @@ void main() {
       );
       final byline = tester.widget<Text>(find.text('كاتب الخبر'));
       final kindLabel = tester.widget<Text>(find.text('Article'));
+      final siteName = tester.widget<Text>(find.text('الجزيرة'));
 
       expect(title.textDirection, TextDirection.rtl);
       expect(title.textAlign, TextAlign.start);
@@ -330,7 +331,8 @@ void main() {
       expect(byline.textAlign, TextAlign.start);
       expect(kindLabel.textDirection, TextDirection.rtl);
       expect(kindLabel.textAlign, TextAlign.start);
-      expect(find.text('الجزيرة'), findsNothing);
+      expect(siteName.textDirection, TextDirection.rtl);
+      expect(siteName.textAlign, TextAlign.start);
     });
 
     testWidgets('passes RTL direction to fallback book cover text', (
