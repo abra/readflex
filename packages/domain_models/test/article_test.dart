@@ -19,6 +19,7 @@ void main() {
       id: 'a1',
       title: 'Article',
       url: 'https://example.com/a',
+      canonicalUrl: 'https://example.com/canonical-a',
       author: 'Author',
       siteName: 'Example',
       contentPath: '/data/articles/a1/article.json',
@@ -33,6 +34,7 @@ void main() {
     expect(source.sourceType, SourceType.article);
     expect(source.author, 'Author');
     expect(source.sourceName, 'Example');
+    expect(source.originalUrl, 'https://example.com/a');
     expect(source.typeLabel, 'Article');
     expect(source.readingProgress, 0.4);
     expect(source.estimatedWordCount, 900);

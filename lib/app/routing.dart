@@ -22,6 +22,7 @@ import 'package:readflex/app/screens/tab_container_screen.dart';
 import 'package:source_details/source_details.dart';
 import 'package:subscription_paywall/subscription_paywall.dart';
 import 'package:translate/translate.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 abstract final class AppRoutes {
   static const root = '/';
@@ -206,6 +207,9 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                 ),
               );
             },
+            onArticleTitlePressed: (url, title) {
+              unawaited(_openArticleUrl(url));
+            },
           );
         },
       ),
@@ -346,6 +350,17 @@ class _SourceDetailsRouteExtra {
 
   final LibrarySource? initialSource;
   final VoidCallback? onSourceOpened;
+}
+
+Future<void> _openArticleUrl(String rawUrl) async {
+  final uri = Uri.tryParse(rawUrl.trim());
+  if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) return;
+
+  try {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } catch (error) {
+    debugPrint('Failed to open article URL: $rawUrl ($error)');
+  }
 }
 
 class _ReaderRouteExtra {

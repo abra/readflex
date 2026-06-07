@@ -190,6 +190,51 @@ void main() {
       expect(articleIcon.size, closeTo(coverSize.width * 0.40, 0.1));
     });
 
+    testWidgets('tapping article hero title requests original URL', (
+      tester,
+    ) async {
+      repository.source = null;
+      String? openedUrl;
+      String? openedTitle;
+
+      await tester.pumpSourceDetails(
+        repository: repository,
+        articleRepository: articleRepository,
+        highlightRepository: highlightRepository,
+        flashcardRepository: flashcardRepository,
+        dictionaryRepository: dictionaryRepository,
+        initialSource: LibrarySource.fromArticle(_article),
+        onArticleTitlePressed: (url, title) {
+          openedUrl = url;
+          openedTitle = title;
+        },
+      );
+
+      await tester.tap(find.byKey(const ValueKey('source-details-title')));
+
+      expect(openedUrl, 'https://example.com/article');
+      expect(openedTitle, 'Saved Article');
+    });
+
+    testWidgets('tapping book hero title does not request original URL', (
+      tester,
+    ) async {
+      var didOpen = false;
+
+      await tester.pumpSourceDetails(
+        repository: repository,
+        highlightRepository: highlightRepository,
+        flashcardRepository: flashcardRepository,
+        dictionaryRepository: dictionaryRepository,
+        initialSource: LibrarySource.fromBook(_newSource),
+        onArticleTitlePressed: (_, _) => didOpen = true,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('source-details-title')));
+
+      expect(didOpen, isFalse);
+    });
+
     testWidgets('article reading time uses characters for Japanese text', (
       tester,
     ) async {
@@ -444,6 +489,7 @@ extension on WidgetTester {
     ArticleRepository? articleRepository,
     LibrarySource? initialSource,
     Future<void> Function(Book source, SourceType sourceType)? onReadPressed,
+    void Function(String url, String title)? onArticleTitlePressed,
   }) async {
     await pumpWidget(
       MaterialApp(
@@ -460,6 +506,7 @@ extension on WidgetTester {
               dictionaryRepository ?? _FakeDictionaryRepository(),
           initialSource: initialSource,
           onReadPressed: onReadPressed ?? (_, _) async {},
+          onArticleTitlePressed: onArticleTitlePressed,
         ),
       ),
     );

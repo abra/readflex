@@ -18,6 +18,7 @@ class LibrarySource extends Equatable {
     required this.addedAt,
     this.author,
     this.sourceName,
+    this.originalUrl,
     this.language,
     this.coverImagePath,
     this.readingProgress = 0.0,
@@ -51,6 +52,7 @@ class LibrarySource extends Equatable {
     title: article.title,
     author: article.author,
     sourceName: article.siteName ?? article.hostname,
+    originalUrl: article.url,
     language: article.language,
     coverImagePath: null,
     typeLabel: 'Article',
@@ -68,6 +70,7 @@ class LibrarySource extends Equatable {
   final String title;
   final String? author;
   final String? sourceName;
+  final String? originalUrl;
   final String? language;
   final String? coverImagePath;
   final String typeLabel;
@@ -96,6 +99,7 @@ class LibrarySource extends Equatable {
     title,
     author,
     sourceName,
+    originalUrl,
     language,
     coverImagePath,
     typeLabel,

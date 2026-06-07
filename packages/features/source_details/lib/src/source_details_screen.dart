@@ -47,6 +47,7 @@ class SourceDetailsScreen extends StatelessWidget {
     required this.onReadPressed,
     this.articleRepository,
     this.initialSource,
+    this.onArticleTitlePressed,
     super.key,
   });
 
@@ -58,6 +59,7 @@ class SourceDetailsScreen extends StatelessWidget {
   final DictionaryRepository dictionaryRepository;
   final Future<void> Function(Book source, SourceType sourceType) onReadPressed;
   final LibrarySource? initialSource;
+  final void Function(String url, String title)? onArticleTitlePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +77,7 @@ class SourceDetailsScreen extends StatelessWidget {
       child: SourceDetailsView(
         sourceId: sourceId,
         onReadPressed: onReadPressed,
+        onArticleTitlePressed: onArticleTitlePressed,
       ),
     );
   }
@@ -84,11 +87,13 @@ class SourceDetailsView extends StatelessWidget {
   const SourceDetailsView({
     required this.sourceId,
     required this.onReadPressed,
+    this.onArticleTitlePressed,
     super.key,
   });
 
   final String sourceId;
   final Future<void> Function(Book source, SourceType sourceType) onReadPressed;
+  final void Function(String url, String title)? onArticleTitlePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -116,6 +121,7 @@ class SourceDetailsView extends StatelessWidget {
                 source: state.source!,
                 showReviewSection: state.showReviewSection,
                 reviewSummary: state.reviewSummary,
+                onArticleTitlePressed: onArticleTitlePressed,
               ),
             },
           );
@@ -194,11 +200,13 @@ class _SourceDetailsContent extends StatelessWidget {
     required this.source,
     required this.showReviewSection,
     required this.reviewSummary,
+    this.onArticleTitlePressed,
   });
 
   final LibrarySource source;
   final bool showReviewSection;
   final SourceReviewSummary reviewSummary;
+  final void Function(String url, String title)? onArticleTitlePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -234,6 +242,7 @@ class _SourceDetailsContent extends StatelessWidget {
                     _HeroSection(
                       source: source,
                       coverWidth: coverWidth,
+                      onArticleTitlePressed: onArticleTitlePressed,
                     ),
                     const SizedBox(height: AppSpacing.xl),
                     _SourceStats(source: source),
@@ -327,10 +336,12 @@ class _HeroSection extends StatelessWidget {
   const _HeroSection({
     required this.source,
     required this.coverWidth,
+    this.onArticleTitlePressed,
   });
 
   final LibrarySource source;
   final double coverWidth;
+  final void Function(String url, String title)? onArticleTitlePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -340,6 +351,15 @@ class _HeroSection extends StatelessWidget {
     final subtitle = _subtitleFor(source);
     final coverHeight = coverWidth / appSourceCoverAspectRatio;
     final heroTextDirection = _sourceTextDirection(source);
+    final articleUrl = source.sourceType == SourceType.article
+        ? source.originalUrl?.trim()
+        : null;
+    final onTitlePressed =
+        articleUrl != null &&
+            articleUrl.isNotEmpty &&
+            onArticleTitlePressed != null
+        ? () => onArticleTitlePressed!(articleUrl, source.title)
+        : null;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -359,6 +379,7 @@ class _HeroSection extends StatelessWidget {
                   child: _AutoSizedHeroTitle(
                     title: source.title,
                     textDirection: heroTextDirection,
+                    onTap: onTitlePressed,
                   ),
                 ),
                 if (subtitle case final value? when value.isNotEmpty) ...[
@@ -403,10 +424,12 @@ class _AutoSizedHeroTitle extends StatelessWidget {
   const _AutoSizedHeroTitle({
     required this.title,
     required this.textDirection,
+    this.onTap,
   });
 
   final String title;
   final TextDirection textDirection;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -434,24 +457,36 @@ class _AutoSizedHeroTitle extends StatelessWidget {
           textScaler: MediaQuery.textScalerOf(context),
         );
 
+        Widget titleText = Text(
+          title,
+          key: const ValueKey('source-details-title'),
+          textAlign: TextAlign.start,
+          textDirection: textDirection,
+          softWrap: true,
+          maxLines: fit.maxLines,
+          overflow: fit.maxLines == null
+              ? TextOverflow.visible
+              : TextOverflow.ellipsis,
+          style: fit.style,
+        );
+        if (onTap != null) {
+          titleText = Semantics(
+            button: true,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onTap,
+              child: titleText,
+            ),
+          );
+        }
+
         return SizedBox.expand(
           key: const ValueKey('source-details-title-cell'),
           child: Align(
             alignment: _bottomAlignmentFor(textDirection),
             child: SizedBox(
               width: constraints.maxWidth,
-              child: Text(
-                title,
-                key: const ValueKey('source-details-title'),
-                textAlign: TextAlign.start,
-                textDirection: textDirection,
-                softWrap: true,
-                maxLines: fit.maxLines,
-                overflow: fit.maxLines == null
-                    ? TextOverflow.visible
-                    : TextOverflow.ellipsis,
-                style: fit.style,
-              ),
+              child: titleText,
             ),
           ),
         );
