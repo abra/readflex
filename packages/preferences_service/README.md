@@ -1,6 +1,6 @@
 # preferences_service
 
-User preferences: theme mode, locale, catalog layout, global reader appearance,
+User preferences: theme mode, locale, library layout, global reader appearance,
 per-source reader appearance overrides, reader search history, and onboarding /
 setup flags. Backed by `shared_preferences` (JSON blob under a single key) and
 exposed to the UI via a reactive stream and an `InheritedModel` scope.
@@ -27,7 +27,7 @@ This is **not** where auth tokens live — those go through `auth_service` /
 |----------------------------|-------------|-------------|
 | `themeMode`                | `ThemeMode` | `system`    |
 | `locale`                   | `Locale`    | platform    |
-| `catalogLayoutMode`        | `String`    | `'grid'`    |
+| `libraryLayoutMode`        | `String`    | `'grid'`    |
 | `readerThemeId`            | `String`    | `'paper'`   |
 | `readerFontId`             | `String`    | `'serif'`   |
 | `readerLayoutId`           | `String`    | `'standard'`|

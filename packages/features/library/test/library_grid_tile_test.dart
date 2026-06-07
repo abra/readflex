@@ -1,4 +1,4 @@
-import 'package:catalog/src/catalog_grid_tile.dart';
+import 'package:library_feature/src/library_grid_tile.dart';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
@@ -200,7 +200,7 @@ void main() {
 
     final coverRect = tester.getRect(find.byType(AppSourceCoverFrame));
     final progressRect = tester.getRect(
-      find.byKey(const Key('catalogGridProgressBar')),
+      find.byKey(const Key('libraryGridProgressBar')),
     );
     expect(progressRect.left, coverRect.left + AppSpacing.xxs);
     expect(progressRect.right, coverRect.right - AppSpacing.xxs);

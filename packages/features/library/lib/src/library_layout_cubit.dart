@@ -1,26 +1,26 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:preferences_service/preferences_service.dart';
 
-part 'catalog_layout_state.dart';
+part 'library_layout_state.dart';
 
-class CatalogLayoutCubit extends Cubit<CatalogLayoutMode> {
-  CatalogLayoutCubit({
+class LibraryLayoutCubit extends Cubit<LibraryLayoutMode> {
+  LibraryLayoutCubit({
     required PreferencesService preferencesService,
   }) : _preferencesService = preferencesService,
        super(
-         CatalogLayoutModeX.fromId(
-           preferencesService.current.catalogLayoutMode,
+         LibraryLayoutModeX.fromId(
+           preferencesService.current.libraryLayoutMode,
          ),
        );
 
   final PreferencesService _preferencesService;
 
-  Future<void> setLayoutMode(CatalogLayoutMode mode) async {
+  Future<void> setLayoutMode(LibraryLayoutMode mode) async {
     if (state == mode) return;
     emit(mode);
     try {
       await _preferencesService.update(
-        (prefs) => prefs.copyWith(catalogLayoutMode: mode.id),
+        (prefs) => prefs.copyWith(libraryLayoutMode: mode.id),
       );
     } catch (e, st) {
       addError(e, st);

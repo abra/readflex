@@ -1,6 +1,6 @@
-import 'package:catalog/src/catalog_list_view.dart';
-import 'package:catalog/src/catalog_list_tile.dart';
-import 'package:catalog/src/catalog_selection_cubit.dart';
+import 'package:library_feature/src/library_list_view.dart';
+import 'package:library_feature/src/library_list_tile.dart';
+import 'package:library_feature/src/library_selection_cubit.dart';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
@@ -68,7 +68,7 @@ void main() {
 
     final coverRect = tester.getRect(find.byType(AppSourceCoverFrame));
     final checkRect = tester.getRect(
-      find.byKey(const ValueKey('catalogListSelectionCheck')),
+      find.byKey(const ValueKey('libraryListSelectionCheck')),
     );
     expect(checkRect.top, coverRect.top + AppSpacing.xs);
     expect(checkRect.right, coverRect.right - AppSpacing.xs);
@@ -81,9 +81,9 @@ void main() {
       MaterialApp(
         theme: AppTheme.light(),
         home: Scaffold(
-          body: CatalogListView(
+          body: LibraryListView(
             sources: _books.map(LibrarySource.fromBook).toList(),
-            selection: const CatalogSelectionState(),
+            selection: const LibrarySelectionState(),
             scrollController: ScrollController(),
             onSourcePressed: (_) {},
             onSourceLongPressed: (_) {},
@@ -94,7 +94,7 @@ void main() {
     );
 
     final dividerFinder = find.byKey(
-      const ValueKey('catalogListRowTopDivider'),
+      const ValueKey('libraryListRowTopDivider'),
     );
     expect(dividerFinder, findsOneWidget);
 
@@ -114,9 +114,9 @@ void main() {
       MaterialApp(
         theme: AppTheme.light(),
         home: Scaffold(
-          body: CatalogListView(
+          body: LibraryListView(
             sources: [LibrarySource.fromArticle(_article)],
-            selection: const CatalogSelectionState(),
+            selection: const LibrarySelectionState(),
             scrollController: ScrollController(),
             onSourcePressed: (_) {},
             onSourceLongPressed: (_) {},
@@ -162,7 +162,7 @@ void main() {
 
     final title = tester.widget<Text>(find.text(rtlArticle.title));
     final metaRow = tester.widget<Row>(
-      find.byKey(const ValueKey('catalogListRowMeta')),
+      find.byKey(const ValueKey('libraryListRowMeta')),
     );
     final rowRect = tester.getRect(find.byType(GestureDetector));
     final titleRect = tester.getRect(find.text(rtlArticle.title));

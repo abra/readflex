@@ -1,14 +1,14 @@
-part of 'catalog_bloc.dart';
+part of 'library_bloc.dart';
 
-enum CatalogStatus { initial, loading, success, failure }
+enum LibraryStatus { initial, loading, success, failure }
 
 /// Filter segments mirrored from the readwell_demo Library screen. Kept
 /// as an enum (not a string) so switches are exhaustive and renames are
 /// refactor-safe.
-enum CatalogFilter { all, books, articles, comics, unread, finished }
+enum LibraryFilter { all, books, articles, comics, unread, finished }
 
-class CatalogDeletionEffect extends Equatable {
-  const CatalogDeletionEffect({
+class LibraryDeletionEffect extends Equatable {
+  const LibraryDeletionEffect({
     required this.version,
     required this.success,
     required this.count,
@@ -24,22 +24,22 @@ class CatalogDeletionEffect extends Equatable {
   List<Object?> get props => [version, success, count, singleTitle];
 }
 
-class CatalogState extends Equatable {
+class LibraryState extends Equatable {
   // Non-const because [visibleItems] is a `late final` derived field —
   // const objects can't have late initializers. The trade-off is the
-  // 8 `const CatalogState(...)` literals in tests/bloc-init lose their
+  // 8 `const LibraryState(...)` literals in tests/bloc-init lose their
   // compile-time canonical form, which is irrelevant at runtime.
-  CatalogState({
-    this.status = CatalogStatus.initial,
+  LibraryState({
+    this.status = LibraryStatus.initial,
     this.books = const [],
     this.articles = const [],
-    this.filter = CatalogFilter.all,
+    this.filter = LibraryFilter.all,
     this.searchQuery = '',
     this.deletionVersion = 0,
     this.deletionEffect,
   });
 
-  final CatalogStatus status;
+  final LibraryStatus status;
   final List<Book> books;
   final List<Article> articles;
 
@@ -48,7 +48,7 @@ class CatalogState extends Equatable {
     ...articles.map(LibrarySource.fromArticle),
   ];
 
-  final CatalogFilter filter;
+  final LibraryFilter filter;
   final String searchQuery;
 
   /// Monotonic counter bumped exactly once per dispatched delete event
@@ -58,7 +58,7 @@ class CatalogState extends Equatable {
 
   /// One-shot UI effect emitted after a delete finishes. The screen listens
   /// for changes and renders the toast; it no longer owns delete queues.
-  final CatalogDeletionEffect? deletionEffect;
+  final LibraryDeletionEffect? deletionEffect;
 
   bool get isEmpty => sources.isEmpty;
 
@@ -85,20 +85,20 @@ class CatalogState extends Equatable {
 
   static List<LibrarySource> _computeVisibleItems({
     required List<LibrarySource> sources,
-    required CatalogFilter filter,
+    required LibraryFilter filter,
     required String searchQuery,
   }) {
     final trimmedQuery = searchQuery.trim().toLowerCase();
 
     final filtered = sources.where((source) {
       final matchesFilter = switch (filter) {
-        CatalogFilter.all => true,
-        CatalogFilter.books =>
+        LibraryFilter.all => true,
+        LibraryFilter.books =>
           source.sourceType == SourceType.book && !source.isComic,
-        CatalogFilter.articles => source.sourceType == SourceType.article,
-        CatalogFilter.comics => source.isComic,
-        CatalogFilter.unread => source.readingProgress == 0,
-        CatalogFilter.finished => source.isFinished,
+        LibraryFilter.articles => source.sourceType == SourceType.article,
+        LibraryFilter.comics => source.isComic,
+        LibraryFilter.unread => source.readingProgress == 0,
+        LibraryFilter.finished => source.isFinished,
       };
       if (!matchesFilter) return false;
 
@@ -123,15 +123,15 @@ class CatalogState extends Equatable {
     return filtered;
   }
 
-  CatalogState copyWith({
-    CatalogStatus? status,
+  LibraryState copyWith({
+    LibraryStatus? status,
     List<Book>? books,
     List<Article>? articles,
-    CatalogFilter? filter,
+    LibraryFilter? filter,
     String? searchQuery,
     int? deletionVersion,
-    CatalogDeletionEffect? deletionEffect,
-  }) => CatalogState(
+    LibraryDeletionEffect? deletionEffect,
+  }) => LibraryState(
     status: status ?? this.status,
     books: books ?? this.books,
     articles: articles ?? this.articles,

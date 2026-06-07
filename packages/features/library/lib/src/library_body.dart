@@ -3,13 +3,13 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'catalog_bloc.dart';
-import 'catalog_grid_view.dart';
-import 'catalog_layout_cubit.dart';
-import 'catalog_list_view.dart';
-import 'catalog_selection_cubit.dart';
+import 'library_bloc.dart';
+import 'library_grid_view.dart';
+import 'library_layout_cubit.dart';
+import 'library_list_view.dart';
+import 'library_selection_cubit.dart';
 
-/// Scrollable body of the catalog: renders the right layout (list / grid)
+/// Scrollable body of the library: renders the right layout (list / grid)
 /// for the current user preference, or one of two empty states if there's
 /// nothing to show.
 ///
@@ -20,8 +20,8 @@ import 'catalog_selection_cubit.dart';
 ///
 /// Wrapping [RefreshIndicator] is always present (even for the empty
 /// states) so pull-to-refresh stays available.
-class CatalogBody extends StatelessWidget {
-  const CatalogBody({
+class LibraryBody extends StatelessWidget {
+  const LibraryBody({
     required this.state,
     required this.selection,
     required this.scrollController,
@@ -32,8 +32,8 @@ class CatalogBody extends StatelessWidget {
     super.key,
   });
 
-  final CatalogState state;
-  final CatalogSelectionState selection;
+  final LibraryState state;
+  final LibrarySelectionState selection;
   final ScrollController scrollController;
   final void Function(LibrarySource source) onSourcePressed;
   final void Function(LibrarySource source) onSourceLongPressed;
@@ -71,10 +71,10 @@ class CatalogBody extends StatelessWidget {
 
     return RefreshIndicator(
       onRefresh: onRefresh,
-      child: BlocBuilder<CatalogLayoutCubit, CatalogLayoutMode>(
+      child: BlocBuilder<LibraryLayoutCubit, LibraryLayoutMode>(
         builder: (context, layoutMode) {
           return switch (layoutMode) {
-            CatalogLayoutMode.list => CatalogListView(
+            LibraryLayoutMode.list => LibraryListView(
               sources: visibleItems,
               selection: selection,
               scrollController: scrollController,
@@ -82,7 +82,7 @@ class CatalogBody extends StatelessWidget {
               onSourceLongPressed: onSourceLongPressed,
               onConfirmSwipeDelete: onConfirmSwipeDelete,
             ),
-            CatalogLayoutMode.grid => CatalogGridView(
+            LibraryLayoutMode.grid => LibraryGridView(
               sources: visibleItems,
               selection: selection,
               scrollController: scrollController,

@@ -2,12 +2,12 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 
-import 'catalog_grid_tile.dart';
-import 'catalog_selection_cubit.dart';
+import 'library_grid_tile.dart';
+import 'library_selection_cubit.dart';
 
 /// Scrollable 3-column grid of book tiles.
-class CatalogGridView extends StatelessWidget {
-  const CatalogGridView({
+class LibraryGridView extends StatelessWidget {
+  const LibraryGridView({
     required this.sources,
     required this.selection,
     required this.scrollController,
@@ -17,7 +17,7 @@ class CatalogGridView extends StatelessWidget {
   });
 
   final List<LibrarySource> sources;
-  final CatalogSelectionState selection;
+  final LibrarySelectionState selection;
   final ScrollController scrollController;
   final void Function(LibrarySource source) onSourcePressed;
   final void Function(LibrarySource source) onSourceLongPressed;

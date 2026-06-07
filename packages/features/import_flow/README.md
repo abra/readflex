@@ -24,7 +24,7 @@ Future<ImportFlowResult?> showImportFlowSheet(
   metadata with `BookMetadataExtractor` from `reader_webview` (foliate-js via
   local HTTP server) and persists via `BookRepository`.
 - Sheet resolves with `ImportFlowResult.bookImported` when the user
-  finishes a successful import so the caller (e.g. `catalog_screen`) can
+  finishes a successful import so the caller (e.g. `library_screen`) can
   refresh.
 
 Helpers exported from `import_flow.dart`:

@@ -18,7 +18,7 @@ from Dart names) a `toStorageString()` helper.
 | `Article`         | A saved web article with local content and reader state   |
 | `ArticleBlock`    | Structured article content returned by the cleaner        |
 | `ExtractedArticle` | Cleaner response before local persistence assigns paths  |
-| `LibrarySource`   | Unified catalog/details projection for books and articles |
+| `LibrarySource`   | Unified library/details projection for books and articles |
 | `SourceBookmark`  | Bookmark anchored to a source with CFI/page metadata      |
 | `Highlight`       | Text highlight attached to a reading source               |
 | `Flashcard`       | Flashcard with front/back and creation source             |

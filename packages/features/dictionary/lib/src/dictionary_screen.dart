@@ -234,7 +234,7 @@ class _DictionaryViewState extends State<_DictionaryView> {
 
 /// Swaps the FAB icon based on whether a multi-select is active. Add
 /// (`+`) when idle, trash when ≥1 entry is selected. Mirror of the
-/// Catalog FAB so the UX feels uniform across tabs.
+/// Library FAB so the UX feels uniform across tabs.
 class _DictionaryFab extends StatelessWidget {
   const _DictionaryFab({
     required this.selectionActive,
@@ -307,7 +307,7 @@ class _SuccessBody extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Compact title row mirrors `CatalogHeader`: title on the
+              // Compact title row mirrors `LibraryHeader`: title on the
               // left, count + trailing affordance on the right. The
               // mastered/learning counts live inside the filter chips
               // below, so the old standalone "saved words" / "mastered"
@@ -361,9 +361,9 @@ class _SuccessBody extends StatelessWidget {
                     // Horizontal padding lives on the list (not on each
                     // row) so the swipe-to-delete background is inset
                     // from the screen edges — same shape as the
-                    // catalog list. Keeping `lg` on rows would make
+                    // library list. Keeping `lg` on rows would make
                     // the Dismissible reach the screen edge while
-                    // catalog's stays inset.
+                    // library's stays inset.
                     padding: const EdgeInsets.fromLTRB(
                       AppSpacing.lg,
                       0,
@@ -467,7 +467,7 @@ class _DictionaryListRow extends StatelessWidget {
         // swipe-delete background insets itself naturally; the row
         // adds a small `xs` inset of its own so the leading mastery
         // dot doesn't sit flush against the tile's left edge —
-        // matches the catalog list-tile spacing.
+        // matches the library list-tile spacing.
         child: Padding(
           padding: const EdgeInsets.symmetric(
             vertical: 10,
@@ -551,7 +551,7 @@ class _DictionaryListRow extends StatelessWidget {
 }
 
 /// Icon-only header action — quick jump to the Practice tab. Sized to
-/// match Catalog's `_LayoutToggleButton` (40×40 with sm radius) so the
+/// match Library's `_LayoutToggleButton` (40×40 with sm radius) so the
 /// header affordance reads consistently across the two screens.
 class _PracticeButton extends StatelessWidget {
   const _PracticeButton({required this.onPressed});

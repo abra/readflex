@@ -65,7 +65,10 @@ class PreferencesRepository {
           map['themeMode'] as String? ?? 'system',
         ),
         locale: _resolveLocale(map['locale'] as String?, supportedCodes),
-        catalogLayoutMode: map['catalogLayoutMode'] as String? ?? 'grid',
+        libraryLayoutMode:
+            map['libraryLayoutMode'] as String? ??
+            map['catalogLayoutMode'] as String? ??
+            'grid',
         readerThemeId: map['readerThemeId'] as String? ?? 'paper',
         readerFontId: fontId,
         readerLayoutId: map['readerLayoutId'] as String? ?? 'standard',
@@ -111,7 +114,7 @@ class PreferencesRepository {
       '_schemaVersion': _currentSchemaVersion,
       'themeMode': prefs.themeMode.name,
       'locale': prefs.locale.languageCode,
-      'catalogLayoutMode': prefs.catalogLayoutMode,
+      'libraryLayoutMode': prefs.libraryLayoutMode,
       'readerThemeId': prefs.readerThemeId,
       'readerFontId': prefs.readerFontId,
       'readerLayoutId': prefs.readerLayoutId,

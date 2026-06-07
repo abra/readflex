@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:toastification/toastification.dart';
 
 /// Default-clamped horizontal inset between the toast and the screen
-/// edge. Matches `AppSpacing.lg` (the catalog/list horizontal padding)
+/// edge. Matches `AppSpacing.lg` (the library/list horizontal padding)
 /// so a toast lines up with the rest of the chrome.
 const double _kHorizontalInset = AppSpacing.lg;
 

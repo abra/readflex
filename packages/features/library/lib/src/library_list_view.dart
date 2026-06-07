@@ -2,8 +2,8 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 
-import 'catalog_list_tile.dart';
-import 'catalog_selection_cubit.dart';
+import 'library_list_tile.dart';
+import 'library_selection_cubit.dart';
 
 /// Vertically scrolling list of library source rows.
 ///
@@ -18,8 +18,8 @@ import 'catalog_selection_cubit.dart';
 /// the parent screen shows a confirmation bottom sheet, dispatches the
 /// delete on confirm, and returns true to let the row finish dismissing
 /// (or false to spring it back).
-class CatalogListView extends StatelessWidget {
-  const CatalogListView({
+class LibraryListView extends StatelessWidget {
+  const LibraryListView({
     required this.sources,
     required this.selection,
     required this.scrollController,
@@ -30,7 +30,7 @@ class CatalogListView extends StatelessWidget {
   });
 
   final List<LibrarySource> sources;
-  final CatalogSelectionState selection;
+  final LibrarySelectionState selection;
   final ScrollController scrollController;
   final void Function(LibrarySource source) onSourcePressed;
   final void Function(LibrarySource source) onSourceLongPressed;
@@ -68,7 +68,7 @@ class CatalogListView extends StatelessWidget {
         }
 
         return Dismissible(
-          key: ValueKey('catalog-row-${source.id}'),
+          key: ValueKey('library-row-${source.id}'),
           direction: DismissDirection.endToStart,
           background: const _SwipeDeleteBackground(),
           confirmDismiss: (_) => onConfirmSwipeDelete(source),

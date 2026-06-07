@@ -25,7 +25,7 @@ void main() {
       const prefs = Preferences();
       expect(prefs.themeMode, ThemeMode.system);
       expect(prefs.locale, const Locale('en'));
-      expect(prefs.catalogLayoutMode, 'grid');
+      expect(prefs.libraryLayoutMode, 'grid');
       expect(prefs.readerThemeId, 'paper');
       expect(prefs.readerFontId, 'serif');
       expect(prefs.readerLayoutId, 'standard');
@@ -51,7 +51,7 @@ void main() {
       final updated = prefs.copyWith(
         themeMode: ThemeMode.dark,
         locale: const Locale('ru'),
-        catalogLayoutMode: 'list',
+        libraryLayoutMode: 'list',
         readerPageTurnStyle: ReaderPageTurnStyle.vertical,
         readerSearchHistory: const ['design patterns', 'bloc'],
         readerBrightness: 0.55,
@@ -67,7 +67,7 @@ void main() {
 
       expect(updated.themeMode, ThemeMode.dark);
       expect(updated.locale, const Locale('ru'));
-      expect(updated.catalogLayoutMode, 'list');
+      expect(updated.libraryLayoutMode, 'list');
       expect(updated.readerPageTurnStyle, ReaderPageTurnStyle.vertical);
       expect(updated.readerSearchHistory, ['design patterns', 'bloc']);
       expect(updated.readerBrightness, 0.55);

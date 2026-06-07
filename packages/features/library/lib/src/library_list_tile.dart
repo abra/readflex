@@ -253,7 +253,7 @@ class _ListRowShell extends StatelessWidget {
                       Directionality(
                         textDirection: textDirection,
                         child: Row(
-                          key: const ValueKey('catalogListRowMeta'),
+                          key: const ValueKey('libraryListRowMeta'),
                           textDirection: textDirection,
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -289,7 +289,7 @@ class _ListRowShell extends StatelessWidget {
               right: 0,
               top: 0,
               child: Container(
-                key: const ValueKey('catalogListRowTopDivider'),
+                key: const ValueKey('libraryListRowTopDivider'),
                 height: 1,
                 color: _listDividerColor(context),
               ),
@@ -312,7 +312,7 @@ class _SelectionCheck extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      key: const ValueKey('catalogListSelectionCheck'),
+      key: const ValueKey('libraryListSelectionCheck'),
       width: 18,
       height: 18,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),

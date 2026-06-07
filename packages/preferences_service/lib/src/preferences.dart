@@ -380,14 +380,14 @@ class ReaderAppearanceOverride {
 }
 
 /// Immutable snapshot of every user-configurable preference in the app —
-/// app theme, locale, catalog layout, reader appearance, and onboarding
+/// app theme, locale, library layout, reader appearance, and onboarding
 /// flags. Loaded at startup, mutated via [PreferencesService.update], and
 /// surfaced to widgets through [PreferencesScope].
 class Preferences {
   const Preferences({
     this.themeMode = ThemeMode.system,
     this.locale = const Locale('en'),
-    this.catalogLayoutMode = 'grid',
+    this.libraryLayoutMode = 'grid',
     this.readerThemeId = 'paper',
     this.readerFontId = 'serif',
     this.readerLayoutId = 'standard',
@@ -410,7 +410,7 @@ class Preferences {
 
   final ThemeMode themeMode;
   final Locale locale;
-  final String catalogLayoutMode;
+  final String libraryLayoutMode;
   final String readerThemeId;
   final String readerFontId;
   final String readerLayoutId;
@@ -468,7 +468,7 @@ class Preferences {
   Preferences copyWith({
     ThemeMode? themeMode,
     Locale? locale,
-    String? catalogLayoutMode,
+    String? libraryLayoutMode,
     String? readerThemeId,
     String? readerFontId,
     String? readerLayoutId,
@@ -490,7 +490,7 @@ class Preferences {
   }) => Preferences(
     themeMode: themeMode ?? this.themeMode,
     locale: locale ?? this.locale,
-    catalogLayoutMode: catalogLayoutMode ?? this.catalogLayoutMode,
+    libraryLayoutMode: libraryLayoutMode ?? this.libraryLayoutMode,
     readerThemeId: readerThemeId ?? this.readerThemeId,
     readerFontId: readerFontId ?? this.readerFontId,
     readerLayoutId: readerLayoutId ?? this.readerLayoutId,
@@ -523,7 +523,7 @@ class Preferences {
       other is Preferences &&
           themeMode == other.themeMode &&
           locale == other.locale &&
-          catalogLayoutMode == other.catalogLayoutMode &&
+          libraryLayoutMode == other.libraryLayoutMode &&
           readerThemeId == other.readerThemeId &&
           readerFontId == other.readerFontId &&
           readerLayoutId == other.readerLayoutId &&
@@ -550,7 +550,7 @@ class Preferences {
   int get hashCode => Object.hashAll([
     themeMode,
     locale,
-    catalogLayoutMode,
+    libraryLayoutMode,
     readerThemeId,
     readerFontId,
     readerLayoutId,

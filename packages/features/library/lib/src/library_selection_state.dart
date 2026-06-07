@@ -1,7 +1,7 @@
-part of 'catalog_selection_cubit.dart';
+part of 'library_selection_cubit.dart';
 
-class CatalogSelectionState {
-  const CatalogSelectionState({this.selectedIds = const <String>{}});
+class LibrarySelectionState {
+  const LibrarySelectionState({this.selectedIds = const <String>{}});
 
   final Set<String> selectedIds;
 
@@ -13,7 +13,7 @@ class CatalogSelectionState {
 
   @override
   bool operator ==(Object other) =>
-      other is CatalogSelectionState &&
+      other is LibrarySelectionState &&
       other.selectedIds.length == selectedIds.length &&
       other.selectedIds.containsAll(selectedIds);
 

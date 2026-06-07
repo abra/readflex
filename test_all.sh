@@ -48,7 +48,7 @@ run "reader_server"               "flutter test test/" "$SCRIPT_DIR/packages/rea
 run "reader_webview"              "flutter test test/" "$SCRIPT_DIR/packages/reader_webview"
 run "reader_webview_js"           "node --test test_js/*.test.mjs" "$SCRIPT_DIR/packages/reader_webview"
 run "toast_service"               "flutter test test/" "$SCRIPT_DIR/packages/toast_service"
-run "catalog"              "flutter test test/" "$SCRIPT_DIR/packages/features/catalog"
+run "library"              "flutter test test/" "$SCRIPT_DIR/packages/features/library"
 run "import_flow"                  "flutter test test/" "$SCRIPT_DIR/packages/features/import_flow"
 run "home"                         "flutter test test/" "$SCRIPT_DIR/packages/features/home"
 run "profile"                      "flutter test test/" "$SCRIPT_DIR/packages/features/profile"

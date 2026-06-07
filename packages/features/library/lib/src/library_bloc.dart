@@ -5,25 +5,25 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:stream_transform/stream_transform.dart';
 
-part 'catalog_event.dart';
-part 'catalog_state.dart';
+part 'library_event.dart';
+part 'library_state.dart';
 
-class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
-  CatalogBloc({
+class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
+  LibraryBloc({
     required BookRepository bookRepository,
     ArticleRepository? articleRepository,
   }) : _bookRepository = bookRepository,
        _articleRepository = articleRepository,
-       super(CatalogState()) {
-    on<CatalogLoadRequested>(_onLoadRequested);
-    on<CatalogSourceDeleted>(_onSourceDeleted);
-    on<CatalogSourcesDeleted>(_onSourcesDeleted);
-    on<CatalogRefreshRequested>(_onRefreshRequested);
-    on<CatalogSearchQueryChanged>(
+       super(LibraryState()) {
+    on<LibraryLoadRequested>(_onLoadRequested);
+    on<LibrarySourceDeleted>(_onSourceDeleted);
+    on<LibrarySourcesDeleted>(_onSourcesDeleted);
+    on<LibraryRefreshRequested>(_onRefreshRequested);
+    on<LibrarySearchQueryChanged>(
       _onSearchQueryChanged,
       transformer: _debounce(_searchDelay),
     );
-    on<CatalogFilterChanged>(_onFilterChanged);
+    on<LibraryFilterChanged>(_onFilterChanged);
   }
 
   static const _searchDelay = Duration(milliseconds: 300);
@@ -33,15 +33,15 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
   }
 
   void _onSearchQueryChanged(
-    CatalogSearchQueryChanged event,
-    Emitter<CatalogState> emit,
+    LibrarySearchQueryChanged event,
+    Emitter<LibraryState> emit,
   ) {
     emit(state.copyWith(searchQuery: event.query));
   }
 
   void _onFilterChanged(
-    CatalogFilterChanged event,
-    Emitter<CatalogState> emit,
+    LibraryFilterChanged event,
+    Emitter<LibraryState> emit,
   ) {
     emit(state.copyWith(filter: event.filter));
   }
@@ -50,23 +50,23 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
   final ArticleRepository? _articleRepository;
 
   Future<void> _onLoadRequested(
-    CatalogLoadRequested event,
-    Emitter<CatalogState> emit,
+    LibraryLoadRequested event,
+    Emitter<LibraryState> emit,
   ) async {
-    emit(state.copyWith(status: CatalogStatus.loading));
+    emit(state.copyWith(status: LibraryStatus.loading));
     await _loadItems(emit);
   }
 
   Future<void> _onRefreshRequested(
-    CatalogRefreshRequested event,
-    Emitter<CatalogState> emit,
+    LibraryRefreshRequested event,
+    Emitter<LibraryState> emit,
   ) async {
     await _loadItems(emit);
   }
 
   Future<void> _onSourceDeleted(
-    CatalogSourceDeleted event,
-    Emitter<CatalogState> emit,
+    LibrarySourceDeleted event,
+    Emitter<LibraryState> emit,
   ) async {
     final deletion = _deletionDescriptorFor({event.sourceId});
     try {
@@ -77,7 +77,7 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
       final effect = _deletionEffect(deletion, success: false);
       emit(
         state.copyWith(
-          status: CatalogStatus.success,
+          status: LibraryStatus.success,
           deletionVersion: effect.version,
           deletionEffect: effect,
         ),
@@ -86,8 +86,8 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
   }
 
   Future<void> _onSourcesDeleted(
-    CatalogSourcesDeleted event,
-    Emitter<CatalogState> emit,
+    LibrarySourcesDeleted event,
+    Emitter<LibraryState> emit,
   ) async {
     final deletion = _deletionDescriptorFor(event.sourceIds);
     // Loop deliberately continues on per-id failure: if id #2 throws we
@@ -113,7 +113,7 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
         final effect = _deletionEffect(deletion, success: false);
         emit(
           state.copyWith(
-            status: CatalogStatus.success,
+            status: LibraryStatus.success,
             books: books,
             articles: articles,
             deletionVersion: effect.version,
@@ -125,7 +125,7 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
         final effect = _deletionEffect(deletion, success: false);
         emit(
           state.copyWith(
-            status: CatalogStatus.success,
+            status: LibraryStatus.success,
             deletionVersion: effect.version,
             deletionEffect: effect,
           ),
@@ -138,11 +138,11 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
 
   /// Pulls the latest source list and emits a `success` (or `failure`)
   /// state. Pass [fromDeletion] when this load is the post-delete
-  /// refresh — that emits a [CatalogDeletionEffect] so the screen can show
+  /// refresh — that emits a [LibraryDeletionEffect] so the screen can show
   /// the correct toast without tracking a local queue.
   Future<void> _loadItems(
-    Emitter<CatalogState> emit, {
-    _CatalogDeletionDescriptor? deletion,
+    Emitter<LibraryState> emit, {
+    _LibraryDeletionDescriptor? deletion,
   }) async {
     try {
       final (books, articles) = await _loadRawSources();
@@ -151,7 +151,7 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
           : _deletionEffect(deletion, success: true);
       emit(
         state.copyWith(
-          status: CatalogStatus.success,
+          status: LibraryStatus.success,
           books: books,
           articles: articles,
           deletionVersion: effect?.version,
@@ -164,8 +164,8 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
           ? null
           : _deletionEffect(deletion, success: false);
       final status = deletion == null
-          ? CatalogStatus.failure
-          : CatalogStatus.success;
+          ? LibraryStatus.failure
+          : LibraryStatus.success;
       emit(
         state.copyWith(
           status: status,
@@ -196,20 +196,20 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
     await _bookRepository.deleteBook(id, scope: scope);
   }
 
-  _CatalogDeletionDescriptor _deletionDescriptorFor(Iterable<String> ids) {
+  _LibraryDeletionDescriptor _deletionDescriptorFor(Iterable<String> ids) {
     final idList = ids.toList(growable: false);
-    return _CatalogDeletionDescriptor(
+    return _LibraryDeletionDescriptor(
       count: idList.length,
       singleTitle: idList.length == 1 ? _titleOf(idList.first) : null,
     );
   }
 
-  CatalogDeletionEffect _deletionEffect(
-    _CatalogDeletionDescriptor deletion, {
+  LibraryDeletionEffect _deletionEffect(
+    _LibraryDeletionDescriptor deletion, {
     required bool success,
   }) {
     final version = state.deletionVersion + 1;
-    return CatalogDeletionEffect(
+    return LibraryDeletionEffect(
       version: version,
       success: success,
       count: deletion.count,
@@ -232,8 +232,8 @@ class CatalogBloc extends Bloc<CatalogEvent, CatalogState> {
   }
 }
 
-class _CatalogDeletionDescriptor {
-  const _CatalogDeletionDescriptor({
+class _LibraryDeletionDescriptor {
+  const _LibraryDeletionDescriptor({
     required this.count,
     this.singleTitle,
   });

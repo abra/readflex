@@ -22,7 +22,7 @@ void main() {
       final prefs = await repo.load(_supportedCodes);
 
       expect(prefs.themeMode, ThemeMode.system);
-      expect(prefs.catalogLayoutMode, 'grid');
+      expect(prefs.libraryLayoutMode, 'grid');
       expect(prefs.readerThemeId, 'paper');
       expect(prefs.readerFontId, 'serif');
       expect(prefs.readerLayoutId, 'standard');
@@ -43,12 +43,27 @@ void main() {
       expect(prefs.hasCompletedSetup, isFalse);
     });
 
+    test('load() reads legacy catalog layout preference', () async {
+      final storage = PreferencesStorage();
+      await storage.setString(
+        _key,
+        jsonEncode(<String, Object?>{
+          'catalogLayoutMode': 'list',
+        }),
+      );
+
+      final repo = PreferencesRepository(storage);
+      final prefs = await repo.load(_supportedCodes);
+
+      expect(prefs.libraryLayoutMode, 'list');
+    });
+
     test('save() then load() round-trips all fields', () async {
       final repo = PreferencesRepository(PreferencesStorage());
       const source = Preferences(
         themeMode: ThemeMode.dark,
         locale: Locale('ru'),
-        catalogLayoutMode: 'list',
+        libraryLayoutMode: 'list',
         readerThemeId: 'night',
         readerFontId: 'geist',
         readerLayoutId: 'comfortable',
@@ -131,7 +146,7 @@ void main() {
           jsonEncode(<String, Object?>{
             'themeMode': 'dark',
             'locale': 'en',
-            'catalogLayoutMode': 'grid',
+            'libraryLayoutMode': 'grid',
             'readerThemeId': 'paper',
             'readerFontId': 'serif',
             'readerTextScale': 1.0,

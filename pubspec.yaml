@@ -61,8 +61,8 @@ dependencies:
     path: packages/toast_service
 
   # Feature packages
-  catalog:
-    path: packages/features/catalog
+  library_feature:
+    path: packages/features/library
   import_flow:
     path: packages/features/import_flow
   home:

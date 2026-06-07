@@ -72,7 +72,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('Dictionary'), findsOneWidget);
-    // Header now mirrors Catalog's "N items" — the per-state counts
+    // Header now mirrors Library's "N items" — the per-state counts
     // (mastered / learning) live in the filter chips below instead
     // of a separate indicator row.
     expect(find.text('2 words'), findsOneWidget);

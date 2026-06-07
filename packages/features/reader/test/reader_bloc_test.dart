@@ -181,7 +181,7 @@ void main() {
         },
       );
 
-      // Catalog uses `lastOpenedAt` to decide between the "New"
+      // Library uses `lastOpenedAt` to decide between the "New"
       // label and a progress %. The bumped value must propagate
       // into [ReaderState.book] — otherwise the next position
       // event will copyWith on a stale book and overwrite the
@@ -736,7 +736,7 @@ void main() {
       });
 
       test(
-        'persists first article progress immediately so catalog refresh sees it',
+        'persists first article progress immediately so library refresh sees it',
         () async {
           final articleRepository = FakeArticleRepository();
           articleRepository.seedArticle(

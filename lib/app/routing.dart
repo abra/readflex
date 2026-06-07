@@ -1,7 +1,7 @@
 import 'dart:async' show unawaited;
 
 import 'package:article_extraction_service/article_extraction_service.dart';
-import 'package:catalog/catalog.dart';
+import 'package:library_feature/library_feature.dart';
 import 'package:dictionary/dictionary.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flashcard/flashcard.dart';
@@ -106,7 +106,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
             routes: [
               GoRoute(
                 path: AppRoutes.library,
-                builder: (context, state) => CatalogScreen(
+                builder: (context, state) => LibraryScreen(
                   bookRepository: deps.bookRepository,
                   articleRepository: deps.articleRepository,
                   preferencesService: deps.preferencesService,

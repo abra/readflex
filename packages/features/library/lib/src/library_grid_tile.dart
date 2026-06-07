@@ -187,7 +187,7 @@ class _GridTileShell extends StatelessWidget {
                     builder: (_, constraints) => ClipRRect(
                       borderRadius: BorderRadius.circular(AppRadius.full),
                       child: SizedBox(
-                        key: const Key('catalogGridProgressBar'),
+                        key: const Key('libraryGridProgressBar'),
                         height: 3,
                         child: Stack(
                           children: [

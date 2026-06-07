@@ -34,12 +34,12 @@ void main() {
       await service.update(
         (s) => s.copyWith(
           themeMode: ThemeMode.dark,
-          catalogLayoutMode: 'list',
+          libraryLayoutMode: 'list',
         ),
       );
 
       expect(service.current.themeMode, ThemeMode.dark);
-      expect(service.current.catalogLayoutMode, 'list');
+      expect(service.current.libraryLayoutMode, 'list');
     });
 
     test('update() changes reader appearance preferences', () async {
@@ -253,7 +253,7 @@ void main() {
       await service.update(
         (s) => s.copyWith(
           themeMode: ThemeMode.dark,
-          catalogLayoutMode: 'list',
+          libraryLayoutMode: 'list',
           readerThemeId: 'mist',
           readerFontId: 'sans',
           readerTextScale: 1.1,
@@ -266,7 +266,7 @@ void main() {
       );
 
       expect(service2.current.themeMode, ThemeMode.dark);
-      expect(service2.current.catalogLayoutMode, 'list');
+      expect(service2.current.libraryLayoutMode, 'list');
       expect(service2.current.readerThemeId, 'mist');
       expect(service2.current.readerFontId, 'sans');
       expect(service2.current.readerTextScale, 1.1);

@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:component_library/component_library.dart';
-import 'package:catalog/catalog.dart';
+import 'package:library_feature/library_feature.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -35,7 +35,7 @@ void main() {
 
   Widget buildSubject() => MaterialApp(
     theme: AppTheme.light(),
-    home: CatalogScreen(
+    home: LibraryScreen(
       bookRepository: bookRepository,
       preferencesService: preferencesService,
       onSourcePressed: (_, {onSourceOpened}) async {},
@@ -117,7 +117,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        home: CatalogScreen(
+        home: LibraryScreen(
           bookRepository: bookRepository,
           preferencesService: preferencesService,
           onSourcePressed: (_, {onSourceOpened}) async {},
@@ -159,7 +159,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        home: CatalogScreen(
+        home: LibraryScreen(
           bookRepository: bookRepository,
           preferencesService: preferencesService,
           onSourcePressed: (_, {onSourceOpened}) async {},
@@ -230,7 +230,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        home: CatalogScreen(
+        home: LibraryScreen(
           bookRepository: bookRepository,
           preferencesService: preferencesService,
           onSourcePressed: (source, {onSourceOpened}) async {
@@ -309,7 +309,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        home: CatalogScreen(
+        home: LibraryScreen(
           bookRepository: bookRepository,
           preferencesService: preferencesService,
           onSourcePressed: (source, {onSourceOpened}) async {

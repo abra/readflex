@@ -1,18 +1,18 @@
 import 'package:bloc_test/bloc_test.dart';
-import 'package:catalog/src/catalog_selection_cubit.dart';
+import 'package:library_feature/src/library_selection_cubit.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('CatalogSelectionCubit', () {
+  group('LibrarySelectionCubit', () {
     test('starts inactive with empty selection', () {
-      final cubit = CatalogSelectionCubit();
+      final cubit = LibrarySelectionCubit();
       expect(cubit.state.isActive, isFalse);
       expect(cubit.state.count, 0);
     });
 
-    blocTest<CatalogSelectionCubit, CatalogSelectionState>(
+    blocTest<LibrarySelectionCubit, LibrarySelectionState>(
       'first toggle activates selection',
-      build: CatalogSelectionCubit.new,
+      build: LibrarySelectionCubit.new,
       act: (c) => c.toggle('a'),
       verify: (c) {
         expect(c.state.isActive, isTrue);
@@ -20,9 +20,9 @@ void main() {
       },
     );
 
-    blocTest<CatalogSelectionCubit, CatalogSelectionState>(
+    blocTest<LibrarySelectionCubit, LibrarySelectionState>(
       'toggle on selected id removes it',
-      build: CatalogSelectionCubit.new,
+      build: LibrarySelectionCubit.new,
       act: (c) => c
         ..toggle('a')
         ..toggle('a'),
@@ -32,9 +32,9 @@ void main() {
       },
     );
 
-    blocTest<CatalogSelectionCubit, CatalogSelectionState>(
+    blocTest<LibrarySelectionCubit, LibrarySelectionState>(
       'multiple toggles accumulate',
-      build: CatalogSelectionCubit.new,
+      build: LibrarySelectionCubit.new,
       act: (c) => c
         ..toggle('a')
         ..toggle('b')
@@ -42,9 +42,9 @@ void main() {
       verify: (c) => expect(c.state.count, 3),
     );
 
-    blocTest<CatalogSelectionCubit, CatalogSelectionState>(
+    blocTest<LibrarySelectionCubit, LibrarySelectionState>(
       'clear empties an active selection',
-      build: CatalogSelectionCubit.new,
+      build: LibrarySelectionCubit.new,
       act: (c) => c
         ..toggle('a')
         ..toggle('b')
@@ -55,25 +55,25 @@ void main() {
       },
     );
 
-    blocTest<CatalogSelectionCubit, CatalogSelectionState>(
+    blocTest<LibrarySelectionCubit, LibrarySelectionState>(
       'clear is a no-op when already empty (no extra emission)',
-      build: CatalogSelectionCubit.new,
+      build: LibrarySelectionCubit.new,
       act: (c) => c.clear(),
-      expect: () => <CatalogSelectionState>[],
+      expect: () => <LibrarySelectionState>[],
     );
   });
 
-  group('CatalogSelectionState equality', () {
+  group('LibrarySelectionState equality', () {
     test('equal sets are equal regardless of insertion order', () {
-      const a = CatalogSelectionState(selectedIds: {'1', '2'});
-      const b = CatalogSelectionState(selectedIds: {'2', '1'});
+      const a = LibrarySelectionState(selectedIds: {'1', '2'});
+      const b = LibrarySelectionState(selectedIds: {'2', '1'});
       expect(a, b);
       expect(a.hashCode, b.hashCode);
     });
 
     test('different sets are not equal', () {
-      const a = CatalogSelectionState(selectedIds: {'1'});
-      const b = CatalogSelectionState(selectedIds: {'1', '2'});
+      const a = LibrarySelectionState(selectedIds: {'1'});
+      const b = LibrarySelectionState(selectedIds: {'1', '2'});
       expect(a, isNot(b));
     });
   });

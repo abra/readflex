@@ -8,24 +8,24 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:toast_service/toast_service.dart';
 
-import 'catalog_bloc.dart';
-import 'catalog_body.dart';
-import 'catalog_header.dart';
-import 'catalog_layout_cubit.dart';
-import 'catalog_selection_cubit.dart';
+import 'library_bloc.dart';
+import 'library_body.dart';
+import 'library_header.dart';
+import 'library_layout_cubit.dart';
+import 'library_selection_cubit.dart';
 import 'confirm_book_deletion_sheet.dart';
 
 const _sourceRouteReturnRefreshDelay = Duration(milliseconds: 320);
 
 /// Entry point for the Library tab.
 ///
-/// Pure composition: creates [CatalogBloc] + [CatalogLayoutCubit] +
-/// [CatalogSelectionCubit], kicks off the initial load, and hands the
-/// widget tree down to [_CatalogView]. All external callbacks
+/// Pure composition: creates [LibraryBloc] + [LibraryLayoutCubit] +
+/// [LibrarySelectionCubit], kicks off the initial load, and hands the
+/// widget tree down to [_LibraryView]. All external callbacks
 /// (`onSourcePressed`, `onAddPressed`) come from the composition root
 /// (`routing.dart`) — the feature itself doesn't know about navigation.
-class CatalogScreen extends StatelessWidget {
-  const CatalogScreen({
+class LibraryScreen extends StatelessWidget {
+  const LibraryScreen({
     required this.bookRepository,
     required this.preferencesService,
     required this.onSourcePressed,
@@ -46,24 +46,24 @@ class CatalogScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugLogScreenBuild('CatalogScreen');
+    debugLogScreenBuild('LibraryScreen');
 
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (_) => CatalogBloc(
+          create: (_) => LibraryBloc(
             bookRepository: bookRepository,
             articleRepository: articleRepository,
-          )..add(const CatalogLoadRequested()),
+          )..add(const LibraryLoadRequested()),
         ),
         BlocProvider(
-          create: (_) => CatalogLayoutCubit(
+          create: (_) => LibraryLayoutCubit(
             preferencesService: preferencesService,
           ),
         ),
-        BlocProvider(create: (_) => CatalogSelectionCubit()),
+        BlocProvider(create: (_) => LibrarySelectionCubit()),
       ],
-      child: _CatalogView(
+      child: _LibraryView(
         onSourcePressed: onSourcePressed,
         onAddPressed: onAddPressed,
       ),
@@ -71,15 +71,15 @@ class CatalogScreen extends StatelessWidget {
   }
 }
 
-/// Stateful shell that owns the transient UI state of the catalog screen —
+/// Stateful shell that owns the transient UI state of the library screen —
 /// the search text controller and the in-flight guard for the FAB — and
-/// assembles [CatalogHeader] + [CatalogBody] around them.
+/// assembles [LibraryHeader] + [LibraryBody] around them.
 ///
-/// Keeping this state local (rather than in [CatalogBloc]) means it doesn't
+/// Keeping this state local (rather than in [LibraryBloc]) means it doesn't
 /// survive navigation, which is what we want: re-entering the screen starts
 /// fresh.
-class _CatalogView extends StatefulWidget {
-  const _CatalogView({
+class _LibraryView extends StatefulWidget {
+  const _LibraryView({
     required this.onSourcePressed,
     required this.onAddPressed,
   });
@@ -92,10 +92,10 @@ class _CatalogView extends StatefulWidget {
   final AsyncCallback onAddPressed;
 
   @override
-  State<_CatalogView> createState() => _CatalogViewState();
+  State<_LibraryView> createState() => _LibraryViewState();
 }
 
-class _CatalogViewState extends State<_CatalogView> {
+class _LibraryViewState extends State<_LibraryView> {
   /// Search field is a local controller + local state: the bloc only needs
   /// to know about query changes (not every keystroke triggers a new load),
   /// and owning a controller lets us clear the field from the clear button.
@@ -124,7 +124,7 @@ class _CatalogViewState extends State<_CatalogView> {
     try {
       await widget.onAddPressed();
       if (!context.mounted) return;
-      context.read<CatalogBloc>().add(const CatalogRefreshRequested());
+      context.read<LibraryBloc>().add(const LibraryRefreshRequested());
     } finally {
       // mounted check: the screen may have been popped while
       // onAddPressed awaited. setState on an unmounted State throws.
@@ -136,7 +136,7 @@ class _CatalogViewState extends State<_CatalogView> {
     BuildContext context,
     LibrarySource source,
   ) async {
-    final selection = context.read<CatalogSelectionCubit>();
+    final selection = context.read<LibrarySelectionCubit>();
     if (selection.state.isActive) {
       selection.toggle(source.id);
       return;
@@ -146,7 +146,7 @@ class _CatalogViewState extends State<_CatalogView> {
     void handleSourceOpened() {
       if (!mounted || sourceOpened) return;
       sourceOpened = true;
-      context.read<CatalogBloc>().add(const CatalogRefreshRequested());
+      context.read<LibraryBloc>().add(const LibraryRefreshRequested());
       if (_scrollController.hasClients) {
         _scrollController.jumpTo(0);
       }
@@ -161,15 +161,15 @@ class _CatalogViewState extends State<_CatalogView> {
     // later by ReaderBloc.
     await Future<void>.delayed(_sourceRouteReturnRefreshDelay);
     if (!context.mounted) return;
-    context.read<CatalogBloc>().add(const CatalogRefreshRequested());
+    context.read<LibraryBloc>().add(const LibraryRefreshRequested());
   }
 
   void _handleSourceLongPress(BuildContext context, LibrarySource source) {
-    context.read<CatalogSelectionCubit>().toggle(source.id);
+    context.read<LibrarySelectionCubit>().toggle(source.id);
   }
 
   Future<void> _handleDeleteSelected(BuildContext context) async {
-    final selection = context.read<CatalogSelectionCubit>();
+    final selection = context.read<LibrarySelectionCubit>();
     final ids = selection.state.selectedIds;
     if (ids.isEmpty) return;
     final scope = await showConfirmBookDeletionSheet(
@@ -177,7 +177,7 @@ class _CatalogViewState extends State<_CatalogView> {
       count: ids.length,
     );
     if (scope == null || !context.mounted) return;
-    context.read<CatalogBloc>().add(CatalogSourcesDeleted(ids, scope: scope));
+    context.read<LibraryBloc>().add(LibrarySourcesDeleted(ids, scope: scope));
     selection.clear();
   }
 
@@ -191,13 +191,13 @@ class _CatalogViewState extends State<_CatalogView> {
   ) async {
     final scope = await showConfirmBookDeletionSheet(context, count: 1);
     if (scope == null || !context.mounted) return false;
-    context.read<CatalogBloc>().add(
-      CatalogSourceDeleted(source.id, scope: scope),
+    context.read<LibraryBloc>().add(
+      LibrarySourceDeleted(source.id, scope: scope),
     );
     return true;
   }
 
-  void _onCatalogStateForToast(BuildContext context, CatalogState state) {
+  void _onLibraryStateForToast(BuildContext context, LibraryState state) {
     final effect = state.deletionEffect;
     if (effect == null) return;
     if (effect.success) {
@@ -232,12 +232,12 @@ class _CatalogViewState extends State<_CatalogView> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<CatalogBloc, CatalogState>(
+    return BlocListener<LibraryBloc, LibraryState>(
       listenWhen: (prev, curr) =>
           prev.deletionEffect != curr.deletionEffect &&
           curr.deletionEffect != null,
-      listener: _onCatalogStateForToast,
-      child: BlocBuilder<CatalogSelectionCubit, CatalogSelectionState>(
+      listener: _onLibraryStateForToast,
+      child: BlocBuilder<LibrarySelectionCubit, LibrarySelectionState>(
         builder: (context, selection) {
           return PopScope(
             // Intercept the system back gesture only while a selection is
@@ -246,10 +246,10 @@ class _CatalogViewState extends State<_CatalogView> {
             canPop: !selection.isActive,
             onPopInvokedWithResult: (didPop, _) {
               if (didPop) return;
-              context.read<CatalogSelectionCubit>().clear();
+              context.read<LibrarySelectionCubit>().clear();
             },
             child: Scaffold(
-              floatingActionButton: _CatalogFab(
+              floatingActionButton: _LibraryFab(
                 selectionActive: selection.isActive,
                 // null while an import sheet is in-flight — Flutter's
                 // FilledButton/FAB renders disabled (greyed) when
@@ -261,7 +261,7 @@ class _CatalogViewState extends State<_CatalogView> {
               ),
               body: SafeArea(
                 bottom: false,
-                child: BlocBuilder<CatalogBloc, CatalogState>(
+                child: BlocBuilder<LibraryBloc, LibraryState>(
                   buildWhen: (prev, curr) =>
                       prev.status != curr.status ||
                       prev.books != curr.books ||
@@ -269,29 +269,29 @@ class _CatalogViewState extends State<_CatalogView> {
                       prev.filter != curr.filter ||
                       prev.searchQuery != curr.searchQuery,
                   builder: (context, state) {
-                    final bloc = context.read<CatalogBloc>();
+                    final bloc = context.read<LibraryBloc>();
 
                     return switch (state.status) {
-                      CatalogStatus.initial || CatalogStatus.loading =>
+                      LibraryStatus.initial || LibraryStatus.loading =>
                         const CenteredCircularProgressIndicator(),
-                      CatalogStatus.failure => ErrorState(
+                      LibraryStatus.failure => ErrorState(
                         message: 'Failed to load library',
                         retryLabel: 'Retry',
-                        onRetry: () => bloc.add(const CatalogLoadRequested()),
+                        onRetry: () => bloc.add(const LibraryLoadRequested()),
                       ),
-                      CatalogStatus.success => Column(
+                      LibraryStatus.success => Column(
                         children: [
-                          CatalogHeader(
+                          LibraryHeader(
                             state: state,
                             searchController: _searchController,
                             onSearchChanged: (query) =>
-                                bloc.add(CatalogSearchQueryChanged(query)),
+                                bloc.add(LibrarySearchQueryChanged(query)),
                             onFilterChanged: (filter) =>
-                                bloc.add(CatalogFilterChanged(filter)),
+                                bloc.add(LibraryFilterChanged(filter)),
                           ),
                           Expanded(
                             child: ScrollEdgeFadeStack(
-                              child: CatalogBody(
+                              child: LibraryBody(
                                 state: state,
                                 selection: selection,
                                 scrollController: _scrollController,
@@ -303,7 +303,7 @@ class _CatalogViewState extends State<_CatalogView> {
                                     _confirmAndDispatchSwipe(context, source),
                                 onRefresh: () async {
                                   bloc.add(
-                                    const CatalogRefreshRequested(),
+                                    const LibraryRefreshRequested(),
                                   );
                                 },
                               ),
@@ -328,8 +328,8 @@ class _CatalogViewState extends State<_CatalogView> {
 /// Add (`+`) when idle, trash when ≥1 item is selected. Both share the
 /// same shape / color so the swap reads as an icon change rather than a
 /// new control appearing.
-class _CatalogFab extends StatelessWidget {
-  const _CatalogFab({
+class _LibraryFab extends StatelessWidget {
+  const _LibraryFab({
     required this.selectionActive,
     required this.onAddPressed,
     required this.onDeletePressed,
@@ -355,7 +355,7 @@ class _CatalogFab extends StatelessWidget {
       foregroundColor: selectionActive ? colors.onError : colors.onPrimary,
       shape: const CircleBorder(),
       elevation: 3,
-      // Tab branches stay alive in StatefulShellRoute, so the Catalog
+      // Tab branches stay alive in StatefulShellRoute, so the Library
       // and Dictionary FABs would otherwise share the default Hero tag
       // during route transitions and trigger a duplicate-hero assertion.
       heroTag: null,

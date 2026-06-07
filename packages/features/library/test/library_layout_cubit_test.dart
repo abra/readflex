@@ -1,5 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
-import 'package:catalog/src/catalog_layout_cubit.dart';
+import 'package:library_feature/src/library_layout_cubit.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -18,89 +18,89 @@ void main() {
     );
   });
 
-  group('CatalogLayoutCubit', () {
-    blocTest<CatalogLayoutCubit, CatalogLayoutMode>(
+  group('LibraryLayoutCubit', () {
+    blocTest<LibraryLayoutCubit, LibraryLayoutMode>(
       'initial state defaults to grid',
-      build: () => CatalogLayoutCubit(
+      build: () => LibraryLayoutCubit(
         preferencesService: preferencesService,
       ),
       verify: (cubit) {
-        expect(cubit.state, CatalogLayoutMode.grid);
+        expect(cubit.state, LibraryLayoutMode.grid);
       },
     );
 
-    blocTest<CatalogLayoutCubit, CatalogLayoutMode>(
+    blocTest<LibraryLayoutCubit, LibraryLayoutMode>(
       'setLayoutMode emits list when switching from grid',
-      build: () => CatalogLayoutCubit(
+      build: () => LibraryLayoutCubit(
         preferencesService: preferencesService,
       ),
-      act: (cubit) => cubit.setLayoutMode(CatalogLayoutMode.list),
-      expect: () => [CatalogLayoutMode.list],
+      act: (cubit) => cubit.setLayoutMode(LibraryLayoutMode.list),
+      expect: () => [LibraryLayoutMode.list],
     );
 
-    blocTest<CatalogLayoutCubit, CatalogLayoutMode>(
+    blocTest<LibraryLayoutCubit, LibraryLayoutMode>(
       'setLayoutMode persists to preferences',
-      build: () => CatalogLayoutCubit(
+      build: () => LibraryLayoutCubit(
         preferencesService: preferencesService,
       ),
-      act: (cubit) => cubit.setLayoutMode(CatalogLayoutMode.list),
+      act: (cubit) => cubit.setLayoutMode(LibraryLayoutMode.list),
       verify: (_) {
-        expect(preferencesService.current.catalogLayoutMode, 'list');
+        expect(preferencesService.current.libraryLayoutMode, 'list');
       },
     );
 
-    blocTest<CatalogLayoutCubit, CatalogLayoutMode>(
+    blocTest<LibraryLayoutCubit, LibraryLayoutMode>(
       'setLayoutMode does not emit when mode is same',
-      build: () => CatalogLayoutCubit(
+      build: () => LibraryLayoutCubit(
         preferencesService: preferencesService,
       ),
-      act: (cubit) => cubit.setLayoutMode(CatalogLayoutMode.grid),
-      expect: () => <CatalogLayoutMode>[],
+      act: (cubit) => cubit.setLayoutMode(LibraryLayoutMode.grid),
+      expect: () => <LibraryLayoutMode>[],
     );
   });
 
-  group('CatalogLayoutCubit reads persisted mode', () {
-    blocTest<CatalogLayoutCubit, CatalogLayoutMode>(
+  group('LibraryLayoutCubit reads persisted mode', () {
+    blocTest<LibraryLayoutCubit, LibraryLayoutMode>(
       'starts with list when preferences has list',
       setUp: () async {
         await preferencesService.update(
-          (p) => p.copyWith(catalogLayoutMode: 'list'),
+          (p) => p.copyWith(libraryLayoutMode: 'list'),
         );
       },
-      build: () => CatalogLayoutCubit(
+      build: () => LibraryLayoutCubit(
         preferencesService: preferencesService,
       ),
       verify: (cubit) {
-        expect(cubit.state, CatalogLayoutMode.list);
+        expect(cubit.state, LibraryLayoutMode.list);
       },
     );
   });
 
-  group('CatalogLayoutModeX', () {
+  group('LibraryLayoutModeX', () {
     test('fromId parses list', () {
       expect(
-        CatalogLayoutModeX.fromId('list'),
-        CatalogLayoutMode.list,
+        LibraryLayoutModeX.fromId('list'),
+        LibraryLayoutMode.list,
       );
     });
 
     test('fromId defaults to grid for unknown', () {
       expect(
-        CatalogLayoutModeX.fromId('unknown'),
-        CatalogLayoutMode.grid,
+        LibraryLayoutModeX.fromId('unknown'),
+        LibraryLayoutMode.grid,
       );
     });
 
     test('fromId defaults to grid for null', () {
       expect(
-        CatalogLayoutModeX.fromId(null),
-        CatalogLayoutMode.grid,
+        LibraryLayoutModeX.fromId(null),
+        LibraryLayoutMode.grid,
       );
     });
 
     test('id round-trips through fromId', () {
-      for (final mode in CatalogLayoutMode.values) {
-        expect(CatalogLayoutModeX.fromId(mode.id), mode);
+      for (final mode in LibraryLayoutMode.values) {
+        expect(LibraryLayoutModeX.fromId(mode.id), mode);
       }
     });
   });

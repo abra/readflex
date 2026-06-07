@@ -391,7 +391,7 @@ void main() {
       expect(state.isEmpty, isTrue);
     });
 
-    // Mirrors the catalog cache test: `late final` should evaluate
+    // Mirrors the library cache test: `late final` should evaluate
     // _compute once per state instance and reuse the same `List`
     // reference across reads. Earlier the getter ran filter +
     // lowercase-search on every BlocBuilder rebuild.

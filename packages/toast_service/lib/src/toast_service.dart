@@ -33,7 +33,7 @@ void showToast(
     // `fillColored` paints the whole pill in the type's accent (green
     // for success, red for error) instead of the flat-style off-white
     // with a thin colored stripe — reads more decisively as feedback
-    // on top of varied catalog content.
+    // on top of varied library content.
     style: ToastificationStyle.fillColored,
     title: messageSuffix == null
         ? Text(message)

@@ -1,5 +1,7 @@
-name: catalog
-description: Book list with empty state
+# Dart reserves `library`, so the pub package uses a feature suffix while
+# the folder, route, UI labels, and public classes remain `Library`.
+name: library_feature
+description: Library feature with books, articles, search, filters, and list/grid layouts
 version: 0.1.0
 publish_to: 'none'
 

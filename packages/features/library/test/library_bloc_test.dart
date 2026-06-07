@@ -1,6 +1,6 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:book_repository/book_repository.dart';
-import 'package:catalog/src/catalog_bloc.dart';
+import 'package:library_feature/src/library_bloc.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -15,87 +15,87 @@ final _book = Book(
 );
 
 void main() {
-  group('CatalogBloc', () {
+  group('LibraryBloc', () {
     late FakeBookRepository repository;
 
     setUp(() {
       repository = FakeBookRepository();
     });
 
-    blocTest<CatalogBloc, CatalogState>(
-      'emits loading then success with books on CatalogLoadRequested',
+    blocTest<LibraryBloc, LibraryState>(
+      'emits loading then success with books on LibraryLoadRequested',
       setUp: () => repository.seedBooks([_book]),
-      build: () => CatalogBloc(bookRepository: repository),
-      act: (bloc) => bloc.add(const CatalogLoadRequested()),
+      build: () => LibraryBloc(bookRepository: repository),
+      act: (bloc) => bloc.add(const LibraryLoadRequested()),
       expect: () => [
-        CatalogState(status: CatalogStatus.loading),
-        CatalogState(status: CatalogStatus.success, books: [_book]),
+        LibraryState(status: LibraryStatus.loading),
+        LibraryState(status: LibraryStatus.success, books: [_book]),
       ],
     );
 
-    blocTest<CatalogBloc, CatalogState>(
+    blocTest<LibraryBloc, LibraryState>(
       'emits success with empty list when library is empty',
-      build: () => CatalogBloc(bookRepository: repository),
-      act: (bloc) => bloc.add(const CatalogLoadRequested()),
+      build: () => LibraryBloc(bookRepository: repository),
+      act: (bloc) => bloc.add(const LibraryLoadRequested()),
       expect: () => [
-        CatalogState(status: CatalogStatus.loading),
-        CatalogState(status: CatalogStatus.success),
+        LibraryState(status: LibraryStatus.loading),
+        LibraryState(status: LibraryStatus.success),
       ],
     );
 
-    blocTest<CatalogBloc, CatalogState>(
+    blocTest<LibraryBloc, LibraryState>(
       'emits failure when repository throws',
       setUp: () => repository.shouldThrow = true,
-      build: () => CatalogBloc(bookRepository: repository),
-      act: (bloc) => bloc.add(const CatalogLoadRequested()),
+      build: () => LibraryBloc(bookRepository: repository),
+      act: (bloc) => bloc.add(const LibraryLoadRequested()),
       expect: () => [
-        CatalogState(status: CatalogStatus.loading),
-        CatalogState(status: CatalogStatus.failure),
+        LibraryState(status: LibraryStatus.loading),
+        LibraryState(status: LibraryStatus.failure),
       ],
     );
 
-    blocTest<CatalogBloc, CatalogState>(
+    blocTest<LibraryBloc, LibraryState>(
       'debounces rapid search changes and emits only the last query',
-      build: () => CatalogBloc(bookRepository: repository),
-      seed: () => CatalogState(
-        status: CatalogStatus.success,
+      build: () => LibraryBloc(bookRepository: repository),
+      seed: () => LibraryState(
+        status: LibraryStatus.success,
         books: [_book],
       ),
       act: (bloc) {
         bloc
-          ..add(const CatalogSearchQueryChanged('t'))
-          ..add(const CatalogSearchQueryChanged('te'))
-          ..add(const CatalogSearchQueryChanged('test'));
+          ..add(const LibrarySearchQueryChanged('t'))
+          ..add(const LibrarySearchQueryChanged('te'))
+          ..add(const LibrarySearchQueryChanged('test'));
       },
       wait: const Duration(milliseconds: 400),
       expect: () => [
-        CatalogState(
-          status: CatalogStatus.success,
+        LibraryState(
+          status: LibraryStatus.success,
           books: [_book],
           searchQuery: 'test',
         ),
       ],
     );
 
-    blocTest<CatalogBloc, CatalogState>(
-      'CatalogSourceDeleted removes source and reloads',
+    blocTest<LibraryBloc, LibraryState>(
+      'LibrarySourceDeleted removes source and reloads',
       setUp: () => repository.seedBooks([_book]),
-      build: () => CatalogBloc(bookRepository: repository),
-      seed: () => CatalogState(
-        status: CatalogStatus.success,
+      build: () => LibraryBloc(bookRepository: repository),
+      seed: () => LibraryState(
+        status: LibraryStatus.success,
         books: [_book],
       ),
       act: (bloc) => bloc.add(
-        CatalogSourceDeleted(
+        LibrarySourceDeleted(
           _book.id,
           scope: BookDeletionScope.keepLearningData,
         ),
       ),
       expect: () => [
-        CatalogState(
-          status: CatalogStatus.success,
+        LibraryState(
+          status: LibraryStatus.success,
           deletionVersion: 1,
-          deletionEffect: const CatalogDeletionEffect(
+          deletionEffect: const LibraryDeletionEffect(
             version: 1,
             success: true,
             count: 1,
@@ -105,8 +105,8 @@ void main() {
       ],
     );
 
-    blocTest<CatalogBloc, CatalogState>(
-      'CatalogSourcesDeleted removes every id in batch and reloads once',
+    blocTest<LibraryBloc, LibraryState>(
+      'LibrarySourcesDeleted removes every id in batch and reloads once',
       setUp: () {
         final second = Book(
           id: '2',
@@ -117,23 +117,23 @@ void main() {
         );
         repository.seedBooks([_book, second]);
       },
-      build: () => CatalogBloc(bookRepository: repository),
-      seed: () => CatalogState(
-        status: CatalogStatus.success,
+      build: () => LibraryBloc(bookRepository: repository),
+      seed: () => LibraryState(
+        status: LibraryStatus.success,
         books: [_book],
       ),
       act: (bloc) => bloc.add(
-        const CatalogSourcesDeleted(
+        const LibrarySourcesDeleted(
           {'1', '2'},
           scope: BookDeletionScope.keepLearningData,
         ),
       ),
       verify: (bloc) {
-        expect(bloc.state.status, CatalogStatus.success);
+        expect(bloc.state.status, LibraryStatus.success);
         expect(bloc.state.books, isEmpty);
         expect(
           bloc.state.deletionEffect,
-          const CatalogDeletionEffect(
+          const LibraryDeletionEffect(
             version: 1,
             success: true,
             count: 2,
@@ -144,13 +144,13 @@ void main() {
 
     // Delete completion metadata is emitted by the bloc so the screen does
     // not need a local queue to attribute toasts to overlapping deletes.
-    blocTest<CatalogBloc, CatalogState>(
-      'CatalogSourceDeleted emits a success deletion effect',
+    blocTest<LibraryBloc, LibraryState>(
+      'LibrarySourceDeleted emits a success deletion effect',
       setUp: () => repository.seedBooks([_book]),
-      build: () => CatalogBloc(bookRepository: repository),
-      seed: () => CatalogState(status: CatalogStatus.success, books: [_book]),
+      build: () => LibraryBloc(bookRepository: repository),
+      seed: () => LibraryState(status: LibraryStatus.success, books: [_book]),
       act: (bloc) => bloc.add(
-        CatalogSourceDeleted(
+        LibrarySourceDeleted(
           _book.id,
           scope: BookDeletionScope.keepLearningData,
         ),
@@ -159,7 +159,7 @@ void main() {
         expect(bloc.state.deletionVersion, 1);
         expect(
           bloc.state.deletionEffect,
-          const CatalogDeletionEffect(
+          const LibraryDeletionEffect(
             version: 1,
             success: true,
             count: 1,
@@ -173,8 +173,8 @@ void main() {
     // throws we still attempt the rest, then re-pull the list and emit an
     // error effect without replacing the visible list with a full-screen
     // failure state.
-    blocTest<CatalogBloc, CatalogState>(
-      'CatalogSourcesDeleted continues on per-id failure and refetches',
+    blocTest<LibraryBloc, LibraryState>(
+      'LibrarySourcesDeleted continues on per-id failure and refetches',
       setUp: () {
         final second = Book(
           id: '2',
@@ -186,24 +186,24 @@ void main() {
         repository.seedBooks([_book, second]);
         repository.failOnIds = const {'1'};
       },
-      build: () => CatalogBloc(bookRepository: repository),
-      seed: () => CatalogState(
-        status: CatalogStatus.success,
+      build: () => LibraryBloc(bookRepository: repository),
+      seed: () => LibraryState(
+        status: LibraryStatus.success,
         books: [_book],
       ),
       act: (bloc) => bloc.add(
-        const CatalogSourcesDeleted(
+        const LibrarySourcesDeleted(
           {'1', '2'},
           scope: BookDeletionScope.keepLearningData,
         ),
       ),
       errors: () => [isA<Object>()],
       verify: (bloc) {
-        expect(bloc.state.status, CatalogStatus.success);
+        expect(bloc.state.status, LibraryStatus.success);
         expect(bloc.state.deletionVersion, 1);
         expect(
           bloc.state.deletionEffect,
-          const CatalogDeletionEffect(
+          const LibraryDeletionEffect(
             version: 1,
             success: false,
             count: 2,
@@ -214,28 +214,28 @@ void main() {
       },
     );
 
-    blocTest<CatalogBloc, CatalogState>(
-      'CatalogSourceDeleted keeps current list visible on failure',
+    blocTest<LibraryBloc, LibraryState>(
+      'LibrarySourceDeleted keeps current list visible on failure',
       setUp: () {
         repository.seedBooks([_book]);
         repository.shouldThrow = true;
       },
-      build: () => CatalogBloc(bookRepository: repository),
-      seed: () => CatalogState(status: CatalogStatus.success, books: [_book]),
+      build: () => LibraryBloc(bookRepository: repository),
+      seed: () => LibraryState(status: LibraryStatus.success, books: [_book]),
       act: (bloc) => bloc.add(
-        CatalogSourceDeleted(
+        LibrarySourceDeleted(
           _book.id,
           scope: BookDeletionScope.keepLearningData,
         ),
       ),
       errors: () => [isA<Object>()],
       verify: (bloc) {
-        expect(bloc.state.status, CatalogStatus.success);
+        expect(bloc.state.status, LibraryStatus.success);
         expect(bloc.state.books, [_book]);
         expect(bloc.state.deletionVersion, 1);
         expect(
           bloc.state.deletionEffect,
-          const CatalogDeletionEffect(
+          const LibraryDeletionEffect(
             version: 1,
             success: false,
             count: 1,
@@ -245,30 +245,30 @@ void main() {
       },
     );
 
-    blocTest<CatalogBloc, CatalogState>(
-      'CatalogLoadRequested does NOT bump deletionVersion',
+    blocTest<LibraryBloc, LibraryState>(
+      'LibraryLoadRequested does NOT bump deletionVersion',
       setUp: () => repository.seedBooks([_book]),
-      build: () => CatalogBloc(bookRepository: repository),
-      seed: () => CatalogState(deletionVersion: 5),
-      act: (bloc) => bloc.add(const CatalogLoadRequested()),
+      build: () => LibraryBloc(bookRepository: repository),
+      seed: () => LibraryState(deletionVersion: 5),
+      act: (bloc) => bloc.add(const LibraryLoadRequested()),
       verify: (bloc) => expect(bloc.state.deletionVersion, 5),
     );
 
-    blocTest<CatalogBloc, CatalogState>(
-      'CatalogRefreshRequested does NOT bump deletionVersion',
+    blocTest<LibraryBloc, LibraryState>(
+      'LibraryRefreshRequested does NOT bump deletionVersion',
       setUp: () => repository.seedBooks([_book]),
-      build: () => CatalogBloc(bookRepository: repository),
-      seed: () => CatalogState(deletionVersion: 7),
-      act: (bloc) => bloc.add(const CatalogRefreshRequested()),
+      build: () => LibraryBloc(bookRepository: repository),
+      seed: () => LibraryState(deletionVersion: 7),
+      act: (bloc) => bloc.add(const LibraryRefreshRequested()),
       verify: (bloc) => expect(bloc.state.deletionVersion, 7),
     );
 
-    blocTest<CatalogBloc, CatalogState>(
+    blocTest<LibraryBloc, LibraryState>(
       'concurrent delete + refresh both run sequentially and land on success',
       setUp: () => repository.seedBooks([_book]),
-      build: () => CatalogBloc(bookRepository: repository),
-      seed: () => CatalogState(
-        status: CatalogStatus.success,
+      build: () => LibraryBloc(bookRepository: repository),
+      seed: () => LibraryState(
+        status: LibraryStatus.success,
         books: [_book],
       ),
       act: (bloc) {
@@ -277,21 +277,21 @@ void main() {
         // may leave the bloc in a dangling state.
         bloc
           ..add(
-            CatalogSourceDeleted(
+            LibrarySourceDeleted(
               _book.id,
               scope: BookDeletionScope.keepLearningData,
             ),
           )
-          ..add(const CatalogRefreshRequested());
+          ..add(const LibraryRefreshRequested());
       },
       verify: (bloc) {
-        expect(bloc.state.status, CatalogStatus.success);
+        expect(bloc.state.status, LibraryStatus.success);
         expect(bloc.state.books, isEmpty);
       },
     );
   });
 
-  group('CatalogState', () {
+  group('LibraryState', () {
     test(
       'visibleItems are sorted by lastOpenedAt descending with addedAt fallback',
       () {
@@ -318,8 +318,8 @@ void main() {
           addedAt: DateTime(2026, 3, 1),
         );
 
-        final state = CatalogState(
-          status: CatalogStatus.success,
+        final state = LibraryState(
+          status: LibraryStatus.success,
           books: [neverOpenedOlder, neverOpenedNewest, recentlyOpened],
         );
 
@@ -347,8 +347,8 @@ void main() {
         format: BookFormat.epub,
         addedAt: DateTime(2026, 1, 1),
       );
-      final state = CatalogState(
-        status: CatalogStatus.success,
+      final state = LibraryState(
+        status: LibraryStatus.success,
         books: [book],
       );
 
@@ -358,7 +358,7 @@ void main() {
     });
 
     test('isEmpty is true when no books', () {
-      final state = CatalogState(status: CatalogStatus.success);
+      final state = LibraryState(status: LibraryStatus.success);
       expect(state.isEmpty, isTrue);
     });
   });

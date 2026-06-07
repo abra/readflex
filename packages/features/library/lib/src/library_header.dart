@@ -2,22 +2,22 @@ import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'catalog_bloc.dart';
-import 'catalog_layout_cubit.dart';
+import 'library_bloc.dart';
+import 'library_layout_cubit.dart';
 
 /// Alpha applied to muted meta text on the header ("N items" counter,
 /// inactive segment label colours). Matches `_kMutedAlpha` in the tile files.
 const double _kMutedAlpha = 0.55;
 
-/// Top-of-screen sticky header for the catalog: serif title + item counter,
+/// Top-of-screen sticky header for the library: serif title + item counter,
 /// a search field, the filter-segment pills, and the list/grid toggle.
 ///
 /// Pure presentation — all state changes are surfaced via the three
-/// callbacks and are expected to hit the catalog BLoC / layout cubit in the
+/// callbacks and are expected to hit the library BLoC / layout cubit in the
 /// parent. The FAB is deliberately not part of the header; it lives on
 /// [Scaffold.floatingActionButton] (see readwell_demo).
-class CatalogHeader extends StatelessWidget {
-  const CatalogHeader({
+class LibraryHeader extends StatelessWidget {
+  const LibraryHeader({
     required this.state,
     required this.searchController,
     required this.onSearchChanged,
@@ -25,10 +25,10 @@ class CatalogHeader extends StatelessWidget {
     super.key,
   });
 
-  final CatalogState state;
+  final LibraryState state;
   final TextEditingController searchController;
   final ValueChanged<String> onSearchChanged;
-  final ValueChanged<CatalogFilter> onFilterChanged;
+  final ValueChanged<LibraryFilter> onFilterChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -85,12 +85,12 @@ class CatalogHeader extends StatelessWidget {
 
 /// Horizontally scrolling strip of filter chips
 /// (`All / Books / Comics / New / Finished`). Built on the shared
-/// [AppFilterChip] so Catalog and Dictionary look the same.
+/// [AppFilterChip] so Library and Dictionary look the same.
 class _FilterSegments extends StatelessWidget {
   const _FilterSegments({required this.active, required this.onChanged});
 
-  final CatalogFilter active;
-  final ValueChanged<CatalogFilter> onChanged;
+  final LibraryFilter active;
+  final ValueChanged<LibraryFilter> onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -98,10 +98,10 @@ class _FilterSegments extends StatelessWidget {
       height: AppSizes.chipTapTarget,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: CatalogFilter.values.length,
+        itemCount: LibraryFilter.values.length,
         separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.xs),
         itemBuilder: (_, i) {
-          final filter = CatalogFilter.values[i];
+          final filter = LibraryFilter.values[i];
           return AppFilterChip(
             label: _labelFor(filter),
             selected: filter == active,
@@ -112,40 +112,40 @@ class _FilterSegments extends StatelessWidget {
     );
   }
 
-  static String _labelFor(CatalogFilter filter) => switch (filter) {
-    CatalogFilter.all => 'All',
-    CatalogFilter.books => 'Books',
-    CatalogFilter.articles => 'Articles',
-    CatalogFilter.comics => 'Comics',
-    CatalogFilter.unread => 'New',
-    CatalogFilter.finished => 'Finished',
+  static String _labelFor(LibraryFilter filter) => switch (filter) {
+    LibraryFilter.all => 'All',
+    LibraryFilter.books => 'Books',
+    LibraryFilter.articles => 'Articles',
+    LibraryFilter.comics => 'Comics',
+    LibraryFilter.unread => 'New',
+    LibraryFilter.finished => 'Finished',
   };
 }
 
-/// Two-button toggle that switches the catalog between list and grid
-/// layouts. Bound to [CatalogLayoutCubit] so the active mode persists in
+/// Two-button toggle that switches the library between list and grid
+/// layouts. Bound to [LibraryLayoutCubit] so the active mode persists in
 /// user preferences.
 class _LayoutToggle extends StatelessWidget {
   const _LayoutToggle();
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<CatalogLayoutCubit, CatalogLayoutMode>(
+    return BlocBuilder<LibraryLayoutCubit, LibraryLayoutMode>(
       builder: (context, mode) {
-        final cubit = context.read<CatalogLayoutCubit>();
+        final cubit = context.read<LibraryLayoutCubit>();
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             _LayoutToggleButton(
               icon: AppIcons.viewList,
-              active: mode == CatalogLayoutMode.list,
-              onTap: () => cubit.setLayoutMode(CatalogLayoutMode.list),
+              active: mode == LibraryLayoutMode.list,
+              onTap: () => cubit.setLayoutMode(LibraryLayoutMode.list),
             ),
             const SizedBox(width: AppSpacing.xs),
             _LayoutToggleButton(
               icon: AppIcons.viewGrid,
-              active: mode == CatalogLayoutMode.grid,
-              onTap: () => cubit.setLayoutMode(CatalogLayoutMode.grid),
+              active: mode == LibraryLayoutMode.grid,
+              onTap: () => cubit.setLayoutMode(LibraryLayoutMode.grid),
             ),
           ],
         );

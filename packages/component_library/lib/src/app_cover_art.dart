@@ -95,12 +95,12 @@ class AppCoverArt extends StatelessWidget {
   final bool topAlignText;
 
   /// Pixel reserve at the top of the cover for an external overlay,
-  /// such as the catalog grid format badge.
+  /// such as the library grid format badge.
   final double topReserve;
 
   /// Pixel reserve at the bottom of the cover for an *external* overlay
   /// that the cover itself doesn't draw — typically the grid-shell's
-  /// progress bar painted by the catalog grid tile on top of the cover. The
+  /// progress bar painted by the library grid tile on top of the cover. The
   /// title-line computation subtracts this so wrapped text never extends
   /// into the bar zone, and in [centerText] / [topAlignText] mode the text column is
   /// physically bounded above this inset so even ellipsis-edge cases

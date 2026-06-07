@@ -111,7 +111,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         // dispatched after open would copyWith on a stale
         // lastOpenedAt and overwrite the freshly-written value
         // back to its previous (often null) state — leaving the
-        // book labelled "New" in the catalog forever.
+        // book labelled "New" in the library forever.
         final updatedBook = book.copyWith(lastOpenedAt: DateTime.now());
         await _bookRepository.updateBook(updatedBook);
         emit(
@@ -169,7 +169,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   ///
   /// foliate-js can occasionally report a fraction slightly above 1.0
   /// (overshoot at end-of-content / re-entry); we clamp to `[0, 1]` so
-  /// the catalog cover's progress pill stays sensible.
+  /// the library cover's progress pill stays sensible.
   Future<void> _onBookPositionUpdated(
     ReaderBookPositionUpdated event,
     Emitter<ReaderState> emit,
