@@ -46,6 +46,22 @@ void main() {
     expect(collections.single.sourceCount, 1);
   });
 
+  test('getCollectionSourceIds returns memberships by collection id', () async {
+    final first = await repository.createCollectionWithSources(
+      name: 'Dune',
+      sourceIds: const ['book-1', 'article-1'],
+    );
+    final second = await repository.createCollectionWithSources(
+      name: 'Essays',
+      sourceIds: const ['article-2'],
+    );
+
+    final sourceIds = await repository.getCollectionSourceIds();
+
+    expect(sourceIds[first.id], {'book-1', 'article-1'});
+    expect(sourceIds[second.id], {'article-2'});
+  });
+
   test('removeSourcesFromCollections deletes dangling memberships', () async {
     final collection = await repository.createCollectionWithSources(
       name: 'Mixed',
@@ -59,4 +75,72 @@ void main() {
 
     expect(collections.single.sourceCount, 1);
   });
+  test('renameCollection updates collection name', () async {
+    final collection = await repository.createCollection('Old name');
+
+    await repository.renameCollection(
+      collectionId: collection.id,
+      name: 'New name',
+    );
+
+    final collections = await repository.getCollections();
+
+    expect(collections.single.name, 'New name');
+  });
+
+  test('updateCollection renames and removes memberships together', () async {
+    final collection = await repository.createCollectionWithSources(
+      name: 'Old name',
+      sourceIds: const ['book-1', 'article-1'],
+    );
+
+    await repository.updateCollection(
+      collectionId: collection.id,
+      name: 'New name',
+      removedSourceIds: const ['book-1'],
+    );
+
+    final collections = await repository.getCollections();
+    final sourceIds = await repository.getCollectionSourceIds();
+
+    expect(collections.single.name, 'New name');
+    expect(collections.single.sourceCount, 1);
+    expect(sourceIds[collection.id], {'article-1'});
+  });
+
+  test('deleteCollection removes collection and memberships', () async {
+    final collection = await repository.createCollectionWithSources(
+      name: 'Dune',
+      sourceIds: const ['book-1', 'article-1'],
+    );
+
+    await repository.deleteCollection(collection.id);
+
+    expect(await repository.getCollections(), isEmpty);
+    expect(await repository.getCollectionSourceIds(), isEmpty);
+  });
+
+  test(
+    'removeSourcesFromCollection only edits the target collection',
+    () async {
+      final first = await repository.createCollectionWithSources(
+        name: 'Dune',
+        sourceIds: const ['book-1', 'article-1'],
+      );
+      final second = await repository.createCollectionWithSources(
+        name: 'Essays',
+        sourceIds: const ['book-1'],
+      );
+
+      await repository.removeSourcesFromCollection(
+        collectionId: first.id,
+        sourceIds: const ['book-1'],
+      );
+
+      final sourceIds = await repository.getCollectionSourceIds();
+
+      expect(sourceIds[first.id], {'article-1'});
+      expect(sourceIds[second.id], {'book-1'});
+    },
+  );
 }

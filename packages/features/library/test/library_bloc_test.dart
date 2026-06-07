@@ -357,6 +357,78 @@ void main() {
       expect(identical(firstRead, secondRead), isTrue);
     });
 
+    test('visibleItems applies manual collection scope before filter', () {
+      final epub = Book(
+        id: 'book-epub',
+        title: 'Dune',
+        filePath: '/dune.epub',
+        format: BookFormat.epub,
+        addedAt: DateTime(2026, 1, 1),
+      );
+      final comic = Book(
+        id: 'book-comic',
+        title: 'Dune Comic',
+        filePath: '/dune.cbz',
+        format: BookFormat.cbz,
+        addedAt: DateTime(2026, 1, 2),
+      );
+      final collection = LibraryCollection(
+        id: 'collection-1',
+        name: 'Dune',
+        sourceCount: 2,
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      );
+      final scope = LibraryCollectionScope.manual(
+        collection: collection,
+        sourceIds: [epub.id, comic.id],
+      );
+
+      final state = LibraryState(
+        status: LibraryStatus.success,
+        books: [epub, comic],
+        filter: LibraryFilter.books,
+        collectionScopes: [scope],
+        selectedCollectionScope: scope,
+      );
+
+      expect(state.visibleItems, [LibrarySource.fromBook(epub)]);
+    });
+
+    test('visibleItems applies smart site collection scope', () {
+      final tproger = Article(
+        id: 'article-1',
+        title: 'Localization',
+        url: 'https://tproger.ru/a',
+        siteName: 'Tproger',
+        contentPath: '/articles/a/content.json',
+        addedAt: DateTime(2026, 1, 1),
+      );
+      final other = Article(
+        id: 'article-2',
+        title: 'AI',
+        url: 'https://example.com/a',
+        siteName: 'Example',
+        contentPath: '/articles/b/content.json',
+        addedAt: DateTime(2026, 1, 2),
+      );
+      const scope = LibraryCollectionScope.smart(
+        type: LibraryCollectionScopeType.site,
+        id: 'tproger',
+        label: 'Tproger',
+        sourceCount: 1,
+      );
+
+      final state = LibraryState(
+        status: LibraryStatus.success,
+        articles: [tproger, other],
+        collectionScopes: const [scope],
+        selectedCollectionScope: scope,
+      );
+
+      expect(state.visibleItems, [LibrarySource.fromArticle(tproger)]);
+    });
+
     test('isEmpty is true when no books', () {
       final state = LibraryState(status: LibraryStatus.success);
       expect(state.isEmpty, isTrue);

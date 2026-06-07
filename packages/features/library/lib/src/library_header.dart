@@ -22,6 +22,8 @@ class LibraryHeader extends StatelessWidget {
     required this.searchController,
     required this.onSearchChanged,
     required this.onFilterChanged,
+    required this.onCollectionScopePressed,
+    required this.onCollectionScopeCleared,
     super.key,
   });
 
@@ -29,6 +31,8 @@ class LibraryHeader extends StatelessWidget {
   final TextEditingController searchController;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<LibraryFilter> onFilterChanged;
+  final VoidCallback onCollectionScopePressed;
+  final VoidCallback onCollectionScopeCleared;
 
   @override
   Widget build(BuildContext context) {
@@ -72,9 +76,11 @@ class LibraryHeader extends StatelessWidget {
             onChanged: onSearchChanged,
           ),
           const SizedBox(height: AppSpacing.lg),
-          _FilterSegments(
-            active: state.filter,
-            onChanged: onFilterChanged,
+          _FilterAndCollectionRow(
+            state: state,
+            onFilterChanged: onFilterChanged,
+            onCollectionScopePressed: onCollectionScopePressed,
+            onCollectionScopeCleared: onCollectionScopeCleared,
           ),
           const SizedBox(height: AppSpacing.md),
         ],
@@ -83,8 +89,142 @@ class LibraryHeader extends StatelessWidget {
   }
 }
 
+class _FilterAndCollectionRow extends StatelessWidget {
+  const _FilterAndCollectionRow({
+    required this.state,
+    required this.onFilterChanged,
+    required this.onCollectionScopePressed,
+    required this.onCollectionScopeCleared,
+  });
+
+  final LibraryState state;
+  final ValueChanged<LibraryFilter> onFilterChanged;
+  final VoidCallback onCollectionScopePressed;
+  final VoidCallback onCollectionScopeCleared;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: AppSizes.chipTapTarget,
+      child: Row(
+        children: [
+          Expanded(
+            child: _FilterSegments(
+              active: state.filter,
+              onChanged: onFilterChanged,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          _CollectionScopeButton(
+            scope: state.selectedCollectionScope,
+            onPressed: onCollectionScopePressed,
+            onClearPressed: onCollectionScopeCleared,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CollectionScopeButton extends StatelessWidget {
+  const _CollectionScopeButton({
+    required this.scope,
+    required this.onPressed,
+    required this.onClearPressed,
+  });
+
+  final LibraryCollectionScope? scope;
+  final VoidCallback onPressed;
+  final VoidCallback onClearPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final selected = scope != null;
+    final foreground = selected
+        ? colors.onPrimary
+        : colors.onSurface.withValues(alpha: _kMutedAlpha);
+    final background = selected
+        ? colors.primary
+        : colors.surfaceContainerHighest.withValues(alpha: 0.5);
+
+    return SizedBox(
+      height: AppSizes.chipTapTarget,
+      child: Center(
+        child: Material(
+          color: background,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: InkWell(
+            onTap: onPressed,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minWidth: AppSizes.chipHeight,
+                maxWidth: selected ? 176 : AppSizes.chipHeight,
+                minHeight: AppSizes.chipHeight,
+              ),
+              child: selected
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            AppIcons.collection,
+                            size: AppIconSize.sm,
+                            color: foreground,
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Flexible(
+                            child: Text(
+                              scope!.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: context.text.labelSmall.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: foreground,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.xxs),
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: onClearPressed,
+                            child: Padding(
+                              padding: const EdgeInsets.all(AppSpacing.xxs),
+                              child: Icon(
+                                AppIcons.close,
+                                size: AppIconSize.xs,
+                                color: foreground,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : SizedBox(
+                      width: AppSizes.chipHeight,
+                      height: AppSizes.chipHeight,
+                      child: Center(
+                        child: Icon(
+                          AppIcons.collection,
+                          size: AppIconSize.sm,
+                          color: foreground,
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Horizontally scrolling strip of filter chips
-/// (`All / Books / Comics / New / Finished`). Built on the shared
+/// (`All / Books / Comics / New`). Built on the shared
 /// [AppFilterChip] so Library and Dictionary look the same.
 class _FilterSegments extends StatelessWidget {
   const _FilterSegments({required this.active, required this.onChanged});
@@ -118,7 +258,6 @@ class _FilterSegments extends StatelessWidget {
     LibraryFilter.articles => 'Articles',
     LibraryFilter.comics => 'Comics',
     LibraryFilter.unread => 'New',
-    LibraryFilter.finished => 'Finished',
   };
 }
 

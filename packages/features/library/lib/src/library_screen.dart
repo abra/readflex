@@ -15,7 +15,10 @@ import 'library_bloc.dart';
 import 'library_body.dart';
 import 'library_header.dart';
 import 'library_layout_cubit.dart';
+import 'manage_collection_cubit.dart';
+import 'manage_collection_sheet.dart';
 import 'library_selection_cubit.dart';
+import 'select_collection_scope_sheet.dart';
 import 'confirm_book_deletion_sheet.dart';
 
 const _sourceRouteReturnRefreshDelay = Duration(milliseconds: 320);
@@ -70,6 +73,11 @@ class LibraryScreen extends StatelessWidget {
         BlocProvider(create: (_) => LibrarySelectionCubit()),
         BlocProvider(
           create: (_) => AddToCollectionCubit(
+            collectionRepository: collectionRepository,
+          ),
+        ),
+        BlocProvider(
+          create: (_) => ManageCollectionCubit(
             collectionRepository: collectionRepository,
           ),
         ),
@@ -191,12 +199,68 @@ class _LibraryViewState extends State<_LibraryView> {
     );
     if (added != true || !context.mounted) return;
     selection.clear();
+    context.read<LibraryBloc>().add(const LibraryRefreshRequested());
     showToast(
       context,
       type: NotificationType.success,
       message: ids.length == 1
           ? 'Added to collection'
           : '${ids.length} items added to collection',
+    );
+  }
+
+  Future<void> _handleCollectionScopePressed(
+    BuildContext context,
+    LibraryState state,
+  ) async {
+    final result = await showLibraryCollectionScopeSheet(
+      context: context,
+      state: state,
+    );
+    if (result == null || !context.mounted) return;
+
+    switch (result) {
+      case LibraryCollectionScopeSelected(:final scope):
+        context.read<LibraryBloc>().add(LibraryCollectionScopeChanged(scope));
+      case LibraryCollectionScopeManageRequested(:final scope):
+        await _handleManageManualCollection(context, state, scope);
+    }
+  }
+
+  Future<void> _handleManageManualCollection(
+    BuildContext context,
+    LibraryState state,
+    LibraryCollectionScope scope,
+  ) async {
+    if (!scope.isManual) return;
+    final sourceIds = scope.sourceIds.toSet();
+    final sources = state.sources
+        .where((source) => sourceIds.contains(source.id))
+        .toList(growable: false);
+
+    final result = await showManageManualCollectionSheet(
+      context: context,
+      cubit: context.read<ManageCollectionCubit>(),
+      scope: scope,
+      sources: sources,
+      onCollectionChanged: () {
+        if (!context.mounted) return;
+        context.read<LibraryBloc>().add(const LibraryRefreshRequested());
+      },
+    );
+    if (!context.mounted || result != ManageCollectionSheetResult.deleted) {
+      return;
+    }
+    showToast(
+      context,
+      type: NotificationType.success,
+      message: 'Collection deleted',
+    );
+  }
+
+  void _handleCollectionScopeCleared(BuildContext context) {
+    context.read<LibraryBloc>().add(
+      const LibraryCollectionScopeChanged(null),
     );
   }
 
@@ -282,7 +346,9 @@ class _LibraryViewState extends State<_LibraryView> {
             },
             child: Scaffold(
               floatingActionButton: selection.isActive
-                  ? null
+                  ? _LibraryDeleteFab(
+                      onDeletePressed: () => _handleDeleteSelected(context),
+                    )
                   : _LibraryFab(
                       // null while an import sheet is in-flight — Flutter's
                       // FAB renders disabled (greyed) when onPressed is null,
@@ -291,69 +357,89 @@ class _LibraryViewState extends State<_LibraryView> {
                           ? null
                           : () => _handleAdd(context),
                     ),
-              bottomNavigationBar: selection.isActive
-                  ? _LibrarySelectionActionBar(
-                      count: selection.selectedIds.length,
-                      onAddToCollectionPressed: () =>
-                          _handleAddSelectedToCollection(context),
-                      onDeletePressed: () => _handleDeleteSelected(context),
-                    )
-                  : null,
-              body: SafeArea(
-                bottom: false,
-                child: BlocBuilder<LibraryBloc, LibraryState>(
-                  buildWhen: (prev, curr) =>
-                      prev.status != curr.status ||
-                      prev.books != curr.books ||
-                      prev.articles != curr.articles ||
-                      prev.filter != curr.filter ||
-                      prev.searchQuery != curr.searchQuery,
-                  builder: (context, state) {
-                    final bloc = context.read<LibraryBloc>();
+              body: Stack(
+                children: [
+                  SafeArea(
+                    bottom: false,
+                    child: BlocBuilder<LibraryBloc, LibraryState>(
+                      buildWhen: (prev, curr) =>
+                          prev.status != curr.status ||
+                          prev.books != curr.books ||
+                          prev.articles != curr.articles ||
+                          prev.filter != curr.filter ||
+                          prev.collectionScopes != curr.collectionScopes ||
+                          prev.selectedCollectionScope !=
+                              curr.selectedCollectionScope ||
+                          prev.searchQuery != curr.searchQuery,
+                      builder: (context, state) {
+                        final bloc = context.read<LibraryBloc>();
 
-                    return switch (state.status) {
-                      LibraryStatus.initial || LibraryStatus.loading =>
-                        const CenteredCircularProgressIndicator(),
-                      LibraryStatus.failure => ErrorState(
-                        message: 'Failed to load library',
-                        retryLabel: 'Retry',
-                        onRetry: () => bloc.add(const LibraryLoadRequested()),
-                      ),
-                      LibraryStatus.success => Column(
-                        children: [
-                          LibraryHeader(
-                            state: state,
-                            searchController: _searchController,
-                            onSearchChanged: (query) =>
-                                bloc.add(LibrarySearchQueryChanged(query)),
-                            onFilterChanged: (filter) =>
-                                bloc.add(LibraryFilterChanged(filter)),
+                        return switch (state.status) {
+                          LibraryStatus.initial || LibraryStatus.loading =>
+                            const CenteredCircularProgressIndicator(),
+                          LibraryStatus.failure => ErrorState(
+                            message: 'Failed to load library',
+                            retryLabel: 'Retry',
+                            onRetry: () =>
+                                bloc.add(const LibraryLoadRequested()),
                           ),
-                          Expanded(
-                            child: ScrollEdgeFadeStack(
-                              child: LibraryBody(
+                          LibraryStatus.success => Column(
+                            children: [
+                              LibraryHeader(
                                 state: state,
-                                selection: selection,
-                                scrollController: _scrollController,
-                                onSourcePressed: (source) =>
-                                    _handleSourceTap(context, source),
-                                onSourceLongPressed: (source) =>
-                                    _handleSourceLongPress(context, source),
-                                onConfirmSwipeDelete: (source) =>
-                                    _confirmAndDispatchSwipe(context, source),
-                                onRefresh: () async {
-                                  bloc.add(
-                                    const LibraryRefreshRequested(),
-                                  );
-                                },
+                                searchController: _searchController,
+                                onSearchChanged: (query) =>
+                                    bloc.add(LibrarySearchQueryChanged(query)),
+                                onFilterChanged: (filter) =>
+                                    bloc.add(LibraryFilterChanged(filter)),
+                                onCollectionScopePressed: () =>
+                                    _handleCollectionScopePressed(
+                                      context,
+                                      state,
+                                    ),
+                                onCollectionScopeCleared: () =>
+                                    _handleCollectionScopeCleared(context),
                               ),
-                            ),
+                              Expanded(
+                                child: ScrollEdgeFadeStack(
+                                  child: LibraryBody(
+                                    state: state,
+                                    selection: selection,
+                                    scrollController: _scrollController,
+                                    onSourcePressed: (source) =>
+                                        _handleSourceTap(context, source),
+                                    onSourceLongPressed: (source) =>
+                                        _handleSourceLongPress(context, source),
+                                    onConfirmSwipeDelete: (source) =>
+                                        _confirmAndDispatchSwipe(
+                                          context,
+                                          source,
+                                        ),
+                                    onRefresh: () async {
+                                      bloc.add(
+                                        const LibraryRefreshRequested(),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        };
+                      },
+                    ),
+                  ),
+                  if (selection.isActive)
+                    PositionedDirectional(
+                      start: AppSpacing.lg,
+                      bottom:
+                          MediaQuery.paddingOf(context).bottom + AppSpacing.lg,
+                      child: _LibraryAddCollectionFab(
+                        onAddToCollectionPressed: () =>
+                            _handleAddSelectedToCollection(context),
                       ),
-                    };
-                  },
-                ),
+                    ),
+                ],
               ),
             ),
           );
@@ -363,53 +449,46 @@ class _LibraryViewState extends State<_LibraryView> {
   }
 }
 
-/// Swaps the FAB icon based on whether a multi-select is active.
-///
-/// Add (`+`) when idle, trash when ≥1 item is selected. Both share the
-/// same shape / color so the swap reads as an icon change rather than a
-/// new control appearing.
-class _LibrarySelectionActionBar extends StatelessWidget {
-  const _LibrarySelectionActionBar({
-    required this.count,
-    required this.onAddToCollectionPressed,
-    required this.onDeletePressed,
-  });
+/// Left-side selection action. The delete action intentionally remains the
+/// Scaffold FAB so the normal add FAB swaps in-place instead of moving.
+class _LibraryAddCollectionFab extends StatelessWidget {
+  const _LibraryAddCollectionFab({required this.onAddToCollectionPressed});
 
-  final int count;
   final VoidCallback onAddToCollectionPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    return FloatingActionButton.extended(
+      onPressed: onAddToCollectionPressed,
+      backgroundColor: colors.primary.withValues(alpha: 0.9),
+      foregroundColor: colors.onPrimary,
+      elevation: 3,
+      heroTag: null,
+      icon: const Icon(AppIcons.collectionAdd, size: 20),
+      label: const Text('Add collection'),
+    );
+  }
+}
+
+class _LibraryDeleteFab extends StatelessWidget {
+  const _LibraryDeleteFab({required this.onDeletePressed});
+
   final VoidCallback onDeletePressed;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
 
-    return AppBottomActionBar(
-      showShadow: true,
-      children: [
-        Expanded(
-          child: Text(
-            '$count selected',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: context.text.titleMedium.copyWith(
-              color: colors.onSurface,
-            ),
-          ),
-        ),
-        FilledButton.icon(
-          onPressed: onAddToCollectionPressed,
-          icon: const Icon(AppIcons.collectionAdd, size: AppIconSize.sm),
-          label: const Text('Collection'),
-        ),
-        IconButton.filled(
-          onPressed: onDeletePressed,
-          style: IconButton.styleFrom(
-            backgroundColor: colors.error,
-            foregroundColor: colors.onError,
-          ),
-          icon: const Icon(AppIcons.delete, size: AppIconSize.sm),
-        ),
-      ],
+    return FloatingActionButton(
+      onPressed: onDeletePressed,
+      backgroundColor: colors.error,
+      foregroundColor: colors.onError,
+      shape: const CircleBorder(),
+      elevation: 3,
+      heroTag: null,
+      child: const Icon(AppIcons.delete, size: 24),
     );
   }
 }

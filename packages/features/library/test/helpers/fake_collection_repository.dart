@@ -13,6 +13,12 @@ class FakeCollectionRepository implements CollectionRepository {
     ..clear()
     ..addAll(collections);
 
+  void seedCollectionSourceIds(Map<String, Set<String>> sourceIds) {
+    addedSourceIdsByCollection
+      ..clear()
+      ..addAll(sourceIds.map((key, value) => MapEntry(key, value.toSet())));
+  }
+
   @override
   Future<List<LibraryCollection>> getCollections() async {
     if (shouldThrow) throw StorageException(cause: 'fake error');
@@ -49,5 +55,70 @@ class FakeCollectionRepository implements CollectionRepository {
   }
 
   @override
-  Future<void> removeSourcesFromCollections(Iterable<String> sourceIds) async {}
+  Future<Map<String, Set<String>>> getCollectionSourceIds() async {
+    if (shouldThrow) throw StorageException(cause: 'fake error');
+    return addedSourceIdsByCollection.map(
+      (key, value) => MapEntry(key, value.toSet()),
+    );
+  }
+
+  @override
+  Future<void> renameCollection({
+    required String collectionId,
+    required String name,
+  }) async {
+    if (shouldThrow) throw StorageException(cause: 'fake error');
+    final index = _collections.indexWhere(
+      (collection) => collection.id == collectionId,
+    );
+    if (index == -1) return;
+    final collection = _collections[index];
+    _collections[index] = LibraryCollection(
+      id: collection.id,
+      name: name.trim(),
+      sourceCount: collection.sourceCount,
+      createdAt: collection.createdAt,
+      updatedAt: DateTime(2026, 1, 2),
+    );
+  }
+
+  @override
+  Future<void> deleteCollection(String collectionId) async {
+    if (shouldThrow) throw StorageException(cause: 'fake error');
+    _collections.removeWhere((collection) => collection.id == collectionId);
+    addedSourceIdsByCollection.remove(collectionId);
+  }
+
+  @override
+  Future<void> updateCollection({
+    required String collectionId,
+    String? name,
+    Iterable<String> removedSourceIds = const [],
+  }) async {
+    if (shouldThrow) throw StorageException(cause: 'fake error');
+    if (name != null) {
+      await renameCollection(collectionId: collectionId, name: name);
+    }
+    await removeSourcesFromCollection(
+      collectionId: collectionId,
+      sourceIds: removedSourceIds,
+    );
+  }
+
+  @override
+  Future<void> removeSourcesFromCollection({
+    required String collectionId,
+    required Iterable<String> sourceIds,
+  }) async {
+    if (shouldThrow) throw StorageException(cause: 'fake error');
+    addedSourceIdsByCollection[collectionId]?.removeAll(sourceIds.toSet());
+  }
+
+  @override
+  Future<void> removeSourcesFromCollections(Iterable<String> sourceIds) async {
+    final ids = sourceIds.toSet();
+    for (final sourceIds in addedSourceIdsByCollection.values) {
+      sourceIds.removeAll(ids);
+    }
+  }
 }

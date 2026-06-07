@@ -27,6 +27,23 @@ class CollectionRepository {
     }
   }
 
+  Future<Map<String, Set<String>>> getCollectionSourceIds() async {
+    try {
+      final rows = await _dao.allCollectionSourceIds();
+      final sourceIdsByCollection = <String, Set<String>>{};
+      for (final row in rows) {
+        final collectionId = row.read<String>('collection_id');
+        final sourceId = row.read<String>('source_id');
+        sourceIdsByCollection
+            .putIfAbsent(collectionId, () => <String>{})
+            .add(sourceId);
+      }
+      return sourceIdsByCollection;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
   Future<LibraryCollection> createCollection(String name) async {
     final normalizedName = name.trim();
     if (normalizedName.isEmpty) {
@@ -56,6 +73,70 @@ class CollectionRepository {
     }
   }
 
+  Future<void> renameCollection({
+    required String collectionId,
+    required String name,
+  }) async {
+    final normalizedName = name.trim();
+    if (normalizedName.isEmpty) {
+      throw ArgumentError.value(name, 'name', 'Collection name is empty');
+    }
+
+    try {
+      await _dao.renameCollection(
+        collectionId: collectionId,
+        name: normalizedName,
+        updatedAt: DateTime.now().toIso8601String(),
+      );
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  Future<void> deleteCollection(String collectionId) async {
+    try {
+      await _db.transaction(() async {
+        await _dao.deleteCollectionMemberships(collectionId);
+        await _dao.deleteCollection(collectionId);
+      });
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  Future<void> updateCollection({
+    required String collectionId,
+    String? name,
+    Iterable<String> removedSourceIds = const [],
+  }) async {
+    final normalizedName = name?.trim();
+    if (normalizedName != null && normalizedName.isEmpty) {
+      throw ArgumentError.value(name, 'name', 'Collection name is empty');
+    }
+    final removedIds = removedSourceIds.toSet();
+    if (normalizedName == null && removedIds.isEmpty) return;
+
+    try {
+      await _db.transaction(() async {
+        if (normalizedName != null) {
+          await _dao.renameCollection(
+            collectionId: collectionId,
+            name: normalizedName,
+            updatedAt: DateTime.now().toIso8601String(),
+          );
+        }
+        if (removedIds.isNotEmpty) {
+          await _dao.removeSources(
+            collectionId: collectionId,
+            sourceIds: removedIds,
+          );
+        }
+      });
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
   Future<void> addSourcesToCollection({
     required String collectionId,
     required Iterable<String> sourceIds,
@@ -70,6 +151,20 @@ class CollectionRepository {
         sourceIds: ids,
         addedAt: now,
       );
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  Future<void> removeSourcesFromCollection({
+    required String collectionId,
+    required Iterable<String> sourceIds,
+  }) async {
+    final ids = sourceIds.toSet();
+    if (ids.isEmpty) return;
+
+    try {
+      await _dao.removeSources(collectionId: collectionId, sourceIds: ids);
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }

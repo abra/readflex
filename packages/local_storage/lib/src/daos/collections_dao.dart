@@ -36,6 +36,45 @@ class CollectionsDao extends DatabaseAccessor<AppDatabase>
     return into(collectionsTable).insert(collection);
   }
 
+  Future<int> renameCollection({
+    required String collectionId,
+    required String name,
+    required String updatedAt,
+  }) {
+    return (update(
+      collectionsTable,
+    )..where((t) => t.id.equals(collectionId))).write(
+      CollectionsTableCompanion(
+        name: Value(name),
+        updatedAt: Value(updatedAt),
+      ),
+    );
+  }
+
+  Future<int> deleteCollection(String collectionId) {
+    return (delete(
+      collectionsTable,
+    )..where((t) => t.id.equals(collectionId))).go();
+  }
+
+  Future<int> deleteCollectionMemberships(String collectionId) {
+    return (delete(
+      collectionSourcesTable,
+    )..where((t) => t.collectionId.equals(collectionId))).go();
+  }
+
+  Future<List<QueryRow>> allCollectionSourceIds() {
+    return customSelect(
+      '''
+        SELECT collection_id,
+               source_id
+        FROM collection_sources_table
+        ORDER BY collection_id ASC, source_id ASC
+      ''',
+      readsFrom: {collectionSourcesTable},
+    ).get();
+  }
+
   Future<void> addSources({
     required String collectionId,
     required Iterable<String> sourceIds,
@@ -55,6 +94,18 @@ class CollectionsDao extends DatabaseAccessor<AppDatabase>
         mode: InsertMode.insertOrIgnore,
       );
     });
+  }
+
+  Future<void> removeSources({
+    required String collectionId,
+    required Iterable<String> sourceIds,
+  }) {
+    final ids = sourceIds.toSet();
+    if (ids.isEmpty) return Future.value();
+    return (delete(collectionSourcesTable)..where(
+          (t) => t.collectionId.equals(collectionId) & t.sourceId.isIn(ids),
+        ))
+        .go();
   }
 
   Future<void> deleteSourceMemberships(Iterable<String> sourceIds) {

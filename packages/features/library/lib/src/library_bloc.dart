@@ -27,6 +27,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
       transformer: _debounce(_searchDelay),
     );
     on<LibraryFilterChanged>(_onFilterChanged);
+    on<LibraryCollectionScopeChanged>(_onCollectionScopeChanged);
   }
 
   static const _searchDelay = Duration(milliseconds: 300);
@@ -47,6 +48,13 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     Emitter<LibraryState> emit,
   ) {
     emit(state.copyWith(filter: event.filter));
+  }
+
+  void _onCollectionScopeChanged(
+    LibraryCollectionScopeChanged event,
+    Emitter<LibraryState> emit,
+  ) {
+    emit(state.copyWith(selectedCollectionScope: event.scope));
   }
 
   final BookRepository _bookRepository;
@@ -117,13 +125,18 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
       // grid. Keep the screen in success because the list remains usable;
       // the error is surfaced through the deletion effect/toast.
       try {
-        final (books, articles) = await _loadRawSources();
+        final snapshot = await _loadLibrarySnapshot();
         final effect = _deletionEffect(deletion, success: false);
         emit(
           state.copyWith(
             status: LibraryStatus.success,
-            books: books,
-            articles: articles,
+            books: snapshot.books,
+            articles: snapshot.articles,
+            collectionScopes: snapshot.collectionScopes,
+            selectedCollectionScope: _resolveSelectedCollectionScope(
+              state.selectedCollectionScope,
+              snapshot.collectionScopes,
+            ),
             deletionVersion: effect.version,
             deletionEffect: effect,
           ),
@@ -153,15 +166,20 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     _LibraryDeletionDescriptor? deletion,
   }) async {
     try {
-      final (books, articles) = await _loadRawSources();
+      final snapshot = await _loadLibrarySnapshot();
       final effect = deletion == null
           ? null
           : _deletionEffect(deletion, success: true);
       emit(
         state.copyWith(
           status: LibraryStatus.success,
-          books: books,
-          articles: articles,
+          books: snapshot.books,
+          articles: snapshot.articles,
+          collectionScopes: snapshot.collectionScopes,
+          selectedCollectionScope: _resolveSelectedCollectionScope(
+            state.selectedCollectionScope,
+            snapshot.collectionScopes,
+          ),
           deletionVersion: effect?.version,
           deletionEffect: effect,
         ),
@@ -184,6 +202,20 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     }
   }
 
+  Future<_LibrarySnapshot> _loadLibrarySnapshot() async {
+    final (books, articles) = await _loadRawSources();
+    final sources = [
+      ...books.map(LibrarySource.fromBook),
+      ...articles.map(LibrarySource.fromArticle),
+    ];
+    final collectionScopes = await _loadCollectionScopes(sources);
+    return _LibrarySnapshot(
+      books: books,
+      articles: articles,
+      collectionScopes: collectionScopes,
+    );
+  }
+
   Future<(List<Book>, List<Article>)> _loadRawSources() async {
     final articleRepository = _articleRepository;
     if (articleRepository == null) {
@@ -193,6 +225,101 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
       await _bookRepository.getBooks(),
       await articleRepository.getArticles(),
     );
+  }
+
+  Future<List<LibraryCollectionScope>> _loadCollectionScopes(
+    List<LibrarySource> sources,
+  ) async {
+    final manualScopes = await _loadManualCollectionScopes();
+    return [
+      ...manualScopes,
+      ..._buildSiteScopes(sources),
+      ..._buildAuthorScopes(sources),
+    ];
+  }
+
+  Future<List<LibraryCollectionScope>> _loadManualCollectionScopes() async {
+    final collectionRepository = _collectionRepository;
+    if (collectionRepository == null) return const [];
+
+    try {
+      final collections = await collectionRepository.getCollections();
+      final sourceIdsByCollection = await collectionRepository
+          .getCollectionSourceIds();
+      return collections
+          .map(
+            (collection) => LibraryCollectionScope.manual(
+              collection: collection,
+              sourceIds: sourceIdsByCollection[collection.id] ?? const {},
+            ),
+          )
+          .toList(growable: false);
+    } catch (e, st) {
+      addError(e, st);
+      return const [];
+    }
+  }
+
+  List<LibraryCollectionScope> _buildSiteScopes(List<LibrarySource> sources) {
+    return _buildSmartScopes(
+      sources: sources,
+      type: LibraryCollectionScopeType.site,
+      labelFor: _siteLabelForSource,
+    );
+  }
+
+  List<LibraryCollectionScope> _buildAuthorScopes(List<LibrarySource> sources) {
+    return _buildSmartScopes(
+      sources: sources,
+      type: LibraryCollectionScopeType.author,
+      labelFor: (source) => source.author,
+    );
+  }
+
+  List<LibraryCollectionScope> _buildSmartScopes({
+    required List<LibrarySource> sources,
+    required LibraryCollectionScopeType type,
+    required String? Function(LibrarySource source) labelFor,
+  }) {
+    final groups = <String, _SmartCollectionGroup>{};
+    for (final source in sources) {
+      final label = labelFor(source)?.trim();
+      if (label == null || label.isEmpty) continue;
+      final id = _collectionScopeKey(label);
+      if (id.isEmpty) continue;
+      groups
+          .putIfAbsent(id, () => _SmartCollectionGroup(label: label))
+          .sourceIds
+          .add(source.id);
+    }
+
+    final scopes = groups.entries
+        .map(
+          (entry) => LibraryCollectionScope.smart(
+            type: type,
+            id: entry.key,
+            label: entry.value.label,
+            sourceCount: entry.value.sourceIds.length,
+          ),
+        )
+        .toList();
+    scopes.sort(
+      (a, b) => a.label.toLowerCase().compareTo(b.label.toLowerCase()),
+    );
+    return scopes;
+  }
+
+  LibraryCollectionScope? _resolveSelectedCollectionScope(
+    LibraryCollectionScope? selected,
+    List<LibraryCollectionScope> scopes,
+  ) {
+    if (selected == null) return null;
+    for (final scope in scopes) {
+      if (scope.type == selected.type && scope.id == selected.id) {
+        return scope;
+      }
+    }
+    return null;
   }
 
   Future<void> _removeCollectionMemberships(Set<String> sourceIds) async {
@@ -261,4 +388,23 @@ class _LibraryDeletionDescriptor {
 
   final int count;
   final String? singleTitle;
+}
+
+class _LibrarySnapshot {
+  const _LibrarySnapshot({
+    required this.books,
+    required this.articles,
+    required this.collectionScopes,
+  });
+
+  final List<Book> books;
+  final List<Article> articles;
+  final List<LibraryCollectionScope> collectionScopes;
+}
+
+class _SmartCollectionGroup {
+  _SmartCollectionGroup({required this.label});
+
+  final String label;
+  final Set<String> sourceIds = {};
 }

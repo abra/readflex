@@ -37,3 +37,9 @@ final class LibraryFilterChanged extends LibraryEvent {
 
   final LibraryFilter filter;
 }
+
+final class LibraryCollectionScopeChanged extends LibraryEvent {
+  const LibraryCollectionScopeChanged(this.scope);
+
+  final LibraryCollectionScope? scope;
+}

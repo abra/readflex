@@ -76,6 +76,9 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet> {
               sourceCount: widget.sourceIds.length,
               onCollectionPressed: _addToCollection,
               onCreatePressed: state.isBusy ? null : _createAndAdd,
+              onCancelPressed: state.isBusy
+                  ? null
+                  : () => Navigator.of(context).pop(false),
             ),
           };
 
@@ -96,6 +99,7 @@ class _CollectionContent extends StatelessWidget {
     required this.sourceCount,
     required this.onCollectionPressed,
     required this.onCreatePressed,
+    required this.onCancelPressed,
   });
 
   final AddToCollectionState state;
@@ -103,6 +107,7 @@ class _CollectionContent extends StatelessWidget {
   final int sourceCount;
   final ValueChanged<LibraryCollection> onCollectionPressed;
   final VoidCallback? onCreatePressed;
+  final VoidCallback? onCancelPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -152,24 +157,31 @@ class _CollectionContent extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
         ],
+        TextField(
+          controller: nameController,
+          enabled: !state.isBusy,
+          textInputAction: TextInputAction.done,
+          decoration: const InputDecoration(
+            hintText: 'New collection name',
+          ),
+          onSubmitted: (_) => onCreatePressed?.call(),
+        ),
+        const SizedBox(height: AppSpacing.md),
         Row(
           children: [
             Expanded(
-              child: TextField(
-                controller: nameController,
-                enabled: !state.isBusy,
-                textInputAction: TextInputAction.done,
-                decoration: const InputDecoration(
-                  hintText: 'New collection name',
-                ),
-                onSubmitted: (_) => onCreatePressed?.call(),
+              child: OutlinedButton(
+                onPressed: onCancelPressed,
+                child: const Text('Cancel'),
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            FilledButton.icon(
-              onPressed: onCreatePressed,
-              icon: const Icon(AppIcons.add, size: AppIconSize.sm),
-              label: const Text('Create'),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: onCreatePressed,
+                icon: const Icon(AppIcons.add, size: AppIconSize.sm),
+                label: const Text('Create'),
+              ),
             ),
           ],
         ),

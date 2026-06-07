@@ -24,6 +24,7 @@ abstract final class AppIcons {
   static const IconData play = LucideIcons.play;
   static const IconData paste = LucideIcons.clipboardPaste;
   static const IconData moreHorizontal = LucideIcons.moreHorizontal;
+  static const IconData moreVertical = LucideIcons.moreVertical;
   static const IconData chevronLeft = LucideIcons.chevronLeft;
   static const IconData chevronRight = LucideIcons.chevronRight;
 
@@ -33,7 +34,7 @@ abstract final class AppIcons {
   static const IconData articleBadge = LucideIcons.newspaper;
   static const IconData bookmark = LucideIcons.bookmark;
   static const IconData bookmarkAdd = LucideIcons.bookmarkPlus;
-  static const IconData collection = LucideIcons.folders;
+  static const IconData collection = LucideIcons.folder;
   static const IconData collectionAdd = LucideIcons.folderPlus;
   static const IconData highlight = LucideIcons.highlighter;
   static const IconData flashcard = LucideIcons.layers;

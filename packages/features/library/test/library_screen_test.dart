@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:article_repository/article_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:library_feature/library_feature.dart';
 import 'package:domain_models/domain_models.dart';
@@ -36,10 +37,11 @@ void main() {
     );
   });
 
-  Widget buildSubject() => MaterialApp(
+  Widget buildSubject({ArticleRepository? articleRepository}) => MaterialApp(
     theme: AppTheme.light(),
     home: LibraryScreen(
       bookRepository: bookRepository,
+      articleRepository: articleRepository,
       collectionRepository: collectionRepository,
       preferencesService: preferencesService,
       onSourcePressed: (_, {onSourceOpened}) async {},
@@ -384,19 +386,414 @@ void main() {
     );
   });
 
-  testWidgets('selection mode shows collection action bar', (tester) async {
+  testWidgets('selection mode shows collection and delete FABs', (
+    tester,
+  ) async {
     bookRepository.seedBooks([_book]);
 
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
+    final addFabCenter = tester.getCenter(find.byIcon(AppIcons.add));
+
     await tester.longPress(find.text('Flutter in Action'));
     await tester.pumpAndSettle();
 
-    expect(find.text('1 selected'), findsOneWidget);
-    expect(find.text('Collection'), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsNWidgets(2));
+    expect(find.text('Add collection'), findsOneWidget);
+    expect(find.byIcon(AppIcons.collectionAdd), findsOneWidget);
     expect(find.byIcon(AppIcons.delete), findsOneWidget);
-    expect(find.byType(FloatingActionButton), findsNothing);
+    expect(find.byIcon(AppIcons.add), findsNothing);
+    expect(
+      tester.getCenter(find.byIcon(AppIcons.delete)).dx,
+      closeTo(addFabCenter.dx, 1),
+    );
+    expect(
+      tester.getCenter(find.byIcon(AppIcons.delete)).dy,
+      closeTo(addFabCenter.dy, 1),
+    );
+
+    final screenWidth = tester.getSize(find.byType(Scaffold)).width;
+    expect(
+      tester.getCenter(find.text('Add collection')).dx,
+      lessThan(screenWidth * 0.35),
+    );
+    expect(
+      tester.getCenter(find.byIcon(AppIcons.delete)).dx,
+      greaterThan(screenWidth * 0.65),
+    );
+  });
+
+  testWidgets('manual collection scope filters visible sources', (
+    tester,
+  ) async {
+    final other = Book(
+      id: 'b-2',
+      title: 'Domain-Driven Design',
+      author: 'Eric Evans',
+      filePath: '/books/ddd.epub',
+      format: BookFormat.epub,
+      addedAt: DateTime(2026, 1, 2),
+    );
+    final collection = LibraryCollection(
+      id: 'collection-1',
+      name: 'Dune',
+      sourceCount: 1,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+    bookRepository.seedBooks([_book, other]);
+    collectionRepository.seedCollections([collection]);
+    collectionRepository.seedCollectionSourceIds({
+      collection.id: {_book.id},
+    });
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    expect(find.text('Flutter in Action'), findsOneWidget);
+    expect(find.text('Domain-Driven Design'), findsOneWidget);
+
+    await tester.tap(find.byIcon(AppIcons.collection));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Dune'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Flutter in Action'), findsOneWidget);
+    expect(find.text('Domain-Driven Design'), findsNothing);
+    expect(find.text('Dune'), findsOneWidget);
+
+    await tester.tap(find.byIcon(AppIcons.close));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Flutter in Action'), findsOneWidget);
+    expect(find.text('Domain-Driven Design'), findsOneWidget);
+  });
+
+  testWidgets('collection scope sheet filters scopes by search query', (
+    tester,
+  ) async {
+    final articleRepository = _FakeArticleRepository()
+      ..seedArticles([
+        Article(
+          id: 'a-1',
+          title: 'Article',
+          url: 'https://tproger.ru/a',
+          siteName: 'Tproger',
+          author: 'Seiken',
+          contentPath: '/articles/a-1/article.json',
+          addedAt: DateTime(2026, 1, 2),
+        ),
+      ]);
+    final collection = LibraryCollection(
+      id: 'collection-1',
+      name: 'Dune',
+      sourceCount: 1,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+    bookRepository.seedBooks([_book]);
+    collectionRepository.seedCollections([collection]);
+    collectionRepository.seedCollectionSourceIds({
+      collection.id: {_book.id},
+    });
+
+    await tester.pumpWidget(buildSubject(articleRepository: articleRepository));
+    await tester.pump();
+
+    await tester.tap(find.byIcon(AppIcons.collection));
+    await tester.pumpAndSettle();
+
+    final sheet = find.byType(ActionBottomSheetLayout);
+    final sheetTopBeforeSearch = tester.getTopLeft(sheet).dy;
+    final sheetHeightBeforeSearch = tester.getSize(sheet).height;
+    final searchField = find.widgetWithText(TextField, 'Search collections...');
+    final manualRow = find.byKey(
+      const ValueKey('collectionScopeRow-manual-collection-1'),
+    );
+    final siteRow = find.byKey(
+      const ValueKey('collectionScopeRow-site-tproger'),
+    );
+    final authorRow = find.byKey(
+      const ValueKey('collectionScopeRow-author-seiken'),
+    );
+
+    expect(searchField, findsOneWidget);
+    expect(manualRow, findsOneWidget);
+    expect(siteRow, findsOneWidget);
+    expect(authorRow, findsOneWidget);
+
+    await tester.enterText(searchField, 'tpro');
+    await tester.pumpAndSettle();
+
+    expect(manualRow, findsNothing);
+    expect(siteRow, findsOneWidget);
+    expect(authorRow, findsNothing);
+
+    await tester.enterText(searchField, 'missing');
+    await tester.pumpAndSettle();
+
+    expect(find.text('No matching collections'), findsOneWidget);
+    expect(siteRow, findsNothing);
+    expect(tester.getTopLeft(sheet).dy, closeTo(sheetTopBeforeSearch, 0.1));
+    expect(tester.getSize(sheet).height, closeTo(sheetHeightBeforeSearch, 0.1));
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(ActionBottomSheetLayout),
+        matching: find.byIcon(AppIcons.close),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(manualRow, findsOneWidget);
+    expect(siteRow, findsOneWidget);
+    expect(authorRow, findsOneWidget);
+  });
+
+  testWidgets('collection scope rows do not show pressed overlay', (
+    tester,
+  ) async {
+    final collection = LibraryCollection(
+      id: 'collection-1',
+      name: 'Dune',
+      sourceCount: 1,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+    bookRepository.seedBooks([_book]);
+    collectionRepository.seedCollections([collection]);
+    collectionRepository.seedCollectionSourceIds({
+      collection.id: {_book.id},
+    });
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.tap(find.byIcon(AppIcons.collection));
+    await tester.pumpAndSettle();
+
+    final manualRow = find.byKey(
+      const ValueKey('collectionScopeRow-manual-collection-1'),
+    );
+    final rowInkWell = tester.widget<InkWell>(
+      find.ancestor(of: manualRow, matching: find.byType(InkWell)),
+    );
+
+    expect(
+      rowInkWell.overlayColor?.resolve({WidgetState.pressed}),
+      Colors.transparent,
+    );
+  });
+
+  testWidgets('collection scope rows keep equal height across sections', (
+    tester,
+  ) async {
+    final articleRepository = _FakeArticleRepository()
+      ..seedArticles([
+        Article(
+          id: 'a-1',
+          title: 'Article',
+          url: 'https://tproger.ru/a',
+          siteName: 'Tproger',
+          author: 'Seiken',
+          contentPath: '/articles/a-1/article.json',
+          addedAt: DateTime(2026, 1, 2),
+        ),
+      ]);
+    final collection = LibraryCollection(
+      id: 'collection-1',
+      name: 'Dune',
+      sourceCount: 1,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+    bookRepository.seedBooks([_book]);
+    collectionRepository.seedCollections([collection]);
+    collectionRepository.seedCollectionSourceIds({
+      collection.id: {_book.id},
+    });
+
+    await tester.pumpWidget(buildSubject(articleRepository: articleRepository));
+    await tester.pump();
+
+    await tester.tap(find.byIcon(AppIcons.collection));
+    await tester.pumpAndSettle();
+
+    final manualRow = find.byKey(
+      const ValueKey('collectionScopeRow-manual-collection-1'),
+    );
+    final siteRow = find.byKey(
+      const ValueKey('collectionScopeRow-site-tproger'),
+    );
+    final authorRow = find.byKey(
+      const ValueKey('collectionScopeRow-author-seiken'),
+    );
+
+    expect(manualRow, findsOneWidget);
+    expect(siteRow, findsOneWidget);
+    expect(authorRow, findsOneWidget);
+    expect(tester.getSize(manualRow).height, tester.getSize(siteRow).height);
+    expect(tester.getSize(manualRow).height, tester.getSize(authorRow).height);
+  });
+
+  testWidgets('manual collection management removes a source', (
+    tester,
+  ) async {
+    final other = Book(
+      id: 'b-2',
+      title: 'Domain-Driven Design',
+      author: 'Eric Evans',
+      filePath: '/books/ddd.epub',
+      format: BookFormat.epub,
+      addedAt: DateTime(2026, 1, 2),
+    );
+    final collection = LibraryCollection(
+      id: 'collection-1',
+      name: 'Dune',
+      sourceCount: 2,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+    bookRepository.seedBooks([_book, other]);
+    collectionRepository.seedCollections([collection]);
+    collectionRepository.seedCollectionSourceIds({
+      collection.id: {_book.id, other.id},
+    });
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.tap(find.byIcon(AppIcons.collection));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(AppIcons.moreVertical));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Manage collection'), findsOneWidget);
+
+    final sheet = find.byType(ActionBottomSheetLayout);
+    final saveFinder = find.descendant(
+      of: sheet,
+      matching: find.widgetWithText(FilledButton, 'Save'),
+    );
+    var saveButton = tester.widget<FilledButton>(saveFinder);
+    final sheetHeightBeforeRemoval = tester.getSize(sheet).height;
+    final saveTopBeforeRemoval = tester.getTopLeft(saveFinder).dy;
+    expect(saveButton.onPressed, isNull);
+
+    await tester.tap(
+      find.descendant(of: sheet, matching: find.byIcon(AppIcons.close)).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(sheet).height, lessThan(sheetHeightBeforeRemoval));
+    expect(
+      tester.getTopLeft(saveFinder).dy,
+      closeTo(saveTopBeforeRemoval, 0.1),
+    );
+
+    expect(
+      find.descendant(of: sheet, matching: find.text('Flutter in Action')),
+      findsNothing,
+    );
+    expect(collectionRepository.addedSourceIdsByCollection[collection.id], {
+      _book.id,
+      other.id,
+    });
+
+    saveButton = tester.widget<FilledButton>(saveFinder);
+    expect(saveButton.onPressed, isNotNull);
+
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(collectionRepository.addedSourceIdsByCollection[collection.id], {
+      other.id,
+    });
+    expect(find.text('Manage collection'), findsNothing);
+  });
+
+  testWidgets('manual collection management deletes collection', (
+    tester,
+  ) async {
+    final collection = LibraryCollection(
+      id: 'collection-1',
+      name: 'Dune',
+      sourceCount: 1,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+    bookRepository.seedBooks([_book]);
+    collectionRepository.seedCollections([collection]);
+    collectionRepository.seedCollectionSourceIds({
+      collection.id: {_book.id},
+    });
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.tap(find.byIcon(AppIcons.collection));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(AppIcons.moreVertical));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete collection'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ActionBottomSheetLayout), findsOneWidget);
+    expect(find.text('Manage collection'), findsNothing);
+    expect(find.text('Delete collection?'), findsOneWidget);
+
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    expect(await collectionRepository.getCollections(), isEmpty);
+    expect(await collectionRepository.getCollectionSourceIds(), isEmpty);
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('manual collection management renames from footer action', (
+    tester,
+  ) async {
+    final collection = LibraryCollection(
+      id: 'collection-1',
+      name: 'Dune',
+      sourceCount: 1,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+    bookRepository.seedBooks([_book]);
+    collectionRepository.seedCollections([collection]);
+    collectionRepository.seedCollectionSourceIds({
+      collection.id: {_book.id},
+    });
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.tap(find.byIcon(AppIcons.collection));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(AppIcons.moreVertical));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Collection name'), findsNothing);
+    expect(find.text('Save'), findsOneWidget);
+
+    final nameField = find.descendant(
+      of: find.byType(ActionBottomSheetLayout),
+      matching: find.byType(TextField),
+    );
+    expect(nameField, findsOneWidget);
+
+    await tester.enterText(nameField, 'Dune Saga');
+    await tester.pump();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    final collections = await collectionRepository.getCollections();
+    expect(collections.single.name, 'Dune Saga');
+    expect(find.text('Manage collection'), findsNothing);
   });
 
   testWidgets('creates collection from selected source', (tester) async {
@@ -407,11 +804,23 @@ void main() {
 
     await tester.longPress(find.text('Flutter in Action'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Collection'));
+    await tester.tap(find.byIcon(AppIcons.collectionAdd));
     await tester.pumpAndSettle();
 
+    final nameField = find.widgetWithText(TextField, 'New collection name');
+    expect(find.text('Cancel'), findsOneWidget);
+    expect(find.text('Create'), findsOneWidget);
+    expect(
+      tester.getCenter(nameField).dy,
+      lessThan(tester.getCenter(find.text('Create')).dy),
+    );
+    expect(
+      tester.getCenter(find.text('Cancel')).dy,
+      closeTo(tester.getCenter(find.text('Create')).dy, 1),
+    );
+
     await tester.enterText(
-      find.widgetWithText(TextField, 'New collection name'),
+      nameField,
       'Dune',
     );
     await tester.tap(find.text('Create'));
@@ -422,10 +831,24 @@ void main() {
       collectionRepository.addedSourceIdsByCollection.values.single,
       contains(_book.id),
     );
-    expect(find.text('1 selected'), findsNothing);
     expect(find.text('Added to collection'), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
   });
+}
+
+class _FakeArticleRepository implements ArticleRepository {
+  final List<Article> _articles = [];
+
+  void seedArticles(List<Article> articles) => _articles
+    ..clear()
+    ..addAll(articles);
+
+  @override
+  Future<List<Article>> getArticles({int? limit, int? offset}) async =>
+      List.unmodifiable(_articles);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
