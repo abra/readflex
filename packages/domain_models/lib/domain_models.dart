@@ -15,6 +15,7 @@ export 'src/models/fsrs_card_data.dart';
 export 'src/models/highlight.dart';
 export 'src/models/highlight_color.dart';
 export 'src/models/extracted_article.dart';
+export 'src/models/library_collection.dart';
 export 'src/models/library_source.dart';
 export 'src/models/rating.dart';
 export 'src/models/review_item.dart';

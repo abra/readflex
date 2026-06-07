@@ -1,5 +1,6 @@
 import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
+import 'package:collection_repository/collection_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/foundation.dart';
@@ -8,6 +9,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:toast_service/toast_service.dart';
 
+import 'add_to_collection_cubit.dart';
+import 'add_to_collection_sheet.dart';
 import 'library_bloc.dart';
 import 'library_body.dart';
 import 'library_header.dart';
@@ -27,6 +30,7 @@ const _sourceRouteReturnRefreshDelay = Duration(milliseconds: 320);
 class LibraryScreen extends StatelessWidget {
   const LibraryScreen({
     required this.bookRepository,
+    required this.collectionRepository,
     required this.preferencesService,
     required this.onSourcePressed,
     required this.onAddPressed,
@@ -36,6 +40,7 @@ class LibraryScreen extends StatelessWidget {
 
   final BookRepository bookRepository;
   final ArticleRepository? articleRepository;
+  final CollectionRepository collectionRepository;
   final PreferencesService preferencesService;
   final Future<void> Function(
     LibrarySource source, {
@@ -54,6 +59,7 @@ class LibraryScreen extends StatelessWidget {
           create: (_) => LibraryBloc(
             bookRepository: bookRepository,
             articleRepository: articleRepository,
+            collectionRepository: collectionRepository,
           )..add(const LibraryLoadRequested()),
         ),
         BlocProvider(
@@ -62,6 +68,11 @@ class LibraryScreen extends StatelessWidget {
           ),
         ),
         BlocProvider(create: (_) => LibrarySelectionCubit()),
+        BlocProvider(
+          create: (_) => AddToCollectionCubit(
+            collectionRepository: collectionRepository,
+          ),
+        ),
       ],
       child: _LibraryView(
         onSourcePressed: onSourcePressed,
@@ -168,6 +179,27 @@ class _LibraryViewState extends State<_LibraryView> {
     context.read<LibrarySelectionCubit>().toggle(source.id);
   }
 
+  Future<void> _handleAddSelectedToCollection(BuildContext context) async {
+    final selection = context.read<LibrarySelectionCubit>();
+    final ids = selection.state.selectedIds;
+    if (ids.isEmpty) return;
+
+    final added = await showAddToCollectionSheet(
+      context: context,
+      cubit: context.read<AddToCollectionCubit>(),
+      sourceIds: ids,
+    );
+    if (added != true || !context.mounted) return;
+    selection.clear();
+    showToast(
+      context,
+      type: NotificationType.success,
+      message: ids.length == 1
+          ? 'Added to collection'
+          : '${ids.length} items added to collection',
+    );
+  }
+
   Future<void> _handleDeleteSelected(BuildContext context) async {
     final selection = context.read<LibrarySelectionCubit>();
     final ids = selection.state.selectedIds;
@@ -249,16 +281,24 @@ class _LibraryViewState extends State<_LibraryView> {
               context.read<LibrarySelectionCubit>().clear();
             },
             child: Scaffold(
-              floatingActionButton: _LibraryFab(
-                selectionActive: selection.isActive,
-                // null while an import sheet is in-flight — Flutter's
-                // FilledButton/FAB renders disabled (greyed) when
-                // onPressed is null, which matches the actual state:
-                // a second tap would have been ignored anyway. Keeps
-                // the visual and behavioural guards in lockstep.
-                onAddPressed: _addInFlight ? null : () => _handleAdd(context),
-                onDeletePressed: () => _handleDeleteSelected(context),
-              ),
+              floatingActionButton: selection.isActive
+                  ? null
+                  : _LibraryFab(
+                      // null while an import sheet is in-flight — Flutter's
+                      // FAB renders disabled (greyed) when onPressed is null,
+                      // matching the actual re-entry guard.
+                      onAddPressed: _addInFlight
+                          ? null
+                          : () => _handleAdd(context),
+                    ),
+              bottomNavigationBar: selection.isActive
+                  ? _LibrarySelectionActionBar(
+                      count: selection.selectedIds.length,
+                      onAddToCollectionPressed: () =>
+                          _handleAddSelectedToCollection(context),
+                      onDeletePressed: () => _handleDeleteSelected(context),
+                    )
+                  : null,
               body: SafeArea(
                 bottom: false,
                 child: BlocBuilder<LibraryBloc, LibraryState>(
@@ -328,41 +368,75 @@ class _LibraryViewState extends State<_LibraryView> {
 /// Add (`+`) when idle, trash when ≥1 item is selected. Both share the
 /// same shape / color so the swap reads as an icon change rather than a
 /// new control appearing.
-class _LibraryFab extends StatelessWidget {
-  const _LibraryFab({
-    required this.selectionActive,
-    required this.onAddPressed,
+class _LibrarySelectionActionBar extends StatelessWidget {
+  const _LibrarySelectionActionBar({
+    required this.count,
+    required this.onAddToCollectionPressed,
     required this.onDeletePressed,
   });
 
-  final bool selectionActive;
+  final int count;
+  final VoidCallback onAddToCollectionPressed;
+  final VoidCallback onDeletePressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    return AppBottomActionBar(
+      showShadow: true,
+      children: [
+        Expanded(
+          child: Text(
+            '$count selected',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: context.text.titleMedium.copyWith(
+              color: colors.onSurface,
+            ),
+          ),
+        ),
+        FilledButton.icon(
+          onPressed: onAddToCollectionPressed,
+          icon: const Icon(AppIcons.collectionAdd, size: AppIconSize.sm),
+          label: const Text('Collection'),
+        ),
+        IconButton.filled(
+          onPressed: onDeletePressed,
+          style: IconButton.styleFrom(
+            backgroundColor: colors.error,
+            foregroundColor: colors.onError,
+          ),
+          icon: const Icon(AppIcons.delete, size: AppIconSize.sm),
+        ),
+      ],
+    );
+  }
+}
+
+class _LibraryFab extends StatelessWidget {
+  const _LibraryFab({required this.onAddPressed});
 
   /// Nullable so the parent can render the FAB as disabled while an
   /// import is in-flight. `FloatingActionButton` greys itself out when
   /// `onPressed` is null.
   final VoidCallback? onAddPressed;
-  final VoidCallback onDeletePressed;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
     return FloatingActionButton(
-      onPressed: selectionActive ? onDeletePressed : onAddPressed,
-      backgroundColor: selectionActive
-          ? colors.error
-          : colors.primary.withValues(alpha: 0.9),
-      foregroundColor: selectionActive ? colors.onError : colors.onPrimary,
+      onPressed: onAddPressed,
+      backgroundColor: colors.primary.withValues(alpha: 0.9),
+      foregroundColor: colors.onPrimary,
       shape: const CircleBorder(),
       elevation: 3,
       // Tab branches stay alive in StatefulShellRoute, so the Library
       // and Dictionary FABs would otherwise share the default Hero tag
       // during route transitions and trigger a duplicate-hero assertion.
       heroTag: null,
-      child: Icon(
-        selectionActive ? AppIcons.delete : AppIcons.add,
-        size: 24,
-      ),
+      child: const Icon(AppIcons.add, size: 24),
     );
   }
 }

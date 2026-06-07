@@ -8,12 +8,14 @@ import 'package:path_provider/path_provider.dart';
 
 import 'daos/articles_dao.dart';
 import 'daos/books_dao.dart';
+import 'daos/collections_dao.dart';
 import 'daos/dictionary_dao.dart';
 import 'daos/flashcards_dao.dart';
 import 'daos/highlights_dao.dart';
 import 'daos/review_items_dao.dart';
 import 'tables/articles_table.dart';
 import 'tables/books_table.dart';
+import 'tables/collections_table.dart';
 import 'tables/dictionary_table.dart';
 import 'tables/flashcards_table.dart';
 import 'tables/highlights_table.dart';
@@ -39,6 +41,8 @@ part 'database.g.dart';
     DictionaryTable,
     ReviewItemsTable,
     ReviewLogsTable,
+    CollectionsTable,
+    CollectionSourcesTable,
   ],
   daos: [
     ArticlesDao,
@@ -47,6 +51,7 @@ part 'database.g.dart';
     FlashcardsDao,
     DictionaryDao,
     ReviewItemsDao,
+    CollectionsDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -56,7 +61,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -65,6 +70,7 @@ class AppDatabase extends _$AppDatabase {
       await _createBookmarksTable();
       await _createArticlesIndexes();
       await _createIndexes();
+      await _createCollectionIndexes();
     },
     onUpgrade: (migrator, from, to) async {
       if (from < 2) {
@@ -375,6 +381,11 @@ class AppDatabase extends _$AppDatabase {
       if (from < 18) {
         await _createArticlesTable();
       }
+      if (from < 19) {
+        await migrator.createTable(collectionsTable);
+        await migrator.createTable(collectionSourcesTable);
+        await _createCollectionIndexes();
+      }
     },
   );
 
@@ -483,6 +494,17 @@ class AppDatabase extends _$AppDatabase {
     await customStatement('''
       CREATE INDEX IF NOT EXISTS idx_bookmarks_source_cfi
       ON bookmarks_table (source_id, cfi)
+    ''');
+  }
+
+  Future<void> _createCollectionIndexes() async {
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_collection_sources_source
+      ON collection_sources_table (source_id)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_collection_sources_collection
+      ON collection_sources_table (collection_id)
     ''');
   }
 

@@ -33,6 +33,8 @@ abstract final class AppIcons {
   static const IconData articleBadge = LucideIcons.newspaper;
   static const IconData bookmark = LucideIcons.bookmark;
   static const IconData bookmarkAdd = LucideIcons.bookmarkPlus;
+  static const IconData collection = LucideIcons.folders;
+  static const IconData collectionAdd = LucideIcons.folderPlus;
   static const IconData highlight = LucideIcons.highlighter;
   static const IconData flashcard = LucideIcons.layers;
   static const IconData quote = LucideIcons.quote;

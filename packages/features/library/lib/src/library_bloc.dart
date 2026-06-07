@@ -1,5 +1,6 @@
 import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
+import 'package:collection_repository/collection_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,8 +13,10 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
   LibraryBloc({
     required BookRepository bookRepository,
     ArticleRepository? articleRepository,
+    CollectionRepository? collectionRepository,
   }) : _bookRepository = bookRepository,
        _articleRepository = articleRepository,
+       _collectionRepository = collectionRepository,
        super(LibraryState()) {
     on<LibraryLoadRequested>(_onLoadRequested);
     on<LibrarySourceDeleted>(_onSourceDeleted);
@@ -48,6 +51,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
 
   final BookRepository _bookRepository;
   final ArticleRepository? _articleRepository;
+  final CollectionRepository? _collectionRepository;
 
   Future<void> _onLoadRequested(
     LibraryLoadRequested event,
@@ -71,6 +75,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     final deletion = _deletionDescriptorFor({event.sourceId});
     try {
       await _deleteSource(event.sourceId, event.scope);
+      await _removeCollectionMemberships({event.sourceId});
       await _loadItems(emit, deletion: deletion);
     } catch (e, st) {
       addError(e, st);
@@ -96,14 +101,17 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     // selection gone, the other half still in the list, and a generic
     // failure toast that says nothing about the split.
     var anyFailed = false;
+    final deletedIds = <String>{};
     for (final id in event.sourceIds) {
       try {
         await _deleteSource(id, event.scope);
+        deletedIds.add(id);
       } catch (e, st) {
         anyFailed = true;
         addError(e, st);
       }
     }
+    await _removeCollectionMemberships(deletedIds);
     if (anyFailed) {
       // Re-pull the list so the rows that DID delete fall away from the
       // grid. Keep the screen in success because the list remains usable;
@@ -185,6 +193,19 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
       await _bookRepository.getBooks(),
       await articleRepository.getArticles(),
     );
+  }
+
+  Future<void> _removeCollectionMemberships(Set<String> sourceIds) async {
+    if (sourceIds.isEmpty) return;
+    final collectionRepository = _collectionRepository;
+    if (collectionRepository == null) return;
+    try {
+      await collectionRepository.removeSourcesFromCollections(sourceIds);
+    } catch (e, st) {
+      // Deletion already succeeded; membership cleanup is best-effort so the
+      // library list does not report a false source-deletion failure.
+      addError(e, st);
+    }
   }
 
   Future<void> _deleteSource(String id, BookDeletionScope scope) async {

@@ -10,6 +10,7 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import 'helpers/fake_book_repository.dart';
+import 'helpers/fake_collection_repository.dart';
 
 final _book = Book(
   id: 'b-1',
@@ -22,10 +23,12 @@ final _book = Book(
 
 void main() {
   late FakeBookRepository bookRepository;
+  late FakeCollectionRepository collectionRepository;
   late PreferencesService preferencesService;
 
   setUp(() async {
     bookRepository = FakeBookRepository();
+    collectionRepository = FakeCollectionRepository();
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();
     preferencesService = await PreferencesService.create(
@@ -37,6 +40,7 @@ void main() {
     theme: AppTheme.light(),
     home: LibraryScreen(
       bookRepository: bookRepository,
+      collectionRepository: collectionRepository,
       preferencesService: preferencesService,
       onSourcePressed: (_, {onSourceOpened}) async {},
       onAddPressed: () async {},
@@ -119,6 +123,7 @@ void main() {
         theme: AppTheme.light(),
         home: LibraryScreen(
           bookRepository: bookRepository,
+          collectionRepository: collectionRepository,
           preferencesService: preferencesService,
           onSourcePressed: (_, {onSourceOpened}) async {},
           onAddPressed: () async {
@@ -161,6 +166,7 @@ void main() {
         theme: AppTheme.light(),
         home: LibraryScreen(
           bookRepository: bookRepository,
+          collectionRepository: collectionRepository,
           preferencesService: preferencesService,
           onSourcePressed: (_, {onSourceOpened}) async {},
           onAddPressed: () async {
@@ -232,6 +238,7 @@ void main() {
         theme: AppTheme.light(),
         home: LibraryScreen(
           bookRepository: bookRepository,
+          collectionRepository: collectionRepository,
           preferencesService: preferencesService,
           onSourcePressed: (source, {onSourceOpened}) async {
             expect(source.id, target.id);
@@ -311,6 +318,7 @@ void main() {
         theme: AppTheme.light(),
         home: LibraryScreen(
           bookRepository: bookRepository,
+          collectionRepository: collectionRepository,
           preferencesService: preferencesService,
           onSourcePressed: (source, {onSourceOpened}) async {
             expect(source.id, target.id);
@@ -374,5 +382,50 @@ void main() {
       3,
       reason: 'return refresh picks up reader progress persisted after open',
     );
+  });
+
+  testWidgets('selection mode shows collection action bar', (tester) async {
+    bookRepository.seedBooks([_book]);
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.longPress(find.text('Flutter in Action'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 selected'), findsOneWidget);
+    expect(find.text('Collection'), findsOneWidget);
+    expect(find.byIcon(AppIcons.delete), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsNothing);
+  });
+
+  testWidgets('creates collection from selected source', (tester) async {
+    bookRepository.seedBooks([_book]);
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.longPress(find.text('Flutter in Action'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Collection'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'New collection name'),
+      'Dune',
+    );
+    await tester.tap(find.text('Create'));
+    await tester.pumpAndSettle();
+
+    expect(collectionRepository.addedSourceIdsByCollection, isNotEmpty);
+    expect(
+      collectionRepository.addedSourceIdsByCollection.values.single,
+      contains(_book.id),
+    );
+    expect(find.text('1 selected'), findsNothing);
+    expect(find.text('Added to collection'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
   });
 }

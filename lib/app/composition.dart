@@ -11,6 +11,7 @@ import 'package:article_extraction_service/article_extraction_service.dart';
 import 'package:article_repository/article_repository.dart';
 import 'package:auth_service/auth_service.dart';
 import 'package:book_repository/book_repository.dart';
+import 'package:collection_repository/collection_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
 import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
@@ -133,6 +134,7 @@ Future<DependenciesContainer> createDependenciesContainer(
     articlesDirectory: articlesDir,
     logger: logger,
   );
+  final collectionRepository = CollectionRepository(database: database);
   final highlightRepository = HighlightRepository(database: database);
   final flashcardRepository = FlashcardRepository(database: database);
   final dictionaryRepository = DictionaryRepository(database: database);
@@ -179,6 +181,7 @@ Future<DependenciesContainer> createDependenciesContainer(
     articleExtractionService: articleExtractionService,
     articleRepository: articleRepository,
     bookRepository: bookRepository,
+    collectionRepository: collectionRepository,
     highlightRepository: highlightRepository,
     flashcardRepository: flashcardRepository,
     dictionaryRepository: dictionaryRepository,

@@ -109,6 +109,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                 builder: (context, state) => LibraryScreen(
                   bookRepository: deps.bookRepository,
                   articleRepository: deps.articleRepository,
+                  collectionRepository: deps.collectionRepository,
                   preferencesService: deps.preferencesService,
                   onSourcePressed: (source, {onSourceOpened}) => context.push(
                     AppRoutes.sourceDetails(source.id),

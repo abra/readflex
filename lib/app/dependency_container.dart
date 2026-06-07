@@ -9,6 +9,7 @@ import 'package:article_extraction_service/article_extraction_service.dart';
 import 'package:article_repository/article_repository.dart';
 import 'package:auth_service/auth_service.dart';
 import 'package:book_repository/book_repository.dart';
+import 'package:collection_repository/collection_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
 import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:flashcard_repository/flashcard_repository.dart';
@@ -36,6 +37,7 @@ class DependenciesContainer {
     required this.articleExtractionService,
     required this.articleRepository,
     required this.bookRepository,
+    required this.collectionRepository,
     required this.highlightRepository,
     required this.flashcardRepository,
     required this.dictionaryRepository,
@@ -58,6 +60,7 @@ class DependenciesContainer {
   final ArticleExtractionService articleExtractionService;
   final ArticleRepository articleRepository;
   final BookRepository bookRepository;
+  final CollectionRepository collectionRepository;
   final HighlightRepository highlightRepository;
   final FlashcardRepository flashcardRepository;
   final DictionaryRepository dictionaryRepository;
