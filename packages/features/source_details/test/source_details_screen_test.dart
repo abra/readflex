@@ -75,7 +75,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(AppBottomActionBar),
-          matching: find.byIcon(AppIcons.book),
+          matching: find.byIcon(AppIcons.play),
         ),
         findsOneWidget,
       );
@@ -137,7 +137,7 @@ void main() {
       expect(painter.height, lessThanOrEqualTo(titleCellSize.height + 0.1));
     });
 
-    testWidgets('article details show source and byline', (
+    testWidgets('article details show kind and byline', (
       tester,
     ) async {
       repository.source = null;
@@ -155,7 +155,7 @@ void main() {
       expect(find.text('Article'), findsOneWidget);
       expect(find.text('Type'), findsNothing);
       expect(find.text('Source'), findsNothing);
-      expect(find.text('Example'), findsOneWidget);
+      expect(find.text('Example'), findsNothing);
       expect(find.text('Article Author'), findsWidgets);
       final byline = tester.widget<Text>(find.text('Article Author'));
       expect(byline.style?.fontFamily, AppTypography.fontFamilySerif);
@@ -163,11 +163,18 @@ void main() {
       expect(byline.style?.fontSize, 16);
       expect(find.text('Time'), findsOneWidget);
       expect(find.text('6 min'), findsOneWidget);
-      expect(find.text('Words'), findsOneWidget);
-      expect(find.text('1.4k'), findsOneWidget);
+      expect(find.text('Words'), findsNothing);
+      expect(find.text('1.4k'), findsNothing);
       expect(find.text('Saved'), findsOneWidget);
       expect(find.text('Jan 1'), findsOneWidget);
       expect(find.text('Read article'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(AppBottomActionBar),
+          matching: find.byIcon(AppIcons.play),
+        ),
+        findsOneWidget,
+      );
 
       final coverArt = tester.widget<AppCoverArt>(find.byType(AppCoverArt));
       expect(coverArt.showTitle, isFalse);
@@ -181,6 +188,63 @@ void main() {
       );
       final coverSize = tester.getSize(find.byType(AppSourceCoverFrame));
       expect(articleIcon.size, closeTo(coverSize.width * 0.40, 0.1));
+    });
+
+    testWidgets('article reading time uses characters for Japanese text', (
+      tester,
+    ) async {
+      final japaneseArticle = _article.copyWith(
+        title: '日本語の記事',
+        language: 'ja',
+        textLength: 1200,
+        estimatedWordCount: 22,
+      );
+      repository.source = null;
+      articleRepository.article = japaneseArticle;
+
+      await tester.pumpSourceDetails(
+        repository: repository,
+        articleRepository: articleRepository,
+        highlightRepository: highlightRepository,
+        flashcardRepository: flashcardRepository,
+        dictionaryRepository: dictionaryRepository,
+        initialSource: LibrarySource.fromArticle(japaneseArticle),
+      );
+
+      expect(find.text('Time'), findsOneWidget);
+      expect(find.text('3 min'), findsOneWidget);
+      expect(find.text('Words'), findsNothing);
+      expect(find.text('22'), findsNothing);
+    });
+
+    testWidgets('opened article keeps stable stats row', (tester) async {
+      final openedArticle = _article.copyWith(
+        readingProgress: 0.4,
+        lastOpenedAt: DateTime(2026, 1, 2),
+      );
+      repository.source = null;
+      articleRepository.article = openedArticle;
+
+      await tester.pumpSourceDetails(
+        repository: repository,
+        articleRepository: articleRepository,
+        highlightRepository: highlightRepository,
+        flashcardRepository: flashcardRepository,
+        dictionaryRepository: dictionaryRepository,
+        initialSource: LibrarySource.fromArticle(openedArticle),
+      );
+
+      expect(find.text('Time'), findsOneWidget);
+      expect(find.text('6 min'), findsOneWidget);
+      expect(find.text('Words'), findsNothing);
+      expect(find.text('1.4k'), findsNothing);
+      expect(find.text('Status'), findsOneWidget);
+      expect(find.text('40%'), findsOneWidget);
+      expect(find.text('Saved'), findsOneWidget);
+      expect(find.text('Jan 1'), findsOneWidget);
+      expect(find.text('Left'), findsNothing);
+      expect(find.text('Opened'), findsNothing);
+      expect(find.text('Jan 2'), findsNothing);
     });
 
     testWidgets('aligns RTL article hero text from article language', (
@@ -213,14 +277,15 @@ void main() {
         find.byKey(const ValueKey('source-details-title')),
       );
       final byline = tester.widget<Text>(find.text('كاتب الخبر'));
-      final sourceLabel = tester.widget<Text>(find.text('الجزيرة'));
+      final kindLabel = tester.widget<Text>(find.text('Article'));
 
       expect(title.textDirection, TextDirection.rtl);
       expect(title.textAlign, TextAlign.start);
       expect(byline.textDirection, TextDirection.rtl);
       expect(byline.textAlign, TextAlign.start);
-      expect(sourceLabel.textDirection, TextDirection.rtl);
-      expect(sourceLabel.textAlign, TextAlign.start);
+      expect(kindLabel.textDirection, TextDirection.rtl);
+      expect(kindLabel.textAlign, TextAlign.start);
+      expect(find.text('الجزيرة'), findsNothing);
     });
 
     testWidgets('passes RTL direction to fallback book cover text', (
@@ -271,6 +336,31 @@ void main() {
       expect(find.text('Flashcards'), findsNothing);
       expect(find.text('Dictionary'), findsNothing);
       expect(find.byIcon(AppIcons.chevronRight), findsNothing);
+    });
+
+    testWidgets('opened book keeps stable stats row', (tester) async {
+      final openedSource = _newSource.copyWith(
+        readingProgress: 0.35,
+        lastOpenedAt: DateTime(2026, 1, 2),
+      );
+      repository.source = openedSource;
+
+      await tester.pumpSourceDetails(
+        repository: repository,
+        highlightRepository: highlightRepository,
+        flashcardRepository: flashcardRepository,
+        dictionaryRepository: dictionaryRepository,
+        initialSource: LibrarySource.fromBook(openedSource),
+      );
+
+      expect(find.text('Format'), findsOneWidget);
+      expect(find.text('EPUB'), findsOneWidget);
+      expect(find.text('Status'), findsOneWidget);
+      expect(find.text('35%'), findsOneWidget);
+      expect(find.text('Added'), findsOneWidget);
+      expect(find.text('Jan 1'), findsOneWidget);
+      expect(find.text('Opened'), findsNothing);
+      expect(find.text('Jan 2'), findsNothing);
     });
 
     testWidgets(

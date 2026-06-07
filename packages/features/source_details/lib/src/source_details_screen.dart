@@ -25,6 +25,17 @@ const _authorFontSize = 16.0;
 const _authorLineHeight = 1.30;
 const _statMaxLines = 1;
 const _articleWordsPerMinute = 225;
+const _articleCharactersPerMinute = 500;
+const _characterBasedReadingLanguageCodes = <String>{
+  'ja',
+  'zh',
+  'ko',
+  'th',
+  'lo',
+  'km',
+  'my',
+};
+const _characterPerWordFallbackRatio = 18;
 
 class SourceDetailsScreen extends StatelessWidget {
   const SourceDetailsScreen({
@@ -152,7 +163,6 @@ class _SourceDetailsBottomBar extends StatelessWidget {
         SizedBox.square(
           dimension: AppSizes.buttonHeight,
           child: IconButton(
-            tooltip: 'Back',
             onPressed: () => Navigator.of(context).maybePop(),
             style: style,
             icon: const Icon(AppIcons.back, size: AppIconSize.lg),
@@ -221,8 +231,6 @@ class _SourceDetailsContent extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _SourceKindLabel(source: source),
-                    const SizedBox(height: AppSpacing.lg),
                     _HeroSection(
                       source: source,
                       coverWidth: coverWidth,
@@ -256,9 +264,13 @@ class _SourceDetailsContent extends StatelessWidget {
 }
 
 class _SourceKindLabel extends StatelessWidget {
-  const _SourceKindLabel({required this.source});
+  const _SourceKindLabel({
+    required this.source,
+    required this.textDirection,
+  });
 
   final LibrarySource source;
+  final TextDirection textDirection;
 
   @override
   Widget build(BuildContext context) {
@@ -267,6 +279,8 @@ class _SourceKindLabel extends StatelessWidget {
     final isArticle = source.sourceType == SourceType.article;
 
     return Row(
+      mainAxisSize: MainAxisSize.min,
+      textDirection: textDirection,
       children: [
         Icon(
           isArticle ? AppIcons.article : AppIcons.book,
@@ -276,6 +290,8 @@ class _SourceKindLabel extends StatelessWidget {
         const SizedBox(width: AppSpacing.xs),
         Text(
           isArticle ? 'Article' : 'Book',
+          textAlign: TextAlign.start,
+          textDirection: textDirection,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: text.labelSmall.copyWith(
@@ -322,9 +338,6 @@ class _HeroSection extends StatelessWidget {
     final text = context.text;
     final coverImage = _coverImageFor(source);
     final subtitle = _subtitleFor(source);
-    final articleSource = source.sourceType == SourceType.article
-        ? source.sourceName?.trim()
-        : null;
     final coverHeight = coverWidth / appSourceCoverAspectRatio;
     final heroTextDirection = _sourceTextDirection(source);
 
@@ -337,13 +350,11 @@ class _HeroSection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: _crossAxisAlignmentFor(heroTextDirection),
               children: [
-                if (articleSource case final value? when value.isNotEmpty) ...[
-                  _ArticleSourceLabel(
-                    sourceName: value,
-                    textDirection: heroTextDirection,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                ],
+                _SourceKindLabel(
+                  source: source,
+                  textDirection: heroTextDirection,
+                ),
+                const SizedBox(height: AppSpacing.sm),
                 Expanded(
                   child: _AutoSizedHeroTitle(
                     title: source.title,
@@ -517,48 +528,6 @@ class _HeroTitleFit {
 
   final TextStyle style;
   final int? maxLines;
-}
-
-class _ArticleSourceLabel extends StatelessWidget {
-  const _ArticleSourceLabel({
-    required this.sourceName,
-    required this.textDirection,
-  });
-
-  final String sourceName;
-  final TextDirection textDirection;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final text = context.text;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      textDirection: textDirection,
-      children: [
-        Icon(
-          AppIcons.link,
-          size: AppIconSize.xs,
-          color: colors.primary,
-        ),
-        const SizedBox(width: AppSpacing.xs),
-        Flexible(
-          child: Text(
-            sourceName,
-            textAlign: TextAlign.start,
-            textDirection: textDirection,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: text.labelSmall.copyWith(
-              color: colors.primary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 class _SourceCover extends StatelessWidget {
@@ -858,7 +827,7 @@ List<_SourceStatData> _statsFor(LibrarySource source) {
     return _articleStatsFor(source);
   }
 
-  final stats = <_SourceStatData>[
+  return <_SourceStatData>[
     _SourceStatData(
       label: 'Format',
       value: source.typeLabel,
@@ -873,23 +842,11 @@ List<_SourceStatData> _statsFor(LibrarySource source) {
       value: _shortDate(source.addedAt),
     ),
   ];
-
-  if (source.lastOpenedAt case final lastOpenedAt?) {
-    stats.add(
-      _SourceStatData(
-        label: 'Opened',
-        value: _shortDate(lastOpenedAt),
-      ),
-    );
-  }
-
-  return stats.take(4).toList(growable: false);
 }
 
 List<_SourceStatData> _articleStatsFor(LibrarySource source) {
-  final stats = <_SourceStatData>[
+  return <_SourceStatData>[
     _articleReadingTimeStat(source),
-    if (source.lastOpenedAt == null) _articleWordCountStat(source),
     _SourceStatData(
       label: 'Status',
       value: _progressLabel(source),
@@ -900,54 +857,47 @@ List<_SourceStatData> _articleStatsFor(LibrarySource source) {
       value: _shortDate(source.addedAt),
     ),
   ];
-
-  if (source.lastOpenedAt case final lastOpenedAt?) {
-    stats.add(
-      _SourceStatData(
-        label: 'Opened',
-        value: _shortDate(lastOpenedAt),
-      ),
-    );
-  }
-
-  return stats.take(4).toList(growable: false);
 }
 
 _SourceStatData _articleReadingTimeStat(LibrarySource source) {
-  final wordCount = source.estimatedWordCount;
-  if (wordCount <= 0) {
+  final totalMinutes = _estimatedArticleReadingMinutes(source);
+  if (totalMinutes == null) {
     return const _SourceStatData(label: 'Time', value: '—');
-  }
-
-  final totalMinutes = math.max(
-    1,
-    (wordCount / _articleWordsPerMinute).ceil(),
-  );
-  if (source.readingProgress > 0 && !source.isFinished) {
-    final remainingMinutes = math.max(
-      1,
-      (totalMinutes * (1 - source.readingProgress)).ceil(),
-    );
-    return _SourceStatData(label: 'Left', value: '$remainingMinutes min');
   }
 
   return _SourceStatData(label: 'Time', value: '$totalMinutes min');
 }
 
-_SourceStatData _articleWordCountStat(LibrarySource source) {
-  final wordCount = source.estimatedWordCount;
-  if (wordCount <= 0) {
-    return const _SourceStatData(label: 'Words', value: '—');
+int? _estimatedArticleReadingMinutes(LibrarySource source) {
+  if (_usesCharacterBasedReadingTime(source)) {
+    final characterCount = source.estimatedCharacterCount;
+    if (characterCount <= 0) return null;
+    return math.max(1, (characterCount / _articleCharactersPerMinute).ceil());
   }
 
-  return _SourceStatData(label: 'Words', value: _compactWordCount(wordCount));
+  final wordCount = source.estimatedWordCount;
+  if (wordCount > 0) {
+    return math.max(1, (wordCount / _articleWordsPerMinute).ceil());
+  }
+
+  final characterCount = source.estimatedCharacterCount;
+  if (characterCount <= 0) return null;
+  return math.max(1, (characterCount / _articleCharactersPerMinute).ceil());
 }
 
-String _compactWordCount(int wordCount) {
-  if (wordCount < 1000) return '$wordCount';
-  final compact = wordCount / 1000;
-  if (wordCount % 1000 == 0) return '${compact.toInt()}k';
-  return '${compact.toStringAsFixed(1)}k';
+bool _usesCharacterBasedReadingTime(LibrarySource source) {
+  final languageCode = normalizeArticleLanguage(
+    source.language,
+  )?.split('-').first;
+  if (languageCode != null &&
+      _characterBasedReadingLanguageCodes.contains(languageCode)) {
+    return true;
+  }
+
+  final wordCount = source.estimatedWordCount;
+  final characterCount = source.estimatedCharacterCount;
+  if (wordCount <= 0 || characterCount <= 0) return false;
+  return characterCount / wordCount >= _characterPerWordFallbackRatio;
 }
 
 String _readButtonLabel(LibrarySource source) {
@@ -958,8 +908,7 @@ String _readButtonLabel(LibrarySource source) {
   return hasProgress ? 'Continue reading' : 'Start reading';
 }
 
-IconData _readButtonIcon(LibrarySource source) =>
-    source.sourceType == SourceType.article ? AppIcons.article : AppIcons.book;
+IconData _readButtonIcon(LibrarySource source) => AppIcons.play;
 
 String _reviewSummaryLabel(
   int count, {
@@ -1014,9 +963,7 @@ ButtonStyle _plainIconButtonStyle(BuildContext context) {
   return ButtonStyle(
     backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
     foregroundColor: WidgetStatePropertyAll(colors.onSurface),
-    overlayColor: WidgetStatePropertyAll(
-      colors.onSurface.withValues(alpha: 0.08),
-    ),
+    overlayColor: const WidgetStatePropertyAll(Colors.transparent),
     minimumSize: const WidgetStatePropertyAll(
       Size.square(AppSizes.iconButtonSize),
     ),
