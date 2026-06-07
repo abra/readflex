@@ -2265,15 +2265,18 @@ const setStyle = (oldStyle) => {
     requestAnimationFrame(() => reader.applyTextContrastGuard?.())
   }
 
-  if (!oldStyle) {
-    return
-  }
+  if (shouldRefreshLayoutForStyle(oldStyle, style)) refreshLayout()
+}
 
-  if (oldStyle?.writingMode !== style.writingMode ||
-    oldStyle?.pageTurnStyle !== style.pageTurnStyle && [oldStyle?.pageTurnStyle, style.pageTurnStyle].some(value => value === 'scroll')
-  ) {
-    refreshLayout()
-  }
+const shouldRefreshLayoutForStyle = (oldStyle, nextStyle) => {
+  if (!oldStyle) return false
+  if (oldStyle.writingMode !== nextStyle.writingMode) return true
+  if (oldStyle.pageTurnStyle === nextStyle.pageTurnStyle) return false
+  // The vertical page-turn mode changes the renderer scroll axis; WebKit on
+  // device can keep the old axis unless the layout is rebuilt around the
+  // current CFI.
+  return [oldStyle.pageTurnStyle, nextStyle.pageTurnStyle]
+    .some(value => value === 'scroll' || value === 'vertical')
 }
 
 const refreshLayout = () => {
