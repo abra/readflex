@@ -544,6 +544,44 @@ void main() {
     expect(find.text('Sheet content'), findsOneWidget);
   });
 
+  testWidgets('showAppBottomSheet can skip external bottom safe area', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            return Scaffold(
+              body: Center(
+                child: FilledButton(
+                  onPressed: () {
+                    unawaited(
+                      showAppBottomSheet<void>(
+                        context,
+                        bottomSafeAreaMinimum: null,
+                        builder: (_) => const SizedBox(
+                          height: 80,
+                          child: Text('Sheet content'),
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Open sheet'),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open sheet'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppBottomSafeArea), findsNothing);
+    expect(find.text('Sheet content'), findsOneWidget);
+  });
+
   testWidgets('AppBottomActionBar renders provided actions', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

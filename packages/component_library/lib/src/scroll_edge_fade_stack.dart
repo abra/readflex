@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'top_scroll_under_scrim.dart';
 
-/// Wraps a scrollable [child] in a stack that overlays a top and bottom
-/// [ScrollEdgeFade] reflecting whether content extends past the visible
+/// Wraps a scrollable [child] in a stack that overlays edge
+/// [ScrollEdgeFade]s reflecting whether content extends past the visible
 /// viewport. The fades fade in/out automatically as the user scrolls.
 ///
 /// Listens to a single descendant vertical scrollable through
@@ -15,9 +15,16 @@ import 'top_scroll_under_scrim.dart';
 /// long list and a hairline fade improves the visual hint that more
 /// content is below.
 class ScrollEdgeFadeStack extends StatefulWidget {
-  const ScrollEdgeFadeStack({super.key, required this.child});
+  const ScrollEdgeFadeStack({
+    super.key,
+    required this.child,
+    this.showBottomFade = true,
+  });
 
   final Widget child;
+
+  /// Whether to paint the lower edge fade when content continues below.
+  final bool showBottomFade;
 
   @override
   State<ScrollEdgeFadeStack> createState() => _ScrollEdgeFadeStackState();
@@ -35,7 +42,7 @@ class _ScrollEdgeFadeStackState extends State<ScrollEdgeFadeStack> {
   void _updateFromMetrics(ScrollMetrics metrics) {
     if (metrics.axis != Axis.vertical) return;
     final showTop = metrics.extentBefore > 0;
-    final showBottom = metrics.extentAfter > 0;
+    final showBottom = widget.showBottomFade && metrics.extentAfter > 0;
     if ((showTop != _showTop || showBottom != _showBottom) && mounted) {
       setState(() {
         _showTop = showTop;
@@ -79,15 +86,16 @@ class _ScrollEdgeFadeStackState extends State<ScrollEdgeFadeStack> {
           right: 0,
           child: ScrollEdgeFade(visible: _showTop),
         ),
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: ScrollEdgeFade(
-            visible: _showBottom,
-            edge: ScrollFadeEdge.bottom,
+        if (widget.showBottomFade)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: ScrollEdgeFade(
+              visible: _showBottom,
+              edge: ScrollFadeEdge.bottom,
+            ),
           ),
-        ),
       ],
     );
   }

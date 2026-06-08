@@ -31,6 +31,7 @@ Future<LibraryCollectionScopeSheetResult?> showLibraryCollectionScopeSheet({
 }) {
   return showAppBottomSheet<LibraryCollectionScopeSheetResult>(
     context,
+    bottomSafeAreaMinimum: null,
     builder: (_) => _CollectionScopeSheet(state: state),
   );
 }
@@ -88,15 +89,21 @@ class _CollectionScopeSheetState extends State<_CollectionScopeSheet> {
 
     return ActionBottomSheetLayout(
       title: 'Collections',
+      bodyPadding: EdgeInsets.zero,
       child: hasScopes
           ? Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SearchField(
-                  hintText: 'Search collections...',
-                  controller: _searchController,
-                  onChanged: _onSearchChanged,
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                  ),
+                  child: SearchField(
+                    hintText: 'Search collections...',
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 SizedBox(
@@ -109,7 +116,7 @@ class _CollectionScopeSheetState extends State<_CollectionScopeSheet> {
               ],
             )
           : Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+              padding: const EdgeInsets.all(AppSpacing.xl),
               child: Text(
                 'No collections yet',
                 textAlign: TextAlign.center,
@@ -160,24 +167,28 @@ class _CollectionScopeSections extends StatelessWidget {
       );
     }
 
-    return ListView(
-      children: [
-        _ScopeSection(
-          title: 'Manual collections',
-          scopes: manualScopes,
-          selected: state.selectedCollectionScope,
-        ),
-        _ScopeSection(
-          title: 'Sites',
-          scopes: siteScopes,
-          selected: state.selectedCollectionScope,
-        ),
-        _ScopeSection(
-          title: 'Authors',
-          scopes: authorScopes,
-          selected: state.selectedCollectionScope,
-        ),
-      ],
+    return ScrollEdgeFadeStack(
+      showBottomFade: false,
+      child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+        children: [
+          _ScopeSection(
+            title: 'Manual collections',
+            scopes: manualScopes,
+            selected: state.selectedCollectionScope,
+          ),
+          _ScopeSection(
+            title: 'Sites',
+            scopes: siteScopes,
+            selected: state.selectedCollectionScope,
+          ),
+          _ScopeSection(
+            title: 'Authors',
+            scopes: authorScopes,
+            selected: state.selectedCollectionScope,
+          ),
+        ],
+      ),
     );
   }
 

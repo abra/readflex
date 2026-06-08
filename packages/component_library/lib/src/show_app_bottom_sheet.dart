@@ -23,11 +23,15 @@ import 'theme/tokens/app_spacing.dart';
 /// and scrim tap at once. Note the system back gesture still pops
 /// the sheet — wrap the body in `PopScope(canPop: false, ...)` if
 /// you want a truly must-complete flow.
+///
+/// [bottomSafeAreaMinimum] defaults to the app's standard bottom gap. Pass
+/// null only when the sheet content owns its own bottom scrolling boundary.
 Future<T?> showAppBottomSheet<T>(
   BuildContext context, {
   required WidgetBuilder builder,
   bool dismissible = true,
   VoidCallback? onFullyHidden,
+  double? bottomSafeAreaMinimum = AppSpacing.lg,
 }) {
   final navigator = Navigator.of(context, rootNavigator: true);
   final controller = BottomSheet.createAnimationController(
@@ -64,22 +68,29 @@ Future<T?> showAppBottomSheet<T>(
     isDismissible: dismissible,
     enableDrag: dismissible,
     transitionAnimationController: controller,
-    builder: (ctx) => Padding(
-      // Lift the sheet above the keyboard. Done once here so every
-      // sheet body gets it, regardless of whether it has form fields.
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
-      child: AppBottomSafeArea(
-        // Android immersive mode can report a zero bottom inset. Keep
-        // sheet actions off the physical screen edge in that case.
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (dismissible) const _SheetDragHandle(),
-            Flexible(child: builder(ctx)),
-          ],
-        ),
-      ),
-    ),
+    builder: (ctx) {
+      final sheetContent = Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (dismissible) const _SheetDragHandle(),
+          Flexible(child: builder(ctx)),
+        ],
+      );
+
+      return Padding(
+        // Lift the sheet above the keyboard. Done once here so every
+        // sheet body gets it, regardless of whether it has form fields.
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
+        child: bottomSafeAreaMinimum == null
+            ? sheetContent
+            : AppBottomSafeArea(
+                // Android immersive mode can report a zero bottom inset. Keep
+                // sheet actions off the physical screen edge in that case.
+                minimumBottom: bottomSafeAreaMinimum,
+                child: sheetContent,
+              ),
+      );
+    },
   );
 
   unawaited(

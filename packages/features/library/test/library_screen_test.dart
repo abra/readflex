@@ -551,6 +551,51 @@ void main() {
     expect(authorRow, findsOneWidget);
   });
 
+  testWidgets('collection scope sheet uses scroll edge fades', (tester) async {
+    final collection = LibraryCollection(
+      id: 'collection-1',
+      name: 'Dune',
+      sourceCount: 1,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+    bookRepository.seedBooks([_book]);
+    collectionRepository.seedCollections([collection]);
+    collectionRepository.seedCollectionSourceIds({
+      collection.id: {_book.id},
+    });
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.tap(find.byIcon(AppIcons.collection));
+    await tester.pumpAndSettle();
+
+    final sheet = find.byType(ActionBottomSheetLayout);
+    final fadeStack = find.descendant(
+      of: sheet,
+      matching: find.byType(ScrollEdgeFadeStack),
+    );
+
+    final sheetWidget = tester.widget<ActionBottomSheetLayout>(sheet);
+
+    expect(find.byType(AppBottomSafeArea), findsNothing);
+    expect(sheetWidget.bodyPadding, EdgeInsets.zero);
+    expect(fadeStack, findsOneWidget);
+    expect(
+      tester.getSize(fadeStack).width,
+      closeTo(tester.getSize(sheet).width, 0.1),
+    );
+    expect(
+      find.descendant(of: fadeStack, matching: find.byType(ScrollEdgeFade)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: fadeStack, matching: find.byType(ListView)),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('collection scope rows do not show pressed overlay', (
     tester,
   ) async {
