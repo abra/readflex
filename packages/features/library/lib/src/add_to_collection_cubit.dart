@@ -17,11 +17,12 @@ class AddToCollectionCubit extends Cubit<AddToCollectionState> {
       state.copyWith(status: AddToCollectionStatus.loading, clearError: true),
     );
     try {
-      final collections = await _collectionRepository.getCollections();
+      final snapshot = await _loadSnapshot();
       emit(
         state.copyWith(
           status: AddToCollectionStatus.success,
-          collections: collections,
+          collections: snapshot.collections,
+          favouritesSourceCount: snapshot.favouritesSourceCount,
           clearError: true,
         ),
       );
@@ -51,11 +52,12 @@ class AddToCollectionCubit extends Cubit<AddToCollectionState> {
         collectionId: collectionId,
         sourceIds: sourceIds,
       );
-      final collections = await _collectionRepository.getCollections();
+      final snapshot = await _loadSnapshot();
       emit(
         state.copyWith(
           status: AddToCollectionStatus.success,
-          collections: collections,
+          collections: snapshot.collections,
+          favouritesSourceCount: snapshot.favouritesSourceCount,
           clearError: true,
         ),
       );
@@ -65,6 +67,35 @@ class AddToCollectionCubit extends Cubit<AddToCollectionState> {
         state.copyWith(
           status: AddToCollectionStatus.failure,
           errorMessage: 'Failed to update collection',
+        ),
+      );
+    }
+  }
+
+  Future<void> addToFavourites({required Iterable<String> sourceIds}) async {
+    emit(
+      state.copyWith(
+        status: AddToCollectionStatus.submitting,
+        clearError: true,
+      ),
+    );
+    try {
+      await _collectionRepository.addSourcesToFavourites(sourceIds: sourceIds);
+      final snapshot = await _loadSnapshot();
+      emit(
+        state.copyWith(
+          status: AddToCollectionStatus.success,
+          collections: snapshot.collections,
+          favouritesSourceCount: snapshot.favouritesSourceCount,
+          clearError: true,
+        ),
+      );
+    } catch (e, st) {
+      addError(e, st);
+      emit(
+        state.copyWith(
+          status: AddToCollectionStatus.failure,
+          errorMessage: 'Failed to update favourites',
         ),
       );
     }
@@ -85,11 +116,12 @@ class AddToCollectionCubit extends Cubit<AddToCollectionState> {
         name: name,
         sourceIds: sourceIds,
       );
-      final collections = await _collectionRepository.getCollections();
+      final snapshot = await _loadSnapshot();
       emit(
         state.copyWith(
           status: AddToCollectionStatus.success,
-          collections: collections,
+          collections: snapshot.collections,
+          favouritesSourceCount: snapshot.favouritesSourceCount,
           clearError: true,
         ),
       );
@@ -110,5 +142,16 @@ class AddToCollectionCubit extends Cubit<AddToCollectionState> {
         ),
       );
     }
+  }
+
+  Future<({List<LibraryCollection> collections, int favouritesSourceCount})>
+  _loadSnapshot() async {
+    final collections = await _collectionRepository.getCollections();
+    final favouriteSourceIds = await _collectionRepository
+        .getFavouriteSourceIds();
+    return (
+      collections: collections,
+      favouritesSourceCount: favouriteSourceIds.length,
+    );
   }
 }

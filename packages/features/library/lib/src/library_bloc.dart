@@ -230,12 +230,29 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
   Future<List<LibraryCollectionScope>> _loadCollectionScopes(
     List<LibrarySource> sources,
   ) async {
+    final favouriteScope = await _loadFavouriteCollectionScope();
     final manualScopes = await _loadManualCollectionScopes();
     return [
+      favouriteScope,
       ...manualScopes,
       ..._buildSiteScopes(sources),
       ..._buildAuthorScopes(sources),
     ];
+  }
+
+  Future<LibraryCollectionScope> _loadFavouriteCollectionScope() async {
+    final collectionRepository = _collectionRepository;
+    if (collectionRepository == null) {
+      return LibraryCollectionScope.favourites();
+    }
+
+    try {
+      final sourceIds = await collectionRepository.getFavouriteSourceIds();
+      return LibraryCollectionScope.favourites(sourceIds: sourceIds);
+    } catch (e, st) {
+      addError(e, st);
+      return LibraryCollectionScope.favourites();
+    }
   }
 
   Future<List<LibraryCollectionScope>> _loadManualCollectionScopes() async {

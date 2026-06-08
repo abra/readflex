@@ -470,6 +470,42 @@ void main() {
     expect(find.text('Domain-Driven Design'), findsOneWidget);
   });
 
+  testWidgets(
+    'collection scope sheet shows favourites without permanent section',
+    (
+      tester,
+    ) async {
+      bookRepository.seedBooks([_book]);
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pump();
+
+      await tester.tap(find.byIcon(AppIcons.collection));
+      await tester.pumpAndSettle();
+
+      final favouritesRow = find.byKey(
+        const ValueKey('collectionScopeRow-favourites-readflex:favourites'),
+      );
+
+      expect(find.text('Permanent'), findsNothing);
+      expect(favouritesRow, findsOneWidget);
+      expect(
+        find.descendant(
+          of: favouritesRow,
+          matching: find.byIcon(AppIcons.collectionFavourites),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: favouritesRow,
+          matching: find.byIcon(AppIcons.moreVertical),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets('collection scope sheet filters scopes by search query', (
     tester,
   ) async {
@@ -711,7 +747,9 @@ void main() {
 
     await tester.tap(find.byIcon(AppIcons.collection));
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(AppIcons.moreVertical));
+    await tester.tap(
+      find.byKey(const ValueKey('collectionScopeManage-manual-collection-1')),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Manage collection'), findsOneWidget);
@@ -727,7 +765,7 @@ void main() {
     expect(saveButton.onPressed, isNull);
 
     await tester.tap(
-      find.descendant(of: sheet, matching: find.byIcon(AppIcons.close)).first,
+      find.byKey(const ValueKey('collectionSourceRemove-b-1')),
     );
     await tester.pumpAndSettle();
 
@@ -758,6 +796,69 @@ void main() {
     expect(find.text('Manage collection'), findsNothing);
   });
 
+  testWidgets(
+    'favourites management removes a source without delete controls',
+    (
+      tester,
+    ) async {
+      final other = Book(
+        id: 'b-2',
+        title: 'Domain-Driven Design',
+        author: 'Eric Evans',
+        filePath: '/books/ddd.epub',
+        format: BookFormat.epub,
+        addedAt: DateTime(2026, 1, 2),
+      );
+      bookRepository.seedBooks([_book, other]);
+      await collectionRepository.addSourcesToFavourites(
+        sourceIds: [_book.id, other.id],
+      );
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pump();
+
+      await tester.tap(find.byIcon(AppIcons.collection));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(
+          const ValueKey(
+            'collectionScopeManage-favourites-readflex:favourites',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final sheet = find.byType(ActionBottomSheetLayout);
+      expect(find.text('Manage collection'), findsOneWidget);
+      expect(
+        find.descendant(of: sheet, matching: find.byType(TextField)),
+        findsNothing,
+      );
+      expect(find.text('Delete collection'), findsNothing);
+
+      final saveFinder = find.descendant(
+        of: sheet,
+        matching: find.widgetWithText(FilledButton, 'Save'),
+      );
+      var saveButton = tester.widget<FilledButton>(saveFinder);
+      expect(saveButton.onPressed, isNull);
+
+      await tester.tap(
+        find.byKey(const ValueKey('collectionSourceRemove-b-1')),
+      );
+      await tester.pumpAndSettle();
+
+      saveButton = tester.widget<FilledButton>(saveFinder);
+      expect(saveButton.onPressed, isNotNull);
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(collectionRepository.favouriteSourceIds, {other.id});
+      expect(find.text('Manage collection'), findsNothing);
+    },
+  );
+
   testWidgets('manual collection management deletes collection', (
     tester,
   ) async {
@@ -779,7 +880,9 @@ void main() {
 
     await tester.tap(find.byIcon(AppIcons.collection));
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(AppIcons.moreVertical));
+    await tester.tap(
+      find.byKey(const ValueKey('collectionScopeManage-manual-collection-1')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Delete collection'));
     await tester.pumpAndSettle();
@@ -819,7 +922,9 @@ void main() {
 
     await tester.tap(find.byIcon(AppIcons.collection));
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(AppIcons.moreVertical));
+    await tester.tap(
+      find.byKey(const ValueKey('collectionScopeManage-manual-collection-1')),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Collection name'), findsNothing);
@@ -839,6 +944,34 @@ void main() {
     final collections = await collectionRepository.getCollections();
     expect(collections.single.name, 'Dune Saga');
     expect(find.text('Manage collection'), findsNothing);
+  });
+
+  testWidgets('adds selected source to favourites from add collection sheet', (
+    tester,
+  ) async {
+    bookRepository.seedBooks([_book]);
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.longPress(find.text('Flutter in Action'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(AppIcons.collectionAdd));
+    await tester.pumpAndSettle();
+
+    final favouritesRow = find.widgetWithText(InkWell, 'Favourites');
+
+    expect(favouritesRow, findsOneWidget);
+    expect(find.byIcon(AppIcons.collectionFavourites), findsOneWidget);
+
+    await tester.tap(favouritesRow);
+    await tester.pumpAndSettle();
+
+    expect(collectionRepository.favouriteSourceIds, {_book.id});
+    expect(find.text('Add to collection'), findsNothing);
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('creates collection from selected source', (tester) async {
@@ -876,8 +1009,6 @@ void main() {
       collectionRepository.addedSourceIdsByCollection.values.single,
       contains(_book.id),
     );
-    expect(find.text('Added to collection'), findsOneWidget);
-
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
   });

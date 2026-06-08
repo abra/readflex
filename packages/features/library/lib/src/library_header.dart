@@ -172,7 +172,7 @@ class _CollectionScopeButton extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            AppIcons.collection,
+                            _iconFor(scope!.type),
                             size: AppIconSize.sm,
                             color: foreground,
                           ),
@@ -220,6 +220,15 @@ class _CollectionScopeButton extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  IconData _iconFor(LibraryCollectionScopeType type) {
+    return switch (type) {
+      LibraryCollectionScopeType.favourites => AppIcons.collectionFavourites,
+      LibraryCollectionScopeType.manual => AppIcons.collection,
+      LibraryCollectionScopeType.site => AppIcons.global,
+      LibraryCollectionScopeType.author => AppIcons.profile,
+    };
   }
 }
 

@@ -223,22 +223,22 @@ class _LibraryViewState extends State<_LibraryView> {
       case LibraryCollectionScopeSelected(:final scope):
         context.read<LibraryBloc>().add(LibraryCollectionScopeChanged(scope));
       case LibraryCollectionScopeManageRequested(:final scope):
-        await _handleManageManualCollection(context, state, scope);
+        await _handleManageCollection(context, state, scope);
     }
   }
 
-  Future<void> _handleManageManualCollection(
+  Future<void> _handleManageCollection(
     BuildContext context,
     LibraryState state,
     LibraryCollectionScope scope,
   ) async {
-    if (!scope.isManual) return;
+    if (!scope.canManage) return;
     final sourceIds = scope.sourceIds.toSet();
     final sources = state.sources
         .where((source) => sourceIds.contains(source.id))
         .toList(growable: false);
 
-    final result = await showManageManualCollectionSheet(
+    final result = await showManageCollectionSheet(
       context: context,
       cubit: context.read<ManageCollectionCubit>(),
       scope: scope,

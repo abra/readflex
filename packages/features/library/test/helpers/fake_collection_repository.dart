@@ -9,6 +9,11 @@ class FakeCollectionRepository implements CollectionRepository {
   final Map<String, Set<String>> addedSourceIdsByCollection = {};
   bool shouldThrow = false;
 
+  Set<String> get favouriteSourceIds => Set.unmodifiable(
+    addedSourceIdsByCollection[CollectionRepository.favouritesCollectionId] ??
+        const <String>{},
+  );
+
   void seedCollections(List<LibraryCollection> collections) => _collections
     ..clear()
     ..addAll(collections);
@@ -52,6 +57,25 @@ class FakeCollectionRepository implements CollectionRepository {
     addedSourceIdsByCollection
         .putIfAbsent(collectionId, () => <String>{})
         .addAll(sourceIds);
+  }
+
+  @override
+  Future<void> addSourcesToFavourites({
+    required Iterable<String> sourceIds,
+  }) async {
+    if (shouldThrow) throw StorageException(cause: 'fake error');
+    addedSourceIdsByCollection
+        .putIfAbsent(
+          CollectionRepository.favouritesCollectionId,
+          () => <String>{},
+        )
+        .addAll(sourceIds);
+  }
+
+  @override
+  Future<Set<String>> getFavouriteSourceIds() async {
+    if (shouldThrow) throw StorageException(cause: 'fake error');
+    return favouriteSourceIds;
   }
 
   @override
@@ -112,6 +136,15 @@ class FakeCollectionRepository implements CollectionRepository {
   }) async {
     if (shouldThrow) throw StorageException(cause: 'fake error');
     addedSourceIdsByCollection[collectionId]?.removeAll(sourceIds.toSet());
+  }
+
+  @override
+  Future<void> removeSourcesFromFavourites({
+    required Iterable<String> sourceIds,
+  }) async {
+    if (shouldThrow) throw StorageException(cause: 'fake error');
+    addedSourceIdsByCollection[CollectionRepository.favouritesCollectionId]
+        ?.removeAll(sourceIds.toSet());
   }
 
   @override

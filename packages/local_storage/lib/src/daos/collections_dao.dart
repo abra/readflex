@@ -36,6 +36,14 @@ class CollectionsDao extends DatabaseAccessor<AppDatabase>
     return into(collectionsTable).insert(collection);
   }
 
+  Future<void> insertCollectionIfAbsent(
+    CollectionsTableCompanion collection,
+  ) {
+    return into(
+      collectionsTable,
+    ).insert(collection, mode: InsertMode.insertOrIgnore);
+  }
+
   Future<int> renameCollection({
     required String collectionId,
     required String name,

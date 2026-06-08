@@ -23,11 +23,24 @@ class ManageCollectionCubit extends Cubit<ManageCollectionState> {
       ),
     );
     try {
-      await _collectionRepository.updateCollection(
-        collectionId: collectionId,
-        name: name,
-        removedSourceIds: removedSourceIds,
-      );
+      if (collectionId == CollectionRepository.favouritesCollectionId) {
+        if (name != null) {
+          throw ArgumentError.value(
+            collectionId,
+            'collectionId',
+            'Favourites cannot be renamed',
+          );
+        }
+        await _collectionRepository.removeSourcesFromFavourites(
+          sourceIds: removedSourceIds,
+        );
+      } else {
+        await _collectionRepository.updateCollection(
+          collectionId: collectionId,
+          name: name,
+          removedSourceIds: removedSourceIds,
+        );
+      }
       emit(
         state.copyWith(
           status: ManageCollectionStatus.success,

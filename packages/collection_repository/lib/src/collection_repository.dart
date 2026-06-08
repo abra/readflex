@@ -5,15 +5,18 @@ import 'package:uuid/uuid.dart' show Uuid;
 
 const _uuid = Uuid();
 
-/// Repository for user-created library collections.
+/// Repository for library collections.
 ///
 /// Smart collections (author, site/domain, etc.) are computed from source
-/// metadata by the Library feature. This repository persists only manual
-/// collections and their source memberships.
+/// metadata by the Library feature. This repository persists manual
+/// collections plus protected built-in collection memberships.
 class CollectionRepository {
   CollectionRepository({required AppDatabase database})
     : _db = database,
       _dao = database.collectionsDao;
+
+  static const favouritesCollectionId = 'readflex:favourites';
+  static const favouritesCollectionName = 'Favourites';
 
   final AppDatabase _db;
   final CollectionsDao _dao;
@@ -21,7 +24,10 @@ class CollectionRepository {
   Future<List<LibraryCollection>> getCollections() async {
     try {
       final rows = await _dao.allCollectionsWithCounts();
-      return rows.map(_collectionFromRow).toList(growable: false);
+      return rows
+          .map(_collectionFromRow)
+          .where((collection) => !_isFavouritesCollection(collection.id))
+          .toList(growable: false);
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }
@@ -39,6 +45,17 @@ class CollectionRepository {
             .add(sourceId);
       }
       return sourceIdsByCollection;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  Future<Set<String>> getFavouriteSourceIds() async {
+    try {
+      final sourceIdsByCollection = await getCollectionSourceIds();
+      return Set.unmodifiable(
+        sourceIdsByCollection[favouritesCollectionId] ?? const <String>{},
+      );
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }
@@ -77,6 +94,7 @@ class CollectionRepository {
     required String collectionId,
     required String name,
   }) async {
+    _checkManualCollectionId(collectionId);
     final normalizedName = name.trim();
     if (normalizedName.isEmpty) {
       throw ArgumentError.value(name, 'name', 'Collection name is empty');
@@ -94,6 +112,7 @@ class CollectionRepository {
   }
 
   Future<void> deleteCollection(String collectionId) async {
+    _checkManualCollectionId(collectionId);
     try {
       await _db.transaction(() async {
         await _dao.deleteCollectionMemberships(collectionId);
@@ -109,6 +128,7 @@ class CollectionRepository {
     String? name,
     Iterable<String> removedSourceIds = const [],
   }) async {
+    _checkManualCollectionId(collectionId);
     final normalizedName = name?.trim();
     if (normalizedName != null && normalizedName.isEmpty) {
       throw ArgumentError.value(name, 'name', 'Collection name is empty');
@@ -141,6 +161,7 @@ class CollectionRepository {
     required String collectionId,
     required Iterable<String> sourceIds,
   }) async {
+    _checkManualCollectionId(collectionId);
     final ids = sourceIds.toSet();
     if (ids.isEmpty) return;
 
@@ -156,15 +177,53 @@ class CollectionRepository {
     }
   }
 
-  Future<void> removeSourcesFromCollection({
-    required String collectionId,
+  Future<void> addSourcesToFavourites({
     required Iterable<String> sourceIds,
   }) async {
     final ids = sourceIds.toSet();
     if (ids.isEmpty) return;
 
     try {
+      final now = DateTime.now().toIso8601String();
+      await _db.transaction(() async {
+        await _ensureFavouritesCollection(now);
+        await _dao.addSources(
+          collectionId: favouritesCollectionId,
+          sourceIds: ids,
+          addedAt: now,
+        );
+      });
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  Future<void> removeSourcesFromCollection({
+    required String collectionId,
+    required Iterable<String> sourceIds,
+  }) async {
+    _checkManualCollectionId(collectionId);
+    final ids = sourceIds.toSet();
+    if (ids.isEmpty) return;
+
+    try {
       await _dao.removeSources(collectionId: collectionId, sourceIds: ids);
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  Future<void> removeSourcesFromFavourites({
+    required Iterable<String> sourceIds,
+  }) async {
+    final ids = sourceIds.toSet();
+    if (ids.isEmpty) return;
+
+    try {
+      await _dao.removeSources(
+        collectionId: favouritesCollectionId,
+        sourceIds: ids,
+      );
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }
@@ -206,6 +265,30 @@ class CollectionRepository {
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }
+  }
+
+  Future<void> _ensureFavouritesCollection(String now) {
+    return _dao.insertCollectionIfAbsent(
+      CollectionsTableCompanion.insert(
+        id: favouritesCollectionId,
+        name: favouritesCollectionName,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+  }
+
+  void _checkManualCollectionId(String collectionId) {
+    if (!_isFavouritesCollection(collectionId)) return;
+    throw ArgumentError.value(
+      collectionId,
+      'collectionId',
+      'Permanent collection cannot be modified as a manual collection',
+    );
+  }
+
+  bool _isFavouritesCollection(String collectionId) {
+    return collectionId == favouritesCollectionId;
   }
 
   LibraryCollection _collectionFromRow(QueryRow row) {

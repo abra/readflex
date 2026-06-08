@@ -48,6 +48,13 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet> {
     Navigator.of(context).pop(true);
   }
 
+  Future<void> _addToFavourites() async {
+    final cubit = context.read<AddToCollectionCubit>();
+    await cubit.addToFavourites(sourceIds: widget.sourceIds);
+    if (!mounted || cubit.state.status == AddToCollectionStatus.failure) return;
+    Navigator.of(context).pop(true);
+  }
+
   Future<void> _createAndAdd() async {
     final cubit = context.read<AddToCollectionCubit>();
     await cubit.createAndAdd(
@@ -75,6 +82,7 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet> {
               nameController: _nameController,
               sourceCount: widget.sourceIds.length,
               onCollectionPressed: _addToCollection,
+              onFavouritesPressed: state.isBusy ? null : _addToFavourites,
               onCreatePressed: state.isBusy ? null : _createAndAdd,
               onCancelPressed: state.isBusy
                   ? null
@@ -98,6 +106,7 @@ class _CollectionContent extends StatelessWidget {
     required this.nameController,
     required this.sourceCount,
     required this.onCollectionPressed,
+    required this.onFavouritesPressed,
     required this.onCreatePressed,
     required this.onCancelPressed,
   });
@@ -106,6 +115,7 @@ class _CollectionContent extends StatelessWidget {
   final TextEditingController nameController;
   final int sourceCount;
   final ValueChanged<LibraryCollection> onCollectionPressed;
+  final VoidCallback? onFavouritesPressed;
   final VoidCallback? onCreatePressed;
   final VoidCallback? onCancelPressed;
 
@@ -125,9 +135,20 @@ class _CollectionContent extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
         ],
+        _CollectionRow(
+          icon: AppIcons.collectionFavourites,
+          label: 'Favourites',
+          sourceCount: state.favouritesSourceCount,
+          enabled: !state.isBusy,
+          onPressed: onFavouritesPressed,
+        ),
+        Divider(height: 1, color: context.appColors.divider),
         if (state.collections.isEmpty)
           Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+            padding: const EdgeInsets.only(
+              top: AppSpacing.lg,
+              bottom: AppSpacing.lg,
+            ),
             child: Text(
               'Create a collection for $sourceCount selected item${sourceCount == 1 ? '' : 's'}.',
               style: text.bodyMedium.copyWith(
@@ -148,7 +169,9 @@ class _CollectionContent extends StatelessWidget {
               itemBuilder: (context, index) {
                 final collection = state.collections[index];
                 return _CollectionRow(
-                  collection: collection,
+                  icon: AppIcons.collection,
+                  label: collection.name,
+                  sourceCount: collection.sourceCount,
                   enabled: !state.isBusy,
                   onPressed: () => onCollectionPressed(collection),
                 );
@@ -192,14 +215,18 @@ class _CollectionContent extends StatelessWidget {
 
 class _CollectionRow extends StatelessWidget {
   const _CollectionRow({
-    required this.collection,
+    required this.icon,
+    required this.label,
+    required this.sourceCount,
     required this.enabled,
     required this.onPressed,
   });
 
-  final LibraryCollection collection;
+  final IconData icon;
+  final String label;
+  final int sourceCount;
   final bool enabled;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -216,14 +243,14 @@ class _CollectionRow extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              AppIcons.collection,
+              icon,
               size: AppIconSize.sm,
               color: colors.onSurfaceVariant,
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Text(
-                collection.name,
+                label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: text.bodyLarge.copyWith(color: colors.onSurface),
@@ -231,7 +258,7 @@ class _CollectionRow extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.md),
             Text(
-              '${collection.sourceCount}',
+              '$sourceCount',
               style: text.bodyMedium.copyWith(color: colors.onSurfaceVariant),
             ),
           ],

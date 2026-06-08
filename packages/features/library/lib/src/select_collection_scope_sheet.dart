@@ -138,6 +138,10 @@ class _CollectionScopeSections extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final normalizedQuery = query.trim().toLowerCase();
+    final favouriteScopes = _filterScopes(
+      state.favouriteCollectionScopes,
+      normalizedQuery,
+    );
     final manualScopes = _filterScopes(
       state.manualCollectionScopes,
       normalizedQuery,
@@ -151,6 +155,7 @@ class _CollectionScopeSections extends StatelessWidget {
       normalizedQuery,
     );
     final hasMatches =
+        favouriteScopes.isNotEmpty ||
         manualScopes.isNotEmpty ||
         siteScopes.isNotEmpty ||
         authorScopes.isNotEmpty;
@@ -172,6 +177,10 @@ class _CollectionScopeSections extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
         children: [
+          _ScopeSection(
+            scopes: favouriteScopes,
+            selected: state.selectedCollectionScope,
+          ),
           _ScopeSection(
             title: 'Manual collections',
             scopes: manualScopes,
@@ -205,12 +214,12 @@ class _CollectionScopeSections extends StatelessWidget {
 
 class _ScopeSection extends StatelessWidget {
   const _ScopeSection({
-    required this.title,
     required this.scopes,
     required this.selected,
+    this.title,
   });
 
-  final String title;
+  final String? title;
   final List<LibraryCollectionScope> scopes;
   final LibraryCollectionScope? selected;
 
@@ -223,19 +232,20 @@ class _ScopeSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(
-              left: AppSpacing.xs,
-              right: AppSpacing.xs,
-              bottom: AppSpacing.xs,
-            ),
-            child: Text(
-              title,
-              style: context.text.labelSmall.copyWith(
-                color: context.colors.onSurfaceVariant,
+          if (title != null)
+            Padding(
+              padding: const EdgeInsets.only(
+                left: AppSpacing.xs,
+                right: AppSpacing.xs,
+                bottom: AppSpacing.xs,
+              ),
+              child: Text(
+                title!,
+                style: context.text.labelSmall.copyWith(
+                  color: context.colors.onSurfaceVariant,
+                ),
               ),
             ),
-          ),
           ...scopes.map(
             (scope) => _CollectionScopeRow(
               scope: scope,
@@ -281,7 +291,7 @@ class _CollectionScopeRow extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.only(
               left: AppSpacing.sm,
-              right: scope.isManual ? 0 : AppSpacing.sm,
+              right: scope.canManage ? 0 : AppSpacing.sm,
             ),
             child: Row(
               children: [
@@ -306,11 +316,14 @@ class _CollectionScopeRow extends StatelessWidget {
                   '${scope.sourceCount}',
                   style: context.text.bodyMedium.copyWith(color: foreground),
                 ),
-                if (scope.isManual) ...[
+                if (scope.canManage) ...[
                   const SizedBox(width: AppSpacing.md),
                   Semantics(
                     button: true,
                     child: GestureDetector(
+                      key: ValueKey(
+                        'collectionScopeManage-${scope.type.name}-${scope.id}',
+                      ),
                       behavior: HitTestBehavior.opaque,
                       onTap: () => Navigator.of(
                         context,
@@ -333,6 +346,7 @@ class _CollectionScopeRow extends StatelessWidget {
 
   IconData _iconFor(LibraryCollectionScopeType type) {
     return switch (type) {
+      LibraryCollectionScopeType.favourites => AppIcons.collectionFavourites,
       LibraryCollectionScopeType.manual => AppIcons.collection,
       LibraryCollectionScopeType.site => AppIcons.global,
       LibraryCollectionScopeType.author => AppIcons.profile,

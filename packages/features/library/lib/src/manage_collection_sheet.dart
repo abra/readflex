@@ -12,7 +12,7 @@ enum _ManageCollectionStep { manage, confirmDelete }
 
 const double _collectionSourcesMaxHeight = 260;
 
-Future<ManageCollectionSheetResult?> showManageManualCollectionSheet({
+Future<ManageCollectionSheetResult?> showManageCollectionSheet({
   required BuildContext context,
   required ManageCollectionCubit cubit,
   required LibraryCollectionScope scope,
@@ -23,7 +23,7 @@ Future<ManageCollectionSheetResult?> showManageManualCollectionSheet({
     context,
     builder: (_) => BlocProvider.value(
       value: cubit,
-      child: _ManageManualCollectionSheet(
+      child: _ManageCollectionSheet(
         scope: scope,
         sources: sources,
         onCollectionChanged: onCollectionChanged,
@@ -32,8 +32,8 @@ Future<ManageCollectionSheetResult?> showManageManualCollectionSheet({
   );
 }
 
-class _ManageManualCollectionSheet extends StatefulWidget {
-  const _ManageManualCollectionSheet({
+class _ManageCollectionSheet extends StatefulWidget {
+  const _ManageCollectionSheet({
     required this.scope,
     required this.sources,
     required this.onCollectionChanged,
@@ -44,12 +44,10 @@ class _ManageManualCollectionSheet extends StatefulWidget {
   final VoidCallback onCollectionChanged;
 
   @override
-  State<_ManageManualCollectionSheet> createState() =>
-      _ManageManualCollectionSheetState();
+  State<_ManageCollectionSheet> createState() => _ManageCollectionSheetState();
 }
 
-class _ManageManualCollectionSheetState
-    extends State<_ManageManualCollectionSheet> {
+class _ManageCollectionSheetState extends State<_ManageCollectionSheet> {
   late final TextEditingController _nameController;
   late String _currentName;
   final _removedSourceIds = <String>{};
@@ -82,9 +80,13 @@ class _ManageManualCollectionSheetState
   }
 
   Future<void> _saveChanges() async {
-    final name = _nameController.text.trim();
-    final hasNameChange = name != _currentName;
-    if (name.isEmpty || (!hasNameChange && _removedSourceIds.isEmpty)) return;
+    final canRename = widget.scope.canRename;
+    final name = canRename ? _nameController.text.trim() : _currentName;
+    final hasNameChange = canRename && name != _currentName;
+    if ((canRename && name.isEmpty) ||
+        (!hasNameChange && _removedSourceIds.isEmpty)) {
+      return;
+    }
 
     final cubit = context.read<ManageCollectionCubit>();
     final saved = await cubit.saveChanges(
@@ -103,6 +105,7 @@ class _ManageManualCollectionSheetState
   }
 
   Future<void> _deleteCollection() async {
+    if (!widget.scope.canDelete) return;
     final cubit = context.read<ManageCollectionCubit>();
     final deleted = await cubit.deleteCollection(widget.scope.id);
     if (!mounted || !deleted) return;
@@ -124,11 +127,13 @@ class _ManageManualCollectionSheetState
           final visibleSources = widget.sources
               .where((source) => !_removedSourceIds.contains(source.id))
               .toList(growable: false);
-          final name = _nameController.text.trim();
+          final canRename = widget.scope.canRename;
+          final name = canRename ? _nameController.text.trim() : _currentName;
           final canSave =
               !state.isBusy &&
-              name.isNotEmpty &&
-              (name != _currentName || _removedSourceIds.isNotEmpty);
+              (!canRename || name.isNotEmpty) &&
+              ((canRename && name != _currentName) ||
+                  _removedSourceIds.isNotEmpty);
 
           final child = switch (_step) {
             _ManageCollectionStep.manage => _ManageCollectionContent(
@@ -137,6 +142,8 @@ class _ManageManualCollectionSheetState
               nameController: _nameController,
               visibleSources: visibleSources,
               initialSourceCount: widget.sources.length,
+              canRename: widget.scope.canRename,
+              canDelete: widget.scope.canDelete,
               canSave: canSave,
               onSave: _saveChanges,
               onRemoveSource: _stageSourceRemoval,
@@ -205,6 +212,8 @@ class _ManageCollectionContent extends StatelessWidget {
     required this.nameController,
     required this.visibleSources,
     required this.initialSourceCount,
+    required this.canRename,
+    required this.canDelete,
     required this.canSave,
     required this.onSave,
     required this.onRemoveSource,
@@ -216,6 +225,8 @@ class _ManageCollectionContent extends StatelessWidget {
   final TextEditingController nameController;
   final List<LibrarySource> visibleSources;
   final int initialSourceCount;
+  final bool canRename;
+  final bool canDelete;
   final bool canSave;
   final Future<void> Function() onSave;
   final ValueChanged<LibrarySource> onRemoveSource;
@@ -236,14 +247,16 @@ class _ManageCollectionContent extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
         ],
-        TextField(
-          controller: nameController,
-          enabled: !state.isBusy,
-          textInputAction: TextInputAction.done,
-          decoration: const InputDecoration(),
-          onSubmitted: (_) => canSave ? onSave() : null,
-        ),
-        const SizedBox(height: AppSpacing.lg),
+        if (canRename) ...[
+          TextField(
+            controller: nameController,
+            enabled: !state.isBusy,
+            textInputAction: TextInputAction.done,
+            decoration: const InputDecoration(),
+            onSubmitted: (_) => canSave ? onSave() : null,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+        ],
         Text(
           'Items',
           style: context.text.labelSmall.copyWith(
@@ -258,27 +271,33 @@ class _ManageCollectionContent extends StatelessWidget {
           onRemoveSource: onRemoveSource,
         ),
         const SizedBox(height: AppSpacing.lg),
-        Row(
-          children: [
-            Expanded(
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: context.colors.error,
-                  foregroundColor: context.colors.onError,
+        if (canDelete)
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: context.colors.error,
+                    foregroundColor: context.colors.onError,
+                  ),
+                  onPressed: state.isBusy ? null : onDeletePressed,
+                  child: const Text('Delete collection'),
                 ),
-                onPressed: state.isBusy ? null : onDeletePressed,
-                child: const Text('Delete collection'),
               ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: FilledButton(
-                onPressed: canSave ? onSave : null,
-                child: const Text('Save'),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: FilledButton(
+                  onPressed: canSave ? onSave : null,
+                  child: const Text('Save'),
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          )
+        else
+          FilledButton(
+            onPressed: canSave ? onSave : null,
+            child: const Text('Save'),
+          ),
       ],
     );
   }
@@ -431,6 +450,7 @@ class _CollectionSourceRow extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.md),
           IconButton(
+            key: ValueKey('collectionSourceRemove-${source.id}'),
             style: IconButton.styleFrom(
               backgroundColor: Colors.transparent,
               foregroundColor: colors.onSurfaceVariant,

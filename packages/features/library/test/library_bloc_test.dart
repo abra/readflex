@@ -14,6 +14,8 @@ final _book = Book(
   addedAt: DateTime(2026, 1, 1),
 );
 
+final _favouritesScope = LibraryCollectionScope.favourites();
+
 void main() {
   group('LibraryBloc', () {
     late FakeBookRepository repository;
@@ -29,7 +31,11 @@ void main() {
       act: (bloc) => bloc.add(const LibraryLoadRequested()),
       expect: () => [
         LibraryState(status: LibraryStatus.loading),
-        LibraryState(status: LibraryStatus.success, books: [_book]),
+        LibraryState(
+          status: LibraryStatus.success,
+          books: [_book],
+          collectionScopes: [_favouritesScope],
+        ),
       ],
     );
 
@@ -39,7 +45,10 @@ void main() {
       act: (bloc) => bloc.add(const LibraryLoadRequested()),
       expect: () => [
         LibraryState(status: LibraryStatus.loading),
-        LibraryState(status: LibraryStatus.success),
+        LibraryState(
+          status: LibraryStatus.success,
+          collectionScopes: [_favouritesScope],
+        ),
       ],
     );
 
@@ -95,6 +104,7 @@ void main() {
         LibraryState(
           status: LibraryStatus.success,
           deletionVersion: 1,
+          collectionScopes: [_favouritesScope],
           deletionEffect: const LibraryDeletionEffect(
             version: 1,
             success: true,
@@ -355,6 +365,32 @@ void main() {
       final firstRead = state.visibleItems;
       final secondRead = state.visibleItems;
       expect(identical(firstRead, secondRead), isTrue);
+    });
+
+    test('favourites scope is permanent and currently empty', () {
+      final state = LibraryState(
+        status: LibraryStatus.success,
+        books: [_book],
+        collectionScopes: [_favouritesScope],
+        selectedCollectionScope: _favouritesScope,
+      );
+
+      expect(_favouritesScope.isFavourites, isTrue);
+      expect(_favouritesScope.isManual, isFalse);
+      expect(state.favouriteCollectionScopes, [_favouritesScope]);
+      expect(state.visibleItems, isEmpty);
+    });
+
+    test('visibleItems applies favourites collection scope', () {
+      final scope = LibraryCollectionScope.favourites(sourceIds: [_book.id]);
+      final state = LibraryState(
+        status: LibraryStatus.success,
+        books: [_book],
+        collectionScopes: [scope],
+        selectedCollectionScope: scope,
+      );
+
+      expect(state.visibleItems, [LibrarySource.fromBook(_book)]);
     });
 
     test('visibleItems applies manual collection scope before filter', () {

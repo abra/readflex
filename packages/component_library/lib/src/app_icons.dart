@@ -36,6 +36,7 @@ abstract final class AppIcons {
   static const IconData bookmarkAdd = LucideIcons.bookmarkPlus;
   static const IconData collection = LucideIcons.folder;
   static const IconData collectionAdd = LucideIcons.folderPlus;
+  static const IconData collectionFavourites = LucideIcons.heart;
   static const IconData highlight = LucideIcons.highlighter;
   static const IconData flashcard = LucideIcons.layers;
   static const IconData quote = LucideIcons.quote;

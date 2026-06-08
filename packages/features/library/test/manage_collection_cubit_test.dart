@@ -1,4 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:collection_repository/collection_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/manage_collection_cubit.dart';
@@ -60,6 +61,27 @@ void main() {
     verify: (_) async {
       final sourceIds = await repository.getCollectionSourceIds();
       expect(sourceIds['collection-1'], {'article-1'});
+    },
+  );
+
+  blocTest<ManageCollectionCubit, ManageCollectionState>(
+    'saveChanges removes sources from favourites',
+    build: () {
+      repository.seedCollectionSourceIds({
+        CollectionRepository.favouritesCollectionId: {'book-1', 'article-1'},
+      });
+      return ManageCollectionCubit(collectionRepository: repository);
+    },
+    act: (cubit) => cubit.saveChanges(
+      collectionId: CollectionRepository.favouritesCollectionId,
+      removedSourceIds: ['book-1'],
+    ),
+    expect: () => [
+      const ManageCollectionState(status: ManageCollectionStatus.submitting),
+      const ManageCollectionState(status: ManageCollectionStatus.success),
+    ],
+    verify: (_) async {
+      expect(repository.favouriteSourceIds, {'article-1'});
     },
   );
 

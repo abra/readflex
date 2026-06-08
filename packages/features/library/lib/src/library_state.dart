@@ -7,9 +7,16 @@ enum LibraryStatus { initial, loading, success, failure }
 /// refactor-safe.
 enum LibraryFilter { all, books, articles, comics, unread }
 
-enum LibraryCollectionScopeType { manual, site, author }
+enum LibraryCollectionScopeType { favourites, manual, site, author }
 
 class LibraryCollectionScope extends Equatable {
+  LibraryCollectionScope.favourites({Iterable<String> sourceIds = const []})
+    : type = LibraryCollectionScopeType.favourites,
+      id = CollectionRepository.favouritesCollectionId,
+      label = 'Favourites',
+      sourceIds = _sortedUniqueSourceIds(sourceIds),
+      sourceCount = sourceIds.toSet().length;
+
   LibraryCollectionScope.manual({
     required LibraryCollection collection,
     required Iterable<String> sourceIds,
@@ -33,6 +40,10 @@ class LibraryCollectionScope extends Equatable {
   final List<String> sourceIds;
 
   bool get isManual => type == LibraryCollectionScopeType.manual;
+  bool get isFavourites => type == LibraryCollectionScopeType.favourites;
+  bool get canManage => isManual || isFavourites;
+  bool get canRename => isManual;
+  bool get canDelete => isManual;
 
   @override
   List<Object?> get props => [type, id, label, sourceCount, sourceIds];
@@ -101,6 +112,10 @@ class LibraryState extends Equatable {
 
   bool get hasCollectionScope => selectedCollectionScope != null;
 
+  List<LibraryCollectionScope> get favouriteCollectionScopes => collectionScopes
+      .where((scope) => scope.type == LibraryCollectionScopeType.favourites)
+      .toList(growable: false);
+
   List<LibraryCollectionScope> get manualCollectionScopes => collectionScopes
       .where((scope) => scope.type == LibraryCollectionScopeType.manual)
       .toList(growable: false);
@@ -146,7 +161,13 @@ class LibraryState extends Equatable {
   }) {
     if (collectionScope == null) return sources;
     return switch (collectionScope.type) {
-      LibraryCollectionScopeType.manual => _sourcesInManualCollection(
+      // Favourite membership is repository-managed, but this remains a
+      // permanent scope so it cannot be edited or deleted as manual collection.
+      LibraryCollectionScopeType.favourites => _sourcesInCollection(
+        sources,
+        collectionScope,
+      ),
+      LibraryCollectionScopeType.manual => _sourcesInCollection(
         sources,
         collectionScope,
       ),
@@ -168,7 +189,7 @@ class LibraryState extends Equatable {
     };
   }
 
-  static List<LibrarySource> _sourcesInManualCollection(
+  static List<LibrarySource> _sourcesInCollection(
     List<LibrarySource> sources,
     LibraryCollectionScope collectionScope,
   ) {

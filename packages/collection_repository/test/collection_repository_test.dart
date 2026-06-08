@@ -33,6 +33,64 @@ void main() {
     },
   );
 
+  test('favourites are persisted but hidden from manual collections', () async {
+    await repository.addSourcesToFavourites(
+      sourceIds: const ['book-1', 'book-1', 'article-1'],
+    );
+
+    expect(await repository.getCollections(), isEmpty);
+    expect(await repository.getFavouriteSourceIds(), {'book-1', 'article-1'});
+
+    final sourceIds = await repository.getCollectionSourceIds();
+    expect(
+      sourceIds[CollectionRepository.favouritesCollectionId],
+      {'book-1', 'article-1'},
+    );
+  });
+
+  test('removeSourcesFromFavourites removes favourite memberships', () async {
+    await repository.addSourcesToFavourites(
+      sourceIds: const ['book-1', 'article-1'],
+    );
+
+    await repository.removeSourcesFromFavourites(sourceIds: const ['book-1']);
+
+    expect(await repository.getFavouriteSourceIds(), {'article-1'});
+  });
+
+  test(
+    'favourites cannot be modified through manual collection APIs',
+    () async {
+      expect(
+        () => repository.deleteCollection(
+          CollectionRepository.favouritesCollectionId,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => repository.renameCollection(
+          collectionId: CollectionRepository.favouritesCollectionId,
+          name: 'New name',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => repository.addSourcesToCollection(
+          collectionId: CollectionRepository.favouritesCollectionId,
+          sourceIds: const ['book-1'],
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => repository.removeSourcesFromCollection(
+          collectionId: CollectionRepository.favouritesCollectionId,
+          sourceIds: const ['book-1'],
+        ),
+        throwsArgumentError,
+      );
+    },
+  );
+
   test('addSourcesToCollection is idempotent per source id', () async {
     final collection = await repository.createCollection('Articles');
 
