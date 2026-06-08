@@ -11,7 +11,7 @@ import 'connectivity_service.dart';
 ///
 /// State here is a single enum value, so a plain [InheritedWidget] suffices —
 /// no [InheritedModel] aspects needed.
-class ConnectivityScope extends StatelessWidget {
+class ConnectivityScope extends StatefulWidget {
   const ConnectivityScope({
     required this.service,
     required this.child,
@@ -37,14 +37,43 @@ class ConnectivityScope extends StatelessWidget {
   }
 
   @override
+  State<ConnectivityScope> createState() => _ConnectivityScopeState();
+}
+
+class _ConnectivityScopeState extends State<ConnectivityScope>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didUpdateWidget(ConnectivityScope oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.service != widget.service) widget.service.refresh();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) widget.service.refresh();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<ConnectivityStatus>(
-      stream: service.statusStream,
-      initialData: service.status,
+      stream: widget.service.statusStream,
+      initialData: widget.service.status,
       builder: (context, snapshot) {
         return _ConnectivityInherited(
-          status: snapshot.data ?? service.status,
-          child: child,
+          status: snapshot.data ?? widget.service.status,
+          child: widget.child,
         );
       },
     );

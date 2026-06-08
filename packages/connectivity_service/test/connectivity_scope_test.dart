@@ -15,8 +15,15 @@ class _FakeConnectivityService implements ConnectivityService {
   @override
   ConnectivityStatus get status => _initial;
 
+  var refreshCount = 0;
+
   @override
   Stream<ConnectivityStatus> get statusStream => _controller.stream;
+
+  @override
+  Future<void> refresh() async {
+    refreshCount++;
+  }
 
   void emit(ConnectivityStatus next) {
     _initial = next;
@@ -71,6 +78,20 @@ void main() {
       service.emit(ConnectivityStatus.offline);
       await tester.pumpAndSettle();
       expect(buildCount, 2);
+    });
+
+    testWidgets('refreshes platform status on app resume', (tester) async {
+      final service = _FakeConnectivityService(ConnectivityStatus.online);
+      addTearDown(service.dispose);
+
+      await tester.pumpWidget(
+        ConnectivityScope(service: service, child: const SizedBox()),
+      );
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+
+      expect(service.refreshCount, 1);
     });
 
     testWidgets('throws when used without a ConnectivityScope ancestor', (

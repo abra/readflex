@@ -80,6 +80,57 @@ void main() {
       },
     );
 
+    test('maps vpn-only events to offline', () async {
+      final service = build(ConnectivityStatus.online);
+      addTearDown(service.dispose);
+
+      final emissions = <ConnectivityStatus>[];
+      final sub = service.statusStream.listen(emissions.add);
+      addTearDown(sub.cancel);
+
+      events.add([ConnectivityResult.vpn]);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(emissions, [ConnectivityStatus.offline]);
+      expect(service.status, ConnectivityStatus.offline);
+    });
+
+    test('keeps vpn plus an underlying interface online', () async {
+      final service = build(ConnectivityStatus.online);
+      addTearDown(service.dispose);
+
+      final emissions = <ConnectivityStatus>[];
+      final sub = service.statusStream.listen(emissions.add);
+      addTearDown(sub.cancel);
+
+      events.add([ConnectivityResult.wifi, ConnectivityResult.vpn]);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(emissions, isEmpty);
+      expect(service.status, ConnectivityStatus.online);
+    });
+
+    test('refresh re-reads platform status and emits changes', () async {
+      var platformResults = [ConnectivityResult.wifi];
+      final service = ConnectivityPlusService.forTesting(
+        initial: ConnectivityStatus.online,
+        events: events.stream,
+        read: () async => platformResults,
+      );
+      addTearDown(service.dispose);
+
+      final emissions = <ConnectivityStatus>[];
+      final sub = service.statusStream.listen(emissions.add);
+      addTearDown(sub.cancel);
+
+      platformResults = [ConnectivityResult.none];
+      await service.refresh();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(service.status, ConnectivityStatus.offline);
+      expect(emissions, [ConnectivityStatus.offline]);
+    });
+
     test('dispose() closes the stream and stops listening', () async {
       final service = build(ConnectivityStatus.online);
 

@@ -12,6 +12,9 @@ abstract class ConnectivityService {
   /// Reactive connectivity stream.
   Stream<ConnectivityStatus> get statusStream;
 
+  /// Re-read the platform status and emit when it changed.
+  Future<void> refresh();
+
   /// Dispose resources.
   void dispose();
 }
@@ -28,6 +31,9 @@ class NoopConnectivityService implements ConnectivityService {
 
   @override
   Stream<ConnectivityStatus> get statusStream => const Stream.empty();
+
+  @override
+  Future<void> refresh() async {}
 
   @override
   void dispose() {}
