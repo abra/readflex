@@ -756,7 +756,7 @@ void main() {
 
     expect(find.text('Manage collection'), findsOneWidget);
 
-    final sheet = find.byType(ActionBottomSheetLayout);
+    final sheet = find.byKey(const ValueKey('manageCollectionContent'));
     final saveFinder = find.descendant(
       of: sheet,
       matching: find.widgetWithText(FilledButton, 'Save'),
@@ -769,6 +769,13 @@ void main() {
     await tester.tap(
       find.byKey(const ValueKey('collectionSourceRemove-b-1')),
     );
+    await tester.pump();
+
+    expect(
+      find.descendant(of: sheet, matching: find.text('Flutter in Action')),
+      findsOneWidget,
+    );
+
     await tester.pumpAndSettle();
 
     expect(tester.getSize(sheet).height, lessThan(sheetHeightBeforeRemoval));
@@ -838,7 +845,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final sheet = find.byType(ActionBottomSheetLayout);
+    final sheet = find.byKey(const ValueKey('manageCollectionContent'));
     expect(
       find.descendant(of: sheet, matching: find.text('1 book, 1 article')),
       findsOneWidget,
@@ -853,6 +860,54 @@ void main() {
       find.descendant(of: sheet, matching: find.text('1 article')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('manage collection empty state is centered in list area', (
+    tester,
+  ) async {
+    final collection = LibraryCollection(
+      id: 'collection-1',
+      name: 'Empty collection',
+      sourceCount: 0,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+    bookRepository.seedBooks([_book]);
+    collectionRepository.seedCollections([collection]);
+    collectionRepository.seedCollectionSourceIds({collection.id: <String>{}});
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.tap(find.byIcon(AppIcons.collection));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('collectionScopeManage-manual-collection-1')),
+    );
+    await tester.pumpAndSettle();
+
+    final sheet = find.byKey(const ValueKey('manageCollectionContent'));
+    final countLabel = find.descendant(
+      of: sheet,
+      matching: find.text('0 books/articles'),
+    );
+    final emptyLabel = find.descendant(
+      of: sheet,
+      matching: find.text('No items in this collection'),
+    );
+    final saveButton = find.descendant(
+      of: sheet,
+      matching: find.widgetWithText(FilledButton, 'Save'),
+    );
+
+    expect(countLabel, findsOneWidget);
+    expect(emptyLabel, findsOneWidget);
+
+    final listAreaTop = tester.getBottomLeft(countLabel).dy + AppSpacing.md;
+    final listAreaBottom = tester.getTopLeft(saveButton).dy - AppSpacing.lg;
+    final expectedCenter = (listAreaTop + listAreaBottom) / 2;
+
+    expect(tester.getCenter(emptyLabel).dy, closeTo(expectedCenter, 1));
   });
 
   testWidgets('manage collection item list uses scroll edge fades', (
@@ -892,7 +947,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final sheet = find.byType(ActionBottomSheetLayout);
+    final sheet = find.byKey(const ValueKey('manageCollectionContent'));
     final fadeStack = find.descendant(
       of: sheet,
       matching: find.byType(ScrollEdgeFadeStack),
@@ -949,7 +1004,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final sheet = find.byType(ActionBottomSheetLayout);
+      final sheet = find.byKey(const ValueKey('manageCollectionContent'));
       expect(find.text('Manage collection'), findsOneWidget);
       expect(
         find.descendant(of: sheet, matching: find.byType(TextField)),
@@ -1005,12 +1060,47 @@ void main() {
       find.byKey(const ValueKey('collectionScopeManage-manual-collection-1')),
     );
     await tester.pumpAndSettle();
+
+    final manageStepHeight = tester
+        .getSize(
+          find.byKey(const ValueKey('manageCollectionContent')),
+        )
+        .height;
+
     await tester.tap(find.text('Delete collection'));
+    await tester.pump();
+
+    expect(find.byType(FractionalTranslation), findsWidgets);
+
     await tester.pumpAndSettle();
 
-    expect(find.byType(ActionBottomSheetLayout), findsOneWidget);
+    final deleteStep = find.byKey(const ValueKey('deleteCollectionContent'));
+    expect(deleteStep, findsOneWidget);
+    expect(tester.getSize(deleteStep).height, lessThan(manageStepHeight));
     expect(find.text('Manage collection'), findsNothing);
     expect(find.text('Delete collection?'), findsOneWidget);
+
+    final deleteTitle = find.text('Delete collection?');
+    final deleteMessage = find.descendant(
+      of: deleteStep,
+      matching: find.text(
+        'This removes "Dune" only. Books and articles stay in your library.',
+      ),
+    );
+    final deleteButton = find.descendant(
+      of: deleteStep,
+      matching: find.widgetWithText(FilledButton, 'Delete'),
+    );
+    final messageAreaTop = tester.getBottomLeft(deleteTitle).dy + AppSpacing.lg;
+    final messageAreaBottom =
+        tester.getTopLeft(deleteButton).dy - AppSpacing.lg;
+    final expectedMessageCenter = (messageAreaTop + messageAreaBottom) / 2;
+
+    expect(deleteMessage, findsOneWidget);
+    expect(
+      tester.getCenter(deleteMessage).dy,
+      closeTo(expectedMessageCenter, 1),
+    );
 
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
@@ -1052,7 +1142,7 @@ void main() {
     expect(find.text('Save'), findsOneWidget);
 
     final nameField = find.descendant(
-      of: find.byType(ActionBottomSheetLayout),
+      of: find.byKey(const ValueKey('manageCollectionContent')),
       matching: find.byType(TextField),
     );
     expect(nameField, findsOneWidget);
