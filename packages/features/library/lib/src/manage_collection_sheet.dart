@@ -11,6 +11,15 @@ enum ManageCollectionSheetResult { deleted }
 enum _ManageCollectionStep { manage, confirmDelete }
 
 const double _collectionSourcesMaxHeight = 260;
+const EdgeInsets _sheetHorizontalPadding = EdgeInsets.symmetric(
+  horizontal: AppSpacing.xl,
+);
+const EdgeInsets _sheetActionsPadding = EdgeInsets.fromLTRB(
+  AppSpacing.xl,
+  0,
+  AppSpacing.xl,
+  AppSpacing.lg,
+);
 
 Future<ManageCollectionSheetResult?> showManageCollectionSheet({
   required BuildContext context,
@@ -122,6 +131,7 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet> {
   Widget build(BuildContext context) {
     return ActionBottomSheetLayout(
       title: _title,
+      bodyPadding: EdgeInsets.zero,
       child: BlocBuilder<ManageCollectionCubit, ManageCollectionState>(
         builder: (context, state) {
           final visibleSources = widget.sources
@@ -239,31 +249,40 @@ class _ManageCollectionContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (state.errorMessage != null) ...[
-          Text(
-            state.errorMessage!,
-            style: context.text.bodyMedium.copyWith(
-              color: context.colors.error,
+          Padding(
+            padding: _sheetHorizontalPadding,
+            child: Text(
+              state.errorMessage!,
+              style: context.text.bodyMedium.copyWith(
+                color: context.colors.error,
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
         ],
         if (canRename) ...[
-          TextField(
-            controller: nameController,
-            enabled: !state.isBusy,
-            textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(),
-            onSubmitted: (_) => canSave ? onSave() : null,
+          Padding(
+            padding: _sheetHorizontalPadding,
+            child: TextField(
+              controller: nameController,
+              enabled: !state.isBusy,
+              textInputAction: TextInputAction.done,
+              decoration: const InputDecoration(),
+              onSubmitted: (_) => canSave ? onSave() : null,
+            ),
           ),
           const SizedBox(height: AppSpacing.lg),
         ],
-        Text(
-          'Items',
-          style: context.text.labelSmall.copyWith(
-            color: context.colors.onSurfaceVariant,
+        Padding(
+          padding: _sheetHorizontalPadding,
+          child: Text(
+            _sourceCountLabel(visibleSources),
+            style: context.text.labelSmall.copyWith(
+              color: context.colors.onSurfaceVariant,
+            ),
           ),
         ),
-        const SizedBox(height: AppSpacing.xs),
+        const SizedBox(height: AppSpacing.md),
         _CollectionSourcesList(
           initialSourceCount: initialSourceCount,
           visibleSources: visibleSources,
@@ -271,35 +290,62 @@ class _ManageCollectionContent extends StatelessWidget {
           onRemoveSource: onRemoveSource,
         ),
         const SizedBox(height: AppSpacing.lg),
-        if (canDelete)
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: context.colors.error,
-                    foregroundColor: context.colors.onError,
-                  ),
-                  onPressed: state.isBusy ? null : onDeletePressed,
-                  child: const Text('Delete collection'),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: FilledButton(
+        Padding(
+          padding: _sheetActionsPadding,
+          child: canDelete
+              ? Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: context.colors.error,
+                          foregroundColor: context.colors.onError,
+                        ),
+                        onPressed: state.isBusy ? null : onDeletePressed,
+                        child: const Text('Delete collection'),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: canSave ? onSave : null,
+                        child: const Text('Save'),
+                      ),
+                    ),
+                  ],
+                )
+              : FilledButton(
                   onPressed: canSave ? onSave : null,
                   child: const Text('Save'),
                 ),
-              ),
-            ],
-          )
-        else
-          FilledButton(
-            onPressed: canSave ? onSave : null,
-            child: const Text('Save'),
-          ),
+        ),
       ],
     );
+  }
+
+  String _sourceCountLabel(List<LibrarySource> sources) {
+    var books = 0;
+    var articles = 0;
+    for (final source in sources) {
+      switch (source.sourceType) {
+        case SourceType.book:
+          books++;
+          break;
+        case SourceType.article:
+          articles++;
+          break;
+      }
+    }
+
+    final parts = [
+      if (books > 0) _pluralize(books, 'book'),
+      if (articles > 0) _pluralize(articles, 'article'),
+    ];
+    return parts.isEmpty ? '0 books/articles' : parts.join(', ');
+  }
+
+  String _pluralize(int count, String singular) {
+    return count == 1 ? '$count $singular' : '$count ${singular}s';
   }
 }
 
@@ -320,7 +366,10 @@ class _CollectionSourcesList extends StatelessWidget {
   Widget build(BuildContext context) {
     if (visibleSources.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.lg,
+        ),
         child: Text(
           'No items in this collection',
           textAlign: TextAlign.center,
@@ -333,21 +382,23 @@ class _CollectionSourcesList extends StatelessWidget {
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxHeight: _collectionSourcesMaxHeight),
-      child: ListView.separated(
-        shrinkWrap: true,
-        itemCount: visibleSources.length,
-        separatorBuilder: (_, _) => Divider(
-          height: 1,
-          color: context.appColors.divider,
+      child: ScrollEdgeFadeStack(
+        child: ListView.separated(
+          shrinkWrap: true,
+          itemCount: visibleSources.length,
+          separatorBuilder: (_, _) => Divider(
+            height: 1,
+            color: context.appColors.divider,
+          ),
+          itemBuilder: (context, index) {
+            final source = visibleSources[index];
+            return _CollectionSourceRow(
+              source: source,
+              enabled: enabled,
+              onRemovePressed: () => onRemoveSource(source),
+            );
+          },
         ),
-        itemBuilder: (context, index) {
-          final source = visibleSources[index];
-          return _CollectionSourceRow(
-            source: source,
-            enabled: enabled,
-            onRemovePressed: () => onRemoveSource(source),
-          );
-        },
       ),
     );
   }
@@ -369,46 +420,49 @@ class _DeleteCollectionConfirmationContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (state.errorMessage != null) ...[
-          Text(
-            state.errorMessage!,
-            style: context.text.bodyMedium.copyWith(
-              color: context.colors.error,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-        ],
-        Text(
-          'This removes "$collectionName" only. Books and articles stay in your library.',
-          style: context.text.bodyMedium,
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: state.isBusy ? null : onCancel,
-                child: const Text('Cancel'),
+    return Padding(
+      padding: _sheetActionsPadding,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (state.errorMessage != null) ...[
+            Text(
+              state.errorMessage!,
+              style: context.text.bodyMedium.copyWith(
+                color: context.colors.error,
               ),
             ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: context.colors.error,
-                  foregroundColor: context.colors.onError,
-                ),
-                onPressed: state.isBusy ? null : onDelete,
-                child: const Text('Delete'),
-              ),
-            ),
+            const SizedBox(height: AppSpacing.md),
           ],
-        ),
-      ],
+          Text(
+            'This removes "$collectionName" only. Books and articles stay in your library.',
+            style: context.text.bodyMedium,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: state.isBusy ? null : onCancel,
+                  child: const Text('Cancel'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: context.colors.error,
+                    foregroundColor: context.colors.onError,
+                  ),
+                  onPressed: state.isBusy ? null : onDelete,
+                  child: const Text('Delete'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -429,7 +483,10 @@ class _CollectionSourceRow extends StatelessWidget {
     final colors = context.colors;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xl,
+        vertical: AppSpacing.sm,
+      ),
       child: Row(
         children: [
           Icon(

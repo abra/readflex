@@ -13,6 +13,8 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 import 'helpers/fake_book_repository.dart';
 import 'helpers/fake_collection_repository.dart';
 
+const double _collectionSourcesMaxHeightForTest = 260;
+
 final _book = Book(
   id: 'b-1',
   title: 'Flutter in Action',
@@ -794,6 +796,125 @@ void main() {
       other.id,
     });
     expect(find.text('Manage collection'), findsNothing);
+  });
+
+  testWidgets('manage collection shows book and article counts', (
+    tester,
+  ) async {
+    final articleRepository = _FakeArticleRepository()
+      ..seedArticles([
+        Article(
+          id: 'article-1',
+          title: 'Saved article',
+          url: 'https://example.com/a',
+          siteName: 'Example',
+          author: 'Author',
+          contentPath: '/articles/article-1/article.json',
+          addedAt: DateTime(2026, 1, 2),
+        ),
+      ]);
+    final collection = LibraryCollection(
+      id: 'collection-1',
+      name: 'Mixed collection',
+      sourceCount: 2,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+    bookRepository.seedBooks([_book]);
+    collectionRepository.seedCollections([collection]);
+    collectionRepository.seedCollectionSourceIds({
+      collection.id: {_book.id, 'article-1'},
+    });
+
+    await tester.pumpWidget(
+      buildSubject(articleRepository: articleRepository),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byIcon(AppIcons.collection));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('collectionScopeManage-manual-collection-1')),
+    );
+    await tester.pumpAndSettle();
+
+    final sheet = find.byType(ActionBottomSheetLayout);
+    expect(
+      find.descendant(of: sheet, matching: find.text('1 book, 1 article')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('collectionSourceRemove-b-1')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(of: sheet, matching: find.text('1 article')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('manage collection item list uses scroll edge fades', (
+    tester,
+  ) async {
+    final books = List.generate(
+      12,
+      (index) => Book(
+        id: 'book-$index',
+        title: 'Book $index',
+        author: 'Author',
+        filePath: '/books/book-$index.epub',
+        format: BookFormat.epub,
+        addedAt: DateTime(2026, 1, index + 1),
+      ),
+    );
+    final collection = LibraryCollection(
+      id: 'collection-1',
+      name: 'Large collection',
+      sourceCount: books.length,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+    bookRepository.seedBooks(books);
+    collectionRepository.seedCollections([collection]);
+    collectionRepository.seedCollectionSourceIds({
+      collection.id: books.map((book) => book.id).toSet(),
+    });
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.tap(find.byIcon(AppIcons.collection));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('collectionScopeManage-manual-collection-1')),
+    );
+    await tester.pumpAndSettle();
+
+    final sheet = find.byType(ActionBottomSheetLayout);
+    final fadeStack = find.descendant(
+      of: sheet,
+      matching: find.byType(ScrollEdgeFadeStack),
+    );
+
+    expect(fadeStack, findsOneWidget);
+    expect(
+      find.descendant(of: fadeStack, matching: find.byType(ListView)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: fadeStack, matching: find.byType(ScrollEdgeFade)),
+      findsNWidgets(2),
+    );
+    expect(
+      tester.getSize(fadeStack).width,
+      closeTo(tester.getSize(sheet).width, 0.1),
+    );
+    expect(
+      tester.getSize(fadeStack).height,
+      lessThanOrEqualTo(_collectionSourcesMaxHeightForTest),
+    );
   });
 
   testWidgets(
