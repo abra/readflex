@@ -598,10 +598,13 @@ void main() {
       );
       expect(bookJs, contains('readerCSSKeys.some'));
       expect(bookJs, contains('const shouldRefreshLayoutForStyle ='));
-      expect(bookJs, contains('if (oldStyle.writingMode !== nextStyle.writingMode)'));
       expect(
         bookJs,
-        contains("value === 'scroll' || value === 'vertical'"),
+        contains('return oldStyle.writingMode !== nextStyle.writingMode'),
+      );
+      expect(
+        bookJs,
+        isNot(contains("value === 'scroll' || value === 'vertical'")),
       );
       expect(
         bookJs,

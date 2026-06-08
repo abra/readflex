@@ -2270,13 +2270,10 @@ const setStyle = (oldStyle) => {
 
 const shouldRefreshLayoutForStyle = (oldStyle, nextStyle) => {
   if (!oldStyle) return false
-  if (oldStyle.writingMode !== nextStyle.writingMode) return true
-  if (oldStyle.pageTurnStyle === nextStyle.pageTurnStyle) return false
-  // The vertical page-turn mode changes the renderer scroll axis; WebKit on
-  // device can keep the old axis unless the layout is rebuilt around the
-  // current CFI.
-  return [oldStyle.pageTurnStyle, nextStyle.pageTurnStyle]
-    .some(value => value === 'scroll' || value === 'vertical')
+  // Page-turn direction changes only affect gesture/navigation presentation.
+  // Reopening a neighboring section here makes the current page visibly blink;
+  // paginator attribute updates already re-render the current section in place.
+  return oldStyle.writingMode !== nextStyle.writingMode
 }
 
 const refreshLayout = () => {

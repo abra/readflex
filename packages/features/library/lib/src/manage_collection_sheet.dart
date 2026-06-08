@@ -261,14 +261,13 @@ class _ManageCollectionContent extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: FilledButton.icon(
+              child: FilledButton(
                 style: FilledButton.styleFrom(
                   backgroundColor: context.colors.error,
                   foregroundColor: context.colors.onError,
                 ),
                 onPressed: state.isBusy ? null : onDeletePressed,
-                icon: const Icon(AppIcons.delete, size: AppIconSize.sm),
-                label: const Text('Delete collection'),
+                child: const Text('Delete collection'),
               ),
             ),
             const SizedBox(width: AppSpacing.md),
