@@ -791,8 +791,10 @@ class _ArticleUploadingView extends StatelessWidget {
     return _StatusLayout(
       reserveActionSpace: true,
       content: _StatusContent(
-        icon: const CenteredCircularProgressIndicator(),
-        title: 'Saving article...',
+        icon: const _StatusIconSlot(
+          child: CenteredCircularProgressIndicator(),
+        ),
+        title: _articleUploadingTitle(state.stage),
         detail: state.url,
         titleStyle: text.bodyMedium.copyWith(
           color: colors.onSurface,
@@ -805,6 +807,11 @@ class _ArticleUploadingView extends StatelessWidget {
     );
   }
 }
+
+String _articleUploadingTitle(ImportFlowArticleStage stage) => switch (stage) {
+  ImportFlowArticleStage.fetching => 'Fetching article...',
+  ImportFlowArticleStage.saving => 'Saving offline copy...',
+};
 
 class _StatusLayout extends StatelessWidget {
   const _StatusLayout({
@@ -884,7 +891,7 @@ class _StatusContent extends StatelessWidget {
   }
 }
 
-const _kStatusActionHeight = 40.0;
+const _kStatusActionHeight = 48.0;
 
 /// Insets used by the title-less status views (uploading, done,
 /// failure) so they line up with the [_MenuView]'s ActionBottomSheet
@@ -945,13 +952,15 @@ class _FailureView extends StatelessWidget {
 
     return _StatusLayout(
       content: _StatusContent(
-        icon: _IconDisc(
-          tint: cs.error,
-          // Bare exclamation glyph keeps the disc as the only ring
-          // around the mark, mirroring the success view's bare check.
-          child: Text(
-            '!',
-            style: text.statusGlyph.copyWith(color: cs.error),
+        icon: _StatusIconSlot(
+          child: _IconDisc(
+            tint: cs.error,
+            // Bare exclamation glyph keeps the disc as the only ring
+            // around the mark, mirroring the success view's bare check.
+            child: Text(
+              '!',
+              style: text.statusGlyph.copyWith(color: cs.error),
+            ),
           ),
         ),
         title: state.message,
@@ -1006,8 +1015,10 @@ class _SuccessLayout extends StatelessWidget {
 
     return _StatusLayout(
       content: _StatusContent(
-        icon: _IconDisc(
-          child: Icon(AppIcons.check, color: cs.primary, size: 24),
+        icon: _StatusIconSlot(
+          child: _IconDisc(
+            child: Icon(AppIcons.check, color: cs.primary, size: 24),
+          ),
         ),
         title: title,
         detail: detail,
@@ -1019,6 +1030,21 @@ class _SuccessLayout extends StatelessWidget {
         detailStyle: text.labelSmall.copyWith(color: muted),
       ),
       action: FilledButton(onPressed: onDone, child: const Text('Done')),
+    );
+  }
+}
+
+class _StatusIconSlot extends StatelessWidget {
+  const _StatusIconSlot({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 56,
+      height: 56,
+      child: Center(child: child),
     );
   }
 }

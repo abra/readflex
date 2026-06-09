@@ -189,7 +189,8 @@ void main() {
     blocTest<ImportFlowCubit, ImportFlowState>(
       'article import emits URL entry, uploading, then done',
       build: () => _buildCubit(
-        importArticle: (url) async => _fakeArticle(title: 'Saved article'),
+        importArticle: (url, {onStage}) async =>
+            _fakeArticle(title: 'Saved article'),
       ),
       act: (cubit) async {
         cubit.showArticleUrlEntry();
@@ -203,9 +204,28 @@ void main() {
     );
 
     blocTest<ImportFlowCubit, ImportFlowState>(
+      'article import updates the visible stage from callback',
+      build: () => _buildCubit(
+        importArticle: (url, {onStage}) async {
+          onStage?.call(ImportFlowArticleStage.saving);
+          return _fakeArticle(title: 'Saved article');
+        },
+      ),
+      act: (cubit) => cubit.importArticle('https://example.com/article'),
+      expect: () => [
+        const ImportFlowArticleUploading(url: 'https://example.com/article'),
+        const ImportFlowArticleUploading(
+          url: 'https://example.com/article',
+          stage: ImportFlowArticleStage.saving,
+        ),
+        const ImportFlowArticleDone(title: 'Saved article'),
+      ],
+    );
+
+    blocTest<ImportFlowCubit, ImportFlowState>(
       'article import accepts pasted domain without scheme',
       build: () => _buildCubit(
-        importArticle: (url) async {
+        importArticle: (url, {onStage}) async {
           expect(url, 'https://habr.com/ru/articles/1029802/');
           return _fakeArticle(title: 'Saved article');
         },
@@ -222,7 +242,8 @@ void main() {
     blocTest<ImportFlowCubit, ImportFlowState>(
       'article import rejects invalid URLs without calling import callback',
       build: () => _buildCubit(
-        importArticle: (_) async => throw StateError('should not be called'),
+        importArticle: (_, {onStage}) async =>
+            throw StateError('should not be called'),
       ),
       act: (cubit) => cubit.importArticle('not a url'),
       expect: () => [
@@ -236,7 +257,7 @@ void main() {
     blocTest<ImportFlowCubit, ImportFlowState>(
       'article import surfaces ArticleImportException.message in failure state',
       build: () => _buildCubit(
-        importArticle: (_) async {
+        importArticle: (_, {onStage}) async {
           throw const ArticleImportException(
             'Could not extract article content',
           );
@@ -302,7 +323,7 @@ void main() {
           capturedOnProgress = onProgress!;
           return importCompleter.future;
         },
-        onImportArticle: (_) async => null,
+        onImportArticle: (_, {onStage}) async => null,
       );
 
       // Kick off the import; it'll park awaiting the completer.
@@ -336,7 +357,7 @@ void main() {
       final cubit = ImportFlowCubit(
         onPickBookFile: () async => File('/tmp/will_fail.epub'),
         onImportBook: (file, {onProgress}) => importCompleter.future,
-        onImportArticle: (_) async => null,
+        onImportArticle: (_, {onStage}) async => null,
       );
       final pending = cubit.pickAndImportBook();
       await Future<void>.delayed(Duration.zero);
@@ -433,7 +454,7 @@ ImportFlowCubit _buildCubit({
   return ImportFlowCubit(
     onPickBookFile: pickBookFile ?? () async => null,
     onImportBook: importBook ?? (file, {onProgress}) async => null,
-    onImportArticle: importArticle ?? (_) async => null,
+    onImportArticle: importArticle ?? (_, {onStage}) async => null,
     isBookImportTermsAccepted: isBookImportTermsAccepted,
     acceptBookImportTerms: acceptBookImportTerms,
   );

@@ -62,12 +62,16 @@ class ImportFlowBookDone extends ImportFlowState {
 }
 
 class ImportFlowArticleUploading extends ImportFlowState {
-  const ImportFlowArticleUploading({required this.url});
+  const ImportFlowArticleUploading({
+    required this.url,
+    this.stage = ImportFlowArticleStage.fetching,
+  });
 
   final String url;
+  final ImportFlowArticleStage stage;
 
   @override
-  List<Object?> get props => [url];
+  List<Object?> get props => [url, stage];
 }
 
 class ImportFlowArticleDone extends ImportFlowState {

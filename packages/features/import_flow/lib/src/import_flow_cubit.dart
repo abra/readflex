@@ -34,8 +34,18 @@ typedef ImportBookFile =
       void Function(double progress)? onProgress,
     });
 
+/// Current phase of saving a web article.
+enum ImportFlowArticleStage {
+  fetching,
+  saving,
+}
+
 /// Extracts, cleans, and persists a web article by URL.
-typedef ImportArticleUrl = Future<Article?> Function(String url);
+typedef ImportArticleUrl =
+    Future<Article?> Function(
+      String url, {
+      void Function(ImportFlowArticleStage stage)? onStage,
+    });
 
 /// User-facing failure raised by the app layer when article extraction has
 /// a meaningful backend reason (unsupported URL, extraction failed, etc.).
@@ -216,7 +226,15 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
     _isImportingArticle = true;
     emit(ImportFlowArticleUploading(url: url));
     try {
-      final article = await _onImportArticle(url);
+      final article = await _onImportArticle(
+        url,
+        onStage: (stage) {
+          if (isClosed) return;
+          if (state case ImportFlowArticleUploading(:final url)) {
+            emit(ImportFlowArticleUploading(url: url, stage: stage));
+          }
+        },
+      );
       if (isClosed) return;
       if (article == null) {
         emit(

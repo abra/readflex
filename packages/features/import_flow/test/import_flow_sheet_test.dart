@@ -44,7 +44,7 @@ void main() {
           context,
           onPickBookFile: () async => null,
           onImportBook: (file, {onProgress}) async => null,
-          onImportArticle: (_) async => null,
+          onImportArticle: (_, {onStage}) async => null,
         ),
       ),
     );
@@ -65,7 +65,7 @@ void main() {
           context,
           onPickBookFile: () async => null,
           onImportBook: (file, {onProgress}) async => null,
-          onImportArticle: (_) async => null,
+          onImportArticle: (_, {onStage}) async => null,
         ),
       ),
     );
@@ -85,7 +85,7 @@ void main() {
           context,
           onPickBookFile: () async => null,
           onImportBook: (file, {onProgress}) async => null,
-          onImportArticle: (_) async => null,
+          onImportArticle: (_, {onStage}) async => null,
         ),
       ),
     );
@@ -111,7 +111,7 @@ void main() {
           context,
           onPickBookFile: () async => null,
           onImportBook: (file, {onProgress}) async => null,
-          onImportArticle: (_) async => null,
+          onImportArticle: (_, {onStage}) async => null,
         ),
       ),
     );
@@ -140,7 +140,7 @@ void main() {
           context,
           onPickBookFile: () async => null,
           onImportBook: (file, {onProgress}) async => null,
-          onImportArticle: (_) async => null,
+          onImportArticle: (_, {onStage}) async => null,
         ),
       ),
     );
@@ -182,7 +182,7 @@ void main() {
           context,
           onPickBookFile: () async => null,
           onImportBook: (file, {onProgress}) async => null,
-          onImportArticle: (_) async => null,
+          onImportArticle: (_, {onStage}) async => null,
         ),
       ),
     );
@@ -218,7 +218,7 @@ void main() {
           context,
           onPickBookFile: () async => null,
           onImportBook: (file, {onProgress}) async => null,
-          onImportArticle: (_) => importCompleter.future,
+          onImportArticle: (_, {onStage}) => importCompleter.future,
         ),
       ),
     );
@@ -231,13 +231,18 @@ void main() {
     await tester.tap(find.text('Save'));
     await tester.pump();
 
-    expect(find.text('Saving article...'), findsOneWidget);
+    expect(find.text('Fetching article...'), findsOneWidget);
     expect(
       find.byWidgetPredicate(
         (widget) => widget is Text && widget.data == 'https://example.com/a',
       ),
       findsOneWidget,
     );
+    final uploadingTitleTop = tester
+        .getTopLeft(
+          find.text('Fetching article...'),
+        )
+        .dy;
 
     importCompleter.complete(_fakeArticle(title: 'Saved article'));
     await tester.pump();
@@ -251,6 +256,10 @@ void main() {
 
     expect(find.text('Article saved!'), findsOneWidget);
     expect(find.text('Saved article'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Article saved!')).dy,
+      closeTo(uploadingTitleTop, 1),
+    );
   });
 
   testWidgets('book upload requires accepting terms before file picker', (
@@ -271,7 +280,7 @@ void main() {
             return null;
           },
           onImportBook: (file, {onProgress}) async => null,
-          onImportArticle: (_) async => null,
+          onImportArticle: (_, {onStage}) async => null,
           isBookImportTermsAccepted: () => accepted,
           acceptBookImportTerms: () async {
             acceptCalls += 1;
@@ -343,7 +352,7 @@ void main() {
             return null;
           },
           onImportBook: (file, {onProgress}) async => null,
-          onImportArticle: (_) async => null,
+          onImportArticle: (_, {onStage}) async => null,
         ),
       ),
     );
@@ -370,7 +379,7 @@ void main() {
             onProgress?.call(1.0);
             return _fakeBook();
           },
-          onImportArticle: (_) async => null,
+          onImportArticle: (_, {onStage}) async => null,
         ),
       ),
     );
@@ -396,7 +405,7 @@ void main() {
           context,
           onPickBookFile: () async => File('/tmp/Test.epub'),
           onImportBook: (file, {onProgress}) => importCompleter.future,
-          onImportArticle: (_) async => null,
+          onImportArticle: (_, {onStage}) async => null,
         ),
       ),
     );
@@ -432,7 +441,7 @@ void main() {
           onImportBook: (file, {onProgress}) async => _fakeBook(
             format: BookFormat.cbz,
           ),
-          onImportArticle: (_) async => null,
+          onImportArticle: (_, {onStage}) async => null,
         ),
       ),
     );
@@ -454,7 +463,7 @@ void main() {
           context,
           onPickBookFile: () async => File('/tmp/Bad.epub'),
           onImportBook: (file, {onProgress}) async => null,
-          onImportArticle: (_) async => null,
+          onImportArticle: (_, {onStage}) async => null,
         ),
       ),
     );
@@ -483,7 +492,7 @@ void main() {
             await failureCompleter.future;
             throw const BookImportException('File type not supported');
           },
-          onImportArticle: (_) async => null,
+          onImportArticle: (_, {onStage}) async => null,
         ),
       ),
     );

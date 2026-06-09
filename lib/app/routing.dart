@@ -133,7 +133,11 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                         logger: deps.logger,
                         onProgress: onProgress,
                       ),
-                      onImportArticle: (url) => _importArticleUrl(deps, url),
+                      onImportArticle: (url, {onStage}) => _importArticleUrl(
+                        deps,
+                        url,
+                        onStage: onStage,
+                      ),
                       isBookImportTermsAccepted: () =>
                           deps.preferencesService.hasAcceptedBookImportTerms(
                             _currentBookImportTermsVersion,
@@ -331,7 +335,11 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                 logger: deps.logger,
                 onProgress: onProgress,
               ),
-              onImportArticle: (url) => _importArticleUrl(deps, url),
+              onImportArticle: (url, {onStage}) => _importArticleUrl(
+                deps,
+                url,
+                onStage: onStage,
+              ),
               isBookImportTermsAccepted: () =>
                   deps.preferencesService.hasAcceptedBookImportTerms(
                     _currentBookImportTermsVersion,
@@ -457,14 +465,17 @@ VoidCallback? _onSourceOpenedFromRoute(GoRouterState state) {
 
 Future<Article?> _importArticleUrl(
   DependenciesContainer deps,
-  String url,
-) async {
+  String url, {
+  void Function(ImportFlowArticleStage stage)? onStage,
+}) async {
   final ExtractedArticle article;
   try {
+    onStage?.call(ImportFlowArticleStage.fetching);
     article = await deps.articleExtractionService.extract(url);
   } on ArticleExtractionException catch (e) {
     throw ArticleImportException(e.message);
   }
+  onStage?.call(ImportFlowArticleStage.saving);
   return deps.articleRepository.addExtractedArticle(article);
 }
 
