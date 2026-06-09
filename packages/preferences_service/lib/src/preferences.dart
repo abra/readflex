@@ -404,6 +404,7 @@ class Preferences {
     this.readerBrightness,
     this.readerLastCustomBrightness = 0.7,
     this.readerAppearanceOverrides = const {},
+    this.bookImportTermsAcceptedVersion = 0,
     this.onboardingCompleted = false,
     this.hasCompletedSetup = false,
   });
@@ -427,6 +428,9 @@ class Preferences {
   final double? readerBrightness;
   final double readerLastCustomBrightness;
   final Map<String, ReaderAppearanceOverride> readerAppearanceOverrides;
+
+  /// Accepted Terms/Privacy version for book and document imports.
+  final int bookImportTermsAcceptedVersion;
 
   /// Whether the user has completed the onboarding flow.
   final bool onboardingCompleted;
@@ -485,6 +489,7 @@ class Preferences {
     Object? readerBrightness = _unset,
     double? readerLastCustomBrightness,
     Map<String, ReaderAppearanceOverride>? readerAppearanceOverrides,
+    int? bookImportTermsAcceptedVersion,
     bool? onboardingCompleted,
     bool? hasCompletedSetup,
   }) => Preferences(
@@ -513,6 +518,8 @@ class Preferences {
     ),
     readerAppearanceOverrides:
         readerAppearanceOverrides ?? this.readerAppearanceOverrides,
+    bookImportTermsAcceptedVersion:
+        bookImportTermsAcceptedVersion ?? this.bookImportTermsAcceptedVersion,
     onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
     hasCompletedSetup: hasCompletedSetup ?? this.hasCompletedSetup,
   );
@@ -543,6 +550,8 @@ class Preferences {
             readerAppearanceOverrides,
             other.readerAppearanceOverrides,
           ) &&
+          bookImportTermsAcceptedVersion ==
+              other.bookImportTermsAcceptedVersion &&
           onboardingCompleted == other.onboardingCompleted &&
           hasCompletedSetup == other.hasCompletedSetup;
 
@@ -567,6 +576,7 @@ class Preferences {
     readerBrightness,
     readerLastCustomBrightness,
     _hashReaderAppearanceOverrides(readerAppearanceOverrides),
+    bookImportTermsAcceptedVersion,
     onboardingCompleted,
     hasCompletedSetup,
   ]);

@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'dart:io';
 
 import 'package:domain_models/domain_models.dart';
@@ -15,6 +16,9 @@ part 'import_flow_state.dart';
 /// transition into [ImportFlowBookUploading] when this resolves to a
 /// non-null file.
 typedef PickBookFile = Future<File?> Function();
+
+typedef IsBookImportTermsAccepted = bool Function();
+typedef AcceptBookImportTerms = Future<void> Function();
 
 /// Persist a picked book file. Implementations should parse metadata
 /// (title/author/cover) and copy the file to the books directory.
@@ -53,14 +57,20 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
     required PickBookFile onPickBookFile,
     required ImportBookFile onImportBook,
     required ImportArticleUrl onImportArticle,
+    IsBookImportTermsAccepted? isBookImportTermsAccepted,
+    AcceptBookImportTerms? acceptBookImportTerms,
   }) : _onPickBookFile = onPickBookFile,
        _onImportBook = onImportBook,
        _onImportArticle = onImportArticle,
+       _isBookImportTermsAccepted = isBookImportTermsAccepted ?? (() => true),
+       _acceptBookImportTerms = acceptBookImportTerms ?? (() async {}),
        super(const ImportFlowMenu());
 
   final PickBookFile _onPickBookFile;
   final ImportBookFile _onImportBook;
   final ImportArticleUrl _onImportArticle;
+  final IsBookImportTermsAccepted _isBookImportTermsAccepted;
+  final AcceptBookImportTerms _acceptBookImportTerms;
 
   /// Re-entry guard for [pickAndImportBook]. Without it a double-tap
   /// on the menu's "Upload Book" tile (or the failure screen's "Try
@@ -77,6 +87,25 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
 
   void showArticleUrlEntry() {
     emit(const ImportFlowArticleUrlEntry());
+  }
+
+  void requestBookImport() {
+    if (_isBookImportTermsAccepted()) {
+      unawaited(pickAndImportBook());
+      return;
+    }
+    emit(const ImportFlowBookTermsRequired());
+  }
+
+  void cancelBookImportTerms() {
+    emit(const ImportFlowMenu());
+  }
+
+  Future<void> acceptTermsAndPickBook() async {
+    await _acceptBookImportTerms();
+    if (isClosed) return;
+    emit(const ImportFlowMenu());
+    await pickAndImportBook();
   }
 
   /// Open the platform file picker, then drive book import through

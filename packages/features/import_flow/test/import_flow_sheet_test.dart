@@ -253,6 +253,85 @@ void main() {
     expect(find.text('Saved article'), findsOneWidget);
   });
 
+  testWidgets('book upload requires accepting terms before file picker', (
+    tester,
+  ) async {
+    var accepted = false;
+    var acceptCalls = 0;
+    var pickerCalls = 0;
+    var termsCalls = 0;
+    var privacyCalls = 0;
+
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async {
+            pickerCalls += 1;
+            return null;
+          },
+          onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (_) async => null,
+          isBookImportTermsAccepted: () => accepted,
+          acceptBookImportTerms: () async {
+            acceptCalls += 1;
+            accepted = true;
+          },
+          onOpenTerms: () async => termsCalls += 1,
+          onOpenPrivacy: () async => privacyCalls += 1,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Upload Book'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Before uploading'), findsOneWidget);
+    expect(
+      find.text(
+        'Only upload books, comics, and documents you have the right to use in ReadFlex.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text('I confirm I have the right to upload this file.'),
+      findsOneWidget,
+    );
+    expect(find.text('Terms'), findsOneWidget);
+    expect(find.text('Privacy Policy'), findsOneWidget);
+    expect(pickerCalls, 0);
+
+    var continueButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Continue'),
+    );
+    expect(continueButton.onPressed, isNull);
+
+    await tester.tap(find.byKey(const ValueKey('importFlowLegalLink-Terms')));
+    await tester.tap(
+      find.byKey(const ValueKey('importFlowLegalLink-Privacy Policy')),
+    );
+    expect(termsCalls, 1);
+    expect(privacyCalls, 1);
+
+    await tester.tap(find.byType(Checkbox));
+    await tester.pump();
+
+    continueButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Continue'),
+    );
+    expect(continueButton.onPressed, isNotNull);
+
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    expect(acceptCalls, 1);
+    expect(pickerCalls, 1);
+    expect(accepted, isTrue);
+    expect(find.text('Add to Library'), findsOneWidget);
+  });
+
   testWidgets('cancelled book picker keeps menu open', (tester) async {
     var pickerCalls = 0;
     await tester.pumpWidget(

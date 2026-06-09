@@ -24,6 +24,59 @@ void main() {
     );
 
     blocTest<ImportFlowCubit, ImportFlowState>(
+      'requestBookImport shows terms before first book upload',
+      build: () => _buildCubit(isBookImportTermsAccepted: () => false),
+      act: (cubit) => cubit.requestBookImport(),
+      expect: () => [const ImportFlowBookTermsRequired()],
+    );
+
+    test('requestBookImport bypasses terms after acceptance', () async {
+      var pickCount = 0;
+      final cubit = _buildCubit(
+        isBookImportTermsAccepted: () => true,
+        pickBookFile: () async {
+          pickCount++;
+          return null;
+        },
+      );
+
+      cubit.requestBookImport();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(pickCount, 1);
+      expect(cubit.state, isA<ImportFlowMenu>());
+      await cubit.close();
+    });
+
+    test(
+      'acceptTermsAndPickBook saves acceptance before opening picker',
+      () async {
+        final calls = <String>[];
+        final cubit = _buildCubit(
+          isBookImportTermsAccepted: () => false,
+          acceptBookImportTerms: () async => calls.add('accept'),
+          pickBookFile: () async {
+            calls.add('pick');
+            return null;
+          },
+        );
+
+        await cubit.acceptTermsAndPickBook();
+
+        expect(calls, ['accept', 'pick']);
+        await cubit.close();
+      },
+    );
+
+    blocTest<ImportFlowCubit, ImportFlowState>(
+      'cancelBookImportTerms returns to menu',
+      build: _buildCubit,
+      seed: () => const ImportFlowBookTermsRequired(),
+      act: (cubit) => cubit.cancelBookImportTerms(),
+      expect: () => [const ImportFlowMenu()],
+    );
+
+    blocTest<ImportFlowCubit, ImportFlowState>(
       'cancelled file picker keeps cubit in menu',
       build: () => _buildCubit(pickBookFile: () async => null),
       act: (cubit) => cubit.pickAndImportBook(),
@@ -374,11 +427,15 @@ ImportFlowCubit _buildCubit({
   PickBookFile? pickBookFile,
   ImportBookFile? importBook,
   ImportArticleUrl? importArticle,
+  IsBookImportTermsAccepted? isBookImportTermsAccepted,
+  AcceptBookImportTerms? acceptBookImportTerms,
 }) {
   return ImportFlowCubit(
     onPickBookFile: pickBookFile ?? () async => null,
     onImportBook: importBook ?? (file, {onProgress}) async => null,
     onImportArticle: importArticle ?? (_) async => null,
+    isBookImportTermsAccepted: isBookImportTermsAccepted,
+    acceptBookImportTerms: acceptBookImportTerms,
   );
 }
 

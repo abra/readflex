@@ -19,6 +19,8 @@ import 'import_flow_result.dart';
 ///   * [onImportBook] takes that file, parses metadata, and persists
 ///     the book — exposing byte-level progress through `onProgress` so
 ///     the sheet can show a real progress bar.
+///   * [onOpenTerms] and [onOpenPrivacy] open legal documents outside
+///     the sheet; the cubit never launches URLs directly.
 ///
 /// Returns [ImportFlowResult.bookImported] when the user finished an
 /// import, or `null` if they dismissed without finishing.
@@ -27,6 +29,10 @@ Future<ImportFlowResult?> showImportFlowSheet(
   required PickBookFile onPickBookFile,
   required ImportBookFile onImportBook,
   required ImportArticleUrl onImportArticle,
+  IsBookImportTermsAccepted? isBookImportTermsAccepted,
+  AcceptBookImportTerms? acceptBookImportTerms,
+  Future<void> Function()? onOpenTerms,
+  Future<void> Function()? onOpenPrivacy,
 }) {
   return showAppBottomSheet<ImportFlowResult>(
     context,
@@ -35,14 +41,25 @@ Future<ImportFlowResult?> showImportFlowSheet(
         onPickBookFile: onPickBookFile,
         onImportBook: onImportBook,
         onImportArticle: onImportArticle,
+        isBookImportTermsAccepted: isBookImportTermsAccepted,
+        acceptBookImportTerms: acceptBookImportTerms,
       ),
-      child: const _ImportFlowSheet(),
+      child: _ImportFlowSheet(
+        onOpenTerms: onOpenTerms ?? _noopFuture,
+        onOpenPrivacy: onOpenPrivacy ?? _noopFuture,
+      ),
     ),
   );
 }
 
 class _ImportFlowSheet extends StatelessWidget {
-  const _ImportFlowSheet();
+  const _ImportFlowSheet({
+    required this.onOpenTerms,
+    required this.onOpenPrivacy,
+  });
+
+  final Future<void> Function() onOpenTerms;
+  final Future<void> Function() onOpenPrivacy;
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +77,10 @@ class _ImportFlowSheet extends StatelessWidget {
               key: ValueKey(state.runtimeType),
               child: switch (state) {
                 ImportFlowMenu() => const _MenuView(),
+                ImportFlowBookTermsRequired() => _BookTermsView(
+                  onOpenTerms: onOpenTerms,
+                  onOpenPrivacy: onOpenPrivacy,
+                ),
                 ImportFlowArticleUrlEntry() => const _ArticleUrlEntryView(),
                 ImportFlowBookUploading() => _BookUploadingView(state: state),
                 ImportFlowArticleUploading() => _ArticleUploadingView(
@@ -224,7 +245,9 @@ int _transitionDirection(ImportFlowState from, ImportFlowState to) {
 int _navigationDepth(ImportFlowState state) {
   return switch (state) {
     ImportFlowMenu() => 0,
-    ImportFlowArticleUrlEntry() || ImportFlowBookUploading() => 1,
+    ImportFlowBookTermsRequired() ||
+    ImportFlowArticleUrlEntry() ||
+    ImportFlowBookUploading() => 1,
     ImportFlowArticleUploading() ||
     ImportFlowBookDone() ||
     ImportFlowFailure() => 2,
@@ -253,7 +276,7 @@ class _MenuView extends StatelessWidget {
             icon: AppIcons.uploadFile,
             title: 'Upload Book',
             subtitle: 'EPUB, FB2, MOBI, PDF, AZW3, CBZ',
-            onTap: cubit.pickAndImportBook,
+            onTap: cubit.requestBookImport,
           ),
           const SizedBox(height: AppSpacing.sm),
           AppActionCard(
@@ -272,6 +295,187 @@ class _MenuView extends StatelessWidget {
     );
   }
 }
+
+class _BookTermsView extends StatefulWidget {
+  const _BookTermsView({
+    required this.onOpenTerms,
+    required this.onOpenPrivacy,
+  });
+
+  final Future<void> Function() onOpenTerms;
+  final Future<void> Function() onOpenPrivacy;
+
+  @override
+  State<_BookTermsView> createState() => _BookTermsViewState();
+}
+
+class _BookTermsViewState extends State<_BookTermsView> {
+  var _accepted = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cubit = context.read<ImportFlowCubit>();
+    final colors = context.colors;
+    final text = context.text;
+
+    return Padding(
+      padding: _kStatusViewPadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const BottomSheetHeader(title: 'Before uploading'),
+          const SizedBox(height: AppSpacing.md),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Only upload books, comics, and documents you have the right to use in ReadFlex.',
+                    style: text.bodyMedium.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _BookTermsLinks(
+                    onOpenTerms: widget.onOpenTerms,
+                    onOpenPrivacy: widget.onOpenPrivacy,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _BookTermsCheckbox(
+                    accepted: _accepted,
+                    onChanged: (value) => setState(() => _accepted = value),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: _PlainTextButton(
+                  label: 'Cancel',
+                  onPressed: cubit.cancelBookImportTerms,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _accepted ? cubit.acceptTermsAndPickBook : null,
+                  child: const Text('Continue'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookTermsCheckbox extends StatelessWidget {
+  const _BookTermsCheckbox({
+    required this.accepted,
+    required this.onChanged,
+  });
+
+  final bool accepted;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => onChanged(!accepted),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Checkbox(
+              value: accepted,
+              onChanged: (value) => onChanged(value ?? false),
+              visualDensity: VisualDensity.compact,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'I confirm I have the right to upload this file.',
+                  style: context.text.bodyMedium,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BookTermsLinks extends StatelessWidget {
+  const _BookTermsLinks({
+    required this.onOpenTerms,
+    required this.onOpenPrivacy,
+  });
+
+  final Future<void> Function() onOpenTerms;
+  final Future<void> Function() onOpenPrivacy;
+
+  @override
+  Widget build(BuildContext context) {
+    final textStyle = context.text.bodySmall.copyWith(
+      color: context.colors.onSurfaceVariant,
+    );
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text('By continuing, you accept the ', style: textStyle),
+        _InlineLinkButton(label: 'Terms', onPressed: onOpenTerms),
+        Text(' and ', style: textStyle),
+        _InlineLinkButton(label: 'Privacy Policy', onPressed: onOpenPrivacy),
+        Text('.', style: textStyle),
+      ],
+    );
+  }
+}
+
+class _InlineLinkButton extends StatelessWidget {
+  const _InlineLinkButton({required this.label, required this.onPressed});
+
+  final String label;
+  final Future<void> Function() onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 24),
+      child: InkWell(
+        key: ValueKey('importFlowLegalLink-$label'),
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(4),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+          child: Center(
+            widthFactor: 1,
+            child: Text(
+              label,
+              style: context.text.bodySmall.copyWith(
+                color: context.colors.primary,
+                decoration: TextDecoration.underline,
+                decorationColor: context.colors.primary,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> _noopFuture() async {}
 
 /// Full-width outlined button for Cancel and other secondary actions
 /// inside the sheet. Matches the Cancel in the delete-confirmation

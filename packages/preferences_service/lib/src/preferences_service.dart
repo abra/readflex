@@ -78,6 +78,18 @@ class PreferencesService {
     });
   }
 
+  bool hasAcceptedBookImportTerms(int version) {
+    if (version <= 0) return true;
+    return _current.bookImportTermsAcceptedVersion >= version;
+  }
+
+  Future<void> acceptBookImportTerms(int version) async {
+    if (version <= 0 || hasAcceptedBookImportTerms(version)) return;
+    await update(
+      (prefs) => prefs.copyWith(bookImportTermsAcceptedVersion: version),
+    );
+  }
+
   Future<void> setReaderAppearanceOverride(
     String sourceId,
     ReaderAppearanceOverride override,

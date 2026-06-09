@@ -14,6 +14,11 @@ Future<ImportFlowResult?> showImportFlowSheet(
   BuildContext context, {
   required PickBookFile onPickBookFile,
   required ImportBookFile onImportBook,
+  required ImportArticleUrl onImportArticle,
+  IsBookImportTermsAccepted? isBookImportTermsAccepted,
+  AcceptBookImportTerms? acceptBookImportTerms,
+  Future<void> Function()? onOpenTerms,
+  Future<void> Function()? onOpenPrivacy,
 });
 ```
 
@@ -23,9 +28,13 @@ Future<ImportFlowResult?> showImportFlowSheet(
   `Book?`. The default helper is `importBookFile(...)`, which extracts
   metadata with `BookMetadataExtractor` from `reader_webview` (foliate-js via
   local HTTP server) and persists via `BookRepository`.
-- Sheet resolves with `ImportFlowResult.bookImported` when the user
-  finishes a successful import so the caller (e.g. `library_screen`) can
-  refresh.
+- `onImportArticle` — imports a cleaned article from a URL.
+- `isBookImportTermsAccepted` / `acceptBookImportTerms` — optional gate for
+  book uploads; callers normally back this with persisted preferences.
+- `onOpenTerms` / `onOpenPrivacy` — optional external legal-link callbacks.
+- Sheet resolves with `ImportFlowResult.bookImported` or
+  `ImportFlowResult.articleImported` when the user finishes a successful import
+  so the caller (e.g. `library_screen`) can refresh.
 
 Helpers exported from `import_flow.dart`:
 

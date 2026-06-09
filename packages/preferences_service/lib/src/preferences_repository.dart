@@ -93,6 +93,8 @@ class PreferencesRepository {
         readerAppearanceOverrides: _readReaderAppearanceOverrides(
           map['readerAppearanceOverrides'],
         ),
+        bookImportTermsAcceptedVersion:
+            (map['bookImportTermsAcceptedVersion'] as num?)?.toInt() ?? 0,
         onboardingCompleted: map['onboardingCompleted'] as bool? ?? false,
         hasCompletedSetup: map['hasCompletedSetup'] as bool? ?? false,
       );
@@ -133,6 +135,7 @@ class PreferencesRepository {
       'readerAppearanceOverrides': _writeReaderAppearanceOverrides(
         prefs.readerAppearanceOverrides,
       ),
+      'bookImportTermsAcceptedVersion': prefs.bookImportTermsAcceptedVersion,
       'onboardingCompleted': prefs.onboardingCompleted,
       'hasCompletedSetup': prefs.hasCompletedSetup,
     };

@@ -24,6 +24,10 @@ import 'package:subscription_paywall/subscription_paywall.dart';
 import 'package:translate/translate.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+const _currentBookImportTermsVersion = 1;
+const _readflexTermsUrl = 'https://abra.github.io/readflex/terms/';
+const _readflexPrivacyUrl = 'https://abra.github.io/readflex/privacy/';
+
 abstract final class AppRoutes {
   static const root = '/';
   static const splash = '/splash';
@@ -130,6 +134,18 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                         onProgress: onProgress,
                       ),
                       onImportArticle: (url) => _importArticleUrl(deps, url),
+                      isBookImportTermsAccepted: () =>
+                          deps.preferencesService.hasAcceptedBookImportTerms(
+                            _currentBookImportTermsVersion,
+                          ),
+                      acceptBookImportTerms: () =>
+                          deps.preferencesService.acceptBookImportTerms(
+                            _currentBookImportTermsVersion,
+                          ),
+                      onOpenTerms: () => _openExternalUrl(_readflexTermsUrl),
+                      onOpenPrivacy: () => _openExternalUrl(
+                        _readflexPrivacyUrl,
+                      ),
                     );
                   },
                 ),
@@ -316,6 +332,18 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                 onProgress: onProgress,
               ),
               onImportArticle: (url) => _importArticleUrl(deps, url),
+              isBookImportTermsAccepted: () =>
+                  deps.preferencesService.hasAcceptedBookImportTerms(
+                    _currentBookImportTermsVersion,
+                  ),
+              acceptBookImportTerms: () =>
+                  deps.preferencesService.acceptBookImportTerms(
+                    _currentBookImportTermsVersion,
+                  ),
+              onOpenTerms: () => _openExternalUrl(_readflexTermsUrl),
+              onOpenPrivacy: () => _openExternalUrl(
+                _readflexPrivacyUrl,
+              ),
             );
             return result == ImportFlowResult.bookImported ||
                 result == ImportFlowResult.articleImported;
@@ -353,14 +381,16 @@ class _SourceDetailsRouteExtra {
   final VoidCallback? onSourceOpened;
 }
 
-Future<void> _openArticleUrl(String rawUrl) async {
+Future<void> _openArticleUrl(String rawUrl) => _openExternalUrl(rawUrl);
+
+Future<void> _openExternalUrl(String rawUrl) async {
   final uri = Uri.tryParse(rawUrl.trim());
   if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) return;
 
   try {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   } catch (error) {
-    debugPrint('Failed to open article URL: $rawUrl ($error)');
+    debugPrint('Failed to open URL: $rawUrl ($error)');
   }
 }
 

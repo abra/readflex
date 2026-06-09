@@ -19,6 +19,10 @@ class ImportFlowArticleUrlEntry extends ImportFlowState {
   const ImportFlowArticleUrlEntry();
 }
 
+class ImportFlowBookTermsRequired extends ImportFlowState {
+  const ImportFlowBookTermsRequired();
+}
+
 /// Book file is being parsed and copied to disk.
 ///
 /// `progress == null` means the byte-copy hasn't started yet — the

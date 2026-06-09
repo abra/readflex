@@ -286,6 +286,25 @@ void main() {
       expect(service2.current.locale, const Locale('ru'));
     });
 
+    test('book import terms acceptance persists by version', () async {
+      final service = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+
+      expect(service.hasAcceptedBookImportTerms(1), isFalse);
+
+      await service.acceptBookImportTerms(1);
+
+      expect(service.hasAcceptedBookImportTerms(1), isTrue);
+      expect(service.hasAcceptedBookImportTerms(2), isFalse);
+
+      final service2 = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+      expect(service2.hasAcceptedBookImportTerms(1), isTrue);
+      expect(service2.current.bookImportTermsAcceptedVersion, 1);
+    });
+
     test('onboardingCompleted defaults to false and persists true', () async {
       final service = await PreferencesService.create(
         supportedCodes: _supportedCodes,
