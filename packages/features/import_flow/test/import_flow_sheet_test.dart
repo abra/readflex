@@ -122,18 +122,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Saves a clean offline reading version.'),
+      find.text('Creates a clean article for offline reading.'),
       findsOneWidget,
     );
-    expect(find.text('Keeps article images when available.'), findsOneWidget);
-    expect(
-      find.text('Works with public pages you can open in a browser.'),
-      findsOneWidget,
-    );
-    expect(
-      find.text('Paste a copied article URL when available.'),
-      findsOneWidget,
-    );
+    expect(find.text('Keeps the original source link.'), findsOneWidget);
+    expect(find.text('Adds it to your Library.'), findsOneWidget);
   });
 
   testWidgets('article url entry pastes a valid clipboard url', (

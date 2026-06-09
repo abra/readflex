@@ -431,22 +431,17 @@ class _ArticleUrlHints extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _ArticleUrlHint(
-          text: 'Saves a clean offline reading version.',
+          text: 'Creates a clean article for offline reading.',
           color: color,
         ),
         const SizedBox(height: AppSpacing.xs),
         _ArticleUrlHint(
-          text: 'Keeps article images when available.',
+          text: 'Keeps the original source link.',
           color: color,
         ),
         const SizedBox(height: AppSpacing.xs),
         _ArticleUrlHint(
-          text: 'Works with public pages you can open in a browser.',
-          color: color,
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        _ArticleUrlHint(
-          text: 'Paste a copied article URL when available.',
+          text: 'Adds it to your Library.',
           color: color,
         ),
       ],
