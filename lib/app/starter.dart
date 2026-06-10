@@ -20,6 +20,12 @@ import 'package:readflex/app/config/application_config.dart';
 import 'package:readflex/app/root_context.dart';
 import 'package:readflex/app/screens/initialization_failed_screen.dart';
 
+const _traceBuilds = bool.fromEnvironment('READFLEX_TRACE_BUILDS');
+const _profileBuilds = bool.fromEnvironment('READFLEX_PROFILE_BUILDS');
+const _profileUserBuilds = bool.fromEnvironment(
+  'READFLEX_PROFILE_USER_BUILDS',
+);
+
 /// Initializes dependencies and runs app.
 Future<void> starter() async {
   const config = ApplicationConfig();
@@ -36,6 +42,7 @@ Future<void> starter() async {
   await runZonedGuarded(() async {
     // Ensure Flutter is initialized.
     WidgetsFlutterBinding.ensureInitialized();
+    _configureBuildTracing(logger);
 
     // Configure global error interception.
     FlutterError.onError = logger.logFlutterError;
@@ -108,4 +115,20 @@ Future<void> starter() async {
     // Launch the application.
     await composeAndRun();
   }, logger.logZoneError);
+}
+
+void _configureBuildTracing(Logger logger) {
+  if (kReleaseMode) return;
+  if (_traceBuilds) {
+    debugPrintRebuildDirtyWidgets = true;
+    logger.info('READFLEX_TRACE_BUILDS enabled');
+  }
+  if (_profileBuilds) {
+    debugProfileBuildsEnabled = true;
+    logger.info('READFLEX_PROFILE_BUILDS enabled');
+  }
+  if (_profileUserBuilds) {
+    debugProfileBuildsEnabledUserWidgets = true;
+    logger.info('READFLEX_PROFILE_USER_BUILDS enabled');
+  }
 }

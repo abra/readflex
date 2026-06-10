@@ -56,6 +56,15 @@ class AppSourceCover extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+        final cacheWidth = _imageCacheDimension(
+          constraints.maxWidth,
+          devicePixelRatio,
+        );
+        final cacheHeight = _imageCacheDimension(
+          constraints.maxHeight,
+          devicePixelRatio,
+        );
         final fallback = AppCoverArt(
           title: title,
           author: author,
@@ -80,10 +89,15 @@ class AppSourceCover extends StatelessWidget {
 
         if (!isArticle) {
           if (coverImage case final imageProvider?) {
+            final resizedImageProvider = ResizeImage.resizeIfNeeded(
+              cacheWidth,
+              cacheHeight,
+              imageProvider,
+            );
             final image = ClipRRect(
               borderRadius: BorderRadius.circular(appSourceCoverRadius),
               child: Image(
-                image: imageProvider,
+                image: resizedImageProvider,
                 fit: fit,
                 width: constraints.maxWidth,
                 height: constraints.maxHeight,
@@ -117,6 +131,11 @@ class AppSourceCover extends StatelessWidget {
       },
     );
   }
+}
+
+int? _imageCacheDimension(double logicalPixels, double devicePixelRatio) {
+  if (!logicalPixels.isFinite || logicalPixels <= 0) return null;
+  return (logicalPixels * devicePixelRatio).ceil();
 }
 
 void _reportCoverDecodeFailure({

@@ -31,77 +31,68 @@ void main() {
     await cubit.close();
   });
 
-  testWidgets('renders compact Aa sheet without an embedded preview', (
+  testWidgets('renders layered Aa sheet without tabs or preview', (
     tester,
   ) async {
     await tester.openAppearanceSheet(cubit);
 
     expect(find.text('Aa'), findsOneWidget);
     expect(find.text('Reset'), findsOneWidget);
-    expect(find.text('Font'), findsOneWidget);
-    expect(find.text('Layout'), findsOneWidget);
-    expect(find.text('Theme'), findsOneWidget);
-    expect(find.text('TYPEFACE'), findsOneWidget);
-    expect(find.text('SIZE'), findsOneWidget);
-    expect(find.text('PREVIEW'), findsNothing);
-  });
-
-  testWidgets('switches between appearance sections', (tester) async {
-    await tester.openAppearanceSheet(cubit);
-
-    await tester.tap(find.text('Layout'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('SPACING'), findsOneWidget);
-    expect(find.text('MARGINS'), findsOneWidget);
-    expect(find.text('ALIGNMENT'), findsOneWidget);
-    expect(find.text('TURNING'), findsOneWidget);
-    expect(find.text('TYPEFACE'), findsNothing);
-
-    await tester.tap(find.text('Theme'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('READING THEME'), findsOneWidget);
+    expect(find.text('Font'), findsNothing);
+    expect(find.text('Layout'), findsNothing);
+    expect(find.text('Theme'), findsNothing);
     expect(find.text('Paper'), findsOneWidget);
     expect(find.text('Warm'), findsOneWidget);
+    expect(find.text('Graphite'), findsOneWidget);
+    expect(find.text('Night'), findsOneWidget);
+    final fontLabel = tester.widget<Text>(find.text('Literata'));
+    final decreaseLabel = tester.widget<Text>(find.text('A-'));
+    final increaseLabel = tester.widget<Text>(find.text('A+'));
+
+    expect(fontLabel.style?.fontSize, greaterThanOrEqualTo(20));
+    expect(decreaseLabel.style?.fontSize, 20);
+    expect(increaseLabel.style?.fontSize, 24);
+    expect(find.text('LINE HEIGHT'), findsOneWidget);
+    expect(find.text('TURNING'), findsOneWidget);
+    expect(find.text('MARGINS'), findsOneWidget);
+    expect(find.text('ALIGNMENT'), findsOneWidget);
+    expect(find.text('PREVIEW'), findsNothing);
+    expect(find.byType(Divider), findsAtLeastNWidgets(4));
+    expect(find.byType(VerticalDivider), findsNWidgets(2));
   });
 
-  testWidgets('keeps appearance sheet height stable across tabs', (
+  testWidgets('theme swatches persist reader theme', (tester) async {
+    await tester.openAppearanceSheet(cubit);
+
+    await tester.tap(find.text('Night'));
+    await tester.pumpAndSettle();
+
+    expect(cubit.state.effectiveAppearance.themeId, 'night');
+    expect(
+      preferencesService.readerAppearanceOverrideFor(_sourceId)?.themeId,
+      'night',
+    );
+  });
+
+  testWidgets('font tile cycles through font presets', (tester) async {
+    await tester.openAppearanceSheet(cubit);
+
+    await tester.tap(find.text('Literata'));
+    await tester.pumpAndSettle();
+
+    expect(cubit.state.effectiveAppearance.fontId, 'ptSerif');
+    expect(find.text('PT Serif'), findsOneWidget);
+    expect(
+      preferencesService.readerAppearanceOverrideFor(_sourceId)?.fontId,
+      'ptSerif',
+    );
+  });
+
+  testWidgets('appearance sheet does not reserve fixed tab body height', (
     tester,
   ) async {
     await tester.openAppearanceSheet(cubit);
 
-    final fontHeight = tester
-        .getSize(find.byType(ActionBottomSheetLayout))
-        .height;
-
-    await tester.tap(find.text('Layout'));
-    await tester.pumpAndSettle();
-    final layoutHeight = tester
-        .getSize(find.byType(ActionBottomSheetLayout))
-        .height;
-
-    await tester.tap(find.text('Theme'));
-    await tester.pumpAndSettle();
-    final themeHeight = tester
-        .getSize(find.byType(ActionBottomSheetLayout))
-        .height;
-
-    expect(layoutHeight, fontHeight);
-    expect(themeHeight, fontHeight);
-  });
-
-  testWidgets('appearance tabs do not reserve fixed empty body height', (
-    tester,
-  ) async {
-    await tester.openAppearanceSheet(cubit);
-
-    expect(_fixedTabBodyHeightFinder(), findsNothing);
-
-    await tester.tap(find.text('Theme'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('READING THEME'), findsOneWidget);
     expect(_fixedTabBodyHeightFinder(), findsNothing);
   });
 
@@ -110,28 +101,26 @@ void main() {
   ) async {
     await tester.openAppearanceSheet(cubit);
 
-    await tester.tap(find.text('Layout'));
-    await tester.pumpAndSettle();
+    expect(find.text('1.6'), findsOneWidget);
+    Text lineHeightText(String value) {
+      return tester.widget<Text>(
+        find.descendant(
+          of: find.byKey(ValueKey('reader-line-height-$value')),
+          matching: find.text(value),
+        ),
+      );
+    }
 
-    expect(find.text('1.6'), findsNWidgets(2));
-    final activeSpacing = tester.widget<Container>(
-      find.byKey(const ValueKey('reader-line-height-1.6')),
-    );
-    final activeDecoration = activeSpacing.decoration! as BoxDecoration;
-    expect(activeDecoration.color, isNot(Colors.transparent));
-
-    final inactiveSpacing = tester.widget<Container>(
-      find.byKey(const ValueKey('reader-line-height-1.4')),
-    );
-    final inactiveDecoration = inactiveSpacing.decoration! as BoxDecoration;
-    expect(inactiveDecoration.color, Colors.transparent);
+    final primary = Theme.of(
+      tester.element(find.byKey(const ValueKey('reader-line-height-1.6'))),
+    ).colorScheme.primary;
+    expect(lineHeightText('1.6').style?.color, primary);
+    expect(lineHeightText('1.4').style?.color, isNot(primary));
   });
 
   testWidgets('persists text alignment from layout panel', (tester) async {
     await tester.openAppearanceSheet(cubit);
 
-    await tester.tap(find.text('Layout'));
-    await tester.pumpAndSettle();
     expect(find.text('Start'), findsOneWidget);
     expect(find.text('End'), findsOneWidget);
     expect(find.text('Justify'), findsOneWidget);
@@ -164,15 +153,34 @@ void main() {
   testWidgets('persists page turn style from layout panel', (tester) async {
     await tester.openAppearanceSheet(cubit);
 
-    await tester.tap(find.text('Layout'));
-    await tester.pumpAndSettle();
-    expect(find.text('Horizontal'), findsOneWidget);
-    expect(find.text('Vertical'), findsOneWidget);
+    final primary = Theme.of(
+      tester.element(find.byIcon(AppIcons.pageTurnHorizontal)),
+    ).colorScheme.primary;
+
+    expect(find.byIcon(AppIcons.pageTurnHorizontal), findsOneWidget);
+    expect(find.byIcon(AppIcons.pageTurnVertical), findsOneWidget);
     expect(find.text('Instant'), findsNothing);
+    IconButton iconButtonFor(IconData icon) {
+      return tester.widget<IconButton>(
+        find.ancestor(
+          of: find.byIcon(icon),
+          matching: find.byType(IconButton),
+        ),
+      );
+    }
 
-    await tester.tap(find.text('Vertical'));
+    final horizontalStyle = iconButtonFor(AppIcons.pageTurnHorizontal).style!;
+    expect(horizontalStyle.foregroundColor?.resolve({}), primary);
+    expect(horizontalStyle.backgroundColor?.resolve({}), Colors.transparent);
+    expect(horizontalStyle.overlayColor?.resolve({}), Colors.transparent);
+
+    await tester.tap(find.byIcon(AppIcons.pageTurnVertical));
     await tester.pumpAndSettle();
 
+    final verticalStyle = iconButtonFor(AppIcons.pageTurnVertical).style!;
+    expect(verticalStyle.foregroundColor?.resolve({}), primary);
+    expect(verticalStyle.backgroundColor?.resolve({}), Colors.transparent);
+    expect(verticalStyle.overlayColor?.resolve({}), Colors.transparent);
     expect(
       cubit.state.effectiveAppearance.pageTurnStyle,
       ReaderPageTurnStyle.vertical,
@@ -188,7 +196,7 @@ void main() {
   ) async {
     await tester.openAppearanceSheet(cubit);
 
-    await tester.tap(find.text('PT Serif'));
+    await tester.tap(find.text('Literata'));
     await tester.pumpAndSettle();
 
     expect(
@@ -203,7 +211,7 @@ void main() {
     expect(cubit.state.hasOverride, isFalse);
   });
 
-  testWidgets('tapping size percent clears text size override', (
+  testWidgets('text size buttons preview and persist source override', (
     tester,
   ) async {
     await tester.openAppearanceSheet(cubit);
@@ -211,19 +219,17 @@ void main() {
     await tester.tap(find.text('A+'));
     await tester.pump();
 
-    expect(find.text('105%'), findsOneWidget);
-
-    await tester.tap(find.text('105%'));
-    await tester.pump();
-
-    expect(find.text('100%'), findsOneWidget);
+    expect(cubit.state.effectiveAppearance.textScale, closeTo(1.05, 0.001));
 
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(preferencesService.readerAppearanceOverrideFor(_sourceId), isNull);
+    expect(
+      preferencesService.readerAppearanceOverrideFor(_sourceId)?.textScale,
+      closeTo(1.05, 0.001),
+    );
   });
 
-  testWidgets('size percent resets inherited global scale to 100%', (
+  testWidgets('text size buttons override inherited global scale', (
     tester,
   ) async {
     await preferencesService.update(
@@ -237,17 +243,19 @@ void main() {
       find.widgetWithText(TextButton, 'Reset'),
     );
     expect(resetButton.onPressed, isNull);
-    expect(find.text('115%'), findsOneWidget);
     expect(preferencesService.readerAppearanceOverrideFor(_sourceId), isNull);
     expect(cubit.state.effectiveAppearance.textScale, 1.15);
 
-    await tester.tap(find.text('115%'));
+    await tester.tap(find.text('A-'));
     await tester.pump();
 
-    expect(find.text('100%'), findsOneWidget);
+    expect(cubit.state.effectiveAppearance.textScale, closeTo(1.10, 0.001));
+
+    await tester.pump(const Duration(milliseconds: 300));
+
     expect(
       preferencesService.readerAppearanceOverrideFor(_sourceId)?.textScale,
-      1.0,
+      closeTo(1.10, 0.001),
     );
   });
 
@@ -315,9 +323,7 @@ Finder _fixedTabBodyHeightFinder() {
 }
 
 extension on WidgetTester {
-  Future<void> openAppearanceSheet(
-    ReaderAppearanceCubit cubit,
-  ) async {
+  Future<void> openAppearanceSheet(ReaderAppearanceCubit cubit) async {
     await pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
