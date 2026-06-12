@@ -17,6 +17,7 @@ import 'package:readflex/app/bloc/app_bloc_observer.dart';
 import 'package:readflex/app/bloc/bloc_transformer.dart';
 import 'package:readflex/app/composition.dart';
 import 'package:readflex/app/config/application_config.dart';
+import 'package:readflex/app/frame_timing_tracing.dart';
 import 'package:readflex/app/root_context.dart';
 import 'package:readflex/app/screens/initialization_failed_screen.dart';
 
@@ -43,6 +44,7 @@ Future<void> starter() async {
     // Ensure Flutter is initialized.
     WidgetsFlutterBinding.ensureInitialized();
     _configureBuildTracing(logger);
+    configureFrameTimingTracing(logger);
 
     // Configure global error interception.
     FlutterError.onError = logger.logFlutterError;
