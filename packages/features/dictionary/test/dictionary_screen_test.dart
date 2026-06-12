@@ -229,6 +229,39 @@ void main() {
     expect(find.text('Add word'), findsOneWidget);
   });
 
+  testWidgets('selection mode supports multi-select and back clears it', (
+    tester,
+  ) async {
+    dictionaryRepository.seed([_entry, _entry2]);
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    expect(find.byIcon(AppIcons.add), findsOneWidget);
+    expect(find.byIcon(AppIcons.delete), findsNothing);
+    expect(find.byIcon(AppIcons.check), findsNothing);
+
+    await tester.longPress(find.text('serendipity'));
+    await tester.pump();
+
+    expect(find.byIcon(AppIcons.add), findsNothing);
+    expect(find.byIcon(AppIcons.delete), findsOneWidget);
+    expect(find.byIcon(AppIcons.check), findsOneWidget);
+
+    await tester.tap(find.text('ephemeral'));
+    await tester.pump();
+
+    expect(find.byIcon(AppIcons.check), findsNWidgets(2));
+
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+
+    expect(find.byIcon(AppIcons.add), findsOneWidget);
+    expect(find.byIcon(AppIcons.delete), findsNothing);
+    expect(find.byIcon(AppIcons.check), findsNothing);
+    expect(find.text('Dictionary'), findsOneWidget);
+  });
+
   testWidgets('Add word sheet inserts entry into the list on save', (
     tester,
   ) async {
