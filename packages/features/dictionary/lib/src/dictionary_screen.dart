@@ -139,61 +139,27 @@ class _DictionaryViewState extends State<_DictionaryView> {
           prev.deletionEffect != curr.deletionEffect &&
           curr.deletionEffect != null,
       listener: _onDictionaryStateForToast,
-      child: BlocBuilder<DictionarySelectionCubit, DictionarySelectionState>(
-        builder: (context, selection) {
-          return PopScope(
-            // Cancel selection mode on the system back gesture instead
-            // of leaving the tab.
-            canPop: !selection.isActive,
-            onPopInvokedWithResult: (didPop, _) {
-              if (didPop) return;
-              context.read<DictionarySelectionCubit>().clear();
-            },
-            child: Scaffold(
-              floatingActionButton: _DictionaryFab(
-                selectionActive: selection.isActive,
-                onAddPressed: () => _openAddWordSheet(context),
-                onDeletePressed: () => _handleDeleteSelected(context),
-              ),
-              body: BlocBuilder<DictionaryBloc, DictionaryState>(
-                builder: (context, state) {
-                  final filtered = state.filteredEntries;
-
-                  return switch (state.status) {
-                    DictionaryStatus.initial || DictionaryStatus.loading =>
-                      const CenteredCircularProgressIndicator(),
-                    DictionaryStatus.failure => ErrorState(
-                      message: 'Failed to load dictionary',
-                      retryLabel: 'Retry',
-                      onRetry: () => context.read<DictionaryBloc>().add(
-                        const DictionaryLoadRequested(),
-                      ),
-                    ),
-                    DictionaryStatus.success => SafeArea(
-                      bottom: false,
-                      child: _SuccessBody(
-                        state: state,
-                        filtered: filtered,
-                        selection: selection,
-                        onPracticePressed: widget.onPracticePressed,
-                        onTapEntry: (entry) => _openDetailSheet(
-                          context,
-                          entry: entry,
-                          mastered: state.isMastered(entry.id),
-                        ),
-                        onLongPressEntry: (entry) => context
-                            .read<DictionarySelectionCubit>()
-                            .toggle(entry.id),
-                        onConfirmSwipeDelete: (entry) =>
-                            _confirmAndDispatchSwipe(context, entry),
-                      ),
-                    ),
-                  };
-                },
-              ),
+      child: _DictionarySelectionPopScope(
+        onCancelSelection: () =>
+            context.read<DictionarySelectionCubit>().clear(),
+        child: Scaffold(
+          floatingActionButton: _DictionaryFabDriver(
+            onAddPressed: () => _openAddWordSheet(context),
+            onDeletePressed: () => _handleDeleteSelected(context),
+          ),
+          body: _DictionaryBody(
+            onPracticePressed: widget.onPracticePressed,
+            onTapEntry: (entry, mastered) => _openDetailSheet(
+              context,
+              entry: entry,
+              mastered: mastered,
             ),
-          );
-        },
+            onLongPressEntry: (entry) =>
+                context.read<DictionarySelectionCubit>().toggle(entry.id),
+            onConfirmSwipeDelete: (entry) =>
+                _confirmAndDispatchSwipe(context, entry),
+          ),
+        ),
       ),
     );
   }
@@ -228,6 +194,116 @@ class _DictionaryViewState extends State<_DictionaryView> {
         onPractice: widget.onPracticePressed,
         onDelete: () => _handleDetailDelete(context, entry),
       ),
+    );
+  }
+}
+
+class _DictionarySelectionPopScope extends StatelessWidget {
+  const _DictionarySelectionPopScope({
+    required this.onCancelSelection,
+    required this.child,
+  });
+
+  final VoidCallback onCancelSelection;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<
+      DictionarySelectionCubit,
+      DictionarySelectionState,
+      bool
+    >(
+      selector: (state) => state.isActive,
+      builder: (context, selectionActive) {
+        return PopScope(
+          // Cancel selection mode on the system back gesture instead
+          // of leaving the tab.
+          canPop: !selectionActive,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop) return;
+            onCancelSelection();
+          },
+          child: child,
+        );
+      },
+    );
+  }
+}
+
+class _DictionaryFabDriver extends StatelessWidget {
+  const _DictionaryFabDriver({
+    required this.onAddPressed,
+    required this.onDeletePressed,
+  });
+
+  final VoidCallback onAddPressed;
+  final VoidCallback onDeletePressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<
+      DictionarySelectionCubit,
+      DictionarySelectionState,
+      bool
+    >(
+      selector: (state) => state.isActive,
+      builder: (context, selectionActive) {
+        return _DictionaryFab(
+          selectionActive: selectionActive,
+          onAddPressed: onAddPressed,
+          onDeletePressed: onDeletePressed,
+        );
+      },
+    );
+  }
+}
+
+class _DictionaryBody extends StatelessWidget {
+  const _DictionaryBody({
+    required this.onPracticePressed,
+    required this.onTapEntry,
+    required this.onLongPressEntry,
+    required this.onConfirmSwipeDelete,
+  });
+
+  final VoidCallback? onPracticePressed;
+  final void Function(DictionaryEntry entry, bool mastered) onTapEntry;
+  final ValueChanged<DictionaryEntry> onLongPressEntry;
+  final Future<bool> Function(DictionaryEntry) onConfirmSwipeDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<DictionaryBloc, DictionaryState>(
+      builder: (context, state) {
+        final filtered = state.filteredEntries;
+
+        return switch (state.status) {
+          DictionaryStatus.initial ||
+          DictionaryStatus.loading => const CenteredCircularProgressIndicator(),
+          DictionaryStatus.failure => ErrorState(
+            message: 'Failed to load dictionary',
+            retryLabel: 'Retry',
+            onRetry: () => context.read<DictionaryBloc>().add(
+              const DictionaryLoadRequested(),
+            ),
+          ),
+          DictionaryStatus.success => SafeArea(
+            bottom: false,
+            child: _SuccessBody(
+              state: state,
+              filtered: filtered,
+              onPracticePressed: onPracticePressed,
+              onTapEntry: (entry) => onTapEntry(
+                entry,
+                state.isMastered(entry.id),
+              ),
+              onLongPressEntry: onLongPressEntry,
+              onConfirmSwipeDelete: onConfirmSwipeDelete,
+            ),
+          ),
+        };
+      },
     );
   }
 }
@@ -274,7 +350,6 @@ class _SuccessBody extends StatelessWidget {
   const _SuccessBody({
     required this.state,
     required this.filtered,
-    required this.selection,
     required this.onPracticePressed,
     required this.onTapEntry,
     required this.onLongPressEntry,
@@ -283,7 +358,6 @@ class _SuccessBody extends StatelessWidget {
 
   final DictionaryState state;
   final List<DictionaryEntry> filtered;
-  final DictionarySelectionState selection;
   final VoidCallback? onPracticePressed;
   final ValueChanged<DictionaryEntry> onTapEntry;
   final ValueChanged<DictionaryEntry> onLongPressEntry;
@@ -350,64 +424,103 @@ class _SuccessBody extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: ScrollEdgeFadeStack(
-            child: filtered.isEmpty
-                ? const EmptyState(
-                    icon: AppIcons.book,
-                    message: 'No entries found',
-                    subtitle: 'Try a different search term',
-                  )
-                : ListView.separated(
-                    // Horizontal padding lives on the list (not on each
-                    // row) so the swipe-to-delete background is inset
-                    // from the screen edges — same shape as the
-                    // library list. Keeping `lg` on rows would make
-                    // the Dismissible reach the screen edge while
-                    // library's stays inset.
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      0,
-                      AppSpacing.lg,
-                      80,
-                    ),
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, _) => Divider(
-                      color: appColors.divider.withValues(alpha: 0.4),
-                      height: 1,
-                    ),
-                    itemBuilder: (_, i) {
-                      final entry = filtered[i];
-                      final mastered = state.isMastered(entry.id);
-                      final row = _DictionaryListRow(
-                        key: ValueKey(entry.id),
-                        entry: entry,
-                        mastered: mastered,
-                        isSelected: selection.contains(entry.id),
-                        onTap: () {
-                          if (selection.isActive) {
-                            onLongPressEntry(entry);
-                          } else {
-                            onTapEntry(entry);
-                          }
-                        },
-                        onLongPress: () => onLongPressEntry(entry),
-                      );
-                      // Swipe-to-delete is suppressed during multi-select
-                      // so two destructive paths don't compete for the
-                      // same gesture.
-                      if (selection.isActive) return row;
-                      return Dismissible(
-                        key: ValueKey('dict-row-${entry.id}'),
-                        direction: DismissDirection.endToStart,
-                        background: const _SwipeDeleteBackground(),
-                        confirmDismiss: (_) => onConfirmSwipeDelete(entry),
-                        child: row,
-                      );
-                    },
-                  ),
+          child: _DictionaryEntryList(
+            state: state,
+            filtered: filtered,
+            dividerColor: appColors.divider.withValues(alpha: 0.4),
+            onTapEntry: onTapEntry,
+            onLongPressEntry: onLongPressEntry,
+            onConfirmSwipeDelete: onConfirmSwipeDelete,
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DictionaryEntryList extends StatelessWidget {
+  const _DictionaryEntryList({
+    required this.state,
+    required this.filtered,
+    required this.dividerColor,
+    required this.onTapEntry,
+    required this.onLongPressEntry,
+    required this.onConfirmSwipeDelete,
+  });
+
+  final DictionaryState state;
+  final List<DictionaryEntry> filtered;
+  final Color dividerColor;
+  final ValueChanged<DictionaryEntry> onTapEntry;
+  final ValueChanged<DictionaryEntry> onLongPressEntry;
+  final Future<bool> Function(DictionaryEntry) onConfirmSwipeDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<
+      DictionarySelectionCubit,
+      DictionarySelectionState,
+      DictionarySelectionState
+    >(
+      selector: (state) => state,
+      builder: (context, selection) {
+        return ScrollEdgeFadeStack(
+          child: filtered.isEmpty
+              ? const EmptyState(
+                  icon: AppIcons.book,
+                  message: 'No entries found',
+                  subtitle: 'Try a different search term',
+                )
+              : ListView.separated(
+                  // Horizontal padding lives on the list (not on each
+                  // row) so the swipe-to-delete background is inset
+                  // from the screen edges — same shape as the
+                  // library list. Keeping `lg` on rows would make
+                  // the Dismissible reach the screen edge while
+                  // library's stays inset.
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    0,
+                    AppSpacing.lg,
+                    80,
+                  ),
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, _) => Divider(
+                    color: dividerColor,
+                    height: 1,
+                  ),
+                  itemBuilder: (_, i) {
+                    final entry = filtered[i];
+                    final mastered = state.isMastered(entry.id);
+                    final row = _DictionaryListRow(
+                      key: ValueKey(entry.id),
+                      entry: entry,
+                      mastered: mastered,
+                      isSelected: selection.contains(entry.id),
+                      onTap: () {
+                        if (selection.isActive) {
+                          onLongPressEntry(entry);
+                        } else {
+                          onTapEntry(entry);
+                        }
+                      },
+                      onLongPress: () => onLongPressEntry(entry),
+                    );
+                    // Swipe-to-delete is suppressed during multi-select
+                    // so two destructive paths don't compete for the
+                    // same gesture.
+                    if (selection.isActive) return row;
+                    return Dismissible(
+                      key: ValueKey('dict-row-${entry.id}'),
+                      direction: DismissDirection.endToStart,
+                      background: const _SwipeDeleteBackground(),
+                      confirmDismiss: (_) => onConfirmSwipeDelete(entry),
+                      child: row,
+                    );
+                  },
+                ),
+        );
+      },
     );
   }
 }
