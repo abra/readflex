@@ -759,77 +759,150 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
     final hasSelection = context.select<ReaderSelectionCubit, bool>(
       (c) => c.state.hasSelection,
     );
-    final progress = context.select<ReaderBloc, double>(
-      (b) => b.state.book?.readingProgress ?? 0,
-    );
-    final chapterTitle = context.select<ReaderBloc, String?>(
-      (b) => b.state.chapterTitle,
-    );
-    final chapterCurrentPage = context.select<ReaderBloc, int?>(
-      (b) => b.state.chapterCurrentPage,
-    );
-    final chapterTotalPages = context.select<ReaderBloc, int?>(
-      (b) => b.state.chapterTotalPages,
-    );
-    final currentPageBookmarked = context.select<ReaderBloc, bool>(
-      (b) => b.state.currentPageBookmarked,
-    );
-    final format = context.select<ReaderBloc, BookFormat?>(
-      (b) => b.state.book?.format,
-    );
-    final sourceType = context.select<ReaderBloc, SourceType>(
-      (b) => b.state.sourceType,
-    );
-    final pageProgressionRtl = context.select<ReaderBloc, bool>(
-      (b) => b.state.pageProgressionRtl,
-    );
-    final documentFeatures = context
-        .select<ReaderBloc, ReaderDocumentFeatures?>(
-          (b) => b.state.documentFeatures,
-        );
+    final visible = chromeVisible && !_selectionActionsVisible(hasSelection);
     final pageTurnStyle = context
         .select<ReaderAppearanceCubit, ReaderPageTurnStyle>(
           (c) => c.state.effectiveAppearance.pageTurnStyle,
         );
-    final actions = readerChromeActionsForFormat(format);
     final colors = context.colors;
 
-    return _ReaderBottomChrome(
-      visible: chromeVisible && !_selectionActionsVisible(hasSelection),
-      progress: progress,
-      chapterTitle: chapterTitle,
-      chapterCurrentPage: chapterCurrentPage,
-      chapterTotalPages: chapterTotalPages,
-      sourceType: sourceType,
-      pageProgressionRtl: pageProgressionRtl,
-      format: format,
-      panelColor: colors.surface,
-      textColor: colors.onSurfaceVariant,
-      accentColor: colors.primary,
-      dividerColor: colors.outlineVariant,
-      foregroundColor: colors.onSurface,
-      bookmarkActive: currentPageBookmarked,
-      showTocAction: actions.contains(ReaderChromeAction.contents),
-      showFontAction: actions.contains(ReaderChromeAction.textAppearance),
-      showPageTurnAction: actions.contains(ReaderChromeAction.pageTurn),
-      showBookmarkAction: actions.contains(ReaderChromeAction.bookmark),
-      showSearchAction: actions.contains(ReaderChromeAction.textSearch),
+    return BlocSelector<ReaderBloc, ReaderState, _ReaderBottomChromeSnapshot>(
+      selector: (state) => _ReaderBottomChromeSnapshot.fromState(
+        state,
+        visible: visible,
+        pageTurnStyle: pageTurnStyle,
+      ),
+      builder: (context, snapshot) {
+        _debugTraceReader(
+          '_ReaderBottomChromeDriver build '
+          'visible=${snapshot.visible} '
+          'progress=${snapshot.progress.toStringAsFixed(3)} '
+          'chapterPage=${snapshot.chapterCurrentPage}/'
+          '${snapshot.chapterTotalPages}',
+        );
+        final actions = readerChromeActionsForFormat(snapshot.format);
+        return _ReaderBottomChrome(
+          visible: snapshot.visible,
+          progress: snapshot.progress,
+          chapterTitle: snapshot.chapterTitle,
+          chapterCurrentPage: snapshot.chapterCurrentPage,
+          chapterTotalPages: snapshot.chapterTotalPages,
+          sourceType: snapshot.sourceType,
+          pageProgressionRtl: snapshot.pageProgressionRtl,
+          format: snapshot.format,
+          panelColor: colors.surface,
+          textColor: colors.onSurfaceVariant,
+          accentColor: colors.primary,
+          dividerColor: colors.outlineVariant,
+          foregroundColor: colors.onSurface,
+          bookmarkActive: snapshot.currentPageBookmarked,
+          showTocAction: actions.contains(ReaderChromeAction.contents),
+          showFontAction: actions.contains(ReaderChromeAction.textAppearance),
+          showPageTurnAction: actions.contains(ReaderChromeAction.pageTurn),
+          showBookmarkAction: actions.contains(ReaderChromeAction.bookmark),
+          showSearchAction: actions.contains(ReaderChromeAction.textSearch),
+          pageTurnStyle: snapshot.pageTurnStyle,
+          searchActionEnabled: readerSearchActionEnabled(
+            format: snapshot.format,
+            documentFeatures: snapshot.documentFeatures,
+          ),
+          searchActionTooltip: readerSearchActionTooltip(
+            format: snapshot.format,
+            documentFeatures: snapshot.documentFeatures,
+          ),
+          onBack: () => Navigator.of(context).maybePop(),
+          onTocPressed: onTocPressed,
+          onFontPressed: onFontPressed,
+          onPageTurnPressed: onPageTurnPressed,
+          onBookmarkPressed: onBookmarkPressed,
+          onSearchPressed: onSearchPressed,
+          onSeekFraction: onSeekFraction,
+        );
+      },
+    );
+  }
+}
+
+class _ReaderBottomChromeSnapshot {
+  const _ReaderBottomChromeSnapshot({
+    required this.visible,
+    required this.progress,
+    required this.chapterTitle,
+    required this.chapterCurrentPage,
+    required this.chapterTotalPages,
+    required this.sourceType,
+    required this.pageProgressionRtl,
+    required this.format,
+    required this.currentPageBookmarked,
+    required this.documentFeatures,
+    required this.pageTurnStyle,
+  });
+
+  factory _ReaderBottomChromeSnapshot.fromState(
+    ReaderState state, {
+    required bool visible,
+    required ReaderPageTurnStyle pageTurnStyle,
+  }) {
+    return _ReaderBottomChromeSnapshot(
+      visible: visible,
+      progress: state.book?.readingProgress ?? 0,
+      chapterTitle: state.chapterTitle,
+      chapterCurrentPage: state.chapterCurrentPage,
+      chapterTotalPages: state.chapterTotalPages,
+      sourceType: state.sourceType,
+      pageProgressionRtl: state.pageProgressionRtl,
+      format: state.book?.format,
+      currentPageBookmarked: state.currentPageBookmarked,
+      documentFeatures: state.documentFeatures,
       pageTurnStyle: pageTurnStyle,
-      searchActionEnabled: readerSearchActionEnabled(
-        format: format,
-        documentFeatures: documentFeatures,
-      ),
-      searchActionTooltip: readerSearchActionTooltip(
-        format: format,
-        documentFeatures: documentFeatures,
-      ),
-      onBack: () => Navigator.of(context).maybePop(),
-      onTocPressed: onTocPressed,
-      onFontPressed: onFontPressed,
-      onPageTurnPressed: onPageTurnPressed,
-      onBookmarkPressed: onBookmarkPressed,
-      onSearchPressed: onSearchPressed,
-      onSeekFraction: onSeekFraction,
+    );
+  }
+
+  final bool visible;
+  final double progress;
+  final String? chapterTitle;
+  final int? chapterCurrentPage;
+  final int? chapterTotalPages;
+  final SourceType sourceType;
+  final bool pageProgressionRtl;
+  final BookFormat? format;
+  final bool currentPageBookmarked;
+  final ReaderDocumentFeatures? documentFeatures;
+  final ReaderPageTurnStyle pageTurnStyle;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! _ReaderBottomChromeSnapshot) return false;
+    if (visible != other.visible) return false;
+    if (!visible) return true;
+    return progress == other.progress &&
+        chapterTitle == other.chapterTitle &&
+        chapterCurrentPage == other.chapterCurrentPage &&
+        chapterTotalPages == other.chapterTotalPages &&
+        sourceType == other.sourceType &&
+        pageProgressionRtl == other.pageProgressionRtl &&
+        format == other.format &&
+        currentPageBookmarked == other.currentPageBookmarked &&
+        documentFeatures == other.documentFeatures &&
+        pageTurnStyle == other.pageTurnStyle;
+  }
+
+  @override
+  int get hashCode {
+    if (!visible) return visible.hashCode;
+    return Object.hash(
+      visible,
+      progress,
+      chapterTitle,
+      chapterCurrentPage,
+      chapterTotalPages,
+      sourceType,
+      pageProgressionRtl,
+      format,
+      currentPageBookmarked,
+      documentFeatures,
+      pageTurnStyle,
     );
   }
 }
