@@ -67,6 +67,11 @@ const _kReaderBrightnessChromeDragHeight =
 
 const _kReaderTocTileEstimatedHeight = 60.0;
 
+typedef _ReaderChromeOverlaySnapshot = ({
+  bool chromeVisible,
+  ReaderOverlay overlay,
+});
+
 double _snapReaderBrightnessButtonValue(double value, double delta) {
   final percent = value * 100;
   final stepPercent = _kReaderBrightnessStep * 100;

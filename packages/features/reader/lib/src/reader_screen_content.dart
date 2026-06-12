@@ -281,9 +281,13 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
         .select<ReaderAppearanceCubit, ReaderAppearancePreferences>(
           (c) => c.state.effectiveAppearance,
         );
-    final uiState = context.select<ReaderUiCubit, ReaderUiState>(
-      (c) => c.state,
-    );
+    final chromeOverlay = context
+        .select<ReaderUiCubit, _ReaderChromeOverlaySnapshot>(
+          (c) => (
+            chromeVisible: c.state.chromeVisible,
+            overlay: c.state.overlay,
+          ),
+        );
     final pageProgressionRtl = context.select<ReaderBloc, bool>(
       (b) => b.state.pageProgressionRtl,
     );
@@ -308,7 +312,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     final readerTheme = ReaderThemePreset.fromId(appearance.themeId).data;
     final systemUiStyle = readerSystemUiOverlayStyle(
       readerTheme: readerTheme,
-      chromeVisible: uiState.chromeVisible,
+      chromeVisible: chromeOverlay.chromeVisible,
       chromeSurfaceColor: context.colors.surface,
       appNavigationBarColor: Theme.of(context).scaffoldBackgroundColor,
     );
@@ -369,7 +373,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
             _ContextPanelDriver(textActions: widget.textActions),
             const _ReviewReminderDriver(),
             _ReaderTocDrawerDriver(
-              visible: uiState.tocDrawerVisible,
+              visible: chromeOverlay.overlay == ReaderOverlay.toc,
               format: format,
               pageProgressionRtl: pageProgressionRtl,
               onClose: _closeTocDrawer,
@@ -378,7 +382,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
               onBookmarkDeleted: _deleteBookmark,
             ),
             _ReaderSearchDrawer(
-              visible: uiState.searchDrawerVisible,
+              visible: chromeOverlay.overlay == ReaderOverlay.search,
               format: format,
               pageProgressionRtl: pageProgressionRtl,
               onClose: _closeSearchDrawer,

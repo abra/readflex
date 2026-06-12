@@ -164,15 +164,19 @@ class _ReaderChromeDismissBarrierDriver extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final uiState = context.select<ReaderUiCubit, ReaderUiState>(
-      (c) => c.state,
-    );
+    final chromeOverlay = context
+        .select<ReaderUiCubit, _ReaderChromeOverlaySnapshot>(
+          (c) => (
+            chromeVisible: c.state.chromeVisible,
+            overlay: c.state.overlay,
+          ),
+        );
     final hasSelection = context.select<ReaderSelectionCubit, bool>(
       (c) => c.state.hasSelection,
     );
     final shouldBlockPage = shouldBlockReaderPageInput(
-      chromeVisible: uiState.chromeVisible,
-      overlayVisible: uiState.overlay != ReaderOverlay.none,
+      chromeVisible: chromeOverlay.chromeVisible,
+      overlayVisible: chromeOverlay.overlay != ReaderOverlay.none,
       hasSelection: _selectionActionsVisible(hasSelection),
     );
 
@@ -198,9 +202,13 @@ class ReaderBrightnessChromeDriver extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final uiState = context.select<ReaderUiCubit, ReaderUiState>(
-      (c) => c.state,
-    );
+    final chromeOverlay = context
+        .select<ReaderUiCubit, _ReaderChromeOverlaySnapshot>(
+          (c) => (
+            chromeVisible: c.state.chromeVisible,
+            overlay: c.state.overlay,
+          ),
+        );
     final hasSelection = context.select<ReaderSelectionCubit, bool>(
       (c) => c.state.hasSelection,
     );
@@ -210,8 +218,8 @@ class ReaderBrightnessChromeDriver extends StatelessWidget {
         );
     final cubit = context.read<ReaderBrightnessCubit>();
     final visible =
-        uiState.chromeVisible &&
-        uiState.overlay == ReaderOverlay.none &&
+        chromeOverlay.chromeVisible &&
+        chromeOverlay.overlay == ReaderOverlay.none &&
         !_selectionActionsVisible(hasSelection);
     final controlValue = brightnessState.controlValue;
     double brightnessAfterDelta(double value, double delta) {
@@ -548,9 +556,13 @@ class _ReaderPageBookmarkIndicatorDriver extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final uiState = context.select<ReaderUiCubit, ReaderUiState>(
-      (c) => c.state,
-    );
+    final chromeOverlay = context
+        .select<ReaderUiCubit, _ReaderChromeOverlaySnapshot>(
+          (c) => (
+            chromeVisible: c.state.chromeVisible,
+            overlay: c.state.overlay,
+          ),
+        );
     final hasSelection = context.select<ReaderSelectionCubit, bool>(
       (c) => c.state.hasSelection,
     );
@@ -562,7 +574,8 @@ class _ReaderPageBookmarkIndicatorDriver extends StatelessWidget {
     );
     final visible =
         bookmarked &&
-        uiState.contentOnlyVisible &&
+        !chromeOverlay.chromeVisible &&
+        chromeOverlay.overlay == ReaderOverlay.none &&
         !_selectionActionsVisible(hasSelection);
     final topOffset =
         BookLayoutPreset.fromId(layoutId).data.topMargin -
