@@ -81,6 +81,7 @@ class _FlashcardSheetView extends StatelessWidget {
       buildWhen: (prev, curr) =>
           prev.status != curr.status || prev.canSave != curr.canSave,
       builder: (context, state) {
+        final cubit = context.read<FlashcardCubit>();
         final isSaving = state.status == FlashcardStatus.saving;
 
         return ActionBottomSheetLayout(
@@ -106,7 +107,7 @@ class _FlashcardSheetView extends StatelessWidget {
                 ),
                 maxLines: 2,
                 enabled: !isSaving,
-                onChanged: (v) => context.read<FlashcardCubit>().setFront(v),
+                onChanged: cubit.setFront,
               ),
               const SizedBox(height: AppSpacing.sm),
               // Back field
@@ -118,7 +119,7 @@ class _FlashcardSheetView extends StatelessWidget {
                 ),
                 maxLines: 2,
                 enabled: !isSaving,
-                onChanged: (v) => context.read<FlashcardCubit>().setBack(v),
+                onChanged: cubit.setBack,
               ),
               const SizedBox(height: AppSpacing.sm),
               // Hint field
@@ -128,7 +129,7 @@ class _FlashcardSheetView extends StatelessWidget {
                   isDense: true,
                 ),
                 enabled: !isSaving,
-                onChanged: (v) => context.read<FlashcardCubit>().setHint(v),
+                onChanged: cubit.setHint,
               ),
               const SizedBox(height: AppSpacing.md),
               if (state.status == FlashcardStatus.failure)
@@ -144,7 +145,7 @@ class _FlashcardSheetView extends StatelessWidget {
               FilledButton(
                 onPressed: isSaving || !state.canSave
                     ? null
-                    : () => context.read<FlashcardCubit>().save(
+                    : () => cubit.save(
                         sourceId: selection.sourceId,
                         sourceType: selection.sourceType,
                       ),

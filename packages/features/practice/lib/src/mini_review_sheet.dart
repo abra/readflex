@@ -131,6 +131,8 @@ class _ReviewContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cubit = context.read<MiniReviewCubit>();
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -168,13 +170,13 @@ class _ReviewContent extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: () => context.read<MiniReviewCubit>().reveal(),
+              onPressed: cubit.reveal,
               child: Text(revealLabel(state.currentItem)),
             ),
           )
         else
           RatingButtons(
-            onRate: (rating) => context.read<MiniReviewCubit>().rate(rating),
+            onRate: cubit.rate,
           ),
       ],
     );

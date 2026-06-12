@@ -80,6 +80,7 @@ class _HighlightSheetView extends StatelessWidget {
           prev.status != curr.status ||
           prev.selectedColor != curr.selectedColor,
       builder: (context, state) {
+        final cubit = context.read<HighlightCubit>();
         final isSaving = state.status == HighlightSheetStatus.saving;
 
         return ActionBottomSheetLayout(
@@ -108,7 +109,7 @@ class _HighlightSheetView extends StatelessWidget {
                 children: HighlightColor.values.map((color) {
                   final isSelected = state.selectedColor == color;
                   return GestureDetector(
-                    onTap: () => context.read<HighlightCubit>().setColor(color),
+                    onTap: () => cubit.setColor(color),
                     behavior: HitTestBehavior.opaque,
                     child: SizedBox(
                       width: AppSizes.buttonHeight,
@@ -137,7 +138,7 @@ class _HighlightSheetView extends StatelessWidget {
                 ),
                 maxLines: 2,
                 enabled: !isSaving,
-                onChanged: (v) => context.read<HighlightCubit>().setNote(v),
+                onChanged: cubit.setNote,
               ),
               const SizedBox(height: AppSpacing.md),
               if (state.status == HighlightSheetStatus.failure)
@@ -153,7 +154,7 @@ class _HighlightSheetView extends StatelessWidget {
               FilledButton(
                 onPressed: isSaving
                     ? null
-                    : () => context.read<HighlightCubit>().save(
+                    : () => cubit.save(
                         text: selection.selectedText,
                         sourceId: selection.sourceId,
                         sourceType: selection.sourceType,

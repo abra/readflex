@@ -365,6 +365,7 @@ class _SuccessBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bloc = context.read<DictionaryBloc>();
     final cs = context.colors;
     final text = context.text;
     final appColors = context.appColors;
@@ -408,14 +409,14 @@ class _SuccessBody extends StatelessWidget {
               const SizedBox(height: AppSpacing.lg),
               SearchField(
                 hintText: 'Search words...',
-                onChanged: (query) => context.read<DictionaryBloc>().add(
+                onChanged: (query) => bloc.add(
                   DictionarySearchChanged(query),
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
               _FilterChipsBar(
                 active: state.filter,
-                onSelected: (filter) => context.read<DictionaryBloc>().add(
+                onSelected: (filter) => bloc.add(
                   DictionaryFilterChanged(filter),
                 ),
               ),
