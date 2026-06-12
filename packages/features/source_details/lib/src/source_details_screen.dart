@@ -99,6 +99,10 @@ class SourceDetailsView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: BlocBuilder<SourceDetailsBloc, SourceDetailsState>(
+        buildWhen: (previous, current) =>
+            previous.status != current.status ||
+            previous.source != current.source ||
+            previous.reviewSummary != current.reviewSummary,
         builder: (context, state) {
           return SafeArea(
             bottom: false,

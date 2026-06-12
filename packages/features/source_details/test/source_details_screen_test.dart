@@ -437,7 +437,7 @@ void main() {
       },
     );
 
-    testWidgets('updates bottom action after source reloads from reader', (
+    testWidgets('updates details after source reloads from reader', (
       tester,
     ) async {
       await tester.pumpSourceDetails(
@@ -450,17 +450,26 @@ void main() {
           repository.source = source.copyWith(
             lastOpenedAt: DateTime(2026, 1, 2),
           );
+          highlightRepository.count = 6;
+          flashcardRepository.count = 7;
+          dictionaryRepository.count = 8;
         },
       );
 
       expect(find.text('Start reading'), findsOneWidget);
       expect(find.text('Continue reading'), findsNothing);
+      expect(find.text('2 saved passages'), findsOneWidget);
+      expect(find.text('3 cards created'), findsOneWidget);
+      expect(find.text('4 words collected'), findsOneWidget);
 
       await tester.tap(find.text('Start reading'));
       await tester.pumpAndSettle();
 
       expect(find.text('Start reading'), findsNothing);
       expect(find.text('Continue reading'), findsOneWidget);
+      expect(find.text('6 saved passages'), findsOneWidget);
+      expect(find.text('7 cards created'), findsOneWidget);
+      expect(find.text('8 words collected'), findsOneWidget);
     });
 
     testWidgets('keeps source cover frame bounds at stable 2:3 ratio', (
