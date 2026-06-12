@@ -291,12 +291,6 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     final pageProgressionRtl = context.select<ReaderBloc, bool>(
       (b) => b.state.pageProgressionRtl,
     );
-    final canGoPrevious = context.select<ReaderBloc, bool>(
-      (b) => !b.state.atStart,
-    );
-    final canGoNext = context.select<ReaderBloc, bool>(
-      (b) => !b.state.atEnd,
-    );
     final format = context.select<ReaderBloc, BookFormat?>(
       (b) => b.state.book?.format,
     );
@@ -308,7 +302,6 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     // foliate-js customCSS. Chrome (passed-through Stack siblings)
     // pulls colours from the app theme themselves; they don't take
     // a `readerTheme` prop any more.
-    final layout = BookLayoutPreset.fromId(appearance.layoutId).data;
     final readerTheme = ReaderThemePreset.fromId(appearance.themeId).data;
     final systemUiStyle = readerSystemUiOverlayStyle(
       readerTheme: readerTheme,
@@ -347,15 +340,9 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
             ),
             ReaderTapZoneHintDriver(readerTheme: readerTheme),
             const _ReaderChromeDismissBarrierDriver(),
-            ReaderTapEdgeIndicator(
+            _ReaderTapEdgeIndicatorDriver(
               readerTheme: readerTheme,
-              axis: _readerTapAxisForPageTurnStyle(appearance.pageTurnStyle),
-              pageProgressionRtl: pageProgressionRtl,
-              canGoPrevious: canGoPrevious,
-              canGoNext: canGoNext,
-              contentTopMargin: layout.topMargin,
-              contentBottomMargin: layout.bottomMargin,
-              contentSideMargin: appearance.sideMargin,
+              appearance: appearance,
               visible: webViewReady,
             ),
             const _ReaderTopChromeDriver(),
@@ -393,6 +380,44 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ReaderTapEdgeIndicatorDriver extends StatelessWidget {
+  const _ReaderTapEdgeIndicatorDriver({
+    required this.readerTheme,
+    required this.appearance,
+    required this.visible,
+  });
+
+  final ReaderThemeData readerTheme;
+  final ReaderAppearancePreferences appearance;
+  final bool visible;
+
+  @override
+  Widget build(BuildContext context) {
+    final pageProgressionRtl = context.select<ReaderBloc, bool>(
+      (b) => b.state.pageProgressionRtl,
+    );
+    final canGoPrevious = context.select<ReaderBloc, bool>(
+      (b) => !b.state.atStart,
+    );
+    final canGoNext = context.select<ReaderBloc, bool>(
+      (b) => !b.state.atEnd,
+    );
+    final layout = BookLayoutPreset.fromId(appearance.layoutId).data;
+
+    return ReaderTapEdgeIndicator(
+      readerTheme: readerTheme,
+      axis: _readerTapAxisForPageTurnStyle(appearance.pageTurnStyle),
+      pageProgressionRtl: pageProgressionRtl,
+      canGoPrevious: canGoPrevious,
+      canGoNext: canGoNext,
+      contentTopMargin: layout.topMargin,
+      contentBottomMargin: layout.bottomMargin,
+      contentSideMargin: appearance.sideMargin,
+      visible: visible,
     );
   }
 }
