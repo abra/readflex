@@ -281,13 +281,6 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
         .select<ReaderAppearanceCubit, ReaderAppearancePreferences>(
           (c) => c.state.effectiveAppearance,
         );
-    final chromeOverlay = context
-        .select<ReaderUiCubit, _ReaderChromeOverlaySnapshot>(
-          (c) => (
-            chromeVisible: c.state.chromeVisible,
-            overlay: c.state.overlay,
-          ),
-        );
     final pageProgressionRtl = context.select<ReaderBloc, bool>(
       (b) => b.state.pageProgressionRtl,
     );
@@ -303,25 +296,17 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     // pulls colours from the app theme themselves; they don't take
     // a `readerTheme` prop any more.
     final readerTheme = ReaderThemePreset.fromId(appearance.themeId).data;
-    final systemUiStyle = readerSystemUiOverlayStyle(
-      readerTheme: readerTheme,
-      chromeVisible: chromeOverlay.chromeVisible,
-      chromeSurfaceColor: context.colors.surface,
-      appNavigationBarColor: Theme.of(context).scaffoldBackgroundColor,
-    );
     _debugTraceReader(
       '_ReadyContentBody build '
       'sourceId=$sourceId '
       'webViewReady=$webViewReady '
-      'chrome=${chromeOverlay.chromeVisible} '
-      'overlay=${chromeOverlay.overlay.name} '
       'format=$format '
       'theme=${appearance.themeId} '
       'layout=${appearance.layoutId}',
     );
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: systemUiStyle,
+    return _ReaderSystemUiOverlayDriver(
+      readerTheme: readerTheme,
       child: BlocListener<ReaderUiCubit, ReaderUiState>(
         listenWhen: (previous, current) =>
             previous.clearSearchToken != current.clearSearchToken,
@@ -369,8 +354,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
             const _ReaderImagePageProgressOverlayDriver(),
             _ContextPanelDriver(textActions: widget.textActions),
             const _ReviewReminderDriver(),
-            _ReaderTocDrawerDriver(
-              visible: chromeOverlay.overlay == ReaderOverlay.toc,
+            _ReaderTocDrawerVisibilityDriver(
               format: format,
               pageProgressionRtl: pageProgressionRtl,
               onClose: _closeTocDrawer,
@@ -378,8 +362,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
               onBookmarkSelected: _goToBookmark,
               onBookmarkDeleted: _deleteBookmark,
             ),
-            _ReaderSearchDrawer(
-              visible: chromeOverlay.overlay == ReaderOverlay.search,
+            _ReaderSearchDrawerVisibilityDriver(
               format: format,
               pageProgressionRtl: pageProgressionRtl,
               onClose: _closeSearchDrawer,
@@ -390,6 +373,107 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ReaderSystemUiOverlayDriver extends StatelessWidget {
+  const _ReaderSystemUiOverlayDriver({
+    required this.readerTheme,
+    required this.child,
+  });
+
+  final ReaderThemeData readerTheme;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final chromeVisible = context.select<ReaderUiCubit, bool>(
+      (c) => c.state.chromeVisible,
+    );
+    final systemUiStyle = readerSystemUiOverlayStyle(
+      readerTheme: readerTheme,
+      chromeVisible: chromeVisible,
+      chromeSurfaceColor: context.colors.surface,
+      appNavigationBarColor: Theme.of(context).scaffoldBackgroundColor,
+    );
+    _debugTraceReader(
+      '_ReaderSystemUiOverlayDriver build chrome=$chromeVisible',
+    );
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemUiStyle,
+      child: child,
+    );
+  }
+}
+
+class _ReaderTocDrawerVisibilityDriver extends StatelessWidget {
+  const _ReaderTocDrawerVisibilityDriver({
+    required this.format,
+    required this.pageProgressionRtl,
+    required this.onClose,
+    required this.onItemSelected,
+    required this.onBookmarkSelected,
+    required this.onBookmarkDeleted,
+  });
+
+  final BookFormat? format;
+  final bool pageProgressionRtl;
+  final void Function({bool restoreChrome}) onClose;
+  final ValueChanged<ReaderTocItem> onItemSelected;
+  final ValueChanged<SourceBookmark> onBookmarkSelected;
+  final ValueChanged<SourceBookmark> onBookmarkDeleted;
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = context.select<ReaderUiCubit, bool>(
+      (c) => c.state.overlay == ReaderOverlay.toc,
+    );
+
+    return _ReaderTocDrawerDriver(
+      visible: visible,
+      format: format,
+      pageProgressionRtl: pageProgressionRtl,
+      onClose: onClose,
+      onItemSelected: onItemSelected,
+      onBookmarkSelected: onBookmarkSelected,
+      onBookmarkDeleted: onBookmarkDeleted,
+    );
+  }
+}
+
+class _ReaderSearchDrawerVisibilityDriver extends StatelessWidget {
+  const _ReaderSearchDrawerVisibilityDriver({
+    required this.format,
+    required this.pageProgressionRtl,
+    required this.onClose,
+    required this.onSearch,
+    required this.onClearSearch,
+    required this.onResultSelected,
+  });
+
+  final BookFormat? format;
+  final bool pageProgressionRtl;
+  final void Function({bool restoreChrome, bool clearSearch}) onClose;
+  final Stream<ReaderSearchEvent> Function(String query) onSearch;
+  final VoidCallback onClearSearch;
+  final ValueChanged<ReaderSearchResult> onResultSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = context.select<ReaderUiCubit, bool>(
+      (c) => c.state.overlay == ReaderOverlay.search,
+    );
+
+    return _ReaderSearchDrawer(
+      visible: visible,
+      format: format,
+      pageProgressionRtl: pageProgressionRtl,
+      onClose: onClose,
+      onSearch: onSearch,
+      onClearSearch: onClearSearch,
+      onResultSelected: onResultSelected,
     );
   }
 }
