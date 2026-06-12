@@ -129,9 +129,14 @@ class _ProfileViewState extends State<_ProfileView> {
                   // ─── Appearance ───
                   SectionLabel(label: 'APPEARANCE'),
                   const SizedBox(height: AppSpacing.md),
-                  BlocBuilder<ProfileAppearanceCubit, ProfileAppearanceState>(
-                    builder: (context, state) => _ThemeRow(
-                      themeMode: state.themeMode,
+                  BlocSelector<
+                    ProfileAppearanceCubit,
+                    ProfileAppearanceState,
+                    ThemeMode
+                  >(
+                    selector: (state) => state.themeMode,
+                    builder: (context, themeMode) => _ThemeRow(
+                      themeMode: themeMode,
                       onChanged: (mode) {
                         context.read<ProfileAppearanceCubit>().setThemeMode(
                           mode,
@@ -233,29 +238,36 @@ class _ProfileViewState extends State<_ProfileView> {
                   const SizedBox(height: AppSpacing.lg),
 
                   // ─── Sign out ───
-                  BlocBuilder<ProfileCubit, ProfileState>(
-                    builder: (context, state) {
-                      if (!state.isAuthenticated) {
+                  BlocSelector<ProfileCubit, ProfileState, bool>(
+                    selector: (state) => state.isAuthenticated,
+                    builder: (context, isAuthenticated) {
+                      if (!isAuthenticated) {
                         return const SizedBox.shrink();
                       }
-                      return Center(
-                        child: TextButton.icon(
-                          onPressed: state.isLoading
-                              ? null
-                              : () => context.read<ProfileCubit>().signOut(),
-                          icon: Icon(
-                            AppIcons.logOut,
-                            size: AppIconSize.sm,
-                            color: cs.error,
-                          ),
-                          label: Text(
-                            'Sign Out',
-                            style: context.text.bodyMedium.copyWith(
-                              fontWeight: FontWeight.w500,
-                              color: cs.error,
+                      return BlocSelector<ProfileCubit, ProfileState, bool>(
+                        selector: (state) => state.isLoading,
+                        builder: (context, isLoading) {
+                          return Center(
+                            child: TextButton.icon(
+                              onPressed: isLoading
+                                  ? null
+                                  : () =>
+                                        context.read<ProfileCubit>().signOut(),
+                              icon: Icon(
+                                AppIcons.logOut,
+                                size: AppIconSize.sm,
+                                color: cs.error,
+                              ),
+                              label: Text(
+                                'Sign Out',
+                                style: context.text.bodyMedium.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                  color: cs.error,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
+                          );
+                        },
                       );
                     },
                   ),
