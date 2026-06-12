@@ -333,118 +333,179 @@ class _LibraryViewState extends State<_LibraryView> {
           prev.deletionEffect != curr.deletionEffect &&
           curr.deletionEffect != null,
       listener: _onLibraryStateForToast,
-      child: BlocBuilder<LibrarySelectionCubit, LibrarySelectionState>(
-        builder: (context, selection) {
-          return PopScope(
-            // Intercept the system back gesture only while a selection is
-            // active so the user can cancel multi-select without leaving
-            // the tab.
-            canPop: !selection.isActive,
-            onPopInvokedWithResult: (didPop, _) {
-              if (didPop) return;
-              context.read<LibrarySelectionCubit>().clear();
-            },
-            child: Scaffold(
-              floatingActionButton: selection.isActive
-                  ? _LibraryDeleteFab(
-                      onDeletePressed: () => _handleDeleteSelected(context),
-                    )
-                  : _LibraryFab(
-                      // null while an import sheet is in-flight — Flutter's
-                      // FAB renders disabled (greyed) when onPressed is null,
-                      // matching the actual re-entry guard.
-                      onAddPressed: _addInFlight
-                          ? null
-                          : () => _handleAdd(context),
-                    ),
-              body: Stack(
-                children: [
-                  SafeArea(
-                    bottom: false,
-                    child: BlocBuilder<LibraryBloc, LibraryState>(
-                      buildWhen: (prev, curr) =>
-                          prev.status != curr.status ||
-                          prev.books != curr.books ||
-                          prev.articles != curr.articles ||
-                          prev.filter != curr.filter ||
-                          prev.collectionScopes != curr.collectionScopes ||
-                          prev.selectedCollectionScope !=
-                              curr.selectedCollectionScope ||
-                          prev.searchQuery != curr.searchQuery,
-                      builder: (context, state) {
-                        final bloc = context.read<LibraryBloc>();
+      child: _LibrarySelectionPopScope(
+        onCancelSelection: () => context.read<LibrarySelectionCubit>().clear(),
+        child: Scaffold(
+          floatingActionButton: _LibraryFabDriver(
+            addInFlight: _addInFlight,
+            onAddPressed: () => _handleAdd(context),
+            onDeletePressed: () => _handleDeleteSelected(context),
+          ),
+          body: Stack(
+            children: [
+              SafeArea(
+                bottom: false,
+                child: BlocBuilder<LibraryBloc, LibraryState>(
+                  buildWhen: (prev, curr) =>
+                      prev.status != curr.status ||
+                      prev.books != curr.books ||
+                      prev.articles != curr.articles ||
+                      prev.filter != curr.filter ||
+                      prev.collectionScopes != curr.collectionScopes ||
+                      prev.selectedCollectionScope !=
+                          curr.selectedCollectionScope ||
+                      prev.searchQuery != curr.searchQuery,
+                  builder: (context, state) {
+                    final bloc = context.read<LibraryBloc>();
 
-                        return switch (state.status) {
-                          LibraryStatus.initial || LibraryStatus.loading =>
-                            const CenteredCircularProgressIndicator(),
-                          LibraryStatus.failure => ErrorState(
-                            message: 'Failed to load library',
-                            retryLabel: 'Retry',
-                            onRetry: () =>
-                                bloc.add(const LibraryLoadRequested()),
-                          ),
-                          LibraryStatus.success => Column(
-                            children: [
-                              LibraryHeader(
-                                state: state,
-                                searchController: _searchController,
-                                onSearchChanged: (query) =>
-                                    bloc.add(LibrarySearchQueryChanged(query)),
-                                onFilterChanged: (filter) =>
-                                    bloc.add(LibraryFilterChanged(filter)),
-                                onCollectionScopePressed: () =>
-                                    _handleCollectionScopePressed(
-                                      context,
-                                      state,
-                                    ),
-                                onCollectionScopeCleared: () =>
-                                    _handleCollectionScopeCleared(context),
-                              ),
-                              Expanded(
-                                child: ScrollEdgeFadeStack(
-                                  child: LibraryBody(
-                                    state: state,
-                                    selection: selection,
-                                    scrollController: _scrollController,
-                                    onSourcePressed: (source) =>
-                                        _handleSourceTap(context, source),
-                                    onSourceLongPressed: (source) =>
-                                        _handleSourceLongPress(context, source),
-                                    onConfirmSwipeDelete: (source) =>
-                                        _confirmAndDispatchSwipe(
-                                          context,
-                                          source,
-                                        ),
-                                    onRefresh: () async {
-                                      bloc.add(
-                                        const LibraryRefreshRequested(),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        };
-                      },
-                    ),
-                  ),
-                  if (selection.isActive)
-                    PositionedDirectional(
-                      start: AppSpacing.lg,
-                      bottom:
-                          MediaQuery.paddingOf(context).bottom + AppSpacing.lg,
-                      child: _LibraryAddCollectionFab(
-                        onAddToCollectionPressed: () =>
-                            _handleAddSelectedToCollection(context),
+                    return switch (state.status) {
+                      LibraryStatus.initial || LibraryStatus.loading =>
+                        const CenteredCircularProgressIndicator(),
+                      LibraryStatus.failure => ErrorState(
+                        message: 'Failed to load library',
+                        retryLabel: 'Retry',
+                        onRetry: () => bloc.add(const LibraryLoadRequested()),
                       ),
-                    ),
-                ],
+                      LibraryStatus.success => Column(
+                        children: [
+                          LibraryHeader(
+                            state: state,
+                            searchController: _searchController,
+                            onSearchChanged: (query) =>
+                                bloc.add(LibrarySearchQueryChanged(query)),
+                            onFilterChanged: (filter) =>
+                                bloc.add(LibraryFilterChanged(filter)),
+                            onCollectionScopePressed: () =>
+                                _handleCollectionScopePressed(
+                                  context,
+                                  state,
+                                ),
+                            onCollectionScopeCleared: () =>
+                                _handleCollectionScopeCleared(context),
+                          ),
+                          Expanded(
+                            child: ScrollEdgeFadeStack(
+                              child: LibraryBody(
+                                state: state,
+                                scrollController: _scrollController,
+                                onSourcePressed: (source) =>
+                                    _handleSourceTap(context, source),
+                                onSourceLongPressed: (source) =>
+                                    _handleSourceLongPress(context, source),
+                                onConfirmSwipeDelete: (source) =>
+                                    _confirmAndDispatchSwipe(
+                                      context,
+                                      source,
+                                    ),
+                                onRefresh: () async {
+                                  bloc.add(
+                                    const LibraryRefreshRequested(),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    };
+                  },
+                ),
               ),
-            ),
-          );
-        },
+              _LibraryAddCollectionFabDriver(
+                onAddToCollectionPressed: () =>
+                    _handleAddSelectedToCollection(context),
+              ),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+}
+
+class _LibrarySelectionPopScope extends StatelessWidget {
+  const _LibrarySelectionPopScope({
+    required this.onCancelSelection,
+    required this.child,
+  });
+
+  final VoidCallback onCancelSelection;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<LibrarySelectionCubit, LibrarySelectionState, bool>(
+      selector: (state) => state.isActive,
+      builder: (context, selectionActive) {
+        return PopScope(
+          // Intercept the system back gesture only while a selection is
+          // active so the user can cancel multi-select without leaving
+          // the tab.
+          canPop: !selectionActive,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop) return;
+            onCancelSelection();
+          },
+          child: child,
+        );
+      },
+    );
+  }
+}
+
+class _LibraryFabDriver extends StatelessWidget {
+  const _LibraryFabDriver({
+    required this.addInFlight,
+    required this.onAddPressed,
+    required this.onDeletePressed,
+  });
+
+  final bool addInFlight;
+  final VoidCallback onAddPressed;
+  final VoidCallback onDeletePressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<LibrarySelectionCubit, LibrarySelectionState, bool>(
+      selector: (state) => state.isActive,
+      builder: (context, selectionActive) {
+        if (selectionActive) {
+          return _LibraryDeleteFab(onDeletePressed: onDeletePressed);
+        }
+
+        return _LibraryFab(
+          // null while an import sheet is in-flight — Flutter's FAB renders
+          // disabled (greyed) when onPressed is null, matching the actual
+          // re-entry guard.
+          onAddPressed: addInFlight ? null : onAddPressed,
+        );
+      },
+    );
+  }
+}
+
+class _LibraryAddCollectionFabDriver extends StatelessWidget {
+  const _LibraryAddCollectionFabDriver({
+    required this.onAddToCollectionPressed,
+  });
+
+  final VoidCallback onAddToCollectionPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<LibrarySelectionCubit, LibrarySelectionState, bool>(
+      selector: (state) => state.isActive,
+      builder: (context, selectionActive) {
+        if (!selectionActive) return const SizedBox.shrink();
+
+        return PositionedDirectional(
+          start: AppSpacing.lg,
+          bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.lg,
+          child: _LibraryAddCollectionFab(
+            onAddToCollectionPressed: onAddToCollectionPressed,
+          ),
+        );
+      },
     );
   }
 }

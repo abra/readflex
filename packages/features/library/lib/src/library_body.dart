@@ -23,7 +23,6 @@ import 'library_selection_cubit.dart';
 class LibraryBody extends StatelessWidget {
   const LibraryBody({
     required this.state,
-    required this.selection,
     required this.scrollController,
     required this.onSourcePressed,
     required this.onSourceLongPressed,
@@ -33,7 +32,6 @@ class LibraryBody extends StatelessWidget {
   });
 
   final LibraryState state;
-  final LibrarySelectionState selection;
   final ScrollController scrollController;
   final void Function(LibrarySource source) onSourcePressed;
   final void Function(LibrarySource source) onSourceLongPressed;
@@ -73,23 +71,32 @@ class LibraryBody extends StatelessWidget {
       onRefresh: onRefresh,
       child: BlocBuilder<LibraryLayoutCubit, LibraryLayoutMode>(
         builder: (context, layoutMode) {
-          return switch (layoutMode) {
-            LibraryLayoutMode.list => LibraryListView(
-              sources: visibleItems,
-              selection: selection,
-              scrollController: scrollController,
-              onSourcePressed: onSourcePressed,
-              onSourceLongPressed: onSourceLongPressed,
-              onConfirmSwipeDelete: onConfirmSwipeDelete,
-            ),
-            LibraryLayoutMode.grid => LibraryGridView(
-              sources: visibleItems,
-              selection: selection,
-              scrollController: scrollController,
-              onSourcePressed: onSourcePressed,
-              onSourceLongPressed: onSourceLongPressed,
-            ),
-          };
+          return BlocSelector<
+            LibrarySelectionCubit,
+            LibrarySelectionState,
+            LibrarySelectionState
+          >(
+            selector: (state) => state,
+            builder: (context, selection) {
+              return switch (layoutMode) {
+                LibraryLayoutMode.list => LibraryListView(
+                  sources: visibleItems,
+                  selection: selection,
+                  scrollController: scrollController,
+                  onSourcePressed: onSourcePressed,
+                  onSourceLongPressed: onSourceLongPressed,
+                  onConfirmSwipeDelete: onConfirmSwipeDelete,
+                ),
+                LibraryLayoutMode.grid => LibraryGridView(
+                  sources: visibleItems,
+                  selection: selection,
+                  scrollController: scrollController,
+                  onSourcePressed: onSourcePressed,
+                  onSourceLongPressed: onSourceLongPressed,
+                ),
+              };
+            },
+          );
         },
       ),
     );
