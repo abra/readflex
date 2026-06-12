@@ -4,6 +4,7 @@ import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:reader_webview/reader_webview.dart';
@@ -11,6 +12,15 @@ import 'package:reader_webview/reader_webview.dart';
 part 'reader_event.dart';
 
 part 'reader_state.dart';
+
+const _traceReaderBuilds = bool.fromEnvironment(
+  'READFLEX_TRACE_READER_BUILDS',
+);
+
+void _debugTraceReaderBloc(String message) {
+  if (!_traceReaderBuilds || kReleaseMode) return;
+  debugPrint('[reader-trace] $message');
+}
 
 /// Owns the loaded book and its highlights for the reader screen.
 ///
@@ -242,6 +252,15 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         currentPageBookmarkCfi: event.currentPageBookmarkCfi,
         currentPageBookmarkId: event.currentPageBookmarkId,
       ),
+    );
+    _debugTraceReaderBloc(
+      'ReaderBookPositionUpdated emit '
+      'progress=${progress.toStringAsFixed(3)} '
+      'bookPage=$bookCurrentPage/${event.bookTotalPages} '
+      'chapterPage=${event.chapterCurrentPage}/${event.chapterTotalPages} '
+      'atStart=${event.atStart} '
+      'atEnd=${event.atEnd} '
+      'rtl=${event.pageProgressionRtl}',
     );
     final isFirstArticleProgress =
         state.sourceType == SourceType.article &&

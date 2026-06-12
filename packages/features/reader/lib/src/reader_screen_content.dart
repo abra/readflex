@@ -309,6 +309,16 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
       chromeSurfaceColor: context.colors.surface,
       appNavigationBarColor: Theme.of(context).scaffoldBackgroundColor,
     );
+    _debugTraceReader(
+      '_ReadyContentBody build '
+      'sourceId=$sourceId '
+      'webViewReady=$webViewReady '
+      'chrome=${chromeOverlay.chromeVisible} '
+      'overlay=${chromeOverlay.overlay.name} '
+      'format=$format '
+      'theme=${appearance.themeId} '
+      'layout=${appearance.layoutId}',
+    );
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemUiStyle,
@@ -407,6 +417,14 @@ class _ReaderTapEdgeIndicatorDriver extends StatelessWidget {
       (b) => !b.state.atEnd,
     );
     final layout = BookLayoutPreset.fromId(appearance.layoutId).data;
+    _debugTraceReader(
+      '_ReaderTapEdgeIndicatorDriver build '
+      'visible=$visible '
+      'rtl=$pageProgressionRtl '
+      'canGoPrevious=$canGoPrevious '
+      'canGoNext=$canGoNext '
+      'pageTurn=${appearance.pageTurnStyle.id}',
+    );
 
     return ReaderTapEdgeIndicator(
       readerTheme: readerTheme,
@@ -478,6 +496,15 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
   @override
   void didUpdateWidget(covariant _ReaderWebViewBody oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final sourceChanged = oldWidget.sourceId != widget.sourceId;
+    final themeChanged = oldWidget.readerTheme != widget.readerTheme;
+    if (sourceChanged || themeChanged) {
+      _debugTraceReader(
+        '_ReaderWebViewBody didUpdateWidget '
+        'sourceChanged=$sourceChanged '
+        'themeChanged=$themeChanged',
+      );
+    }
     if (oldWidget.sourceId != widget.sourceId) {
       _foliateReady = false;
     }
@@ -559,6 +586,17 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         .select<ReaderAppearanceCubit, ReaderAppearancePreferences>(
           (c) => c.state.effectiveAppearance,
         );
+    _debugTraceReader(
+      '_ReaderWebViewBody build '
+      'sourceId=${state.sourceId} '
+      'foliateReady=$_foliateReady '
+      'progress=${state.book?.readingProgress.toStringAsFixed(3)} '
+      'highlights=${highlights.length} '
+      'bookmarks=${bookmarks.length} '
+      'theme=${appearance.themeId} '
+      'layout=${appearance.layoutId} '
+      'pageTurn=${appearance.pageTurnStyle.id}',
+    );
 
     final tapAxis = _readerTapAxisForPageTurnStyle(appearance.pageTurnStyle);
 
@@ -645,11 +683,21 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       bookmarks: bookmarks,
       onReady: () {
         if (mounted && !_foliateReady) {
+          _debugTraceReader('_ReaderWebViewBody onReady');
           setState(() => _foliateReady = true);
           widget.onReady?.call();
         }
       },
       onPositionChanged: (position) {
+        _debugTraceReader(
+          '_ReaderWebViewBody onPositionChanged '
+          'progress=${position.fraction.toStringAsFixed(3)} '
+          'bookPage=${position.bookCurrentPage}/${position.bookTotalPages} '
+          'chapterPage=${position.chapterCurrentPage}/'
+          '${position.chapterTotalPages} '
+          'atStart=${position.atStart} '
+          'atEnd=${position.atEnd}',
+        );
         bloc.add(
           ReaderBookPositionUpdated(
             cfi: position.cfi,

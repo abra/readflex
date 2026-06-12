@@ -4,6 +4,7 @@ import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/services.dart';
@@ -66,11 +67,19 @@ const _kReaderBrightnessChromeDragHeight =
     _kReaderBrightnessChromeHeight - AppSpacing.sm * 2;
 
 const _kReaderTocTileEstimatedHeight = 60.0;
+const _traceReaderBuilds = bool.fromEnvironment(
+  'READFLEX_TRACE_READER_BUILDS',
+);
 
 typedef _ReaderChromeOverlaySnapshot = ({
   bool chromeVisible,
   ReaderOverlay overlay,
 });
+
+void _debugTraceReader(String message) {
+  if (!_traceReaderBuilds || kReleaseMode) return;
+  debugPrint('[reader-trace] $message');
+}
 
 double _snapReaderBrightnessButtonValue(double value, double delta) {
   final percent = value * 100;
