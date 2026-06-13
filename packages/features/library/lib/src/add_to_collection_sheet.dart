@@ -20,6 +20,8 @@ Future<bool?> showAddToCollectionSheet({
   );
 }
 
+/// Sheet that adds the selected source ids to favourites, an existing
+/// collection, or a newly created collection.
 class _AddToCollectionSheet extends StatefulWidget {
   const _AddToCollectionSheet({required this.sourceIds});
 
@@ -100,6 +102,7 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet> {
   }
 }
 
+/// Loaded add-to-collection form content.
 class _CollectionContent extends StatelessWidget {
   const _CollectionContent({
     required this.state,

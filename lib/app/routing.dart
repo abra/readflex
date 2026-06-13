@@ -189,7 +189,8 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                   authService: deps.authService,
                   subscriptionService: deps.subscriptionService,
                   preferencesService: deps.preferencesService,
-                  // TODO: navigate to sign in flow.
+                  // Auth is still backed by NoopAuthService in composition;
+                  // keep this stub until a real sign-in route or sheet exists.
                   onSignInPressed: () {},
                   onDesignSystemPressed: () => context.push(
                     AppRoutes.designSystem,
@@ -379,6 +380,8 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
   );
 }
 
+/// GoRouter payload for opening source details without reloading the source
+/// before the first frame.
 class _SourceDetailsRouteExtra {
   const _SourceDetailsRouteExtra({
     this.initialSource,
@@ -402,6 +405,8 @@ Future<void> _openExternalUrl(String rawUrl) async {
   }
 }
 
+/// GoRouter payload for opening the reader with a warm source and a post-open
+/// refresh callback from the previous screen.
 class _ReaderRouteExtra {
   const _ReaderRouteExtra({
     this.initialSource,

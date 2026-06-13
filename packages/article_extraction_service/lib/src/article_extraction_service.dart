@@ -3,6 +3,7 @@ import 'package:domain_models/domain_models.dart';
 abstract class ArticleExtractionService {
   Future<ExtractedArticle> extract(String url);
 
+  /// Default no-op so stateless implementations do not need boilerplate.
   void dispose() {}
 }
 

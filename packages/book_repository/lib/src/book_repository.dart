@@ -551,6 +551,10 @@ String? _extensionForDetectedFormat(String format) {
   };
 }
 
+/// Signature and MIME diagnostics for imported cover bytes.
+///
+/// Used only for warning logs and extension correction; image decoding still
+/// happens in Flutter's image pipeline.
 final class _CoverDiagnostics {
   const _CoverDiagnostics({
     required this.mimeType,

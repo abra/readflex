@@ -397,6 +397,10 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
   }
 }
 
+/// Stable deletion metadata captured before the source list refreshes.
+///
+/// The toast needs the old title/count even after the deleted row disappears
+/// from [LibraryState.sources].
 class _LibraryDeletionDescriptor {
   const _LibraryDeletionDescriptor({
     required this.count,
@@ -407,6 +411,7 @@ class _LibraryDeletionDescriptor {
   final String? singleTitle;
 }
 
+/// Complete repository snapshot loaded in one BLoC operation.
 class _LibrarySnapshot {
   const _LibrarySnapshot({
     required this.books,
@@ -419,6 +424,8 @@ class _LibrarySnapshot {
   final List<LibraryCollectionScope> collectionScopes;
 }
 
+/// Temporary accumulator for smart collection scopes derived from source
+/// metadata rather than persisted collections.
 class _SmartCollectionGroup {
   _SmartCollectionGroup({required this.label});
 

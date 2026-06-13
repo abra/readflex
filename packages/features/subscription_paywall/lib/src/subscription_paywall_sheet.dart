@@ -45,6 +45,7 @@ class SubscriptionPaywallSheet extends StatelessWidget {
   }
 }
 
+/// Paywall body bound to [SubscriptionPaywallCubit].
 class _SubscriptionPaywallSheetView extends StatelessWidget {
   const _SubscriptionPaywallSheetView();
 

@@ -1,5 +1,6 @@
 part of 'reader_screen.dart';
 
+/// Collects TOC/bookmark state from [ReaderBloc] and feeds the drawer UI.
 class _ReaderTocDrawerDriver extends StatelessWidget {
   const _ReaderTocDrawerDriver({
     required this.visible,
@@ -53,6 +54,7 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
   }
 }
 
+/// Sliding full-height drawer that hosts chapter and bookmark tabs.
 class _ReaderTocDrawer extends StatelessWidget {
   const _ReaderTocDrawer({
     required this.visible,
@@ -119,6 +121,8 @@ class _ReaderTocDrawer extends StatelessWidget {
   }
 }
 
+/// Stateful drawer body because chapter and bookmark searches keep separate
+/// local text controllers.
 class _ReaderTocDrawerContent extends StatefulWidget {
   const _ReaderTocDrawerContent({
     required this.format,
@@ -286,6 +290,8 @@ class _ReaderDrawerTabLabel extends StatelessWidget {
   }
 }
 
+/// Searchable chapter/bookmark tab that auto-scrolls to the active item when
+/// the drawer opens.
 class _ReaderTocTab extends StatefulWidget {
   const _ReaderTocTab({
     required this.controller,
@@ -673,6 +679,7 @@ class _ReaderBookmarkListTile extends StatelessWidget {
   }
 }
 
+/// Sliding drawer dedicated to full-text search inside the current book.
 class _ReaderSearchDrawer extends StatelessWidget {
   const _ReaderSearchDrawer({
     required this.visible,
@@ -725,6 +732,7 @@ class _ReaderSearchDrawer extends StatelessWidget {
   }
 }
 
+/// Owns the search field focus/controller and resets search state when hidden.
 class _ReaderSearchDrawerContent extends StatefulWidget {
   const _ReaderSearchDrawerContent({
     required this.visible,
@@ -1057,6 +1065,7 @@ class _ReaderSearchResultTile extends StatelessWidget {
   }
 }
 
+/// Shared padding/frame wrapper for drawer tab bodies.
 class _ReaderDrawerContentFrame extends StatelessWidget {
   const _ReaderDrawerContentFrame({required this.child});
 
@@ -1078,6 +1087,7 @@ class _ReaderDrawerContentFrame extends StatelessWidget {
   }
 }
 
+/// Compact empty-state message used inside reader drawers.
 class _ReaderDrawerEmptyState extends StatelessWidget {
   const _ReaderDrawerEmptyState({
     required this.message,

@@ -1,5 +1,6 @@
 part of 'reader_screen.dart';
 
+/// Calls [onSourceOpened] once after the reader records a real open timestamp.
 class _ReaderSourceOpenedNotifier extends StatefulWidget {
   const _ReaderSourceOpenedNotifier({
     required this.onSourceOpened,
@@ -88,6 +89,7 @@ class ReaderKeepAwakeScope extends StatefulWidget {
   State<ReaderKeepAwakeScope> createState() => _ReaderKeepAwakeScopeState();
 }
 
+/// Synchronizes keep-awake with both reader visibility and app foreground state.
 class _ReaderKeepAwakeScopeState extends State<ReaderKeepAwakeScope>
     with WidgetsBindingObserver {
   bool _keepAwakeRequested = false;
@@ -160,6 +162,7 @@ class _ReaderKeepAwakeScopeState extends State<ReaderKeepAwakeScope>
   Widget build(BuildContext context) => widget.child;
 }
 
+/// Activates temporary reader brightness while this route is foregrounded.
 class ReaderBrightnessLifecycleScope extends StatefulWidget {
   const ReaderBrightnessLifecycleScope({
     required this.cubit,
@@ -175,6 +178,8 @@ class ReaderBrightnessLifecycleScope extends StatefulWidget {
       _ReaderBrightnessLifecycleScopeState();
 }
 
+/// Resets reader brightness when the app backgrounds, route disposes, or the
+/// brightness cubit instance changes.
 class _ReaderBrightnessLifecycleScopeState
     extends State<ReaderBrightnessLifecycleScope>
     with WidgetsBindingObserver {

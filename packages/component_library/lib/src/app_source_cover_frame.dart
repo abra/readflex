@@ -63,6 +63,7 @@ class AppSourceCoverFrame extends StatelessWidget {
   }
 }
 
+/// Narrow left-edge shadow that gives generated covers a physical book spine.
 class _BindingShade extends StatelessWidget {
   const _BindingShade();
 

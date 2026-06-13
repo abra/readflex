@@ -100,6 +100,10 @@ class _ReviewReminderDriver extends StatelessWidget {
   }
 }
 
+/// Bottom action strip shown for an active text selection.
+///
+/// It converts reader selection fields into [TextSelectionContext] and invokes
+/// the injected [TextAction]s.
 class _ContextPanel extends StatelessWidget {
   const _ContextPanel({
     required this.selectedText,
@@ -194,6 +198,8 @@ class _ContextPanel extends StatelessWidget {
   }
 }
 
+/// Small reader-local prompt for starting due-item review without leaving the
+/// current source.
 class _ReviewReminderBanner extends StatelessWidget {
   const _ReviewReminderBanner({
     required this.onReview,

@@ -108,7 +108,7 @@ class _MaterialContextState extends State<MaterialContext>
   }
 }
 
-// Clamps system text scale so large accessibility font sizes don't break layouts.
+/// App-wide MediaQuery wrapper that caps text scale at the current design limit.
 class _MediaQueryRootOverride extends StatelessWidget {
   const _MediaQueryRootOverride({required this.child});
 

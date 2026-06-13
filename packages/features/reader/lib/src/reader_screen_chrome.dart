@@ -263,6 +263,10 @@ class ReaderBrightnessChromeDriver extends StatelessWidget {
   }
 }
 
+/// Inline brightness control shown beside the page while reader chrome is open.
+///
+/// Keeps drag preview state local so the cubit receives cheap preview updates
+/// and a single persisted value on drag end.
 class _ReaderBrightnessChrome extends StatefulWidget {
   const _ReaderBrightnessChrome({
     required this.visible,
@@ -551,6 +555,7 @@ class _ReaderBrightnessValueButton extends StatelessWidget {
   }
 }
 
+/// Shows the small page-bookmark marker only when chrome/overlays are hidden.
 class _ReaderPageBookmarkIndicatorDriver extends StatelessWidget {
   const _ReaderPageBookmarkIndicatorDriver();
 
@@ -626,6 +631,7 @@ class _ReaderPageBookmarkIndicator extends StatelessWidget {
   }
 }
 
+/// Pulls title and chrome visibility from blocs/cubits for the top chrome bar.
 class _ReaderTopChromeDriver extends StatelessWidget {
   const _ReaderTopChromeDriver();
 
@@ -823,6 +829,10 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
   }
 }
 
+/// Equality-optimized reader state slice used by [BlocSelector].
+///
+/// When the chrome is hidden, all visible-content fields are ignored so page
+/// boundary updates do not rebuild the bottom chrome subtree.
 class _ReaderBottomChromeSnapshot {
   const _ReaderBottomChromeSnapshot({
     required this.visible,
@@ -1374,6 +1384,7 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
   }
 }
 
+/// Feeds image-page progress metrics into the transient CBZ page overlay.
 class _ReaderImagePageProgressOverlayDriver extends StatelessWidget {
   const _ReaderImagePageProgressOverlayDriver();
 

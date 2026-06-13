@@ -54,6 +54,7 @@ class FlashcardSheet extends StatelessWidget {
   }
 }
 
+/// Flashcard form body bound to [FlashcardCubit].
 class _FlashcardSheetView extends StatelessWidget {
   const _FlashcardSheetView({required this.selection});
 

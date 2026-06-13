@@ -225,6 +225,10 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
   }
 }
 
+/// Stable deletion metadata captured before the dictionary list refreshes.
+///
+/// The toast needs the old word/count even after the deleted row disappears
+/// from [DictionaryState.entries].
 class _DictionaryDeletionDescriptor {
   const _DictionaryDeletionDescriptor({
     required this.count,

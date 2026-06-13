@@ -29,6 +29,7 @@ class DependenciesScope extends StatelessWidget {
   }
 }
 
+/// Immutable holder behind [DependenciesScope.of].
 class _DependenciesInherited extends InheritedWidget {
   const _DependenciesInherited({
     required super.child,

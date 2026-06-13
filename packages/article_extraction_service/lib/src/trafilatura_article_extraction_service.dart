@@ -297,6 +297,7 @@ Map<String, String> _downloadHeaders() {
   };
 }
 
+/// Client-downloaded HTML document plus metadata recovered before extraction.
 class _DownloadedArticleDocument {
   const _DownloadedArticleDocument({
     required this.requestedUrl,
@@ -313,6 +314,7 @@ class _DownloadedArticleDocument {
   final _ArticleHtmlMetadata metadata;
 }
 
+/// Language and direction hints read from the original HTML.
 class _ArticleHtmlMetadata {
   const _ArticleHtmlMetadata({this.language, this.textDirection});
 
@@ -430,6 +432,9 @@ Map<String, dynamic> _withRecoveredImageBlocks(
   Map<String, dynamic> json,
   _DownloadedArticleDocument article,
 ) {
+  // Some cleaner responses keep image captions but drop image blocks. JSON-LD
+  // often still contains `[Image: caption url]` markers, so we rebuild those
+  // blocks only when the recovered captions line up with the body paragraphs.
   final body = json['body'];
   if (body is! List || _hasImageBlocks(body)) return json;
 
@@ -559,6 +564,7 @@ final _articleBodyImageMarkerRegex = RegExp(
   caseSensitive: false,
 );
 
+/// Image marker recovered from JSON-LD `articleBody` text.
 class _StructuredImageMarker {
   const _StructuredImageMarker({required this.caption, required this.src});
 

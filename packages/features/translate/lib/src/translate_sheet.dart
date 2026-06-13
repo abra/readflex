@@ -68,6 +68,7 @@ class TranslateSheet extends StatelessWidget {
   }
 }
 
+/// Translation result sheet body bound to [TranslateCubit].
 class _TranslateSheetView extends StatelessWidget {
   const _TranslateSheetView({required this.selection});
 
@@ -183,6 +184,9 @@ class _TranslateSheetView extends StatelessWidget {
   }
 }
 
+/// Optional explanatory rows below the main translation result.
+///
+/// Keeps model-specific metadata display decisions out of the sheet shell.
 class _TranslationDetails extends StatelessWidget {
   const _TranslationDetails({required this.state});
 
@@ -391,6 +395,7 @@ class _TranslationDetails extends StatelessWidget {
   }
 }
 
+/// Single label/value row in the translation details block.
 class _TranslationDetailLine extends StatelessWidget {
   const _TranslationDetailLine({required this.label, required this.value});
 

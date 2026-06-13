@@ -558,6 +558,7 @@ class _ArticleBadge extends StatelessWidget {
   }
 }
 
+/// Directional start/end offsets for the article badge.
 class _BadgeHorizontalPosition {
   const _BadgeHorizontalPosition.left(double value) : start = value, end = null;
 

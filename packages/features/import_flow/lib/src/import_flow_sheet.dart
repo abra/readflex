@@ -52,6 +52,7 @@ Future<ImportFlowResult?> showImportFlowSheet(
   );
 }
 
+/// Import-flow shell bound to [ImportFlowCubit].
 class _ImportFlowSheet extends StatelessWidget {
   const _ImportFlowSheet({
     required this.onOpenTerms,
@@ -98,6 +99,10 @@ class _ImportFlowSheet extends StatelessWidget {
   }
 }
 
+/// Chooses the animated transition style when the import flow changes state.
+///
+/// Menu/form steps slide horizontally, while upload terminal states use a
+/// softer fade+scale transition.
 class _ImportFlowStepSwitcher extends StatefulWidget {
   const _ImportFlowStepSwitcher({
     required this.state,
@@ -180,6 +185,7 @@ _ImportFlowTransitionStyle _transitionStyleFor(
   };
 }
 
+/// Directional slide used for menu/form navigation inside the import flow.
 class _ImportFlowSlideTransition extends StatelessWidget {
   const _ImportFlowSlideTransition({
     required this.animation,
@@ -209,6 +215,7 @@ class _ImportFlowSlideTransition extends StatelessWidget {
   }
 }
 
+/// Fade+scale transition for upload progress, success, and failure states.
 class _ImportFlowStatusTransition extends StatelessWidget {
   const _ImportFlowStatusTransition({
     required this.animation,
@@ -296,6 +303,7 @@ class _MenuView extends StatelessWidget {
   }
 }
 
+/// Terms acceptance step shown before importing a local book file.
 class _BookTermsView extends StatefulWidget {
   const _BookTermsView({
     required this.onOpenTerms,
@@ -492,6 +500,7 @@ class _PlainTextButton extends StatelessWidget {
   }
 }
 
+/// URL entry step for article import.
 class _ArticleUrlEntryView extends StatefulWidget {
   const _ArticleUrlEntryView();
 
@@ -715,6 +724,7 @@ class _BookUploadingView extends StatelessWidget {
   }
 }
 
+/// Progress/status body for local book import.
 class _BookUploadStatusContent extends StatelessWidget {
   const _BookUploadStatusContent({
     required this.filename,
@@ -778,6 +788,7 @@ class _BookUploadStatusContent extends StatelessWidget {
   }
 }
 
+/// Progress/status body for article extraction and persistence.
 class _ArticleUploadingView extends StatelessWidget {
   const _ArticleUploadingView({required this.state});
 
@@ -813,6 +824,10 @@ String _articleUploadingTitle(ImportFlowArticleStage stage) => switch (stage) {
   ImportFlowArticleStage.saving => 'Saving offline copy...',
 };
 
+/// Shared vertical layout for upload/progress states.
+///
+/// [reserveActionSpace] keeps the sheet height stable before a retry/done action
+/// appears.
 class _StatusLayout extends StatelessWidget {
   const _StatusLayout({
     required this.content,
@@ -843,6 +858,7 @@ class _StatusLayout extends StatelessWidget {
   }
 }
 
+/// Icon, title, detail, and optional subtitle block used by status screens.
 class _StatusContent extends StatelessWidget {
   const _StatusContent({
     required this.icon,
@@ -923,6 +939,7 @@ class _BookDoneView extends StatelessWidget {
   }
 }
 
+/// Success state after article import completes.
 class _ArticleDoneView extends StatelessWidget {
   const _ArticleDoneView({required this.state});
 

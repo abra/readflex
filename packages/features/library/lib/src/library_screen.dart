@@ -423,6 +423,7 @@ class _LibraryViewState extends State<_LibraryView> {
   }
 }
 
+/// Converts system back into "cancel selection" while multi-select is active.
 class _LibrarySelectionPopScope extends StatelessWidget {
   const _LibrarySelectionPopScope({
     required this.onCancelSelection,
@@ -453,6 +454,8 @@ class _LibrarySelectionPopScope extends StatelessWidget {
   }
 }
 
+/// Selects the Library FAB mode from selection state: add when idle, delete
+/// when multi-select is active.
 class _LibraryFabDriver extends StatelessWidget {
   const _LibraryFabDriver({
     required this.addInFlight,
@@ -484,6 +487,7 @@ class _LibraryFabDriver extends StatelessWidget {
   }
 }
 
+/// Shows the secondary "add to collection" FAB only during multi-select.
 class _LibraryAddCollectionFabDriver extends StatelessWidget {
   const _LibraryAddCollectionFabDriver({
     required this.onAddToCollectionPressed,

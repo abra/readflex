@@ -291,6 +291,7 @@ class ArticleRepository {
   }
 }
 
+/// Result of rewriting article HTML image sources to local EPUB image paths.
 class _DownloadedArticleImages {
   const _DownloadedArticleImages({required this.html, required this.images});
 
@@ -298,6 +299,7 @@ class _DownloadedArticleImages {
   final List<EpubImage> images;
 }
 
+/// Article body HTML plus generated TOC entries for heading blocks.
 class _ArticleHtml {
   const _ArticleHtml({required this.html, required this.tocEntries});
 

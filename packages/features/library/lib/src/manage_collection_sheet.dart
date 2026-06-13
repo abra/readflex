@@ -10,6 +10,9 @@ enum ManageCollectionSheetResult { deleted }
 
 enum _ManageCollectionStep { manage, confirmDelete }
 
+/// Source currently being animated out of the collection list.
+///
+/// Keeps the original list count stable while the removal animation runs.
 class _RemovingCollectionSource {
   const _RemovingCollectionSource({
     required this.id,
@@ -65,6 +68,8 @@ Future<ManageCollectionSheetResult?> showManageCollectionSheet({
   );
 }
 
+/// Stateful collection-management sheet. Owns staged source removals and
+/// rename/delete step transitions before saving to [ManageCollectionCubit].
 class _ManageCollectionSheet extends StatefulWidget {
   const _ManageCollectionSheet({
     required this.scope,
@@ -327,6 +332,7 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
   }
 }
 
+/// Animated step switcher for the manage/delete-confirmation sheet flow.
 class _ManageCollectionStepSwitcher extends StatefulWidget {
   const _ManageCollectionStepSwitcher({
     required this.step,
@@ -390,6 +396,7 @@ class _ManageCollectionStepSwitcherState
   }
 }
 
+/// Pins an outgoing/incoming step to a known height while the sheet animates.
 class _StepHeightSlot extends StatelessWidget {
   const _StepHeightSlot({
     required this.height,
@@ -412,6 +419,7 @@ class _StepHeightSlot extends StatelessWidget {
   }
 }
 
+/// Directional slide transition between manage collection steps.
 class _ManageCollectionSlideTransition extends StatelessWidget {
   const _ManageCollectionSlideTransition({
     required this.animation,
@@ -457,6 +465,7 @@ int _navigationDepth(_ManageCollectionStep step) {
   };
 }
 
+/// Shared step frame with a bottom-sheet header and expandable body.
 class _ManageCollectionStepView extends StatelessWidget {
   const _ManageCollectionStepView({
     required this.title,
@@ -485,6 +494,8 @@ class _ManageCollectionStepView extends StatelessWidget {
   }
 }
 
+/// Main collection edit step: rename, remove sources, save, or enter delete
+/// confirmation.
 class _ManageCollectionContent extends StatelessWidget {
   const _ManageCollectionContent({
     required this.state,
@@ -622,6 +633,7 @@ class _ManageCollectionContent extends StatelessWidget {
   }
 }
 
+/// Scrollable list of sources currently displayed inside the collection.
 class _CollectionSourcesList extends StatelessWidget {
   const _CollectionSourcesList({
     required this.visibleSources,
@@ -683,6 +695,7 @@ class _CollectionSourcesList extends StatelessWidget {
   }
 }
 
+/// Destructive confirmation step for deleting a manual collection.
 class _DeleteCollectionConfirmationContent extends StatelessWidget {
   const _DeleteCollectionConfirmationContent({
     required this.state,
@@ -750,6 +763,7 @@ class _DeleteCollectionConfirmationContent extends StatelessWidget {
   }
 }
 
+/// Source row wrapper that collapses vertically during staged removal.
 class _CollapsibleCollectionSourceRow extends StatelessWidget {
   const _CollapsibleCollectionSourceRow({
     required this.source,

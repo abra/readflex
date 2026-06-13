@@ -55,6 +55,7 @@ class HighlightSheet extends StatelessWidget {
   }
 }
 
+/// Highlight form body bound to [HighlightCubit].
 class _HighlightSheetView extends StatelessWidget {
   const _HighlightSheetView({required this.selection});
 

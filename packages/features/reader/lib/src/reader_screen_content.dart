@@ -1,5 +1,7 @@
 part of 'reader_screen.dart';
 
+/// Full-screen reader scaffold. The heavy WebView subtree is created only when
+/// [ReaderBloc] reaches [ReaderStatus.ready].
 class _ReaderView extends StatelessWidget {
   const _ReaderView({
     required this.serverPort,
@@ -33,6 +35,7 @@ class _ReaderView extends StatelessWidget {
   }
 }
 
+/// Switches between loading, failure, and ready reader content.
 class _ReaderBody extends StatelessWidget {
   const _ReaderBody({
     required this.status,
@@ -81,10 +84,7 @@ class _ReaderBody extends StatelessWidget {
   }
 }
 
-/// Plain icon button used in the reader action chrome — no background,
-/// no theme-injected `secondary` fill. Greys out automatically when
-/// `onPressed` is null so unfinished slots read as disabled.
-
+/// Ready-state wrapper that keeps the WebView and reader chrome together.
 class _ReadyContent extends StatelessWidget {
   const _ReadyContent({
     required this.serverPort,
@@ -103,6 +103,7 @@ class _ReadyContent extends StatelessWidget {
   }
 }
 
+/// Owns the WebView key and all imperative reader callbacks for ready content.
 class _ReadyContentBody extends StatefulWidget {
   const _ReadyContentBody({
     required this.serverPort,
@@ -377,6 +378,8 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   }
 }
 
+/// Derives the platform status/navigation bar style from reader theme and
+/// chrome visibility.
 class _ReaderSystemUiOverlayDriver extends StatelessWidget {
   const _ReaderSystemUiOverlayDriver({
     required this.readerTheme,
@@ -408,6 +411,8 @@ class _ReaderSystemUiOverlayDriver extends StatelessWidget {
   }
 }
 
+/// Subscribes only to TOC drawer visibility and forwards stable callbacks to
+/// the drawer widget.
 class _ReaderTocDrawerVisibilityDriver extends StatelessWidget {
   const _ReaderTocDrawerVisibilityDriver({
     required this.format,
@@ -443,6 +448,8 @@ class _ReaderTocDrawerVisibilityDriver extends StatelessWidget {
   }
 }
 
+/// Subscribes only to search drawer visibility and forwards search callbacks to
+/// the drawer widget.
 class _ReaderSearchDrawerVisibilityDriver extends StatelessWidget {
   const _ReaderSearchDrawerVisibilityDriver({
     required this.format,
@@ -478,6 +485,8 @@ class _ReaderSearchDrawerVisibilityDriver extends StatelessWidget {
   }
 }
 
+/// Builds the tap-zone edge indicator from reader direction, page bounds, and
+/// appearance margins.
 class _ReaderTapEdgeIndicatorDriver extends StatelessWidget {
   const _ReaderTapEdgeIndicatorDriver({
     required this.readerTheme,
@@ -524,6 +533,8 @@ class _ReaderTapEdgeIndicatorDriver extends StatelessWidget {
   }
 }
 
+/// Hosts the foliate WebView and translates WebView callbacks into reader bloc
+/// and UI-cubit updates.
 class _ReaderWebViewBody extends StatefulWidget {
   const _ReaderWebViewBody({
     required this.sourceId,

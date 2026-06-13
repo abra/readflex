@@ -90,6 +90,8 @@ class PreferencesScope extends StatelessWidget {
   }
 }
 
+/// Aspect-aware preferences holder so theme and reader appearance listeners can
+/// rebuild independently.
 class _PreferencesInherited extends InheritedModel<_PreferencesAspect> {
   const _PreferencesInherited({
     required super.child,

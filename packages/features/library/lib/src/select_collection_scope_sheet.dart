@@ -36,6 +36,7 @@ Future<LibraryCollectionScopeSheetResult?> showLibraryCollectionScopeSheet({
   );
 }
 
+/// Searchable collection selector sheet.
 class _CollectionScopeSheet extends StatefulWidget {
   const _CollectionScopeSheet({required this.state});
 
@@ -129,6 +130,7 @@ class _CollectionScopeSheetState extends State<_CollectionScopeSheet> {
   }
 }
 
+/// Filters and renders collection scopes grouped by source type.
 class _CollectionScopeSections extends StatelessWidget {
   const _CollectionScopeSections({required this.state, required this.query});
 
@@ -212,6 +214,7 @@ class _CollectionScopeSections extends StatelessWidget {
   }
 }
 
+/// Optional titled group inside the collection selector.
 class _ScopeSection extends StatelessWidget {
   const _ScopeSection({
     required this.scopes,
@@ -259,6 +262,7 @@ class _ScopeSection extends StatelessWidget {
   }
 }
 
+/// Selectable row for one collection scope, with manage affordance when allowed.
 class _CollectionScopeRow extends StatelessWidget {
   const _CollectionScopeRow({required this.scope, required this.selected});
 

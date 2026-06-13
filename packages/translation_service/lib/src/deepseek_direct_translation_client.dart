@@ -1890,6 +1890,8 @@ For selected n-word text, choose selected_expression when the selected span itse
 ''';
 }
 
+/// Previous/current/next sentence window sent to the model with `[[...]]`
+/// markers around the selected phrase in [current].
 class _MarkedContextWindow {
   const _MarkedContextWindow({this.previous, required this.current, this.next});
 
@@ -1913,6 +1915,7 @@ class _MarkedContextWindow {
       value.replaceAll('[[', '').replaceAll(']]', '').trim();
 }
 
+/// Half-open character range in normalized plain text.
 class _TextSpan {
   const _TextSpan(this.start, this.end);
 
@@ -1920,6 +1923,7 @@ class _TextSpan {
   final int end;
 }
 
+/// Token plus its half-open character range in normalized plain text.
 class _TokenSpan {
   const _TokenSpan(this.token, this.start, this.end);
 
@@ -1928,6 +1932,7 @@ class _TokenSpan {
   final int end;
 }
 
+/// Local parse of a separated phrasal verb pattern, e.g. `look ... up`.
 class _SeparatedPhrasalPattern {
   const _SeparatedPhrasalPattern({
     required this.verb,
@@ -1938,6 +1943,7 @@ class _SeparatedPhrasalPattern {
   final List<String> particles;
 }
 
+/// Parsed model response before it is normalized into [TranslationResult].
 class _DecodedPayload {
   const _DecodedPayload({
     this.translatedText,

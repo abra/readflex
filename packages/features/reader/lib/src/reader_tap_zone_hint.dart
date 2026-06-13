@@ -125,6 +125,7 @@ class ReaderTapEdgeIndicator extends StatelessWidget {
   }
 }
 
+/// Geometry helper that maps reader margins into visible tap-edge line bounds.
 class _ReaderTapEdgeMetrics {
   _ReaderTapEdgeMetrics({
     required this.width,
@@ -255,6 +256,7 @@ class _ReaderTapZoneHintDriverState extends State<ReaderTapZoneHintDriver>
   }
 }
 
+/// Full-screen transient overlay that visualizes current page-turn tap zones.
 class _ReaderTapZoneHintOverlay extends StatelessWidget {
   const _ReaderTapZoneHintOverlay({
     required this.axis,
@@ -333,6 +335,7 @@ class _ReaderTapZoneHintOverlay extends StatelessWidget {
   }
 }
 
+/// Single highlighted tap-zone panel used by [_ReaderTapZoneHintOverlay].
 class _ReaderTapZoneHintPanel extends StatelessWidget {
   const _ReaderTapZoneHintPanel({
     required this.icon,

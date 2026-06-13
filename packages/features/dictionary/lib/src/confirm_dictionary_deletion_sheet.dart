@@ -19,6 +19,7 @@ Future<bool?> showConfirmDictionaryDeletionSheet(
   );
 }
 
+/// Confirmation sheet for deleting one or more dictionary entries.
 class _ConfirmDictionaryDeletionSheet extends StatelessWidget {
   const _ConfirmDictionaryDeletionSheet({required this.count});
 

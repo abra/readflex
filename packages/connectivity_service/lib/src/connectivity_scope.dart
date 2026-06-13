@@ -40,6 +40,7 @@ class ConnectivityScope extends StatefulWidget {
   State<ConnectivityScope> createState() => _ConnectivityScopeState();
 }
 
+/// Refreshes connectivity on app resume and when the service instance changes.
 class _ConnectivityScopeState extends State<ConnectivityScope>
     with WidgetsBindingObserver {
   @override
@@ -80,6 +81,7 @@ class _ConnectivityScopeState extends State<ConnectivityScope>
   }
 }
 
+/// Single-value inherited holder for the current connectivity status.
 class _ConnectivityInherited extends InheritedWidget {
   const _ConnectivityInherited({required this.status, required super.child});
 

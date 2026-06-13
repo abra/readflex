@@ -35,6 +35,7 @@ void showMiniReviewSheet(
   );
 }
 
+/// Creates the mini-review cubit for one source before rendering the sheet UI.
 class _MiniReviewSheet extends StatelessWidget {
   const _MiniReviewSheet({
     required this.sourceId,
@@ -64,6 +65,7 @@ class _MiniReviewSheet extends StatelessWidget {
   }
 }
 
+/// Mini-review sheet body bound to [MiniReviewCubit].
 class _MiniReviewSheetView extends StatelessWidget {
   const _MiniReviewSheetView();
 

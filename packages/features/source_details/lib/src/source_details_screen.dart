@@ -153,6 +153,7 @@ class SourceDetailsView extends StatelessWidget {
   }
 }
 
+/// Persistent bottom action bar for returning or opening the source in Reader.
 class _SourceDetailsBottomBar extends StatelessWidget {
   const _SourceDetailsBottomBar({
     required this.source,
@@ -199,6 +200,7 @@ class _SourceDetailsBottomBar extends StatelessWidget {
   }
 }
 
+/// Scrollable details body excluding the persistent bottom action bar.
 class _SourceDetailsContent extends StatelessWidget {
   const _SourceDetailsContent({
     required this.source,
@@ -360,6 +362,7 @@ Alignment _bottomAlignmentFor(TextDirection textDirection) {
       : Alignment.bottomLeft;
 }
 
+/// Top source identity block: title, metadata, and cover.
 class _HeroSection extends StatelessWidget {
   const _HeroSection({
     required this.source,
@@ -448,6 +451,7 @@ class _HeroSection extends StatelessWidget {
   }
 }
 
+/// Title renderer that shrinks and then line-caps to fit the fixed hero cell.
 class _AutoSizedHeroTitle extends StatelessWidget {
   const _AutoSizedHeroTitle({
     required this.title,
@@ -586,6 +590,7 @@ double _heroTitleLineHeightFor({
   return painter.preferredLineHeight;
 }
 
+/// Fitted title style and optional line cap for the constrained hero title box.
 class _HeroTitleFit {
   const _HeroTitleFit({required this.style, this.maxLines});
 
@@ -750,6 +755,7 @@ class _SourceProgressLine extends StatelessWidget {
   }
 }
 
+/// Summary rows for reviewable content connected to the current source.
 class _ReviewActions extends StatelessWidget {
   const _ReviewActions({required this.summary});
 
@@ -873,6 +879,7 @@ class _ReviewActionRow extends StatelessWidget {
   }
 }
 
+/// Display-ready label/value pair for the source details stats row.
 class _SourceStatData {
   const _SourceStatData({
     required this.label,

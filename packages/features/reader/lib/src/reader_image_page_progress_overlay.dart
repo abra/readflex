@@ -43,6 +43,7 @@ typedef _ImagePageProgressMetric = ({
   int totalPages,
 });
 
+/// Keeps the last valid image-page metric long enough to fade out smoothly.
 class _ReaderImagePageProgressOverlayState
     extends State<ReaderImagePageProgressOverlay> {
   Timer? _hideTimer;
@@ -142,6 +143,7 @@ class _ReaderImagePageProgressOverlayState
   }
 }
 
+/// Fixed-width page counter pill that avoids width jumps between page numbers.
 class _ImagePageProgressOverlayPill extends StatelessWidget {
   const _ImagePageProgressOverlayPill({
     required this.text,

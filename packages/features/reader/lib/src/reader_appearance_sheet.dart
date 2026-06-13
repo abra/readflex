@@ -25,6 +25,7 @@ Future<void> showReaderAppearanceSheet(
   );
 }
 
+/// Bottom sheet shell for per-source reader appearance overrides.
 class _ReaderAppearanceSheet extends StatelessWidget {
   const _ReaderAppearanceSheet();
 
@@ -56,6 +57,7 @@ class _ResetAppearanceButton extends StatelessWidget {
   }
 }
 
+/// Vertical stack of compact appearance control rows.
 class _LayeredAppearanceControls extends StatelessWidget {
   const _LayeredAppearanceControls();
 
@@ -196,6 +198,7 @@ class _ThemeSwatchButton extends StatelessWidget {
   }
 }
 
+/// Combined font picker and text-size controls in one horizontal level.
 class _FontAndSizeLevel extends StatelessWidget {
   const _FontAndSizeLevel();
 
@@ -213,6 +216,7 @@ class _FontAndSizeLevel extends StatelessWidget {
   }
 }
 
+/// Tap-to-cycle font selector with dot indicators for available presets.
 class _FontCycleControl extends StatelessWidget {
   const _FontCycleControl();
 
@@ -279,6 +283,7 @@ class _PageDot extends StatelessWidget {
   }
 }
 
+/// Compact A-/A+ text-size control used inside the reader appearance sheet.
 class _CompactSizeControl extends StatelessWidget {
   const _CompactSizeControl();
 
@@ -365,6 +370,7 @@ class _CompactTextSizeButton extends StatelessWidget {
   }
 }
 
+/// Combined line-height and page-turn controls in one horizontal level.
 class _LineHeightAndTurningLevel extends StatelessWidget {
   const _LineHeightAndTurningLevel();
 
@@ -401,6 +407,7 @@ class _LineHeightAndTurningLevel extends StatelessWidget {
   }
 }
 
+/// Shared tappable row container for compact appearance controls.
 class _AppearanceLevel extends StatelessWidget {
   const _AppearanceLevel({required this.child, this.onTap});
 

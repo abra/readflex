@@ -56,6 +56,7 @@ class DictionaryScreen extends StatelessWidget {
   }
 }
 
+/// Stateful Dictionary tab body; owns local search controller and sheet flows.
 class _DictionaryView extends StatefulWidget {
   const _DictionaryView({this.onPracticePressed});
 
@@ -198,6 +199,8 @@ class _DictionaryViewState extends State<_DictionaryView> {
   }
 }
 
+/// Converts system back into "cancel selection" while dictionary multi-select
+/// is active.
 class _DictionarySelectionPopScope extends StatelessWidget {
   const _DictionarySelectionPopScope({
     required this.onCancelSelection,
@@ -231,6 +234,7 @@ class _DictionarySelectionPopScope extends StatelessWidget {
   }
 }
 
+/// Selects the Dictionary FAB mode from selection state.
 class _DictionaryFabDriver extends StatelessWidget {
   const _DictionaryFabDriver({
     required this.onAddPressed,
@@ -259,6 +263,7 @@ class _DictionaryFabDriver extends StatelessWidget {
   }
 }
 
+/// Maps [DictionaryBloc] state to loading, error, empty, or list UI.
 class _DictionaryBody extends StatelessWidget {
   const _DictionaryBody({
     required this.onPracticePressed,
@@ -439,6 +444,7 @@ class _SuccessBody extends StatelessWidget {
   }
 }
 
+/// Selection-aware dictionary list with swipe-to-delete rows.
 class _DictionaryEntryList extends StatelessWidget {
   const _DictionaryEntryList({
     required this.state,

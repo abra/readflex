@@ -201,6 +201,8 @@ class WakelockScreenControlService implements ScreenControlService {
   }
 }
 
+/// Result of the Android native brightness read. Separates "the platform
+/// returned null/unavailable" from a real brightness value.
 class _NativeBrightnessRead {
   const _NativeBrightnessRead.available(this.brightness) : available = true;
 
