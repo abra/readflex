@@ -35,11 +35,18 @@ const _rtlLanguageCodes = {
   'yi',
 };
 
+final _languageTagSeparatorRegex = RegExp(r'[,;\s]+');
+final _whitespaceRegex = RegExp(r'\s+');
+final _rtlCharacterRegex = RegExp(
+  r'[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]',
+);
+final _ltrCharacterRegex = RegExp(r'[A-Za-z\u00C0-\u024F\u1E00-\u1EFF]');
+
 String? normalizeArticleLanguage(String? language) {
   final trimmed = language?.trim();
   if (trimmed == null || trimmed.isEmpty) return null;
 
-  final firstTag = trimmed.split(RegExp(r'[,;\s]+')).first.trim();
+  final firstTag = trimmed.split(_languageTagSeparatorRegex).first.trim();
   if (firstTag.isEmpty || firstTag == '*') return null;
 
   final normalized = firstTag.replaceAll('_', '-').toLowerCase();
@@ -62,16 +69,12 @@ ArticleTextDirection? articleTextDirectionForLanguage(String? language) {
 }
 
 ArticleTextDirection? inferArticleTextDirectionFromText(String text) {
-  final sample = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+  final sample = text.replaceAll(_whitespaceRegex, ' ').trim();
   if (sample.isEmpty) return null;
 
   final bounded = sample.length > 5000 ? sample.substring(0, 5000) : sample;
-  final rtlCount = RegExp(
-    r'[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]',
-  ).allMatches(bounded).length;
-  final ltrCount = RegExp(
-    r'[A-Za-z\u00C0-\u024F\u1E00-\u1EFF]',
-  ).allMatches(bounded).length;
+  final rtlCount = _rtlCharacterRegex.allMatches(bounded).length;
+  final ltrCount = _ltrCharacterRegex.allMatches(bounded).length;
 
   if (rtlCount == 0 && ltrCount == 0) return null;
   return rtlCount > ltrCount
