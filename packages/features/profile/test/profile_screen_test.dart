@@ -35,7 +35,6 @@ void main() {
             subscriptionService ?? const NoopSubscriptionService(),
         preferencesService: preferencesService,
         onSignInPressed: () {},
-        onDesignSystemPressed: () {},
         onPremiumPressed: () {},
         appVersion: appVersion,
       ),
@@ -100,18 +99,5 @@ void main() {
     await tester.pump();
 
     expect(find.text('Sign Out'), findsNothing);
-  });
-
-  testWidgets('renders Design System row after scrolling', (tester) async {
-    await tester.pumpWidget(buildSubject());
-    await tester.pump();
-
-    await tester.scrollUntilVisible(
-      find.text('Design System'),
-      200,
-      scrollable: find.byType(Scrollable).last,
-    );
-
-    expect(find.text('Design System'), findsOneWidget);
   });
 }

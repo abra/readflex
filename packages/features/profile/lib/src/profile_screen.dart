@@ -16,15 +16,14 @@ part 'widgets/settings_widgets.dart';
 /// Shows account header, reading stats, appearance/reading/general/about
 /// settings groups, and a sign-out button. Owns [ProfileCubit] (account
 /// data) and [ProfileAppearanceCubit] (theme + reader preferences) for
-/// its subtree. Navigation callbacks for sign-in, paywall, and the
-/// design-system screen are injected by the composition root.
+/// its subtree. Navigation callbacks for sign-in and paywall are injected
+/// by the composition root.
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({
     required this.authService,
     required this.subscriptionService,
     required this.preferencesService,
     required this.onSignInPressed,
-    required this.onDesignSystemPressed,
     required this.onPremiumPressed,
     this.appVersion = '1.0.0',
     super.key,
@@ -34,7 +33,6 @@ class ProfileScreen extends StatelessWidget {
   final SubscriptionService subscriptionService;
   final PreferencesService preferencesService;
   final VoidCallback onSignInPressed;
-  final VoidCallback onDesignSystemPressed;
   final VoidCallback onPremiumPressed;
   final String appVersion;
 
@@ -58,7 +56,6 @@ class ProfileScreen extends StatelessWidget {
       ],
       child: _ProfileView(
         onSignInPressed: onSignInPressed,
-        onDesignSystemPressed: onDesignSystemPressed,
         onPremiumPressed: onPremiumPressed,
         appVersion: appVersion,
       ),
@@ -69,13 +66,11 @@ class ProfileScreen extends StatelessWidget {
 class _ProfileView extends StatefulWidget {
   const _ProfileView({
     required this.onSignInPressed,
-    required this.onDesignSystemPressed,
     required this.onPremiumPressed,
     required this.appVersion,
   });
 
   final VoidCallback onSignInPressed;
-  final VoidCallback onDesignSystemPressed;
   final VoidCallback onPremiumPressed;
   final String appVersion;
 
@@ -218,20 +213,6 @@ class _ProfileViewState extends State<_ProfileView> {
                       SettingsRow(
                         icon: AppIcons.terms,
                         label: 'Terms & Licenses',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // ─── Dev ───
-                  SectionLabel(label: 'DEVELOPER'),
-                  const SizedBox(height: AppSpacing.md),
-                  SettingsGroup(
-                    children: [
-                      SettingsRow(
-                        icon: AppIcons.designSystem,
-                        label: 'Design System',
-                        onTap: widget.onDesignSystemPressed,
                       ),
                     ],
                   ),

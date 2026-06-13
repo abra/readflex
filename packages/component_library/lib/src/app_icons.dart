@@ -78,7 +78,6 @@ abstract final class AppIcons {
   static const IconData shield = LucideIcons.shield;
   static const IconData info = LucideIcons.info;
   static const IconData terms = LucideIcons.bookMarked;
-  static const IconData designSystem = LucideIcons.palette;
   static const IconData logOut = LucideIcons.logOut;
 
   // ── Premium ───────────────────────────────────────────────
@@ -97,7 +96,4 @@ abstract final class AppIcons {
   static const IconData error = LucideIcons.alertCircle;
   static const IconData celebration = LucideIcons.partyPopper;
   static const IconData offline = LucideIcons.wifiOff;
-
-  // ── Formatting (design system demo) ───────────────────────
-  static const IconData tune = LucideIcons.sparkles;
 }

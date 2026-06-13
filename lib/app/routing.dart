@@ -14,7 +14,6 @@ import 'package:practice/practice.dart';
 import 'package:profile/profile.dart';
 import 'package:reader/reader.dart';
 import 'package:readflex/app/dependency_container.dart';
-import 'package:readflex/app/screens/design_system_screen.dart';
 import 'package:readflex/app/screens/first_import_screen.dart';
 import 'package:readflex/app/screens/onboarding_screen.dart';
 import 'package:readflex/app/screens/splash_screen.dart';
@@ -38,7 +37,6 @@ abstract final class AppRoutes {
   static const profile = '/profile';
   static const onboarding = '/onboarding';
   static const firstImport = '/first-import';
-  static const designSystem = '/design-system';
   static const sourceDetailsPath = '/source/:sourceId';
   static const readerPath = '/reader/:sourceId';
 
@@ -192,9 +190,6 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                   // Auth is still backed by NoopAuthService in composition;
                   // keep this stub until a real sign-in route or sheet exists.
                   onSignInPressed: () {},
-                  onDesignSystemPressed: () => context.push(
-                    AppRoutes.designSystem,
-                  ),
                   onPremiumPressed: () => showSubscriptionPaywallSheet(
                     context,
                     subscriptionService: deps.subscriptionService,
@@ -370,11 +365,6 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
             context.go(AppRoutes.home);
           },
         ),
-      ),
-      // TODO: remove or gate behind isDev before production release.
-      GoRoute(
-        path: AppRoutes.designSystem,
-        builder: (context, state) => const DesignSystemScreen(),
       ),
     ],
   );
