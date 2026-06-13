@@ -27,6 +27,7 @@ import 'reader_color_utils.dart';
 import 'reader_device_font_scale.dart';
 import 'reader_drawer_messages.dart';
 import 'reader_directional_layout.dart';
+import 'reader_keep_awake_cubit.dart';
 import 'reader_loading_indicator_style.dart';
 import 'reader_progress_label.dart';
 import 'reader_review_reminder_cubit.dart';
@@ -234,6 +235,11 @@ class ReaderScreen extends StatelessWidget {
               sourceId: sourceId,
             ),
           ),
+          BlocProvider(
+            create: (_) => ReaderKeepAwakeCubit(
+              screenControlService: screenControlService,
+            ),
+          ),
         ],
         child: Builder(
           builder: (context) => _ReaderSourceOpenedNotifier(
@@ -241,7 +247,6 @@ class ReaderScreen extends StatelessWidget {
             child: ReaderBrightnessLifecycleScope(
               cubit: context.read<ReaderBrightnessCubit>(),
               child: ReaderKeepAwakeDriver(
-                screenControlService: screenControlService,
                 child: _ReaderView(
                   serverPort: serverPort,
                   textActions: textActions,

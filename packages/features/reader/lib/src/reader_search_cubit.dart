@@ -83,9 +83,9 @@ class ReaderSearchCubit extends Cubit<ReaderSearchState> {
   int _searchGeneration = 0;
 
   @override
-  Future<void> close() {
+  Future<void> close() async {
     _debounce?.cancel();
-    unawaited(_searchSubscription?.cancel());
+    await _searchSubscription?.cancel();
     return super.close();
   }
 

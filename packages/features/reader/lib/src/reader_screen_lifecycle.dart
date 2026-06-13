@@ -42,12 +42,10 @@ class _ReaderSourceOpenedNotifierState
 
 class ReaderKeepAwakeDriver extends StatelessWidget {
   const ReaderKeepAwakeDriver({
-    required this.screenControlService,
     required this.child,
     super.key,
   });
 
-  final ScreenControlService screenControlService;
   final Widget child;
 
   @override
@@ -61,7 +59,6 @@ class ReaderKeepAwakeDriver extends StatelessWidget {
       builder: (context, contentOnlyVisible) {
         return ReaderKeepAwakeScope(
           active: readerReady && contentOnlyVisible,
-          screenControlService: screenControlService,
           child: child,
         );
       },
@@ -76,13 +73,11 @@ class ReaderKeepAwakeDriver extends StatelessWidget {
 class ReaderKeepAwakeScope extends StatefulWidget {
   const ReaderKeepAwakeScope({
     required this.active,
-    required this.screenControlService,
     required this.child,
     super.key,
   });
 
   final bool active;
-  final ScreenControlService screenControlService;
   final Widget child;
 
   @override
@@ -92,22 +87,26 @@ class ReaderKeepAwakeScope extends StatefulWidget {
 /// Synchronizes keep-awake with both reader visibility and app foreground state.
 class _ReaderKeepAwakeScopeState extends State<ReaderKeepAwakeScope>
     with WidgetsBindingObserver {
-  bool _keepAwakeRequested = false;
-  bool _foreground = true;
+  late ReaderKeepAwakeCubit _cubit;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    unawaited(_sync());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _cubit = context.read<ReaderKeepAwakeCubit>();
+    _cubit.setActive(widget.active);
   }
 
   @override
   void didUpdateWidget(ReaderKeepAwakeScope oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.active != oldWidget.active ||
-        widget.screenControlService != oldWidget.screenControlService) {
-      unawaited(_sync());
+    if (widget.active != oldWidget.active) {
+      _cubit.setActive(widget.active);
     }
   }
 
@@ -115,46 +114,21 @@ class _ReaderKeepAwakeScopeState extends State<ReaderKeepAwakeScope>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.resumed:
-        _foreground = true;
-        unawaited(_sync());
+        _cubit.appLifecycleChanged(state);
         break;
       case AppLifecycleState.inactive:
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
-        _foreground = false;
-        unawaited(_sync());
+        _cubit.appLifecycleChanged(state);
         break;
     }
-  }
-
-  Future<void> _sync() {
-    if (widget.active && _foreground) {
-      return _keepAwake();
-    }
-    return _allowSleep();
-  }
-
-  Future<void> _keepAwake() async {
-    if (_keepAwakeRequested) {
-      return;
-    }
-    _keepAwakeRequested = true;
-    await widget.screenControlService.keepAwake();
-  }
-
-  Future<void> _allowSleep() async {
-    if (!_keepAwakeRequested) {
-      return;
-    }
-    _keepAwakeRequested = false;
-    await widget.screenControlService.allowSleep();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    unawaited(_allowSleep());
+    _cubit.setActive(false);
     super.dispose();
   }
 

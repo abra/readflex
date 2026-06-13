@@ -13,7 +13,7 @@ Feature packages under `packages/features/*` own screens, sheets, blocs/cubits,
 and feature UI. Repository and service packages sit behind those features and
 hide storage, platform, and network details.
 
-Start with [docs/project_architecture.md](docs/project_architecture.md) for the project shape
+Start with [ARCHITECTURE.md](ARCHITECTURE.md) for the project shape
 and package boundaries. Package-level README files document individual public
 APIs and implementation notes.
 
@@ -94,5 +94,5 @@ to implement them:
 - Direct DeepSeek translation is a development path; production should keep API
   keys server-side.
 
-See [docs/project_architecture.md](docs/project_architecture.md) for the handoff checklist and
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the handoff checklist and
 the expected feature dependency pattern.

@@ -62,7 +62,7 @@ class ProfileAppearanceCubit extends Cubit<ProfileAppearanceState> {
 
   @override
   Future<void> close() async {
-    _prefsSub.cancel();
+    await _prefsSub.cancel();
     // Flush pending debounced commits before tearing down. Skipping
     // them would silently drop the user's last slider/button value.
     _textScaleCommitTimer?.cancel();
