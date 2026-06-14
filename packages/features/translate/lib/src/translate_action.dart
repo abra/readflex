@@ -6,6 +6,7 @@ import 'package:shared/shared.dart';
 import 'package:translation_service/translation_service.dart';
 
 import 'translate_sheet.dart';
+import 'translation_language_detection.dart';
 
 /// Reader plug-in that translates the currently selected text and lets
 /// the user save it to the dictionary.
@@ -18,11 +19,15 @@ class TranslateAction extends TextAction {
     required this.translationService,
     required this.dictionaryRepository,
     required this.fsrsRepository,
+    this.translationSourceLanguageCode,
+    this.translationTargetLanguageCode = _defaultTargetLanguageCode,
   });
 
   final TranslationService translationService;
   final DictionaryRepository dictionaryRepository;
   final FsrsRepository fsrsRepository;
+  final String? Function()? translationSourceLanguageCode;
+  final String Function() translationTargetLanguageCode;
 
   @override
   String get label => 'Translate';
@@ -41,6 +46,10 @@ class TranslateAction extends TextAction {
       dictionaryRepository: dictionaryRepository,
       fsrsRepository: fsrsRepository,
       selection: selection,
+      sourceLanguageCode: translationSourceLanguageCode?.call(),
+      targetLanguageCode: translationTargetLanguageCode(),
     );
   }
 }
+
+String _defaultTargetLanguageCode() => defaultTranslationTargetLanguageCode;

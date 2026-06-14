@@ -66,6 +66,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('Font & Text Size'), findsOneWidget);
+    expect(find.text('Source Language'), findsOneWidget);
     expect(find.text('Translation Language'), findsOneWidget);
     expect(find.text('Sync & Backup'), findsOneWidget);
     expect(find.text('Notifications'), findsOneWidget);
@@ -92,6 +93,36 @@ void main() {
     expect(find.text('Books'), findsOneWidget);
     expect(find.text('Read time'), findsOneWidget);
     expect(find.text('Streak'), findsOneWidget);
+  });
+
+  testWidgets('updates target translation language from sheet', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.tap(find.text('Translation Language'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('English').last);
+    await tester.pumpAndSettle();
+
+    expect(preferencesService.current.translationTargetLanguageCode, 'en');
+    expect(find.text('English'), findsOneWidget);
+  });
+
+  testWidgets('updates source translation language from sheet', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.tap(find.text('Source Language'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Russian').last);
+    await tester.pumpAndSettle();
+
+    expect(preferencesService.current.translationSourceLanguageCode, 'ru');
+    expect(find.text('Russian'), findsNWidgets(2));
   });
 
   testWidgets('does not show Sign Out for guest', (tester) async {

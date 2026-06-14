@@ -7,17 +7,20 @@ import 'package:subscription_service/subscription_service.dart';
 
 import 'profile_appearance_cubit.dart';
 import 'profile_cubit.dart';
+import 'profile_translation_cubit.dart';
 
 part 'widgets/font_sheet.dart';
+part 'widgets/language_sheet.dart';
 part 'widgets/settings_widgets.dart';
 
 /// Profile tab root screen (route `/profile`).
 ///
 /// Shows account header, reading stats, appearance/reading/general/about
 /// settings groups, and a sign-out button. Owns [ProfileCubit] (account
-/// data) and [ProfileAppearanceCubit] (theme + reader preferences) for
-/// its subtree. Navigation callbacks for sign-in and paywall are injected
-/// by the composition root.
+/// data), [ProfileAppearanceCubit] (theme + reader preferences), and
+/// [ProfileTranslationCubit] (translation language preferences) for its
+/// subtree. Navigation callbacks for sign-in and paywall are injected by the
+/// composition root.
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({
     required this.authService,
@@ -50,6 +53,11 @@ class ProfileScreen extends StatelessWidget {
         ),
         BlocProvider(
           create: (_) => ProfileAppearanceCubit(
+            preferencesService: preferencesService,
+          ),
+        ),
+        BlocProvider(
+          create: (_) => ProfileTranslationCubit(
             preferencesService: preferencesService,
           ),
         ),
@@ -164,10 +172,35 @@ class _ProfileViewState extends State<_ProfileView> {
                           onTap: () => _showFontSheet(context),
                         ),
                       ),
-                      SettingsRow(
-                        icon: AppIcons.language,
-                        label: 'Translation Language',
-                        detail: 'English',
+                      BlocSelector<
+                        ProfileTranslationCubit,
+                        ProfileTranslationState,
+                        String?
+                      >(
+                        selector: (state) => state.sourceLanguageCode,
+                        builder: (context, sourceLanguageCode) => SettingsRow(
+                          icon: AppIcons.language,
+                          label: 'Source Language',
+                          detail: _translationLanguageLabel(
+                            sourceLanguageCode,
+                          ),
+                          onTap: () => _showTranslationSourceSheet(context),
+                        ),
+                      ),
+                      BlocSelector<
+                        ProfileTranslationCubit,
+                        ProfileTranslationState,
+                        String
+                      >(
+                        selector: (state) => state.targetLanguageCode,
+                        builder: (context, targetLanguageCode) => SettingsRow(
+                          icon: AppIcons.translate,
+                          label: 'Translation Language',
+                          detail: _translationLanguageLabel(
+                            targetLanguageCode,
+                          ),
+                          onTap: () => _showTranslationTargetSheet(context),
+                        ),
                       ),
                     ],
                   ),
@@ -270,6 +303,39 @@ class _ProfileViewState extends State<_ProfileView> {
       builder: (_) => BlocProvider.value(
         value: cubit,
         child: const _FontSheet(),
+      ),
+    );
+  }
+
+  void _showTranslationSourceSheet(BuildContext context) {
+    final cubit = context.read<ProfileTranslationCubit>();
+    final selectedCode = cubit.state.sourceLanguageCode;
+
+    showAppBottomSheet<void>(
+      context,
+      builder: (_) => _LanguageSelectionSheet(
+        title: 'Source Language',
+        selectedCode: selectedCode,
+        includeAuto: true,
+        onSelected: cubit.setSourceLanguageCode,
+      ),
+    );
+  }
+
+  void _showTranslationTargetSheet(BuildContext context) {
+    final cubit = context.read<ProfileTranslationCubit>();
+    final selectedCode = cubit.state.targetLanguageCode;
+
+    showAppBottomSheet<void>(
+      context,
+      builder: (_) => _LanguageSelectionSheet(
+        title: 'Translation Language',
+        selectedCode: selectedCode,
+        includeAuto: false,
+        onSelected: (code) {
+          if (code == null) return;
+          cubit.setTargetLanguageCode(code);
+        },
       ),
     );
   }

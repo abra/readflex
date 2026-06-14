@@ -276,6 +276,14 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                   translationService: deps.translationService,
                   dictionaryRepository: deps.dictionaryRepository,
                   fsrsRepository: deps.fsrsRepository,
+                  translationSourceLanguageCode: () => deps
+                      .preferencesService
+                      .current
+                      .translationSourceLanguageCode,
+                  translationTargetLanguageCode: () => deps
+                      .preferencesService
+                      .current
+                      .translationTargetLanguageCode,
                 ),
               ],
               onCheckDueItems: (sourceId) async {

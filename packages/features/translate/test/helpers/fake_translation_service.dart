@@ -7,6 +7,8 @@ class FakeTranslationService implements TranslationService {
   TranslationResult? resultOverride;
   String? lastText;
   String? lastContextText;
+  String? lastFromLang;
+  String? lastToLang;
 
   /// When set, `translate` blocks on this completer's future before
   /// resolving. Tests that need to simulate "user dismissed the sheet
@@ -23,6 +25,8 @@ class FakeTranslationService implements TranslationService {
   }) async {
     lastText = text;
     lastContextText = contextText;
+    lastFromLang = fromLang;
+    lastToLang = toLang;
     if (awaitGate != null) await awaitGate!.future;
     if (shouldThrow) throw const TranslationException('Translation failed');
 

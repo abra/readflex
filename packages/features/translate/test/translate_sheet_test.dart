@@ -27,20 +27,25 @@ void main() {
     fsrsRepository = FakeFsrsRepository();
   });
 
-  Widget buildSubject({TextSelectionContext selection = _selection}) =>
-      MaterialApp(
-        theme: AppTheme.light(),
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: TranslateSheet(
-              translationService: translationService,
-              dictionaryRepository: dictionaryRepository,
-              fsrsRepository: fsrsRepository,
-              selection: selection,
-            ),
-          ),
+  Widget buildSubject({
+    TextSelectionContext selection = _selection,
+    String? sourceLanguageCode,
+    String targetLanguageCode = 'ru',
+  }) => MaterialApp(
+    theme: AppTheme.light(),
+    home: Scaffold(
+      body: SingleChildScrollView(
+        child: TranslateSheet(
+          translationService: translationService,
+          dictionaryRepository: dictionaryRepository,
+          fsrsRepository: fsrsRepository,
+          selection: selection,
+          sourceLanguageCode: sourceLanguageCode,
+          targetLanguageCode: targetLanguageCode,
         ),
-      );
+      ),
+    ),
+  );
 
   testWidgets('renders title and selected text', (tester) async {
     await tester.pumpWidget(buildSubject());
@@ -56,6 +61,39 @@ void main() {
     await tester.pump(); // let async translate complete
 
     expect(find.text('[ru] serendipity'), findsOneWidget);
+  });
+
+  testWidgets('uses configured translation languages', (tester) async {
+    await tester.pumpWidget(
+      buildSubject(
+        sourceLanguageCode: 'ru',
+        targetLanguageCode: 'en',
+      ),
+    );
+    await tester.pump();
+
+    expect(translationService.lastFromLang, 'ru');
+    expect(translationService.lastToLang, 'en');
+    expect(find.text('[en] serendipity'), findsOneWidget);
+  });
+
+  testWidgets('auto-detects Cyrillic source language', (tester) async {
+    const selection = TextSelectionContext(
+      selectedText: 'привет',
+      sourceId: 'book-1',
+      sourceType: SourceType.book,
+    );
+
+    await tester.pumpWidget(
+      buildSubject(
+        selection: selection,
+        targetLanguageCode: 'en',
+      ),
+    );
+    await tester.pump();
+
+    expect(translationService.lastFromLang, 'ru');
+    expect(translationService.lastToLang, 'en');
   });
 
   testWidgets('translates normalized text while previewing exact selection', (

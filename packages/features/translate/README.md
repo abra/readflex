@@ -15,11 +15,12 @@ translate arbitrary text.
 
 ### TranslateAction
 
-Constructor injects `TranslationService`, `DictionaryRepository`, and
-`FsrsRepository`. Implements `shared.TextAction` (label: "Translate",
-icon: `AppIcons.translate`) and delegates `onExecute` to
-`showTranslateSheet`. Assembled once in `lib/app/routing.dart` alongside
-the other reader actions.
+Constructor injects `TranslationService`, `DictionaryRepository`,
+`FsrsRepository`, and optional language provider callbacks. Implements
+`shared.TextAction` (label: "Translate", icon: `AppIcons.translate`) and
+delegates `onExecute` to `showTranslateSheet`. Assembled once in
+`lib/app/routing.dart` alongside the other reader actions; routing supplies
+language preferences so this feature does not depend on the preferences package.
 
 ### TranslateSheet
 
@@ -31,6 +32,8 @@ Props:
 | `dictionaryRepository`| `DictionaryRepository`  | Persists the entry when saved         |
 | `fsrsRepository`      | `FsrsRepository`        | Registers the entry for review        |
 | `selection`           | `TextSelectionContext`  | Selected text + source metadata       |
+| `sourceLanguageCode`  | `String?`               | Source language; `null` means auto    |
+| `targetLanguageCode`  | `String`                | Target language                       |
 
 ## Architecture
 
@@ -92,6 +95,10 @@ ReaderScreen(
       translationService: deps.translationService,
       dictionaryRepository: deps.dictionaryRepository,
       fsrsRepository: deps.fsrsRepository,
+      translationSourceLanguageCode: () =>
+          deps.preferencesService.current.translationSourceLanguageCode,
+      translationTargetLanguageCode: () =>
+          deps.preferencesService.current.translationTargetLanguageCode,
     ),
   ],
 )

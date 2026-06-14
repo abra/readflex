@@ -26,6 +26,8 @@ void main() {
       expect(prefs.themeMode, ThemeMode.system);
       expect(prefs.locale, const Locale('en'));
       expect(prefs.libraryLayoutMode, 'grid');
+      expect(prefs.translationTargetLanguageCode, 'ru');
+      expect(prefs.translationSourceLanguageCode, isNull);
       expect(prefs.readerThemeId, 'paper');
       expect(prefs.readerFontId, 'serif');
       expect(prefs.readerLayoutId, 'standard');
@@ -52,6 +54,8 @@ void main() {
         themeMode: ThemeMode.dark,
         locale: const Locale('ru'),
         libraryLayoutMode: 'list',
+        translationTargetLanguageCode: 'en',
+        translationSourceLanguageCode: 'ru',
         readerPageTurnStyle: ReaderPageTurnStyle.vertical,
         readerSearchHistory: const ['design patterns', 'bloc'],
         readerBrightness: 0.55,
@@ -68,6 +72,8 @@ void main() {
       expect(updated.themeMode, ThemeMode.dark);
       expect(updated.locale, const Locale('ru'));
       expect(updated.libraryLayoutMode, 'list');
+      expect(updated.translationTargetLanguageCode, 'en');
+      expect(updated.translationSourceLanguageCode, 'ru');
       expect(updated.readerPageTurnStyle, ReaderPageTurnStyle.vertical);
       expect(updated.readerSearchHistory, ['design patterns', 'bloc']);
       expect(updated.readerBrightness, 0.55);
@@ -121,11 +127,31 @@ void main() {
       const a = Preferences();
       final b = a.copyWith(themeMode: ThemeMode.dark);
       expect(a, isNot(equals(b)));
+      expect(a, isNot(equals(a.copyWith(translationTargetLanguageCode: 'en'))));
+      expect(a, isNot(equals(a.copyWith(translationSourceLanguageCode: 'ru'))));
       expect(a, isNot(equals(a.copyWith(readerBrightness: 0.55))));
       expect(
         a,
         isNot(equals(a.copyWith(readerLastCustomBrightness: 0.55))),
       );
+    });
+
+    test('copyWith can clear translation source language', () {
+      const prefs = Preferences(translationSourceLanguageCode: 'en');
+      final updated = prefs.copyWith(translationSourceLanguageCode: null);
+
+      expect(updated.translationSourceLanguageCode, isNull);
+    });
+
+    test('copyWith normalizes unsupported translation language codes', () {
+      const prefs = Preferences();
+      final updated = prefs.copyWith(
+        translationTargetLanguageCode: 'xx',
+        translationSourceLanguageCode: 'yy',
+      );
+
+      expect(updated.translationTargetLanguageCode, 'ru');
+      expect(updated.translationSourceLanguageCode, isNull);
     });
 
     test('readerBrightnessOverrideFor reads source-specific override', () {

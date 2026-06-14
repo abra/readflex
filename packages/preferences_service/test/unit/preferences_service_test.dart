@@ -131,6 +131,40 @@ void main() {
       ]);
     });
 
+    test('translation languages persist across recreations', () async {
+      final service = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+      await service.update(
+        (s) => s.copyWith(
+          translationTargetLanguageCode: 'en',
+          translationSourceLanguageCode: 'ru',
+        ),
+      );
+
+      final service2 = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+
+      expect(service2.current.translationTargetLanguageCode, 'en');
+      expect(service2.current.translationSourceLanguageCode, 'ru');
+    });
+
+    test('translation source language can be reset to auto', () async {
+      final service = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+      await service.update(
+        (s) => s.copyWith(translationSourceLanguageCode: 'en'),
+      );
+
+      await service.update(
+        (s) => s.copyWith(translationSourceLanguageCode: null),
+      );
+
+      expect(service.current.translationSourceLanguageCode, isNull);
+    });
+
     test('reader appearance override persists across recreations', () async {
       final service = await PreferencesService.create(
         supportedCodes: _supportedCodes,

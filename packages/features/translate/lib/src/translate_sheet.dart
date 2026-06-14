@@ -7,6 +7,7 @@ import 'package:shared/shared.dart';
 import 'package:translation_service/translation_service.dart';
 
 import 'translate_cubit.dart';
+import 'translation_language_detection.dart';
 
 /// Opens the [TranslateSheet] as a modal bottom sheet. Called by
 /// [TranslateAction] from the reader's text-selection context panel.
@@ -16,6 +17,8 @@ Future<void> showTranslateSheet(
   required DictionaryRepository dictionaryRepository,
   required FsrsRepository fsrsRepository,
   required TextSelectionContext selection,
+  String? sourceLanguageCode,
+  String targetLanguageCode = defaultTranslationTargetLanguageCode,
 }) {
   return showAppBottomSheet<void>(
     context,
@@ -24,6 +27,8 @@ Future<void> showTranslateSheet(
       dictionaryRepository: dictionaryRepository,
       fsrsRepository: fsrsRepository,
       selection: selection,
+      sourceLanguageCode: sourceLanguageCode,
+      targetLanguageCode: targetLanguageCode,
     ),
   );
 }
@@ -40,6 +45,8 @@ class TranslateSheet extends StatelessWidget {
     required this.dictionaryRepository,
     required this.fsrsRepository,
     required this.selection,
+    this.sourceLanguageCode,
+    this.targetLanguageCode = defaultTranslationTargetLanguageCode,
     super.key,
   });
 
@@ -47,9 +54,19 @@ class TranslateSheet extends StatelessWidget {
   final DictionaryRepository dictionaryRepository;
   final FsrsRepository fsrsRepository;
   final TextSelectionContext selection;
+  final String? sourceLanguageCode;
+  final String targetLanguageCode;
 
   @override
   Widget build(BuildContext context) {
+    final textForTranslation = selection.textForTranslation;
+    final resolvedSourceLanguageCode =
+        sourceLanguageCode ??
+        detectTranslationSourceLanguage(
+          textForTranslation,
+          contextText: selection.contextText,
+        );
+
     return BlocProvider(
       create: (_) =>
           TranslateCubit(
@@ -57,11 +74,11 @@ class TranslateSheet extends StatelessWidget {
             dictionaryRepository: dictionaryRepository,
             fsrsRepository: fsrsRepository,
           )..translate(
-            text: selection.textForTranslation,
+            text: textForTranslation,
             contextText: selection.contextText,
             markedContextText: selection.markedContextTextForTranslation,
-            fromLang: 'en',
-            toLang: 'ru',
+            fromLang: resolvedSourceLanguageCode,
+            toLang: targetLanguageCode,
           ),
       child: _TranslateSheetView(selection: selection),
     );
