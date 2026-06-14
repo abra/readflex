@@ -413,6 +413,7 @@ void main() {
     expect(find.text('Low confidence'), findsOneWidget);
     expect(richTextContains('Part of speech: noun'), isTrue);
     expect(richTextContains('Transcription: /θɪŋz/'), isTrue);
+    expect(find.text('DEFINITIONS'), findsOneWidget);
     expect(
       detailsText.indexOf('Literal:'),
       lessThan(detailsText.indexOf('In context:')),

@@ -109,8 +109,8 @@ class _TranslateSheetView extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SelectionPreviewCard(text: selection.selectedText),
-              const SizedBox(height: AppSpacing.md),
+              _TranslationHeader(selection: selection, state: state),
+              const SizedBox(height: AppSpacing.lg),
               if (isTranslating)
                 const Center(
                   child: Padding(
@@ -119,17 +119,8 @@ class _TranslateSheetView extends StatelessWidget {
                   ),
                 )
               else if (state.translatedText.isNotEmpty) ...[
-                _TranslationResultCard(text: state.translatedText),
+                _TranslationContextSection(state: state),
                 _TranslationDetails(state: state),
-                if (state.context != null && state.context!.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    state.context!,
-                    style: context.text.bodySmall.copyWith(
-                      color: context.colors.onSurfaceVariant,
-                    ),
-                  ),
-                ],
                 if (state.usageExamples.isNotEmpty)
                   _UsageExamplesBlock(state: state),
                 if (saveCandidates.isNotEmpty)
@@ -175,26 +166,204 @@ class _TranslateSheetView extends StatelessWidget {
   }
 }
 
-/// Main translation result block.
-class _TranslationResultCard extends StatelessWidget {
-  const _TranslationResultCard({required this.text});
+/// Top block: selected lexical text and optional translation metadata.
+class _TranslationHeader extends StatelessWidget {
+  const _TranslationHeader({required this.selection, required this.state});
 
-  final String text;
+  final TextSelectionContext selection;
+  final TranslateState state;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: context.colors.primaryContainer,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-      ),
-      child: Text(
-        text,
-        style: context.text.bodyLarge.copyWith(
-          color: context.colors.onPrimaryContainer,
-          fontWeight: FontWeight.w600,
+    final cs = context.colors;
+    final text = context.text;
+    final muted = cs.onSurface.withValues(alpha: 0.55);
+    final word = selection.textForTranslation.trim();
+    final exactSelection = selection.selectedText.trim();
+    final showExactSelection =
+        exactSelection.isNotEmpty && exactSelection != word;
+    final partOfSpeech =
+        state.sense?.partOfSpeech ?? state.expression?.partOfSpeech;
+    final pronunciation =
+        state.sense?.transcription ?? state.sense?.lemmaTranscription;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          word.isEmpty ? exactSelection : word,
+          style: text.headlineSmall.copyWith(
+            fontFamily: AppTypography.fontFamilySerif,
+            fontWeight: FontWeight.w700,
+            color: cs.onSurface,
+            height: 1.1,
+          ),
         ),
+        if (showExactSelection) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            exactSelection,
+            style: text.labelSmall.copyWith(color: muted),
+          ),
+        ],
+        if (partOfSpeech != null || pronunciation != null) ...[
+          const SizedBox(height: AppSpacing.xs),
+          _TranslationMetaLine(
+            partOfSpeech: partOfSpeech,
+            pronunciation: pronunciation,
+            muted: muted,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// "italic POS · pronunciation" row beneath the selected word.
+class _TranslationMetaLine extends StatelessWidget {
+  const _TranslationMetaLine({
+    required this.partOfSpeech,
+    required this.pronunciation,
+    required this.muted,
+  });
+
+  final String? partOfSpeech;
+  final String? pronunciation;
+  final Color muted;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.text;
+    final dotColor = muted.withValues(alpha: 0.5);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (partOfSpeech != null)
+          Text(
+            partOfSpeech!,
+            style: text.labelSmall.copyWith(
+              fontStyle: FontStyle.italic,
+              color: muted,
+            ),
+          ),
+        if (partOfSpeech != null && pronunciation != null) ...[
+          const SizedBox(width: AppSpacing.sm),
+          Container(
+            width: 3,
+            height: 3,
+            decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+        ],
+        if (pronunciation != null)
+          Flexible(
+            child: Text(
+              pronunciation!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: text.labelSmall.copyWith(color: muted),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Primary translated text, styled like Dictionary detail's context block.
+class _TranslationContextSection extends StatelessWidget {
+  const _TranslationContextSection({required this.state});
+
+  final TranslateState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colors;
+    final text = context.text;
+    final muted = cs.onSurface.withValues(alpha: 0.55);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'IN THIS CONTEXT',
+          style: text.kicker.copyWith(color: muted),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          state.translatedText,
+          style: text.titleLarge.copyWith(
+            fontFamily: AppTypography.fontFamilySerif,
+            color: cs.onSurface,
+            height: 1.3,
+          ),
+        ),
+        if (state.context != null && state.context!.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            state.context!,
+            style: text.bodyMedium.copyWith(
+              fontFamily: AppTypography.fontFamilySerif,
+              color: muted,
+              height: 1.55,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Pull-quote for the sentence that came from the current reader context.
+class _TranslationSourceQuote extends StatelessWidget {
+  const _TranslationSourceQuote({required this.quote, this.footer});
+
+  final String quote;
+  final String? footer;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colors;
+    final text = context.text;
+    final muted = cs.onSurface.withValues(alpha: 0.55);
+
+    return Container(
+      padding: const EdgeInsets.only(left: AppSpacing.md),
+      decoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: cs.primary.withValues(alpha: 0.4),
+            width: 2,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          MarkedText(
+            text: quote,
+            style: text.bodyMedium.copyWith(
+              fontFamily: AppTypography.fontFamilySerif,
+              fontStyle: FontStyle.italic,
+              color: cs.onSurface.withValues(alpha: 0.9),
+              height: 1.55,
+            ),
+            highlightStyle: text.bodyMedium.copyWith(
+              fontFamily: AppTypography.fontFamilySerif,
+              fontStyle: FontStyle.italic,
+              fontWeight: FontWeight.w700,
+              color: cs.primary,
+              height: 1.55,
+            ),
+          ),
+          if (footer != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              footer!,
+              style: text.labelSmall.copyWith(color: muted),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -212,24 +381,33 @@ class _UsageExamplesBlock extends StatelessWidget {
     final hasOriginalExample =
         state.selectionContextText != null &&
         state.selectionContextText!.trim().isNotEmpty;
+    final originalExample = hasOriginalExample
+        ? state.usageExamples.first
+        : null;
+    final additionalExamples = hasOriginalExample
+        ? state.usageExamples.skip(1).toList(growable: false)
+        : state.usageExamples;
+    final muted = context.colors.onSurface.withValues(alpha: 0.55);
 
     return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      padding: const EdgeInsets.only(top: AppSpacing.lg),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Examples',
-            style: context.text.labelSmall.copyWith(
-              color: context.colors.onSurfaceVariant,
-              fontWeight: FontWeight.w700,
-            ),
+            style: context.text.kicker.copyWith(color: muted),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          for (var i = 0; i < state.usageExamples.length; i++)
-            _UsageExampleRow(
-              isOriginal: hasOriginalExample && i == 0,
-              text: state.usageExamples[i],
+          const SizedBox(height: AppSpacing.sm),
+          if (originalExample != null)
+            _TranslationSourceQuote(
+              quote: originalExample,
+              footer: 'In this text',
+            ),
+          if (additionalExamples.isNotEmpty)
+            _AdditionalUsageExamples(
+              examples: additionalExamples,
+              topSpacing: originalExample == null ? 0 : AppSpacing.md,
             ),
         ],
       ),
@@ -237,61 +415,27 @@ class _UsageExamplesBlock extends StatelessWidget {
   }
 }
 
-/// Single usage example row with a compact source label.
-class _UsageExampleRow extends StatelessWidget {
-  const _UsageExampleRow({
-    required this.isOriginal,
-    required this.text,
+/// Additional model-provided examples, without per-row labels.
+class _AdditionalUsageExamples extends StatelessWidget {
+  const _AdditionalUsageExamples({
+    required this.examples,
+    required this.topSpacing,
   });
 
-  final bool isOriginal;
-  final String text;
+  final List<String> examples;
+  final double topSpacing;
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.colors;
-    final textTheme = context.text;
-    final backgroundColor = isOriginal
-        ? cs.primary.withValues(alpha: 0.08)
-        : cs.surfaceContainerHighest.withValues(alpha: 0.42);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.xs,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (isOriginal) ...[
-                Text(
-                  'In this text',
-                  style: textTheme.labelSmall.copyWith(
-                    color: cs.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-              ],
-              MarkedText(
-                text: text,
-                style: textTheme.bodySmall.copyWith(color: cs.onSurface),
-                highlightStyle: textTheme.bodySmall.copyWith(
-                  color: cs.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (topSpacing > 0) SizedBox(height: topSpacing),
+        for (final example in examples) ...[
+          _TranslationSourceQuote(quote: example),
+          if (example != examples.last) const SizedBox(height: AppSpacing.md),
+        ],
+      ],
     );
   }
 }
@@ -598,10 +742,11 @@ class _TranslationDetails extends StatelessWidget {
           label: _lemmaLabel(sense.grammaticalForm),
           value: lemmaValue,
         ),
-      if (sense.sourceDefinition != null)
-        _TranslationDetailLine(label: 'Source', value: sense.sourceDefinition!),
-      if (sense.targetDefinition != null)
-        _TranslationDetailLine(label: 'Target', value: sense.targetDefinition!),
+      if (sense.sourceDefinition != null || sense.targetDefinition != null)
+        _TranslationDefinitionsBlock(
+          sourceDefinition: sense.sourceDefinition,
+          targetDefinition: sense.targetDefinition,
+        ),
       if (sense.sourceContextNote != null)
         _TranslationDetailLine(
           label: 'Source context',
@@ -708,6 +853,39 @@ class _TranslationDetails extends StatelessWidget {
       if (pair.target != null) pair.target!,
     ];
     return parts.join(' / ');
+  }
+}
+
+/// Source/target definitions grouped under one semantic heading.
+class _TranslationDefinitionsBlock extends StatelessWidget {
+  const _TranslationDefinitionsBlock({
+    required this.sourceDefinition,
+    required this.targetDefinition,
+  });
+
+  final String? sourceDefinition;
+  final String? targetDefinition;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = context.colors.onSurface.withValues(alpha: 0.55);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'DEFINITIONS',
+          style: context.text.kicker.copyWith(color: muted),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        if (sourceDefinition != null)
+          _TranslationDetailLine(label: 'Source', value: sourceDefinition!),
+        if (sourceDefinition != null && targetDefinition != null)
+          const SizedBox(height: AppSpacing.xs),
+        if (targetDefinition != null)
+          _TranslationDetailLine(label: 'Target', value: targetDefinition!),
+      ],
+    );
   }
 }
 
