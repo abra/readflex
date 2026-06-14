@@ -168,7 +168,7 @@ const buildMarkedRangeContextText = (range) => {
       range.endOffset
     );
     const after = _sliceWithWindow(startText, range.endOffset, segmentEnd);
-    return _limitContext(`${before} [[${selected}]] ${after}`);
+    return _limitContext(`${before}[[${selected}]]${after}`);
   }
 
   const startSegment = _collapseWhitespace(

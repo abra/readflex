@@ -22,6 +22,8 @@ class TranslateState extends Equatable {
     this.literalTranslation,
     this.suggestedFullPhrase,
     this.notes,
+    this.savingEntryKey,
+    this.savedEntryIds = const {},
     this.errorMessage,
   });
 
@@ -39,6 +41,8 @@ class TranslateState extends Equatable {
   final String? literalTranslation;
   final TranslationTextPair? suggestedFullPhrase;
   final TranslationTextPair? notes;
+  final String? savingEntryKey;
+  final Map<String, String> savedEntryIds;
   final String? errorMessage;
 
   static const _absent = Object();
@@ -58,6 +62,8 @@ class TranslateState extends Equatable {
     Object? literalTranslation = _absent,
     Object? suggestedFullPhrase = _absent,
     Object? notes = _absent,
+    Object? savingEntryKey = _absent,
+    Map<String, String>? savedEntryIds,
     String? errorMessage,
   }) => TranslateState(
     status: status ?? this.status,
@@ -82,6 +88,10 @@ class TranslateState extends Equatable {
         ? this.suggestedFullPhrase
         : suggestedFullPhrase as TranslationTextPair?,
     notes: notes == _absent ? this.notes : notes as TranslationTextPair?,
+    savingEntryKey: savingEntryKey == _absent
+        ? this.savingEntryKey
+        : savingEntryKey as String?,
+    savedEntryIds: savedEntryIds ?? this.savedEntryIds,
     errorMessage: errorMessage,
   );
 
@@ -101,6 +111,8 @@ class TranslateState extends Equatable {
     literalTranslation,
     suggestedFullPhrase,
     notes,
+    savingEntryKey,
+    savedEntryIds,
     errorMessage,
   ];
 }

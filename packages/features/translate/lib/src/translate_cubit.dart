@@ -81,6 +81,8 @@ class TranslateCubit extends Cubit<TranslateState> {
           literalTranslation: result.literalTranslation,
           suggestedFullPhrase: result.suggestedFullPhrase,
           notes: result.notes,
+          savingEntryKey: null,
+          savedEntryIds: const {},
         ),
       );
     } catch (e, st) {
@@ -97,25 +99,47 @@ class TranslateCubit extends Cubit<TranslateState> {
 
   Future<void> saveToDictionary({
     required String word,
+    String? entryKey,
+    String? translation,
+    String? pronunciation,
+    String? partOfSpeech,
+    String? context,
+    List<String>? usageExamples,
     String? sourceId,
     SourceType? sourceType,
   }) async {
-    if (state.translatedText.isEmpty) return;
+    final normalizedWord = word.trim();
+    final resolvedTranslation = (translation ?? state.translatedText).trim();
+    final normalizedEntryKey = _nonEmpty(entryKey);
+    if (normalizedWord.isEmpty || resolvedTranslation.isEmpty) return;
+    if (normalizedEntryKey != null &&
+        state.savedEntryIds.containsKey(normalizedEntryKey)) {
+      return;
+    }
 
-    emit(state.copyWith(status: TranslateStatus.saving));
+    emit(
+      state.copyWith(
+        status: TranslateStatus.saving,
+        savingEntryKey: normalizedEntryKey,
+      ),
+    );
 
     try {
       final entry = await _dictionaryRepository.addEntry(
-        word: word,
-        translation: state.translatedText,
+        word: normalizedWord,
+        translation: resolvedTranslation,
         sourceId: sourceId,
         sourceType: sourceType,
         pronunciation:
-            state.sense?.transcription ?? state.sense?.lemmaTranscription,
+            pronunciation ??
+            state.sense?.transcription ??
+            state.sense?.lemmaTranscription,
         partOfSpeech:
-            state.sense?.partOfSpeech ?? state.expression?.partOfSpeech,
-        context: state.selectionContextText ?? state.context,
-        usageExamples: state.usageExamples,
+            partOfSpeech ??
+            state.sense?.partOfSpeech ??
+            state.expression?.partOfSpeech,
+        context: context ?? state.selectionContextText ?? state.context,
+        usageExamples: usageExamples ?? state.usageExamples,
       );
       // Same isClosed-after-await guard as in `translate`: the user can
       // dismiss the sheet between addEntry and the FSRS register, which
@@ -133,16 +157,74 @@ class TranslateCubit extends Cubit<TranslateState> {
         if (!isClosed) addError(e, st);
       }
       if (isClosed) return;
-      emit(state.copyWith(status: TranslateStatus.saved));
+      final savedEntryIds = normalizedEntryKey == null
+          ? state.savedEntryIds
+          : {
+              ...state.savedEntryIds,
+              normalizedEntryKey: entry.id,
+            };
+      emit(
+        state.copyWith(
+          status: TranslateStatus.saved,
+          savingEntryKey: null,
+          savedEntryIds: savedEntryIds,
+        ),
+      );
     } catch (e, st) {
       if (isClosed) return;
       addError(e, st);
       emit(
         state.copyWith(
           status: TranslateStatus.failure,
+          savingEntryKey: null,
           errorMessage: 'Failed to save to dictionary',
         ),
       );
     }
+  }
+
+  Future<void> undoDictionarySave(String entryKey) async {
+    final normalizedEntryKey = _nonEmpty(entryKey);
+    if (normalizedEntryKey == null) return;
+
+    final entryId = state.savedEntryIds[normalizedEntryKey];
+    if (entryId == null) return;
+
+    emit(
+      state.copyWith(
+        status: TranslateStatus.saving,
+        savingEntryKey: normalizedEntryKey,
+      ),
+    );
+
+    try {
+      await _dictionaryRepository.deleteEntry(entryId);
+      if (isClosed) return;
+      emit(
+        state.copyWith(
+          status: TranslateStatus.translated,
+          savingEntryKey: null,
+          savedEntryIds: {
+            for (final entry in state.savedEntryIds.entries)
+              if (entry.key != normalizedEntryKey) entry.key: entry.value,
+          },
+        ),
+      );
+    } catch (e, st) {
+      if (isClosed) return;
+      addError(e, st);
+      emit(
+        state.copyWith(
+          status: TranslateStatus.failure,
+          savingEntryKey: null,
+          errorMessage: 'Failed to undo dictionary save',
+        ),
+      );
+    }
+  }
+
+  static String? _nonEmpty(String? value) {
+    final normalized = value?.trim();
+    return normalized == null || normalized.isEmpty ? null : normalized;
   }
 }

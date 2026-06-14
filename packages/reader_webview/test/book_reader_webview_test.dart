@@ -445,7 +445,24 @@ void main() {
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_59"));
+      expect(assetExtractor, contains("reader_webview_assets_60"));
+    });
+
+    test('keeps same-node marked selection adjacent to punctuation', () {
+      final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
+
+      expect(
+        bookJs,
+        contains(r'return _limitContext(`${before}[[${selected}]]${after}`);'),
+      );
+      expect(
+        bookJs,
+        isNot(
+          contains(
+            r'return _limitContext(`${before} [[${selected}]] ${after}`);',
+          ),
+        ),
+      );
     });
 
     test('does not dump full reader style changes to console', () {

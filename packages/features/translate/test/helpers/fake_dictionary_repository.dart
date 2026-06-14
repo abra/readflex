@@ -46,4 +46,10 @@ class FakeDictionaryRepository implements DictionaryRepository {
     entries.add(entry);
     return entry;
   }
+
+  @override
+  Future<void> deleteEntry(String id) async {
+    if (shouldThrow) throw Exception('deleteEntry failed');
+    entries.removeWhere((entry) => entry.id == id);
+  }
 }

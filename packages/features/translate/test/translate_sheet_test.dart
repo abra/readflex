@@ -60,7 +60,7 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump(); // let async translate complete
 
-    expect(find.text('[ru] serendipity'), findsOneWidget);
+    expect(find.text('[ru] serendipity'), findsWidgets);
   });
 
   testWidgets('uses configured translation languages', (tester) async {
@@ -74,7 +74,7 @@ void main() {
 
     expect(translationService.lastFromLang, 'ru');
     expect(translationService.lastToLang, 'en');
-    expect(find.text('[en] serendipity'), findsOneWidget);
+    expect(find.text('[en] serendipity'), findsWidgets);
   });
 
   testWidgets('auto-detects Cyrillic source language', (tester) async {
@@ -115,7 +115,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('cumven'), findsOneWidget);
-    expect(find.text('[ru] circumvent'), findsOneWidget);
+    expect(find.text('[ru] circumvent'), findsWidgets);
     expect(translationService.lastText, 'circumvent');
     expect(
       translationService.lastContextText,
@@ -123,13 +123,15 @@ void main() {
     );
   });
 
-  testWidgets('shows Save to Dictionary button after translation', (
+  testWidgets('shows dictionary save option after translation', (
     tester,
   ) async {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
     expect(find.text('Save to Dictionary'), findsOneWidget);
+    expect(find.text('Selected word'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Save'), findsOneWidget);
   });
 
   testWidgets('saves normalized text to dictionary for partial selections', (
@@ -145,11 +147,92 @@ void main() {
 
     await tester.pumpWidget(buildSubject(selection: selection));
     await tester.pump();
-    await tester.tap(find.text('Save to Dictionary'));
+    await tester.tap(find.widgetWithText(TextButton, 'Save'));
     await tester.pump();
 
     expect(dictionaryRepository.entries, hasLength(1));
     expect(dictionaryRepository.entries.single.word, 'circumvent');
+  });
+
+  testWidgets('offers separate save actions for selected word and expression', (
+    tester,
+  ) async {
+    const selection = TextSelectionContext(
+      selectedText: 'kick',
+      sourceId: 'book-1',
+      sourceType: SourceType.book,
+      contextText: 'It is time to kick things off.',
+    );
+    translationService.resultOverride = const TranslationResult(
+      originalText: 'kick',
+      translatedText: 'пинать',
+      source: TranslationSource.remote,
+      answerType: TranslationAnswerType.expressionExplanation,
+      sense: TranslationSense(
+        partOfSpeech: 'verb',
+        transcription: '/kɪk/',
+        targetDefinition: 'Начать действие или процесс.',
+      ),
+      expression: TranslationExpression(
+        term: 'kick',
+        surface: 'kick things off',
+        lexicalUnit: 'kick off',
+        expressionType: 'phrasal_verb',
+      ),
+      suggestedFullPhrase: TranslationTextPair(
+        source: 'kick things off',
+        target: 'начать дело',
+      ),
+      usageExamples: ['It is time to [[kick things off]].'],
+    );
+
+    await tester.pumpWidget(buildSubject(selection: selection));
+    await tester.pump();
+
+    expect(find.text('Selected word'), findsOneWidget);
+    expect(find.text('Phrasal verb'), findsOneWidget);
+    expect(find.text('kick things off'), findsOneWidget);
+    expect(find.text('начать дело'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Save'), findsNWidgets(2));
+
+    await tester.tap(find.widgetWithText(TextButton, 'Save').first);
+    await tester.pump();
+
+    expect(dictionaryRepository.entries, hasLength(1));
+    expect(dictionaryRepository.entries[0].word, 'kick');
+    expect(dictionaryRepository.entries[0].translation, 'пинать');
+    expect(find.widgetWithText(TextButton, 'Undo'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, 'Save').last);
+    await tester.pump();
+
+    expect(dictionaryRepository.entries, hasLength(2));
+    expect(dictionaryRepository.entries[1].word, 'kick things off');
+    expect(dictionaryRepository.entries[1].translation, 'начать дело');
+    expect(dictionaryRepository.entries[1].partOfSpeech, 'phrasal verb');
+    expect(
+      dictionaryRepository.entries[1].usageExamples,
+      ['It is time to [[kick things off]].'],
+    );
+    expect(find.widgetWithText(TextButton, 'Undo'), findsNWidgets(2));
+  });
+
+  testWidgets('undo removes a saved dictionary option', (tester) async {
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.tap(find.widgetWithText(TextButton, 'Save'));
+    await tester.pump();
+
+    expect(dictionaryRepository.entries, hasLength(1));
+    expect(find.widgetWithText(TextButton, 'Undo'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, 'Undo'));
+    await tester.pump();
+
+    expect(dictionaryRepository.entries, isEmpty);
+    expect(find.widgetWithText(TextButton, 'Save'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Undo'), findsNothing);
   });
 
   testWidgets('shows usage examples when present', (tester) async {
@@ -163,11 +246,42 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    expect(find.text('счастливая случайность'), findsOneWidget);
+    expect(find.text('счастливая случайность'), findsWidgets);
+    expect(find.text('Examples'), findsOneWidget);
+    expect(find.text('Example'), findsNothing);
+    expect(find.text('In this text'), findsNothing);
     expect(
       find.text('A serendipity led to the discovery.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('labels original context separately from generated examples', (
+    tester,
+  ) async {
+    const selection = TextSelectionContext(
+      selectedText: 'signing',
+      sourceId: 'book-1',
+      sourceType: SourceType.book,
+      contextText: 'The walkthrough explains signing up for a new account.',
+    );
+    translationService.resultOverride = const TranslationResult(
+      originalText: 'signing',
+      translatedText: 'регистрация',
+      source: TranslationSource.remote,
+      usageExamples: [
+        'The walkthrough explains [[signing up]] for a new account.',
+        'She is [[signing up]] for the course.',
+        'They finished [[signing up]] before noon.',
+      ],
+    );
+
+    await tester.pumpWidget(buildSubject(selection: selection));
+    await tester.pump();
+
+    expect(find.text('Examples'), findsOneWidget);
+    expect(find.text('In this text'), findsOneWidget);
+    expect(find.text('Example'), findsNothing);
   });
 
   testWidgets('renders marked source-language usage examples', (tester) async {
@@ -212,7 +326,7 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    expect(find.text('искать'), findsOneWidget);
+    expect(find.text('искать'), findsWidgets);
     expect(
       find.text('Часть фразового глагола "look up": искать информацию.'),
       findsOneWidget,
@@ -290,7 +404,7 @@ void main() {
         .widgetList<RichText>(find.byType(RichText))
         .any((widget) => widget.text.toPlainText().contains(text));
 
-    expect(find.text('начать'), findsOneWidget);
+    expect(find.text('начать'), findsWidgets);
     final detailsText = tester
         .widgetList<RichText>(find.byType(RichText))
         .map((widget) => widget.text.toPlainText())
@@ -328,7 +442,7 @@ void main() {
     expect(richTextContains('separable phrasal verb'), isFalse);
     expect(richTextContains('запустить'), isTrue);
     expect(richTextContains('пнуть вещи прочь'), isTrue);
-    expect(richTextContains('начать дело'), isFalse);
+    expect(richTextContains('начать дело'), isTrue);
     expect(richTextContains('Things is an inserted object.'), isTrue);
   });
 
@@ -411,7 +525,7 @@ void main() {
         .map((widget) => widget.text.toPlainText())
         .join('\n');
 
-    expect(find.text('в'), findsOneWidget);
+    expect(find.text('в'), findsWidgets);
     expect(
       richTextContains(
         '"In" is part of the fixed expression "in other words" in this sentence.',
@@ -436,7 +550,7 @@ void main() {
     expect(find.text('Translation failed'), findsOneWidget);
   });
 
-  testWidgets('shows Save to Dictionary button on failure too', (
+  testWidgets('does not show dictionary save options on translation failure', (
     tester,
   ) async {
     translationService.shouldThrow = true;
@@ -444,14 +558,15 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    expect(find.text('Save to Dictionary'), findsOneWidget);
+    expect(find.text('Save to Dictionary'), findsNothing);
+    expect(find.widgetWithText(TextButton, 'Save'), findsNothing);
   });
 
   testWidgets('save to dictionary adds entry', (tester) async {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    await tester.tap(find.text('Save to Dictionary'));
+    await tester.tap(find.widgetWithText(TextButton, 'Save'));
     await tester.pump();
 
     expect(dictionaryRepository.entries, hasLength(1));

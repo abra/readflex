@@ -301,6 +301,76 @@ void main() {
     );
 
     blocTest<TranslateCubit, TranslateState>(
+      'saveToDictionary tracks keyed save state',
+      build: () => TranslateCubit(
+        translationService: translationService,
+        dictionaryRepository: dictionaryRepository,
+        fsrsRepository: fsrsRepository,
+      ),
+      seed: () => const TranslateState(
+        status: TranslateStatus.translated,
+        translatedText: 'привет',
+      ),
+      act: (cubit) => cubit.saveToDictionary(
+        word: 'hello',
+        entryKey: 'selection:hello',
+      ),
+      expect: () => [
+        const TranslateState(
+          status: TranslateStatus.saving,
+          translatedText: 'привет',
+          savingEntryKey: 'selection:hello',
+        ),
+        const TranslateState(
+          status: TranslateStatus.saved,
+          translatedText: 'привет',
+          savedEntryIds: {'selection:hello': 'de-1'},
+        ),
+      ],
+    );
+
+    blocTest<TranslateCubit, TranslateState>(
+      'undoDictionarySave removes saved entry and clears keyed save state',
+      build: () => TranslateCubit(
+        translationService: translationService,
+        dictionaryRepository: dictionaryRepository,
+        fsrsRepository: fsrsRepository,
+      ),
+      seed: () => const TranslateState(
+        status: TranslateStatus.saved,
+        translatedText: 'привет',
+        savedEntryIds: {'selection:hello': 'de-1'},
+      ),
+      setUp: () {
+        dictionaryRepository.entries.add(
+          DictionaryEntry(
+            id: 'de-1',
+            word: 'hello',
+            translation: 'привет',
+            addedAt: DateTime(2024),
+          ),
+        );
+      },
+      act: (cubit) => cubit.undoDictionarySave('selection:hello'),
+      expect: () => [
+        const TranslateState(
+          status: TranslateStatus.saving,
+          translatedText: 'привет',
+          savingEntryKey: 'selection:hello',
+          savedEntryIds: {'selection:hello': 'de-1'},
+        ),
+        const TranslateState(
+          status: TranslateStatus.translated,
+          translatedText: 'привет',
+          savedEntryIds: {},
+        ),
+      ],
+      verify: (_) {
+        expect(dictionaryRepository.entries, isEmpty);
+      },
+    );
+
+    blocTest<TranslateCubit, TranslateState>(
       'saveToDictionary persists translation context',
       build: () => TranslateCubit(
         translationService: translationService,

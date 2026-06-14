@@ -37,8 +37,8 @@ Future<void> showTranslateSheet(
 /// it to the dictionary.
 ///
 /// Provides its own [TranslateCubit] and kicks off the translation
-/// immediately on build. Closes itself once the entry is saved.
-/// Usually launched via [showTranslateSheet], not constructed directly.
+/// immediately on build. Usually launched via [showTranslateSheet],
+/// not constructed directly.
 class TranslateSheet extends StatelessWidget {
   const TranslateSheet({
     required this.translationService,
@@ -93,16 +93,10 @@ class _TranslateSheetView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<TranslateCubit, TranslateState>(
-      listener: (context, state) {
-        if (state.status == TranslateStatus.saved) {
-          Navigator.of(context).pop();
-        }
-      },
+    return BlocBuilder<TranslateCubit, TranslateState>(
       builder: (context, state) {
-        final isWorking =
-            state.status == TranslateStatus.translating ||
-            state.status == TranslateStatus.saving;
+        final isTranslating = state.status == TranslateStatus.translating;
+        final saveCandidates = _dictionarySaveCandidates(state, selection);
 
         return ActionBottomSheetLayout(
           title: 'Translate',
@@ -115,11 +109,9 @@ class _TranslateSheetView extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Original text
               SelectionPreviewCard(text: selection.selectedText),
               const SizedBox(height: AppSpacing.md),
-              // Translation result
-              if (state.status == TranslateStatus.translating)
+              if (isTranslating)
                 const Center(
                   child: Padding(
                     padding: EdgeInsets.all(AppSpacing.md),
@@ -127,17 +119,7 @@ class _TranslateSheetView extends StatelessWidget {
                   ),
                 )
               else if (state.translatedText.isNotEmpty) ...[
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: context.colors.primaryContainer,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                  ),
-                  child: Text(
-                    state.translatedText,
-                    style: context.text.bodyLarge,
-                  ),
-                ),
+                _TranslationResultCard(text: state.translatedText),
                 _TranslationDetails(state: state),
                 if (state.context != null && state.context!.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.sm),
@@ -148,24 +130,32 @@ class _TranslateSheetView extends StatelessWidget {
                     ),
                   ),
                 ],
-                if (state.usageExamples.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  ...state.usageExamples.map(
-                    (example) => Padding(
-                      padding: const EdgeInsets.only(
-                        bottom: AppSpacing.xs,
-                      ),
-                      child: MarkedText(
-                        text: example,
-                        style: context.text.bodySmall,
-                        highlightStyle: context.text.bodySmall.copyWith(
-                          color: context.colors.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
+                if (state.usageExamples.isNotEmpty)
+                  _UsageExamplesBlock(state: state),
+                if (saveCandidates.isNotEmpty)
+                  _DictionarySaveOptions(
+                    candidates: saveCandidates,
+                    savingEntryKey: state.savingEntryKey,
+                    savedEntryIds: state.savedEntryIds,
+                    onSave: (candidate) {
+                      context.read<TranslateCubit>().saveToDictionary(
+                        word: candidate.word,
+                        entryKey: candidate.key,
+                        translation: candidate.translation,
+                        pronunciation: candidate.pronunciation,
+                        partOfSpeech: candidate.partOfSpeech,
+                        context: candidate.context,
+                        usageExamples: candidate.usageExamples,
+                        sourceId: selection.sourceId,
+                        sourceType: selection.sourceType,
+                      );
+                    },
+                    onUndo: (candidate) {
+                      context.read<TranslateCubit>().undoDictionarySave(
+                        candidate.key,
+                      );
+                    },
                   ),
-                ],
               ],
               if (state.status == TranslateStatus.failure)
                 Padding(
@@ -177,26 +167,335 @@ class _TranslateSheetView extends StatelessWidget {
                     ),
                   ),
                 ),
-              const SizedBox(height: AppSpacing.md),
-              if (state.status == TranslateStatus.translated ||
-                  state.status == TranslateStatus.failure)
-                FilledButton.icon(
-                  onPressed: isWorking
-                      ? null
-                      : () => context.read<TranslateCubit>().saveToDictionary(
-                          word: selection.textForTranslation,
-                          sourceId: selection.sourceId,
-                          sourceType: selection.sourceType,
-                        ),
-                  icon: state.status == TranslateStatus.saving
-                      ? const ButtonLoadingIndicator(size: AppIconSize.sm)
-                      : const Icon(AppIcons.bookmarkAdd),
-                  label: const Text('Save to Dictionary'),
-                ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+/// Main translation result block.
+class _TranslationResultCard extends StatelessWidget {
+  const _TranslationResultCard({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: context.colors.primaryContainer,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: Text(
+        text,
+        style: context.text.bodyLarge.copyWith(
+          color: context.colors.onPrimaryContainer,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+/// Usage examples block that separates the original reader context
+/// from additional model-provided examples.
+class _UsageExamplesBlock extends StatelessWidget {
+  const _UsageExamplesBlock({required this.state});
+
+  final TranslateState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasOriginalExample =
+        state.selectionContextText != null &&
+        state.selectionContextText!.trim().isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Examples',
+            style: context.text.labelSmall.copyWith(
+              color: context.colors.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          for (var i = 0; i < state.usageExamples.length; i++)
+            _UsageExampleRow(
+              isOriginal: hasOriginalExample && i == 0,
+              text: state.usageExamples[i],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Single usage example row with a compact source label.
+class _UsageExampleRow extends StatelessWidget {
+  const _UsageExampleRow({
+    required this.isOriginal,
+    required this.text,
+  });
+
+  final bool isOriginal;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colors;
+    final textTheme = context.text;
+    final backgroundColor = isOriginal
+        ? cs.primary.withValues(alpha: 0.08)
+        : cs.surfaceContainerHighest.withValues(alpha: 0.42);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.xs,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (isOriginal) ...[
+                Text(
+                  'In this text',
+                  style: textTheme.labelSmall.copyWith(
+                    color: cs.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+              ],
+              MarkedText(
+                text: text,
+                style: textTheme.bodySmall.copyWith(color: cs.onSurface),
+                highlightStyle: textTheme.bodySmall.copyWith(
+                  color: cs.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DictionarySaveCandidate {
+  const _DictionarySaveCandidate({
+    required this.key,
+    required this.label,
+    required this.icon,
+    required this.word,
+    required this.translation,
+    required this.context,
+    required this.usageExamples,
+    this.pronunciation,
+    this.partOfSpeech,
+  });
+
+  final String key;
+  final String label;
+  final IconData icon;
+  final String word;
+  final String translation;
+  final String? pronunciation;
+  final String? partOfSpeech;
+  final String? context;
+  final List<String> usageExamples;
+}
+
+class _DictionarySaveOptions extends StatelessWidget {
+  const _DictionarySaveOptions({
+    required this.candidates,
+    required this.savingEntryKey,
+    required this.savedEntryIds,
+    required this.onSave,
+    required this.onUndo,
+  });
+
+  final List<_DictionarySaveCandidate> candidates;
+  final String? savingEntryKey;
+  final Map<String, String> savedEntryIds;
+  final ValueChanged<_DictionarySaveCandidate> onSave;
+  final ValueChanged<_DictionarySaveCandidate> onUndo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Save to Dictionary',
+            style: context.text.labelLarge.copyWith(
+              color: context.colors.onSurface,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ...candidates.expand(
+            (candidate) => [
+              _DictionarySaveOptionRow(
+                candidate: candidate,
+                saving: savingEntryKey == candidate.key,
+                saved: savedEntryIds.containsKey(candidate.key),
+                onSave: () => onSave(candidate),
+                onUndo: () => onUndo(candidate),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DictionarySaveOptionRow extends StatelessWidget {
+  const _DictionarySaveOptionRow({
+    required this.candidate,
+    required this.saving,
+    required this.saved,
+    required this.onSave,
+    required this.onUndo,
+  });
+
+  final _DictionarySaveCandidate candidate;
+  final bool saving;
+  final bool saved;
+  final VoidCallback onSave;
+  final VoidCallback onUndo;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colors;
+    final text = context.text;
+    final actionColor = saved ? cs.primary : cs.onSurfaceVariant;
+
+    return Material(
+      color: cs.surfaceContainerHighest.withValues(alpha: 0.54),
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: cs.primary.withValues(alpha: 0.10),
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Icon(candidate.icon, size: 18, color: cs.primary),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    candidate.label,
+                    style: text.labelSmall.copyWith(
+                      color: cs.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    candidate.word,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.bodyMedium.copyWith(
+                      color: cs.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    candidate.translation,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.bodySmall.copyWith(color: cs.primary),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 150),
+              child: saving
+                  ? const SizedBox(
+                      key: ValueKey('saving'),
+                      width: 40,
+                      height: 40,
+                      child: Center(
+                        child: ButtonLoadingIndicator(size: AppIconSize.sm),
+                      ),
+                    )
+                  : saved
+                  ? _UndoSaveButton(color: actionColor, onPressed: onUndo)
+                  : TextButton.icon(
+                      key: const ValueKey('save'),
+                      onPressed: onSave,
+                      icon: const Icon(
+                        AppIcons.bookmarkAdd,
+                        size: AppIconSize.sm,
+                      ),
+                      label: const Text('Save'),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UndoSaveButton extends StatelessWidget {
+  const _UndoSaveButton({
+    required this.color,
+    required this.onPressed,
+  });
+
+  final Color color;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      key: const ValueKey('saved'),
+      onPressed: onPressed,
+      icon: Icon(AppIcons.check, size: AppIconSize.sm, color: color),
+      label: Text(
+        'Undo',
+        style: context.text.labelMedium.copyWith(
+          color: color,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 }
@@ -436,4 +735,109 @@ class _TranslationDetailLine extends StatelessWidget {
       ),
     );
   }
+}
+
+List<_DictionarySaveCandidate> _dictionarySaveCandidates(
+  TranslateState state,
+  TextSelectionContext selection,
+) {
+  final selectedWord = _nonEmpty(selection.textForTranslation);
+  final selectedTranslation = _nonEmpty(state.translatedText);
+  if (selectedWord == null || selectedTranslation == null) return const [];
+
+  final selectedCandidate = _DictionarySaveCandidate(
+    key: 'selection:${_normalizeForComparison(selectedWord)}',
+    label: selection.selectionKind == 'partial_word'
+        ? 'Complete word'
+        : 'Selected word',
+    icon: AppIcons.bookmarkAdd,
+    word: selectedWord,
+    translation: selectedTranslation,
+    pronunciation:
+        state.sense?.transcription ?? state.sense?.lemmaTranscription,
+    partOfSpeech: state.sense?.partOfSpeech ?? state.expression?.partOfSpeech,
+    context: state.selectionContextText ?? state.context,
+    usageExamples: state.usageExamples,
+  );
+
+  final expressionCandidate = _expressionSaveCandidate(
+    state,
+    selectedWord: selectedWord,
+  );
+
+  return [
+    selectedCandidate,
+    ?expressionCandidate,
+  ];
+}
+
+_DictionarySaveCandidate? _expressionSaveCandidate(
+  TranslateState state, {
+  required String selectedWord,
+}) {
+  final expression = state.expression;
+  if (expression == null || expression.isEmpty) return null;
+
+  final expressionSource =
+      _nonEmpty(state.suggestedFullPhrase?.source) ??
+      _expressionDisplayHead(expression);
+  if (!_isLargerThanTerm(expressionSource, selectedWord)) return null;
+
+  final expressionTranslation =
+      _nonEmpty(state.suggestedFullPhrase?.target) ??
+      _nonEmpty(state.sense?.targetContextNote) ??
+      _nonEmpty(state.sense?.targetDefinition);
+  if (expressionTranslation == null) return null;
+
+  final expressionType = _TranslationDetails._expressionTypeName(
+    expression.expressionType,
+  );
+  final expressionLabel = _capitalize(expressionType);
+
+  return _DictionarySaveCandidate(
+    key: 'expression:${_normalizeForComparison(expressionSource!)}',
+    label: expressionLabel,
+    icon: AppIcons.translate,
+    word: expressionSource,
+    translation: expressionTranslation,
+    partOfSpeech: expressionType,
+    context: state.selectionContextText ?? state.context,
+    usageExamples: state.usageExamples,
+  );
+}
+
+String? _expressionDisplayHead(TranslationExpression expression) {
+  for (final value in [
+    expression.surface,
+    expression.normalizedExpression,
+    expression.lexicalUnit,
+  ]) {
+    final trimmed = _nonEmpty(value);
+    if (trimmed != null) return trimmed;
+  }
+  return null;
+}
+
+bool _isLargerThanTerm(String? value, String term) {
+  final normalizedValue = _nonEmpty(value);
+  if (normalizedValue == null) return false;
+  final valueKey = _normalizeForComparison(normalizedValue);
+  final termKey = _normalizeForComparison(term);
+  if (valueKey == termKey) return false;
+  return valueKey.contains(' ') || valueKey.length > termKey.length;
+}
+
+String? _nonEmpty(String? value) {
+  final trimmed = value?.trim();
+  return trimmed == null || trimmed.isEmpty ? null : trimmed;
+}
+
+String _normalizeForComparison(String value) {
+  return value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+}
+
+String _capitalize(String value) {
+  final normalized = value.trim();
+  if (normalized.isEmpty) return 'Expression';
+  return normalized[0].toUpperCase() + normalized.substring(1);
 }

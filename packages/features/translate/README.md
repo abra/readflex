@@ -41,7 +41,8 @@ Props:
   `saveToDictionary(…)`. Status flow: `idle → translating → translated →
   saving → saved` (with `failure` branching from the working states).
   Failures to register an FSRS row after a successful save are non-fatal
-  and are only logged.
+  and are only logged. Keyed saves keep the saved dictionary entry id per
+  candidate so the sheet can undo a specific save without closing.
 - `TranslateState` — carries `translatedText`, `TranslationSource`, optional
   contextual fields for the selected word/expression, `usageExamples`,
   `naturalEquivalents`, and the last error message. DeepSeek returns
@@ -69,6 +70,13 @@ The key invariant is: exact selection first, larger contextual unit second only
 when it exists. If the reader reports a partial-word selection, the sheet still
 previews the exact user selection but sends and saves the normalized lexical
 selection (`TextSelectionContext.textForTranslation`).
+
+Saving follows the same rule. A plain word result exposes one dictionary
+candidate. When the selected word is part of a larger unit and the model returns
+a usable source/target phrase pair, the sheet exposes two independent save
+actions: the selected word and the larger expression. This allows saving either
+one or both entries with the appropriate context, examples, and review item.
+Saved candidates stay visible with an inline undo action.
 
 ## Dependencies
 
