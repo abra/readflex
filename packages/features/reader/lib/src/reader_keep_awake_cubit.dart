@@ -4,7 +4,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:screen_control_service/screen_control_service.dart';
 
-/// Coordinates reader keep-awake requests with app lifecycle state.
+/// Keeps the device screen awake only while the reader is actively showing
+/// content in the foreground, and releases that request for controls,
+/// background lifecycle states, and disposal.
 class ReaderKeepAwakeCubit extends Cubit<bool> {
   ReaderKeepAwakeCubit({
     required ScreenControlService screenControlService,
