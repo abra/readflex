@@ -31,6 +31,14 @@ void main() {
       expect(css, contains('#b86a2d'));
     });
 
+    test('removes publisher link underline decorations', () {
+      final css = buildBookCustomCSS(theme: lightTheme);
+      expect(css, contains('text-decoration: none !important'));
+      expect(css, contains('text-decoration-line: none !important'));
+      expect(css, contains('border-bottom: 0 !important'));
+      expect(css, contains('box-shadow: none !important'));
+    });
+
     test('forces readable text colors in dark themes', () {
       final css = buildBookCustomCSS(theme: darkTheme);
       expect(

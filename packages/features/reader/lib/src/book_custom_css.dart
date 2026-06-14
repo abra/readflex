@@ -71,7 +71,12 @@ String buildBookCustomCSS({
       'color: $secondaryText !important; }',
     );
   }
-  buffer.writeln('a:link, a:visited { color: $accent !important; }');
+  buffer.writeln(
+    'a:link, a:visited { color: $accent !important; } '
+    'a, a:link, a:visited, a * { '
+    'text-decoration: none !important; text-decoration-line: none !important; '
+    'border-bottom: 0 !important; box-shadow: none !important; }',
+  );
   buffer.writeln(
     'blockquote { border-inline-start: 3px solid $divider !important; '
     'padding-inline-start: 1em !important; margin-inline: 0 !important; '
