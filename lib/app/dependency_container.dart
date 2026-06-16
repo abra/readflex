@@ -103,6 +103,15 @@ class DependenciesContainer {
       logger.warn('articleRepository.dispose failed', error: e, stackTrace: st);
     }
     try {
+      await dictionaryRepository.dispose();
+    } catch (e, st) {
+      logger.warn(
+        'dictionaryRepository.dispose failed',
+        error: e,
+        stackTrace: st,
+      );
+    }
+    try {
       await translationService.dispose();
     } catch (e, st) {
       logger.warn(

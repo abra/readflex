@@ -14,7 +14,10 @@ void main() {
     repo = DictionaryRepository(database: db);
   });
 
-  tearDown(() => db.close());
+  tearDown(() async {
+    await repo.dispose();
+    await db.close();
+  });
 
   group('DictionaryRepository', () {
     test('addEntry creates and returns entry', () async {
@@ -123,6 +126,19 @@ void main() {
 
       expect(await db.reviewItemsDao.byItemId(created.id), isNull);
       expect(await repo.getEntries(), isEmpty);
+    });
+
+    test('changes emits after add, update, and delete', () async {
+      final changes = expectLater(
+        repo.changes,
+        emitsInOrder([anything, anything, anything]),
+      );
+
+      final created = await repo.addEntry(word: 'fresh', translation: 'новый');
+      await repo.updateEntry(created.copyWith(translation: 'свежий'));
+      await repo.deleteEntry(created.id);
+
+      await changes;
     });
 
     test('usageExamples round-trips through storage', () async {

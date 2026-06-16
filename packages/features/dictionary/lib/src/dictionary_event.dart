@@ -10,6 +10,11 @@ final class DictionaryLoadRequested extends DictionaryEvent {
   const DictionaryLoadRequested();
 }
 
+/// Repository-level change emitted by another feature.
+final class _DictionaryRepositoryChanged extends DictionaryEvent {
+  const _DictionaryRepositoryChanged();
+}
+
 /// Search-field input. Debounced before hitting the bloc handler.
 final class DictionarySearchChanged extends DictionaryEvent {
   const DictionarySearchChanged(this.query);

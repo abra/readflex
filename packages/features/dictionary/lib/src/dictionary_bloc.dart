@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:dictionary_repository/dictionary_repository.dart';
@@ -30,6 +32,7 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
        _articleRepository = articleRepository,
        super(DictionaryState()) {
     on<DictionaryLoadRequested>(_onLoadRequested);
+    on<_DictionaryRepositoryChanged>(_onRepositoryChanged);
     on<DictionarySearchChanged>(
       _onSearchChanged,
       transformer: _debounce(_searchDelay),
@@ -38,12 +41,18 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
     on<DictionaryEntryAdded>(_onEntryAdded);
     on<DictionaryEntryDeleted>(_onEntryDeleted);
     on<DictionaryEntriesDeleted>(_onEntriesDeleted);
+    _repositoryChanges = _repository.changes.listen((_) {
+      if (_suppressedRepositoryChanges > 0) return;
+      add(const _DictionaryRepositoryChanged());
+    });
   }
 
   final DictionaryRepository _repository;
   final FsrsRepository _fsrsRepository;
   final BookRepository? _bookRepository;
   final ArticleRepository? _articleRepository;
+  late final StreamSubscription<void> _repositoryChanges;
+  var _suppressedRepositoryChanges = 0;
 
   static const _searchDelay = Duration(milliseconds: 300);
 
@@ -56,6 +65,13 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
     Emitter<DictionaryState> emit,
   ) async {
     emit(state.copyWith(status: DictionaryStatus.loading));
+    await _loadEntries(emit);
+  }
+
+  Future<void> _onRepositoryChanged(
+    _DictionaryRepositoryChanged event,
+    Emitter<DictionaryState> emit,
+  ) async {
     await _loadEntries(emit);
   }
 
@@ -79,11 +95,13 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
     Emitter<DictionaryState> emit,
   ) async {
     try {
-      await _repository.addEntry(
-        word: event.word,
-        translation: event.translation,
-        pronunciation: event.pronunciation,
-        partOfSpeech: event.partOfSpeech,
+      await _withoutRepositoryRefresh(
+        () => _repository.addEntry(
+          word: event.word,
+          translation: event.translation,
+          pronunciation: event.pronunciation,
+          partOfSpeech: event.partOfSpeech,
+        ),
       );
       await _loadEntries(emit);
     } catch (e, st) {
@@ -98,7 +116,9 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
   ) async {
     final deletion = _deletionDescriptorFor({event.entryId});
     try {
-      await _repository.deleteEntry(event.entryId);
+      await _withoutRepositoryRefresh(
+        () => _repository.deleteEntry(event.entryId),
+      );
       await _loadEntries(emit, deletion: deletion);
     } catch (e, st) {
       addError(e, st);
@@ -124,7 +144,7 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
     var anyFailed = false;
     for (final id in event.entryIds) {
       try {
-        await _repository.deleteEntry(id);
+        await _withoutRepositoryRefresh(() => _repository.deleteEntry(id));
       } catch (e, st) {
         anyFailed = true;
         addError(e, st);
@@ -233,6 +253,15 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
     return titles;
   }
 
+  Future<T> _withoutRepositoryRefresh<T>(Future<T> Function() action) async {
+    _suppressedRepositoryChanges += 1;
+    try {
+      return await action();
+    } finally {
+      _suppressedRepositoryChanges -= 1;
+    }
+  }
+
   Future<String?> _sourceTitleFor(String sourceId, SourceType? type) async {
     return switch (type) {
       SourceType.book => _bookTitleFor(sourceId),
@@ -279,6 +308,12 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
       if (entry.id == id) return entry.word;
     }
     return null;
+  }
+
+  @override
+  Future<void> close() async {
+    await _repositoryChanges.cancel();
+    return super.close();
   }
 }
 

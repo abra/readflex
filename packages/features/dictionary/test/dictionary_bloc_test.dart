@@ -147,6 +147,45 @@ void main() {
     );
 
     blocTest<DictionaryBloc, DictionaryState>(
+      'reloads when repository changes outside the bloc',
+      setUp: () => repository.seed([_entry1]),
+      build: () => DictionaryBloc(
+        dictionaryRepository: repository,
+        fsrsRepository: fsrsRepository,
+      ),
+      act: (bloc) async {
+        bloc.add(const DictionaryLoadRequested());
+        await bloc.stream.firstWhere(
+          (state) => state.status == DictionaryStatus.success,
+        );
+        final reloaded = bloc.stream.firstWhere(
+          (state) => state.entries.length == 2,
+        );
+        await repository.addEntry(word: 'fresh', translation: 'новый');
+        await reloaded;
+      },
+      expect: () => [
+        DictionaryState(status: DictionaryStatus.loading),
+        DictionaryState(
+          status: DictionaryStatus.success,
+          entries: [_entry1],
+        ),
+        DictionaryState(
+          status: DictionaryStatus.success,
+          entries: [
+            _entry1,
+            DictionaryEntry(
+              id: 'fake-2',
+              word: 'fresh',
+              translation: 'новый',
+              addedAt: DateTime(2026),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    blocTest<DictionaryBloc, DictionaryState>(
       'emits failure when repository throws',
       setUp: () => repository.shouldThrow = true,
       build: () => DictionaryBloc(

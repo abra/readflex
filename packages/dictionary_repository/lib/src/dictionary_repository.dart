@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:domain_models/domain_models.dart';
 import 'package:local_storage/local_storage.dart';
 import 'package:uuid/uuid.dart' show Uuid;
@@ -20,6 +22,13 @@ class DictionaryRepository {
 
   final AppDatabase _db;
   final DictionaryDao _dao;
+  final _changes = StreamController<void>.broadcast(sync: true);
+
+  /// Emits after a dictionary row is added, updated, or deleted.
+  ///
+  /// Feature blocs use this to stay fresh when another feature, such as the
+  /// reader translate sheet, changes the dictionary through this repository.
+  Stream<void> get changes => _changes.stream;
 
   // ─── CRUD ───
 
@@ -93,6 +102,7 @@ class DictionaryRepository {
         addedAt: addedAt ?? DateTime.now(),
       );
       await _dao.insertEntry(entry.toStorageModel());
+      _notifyChanged();
       return entry;
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
@@ -102,6 +112,7 @@ class DictionaryRepository {
   Future<DictionaryEntry> updateEntry(DictionaryEntry entry) async {
     try {
       await _dao.updateEntry(entry.toStorageModel());
+      _notifyChanged();
       return entry;
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
@@ -117,8 +128,15 @@ class DictionaryRepository {
         await _db.reviewItemsDao.deleteItemsByIds([id]);
         await _dao.deleteEntry(id);
       });
+      _notifyChanged();
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }
+  }
+
+  Future<void> dispose() => _changes.close();
+
+  void _notifyChanged() {
+    if (!_changes.isClosed) _changes.add(null);
   }
 }

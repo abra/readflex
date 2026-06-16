@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
 
@@ -6,8 +8,12 @@ class FakeDictionaryRepository implements DictionaryRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 
   final List<DictionaryEntry> _entries = [];
+  final _changes = StreamController<void>.broadcast(sync: true);
   bool shouldThrow = false;
   Set<String> failOnIds = const {};
+
+  @override
+  Stream<void> get changes => _changes.stream;
 
   void seed(List<DictionaryEntry> entries) => _entries
     ..clear()
@@ -25,6 +31,7 @@ class FakeDictionaryRepository implements DictionaryRepository {
       throw StorageException(cause: 'fake');
     }
     _entries.removeWhere((e) => e.id == id);
+    _notifyChanged();
   }
 
   @override
@@ -53,6 +60,11 @@ class FakeDictionaryRepository implements DictionaryRepository {
       addedAt: addedAt ?? DateTime(2026),
     );
     _entries.add(entry);
+    _notifyChanged();
     return entry;
+  }
+
+  void _notifyChanged() {
+    if (!_changes.isClosed) _changes.add(null);
   }
 }
