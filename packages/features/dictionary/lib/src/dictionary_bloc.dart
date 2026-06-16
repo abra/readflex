@@ -20,6 +20,10 @@ part 'dictionary_state.dart';
 /// ([DictionarySearchChanged]) and entry removal
 /// ([DictionaryEntryDeleted]). The repository owns entry + FSRS cleanup so
 /// deletion stays transactional below the BLoC layer.
+///
+/// Also observes [DictionaryRepository.changes] so entries saved from other
+/// features, such as Reader translation, appear in this tab without coupling
+/// those features to [DictionaryBloc].
 class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
   DictionaryBloc({
     required DictionaryRepository dictionaryRepository,
@@ -41,6 +45,10 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
     on<DictionaryEntryAdded>(_onEntryAdded);
     on<DictionaryEntryDeleted>(_onEntryDeleted);
     on<DictionaryEntriesDeleted>(_onEntriesDeleted);
+
+    // External writes reload the tab. Writes initiated by this bloc are
+    // suppressed here because their handlers already reload with the right
+    // UI effects, such as delete toasts.
     _repositoryChanges = _repository.changes.listen((_) {
       if (_suppressedRepositoryChanges > 0) return;
       add(const _DictionaryRepositoryChanged());
@@ -254,6 +262,8 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
   }
 
   Future<T> _withoutRepositoryRefresh<T>(Future<T> Function() action) async {
+    // Keep repository notifications useful for cross-feature changes without
+    // double-loading after this bloc's own add/delete handlers.
     _suppressedRepositoryChanges += 1;
     try {
       return await action();
