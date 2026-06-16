@@ -5,6 +5,8 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'helpers/fake_article_repository.dart';
+import 'helpers/fake_book_repository.dart';
 import 'helpers/fake_dictionary_repository.dart';
 import 'helpers/fake_fsrs_repository.dart';
 
@@ -28,10 +30,14 @@ final _entry2 = DictionaryEntry(
 void main() {
   late FakeDictionaryRepository dictionaryRepository;
   late FakeFsrsRepository fsrsRepository;
+  late FakeBookRepository bookRepository;
+  late FakeArticleRepository articleRepository;
 
   setUp(() {
     dictionaryRepository = FakeDictionaryRepository();
     fsrsRepository = FakeFsrsRepository();
+    bookRepository = FakeBookRepository();
+    articleRepository = FakeArticleRepository();
   });
 
   Widget buildSubject({VoidCallback? onPracticePressed}) => MaterialApp(
@@ -40,6 +46,8 @@ void main() {
       body: DictionaryScreen(
         dictionaryRepository: dictionaryRepository,
         fsrsRepository: fsrsRepository,
+        bookRepository: bookRepository,
+        articleRepository: articleRepository,
         onPracticePressed: onPracticePressed,
       ),
     ),
@@ -129,6 +137,152 @@ void main() {
       find.text('A serendipity led to the discovery.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('detail sheet shows source title instead of source id', (
+    tester,
+  ) async {
+    final entry = _entry.copyWith(
+      sourceId: 'book-1',
+      sourceType: SourceType.book,
+    );
+    dictionaryRepository.seed([entry]);
+    bookRepository.seed(
+      Book(
+        id: 'book-1',
+        title: 'Bug Bounty from Scratch',
+        filePath: '/tmp/book.epub',
+        format: BookFormat.epub,
+        addedAt: DateTime(2026),
+      ),
+    );
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.tap(find.text('serendipity'));
+    await tester.pumpAndSettle();
+
+    final richText = tester
+        .widgetList<RichText>(find.byType(RichText))
+        .map((widget) => widget.text.toPlainText())
+        .join('\n');
+    expect(richText, contains('from Bug Bounty from Scratch'));
+    expect(richText, isNot(contains('from book-1')));
+  });
+
+  testWidgets('detail sheet highlights marked saved context', (tester) async {
+    final entry = _entry.copyWith(
+      context: 'Several diners [[look up]] from their meals.',
+      usageExamples: const [],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: DictionaryDetailSheet(
+            entry: entry,
+            mastered: false,
+            onDelete: () {},
+          ),
+        ),
+      ),
+    );
+
+    final contextFinder = find.byWidgetPredicate(
+      (widget) =>
+          widget is Text &&
+          widget.textSpan?.toPlainText() ==
+              'Several diners look up from their meals.',
+    );
+    expect(contextFinder, findsOneWidget);
+    expect(
+      find.text('Several diners [[look up]] from their meals.'),
+      findsNothing,
+    );
+
+    final textWidget = tester.widget<Text>(contextFinder);
+    final rootSpan = textWidget.textSpan!;
+    TextSpan? markedSpan;
+    rootSpan.visitChildren((span) {
+      if (span is TextSpan && span.text == 'look up') {
+        markedSpan = span;
+      }
+      return true;
+    });
+    expect(markedSpan?.style?.fontWeight, FontWeight.w700);
+  });
+
+  testWidgets('detail sheet highlights entry word in unmarked context', (
+    tester,
+  ) async {
+    final entry = _entry.copyWith(
+      word: 'look up',
+      context: 'Several diners look up from their meals.',
+      usageExamples: const [],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: DictionaryDetailSheet(
+            entry: entry,
+            mastered: false,
+            onDelete: () {},
+          ),
+        ),
+      ),
+    );
+
+    final contextFinder = find.byWidgetPredicate(
+      (widget) =>
+          widget is Text &&
+          widget.textSpan?.toPlainText() ==
+              'Several diners look up from their meals.',
+    );
+    expect(contextFinder, findsOneWidget);
+
+    final textWidget = tester.widget<Text>(contextFinder);
+    final rootSpan = textWidget.textSpan!;
+    TextSpan? markedSpan;
+    rootSpan.visitChildren((span) {
+      if (span is TextSpan && span.text == 'look up') {
+        markedSpan = span;
+      }
+      return true;
+    });
+    expect(markedSpan?.style?.fontWeight, FontWeight.w700);
+  });
+
+  testWidgets('detail sheet does not duplicate source context', (tester) async {
+    final entry = _entry.copyWith(
+      context: 'Several diners [[look up]] from their meals.',
+      usageExamples: ['Several diners [[look up]] from their meals.'],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: DictionaryDetailSheet(
+            entry: entry,
+            mastered: false,
+            onDelete: () {},
+          ),
+        ),
+      ),
+    );
+
+    final sourceContext = tester
+        .widgetList<Text>(find.byType(Text))
+        .where(
+          (widget) =>
+              widget.textSpan?.toPlainText() ==
+              'Several diners look up from their meals.',
+        );
+    expect(sourceContext, hasLength(1));
   });
 
   testWidgets('detail sheet shows Mastered badge for mastered entries', (

@@ -45,6 +45,11 @@ class TranslateCubit extends Cubit<TranslateState> {
             normalizedMarkedContextText.isEmpty
         ? normalizedContextText
         : normalizedMarkedContextText;
+    final dictionaryContextText =
+        normalizedMarkedContextText == null ||
+            normalizedMarkedContextText.isEmpty
+        ? normalizedContextText
+        : normalizedMarkedContextText;
     emit(
       state.copyWith(
         status: TranslateStatus.translating,
@@ -52,6 +57,10 @@ class TranslateCubit extends Cubit<TranslateState> {
             normalizedContextText == null || normalizedContextText.isEmpty
             ? null
             : normalizedContextText,
+        selectionMarkedContextText:
+            dictionaryContextText == null || dictionaryContextText.isEmpty
+            ? null
+            : dictionaryContextText,
       ),
     );
 
@@ -138,7 +147,7 @@ class TranslateCubit extends Cubit<TranslateState> {
             partOfSpeech ??
             state.sense?.partOfSpeech ??
             state.expression?.partOfSpeech,
-        context: context ?? state.selectionContextText ?? state.context,
+        context: context ?? state.dictionaryContextText,
         usageExamples: usageExamples ?? state.usageExamples,
       );
       // Same isClosed-after-await guard as in `translate`: the user can

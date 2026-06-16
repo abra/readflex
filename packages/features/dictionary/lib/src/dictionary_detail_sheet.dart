@@ -20,12 +20,14 @@ class DictionaryDetailSheet extends StatelessWidget {
     required this.entry,
     required this.mastered,
     required this.onDelete,
+    this.sourceTitle,
     this.onPractice,
     super.key,
   });
 
   final DictionaryEntry entry;
   final bool mastered;
+  final String? sourceTitle;
 
   /// Wired from the screen — pops sheet then navigates to the Practice
   /// tab. When `null` the action button is hidden so the sheet still
@@ -39,6 +41,7 @@ class DictionaryDetailSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = context.colors;
     final muted = cs.onSurface.withValues(alpha: 0.55);
+    final sourceQuote = _sourceQuoteForEntry(entry);
 
     return Padding(
       padding: EdgeInsets.only(
@@ -67,11 +70,11 @@ class DictionaryDetailSheet extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _Header(entry: entry, mastered: mastered),
-                        if (entry.usageExamples.isNotEmpty) ...[
+                        if (sourceQuote != null) ...[
                           const SizedBox(height: AppSpacing.lg),
                           _SourceQuote(
-                            quote: entry.usageExamples.first,
-                            sourceId: entry.sourceId,
+                            quote: sourceQuote,
+                            sourceTitle: sourceTitle,
                           ),
                         ],
                         const SizedBox(height: AppSpacing.lg),
@@ -230,13 +233,13 @@ class _SpeakerButton extends StatelessWidget {
 }
 
 /// Pull-quote with a coloured left border; uses the first usage example
-/// as the body and "from <source>" as the footer. Mirrors the reference
+/// as the body and source title as the footer. Mirrors the reference
 /// `border-l-2 border-primary/40` style.
 class _SourceQuote extends StatelessWidget {
-  const _SourceQuote({required this.quote, this.sourceId});
+  const _SourceQuote({required this.quote, this.sourceTitle});
 
   final String quote;
-  final String? sourceId;
+  final String? sourceTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -273,7 +276,7 @@ class _SourceQuote extends StatelessWidget {
               height: 1.55,
             ),
           ),
-          if (sourceId != null) ...[
+          if (sourceTitle != null && sourceTitle!.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xs),
             RichText(
               text: TextSpan(
@@ -281,7 +284,7 @@ class _SourceQuote extends StatelessWidget {
                 children: [
                   const TextSpan(text: 'from '),
                   TextSpan(
-                    text: sourceId,
+                    text: sourceTitle,
                     style: text.labelSmall.copyWith(
                       fontWeight: FontWeight.w500,
                       color: cs.onSurface.withValues(alpha: 0.7),
@@ -297,9 +300,7 @@ class _SourceQuote extends StatelessWidget {
   }
 }
 
-/// "IN THIS CONTEXT" kicker label + primary translation (serif xl) +
-/// optional surrounding context line. The context line is the original
-/// snippet of source text the word was saved from (when present).
+/// "IN THIS CONTEXT" kicker label + primary translation (serif xl).
 class _ContextSection extends StatelessWidget {
   const _ContextSection({required this.entry, required this.muted});
 
@@ -329,20 +330,59 @@ class _ContextSection extends StatelessWidget {
             height: 1.3,
           ),
         ),
-        if (entry.context != null && entry.context!.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            entry.context!,
-            style: text.bodyMedium.copyWith(
-              fontFamily: AppTypography.fontFamilySerif,
-              color: muted,
-              height: 1.55,
-            ),
-          ),
-        ],
       ],
     );
   }
+}
+
+String? _sourceQuoteForEntry(DictionaryEntry entry) {
+  if (entry.usageExamples.isNotEmpty) return entry.usageExamples.first;
+  final context = entry.context;
+  if (context == null || context.isEmpty) return null;
+  return _markedContextForEntry(entry);
+}
+
+String _markedContextForEntry(DictionaryEntry entry) {
+  final context = entry.context ?? '';
+  if (context.contains(MarkedText.startMarker) &&
+      context.contains(MarkedText.endMarker)) {
+    return context;
+  }
+
+  final term = entry.word.trim();
+  if (term.isEmpty) return context;
+  final index = _findContextTermIndex(context, term);
+  if (index == null) return context;
+  final end = index + term.length;
+  return '${context.substring(0, index)}'
+      '${MarkedText.startMarker}${context.substring(index, end)}'
+      '${MarkedText.endMarker}${context.substring(end)}';
+}
+
+int? _findContextTermIndex(String context, String term) {
+  final haystack = context.toLowerCase();
+  final needle = term.toLowerCase();
+  var index = haystack.indexOf(needle);
+  while (index >= 0) {
+    final end = index + needle.length;
+    if (_hasTermBoundaries(context, index, end)) return index;
+    index = haystack.indexOf(needle, index + 1);
+  }
+  return null;
+}
+
+bool _hasTermBoundaries(String value, int start, int end) {
+  final before = start == 0 ? null : value.codeUnitAt(start - 1);
+  final after = end >= value.length ? null : value.codeUnitAt(end);
+  return !_isTermChar(before) && !_isTermChar(after);
+}
+
+bool _isTermChar(int? codeUnit) {
+  if (codeUnit == null) return false;
+  return (codeUnit >= 0x30 && codeUnit <= 0x39) ||
+      (codeUnit >= 0x41 && codeUnit <= 0x5A) ||
+      (codeUnit >= 0x61 && codeUnit <= 0x7A) ||
+      codeUnit == 0x27;
 }
 
 /// Sticky bottom action bar: Practice (flex) + Delete (square). Practice

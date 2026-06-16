@@ -3,6 +3,8 @@ import 'package:dictionary/src/dictionary_bloc.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'helpers/fake_article_repository.dart';
+import 'helpers/fake_book_repository.dart';
 import 'helpers/fake_dictionary_repository.dart';
 import 'helpers/fake_fsrs_repository.dart';
 
@@ -25,6 +27,16 @@ final _entry3 = DictionaryEntry(
   word: 'serendipity',
   translation: 'удача',
   addedAt: DateTime(2026, 1, 3),
+);
+
+final _bookEntry = _entry1.copyWith(
+  sourceId: 'book-1',
+  sourceType: SourceType.book,
+);
+
+final _articleEntry = _entry2.copyWith(
+  sourceId: 'article-1',
+  sourceType: SourceType.article,
 );
 
 void main() {
@@ -52,6 +64,73 @@ void main() {
           entries: [_entry1, _entry2],
         ),
       ],
+    );
+
+    blocTest<DictionaryBloc, DictionaryState>(
+      'loads readable source titles for book and article entries',
+      setUp: () => repository.seed([_bookEntry, _articleEntry]),
+      build: () {
+        final bookRepository = FakeBookRepository()
+          ..seed(
+            Book(
+              id: 'book-1',
+              title: 'Bug Bounty from Scratch',
+              filePath: '/tmp/book.epub',
+              format: BookFormat.epub,
+              addedAt: DateTime(2026),
+            ),
+          );
+        final articleRepository = FakeArticleRepository()
+          ..seed(
+            Article(
+              id: 'article-1',
+              title: 'The Web Platform Today',
+              url: 'https://example.com/article',
+              contentPath: '/tmp/article.json',
+              addedAt: DateTime(2026),
+            ),
+          );
+        return DictionaryBloc(
+          dictionaryRepository: repository,
+          fsrsRepository: fsrsRepository,
+          bookRepository: bookRepository,
+          articleRepository: articleRepository,
+        );
+      },
+      act: (bloc) => bloc.add(const DictionaryLoadRequested()),
+      expect: () => [
+        DictionaryState(status: DictionaryStatus.loading),
+        DictionaryState(
+          status: DictionaryStatus.success,
+          entries: [_bookEntry, _articleEntry],
+          sourceTitlesById: const {
+            'book-1': 'Bug Bounty from Scratch',
+            'article-1': 'The Web Platform Today',
+          },
+        ),
+      ],
+    );
+
+    blocTest<DictionaryBloc, DictionaryState>(
+      'keeps dictionary usable when source title lookup fails',
+      setUp: () => repository.seed([_bookEntry]),
+      build: () {
+        final bookRepository = FakeBookRepository()..shouldThrow = true;
+        return DictionaryBloc(
+          dictionaryRepository: repository,
+          fsrsRepository: fsrsRepository,
+          bookRepository: bookRepository,
+        );
+      },
+      act: (bloc) => bloc.add(const DictionaryLoadRequested()),
+      expect: () => [
+        DictionaryState(status: DictionaryStatus.loading),
+        DictionaryState(
+          status: DictionaryStatus.success,
+          entries: [_bookEntry],
+        ),
+      ],
+      errors: () => [isA<Exception>()],
     );
 
     blocTest<DictionaryBloc, DictionaryState>(

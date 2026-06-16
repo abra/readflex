@@ -17,6 +17,7 @@ class TranslateState extends Equatable {
     this.expression,
     this.context,
     this.selectionContextText,
+    this.selectionMarkedContextText,
     this.usageExamples = const [],
     this.naturalEquivalents = const [],
     this.literalTranslation,
@@ -36,6 +37,7 @@ class TranslateState extends Equatable {
   final TranslationExpression? expression;
   final String? context;
   final String? selectionContextText;
+  final String? selectionMarkedContextText;
   final List<String> usageExamples;
   final List<String> naturalEquivalents;
   final String? literalTranslation;
@@ -57,6 +59,7 @@ class TranslateState extends Equatable {
     Object? expression = _absent,
     Object? context = _absent,
     Object? selectionContextText = _absent,
+    Object? selectionMarkedContextText = _absent,
     List<String>? usageExamples,
     List<String>? naturalEquivalents,
     Object? literalTranslation = _absent,
@@ -79,6 +82,9 @@ class TranslateState extends Equatable {
     selectionContextText: selectionContextText == _absent
         ? this.selectionContextText
         : selectionContextText as String?,
+    selectionMarkedContextText: selectionMarkedContextText == _absent
+        ? this.selectionMarkedContextText
+        : selectionMarkedContextText as String?,
     usageExamples: usageExamples ?? this.usageExamples,
     naturalEquivalents: naturalEquivalents ?? this.naturalEquivalents,
     literalTranslation: literalTranslation == _absent
@@ -95,6 +101,9 @@ class TranslateState extends Equatable {
     errorMessage: errorMessage,
   );
 
+  String? get dictionaryContextText =>
+      selectionMarkedContextText ?? selectionContextText ?? context;
+
   @override
   List<Object?> get props => [
     status,
@@ -106,6 +115,7 @@ class TranslateState extends Equatable {
     expression,
     context,
     selectionContextText,
+    selectionMarkedContextText,
     usageExamples,
     naturalEquivalents,
     literalTranslation,

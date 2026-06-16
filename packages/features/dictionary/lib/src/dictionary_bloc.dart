@@ -1,3 +1,5 @@
+import 'package:article_repository/article_repository.dart';
+import 'package:book_repository/book_repository.dart';
 import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
@@ -20,8 +22,12 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
   DictionaryBloc({
     required DictionaryRepository dictionaryRepository,
     required FsrsRepository fsrsRepository,
+    BookRepository? bookRepository,
+    ArticleRepository? articleRepository,
   }) : _repository = dictionaryRepository,
        _fsrsRepository = fsrsRepository,
+       _bookRepository = bookRepository,
+       _articleRepository = articleRepository,
        super(DictionaryState()) {
     on<DictionaryLoadRequested>(_onLoadRequested);
     on<DictionarySearchChanged>(
@@ -36,6 +42,8 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
 
   final DictionaryRepository _repository;
   final FsrsRepository _fsrsRepository;
+  final BookRepository? _bookRepository;
+  final ArticleRepository? _articleRepository;
 
   static const _searchDelay = Duration(milliseconds: 300);
 
@@ -128,12 +136,14 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
         final masteredIds = await _fsrsRepository.getMasteredItemIds(
           type: ReviewableType.dictionary,
         );
+        final sourceTitlesById = await _sourceTitlesFor(entries);
         final effect = _deletionEffect(deletion, success: false);
         emit(
           state.copyWith(
             status: DictionaryStatus.success,
             entries: entries,
             masteredIds: masteredIds,
+            sourceTitlesById: sourceTitlesById,
             deletionVersion: effect.version,
             deletionEffect: effect,
           ),
@@ -166,6 +176,7 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
       final masteredIds = await _fsrsRepository.getMasteredItemIds(
         type: ReviewableType.dictionary,
       );
+      final sourceTitlesById = await _sourceTitlesFor(entries);
       final effect = deletion == null
           ? null
           : _deletionEffect(deletion, success: true);
@@ -174,6 +185,7 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
           status: DictionaryStatus.success,
           entries: entries,
           masteredIds: masteredIds,
+          sourceTitlesById: sourceTitlesById,
           deletionVersion: effect?.version,
           deletionEffect: effect,
         ),
@@ -194,6 +206,51 @@ class DictionaryBloc extends Bloc<DictionaryEvent, DictionaryState> {
         ),
       );
     }
+  }
+
+  Future<Map<String, String>> _sourceTitlesFor(
+    List<DictionaryEntry> entries,
+  ) async {
+    final sourceTypesById = <String, SourceType?>{};
+    for (final entry in entries) {
+      final sourceId = entry.sourceId;
+      if (sourceId == null || sourceId.isEmpty) continue;
+      sourceTypesById[sourceId] = entry.sourceType;
+    }
+    if (sourceTypesById.isEmpty) return const {};
+
+    final titles = <String, String>{};
+    for (final source in sourceTypesById.entries) {
+      try {
+        final title = await _sourceTitleFor(source.key, source.value);
+        if (title != null && title.trim().isNotEmpty) {
+          titles[source.key] = title.trim();
+        }
+      } catch (e, st) {
+        addError(e, st);
+      }
+    }
+    return titles;
+  }
+
+  Future<String?> _sourceTitleFor(String sourceId, SourceType? type) async {
+    return switch (type) {
+      SourceType.book => _bookTitleFor(sourceId),
+      SourceType.article => _articleTitleFor(sourceId),
+      null => await _bookTitleFor(sourceId) ?? await _articleTitleFor(sourceId),
+    };
+  }
+
+  Future<String?> _bookTitleFor(String sourceId) async {
+    final repository = _bookRepository;
+    if (repository == null) return null;
+    return (await repository.getBookById(sourceId))?.title;
+  }
+
+  Future<String?> _articleTitleFor(String sourceId) async {
+    final repository = _articleRepository;
+    if (repository == null) return null;
+    return (await repository.getArticleById(sourceId))?.title;
   }
 
   _DictionaryDeletionDescriptor _deletionDescriptorFor(Iterable<String> ids) {

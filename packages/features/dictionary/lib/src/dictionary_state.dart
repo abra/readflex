@@ -51,6 +51,7 @@ class DictionaryState extends Equatable {
     this.searchQuery = '',
     this.filter = DictionaryFilter.all,
     this.masteredIds = const {},
+    this.sourceTitlesById = const {},
     this.deletionVersion = 0,
     this.deletionEffect,
   });
@@ -62,6 +63,9 @@ class DictionaryState extends Equatable {
 
   /// IDs of entries that have reached FSRS "review" state (mastered).
   final Set<String> masteredIds;
+
+  /// Human-readable source titles keyed by [DictionaryEntry.sourceId].
+  final Map<String, String> sourceTitlesById;
 
   /// Monotonic counter bumped exactly once per dispatched delete event
   /// (success OR failure). Used as the identity of [deletionEffect] so
@@ -81,6 +85,12 @@ class DictionaryState extends Equatable {
   late final int learningCount = entries.length - masteredCount;
 
   bool isMastered(String entryId) => masteredIds.contains(entryId);
+
+  String? sourceTitleFor(DictionaryEntry entry) {
+    final sourceId = entry.sourceId;
+    if (sourceId == null) return null;
+    return sourceTitlesById[sourceId];
+  }
 
   /// How many entries the "Recent" filter shows at most.
   static const int recentLimit = 5;
@@ -151,6 +161,7 @@ class DictionaryState extends Equatable {
     String? searchQuery,
     DictionaryFilter? filter,
     Set<String>? masteredIds,
+    Map<String, String>? sourceTitlesById,
     int? deletionVersion,
     DictionaryDeletionEffect? deletionEffect,
   }) => DictionaryState(
@@ -159,6 +170,7 @@ class DictionaryState extends Equatable {
     searchQuery: searchQuery ?? this.searchQuery,
     filter: filter ?? this.filter,
     masteredIds: masteredIds ?? this.masteredIds,
+    sourceTitlesById: sourceTitlesById ?? this.sourceTitlesById,
     deletionVersion: deletionVersion ?? this.deletionVersion,
     deletionEffect: deletionEffect ?? this.deletionEffect,
   );
@@ -170,6 +182,7 @@ class DictionaryState extends Equatable {
     searchQuery,
     filter,
     masteredIds,
+    sourceTitlesById,
     deletionVersion,
     deletionEffect,
   ];

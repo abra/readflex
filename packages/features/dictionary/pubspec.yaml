@@ -16,6 +16,10 @@ dependencies:
 
   domain_models:
     path: ../../domain_models
+  book_repository:
+    path: ../../book_repository
+  article_repository:
+    path: ../../article_repository
   dictionary_repository:
     path: ../../dictionary_repository
   fsrs_repository:

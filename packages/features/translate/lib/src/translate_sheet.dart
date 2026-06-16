@@ -934,7 +934,7 @@ List<_DictionarySaveCandidate> _dictionarySaveCandidates(
     pronunciation:
         state.sense?.transcription ?? state.sense?.lemmaTranscription,
     partOfSpeech: state.sense?.partOfSpeech ?? state.expression?.partOfSpeech,
-    context: state.selectionContextText ?? state.context,
+    context: _dictionaryContextForTerm(state, selectedWord),
     usageExamples: state.usageExamples,
   );
 
@@ -979,9 +979,55 @@ _DictionarySaveCandidate? _expressionSaveCandidate(
     word: expressionSource,
     translation: expressionTranslation,
     partOfSpeech: expressionType,
-    context: state.selectionContextText ?? state.context,
+    context: _dictionaryContextForTerm(state, expressionSource),
     usageExamples: state.usageExamples,
   );
+}
+
+String? _dictionaryContextForTerm(TranslateState state, String term) {
+  final plainContext = state.selectionContextText;
+  if (plainContext != null && plainContext.trim().isNotEmpty) {
+    final marked = _markTermInContext(plainContext, term);
+    if (marked != null) return marked;
+  }
+  return state.dictionaryContextText;
+}
+
+String? _markTermInContext(String context, String term) {
+  final normalizedTerm = term.trim();
+  if (normalizedTerm.isEmpty) return null;
+  final index = _findTermIndex(context, normalizedTerm);
+  if (index == null) return null;
+  final end = index + normalizedTerm.length;
+  return '${context.substring(0, index)}'
+      '${MarkedText.startMarker}${context.substring(index, end)}'
+      '${MarkedText.endMarker}${context.substring(end)}';
+}
+
+int? _findTermIndex(String context, String term) {
+  final haystack = context.toLowerCase();
+  final needle = term.toLowerCase();
+  var index = haystack.indexOf(needle);
+  while (index >= 0) {
+    final end = index + needle.length;
+    if (_hasTermBoundaries(context, index, end)) return index;
+    index = haystack.indexOf(needle, index + 1);
+  }
+  return null;
+}
+
+bool _hasTermBoundaries(String value, int start, int end) {
+  final before = start == 0 ? null : value.codeUnitAt(start - 1);
+  final after = end >= value.length ? null : value.codeUnitAt(end);
+  return !_isTermChar(before) && !_isTermChar(after);
+}
+
+bool _isTermChar(int? codeUnit) {
+  if (codeUnit == null) return false;
+  return (codeUnit >= 0x30 && codeUnit <= 0x39) ||
+      (codeUnit >= 0x41 && codeUnit <= 0x5A) ||
+      (codeUnit >= 0x61 && codeUnit <= 0x7A) ||
+      codeUnit == 0x27;
 }
 
 String? _expressionDisplayHead(TranslationExpression expression) {

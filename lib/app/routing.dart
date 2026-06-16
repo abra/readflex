@@ -161,6 +161,8 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                 builder: (context, state) => DictionaryScreen(
                   dictionaryRepository: deps.dictionaryRepository,
                   fsrsRepository: deps.fsrsRepository,
+                  bookRepository: deps.bookRepository,
+                  articleRepository: deps.articleRepository,
                   onPracticePressed: () => context.go(AppRoutes.practice),
                 ),
               ),

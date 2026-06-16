@@ -137,12 +137,14 @@ void main() {
         const TranslateState(
           status: TranslateStatus.translating,
           selectionContextText: 'She said hello before leaving.',
+          selectionMarkedContextText: 'She said hello before leaving.',
         ),
         const TranslateState(
           status: TranslateStatus.translated,
           translatedText: '[ru] hello',
           source: TranslationSource.platform,
           selectionContextText: 'She said hello before leaving.',
+          selectionMarkedContextText: 'She said hello before leaving.',
         ),
       ],
       verify: (_) {
@@ -154,7 +156,7 @@ void main() {
     );
 
     blocTest<TranslateCubit, TranslateState>(
-      'translate sends marked context while storing plain reader context',
+      'translate sends and stores marked reader context for dictionary saves',
       build: () => TranslateCubit(
         translationService: translationService,
         dictionaryRepository: dictionaryRepository,
@@ -171,12 +173,14 @@ void main() {
         const TranslateState(
           status: TranslateStatus.translating,
           selectionContextText: 'length of time; out of service',
+          selectionMarkedContextText: 'length of time; out [[of]] service',
         ),
         const TranslateState(
           status: TranslateStatus.translated,
           translatedText: '[ru] of',
           source: TranslationSource.platform,
           selectionContextText: 'length of time; out of service',
+          selectionMarkedContextText: 'length of time; out [[of]] service',
         ),
       ],
       verify: (_) {
@@ -401,13 +405,14 @@ void main() {
         translatedText: 'привет',
         context: 'friendly greeting',
         selectionContextText: 'She said hello before leaving.',
+        selectionMarkedContextText: 'She said [[hello]] before leaving.',
       ),
       act: (cubit) => cubit.saveToDictionary(word: 'hello'),
       verify: (_) {
         expect(dictionaryRepository.entries, hasLength(1));
         expect(
           dictionaryRepository.entries.first.context,
-          'She said hello before leaving.',
+          'She said [[hello]] before leaving.',
         );
       },
     );

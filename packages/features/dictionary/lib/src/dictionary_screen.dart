@@ -1,3 +1,5 @@
+import 'package:article_repository/article_repository.dart';
+import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
@@ -25,12 +27,16 @@ class DictionaryScreen extends StatelessWidget {
   const DictionaryScreen({
     required this.dictionaryRepository,
     required this.fsrsRepository,
+    this.bookRepository,
+    this.articleRepository,
     this.onPracticePressed,
     super.key,
   });
 
   final DictionaryRepository dictionaryRepository;
   final FsrsRepository fsrsRepository;
+  final BookRepository? bookRepository;
+  final ArticleRepository? articleRepository;
 
   /// Tapping the Practice button in the screen header invokes this. Wired
   /// at the composition root to switch to the Practice tab. When `null`
@@ -47,6 +53,8 @@ class DictionaryScreen extends StatelessWidget {
           create: (_) => DictionaryBloc(
             dictionaryRepository: dictionaryRepository,
             fsrsRepository: fsrsRepository,
+            bookRepository: bookRepository,
+            articleRepository: articleRepository,
           )..add(const DictionaryLoadRequested()),
         ),
         BlocProvider(create: (_) => DictionarySelectionCubit()),
@@ -150,10 +158,11 @@ class _DictionaryViewState extends State<_DictionaryView> {
           ),
           body: _DictionaryBody(
             onPracticePressed: widget.onPracticePressed,
-            onTapEntry: (entry, mastered) => _openDetailSheet(
+            onTapEntry: (entry, mastered, sourceTitle) => _openDetailSheet(
               context,
               entry: entry,
               mastered: mastered,
+              sourceTitle: sourceTitle,
             ),
             onLongPressEntry: (entry) =>
                 context.read<DictionarySelectionCubit>().toggle(entry.id),
@@ -186,12 +195,14 @@ class _DictionaryViewState extends State<_DictionaryView> {
     BuildContext context, {
     required DictionaryEntry entry,
     required bool mastered,
+    String? sourceTitle,
   }) {
     showAppBottomSheet<void>(
       context,
       builder: (_) => DictionaryDetailSheet(
         entry: entry,
         mastered: mastered,
+        sourceTitle: sourceTitle,
         onPractice: widget.onPracticePressed,
         onDelete: () => _handleDetailDelete(context, entry),
       ),
@@ -273,7 +284,12 @@ class _DictionaryBody extends StatelessWidget {
   });
 
   final VoidCallback? onPracticePressed;
-  final void Function(DictionaryEntry entry, bool mastered) onTapEntry;
+  final void Function(
+    DictionaryEntry entry,
+    bool mastered,
+    String? sourceTitle,
+  )
+  onTapEntry;
   final ValueChanged<DictionaryEntry> onLongPressEntry;
   final Future<bool> Function(DictionaryEntry) onConfirmSwipeDelete;
 
@@ -302,6 +318,7 @@ class _DictionaryBody extends StatelessWidget {
               onTapEntry: (entry) => onTapEntry(
                 entry,
                 state.isMastered(entry.id),
+                state.sourceTitleFor(entry),
               ),
               onLongPressEntry: onLongPressEntry,
               onConfirmSwipeDelete: onConfirmSwipeDelete,

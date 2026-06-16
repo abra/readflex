@@ -201,6 +201,10 @@ void main() {
     expect(dictionaryRepository.entries, hasLength(1));
     expect(dictionaryRepository.entries[0].word, 'kick');
     expect(dictionaryRepository.entries[0].translation, 'пинать');
+    expect(
+      dictionaryRepository.entries[0].context,
+      'It is time to [[kick]] things off.',
+    );
     expect(find.widgetWithText(TextButton, 'Undo'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(TextButton, 'Save').last);
@@ -210,6 +214,10 @@ void main() {
     expect(dictionaryRepository.entries[1].word, 'kick things off');
     expect(dictionaryRepository.entries[1].translation, 'начать дело');
     expect(dictionaryRepository.entries[1].partOfSpeech, 'phrasal verb');
+    expect(
+      dictionaryRepository.entries[1].context,
+      'It is time to [[kick things off]].',
+    );
     expect(
       dictionaryRepository.entries[1].usageExamples,
       ['It is time to [[kick things off]].'],
