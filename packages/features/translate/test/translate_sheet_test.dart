@@ -455,6 +455,31 @@ void main() {
     expect(richTextContains('Things is an inserted object.'), isTrue);
   });
 
+  testWidgets('shows irregular verb forms for translated verbs', (
+    tester,
+  ) async {
+    const selection = TextSelectionContext(
+      selectedText: 'went',
+      sourceId: 'book-1',
+      sourceType: SourceType.book,
+    );
+    translationService.resultOverride = const TranslationResult(
+      originalText: 'went',
+      translatedText: 'пошел',
+      source: TranslationSource.remote,
+      sense: TranslationSense(
+        partOfSpeech: 'verb',
+        lemma: 'go',
+      ),
+    );
+
+    await tester.pumpWidget(buildSubject(selection: selection));
+    await tester.pump();
+
+    expect(find.text('IRREGULAR VERB'), findsOneWidget);
+    expect(find.text('go / went / gone'), findsOneWidget);
+  });
+
   testWidgets(
     'does not render expression and full phrase as separate debug rows',
     (tester) async {

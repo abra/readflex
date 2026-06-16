@@ -20,6 +20,8 @@ dependencies:
     path: ../../book_repository
   article_repository:
     path: ../../article_repository
+  language_tools:
+    path: ../../language_tools
   dictionary_repository:
     path: ../../dictionary_repository
   fsrs_repository:

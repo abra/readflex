@@ -3,6 +3,7 @@ import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fsrs_repository/fsrs_repository.dart';
+import 'package:language_tools/language_tools.dart';
 import 'package:shared/shared.dart';
 import 'package:translation_service/translation_service.dart';
 
@@ -97,6 +98,7 @@ class _TranslateSheetView extends StatelessWidget {
       builder: (context, state) {
         final isTranslating = state.status == TranslateStatus.translating;
         final saveCandidates = _dictionarySaveCandidates(state, selection);
+        final verbForms = _verbFormsForTranslation(state, selection);
 
         return ActionBottomSheetLayout(
           title: 'Translate',
@@ -121,6 +123,8 @@ class _TranslateSheetView extends StatelessWidget {
               else if (state.translatedText.isNotEmpty) ...[
                 _TranslationContextSection(state: state),
                 _TranslationDetails(state: state),
+                if (verbForms != null)
+                  _IrregularVerbFormsBlock(forms: verbForms),
                 if (state.usageExamples.isNotEmpty)
                   _UsageExamplesBlock(state: state),
                 if (saveCandidates.isNotEmpty)
@@ -266,6 +270,93 @@ class _TranslationMetaLine extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+IrregularVerbForms? _verbFormsForTranslation(
+  TranslateState state,
+  TextSelectionContext selection,
+) {
+  final partOfSpeech =
+      state.sense?.partOfSpeech ?? state.expression?.partOfSpeech;
+  final expressionType = state.expression?.expressionType;
+  final shouldConsider =
+      looksLikeVerbPartOfSpeech(partOfSpeech) ||
+      looksLikeVerbPartOfSpeech(expressionType) ||
+      _TranslationDetails._isPhrasalExpression(expressionType);
+  final terms = [
+    state.sense?.lemma,
+    selection.textForTranslation,
+    state.suggestedFullPhrase?.source,
+    state.expression?.lexicalUnit,
+    state.expression?.surface,
+    state.expression?.normalizedExpression,
+  ];
+
+  for (final term in terms) {
+    final trimmed = _nonEmpty(term);
+    if (trimmed == null) continue;
+    final forms = findEnglishIrregularVerbForms(trimmed);
+    if (forms != null && shouldConsider) return forms;
+  }
+  return null;
+}
+
+class _IrregularVerbFormsBlock extends StatelessWidget {
+  const _IrregularVerbFormsBlock({required this.forms});
+
+  final IrregularVerbForms forms;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colors;
+    final muted = cs.onSurface.withValues(alpha: 0.55);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'IRREGULAR VERB',
+            style: context.text.kicker.copyWith(color: muted),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          _VerbFormsPill(forms: forms),
+        ],
+      ),
+    );
+  }
+}
+
+class _VerbFormsPill extends StatelessWidget {
+  const _VerbFormsPill({required this.forms});
+
+  final IrregularVerbForms forms;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colors;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.54),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        child: Text(
+          '${forms.base} / ${forms.pastSimpleLabel} / ${forms.pastParticipleLabel}',
+          style: context.text.labelSmall.copyWith(
+            color: cs.onSurface,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
     );
   }
 }

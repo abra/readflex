@@ -1,6 +1,7 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
+import 'package:language_tools/language_tools.dart';
 
 /// Bottom sheet shown when the user taps a row in the dictionary list.
 ///
@@ -42,6 +43,7 @@ class DictionaryDetailSheet extends StatelessWidget {
     final cs = context.colors;
     final muted = cs.onSurface.withValues(alpha: 0.55);
     final sourceQuote = _sourceQuoteForEntry(entry);
+    final verbForms = _verbFormsForEntry(entry);
 
     return Padding(
       padding: EdgeInsets.only(
@@ -70,6 +72,10 @@ class DictionaryDetailSheet extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _Header(entry: entry, mastered: mastered),
+                        if (verbForms != null) ...[
+                          const SizedBox(height: AppSpacing.lg),
+                          _IrregularVerbFormsBlock(forms: verbForms),
+                        ],
                         if (sourceQuote != null) ...[
                           const SizedBox(height: AppSpacing.lg),
                           _SourceQuote(
@@ -93,6 +99,67 @@ class DictionaryDetailSheet extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+IrregularVerbForms? _verbFormsForEntry(DictionaryEntry entry) {
+  final partOfSpeech = entry.partOfSpeech;
+  if (!looksLikeVerbPartOfSpeech(partOfSpeech)) return null;
+  return findEnglishIrregularVerbForms(entry.word);
+}
+
+class _IrregularVerbFormsBlock extends StatelessWidget {
+  const _IrregularVerbFormsBlock({required this.forms});
+
+  final IrregularVerbForms forms;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colors;
+    final muted = cs.onSurface.withValues(alpha: 0.55);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'IRREGULAR VERB',
+          style: context.text.kicker.copyWith(color: muted),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        _VerbFormsPill(forms: forms),
+      ],
+    );
+  }
+}
+
+class _VerbFormsPill extends StatelessWidget {
+  const _VerbFormsPill({required this.forms});
+
+  final IrregularVerbForms forms;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colors;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.54),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        child: Text(
+          '${forms.base} / ${forms.pastSimpleLabel} / ${forms.pastParticipleLabel}',
+          style: context.text.labelSmall.copyWith(
+            color: cs.onSurface,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),

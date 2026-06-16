@@ -171,6 +171,32 @@ void main() {
     expect(richText, isNot(contains('from book-1')));
   });
 
+  testWidgets('detail sheet shows irregular verb forms for verb entries', (
+    tester,
+  ) async {
+    final entry = _entry.copyWith(
+      word: 'went',
+      partOfSpeech: 'verb',
+      usageExamples: const [],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: DictionaryDetailSheet(
+            entry: entry,
+            mastered: false,
+            onDelete: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('IRREGULAR VERB'), findsOneWidget);
+    expect(find.text('go / went / gone'), findsOneWidget);
+  });
+
   testWidgets('detail sheet highlights marked saved context', (tester) async {
     final entry = _entry.copyWith(
       context: 'Several diners [[look up]] from their meals.',
