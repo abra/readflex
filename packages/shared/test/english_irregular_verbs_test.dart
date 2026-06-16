@@ -1,5 +1,5 @@
-import 'package:language_tools/language_tools.dart';
-import 'package:test/test.dart';
+import 'package:shared/shared.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('findEnglishIrregularVerbForms', () {

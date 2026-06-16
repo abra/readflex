@@ -3,7 +3,6 @@ import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fsrs_repository/fsrs_repository.dart';
-import 'package:language_tools/language_tools.dart';
 import 'package:shared/shared.dart';
 import 'package:translation_service/translation_service.dart';
 

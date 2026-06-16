@@ -1,7 +1,7 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
-import 'package:language_tools/language_tools.dart';
+import 'package:shared/shared.dart';
 
 /// Bottom sheet shown when the user taps a row in the dictionary list.
 ///

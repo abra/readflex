@@ -1,4 +1,4 @@
-// Cross-feature contracts shared across features. Holds the TextAction
-// plugin contract used by the reader to surface actions from other features.
+// Cross-feature contracts and small shared helpers.
 
+export 'src/english_irregular_verbs.dart';
 export 'src/text_action.dart';
