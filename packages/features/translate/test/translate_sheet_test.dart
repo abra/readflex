@@ -225,6 +225,38 @@ void main() {
     expect(find.widgetWithText(TextButton, 'Undo'), findsNWidgets(2));
   });
 
+  testWidgets('does not save expression definitions as translations', (
+    tester,
+  ) async {
+    const selection = TextSelectionContext(
+      selectedText: 'burst',
+      sourceId: 'book-1',
+      sourceType: SourceType.book,
+      contextText: 'Two cops burst in through the door at the back.',
+    );
+    translationService.resultOverride = const TranslationResult(
+      originalText: 'burst',
+      translatedText: 'вспыхнуть',
+      source: TranslationSource.remote,
+      answerType: TranslationAnswerType.expressionExplanation,
+      sense: TranslationSense(
+        targetDefinition: 'Внезапно и с силой войти в помещение.',
+      ),
+      expression: TranslationExpression(
+        term: 'burst',
+        surface: 'burst in',
+        lexicalUnit: 'burst in',
+        expressionType: 'phrasal_verb',
+      ),
+    );
+
+    await tester.pumpWidget(buildSubject(selection: selection));
+    await tester.pump();
+
+    expect(find.text('Phrasal verb'), findsNothing);
+    expect(find.widgetWithText(TextButton, 'Save'), findsOneWidget);
+  });
+
   testWidgets('undo removes a saved dictionary option', (tester) async {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
@@ -428,6 +460,10 @@ void main() {
     );
     expect(
       detailsText.indexOf('In context:'),
+      lessThan(detailsText.indexOf('Expression:')),
+    );
+    expect(
+      detailsText.indexOf('Expression:'),
       lessThan(detailsText.indexOf('Source:')),
     );
     expect(richTextContains('To start an activity or process.'), isTrue);
@@ -481,7 +517,7 @@ void main() {
   });
 
   testWidgets(
-    'does not render expression and full phrase as separate debug rows',
+    'renders expression translation without debug phrase metadata',
     (tester) async {
       translationService.resultOverride = const TranslationResult(
         originalText: 'out',
@@ -510,7 +546,7 @@ void main() {
           .join('\n');
 
       expect(detailsText, contains('In context:'));
-      expect(detailsText, isNot(contains('Expression:')));
+      expect(detailsText, contains('Expression: out of service — не работает'));
       expect(detailsText, isNot(contains('Full phrase:')));
       expect(detailsText, isNot(contains('role: component')));
     },
@@ -566,7 +602,10 @@ void main() {
       ),
       isTrue,
     );
-    expect(detailsText, isNot(contains('Expression:')));
+    expect(
+      detailsText,
+      contains('Expression: in other words — другими словами'),
+    );
     expect(detailsText, isNot(contains('Full phrase:')));
     expect(richTextContains('in other words'), isTrue);
     expect(richTextContains('другими словами'), isTrue);

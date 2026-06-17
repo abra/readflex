@@ -747,6 +747,7 @@ class _TranslationDetails extends StatelessWidget {
     final rows = <Widget>[];
     final notes = _pairSummary(state.notes);
     final contextMarker = _contextMarkerSummary(state.expression);
+    final expressionTranslation = _expressionTranslationSummary(state);
 
     if (_shouldShowLiteral(state)) {
       rows.add(
@@ -771,6 +772,14 @@ class _TranslationDetails extends StatelessWidget {
     if (contextMarker != null) {
       rows.add(
         _TranslationDetailLine(label: 'In context', value: contextMarker),
+      );
+    }
+    if (expressionTranslation != null) {
+      rows.add(
+        _TranslationDetailLine(
+          label: 'Expression',
+          value: expressionTranslation,
+        ),
       );
     }
     rows.addAll(_senseRows(state.sense));
@@ -812,6 +821,22 @@ class _TranslationDetails extends StatelessWidget {
 
   static String _normalizeForComparison(String value) =>
       value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+
+  static String? _expressionTranslationSummary(TranslateState state) {
+    if (state.answerType != TranslationAnswerType.expressionExplanation) {
+      return null;
+    }
+
+    final target = _nonEmpty(state.suggestedFullPhrase?.target);
+    if (target == null) return null;
+
+    final source = _nonEmpty(state.suggestedFullPhrase?.source);
+    if (source == null ||
+        _normalizeForComparison(source) == _normalizeForComparison(target)) {
+      return target;
+    }
+    return '$source — $target';
+  }
 
   static List<Widget> _senseRows(TranslationSense? sense) {
     if (sense == null || sense.isEmpty) return const [];
@@ -1051,10 +1076,7 @@ _DictionarySaveCandidate? _expressionSaveCandidate(
       _expressionDisplayHead(expression);
   if (!_isLargerThanTerm(expressionSource, selectedWord)) return null;
 
-  final expressionTranslation =
-      _nonEmpty(state.suggestedFullPhrase?.target) ??
-      _nonEmpty(state.sense?.targetContextNote) ??
-      _nonEmpty(state.sense?.targetDefinition);
+  final expressionTranslation = _nonEmpty(state.suggestedFullPhrase?.target);
   if (expressionTranslation == null) return null;
 
   final expressionType = _TranslationDetails._expressionTypeName(

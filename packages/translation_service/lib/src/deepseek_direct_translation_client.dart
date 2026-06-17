@@ -1493,7 +1493,12 @@ class DeepSeekDirectTranslationClient implements RemoteTranslationClient {
   ) {
     final phrase = decoded['phrase'];
     if (phrase is! Map<String, Object?>) return null;
-    final target = _nonEmptyString(phrase['translation']);
+    final target =
+        _targetString(phrase['translation']) ??
+        _targetString(decoded['phrase_translation']) ??
+        _targetString(decoded['expression_translation']) ??
+        _targetString(decoded['contextual_translation']) ??
+        _targetString(decoded['translation']);
     if (target == null) return null;
     final source =
         _nonEmptyString(phrase['text']) ??
@@ -1815,6 +1820,7 @@ Rules:
 - Choose the response mode first. Do not choose single_word until all larger-unit checks below fail.
 - context.current is primary. context.previous/context.next are only supporting context for ambiguity, not material to translate as the answer.
 - A selected word may still be part of a larger unit. If it is part of a phrasal verb, idiom, fixed phrase, collocation, verb pattern, preposition pattern, or sentence pattern in context.current, return word_in_expression.
+- This applies to any selected word/span inside the larger unit, including the semantic head or an ordinary standalone noun/verb/adjective. Do not treat a headword as single_word just because it has an independent dictionary meaning. The English examples are illustrative only; apply the same rule for every source_language and script. For languages without whitespace word boundaries, treat the selected lexical segment the same way. Correct examples: selected night in a night out -> word_in_expression, phrase.text = "a night out"; selected out in a night out -> word_in_expression, phrase.text = "a night out"; selected way in out of the way -> word_in_expression, phrase.text = "out of the way".
 - Direct selected-text translation comes first in the output, but it is not a mode-selection rule. For word_in_expression, word_translation is the direct translation of the exact selected token in its grammatical role before applying the larger-unit meaning from context.current, not the contextual meaning of the larger phrase and not an unrelated homograph/part of speech. Never put the larger expression meaning in word_translation. If this makes the main translation look odd, it is still correct because the expression meaning belongs in definition.target. Correct examples: selected kick in kick things off -> word_translation пинать, not начинать; selected turn in turn the projector off -> word_translation поворачивать, not выключать; selected fading in fading out the top image -> word_translation затухание or исчезновение, not увядание; selected carried in carried on -> word_translation нес or перенес, not продолжал; selected backed in backed out of the agreement -> word_translation отступил or сдал назад, not поддержанный; selected up in look the term up -> word_translation вверх, not искать.
 - Return single_word only when the selected word is ordinary in context.current and is not part of any larger unit. For single_word, define the selected word sense, not the whole sentence.
 - transcription is slash-delimited IPA for the exact selected word, for example /feɪd/. For ordinary English words, provide IPA when the word has a standard pronunciation; use null only for names, symbols, abbreviations, or words whose pronunciation is genuinely unknown.
@@ -1822,6 +1828,7 @@ Rules:
 - If a selected function word is governed by a nearby lexical head in context.current, classify the whole construction as word_in_expression: interested in, responsible for, prevent from, depend on, on behalf of, in charge of.
 - If one selected word is a lexical verb, also check immediately nearby particles/prepositions in context.current. If the selected verb plus a nearby particle forms a phrasal verb or phrasal-verb construction, return word_in_expression. This applies to inflected verb forms too: fading out, looked up, turning off, carried on.
 - For phrasal verbs with an object after the particle, phrase.text should include the verb plus particle, not the object: selected fading in fading out the top image -> phrase.text = "fading out". For separated object constructions, phrase.text and marked_sentence should include the full surface span: kicked the project off.
+- For word_in_expression and selected_expression, return a concise contextual target-language translation of the whole phrase/idiom/collocation separately from definitions. This must be a natural dictionary translation such as "ворваться", not an explanatory definition such as "внезапно и с силой войти в помещение".
 - Source definitions and marked_sentence must stay in source_language.
 - Target translations and target definitions must stay in target_language.
 - usage_examples must stay in source_language, use [[...]] around the same selected word/span or larger unit, and return 1-3 concise examples or [] when none are useful.
@@ -1841,7 +1848,7 @@ If one selected word is part of a larger unit, return:
   "word_translation": "target-language translation of the exact word",
   "word_form": {"lemma": "dictionary form for inflected selected word", "form": "plural|gerund|past_tense|comparative|superlative", "transcription": "slash-delimited IPA for lemma"} or null,
   "definition": {"source": "source-language definition of the contextual unit", "target": "target-language definition of the contextual unit"},
-  "phrase": {"text": "larger source phrase or construction span to highlight", "type": "phrasal_verb|idiom|fixed_phrase|collocation|verb_pattern|preposition_pattern|sentence_pattern"},
+  "phrase": {"text": "larger source phrase or construction span to highlight", "translation": "concise target-language translation of the whole contextual unit", "type": "phrasal_verb|idiom|fixed_phrase|collocation|verb_pattern|preposition_pattern|sentence_pattern"},
   "marked_sentence": "source sentence with [[larger phrase]] highlighted",
   "usage_examples": ["source-language usage example with [[larger phrase]] highlighted"],
   "related_terms": [{"source": "source-language related term", "target": "target-language translation", "relation": "word_family|domain_collocation|contrast_term|narrower_domain_term"}]
@@ -1868,7 +1875,7 @@ If the selected n-word text is itself a larger unit, return:
 {
   "mode": "selected_expression",
   "text": "exact selected text",
-  "translation": "target-language translation",
+  "translation": "concise contextual target-language translation, not a definition",
   "phrase_type": "phrasal_verb|idiom|fixed_phrase|collocation|verb_pattern|preposition_pattern|sentence_pattern",
   "definition": {"source": "source-language definition of the selected unit", "target": "target-language definition of the selected unit"},
   "marked_sentence": "source sentence with [[selected text]] highlighted",

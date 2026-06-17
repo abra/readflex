@@ -559,6 +559,14 @@ void main() {
       expect(prompt, contains('not a mode-selection rule'));
       expect(prompt, contains('Return single_word only when'));
       expect(prompt, contains('is not part of any larger unit'));
+      expect(prompt, contains('including the semantic head'));
+      expect(prompt, contains('ordinary standalone noun/verb/adjective'));
+      expect(prompt, contains('English examples are illustrative only'));
+      expect(prompt, contains('for every source_language and script'));
+      expect(prompt, contains('languages without whitespace word boundaries'));
+      expect(prompt, contains('selected night in a night out'));
+      expect(prompt, contains('selected out in a night out'));
+      expect(prompt, contains('selected way in out of the way'));
       expect(prompt, isNot(contains('Exact selection comes first')));
       expect(
         prompt.indexOf('Rules:'),
@@ -586,7 +594,11 @@ void main() {
       expect(prompt, contains('phrase.text = "fading out"'));
       expect(prompt, contains('gerunds/present participles'));
       expect(prompt, contains('grammatical_form gerund'));
-      expect(prompt, isNot(contains('translation of the larger phrase')));
+      expect(
+        prompt,
+        contains('concise contextual target-language translation'),
+      );
+      expect(prompt, contains('not an explanatory definition'));
       expect(prompt, isNot(contains('lexical_unit')));
       expect(prompt, isNot(contains('canonical_pattern')));
       expect(prompt, isNot(contains('selected_role')));
@@ -605,6 +617,7 @@ void main() {
           },
           'phrase': {
             'text': 'kick things off',
+            'translation': 'начать дело',
             'type': 'phrasal_verb',
           },
           'marked_sentence':
@@ -619,8 +632,50 @@ void main() {
       expect(result!.answerType, TranslationAnswerType.expressionExplanation);
       expect(result.translatedText, 'пинать');
       expect(result.expression!.surface, 'kick things off');
-      expect(result.suggestedFullPhrase, isNull);
+      expect(
+        result.suggestedFullPhrase,
+        const TranslationTextPair(
+          source: 'kick things off',
+          target: 'начать дело',
+        ),
+      );
       expect(result.usageExamples.single, contains('[[kick things off]]'));
+    });
+
+    test('keeps contextual phrase translation separate from definition', () {
+      final result =
+          DeepSeekDirectTranslationClient.decodeModelPayloadForTesting(
+            jsonEncode({
+              'mode': 'word_in_expression',
+              'word': 'burst',
+              'word_translation': 'вспыхнуть',
+              'definition': {
+                'source': 'To enter suddenly and forcefully.',
+                'target': 'Внезапно и с силой войти в помещение.',
+              },
+              'phrase': {
+                'text': 'burst in',
+                'translation': 'ворваться',
+                'type': 'phrasal_verb',
+              },
+              'marked_sentence':
+                  'Two cops [[burst in]] through the door at the back.',
+            }),
+            originalText: 'burst',
+            sourceLanguage: 'en',
+            targetLanguage: 'ru',
+          );
+
+      expect(result, isNotNull);
+      expect(result!.translatedText, 'вспыхнуть');
+      expect(
+        result.sense!.targetDefinition,
+        'Внезапно и с силой войти в помещение.',
+      );
+      expect(
+        result.suggestedFullPhrase,
+        const TranslationTextPair(source: 'burst in', target: 'ворваться'),
+      );
     });
 
     test('decodes selected verb inside nearby phrasal particle payload', () {
