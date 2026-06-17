@@ -45,7 +45,7 @@ class TranslateCubit extends Cubit<TranslateState> {
             normalizedMarkedContextText.isEmpty
         ? normalizedContextText
         : normalizedMarkedContextText;
-    final dictionaryContextText =
+    final storedMarkedContextText =
         normalizedMarkedContextText == null ||
             normalizedMarkedContextText.isEmpty
         ? normalizedContextText
@@ -58,9 +58,9 @@ class TranslateCubit extends Cubit<TranslateState> {
             ? null
             : normalizedContextText,
         selectionMarkedContextText:
-            dictionaryContextText == null || dictionaryContextText.isEmpty
+            storedMarkedContextText == null || storedMarkedContextText.isEmpty
             ? null
-            : dictionaryContextText,
+            : storedMarkedContextText,
       ),
     );
 

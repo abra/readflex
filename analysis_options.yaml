@@ -10,3 +10,5 @@ analyzer:
   exclude:
     - "**/*.*.dart"
     - "**/generated/**"
+    # Standalone tools are analyzed from their own package context.
+    - "tool/**"

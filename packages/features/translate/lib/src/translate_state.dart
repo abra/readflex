@@ -101,8 +101,9 @@ class TranslateState extends Equatable {
     errorMessage: errorMessage,
   );
 
-  String? get dictionaryContextText =>
-      selectionMarkedContextText ?? selectionContextText ?? context;
+  /// Plain source context persisted by default. Marked context is reserved for
+  /// translation prompts and UI highlighting.
+  String? get dictionaryContextText => selectionContextText ?? context;
 
   @override
   List<Object?> get props => [

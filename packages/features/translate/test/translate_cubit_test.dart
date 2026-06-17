@@ -156,7 +156,7 @@ void main() {
     );
 
     blocTest<TranslateCubit, TranslateState>(
-      'translate sends and stores marked reader context for dictionary saves',
+      'translate sends and stores marked reader context for UI highlights',
       build: () => TranslateCubit(
         translationService: translationService,
         dictionaryRepository: dictionaryRepository,
@@ -394,7 +394,7 @@ void main() {
     );
 
     blocTest<TranslateCubit, TranslateState>(
-      'saveToDictionary prefers reader context over model explanation',
+      'saveToDictionary persists plain reader context over model explanation',
       build: () => TranslateCubit(
         translationService: translationService,
         dictionaryRepository: dictionaryRepository,
@@ -412,7 +412,7 @@ void main() {
         expect(dictionaryRepository.entries, hasLength(1));
         expect(
           dictionaryRepository.entries.first.context,
-          'She said [[hello]] before leaving.',
+          'She said hello before leaving.',
         );
       },
     );

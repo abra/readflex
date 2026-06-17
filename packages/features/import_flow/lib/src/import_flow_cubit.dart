@@ -186,8 +186,9 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
       // BookImportException exists is to carry that detail to the UI.
       emit(ImportFlowFailure(message: e.message, filename: filename));
       return;
-    } catch (_) {
+    } catch (e, st) {
       if (isClosed) return;
+      addError(e, st);
       emit(
         ImportFlowFailure(
           message: 'Failed to import the book',
@@ -257,8 +258,9 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
           ),
         );
       }
-    } catch (_) {
+    } catch (e, st) {
       if (!isClosed) {
+        addError(e, st);
         emit(
           ImportFlowFailure(
             message: 'Failed to save the article',
