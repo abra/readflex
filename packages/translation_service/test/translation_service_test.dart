@@ -552,6 +552,14 @@ void main() {
       expect(prompt, contains('verb pattern'));
       expect(prompt, contains('preposition pattern'));
       expect(prompt, contains('sentence pattern'));
+      expect(prompt, contains('learner-dictionary collocation'));
+      expect(prompt, contains('selected heavy or rain in heavy rain'));
+      expect(prompt, contains('selected deadline in meet a deadline'));
+      expect(prompt, contains('selected crime in commit a crime'));
+      expect(prompt, contains('selected more in the more I read'));
+      expect(prompt, contains('phrase.text = "the more...the more"'));
+      expect(prompt, contains('selected only or but in not only'));
+      expect(prompt, contains('phrase.text = "not only...but also"'));
       expect(prompt, contains('Do not add keys outside'));
       expect(prompt, contains('Choose the response mode first'));
       expect(prompt, contains('Do not choose single_word until'));
@@ -589,9 +597,15 @@ void main() {
       expect(prompt, contains('singular slash-delimited IPA'));
       expect(prompt, contains('construction span to highlight'));
       expect(prompt, contains('Do not imply an inserted object is part'));
+      expect(
+        prompt,
+        contains('should not translate only the verb plus object'),
+      );
+      expect(prompt, contains('looked at the term'));
       expect(prompt, contains('selected word is a lexical verb'));
       expect(prompt, contains('fading out'));
       expect(prompt, contains('phrase.text = "fading out"'));
+      expect(prompt, contains('grammatical complete-sentence examples'));
       expect(prompt, contains('gerunds/present participles'));
       expect(prompt, contains('grammatical_form gerund'));
       expect(
@@ -599,6 +613,9 @@ void main() {
         contains('concise contextual target-language translation'),
       );
       expect(prompt, contains('not an explanatory definition'));
+      expect(prompt, contains('ordinary compositional descriptive spans'));
+      expect(prompt, contains('new security review'));
+      expect(prompt, contains('red leather notebook'));
       expect(prompt, isNot(contains('lexical_unit')));
       expect(prompt, isNot(contains('canonical_pattern')));
       expect(prompt, isNot(contains('selected_role')));
