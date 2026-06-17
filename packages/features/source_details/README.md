@@ -1,14 +1,15 @@
 # source_details
 
-Details surface for books, comics, and other reading sources. It sits between
-entry points such as Library/Home and the reader:
+Details surface for books, comics, articles, and other reading sources. It sits
+between entry points such as Library/Home and the reader:
 
 ```text
 Library/Home -> SourceDetailsScreen -> ReaderScreen
 ```
 
-The package intentionally uses "source" wording even though the current domain
-model is `Book`: EPUB/FB2/PDF/AZW3 are books, while CBZ is treated as a comic.
+The package intentionally uses "source" wording because the surface can display
+both stored book/comic files and imported articles. Articles are converted to
+the reader's `Book` model only when the user opens them.
 
 ## Public API
 
@@ -17,13 +18,15 @@ model is `Book`: EPUB/FB2/PDF/AZW3 are books, while CBZ is treated as a comic.
 
 | Prop | Type | Purpose |
 |------|------|---------|
-| `sourceId` | `String` | Source/book id from the route |
-| `bookRepository` | `BookRepository` | Loads the source |
+| `sourceId` | `String` | Source id from the route |
+| `bookRepository` | `BookRepository` | Loads book/comic sources |
+| `articleRepository` | `ArticleRepository?` | Optional article lookup + reader conversion |
 | `highlightRepository` | `HighlightRepository` | Loads per-source highlight count |
 | `flashcardRepository` | `FlashcardRepository` | Loads per-source flashcard count |
 | `dictionaryRepository` | `DictionaryRepository` | Loads per-source dictionary count |
-| `onReadPressed` | `Future<void> Function(Book)` | Opens the reader |
-| `initialSource` | `Book?` | Optional route extra to avoid a loading flash |
+| `onReadPressed` | `Future<void> Function(Book, SourceType)` | Opens the reader |
+| `initialSource` | `LibrarySource?` | Optional route extra to avoid a loading flash |
+| `onArticleTitlePressed` | `void Function(String url, String title)?` | Opens the original article URL |
 
 ## Architecture
 
@@ -31,8 +34,9 @@ model is `Book`: EPUB/FB2/PDF/AZW3 are books, while CBZ is treated as a comic.
   `SourceDetailsLoadRequested`.
 - `SourceDetailsView` renders only bloc state and UI callbacks.
 - On return from reader, the screen reloads the source so the button label and
-  reading metadata reflect the latest `Book` row.
-- Review rows show lightweight per-source counts loaded by the bloc via
+  reading metadata reflect the latest stored source row.
+- The bloc resolves books first, then articles when `articleRepository` is
+  available. Review rows show lightweight per-source counts loaded via
   repository count methods; the view does not query repositories directly.
 - The bottom bar is thumb-first: back action on the left, the read/continue
   CTA taking the remaining space.
@@ -42,7 +46,8 @@ model is `Book`: EPUB/FB2/PDF/AZW3 are books, while CBZ is treated as a comic.
 
 ## Dependencies
 
-- `book_repository` — source lookup.
+- `book_repository` — book/comic lookup.
+- `article_repository` — article lookup and conversion to reader book.
 - `highlight_repository` — highlight count for the source.
 - `flashcard_repository` — flashcard count for the source deck.
 - `dictionary_repository` — saved word count for the source.

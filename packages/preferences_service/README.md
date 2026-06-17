@@ -1,9 +1,10 @@
 # preferences_service
 
-User preferences: theme mode, locale, library layout, global reader appearance,
-per-source reader appearance overrides, reader search history, and onboarding /
-setup flags. Backed by `shared_preferences` (JSON blob under a single key) and
-exposed to the UI via a reactive stream and an `InheritedModel` scope.
+User preferences: theme mode, locale, library layout, translation languages,
+global reader appearance, per-source reader appearance overrides, reader search
+history, and onboarding / setup flags. Backed by `shared_preferences` (JSON
+blob under a single key) and exposed to the UI via a reactive stream and an
+`InheritedModel` scope.
 
 This is **not** where auth tokens live — those go through `auth_service` /
 `flutter_secure_storage`.
@@ -16,6 +17,7 @@ This is **not** where auth tokens live — those go through `auth_service` /
 | `ReaderAppearancePreferences`   | data class       | Global/effective reader appearance slice (theme, font, scale, etc.) |
 | `ReaderAppearanceOverride`      | data class       | Optional per-source reader appearance override                    |
 | `ReaderTextAlignment`           | enum             | Reader text alignment (`start`, `end`, `justify`)                 |
+| `ReaderPageTurnStyle`           | enum             | Reader page-turn mode (`horizontal`, `vertical`)                  |
 | `PreferencesService`            | concrete         | Loads, streams, and persists `Preferences`                         |
 | `PreferencesStorage`            | concrete         | Thin `SharedPreferences` wrapper                                   |
 | `PreferencesRepository`         | concrete         | JSON (de)serialization + locale resolution                         |
@@ -28,6 +30,8 @@ This is **not** where auth tokens live — those go through `auth_service` /
 | `themeMode`                | `ThemeMode` | `system`    |
 | `locale`                   | `Locale`    | platform    |
 | `libraryLayoutMode`        | `String`    | `'grid'`    |
+| `translationTargetLanguageCode` | `String` | `'ru'`  |
+| `translationSourceLanguageCode` | `String?` | `null` |
 | `readerThemeId`            | `String`    | `'paper'`   |
 | `readerFontId`             | `String`    | `'serif'`   |
 | `readerLayoutId`           | `String`    | `'standard'`|
@@ -39,10 +43,12 @@ This is **not** where auth tokens live — those go through `auth_service` /
 | `readerOverrideFont`       | `bool`      | `true`      |
 | `readerOverrideColor`      | `bool`      | `true`      |
 | `readerUseBookLayout`      | `bool`      | `true`      |
+| `readerPageTurnStyle`      | `ReaderPageTurnStyle` | `horizontal` |
 | `readerBrightness`         | `double?`   | `null`      |
 | `readerLastCustomBrightness` | `double`  | `0.7`       |
 | `readerSearchHistory`      | `List<String>` | `[]`     |
 | `readerAppearanceOverrides`| `Map<String, ReaderAppearanceOverride>` | `{}` |
+| `bookImportTermsAcceptedVersion` | `int`  | `0`         |
 | `onboardingCompleted`      | `bool`      | `false`     |
 | `hasCompletedSetup`        | `bool`      | `false`     |
 
@@ -84,5 +90,7 @@ restores the last successfully-persisted value.
 Registered on `DependenciesContainer.preferencesService` in
 `lib/app/composition.dart` and exposed via `PreferencesScope` in
 `RootContext`. `MaterialContext` reads `themeModeOf(context)` to drive
-`MaterialApp.themeMode`; Profile edits global reader defaults, while the
-reader applies per-source overrides through `ReaderAppearanceCubit`.
+`MaterialApp.themeMode`; Profile edits global reader defaults and translation
+languages, Translate reads those language preferences through callbacks from
+`routing.dart`, and the reader applies per-source overrides through
+`ReaderAppearanceCubit`.

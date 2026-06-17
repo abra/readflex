@@ -5,8 +5,8 @@ Translation contract plus bundled translation and pronunciation lookup.
 Production wiring uses `BundledTranslationService` as a layered service:
 pronunciation lookup returns empty until a non-bundled source is wired, exact
 word/phrase translation can come from bundled pair packs, online enrichment can
-come from an optional direct DeepSeek client, and the on-device translation adapter is reserved for a future
-plugin/backend-safe implementation.
+come from an optional direct DeepSeek client, and the on-device translation
+adapter is reserved for a future plugin/backend-safe implementation.
 
 The direct DeepSeek client is temporary and intended only for local/internal
 builds. A production app must put DeepSeek behind a Readflex backend so API
@@ -81,11 +81,13 @@ Response rules:
   return source/target `definition`, `marked_sentence` with the word
   highlighted, plus `usage_examples` and `related_terms`.
 - One word inside a larger unit: return `mode: word_in_expression`, `word`,
-  direct standalone `word_translation`, source/target `definition`, `phrase`
-  (`text`, `type`), `marked_sentence` with the larger unit highlighted, plus
-  `usage_examples` and `related_terms`. For
-  separated phrasal verbs, `phrase.text` is the sentence surface to highlight,
-  not a claim that inserted object words are part of the dictionary phrasal verb.
+  direct selected-token `word_translation`, source/target `definition`,
+  `phrase` (`text`, `translation`, `type`), `marked_sentence` with the larger
+  unit highlighted, plus `usage_examples` and `related_terms`. `phrase.translation`
+  is a concise contextual target-language translation of the whole larger unit,
+  separate from the explanatory definition. For separated phrasal verbs,
+  `phrase.text` is the sentence surface to highlight, not a claim that inserted
+  object words are part of the dictionary phrasal verb.
 - Selected n-word expression: return `mode: selected_expression`, `text`,
   `translation`, `phrase_type`, source/target `definition`, `marked_sentence`
   with the selected text highlighted, plus `usage_examples` and
@@ -95,9 +97,15 @@ Response rules:
   `related_terms`.
 
 Before choosing a mode, the model checks only these larger-unit classes:
-phrasal verb, idiom, fixed phrase, collocation, verb pattern, preposition
-pattern, and sentence pattern. Exact selection comes first; larger contextual
-unit comes second only when it exists.
+phrasal verb, idiom, fixed phrase, learner-dictionary collocation, verb pattern,
+preposition pattern, and sentence pattern. Any selected component inside such a
+unit can produce `word_in_expression`, including the semantic head (`night` in
+`a night out`) or a collocation component (`rain` in `heavy rain`). Ordinary
+compositional spans such as `new security review` stay `span_translation`.
+
+The direct client has a local DeepSeek validation matrix under
+`.local/deepseek/validate_expression_matrix.dart`. It is a development diagnostic
+tool, not runtime code; use it when changing the prompt contract.
 
 ## Configuration
 

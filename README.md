@@ -80,6 +80,19 @@ Useful development flags:
 Do not ship public builds with client-side API keys. Backend-backed production
 integrations should replace direct development clients and no-op service stubs.
 
+## Architecture Notes
+
+Feature wiring follows the same shape across the app:
+
+```text
+lib/app/routing.dart -> Screen/Sheet -> Bloc/Cubit -> View
+```
+
+Routes and composition code inject repositories, services, callbacks, and
+configuration into public screens and sheets. Those surfaces create their own
+Bloc/Cubit instances. Views render only state plus UI callbacks and do not reach
+directly into repositories, services, or parsers.
+
 ## Current Production Gaps
 
 Some contracts are intentionally stubbed while the app shell, reader, and import
@@ -89,8 +102,6 @@ to implement them:
 - Auth, AI generation, subscription, notification, analytics, and error
   reporting are represented by no-op services in development composition.
 - Home and Practice screens still have placeholder sections.
-- `/design-system` is a development route and must be removed or gated before a
-  production release.
 - Direct DeepSeek translation is a development path; production should keep API
   keys server-side.
 

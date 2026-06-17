@@ -56,7 +56,7 @@ The sheet follows the same minimal order as the LLM contract:
 - One ordinary word: selected word, word translation, source/target definition,
   and the source sentence with the word highlighted.
 - One word inside a larger unit: selected word and its direct translation first,
-  then a short note about the larger unit, source/target definition, and the
+  then the larger unit's concise translation, source/target definition, and the
   source sentence with the larger unit highlighted.
 - Selected n-word expression: selected text, translation, expression type,
   source/target definition, and the highlighted source sentence.
@@ -66,8 +66,8 @@ The sheet follows the same minimal order as the LLM contract:
 When available, the sheet also shows source-language usage variants and compact
 `Related` term pairs in `source — target` form after the core answer.
 
-The key invariant is: exact selection first, larger contextual unit second only
-when it exists. If the reader reports a partial-word selection, the sheet still
+The key invariant is: exact selected text is shown separately from any larger
+contextual unit. If the reader reports a partial-word selection, the sheet still
 previews the exact user selection but sends and saves the normalized lexical
 selection (`TextSelectionContext.textForTranslation`).
 
@@ -78,15 +78,20 @@ actions: the selected word and the larger expression. This allows saving either
 one or both entries with the appropriate context, examples, and review item.
 Saved candidates stay visible with an inline undo action.
 
+The larger-expression candidate is created only when the translation service
+returns a real phrase translation. Definitions are not reused as expression
+translations, so saved dictionary entries keep translation and explanation
+semantics separate.
+
 ## Dependencies
 
 Requires through constructor injection:
 
 - `TranslationService` — production wiring uses `BundledTranslationService`.
   It first checks exact bundled SQLite pair packs, can call a temporary direct
-  DeepSeek client when `DEEPSEEK_API_KEY` is set, and has an on-device adapter slot for
-  future offline translation. The sheet does not know about
-  network state or provider details.
+  DeepSeek client when `DEEPSEEK_API_KEY` is set, and has an on-device adapter
+  slot for future offline translation. The sheet does not know about network
+  state or provider details.
 - `DictionaryRepository` — stores the saved entry.
 - `FsrsRepository` — registers the new dictionary entry in the review
   queue (`ReviewableType.dictionary`).

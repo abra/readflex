@@ -13,20 +13,27 @@ class ReaderScreen extends StatelessWidget {
     required String sourceId,
     required int serverPort,                       // local reader_server port
     required BookRepository bookRepository,
+    ArticleRepository? articleRepository,
     required HighlightRepository highlightRepository,
     required PreferencesService preferencesService,
     required ScreenControlService screenControlService,
     required List<TextAction> textActions,         // plug-in actions
     List<String> initialSearchHistory = const [],
     Book? initialSource,
+    SourceType initialSourceType = SourceType.book,
     ValueChanged<List<String>>? onSearchHistoryChanged,
+    VoidCallback? onSourceOpened,
     Future<int> Function(String sourceId)? onCheckDueItems,
     void Function(BuildContext, String sourceId)? onStartMiniReview,
   });
 }
 ```
 
-`sourceId` resolves to a `Book` via `BookRepository.getBookById`.
+`sourceId` resolves first through `BookRepository.getBookById`; when an
+`ArticleRepository` is provided, article sources are converted into reader
+books through `ArticleRepository.toReaderBook`. `initialSource` and
+`initialSourceType` let the route avoid a loading flash when the source was
+already loaded by Library/SourceDetails.
 
 ## TextAction plugin system
 
@@ -97,8 +104,8 @@ composition root.
 
 ## Dependencies
 
-- `book_repository`, `highlight_repository` — content, bookmark and highlight
-  persistence
+- `book_repository`, `article_repository`, `highlight_repository` — content,
+  bookmark and highlight persistence
 - `preferences_service` — global reader appearance, per-source overrides,
   search history, and global reader brightness preference persistence
 - `screen_control_service` — content-only keep-awake plus temporary
