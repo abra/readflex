@@ -28,6 +28,22 @@ void main() {
     sourceId: Value(sourceId),
   );
 
+  DictionaryAnchorsTableCompanion makeAnchor({
+    String id = 'a1',
+    String entryId = 'e1',
+    String sourceId = 's1',
+    String cfiRange = 'epubcfi(/6/4)',
+  }) => DictionaryAnchorsTableCompanion.insert(
+    id: id,
+    entryId: entryId,
+    sourceId: sourceId,
+    sourceType: 'book',
+    anchorText: 'hello',
+    cfiRange: cfiRange,
+    kind: 'exactSelection',
+    createdAt: '2026-01-01T00:00:00.000Z',
+  );
+
   test('insert and retrieve entry', () async {
     await dao.insertEntry(makeEntry());
     final entries = await dao.allEntries();
@@ -71,5 +87,36 @@ void main() {
     await dao.deleteEntry('e1');
     final entries = await dao.allEntries();
     expect(entries, isEmpty);
+  });
+
+  test('anchorsBySource filters dictionary anchors', () async {
+    await dao.insertEntry(makeEntry(id: 'e1', sourceId: 's1'));
+    await dao.insertEntry(makeEntry(id: 'e2', sourceId: 's2'));
+    await dao.insertAnchor(makeAnchor(id: 'a1', entryId: 'e1', sourceId: 's1'));
+    await dao.insertAnchor(makeAnchor(id: 'a2', entryId: 'e2', sourceId: 's2'));
+
+    final anchors = await dao.anchorsBySource('s1');
+
+    expect(anchors, hasLength(1));
+    expect(anchors.single.id, 'a1');
+  });
+
+  test('deleteEntry removes anchors for entry', () async {
+    await dao.insertEntry(makeEntry(id: 'e1', sourceId: 's1'));
+    await dao.insertAnchor(makeAnchor(id: 'a1', entryId: 'e1', sourceId: 's1'));
+
+    await dao.deleteEntry('e1');
+
+    expect(await dao.anchorsByEntry('e1'), isEmpty);
+  });
+
+  test('clearSourceForEntries deletes anchors and detaches entries', () async {
+    await dao.insertEntry(makeEntry(id: 'e1', sourceId: 's1'));
+    await dao.insertAnchor(makeAnchor(id: 'a1', entryId: 'e1', sourceId: 's1'));
+
+    await dao.clearSourceForEntries('s1');
+
+    expect(await dao.anchorsBySource('s1'), isEmpty);
+    expect((await dao.entryById('e1'))?.sourceId, isNull);
   });
 }

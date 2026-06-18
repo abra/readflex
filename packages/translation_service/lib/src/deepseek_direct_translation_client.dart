@@ -288,8 +288,8 @@ class DeepSeekDirectTranslationClient implements RemoteTranslationClient {
     final allowSuggestedPhraseFallback =
         _nonEmptyString(decoded['mode']) != 'word_in_expression';
     final suggestedFullPhrase =
-        _suggestedFullPhraseFromMinimalPayload(decoded) ??
         _suggestedFullPhrase(decoded, expression) ??
+        _suggestedFullPhraseFromMinimalPayload(decoded) ??
         (allowSuggestedPhraseFallback
             ? _suggestedFullPhraseFromSenseFallback(
                 sense,
@@ -297,6 +297,10 @@ class DeepSeekDirectTranslationClient implements RemoteTranslationClient {
                 originalText: originalText,
               )
             : null);
+    final expressionTranslation = _expressionTranslationFromMinimalPayload(
+      decoded,
+      expression,
+    );
     final literalTranslation = _targetString(decoded['literal_translation']);
     final translatedText = _selectedTextTranslation(
       modelTranslatedText: modelTranslatedText,
@@ -330,6 +334,7 @@ class DeepSeekDirectTranslationClient implements RemoteTranslationClient {
         expression: expression,
       ),
       literalTranslation: literalTranslation,
+      expressionTranslation: expressionTranslation,
       suggestedFullPhrase: suggestedFullPhrase,
       notes: notes,
     );
@@ -393,6 +398,8 @@ class DeepSeekDirectTranslationClient implements RemoteTranslationClient {
       'plural',
       'gerund',
       'present_participle',
+      'present_tense',
+      'third_person_singular',
       'past',
       'past_tense',
       'comparative',
@@ -712,23 +719,37 @@ class DeepSeekDirectTranslationClient implements RemoteTranslationClient {
     final mode = _nonEmptyString(value['mode']);
     final phrase = value['phrase'];
     if (phrase is Map<String, Object?>) {
-      final phraseText =
+      final phraseSurface =
+          _nonEmptyString(phrase['surface']) ??
           _nonEmptyString(phrase['text']) ??
           _nonEmptyString(phrase['source']) ??
-          _nonEmptyString(phrase['surface']);
-      if (phraseText == null) return null;
+          _nonEmptyString(phrase['span']);
+      final lexicalUnit =
+          _nonEmptyString(phrase['lexical_unit']) ??
+          _nonEmptyString(phrase['lexicalUnit']);
+      final canonicalPattern =
+          _nonEmptyString(phrase['canonical_pattern']) ??
+          _nonEmptyString(phrase['canonicalPattern']);
+      final normalizedExpression =
+          lexicalUnit ??
+          canonicalPattern ??
+          _nonEmptyString(phrase['normalized_expression']) ??
+          _nonEmptyString(phrase['normalizedExpression']) ??
+          phraseSurface;
+      if (phraseSurface == null && normalizedExpression == null) return null;
       final expression = TranslationExpression(
         term:
             _nonEmptyString(value['word']) ??
             _nonEmptyString(value['selected_text']) ??
             fallbackTerm,
-        normalizedExpression: phraseText,
+        normalizedExpression: normalizedExpression,
         expressionType:
             _nonEmptyString(phrase['type']) ??
             _nonEmptyString(value['phrase_type']),
         selectedRole: 'component',
-        surface: phraseText,
-        lexicalUnit: phraseText,
+        surface: phraseSurface,
+        lexicalUnit: lexicalUnit,
+        canonicalPattern: canonicalPattern,
         isSelectedPartOfLexicalUnit: true,
         isMultiwordExpression: true,
       );
@@ -1494,15 +1515,36 @@ class DeepSeekDirectTranslationClient implements RemoteTranslationClient {
     final phrase = decoded['phrase'];
     if (phrase is! Map<String, Object?>) return null;
     final target =
-        _targetString(phrase['translation']) ??
-        _targetString(decoded['phrase_translation']) ??
-        _targetString(decoded['expression_translation']) ??
         _targetString(decoded['contextual_translation']) ??
-        _targetString(decoded['translation']);
+        _targetString(phrase['contextual_translation']) ??
+        _targetString(decoded['phrase_translation']) ??
+        _targetString(decoded['translation']) ??
+        _targetString(phrase['translation']);
     if (target == null) return null;
     final source =
         _nonEmptyString(phrase['text']) ??
         _nonEmptyString(phrase['source']) ??
+        _nonEmptyString(phrase['surface']);
+    return TranslationTextPair(source: source, target: target);
+  }
+
+  static TranslationTextPair? _expressionTranslationFromMinimalPayload(
+    Map<String, Object?> decoded,
+    TranslationExpression? expression,
+  ) {
+    final phrase = decoded['phrase'];
+    if (phrase is! Map<String, Object?>) return null;
+    final target =
+        _targetString(phrase['translation']) ??
+        _targetString(decoded['expression_translation']);
+    if (target == null) return null;
+    final source =
+        expression?.lexicalUnit ??
+        expression?.canonicalPattern ??
+        expression?.normalizedExpression ??
+        _nonEmptyString(phrase['lexical_unit']) ??
+        _nonEmptyString(phrase['canonical_pattern']) ??
+        _nonEmptyString(phrase['text']) ??
         _nonEmptyString(phrase['surface']);
     return TranslationTextPair(source: source, target: target);
   }
@@ -1820,17 +1862,19 @@ Rules:
 - Choose the response mode first. Do not choose single_word until all larger-unit checks below fail.
 - context.current is primary. context.previous/context.next are only supporting context for ambiguity, not material to translate as the answer.
 - A selected word may still be part of a larger unit. If it is part of a phrasal verb, idiom, fixed phrase, learner-dictionary collocation, verb pattern, preposition pattern, or sentence pattern in context.current, return word_in_expression.
-- This applies to any selected word/span inside the larger unit, including the semantic head or an ordinary standalone noun/verb/adjective. Do not treat a headword as single_word just because it has an independent dictionary meaning. The English examples are illustrative only; apply the same rule for every source_language and script. For languages without whitespace word boundaries, treat the selected lexical segment the same way. Correct examples: selected night in a night out -> word_in_expression, phrase.text = "a night out"; selected out in a night out -> word_in_expression, phrase.text = "a night out"; selected way in out of the way -> word_in_expression, phrase.text = "out of the way".
-- Learner-dictionary collocations count as larger units when the selected word is any component of the collocation. Correct examples: selected heavy or rain in heavy rain -> word_in_expression, phrase.text = "heavy rain"; selected make or decision in make a decision -> word_in_expression, phrase.text = "make a decision"; selected deadline in meet a deadline -> word_in_expression, phrase.text = "meet a deadline"; selected crime in commit a crime -> word_in_expression, phrase.text = "commit a crime".
+- For word_in_expression, keep the exact source span and the dictionary head separate. phrase.surface is the exact contiguous span from context.current to highlight. phrase.lexical_unit is the concise dictionary-style expression headword. phrase.canonical_pattern is the abstract learner pattern with placeholders when useful. Do not put a whole sentence-like surface span into phrase.lexical_unit. Correct example: selected sends in It sends us into a dizzying spin -> phrase.surface = "sends us into a dizzying spin", phrase.lexical_unit = "send ... into", phrase.canonical_pattern = "send someone/something into something/a state".
+- If phrase.lexical_unit or phrase.canonical_pattern contains slots, ellipses, or placeholders, phrase.translation must translate that dictionary head or pattern generically, without filling the current sentence's object or complement. Put the contextual translation of phrase.surface in suggested_full_phrase instead. Example shape: phrase.lexical_unit = "send ... into", phrase.translation = "приводить кого-либо/что-либо в какое-либо состояние", suggested_full_phrase = {"source": "sends us into a dizzying spin", "target": "ввергает нас в головокружительное состояние"}.
+- This applies to any selected word/span inside the larger unit, including the semantic head or an ordinary standalone noun/verb/adjective. Do not treat a headword as single_word just because it has an independent dictionary meaning. The English examples are illustrative only; apply the same rule for every source_language and script. For languages without whitespace word boundaries, treat the selected lexical segment the same way. Correct examples: selected night in a night out -> word_in_expression, phrase.surface = "a night out", phrase.lexical_unit = "a night out"; selected out in a night out -> word_in_expression, phrase.surface = "a night out"; selected way in out of the way -> word_in_expression, phrase.surface = "out of the way".
+- Learner-dictionary collocations count as larger units when the selected word is any component of the collocation. Correct examples: selected heavy or rain in heavy rain -> word_in_expression, phrase.surface = "heavy rain", phrase.lexical_unit = "heavy rain"; selected make or decision in make a decision -> word_in_expression, phrase.surface = "make a decision"; selected deadline in meet a deadline -> word_in_expression, phrase.surface = "meet a deadline"; selected crime in commit a crime -> word_in_expression, phrase.surface = "commit a crime".
 - Direct selected-text translation comes first in the output, but it is not a mode-selection rule. For word_in_expression, word_translation is the direct translation of the exact selected token in its grammatical role before applying the larger-unit meaning from context.current, not the contextual meaning of the larger phrase and not an unrelated homograph/part of speech. Never put the larger expression meaning in word_translation. If this makes the main translation look odd, it is still correct because the expression meaning belongs in definition.target. Correct examples: selected kick in kick things off -> word_translation пинать, not начинать; selected turn in turn the projector off -> word_translation поворачивать, not выключать; selected fading in fading out the top image -> word_translation затухание or исчезновение, not увядание; selected carried in carried on -> word_translation нес or перенес, not продолжал; selected backed in backed out of the agreement -> word_translation отступил or сдал назад, not поддержанный; selected up in look the term up -> word_translation вверх, not искать.
 - Return single_word only when the selected word is ordinary in context.current and is not part of any larger unit. For single_word, define the selected word sense, not the whole sentence.
-- transcription is slash-delimited IPA for the exact selected word, for example /feɪd/. For ordinary English words, provide IPA when the word has a standard pronunciation; use null only for names, symbols, abbreviations, or words whose pronunciation is genuinely unknown.
-- word_form/lemma are only for inflectional forms, not derivationally related words. Use them for plural nouns, irregular plurals, gerunds/present participles, past-tense verbs, comparatives, and superlatives. Do not use them for adverb/adjective derivations such as optimistically -> optimistic; put such relations in related_terms only when useful. For plural nouns and irregular plurals, lemma must be the singular noun and lemma_transcription must be the singular slash-delimited IPA. For gerunds/present participles and past-tense verbs, lemma must be the infinitive/base verb and lemma_transcription must be the base slash-delimited IPA. Use null only when the selected word is already the dictionary form. Inflected examples that must not return null: children -> lemma child, grammatical_form plural; analyses -> lemma analysis, grammatical_form plural; fading -> lemma fade, grammatical_form gerund; resolved -> lemma resolve, grammatical_form past_tense.
+- part_of_speech and transcription describe the exact selected word, even when mode is word_in_expression. transcription is slash-delimited IPA for the exact selected word, for example /feɪd/. For ordinary English words, provide IPA when the word has a standard pronunciation; use null only for names, symbols, abbreviations, or words whose pronunciation is genuinely unknown.
+- word_form/lemma are only for inflectional forms, not derivationally related words. Use them for plural nouns, irregular plurals, gerunds/present participles, third-person singular present verbs, past-tense verbs, comparatives, and superlatives. Do not use them for adverb/adjective derivations such as optimistically -> optimistic; put such relations in related_terms only when useful. For plural nouns and irregular plurals, lemma must be the singular noun and lemma_transcription must be the singular slash-delimited IPA. For gerunds/present participles, third-person singular present verbs, and past-tense verbs, lemma must be the infinitive/base verb and lemma_transcription must be the base slash-delimited IPA. Use null only when the selected word is already the dictionary form. Inflected examples that must not return null: children -> lemma child, grammatical_form plural; analyses -> lemma analysis, grammatical_form plural; fading -> lemma fade, grammatical_form gerund; sends -> lemma send, grammatical_form third_person_singular; resolves -> lemma resolve, grammatical_form third_person_singular; resolved -> lemma resolve, grammatical_form past_tense.
 - If a selected function word is governed by a nearby lexical head in context.current, classify the whole construction as word_in_expression: interested in, responsible for, prevent from, depend on, on behalf of, in charge of.
 - If one selected word is a lexical verb, also check immediately nearby particles/prepositions in context.current. If the selected verb plus a nearby particle forms a phrasal verb or phrasal-verb construction, return word_in_expression. This applies to inflected verb forms too: fading out, looked up, turning off, carried on.
-- Sentence patterns count as larger units when the selected word is any marker inside the pattern. For paired or correlative patterns, phrase.text should identify the whole pattern, not only one marker: selected more in the more I read, the more confused I became -> phrase.text = "the more...the more"; selected only or but in not only did it improve speed, but it also reduced memory use -> phrase.text = "not only...but also".
-- For phrasal verbs with an object after the particle, phrase.text should include the verb plus particle, not the object: selected fading in fading out the top image -> phrase.text = "fading out". For separated object constructions, phrase.text and marked_sentence should include the full surface span: kicked the project off.
-- For word_in_expression and selected_expression, return a concise contextual target-language translation of the whole phrase/idiom/collocation separately from definitions. This must be a natural dictionary translation such as "ворваться", not an explanatory definition such as "внезапно и с силой войти в помещение".
+- Sentence patterns count as larger units when the selected word is any marker inside the pattern. For paired or correlative patterns, phrase.lexical_unit should identify the whole pattern, not only one marker: selected more in the more I read, the more confused I became -> phrase.lexical_unit = "the more...the more"; selected only or but in not only did it improve speed, but it also reduced memory use -> phrase.lexical_unit = "not only...but also".
+- For phrasal verbs with an object after the particle, phrase.lexical_unit should include the verb plus particle, not the object: selected fading in fading out the top image -> phrase.lexical_unit = "fade out", phrase.surface = "fading out". For separated object constructions, phrase.surface and marked_sentence should include the full surface span, for example kicked the project off, while phrase.lexical_unit stays "kick off" and phrase.canonical_pattern can be "kick [object] off".
+- For word_in_expression, return a concise dictionary-style target-language translation for phrase.lexical_unit or phrase.canonical_pattern in phrase.translation, and return the contextual target-language translation of phrase.surface in suggested_full_phrase when phrase.surface differs from the dictionary head. For selected_expression, return a concise contextual target-language translation of the selected expression. Translations must be natural dictionary translations such as "ворваться", not explanatory definitions such as "внезапно и с силой войти в помещение".
 - For separated phrasal verbs, phrase.translation must preserve the phrasal meaning and should not translate only the verb plus object literally. For example, looked the term up means "searched for the term", not "looked at the term".
 - Source definitions and marked_sentence must stay in source_language.
 - Target translations and target definitions must stay in target_language.
@@ -1842,16 +1886,19 @@ Rules:
 - Do not include related_terms whose source repeats or contains the selected word, selected headword, or expression headword.
 - Prefer terms that teach useful vocabulary boundaries: word-family forms, common domain collocations, narrower terms, or contrast terms that are often confused with the selected term. If unsure, return [].
 - Highlight the larger unit only when the selected word is part of one; otherwise highlight the exact selection.
-- For separated phrasal verbs, phrase.text and marked_sentence highlight the full separated construction, for example [[kicked the project off]]. Do not imply an inserted object is part of the dictionary phrasal verb.
+- For separated phrasal verbs and verb/preposition patterns, phrase.surface and marked_sentence highlight the full surface construction, for example [[kicked the project off]]. Do not imply an inserted object is part of the dictionary headword.
 
 If one selected word is part of a larger unit, return:
 {
   "mode": "word_in_expression",
   "word": "exact selected word",
   "word_translation": "target-language translation of the exact word",
-  "word_form": {"lemma": "dictionary form for inflected selected word", "form": "plural|gerund|past_tense|comparative|superlative", "transcription": "slash-delimited IPA for lemma"} or null,
+  "part_of_speech": "noun|verb|adjective|adverb|preposition|pronoun|determiner|conjunction|interjection|other",
+  "transcription": "slash-delimited IPA for exact selected word" or null,
+  "word_form": {"lemma": "dictionary form for inflected selected word", "form": "plural|gerund|third_person_singular|past_tense|comparative|superlative", "transcription": "slash-delimited IPA for lemma"} or null,
   "definition": {"source": "source-language definition of the contextual unit", "target": "target-language definition of the contextual unit"},
-  "phrase": {"text": "larger source phrase or construction span to highlight", "translation": "concise target-language translation of the whole contextual unit", "type": "phrasal_verb|idiom|fixed_phrase|collocation|verb_pattern|preposition_pattern|sentence_pattern"},
+  "phrase": {"surface": "exact larger source span from context.current to highlight", "lexical_unit": "concise dictionary-style source expression headword", "canonical_pattern": "abstract source pattern with placeholders or null", "translation": "target-language dictionary-style translation of phrase.lexical_unit or phrase.canonical_pattern; generic for patterns with slots/placeholders", "type": "phrasal_verb|idiom|fixed_phrase|collocation|verb_pattern|preposition_pattern|sentence_pattern"},
+  "suggested_full_phrase": {"source": "phrase.surface when different from phrase.lexical_unit", "target": "contextual target-language translation of phrase.surface"} or null,
   "marked_sentence": "source sentence with [[larger phrase]] highlighted",
   "usage_examples": ["source-language usage example with [[larger phrase]] highlighted"],
   "related_terms": [{"source": "source-language related term", "target": "target-language translation", "relation": "word_family|domain_collocation|contrast_term|narrower_domain_term"}]
@@ -1866,8 +1913,8 @@ If one selected word is ordinary in this context, return:
   "transcription": "slash-delimited IPA for exact selected word" or null,
   "lemma": "dictionary/base form for inflected selected word" or null,
   "lemma_transcription": "slash-delimited IPA for lemma" or null,
-  "grammatical_form": "plural|gerund|past_tense|comparative|superlative" or null,
-  "word_form": {"lemma": "same as lemma; required for plural, gerund, past_tense, comparative, superlative", "form": "same as grammatical_form", "transcription": "same as lemma_transcription"} or null,
+  "grammatical_form": "plural|gerund|third_person_singular|past_tense|comparative|superlative" or null,
+  "word_form": {"lemma": "same as lemma; required for plural, gerund, third_person_singular, past_tense, comparative, superlative", "form": "same as grammatical_form", "transcription": "same as lemma_transcription"} or null,
   "definition": {"source": "source-language definition of this word sense", "target": "target-language definition of this word sense"},
   "marked_sentence": "source sentence with [[selected word]] highlighted",
   "usage_examples": ["source-language usage example with [[selected word]] highlighted"],
@@ -1965,6 +2012,7 @@ class _DecodedPayload {
     this.usageExamples = const [],
     this.naturalEquivalents = const [],
     this.literalTranslation,
+    this.expressionTranslation,
     this.suggestedFullPhrase,
     this.notes,
   });
@@ -1978,6 +2026,7 @@ class _DecodedPayload {
   final List<String> usageExamples;
   final List<String> naturalEquivalents;
   final String? literalTranslation;
+  final TranslationTextPair? expressionTranslation;
   final TranslationTextPair? suggestedFullPhrase;
   final TranslationTextPair? notes;
 
@@ -1996,6 +2045,7 @@ class _DecodedPayload {
     usageExamples: usageExamples,
     naturalEquivalents: naturalEquivalents,
     literalTranslation: literalTranslation,
+    expressionTranslation: expressionTranslation,
     suggestedFullPhrase: suggestedFullPhrase,
     notes: notes,
   );

@@ -2,15 +2,12 @@ import 'dart:async' show unawaited;
 
 import 'package:article_extraction_service/article_extraction_service.dart';
 import 'package:library_feature/library_feature.dart';
-import 'package:dictionary/dictionary.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flashcard/flashcard.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:highlight/highlight.dart';
 import 'package:home/home.dart';
 import 'package:import_flow/import_flow.dart';
-import 'package:practice/practice.dart';
 import 'package:profile/profile.dart';
 import 'package:reader/reader.dart';
 import 'package:readflex/app/dependency_container.dart';
@@ -20,7 +17,6 @@ import 'package:readflex/app/screens/splash_screen.dart';
 import 'package:readflex/app/screens/tab_container_screen.dart';
 import 'package:source_details/source_details.dart';
 import 'package:subscription_paywall/subscription_paywall.dart';
-import 'package:translate/translate.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 const _currentBookImportTermsVersion = 1;
@@ -32,8 +28,6 @@ abstract final class AppRoutes {
   static const splash = '/splash';
   static const home = '/home';
   static const library = '/library';
-  static const dictionary = '/dictionary';
-  static const practice = '/practice';
   static const profile = '/profile';
   static const onboarding = '/onboarding';
   static const firstImport = '/first-import';
@@ -97,9 +91,10 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                     AppRoutes.sourceDetails(book.id),
                     extra: LibrarySource.fromBook(book),
                   ),
-                  onPracticePressed: () => context.go(
-                    AppRoutes.practice,
-                  ),
+                  // Practice is frozen at the app shell for now. Home keeps
+                  // the callback contract because its dashboard is still a
+                  // placeholder and may re-enable this surface later.
+                  onPracticePressed: () {},
                 ),
               ),
             ],
@@ -150,33 +145,6 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                       ),
                     );
                   },
-                ),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: AppRoutes.dictionary,
-                builder: (context, state) => DictionaryScreen(
-                  dictionaryRepository: deps.dictionaryRepository,
-                  fsrsRepository: deps.fsrsRepository,
-                  bookRepository: deps.bookRepository,
-                  articleRepository: deps.articleRepository,
-                  onPracticePressed: () => context.go(AppRoutes.practice),
-                ),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: AppRoutes.practice,
-                builder: (context, state) => PracticeScreen(
-                  fsrsRepository: deps.fsrsRepository,
-                  flashcardRepository: deps.flashcardRepository,
-                  highlightRepository: deps.highlightRepository,
-                  dictionaryRepository: deps.dictionaryRepository,
                 ),
               ),
             ],
@@ -253,6 +221,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
               bookRepository: deps.bookRepository,
               articleRepository: deps.articleRepository,
               highlightRepository: deps.highlightRepository,
+              dictionaryRepository: deps.dictionaryRepository,
               preferencesService: deps.preferencesService,
               screenControlService: deps.screenControlService,
               onSourceOpened: _onSourceOpenedFromRoute(state),
@@ -270,44 +239,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                   highlightRepository: deps.highlightRepository,
                   fsrsRepository: deps.fsrsRepository,
                 ),
-                FlashcardAction(
-                  flashcardRepository: deps.flashcardRepository,
-                  fsrsRepository: deps.fsrsRepository,
-                ),
-                TranslateAction(
-                  translationService: deps.translationService,
-                  dictionaryRepository: deps.dictionaryRepository,
-                  fsrsRepository: deps.fsrsRepository,
-                  translationSourceLanguageCode: () => deps
-                      .preferencesService
-                      .current
-                      .translationSourceLanguageCode,
-                  translationTargetLanguageCode: () => deps
-                      .preferencesService
-                      .current
-                      .translationTargetLanguageCode,
-                ),
               ],
-              onCheckDueItems: (sourceId) async {
-                try {
-                  final items = await deps.fsrsRepository.getDueItemsBySource(
-                    sourceId,
-                  );
-                  return items.length;
-                } catch (_) {
-                  return 0;
-                }
-              },
-              onStartMiniReview: (context, sourceId) {
-                showMiniReviewSheet(
-                  context,
-                  sourceId: sourceId,
-                  fsrsRepository: deps.fsrsRepository,
-                  flashcardRepository: deps.flashcardRepository,
-                  highlightRepository: deps.highlightRepository,
-                  dictionaryRepository: deps.dictionaryRepository,
-                );
-              },
             ),
           );
         },

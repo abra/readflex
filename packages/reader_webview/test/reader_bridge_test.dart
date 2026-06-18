@@ -456,10 +456,15 @@ void main() {
       final selection = ReaderSelection.fromMap({
         'text': 'Some text',
         'cfi': 'epubcfi(/6/4!/4/2,/1:0,/1:10)',
+        'normalizedCfi': 'epubcfi(/6/4!/4/2,/1:0,/1:15)',
       });
 
       expect(selection.text, 'Some text');
       expect(selection.cfiRange, 'epubcfi(/6/4!/4/2,/1:0,/1:10)');
+      expect(
+        selection.normalizedCfiRange,
+        'epubcfi(/6/4!/4/2,/1:0,/1:15)',
+      );
       expect(selection.scrollOffset, isNull);
     });
 
@@ -467,6 +472,7 @@ void main() {
       final selection = ReaderSelection.fromMap({
         'text': 'Both fields',
         'cfi': 'epubcfi(/6/4)',
+        'normalizedCfi': 'epubcfi(/6/6)',
         'normalizedText': 'Both fields normalized',
         'selectionKind': 'partial_span',
         'contextText': 'Both fields in context.',
@@ -479,6 +485,7 @@ void main() {
       expect(selection.normalizedText, 'Both fields normalized');
       expect(selection.selectionKind, 'partial_span');
       expect(selection.cfiRange, 'epubcfi(/6/4)');
+      expect(selection.normalizedCfiRange, 'epubcfi(/6/6)');
       expect(selection.contextText, 'Both fields in context.');
       expect(selection.markedContextText, '[[Both fields]] in context.');
       expect(
@@ -613,6 +620,25 @@ void main() {
       expect(map['text'], 'Book highlight');
       expect(map['cfiRange'], 'epubcfi(/6/4!/4/2,/1:0,/1:15)');
       expect(map['color'], '#FFE600');
+    });
+  });
+
+  group('ReaderDictionaryAnchor', () {
+    test('toMap includes dictionary anchor fields', () {
+      const anchor = ReaderDictionaryAnchor(
+        id: 'da-1',
+        entryId: 'de-1',
+        text: 'Saved word',
+        cfiRange: 'epubcfi(/6/4!/4/2,/1:0,/1:10)',
+        color: '#2F80ED',
+      );
+
+      final map = anchor.toMap();
+      expect(map['id'], 'da-1');
+      expect(map['entryId'], 'de-1');
+      expect(map['text'], 'Saved word');
+      expect(map['cfiRange'], 'epubcfi(/6/4!/4/2,/1:0,/1:10)');
+      expect(map['color'], '#2F80ED');
     });
   });
 }

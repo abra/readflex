@@ -88,10 +88,8 @@ Future<void> starter() async {
         // reader WebView.
         await deps.readerServer.start();
 
-        // Dev-only seed: fills the Dictionary tab with a few entries
-        // so the screen has something to render in development. Gated
-        // on `config.isDev` so prod builds always start with an empty
-        // dictionary.
+        // Dev-only seed: keeps sample dictionary data available for
+        // development while the public Dictionary surface is frozen.
         if (config.isDev) {
           await seedDictionary(
             dictionaryRepository: deps.dictionaryRepository,

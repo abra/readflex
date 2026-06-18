@@ -13,6 +13,8 @@ part 'widgets/font_sheet.dart';
 part 'widgets/language_sheet.dart';
 part 'widgets/settings_widgets.dart';
 
+bool get _translationSettingsEnabled => false;
+
 /// Profile tab root screen (route `/profile`).
 ///
 /// Shows account header, reading stats, appearance/reading/general/about
@@ -172,36 +174,38 @@ class _ProfileViewState extends State<_ProfileView> {
                           onTap: () => _showFontSheet(context),
                         ),
                       ),
-                      BlocSelector<
-                        ProfileTranslationCubit,
-                        ProfileTranslationState,
-                        String?
-                      >(
-                        selector: (state) => state.sourceLanguageCode,
-                        builder: (context, sourceLanguageCode) => SettingsRow(
-                          icon: AppIcons.language,
-                          label: 'Source Language',
-                          detail: _translationLanguageLabel(
-                            sourceLanguageCode,
+                      if (_translationSettingsEnabled) ...[
+                        BlocSelector<
+                          ProfileTranslationCubit,
+                          ProfileTranslationState,
+                          String?
+                        >(
+                          selector: (state) => state.sourceLanguageCode,
+                          builder: (context, sourceLanguageCode) => SettingsRow(
+                            icon: AppIcons.language,
+                            label: 'Source Language',
+                            detail: _translationLanguageLabel(
+                              sourceLanguageCode,
+                            ),
+                            onTap: () => _showTranslationSourceSheet(context),
                           ),
-                          onTap: () => _showTranslationSourceSheet(context),
                         ),
-                      ),
-                      BlocSelector<
-                        ProfileTranslationCubit,
-                        ProfileTranslationState,
-                        String
-                      >(
-                        selector: (state) => state.targetLanguageCode,
-                        builder: (context, targetLanguageCode) => SettingsRow(
-                          icon: AppIcons.translate,
-                          label: 'Translation Language',
-                          detail: _translationLanguageLabel(
-                            targetLanguageCode,
+                        BlocSelector<
+                          ProfileTranslationCubit,
+                          ProfileTranslationState,
+                          String
+                        >(
+                          selector: (state) => state.targetLanguageCode,
+                          builder: (context, targetLanguageCode) => SettingsRow(
+                            icon: AppIcons.translate,
+                            label: 'Translation Language',
+                            detail: _translationLanguageLabel(
+                              targetLanguageCode,
+                            ),
+                            onTap: () => _showTranslationTargetSheet(context),
                           ),
-                          onTap: () => _showTranslationTargetSheet(context),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: AppSpacing.lg),

@@ -3,7 +3,7 @@ import 'package:connectivity_service/connectivity_service.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-const int _kDestinationCount = 5;
+const int _kDestinationCount = 3;
 
 /// Shell scaffold with bottom navigation for the main tabs.
 ///
@@ -87,16 +87,6 @@ class _NavBarWithIndicator extends StatelessWidget {
                 icon: Icon(AppIcons.library),
                 selectedIcon: Icon(AppIcons.library),
                 label: 'Library',
-              ),
-              NavigationDestination(
-                icon: Icon(AppIcons.dictionary),
-                selectedIcon: Icon(AppIcons.dictionary),
-                label: 'Dictionary',
-              ),
-              NavigationDestination(
-                icon: Icon(AppIcons.practice),
-                selectedIcon: Icon(AppIcons.practice),
-                label: 'Practice',
               ),
               NavigationDestination(
                 icon: Icon(AppIcons.profile),

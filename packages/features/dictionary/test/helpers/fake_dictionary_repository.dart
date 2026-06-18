@@ -45,6 +45,10 @@ class FakeDictionaryRepository implements DictionaryRepository {
     SourceType? sourceType,
     List<String> usageExamples = const [],
     DateTime? addedAt,
+    String? anchorText,
+    String? anchorContext,
+    String? anchorCfiRange,
+    DictionaryAnchorKind? anchorKind,
   }) async {
     if (shouldThrow) throw StorageException(cause: 'fake');
     final entry = DictionaryEntry(

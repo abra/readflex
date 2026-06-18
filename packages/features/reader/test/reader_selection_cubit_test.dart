@@ -30,6 +30,7 @@ void main() {
           markedContextText: 'Say [[Hello wor]] again.',
           normalizedMarkedContextText: 'Say [[Hello world]] again.',
           cfiRange: 'epubcfi(/6/4)',
+          normalizedCfiRange: 'epubcfi(/6/6)',
           pageNumber: 42,
         ),
         expect: () => [
@@ -58,6 +59,11 @@ void main() {
                 'Say [[Hello world]] again.',
               )
               .having((s) => s.cfiRange, 'cfiRange', 'epubcfi(/6/4)')
+              .having(
+                (s) => s.normalizedCfiRange,
+                'normalizedCfiRange',
+                'epubcfi(/6/6)',
+              )
               .having((s) => s.pageNumber, 'pageNumber', 42)
               .having((s) => s.scrollOffset, 'scrollOffset', isNull),
         ],
@@ -126,6 +132,7 @@ void main() {
           markedContextText: '[[tex]]',
           normalizedMarkedContextText: '[[text]]',
           cfiRange: 'cfi',
+          normalizedCfiRange: 'normalized-cfi',
           hasSelection: true,
         );
         final copy = state.copyWith(pageNumber: 5);
@@ -136,6 +143,7 @@ void main() {
         expect(copy.markedContextText, '[[tex]]');
         expect(copy.normalizedMarkedContextText, '[[text]]');
         expect(copy.cfiRange, 'cfi');
+        expect(copy.normalizedCfiRange, 'normalized-cfi');
         expect(copy.hasSelection, isTrue);
         expect(copy.pageNumber, 5);
       });

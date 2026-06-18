@@ -76,14 +76,6 @@ class _SubscriptionPaywallSheetView extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.md),
               const _FeatureItem(
-                icon: AppIcons.translate,
-                text: 'AI-powered translations with context',
-              ),
-              const _FeatureItem(
-                icon: AppIcons.sparkles,
-                text: 'AI-generated flashcards',
-              ),
-              const _FeatureItem(
                 icon: AppIcons.cloudSync,
                 text: 'Cloud sync across devices',
               ),

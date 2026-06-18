@@ -353,7 +353,10 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
               onSeekFraction: _seekFraction,
             ),
             const _ReaderImagePageProgressOverlayDriver(),
-            _ContextPanelDriver(textActions: widget.textActions),
+            _ContextPanelDriver(
+              textActions: widget.textActions,
+              webViewKey: _webViewKey,
+            ),
             const _ReviewReminderDriver(),
             _ReaderTocDrawerVisibilityDriver(
               format: format,
@@ -585,6 +588,9 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
   /// non-highlights rebuild.
   List<Highlight>? _lastHighlightsRef;
   List<ReaderHighlight>? _cachedReaderHighlights;
+  List<DictionaryAnchor>? _lastDictionaryAnchorsRef;
+  String? _lastDictionaryAnchorColor;
+  List<ReaderDictionaryAnchor>? _cachedReaderDictionaryAnchors;
   List<SourceBookmark>? _lastBookmarksRef;
   List<ReaderBookmark>? _cachedReaderBookmarks;
 
@@ -639,6 +645,30 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     ];
   }
 
+  List<ReaderDictionaryAnchor> _readerDictionaryAnchorsFor(
+    List<DictionaryAnchor> source, {
+    required String color,
+  }) {
+    final cached = _cachedReaderDictionaryAnchors;
+    if (cached != null &&
+        identical(source, _lastDictionaryAnchorsRef) &&
+        color == _lastDictionaryAnchorColor) {
+      return cached;
+    }
+    _lastDictionaryAnchorsRef = source;
+    _lastDictionaryAnchorColor = color;
+    return _cachedReaderDictionaryAnchors = [
+      for (final anchor in source)
+        ReaderDictionaryAnchor(
+          id: anchor.id,
+          entryId: anchor.entryId,
+          text: anchor.text,
+          cfiRange: anchor.cfiRange,
+          color: color,
+        ),
+    ];
+  }
+
   /// Memoization for `buildBookCustomCSS`. The CSS string only depends on
   /// the reader theme. Reader themes are value-equatable, so we cache
   /// the latest value and reuse the string
@@ -664,6 +694,9 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     final bloc = context.read<ReaderBloc>();
     final uiCubit = context.read<ReaderUiCubit>();
     final selectionCubit = context.read<ReaderSelectionCubit>();
+    final onDictionaryEntryPressed = _ReaderCallbacksScope.of(
+      context,
+    )?.onDictionaryEntryPressed;
     // Subscribe specifically to the highlights list. `state.highlights`
     // is a fresh list instance only on `ReaderHighlightsRefreshed`
     // emits — page turns and other state changes preserve the same
@@ -671,11 +704,22 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     final highlightsState = context.select<ReaderBloc, List<Highlight>>(
       (b) => b.state.highlights,
     );
+    final dictionaryAnchorsState = onDictionaryEntryPressed == null
+        ? const <DictionaryAnchor>[]
+        : context.select<ReaderBloc, List<DictionaryAnchor>>(
+            (b) => b.state.dictionaryAnchors,
+          );
     final bookmarksState = context.select<ReaderBloc, List<SourceBookmark>>(
       (b) => b.state.bookmarks,
     );
     final state = bloc.state;
     final highlights = _readerHighlightsFor(highlightsState);
+    final dictionaryAnchors = onDictionaryEntryPressed == null
+        ? const <ReaderDictionaryAnchor>[]
+        : _readerDictionaryAnchorsFor(
+            dictionaryAnchorsState,
+            color: colorToHex(context.colors.primary),
+          );
     final bookmarks = _readerBookmarksFor(bookmarksState);
     final appearance = context
         .select<ReaderAppearanceCubit, ReaderAppearancePreferences>(
@@ -687,6 +731,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       'foliateReady=$_foliateReady '
       'progress=${state.book?.readingProgress.toStringAsFixed(3)} '
       'highlights=${highlights.length} '
+      'dictionaryAnchors=${dictionaryAnchors.length} '
       'bookmarks=${bookmarks.length} '
       'theme=${appearance.themeId} '
       'layout=${appearance.layoutId} '
@@ -775,6 +820,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       isArticle: state.sourceType == SourceType.article,
       pageProgressionRtl: state.pageProgressionRtl,
       highlights: highlights,
+      dictionaryAnchors: dictionaryAnchors,
       bookmarks: bookmarks,
       onReady: () {
         if (mounted && !_foliateReady) {
@@ -850,9 +896,16 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
           markedContextText: selection.markedContextText,
           normalizedMarkedContextText: selection.normalizedMarkedContextText,
           cfiRange: selection.cfiRange,
+          normalizedCfiRange: selection.normalizedCfiRange,
         );
       },
       onTextDeselected: () => selectionCubit.deselect(),
+      onDictionaryAnchorTapped: (tap) {
+        final callback = onDictionaryEntryPressed;
+        if (callback != null) {
+          unawaited(callback(context, tap.entryId));
+        }
+      },
       onTapped: onTapped,
     );
 

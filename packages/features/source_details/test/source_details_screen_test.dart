@@ -84,12 +84,12 @@ void main() {
       expect(find.byType(Hero), findsNothing);
       expect(find.text('Review'), findsOneWidget);
       expect(find.text('Highlights'), findsOneWidget);
-      expect(find.text('Flashcards'), findsOneWidget);
-      expect(find.text('Dictionary'), findsOneWidget);
+      expect(find.text('Flashcards'), findsNothing);
+      expect(find.text('Dictionary'), findsNothing);
       expect(find.text('2 saved passages'), findsOneWidget);
-      expect(find.text('3 cards created'), findsOneWidget);
-      expect(find.text('4 words collected'), findsOneWidget);
-      expect(find.byIcon(AppIcons.chevronRight), findsNWidgets(3));
+      expect(find.text('3 cards created'), findsNothing);
+      expect(find.text('4 words collected'), findsNothing);
+      expect(find.byIcon(AppIcons.chevronRight), findsOneWidget);
 
       final coverArt = tester.widget<AppCoverArt>(find.byType(AppCoverArt));
       expect(coverArt.topAlignText, isTrue);
@@ -459,8 +459,8 @@ void main() {
       expect(find.text('Start reading'), findsOneWidget);
       expect(find.text('Continue reading'), findsNothing);
       expect(find.text('2 saved passages'), findsOneWidget);
-      expect(find.text('3 cards created'), findsOneWidget);
-      expect(find.text('4 words collected'), findsOneWidget);
+      expect(find.text('3 cards created'), findsNothing);
+      expect(find.text('4 words collected'), findsNothing);
 
       await tester.tap(find.text('Start reading'));
       await tester.pumpAndSettle();
@@ -468,8 +468,8 @@ void main() {
       expect(find.text('Start reading'), findsNothing);
       expect(find.text('Continue reading'), findsOneWidget);
       expect(find.text('6 saved passages'), findsOneWidget);
-      expect(find.text('7 cards created'), findsOneWidget);
-      expect(find.text('8 words collected'), findsOneWidget);
+      expect(find.text('7 cards created'), findsNothing);
+      expect(find.text('8 words collected'), findsNothing);
     });
 
     testWidgets('keeps source cover frame bounds at stable 2:3 ratio', (

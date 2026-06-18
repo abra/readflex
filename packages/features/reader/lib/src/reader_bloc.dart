@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
+import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
@@ -38,12 +39,14 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   ReaderBloc({
     required BookRepository bookRepository,
     required HighlightRepository highlightRepository,
+    required DictionaryRepository dictionaryRepository,
     ArticleRepository? articleRepository,
     Book? initialSource,
     SourceType initialSourceType = SourceType.book,
   }) : _bookRepository = bookRepository,
        _articleRepository = articleRepository,
        _highlightRepository = highlightRepository,
+       _dictionaryRepository = dictionaryRepository,
        super(
          initialSource == null
              ? const ReaderState()
@@ -60,14 +63,22 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     on<ReaderSourceLoadRequested>(_onSourceLoadRequested);
     on<ReaderBookPositionUpdated>(_onBookPositionUpdated);
     on<ReaderHighlightsRefreshed>(_onHighlightsRefreshed);
+    on<ReaderDictionaryAnchorsRefreshed>(_onDictionaryAnchorsRefreshed);
     on<ReaderTocUpdated>(_onTocUpdated);
     on<ReaderDocumentFeaturesUpdated>(_onDocumentFeaturesUpdated);
     on<ReaderBookmarkChanged>(_onBookmarkChanged);
+
+    _dictionaryChanges = _dictionaryRepository.changes.listen((_) {
+      if (isClosed || state.sourceId == null) return;
+      add(const ReaderDictionaryAnchorsRefreshed());
+    });
   }
 
   final BookRepository _bookRepository;
   final ArticleRepository? _articleRepository;
   final HighlightRepository _highlightRepository;
+  final DictionaryRepository _dictionaryRepository;
+  late final StreamSubscription<void> _dictionaryChanges;
 
   /// Pending Book to persist to the repository. foliate-js can emit frequent
   /// `ReaderBookPositionUpdated` events during navigation, so the actual
@@ -79,6 +90,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
 
   @override
   Future<void> close() async {
+    await _dictionaryChanges.cancel();
     _persistTimer?.cancel();
     _persistTimer = null;
     // Flush whatever's pending so closing the reader (or hot
@@ -106,12 +118,13 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     }
 
     try {
-      final (book, article, highlights, bookmarks) = await (
+      final (book, article, highlights, bookmarks, dictionaryAnchors) = await (
         _bookRepository.getBookById(event.sourceId),
         _articleRepository?.getArticleById(event.sourceId) ??
             Future.value(null),
         _highlightRepository.getHighlightsBySource(event.sourceId),
         _bookRepository.getBookmarksBySource(event.sourceId),
+        _dictionaryRepository.getAnchorsBySource(event.sourceId),
       ).wait;
 
       if (book != null) {
@@ -133,6 +146,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             pageProgressionRtl: _inferredBookPageProgressionRtl(updatedBook),
             highlights: highlights,
             bookmarks: bookmarks,
+            dictionaryAnchors: dictionaryAnchors,
             documentFeatures: null,
           ),
         );
@@ -159,6 +173,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             ),
             highlights: highlights,
             bookmarks: bookmarks,
+            dictionaryAnchors: dictionaryAnchors,
             documentFeatures: null,
           ),
         );
@@ -325,6 +340,20 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         sourceId,
       );
       emit(state.copyWith(highlights: highlights));
+    } catch (e, st) {
+      addError(e, st);
+    }
+  }
+
+  Future<void> _onDictionaryAnchorsRefreshed(
+    ReaderDictionaryAnchorsRefreshed event,
+    Emitter<ReaderState> emit,
+  ) async {
+    final sourceId = state.sourceId;
+    if (sourceId == null) return;
+    try {
+      final anchors = await _dictionaryRepository.getAnchorsBySource(sourceId);
+      emit(state.copyWith(dictionaryAnchors: anchors));
     } catch (e, st) {
       addError(e, st);
     }

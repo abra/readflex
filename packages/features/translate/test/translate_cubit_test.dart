@@ -394,6 +394,38 @@ void main() {
     );
 
     blocTest<TranslateCubit, TranslateState>(
+      'saveToDictionary persists source anchor when provided',
+      build: () => TranslateCubit(
+        translationService: translationService,
+        dictionaryRepository: dictionaryRepository,
+        fsrsRepository: fsrsRepository,
+      ),
+      seed: () => const TranslateState(
+        status: TranslateStatus.translated,
+        translatedText: 'вечером',
+      ),
+      act: (cubit) => cubit.saveToDictionary(
+        word: 'evening',
+        sourceId: 'book-1',
+        sourceType: SourceType.book,
+        anchorText: 'evening',
+        anchorContext: 'Good [[evening]].',
+        anchorCfiRange: 'epubcfi(/6/4!/4/2,/1:0,/1:7)',
+        anchorKind: DictionaryAnchorKind.normalizedSelection,
+      ),
+      verify: (_) {
+        expect(dictionaryRepository.anchors, hasLength(1));
+        final anchor = dictionaryRepository.anchors.single;
+        expect(anchor.entryId, dictionaryRepository.entries.single.id);
+        expect(anchor.sourceId, 'book-1');
+        expect(anchor.text, 'evening');
+        expect(anchor.context, 'Good [[evening]].');
+        expect(anchor.cfiRange, 'epubcfi(/6/4!/4/2,/1:0,/1:7)');
+        expect(anchor.kind, DictionaryAnchorKind.normalizedSelection);
+      },
+    );
+
+    blocTest<TranslateCubit, TranslateState>(
       'saveToDictionary persists plain reader context over model explanation',
       build: () => TranslateCubit(
         translationService: translationService,

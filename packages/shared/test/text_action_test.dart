@@ -14,6 +14,8 @@ void main() {
       contextText: 'Well, hello there.',
       markedContextText: 'Well, [[hello]] there.',
       normalizedMarkedContextText: 'Well, [[hello there]].',
+      cfiRange: 'exact-cfi',
+      normalizedCfiRange: 'normalized-cfi',
       scrollOffset: 42,
     );
 
@@ -25,6 +27,8 @@ void main() {
     expect(selection.contextText, 'Well, hello there.');
     expect(selection.markedContextText, 'Well, [[hello]] there.');
     expect(selection.normalizedMarkedContextText, 'Well, [[hello there]].');
+    expect(selection.cfiRange, 'exact-cfi');
+    expect(selection.normalizedCfiRange, 'normalized-cfi');
     expect(selection.textForTranslation, 'hello there');
     expect(selection.markedContextTextForTranslation, 'Well, [[hello there]].');
     expect(selection.scrollOffset, 42);

@@ -50,6 +50,10 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     }
 
     _syncAnnotations(oldWidget.highlights, widget.highlights);
+    _syncDictionaryAnchors(
+      oldWidget.dictionaryAnchors,
+      widget.dictionaryAnchors,
+    );
     _syncBookmarkAnnotations(oldWidget.bookmarks, widget.bookmarks);
   }
 
@@ -67,6 +71,16 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   ) {
     if (!_isReady) return;
     _syncAnnotations(oldList, newList);
+  }
+
+  /// Push a dictionary-anchor diff into the WebView without rebuilding the
+  /// platform view subtree.
+  void syncDictionaryAnchors(
+    List<ReaderDictionaryAnchor> oldList,
+    List<ReaderDictionaryAnchor> newList,
+  ) {
+    if (!_isReady) return;
+    _syncDictionaryAnchors(oldList, newList);
   }
 
   void _syncAnnotations(
@@ -124,6 +138,57 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     _evaluateReaderCommand(
       label: 'addAnnotation',
       expression: 'addAnnotation($annotation)',
+    );
+  }
+
+  void _syncDictionaryAnchors(
+    List<ReaderDictionaryAnchor> oldList,
+    List<ReaderDictionaryAnchor> newList,
+  ) {
+    final oldById = {for (final h in oldList) h.id: h};
+    final newById = {for (final h in newList) h.id: h};
+
+    for (final h in oldList) {
+      final next = newById[h.id];
+      if (next == null) {
+        _evalRemoveDictionaryAnchor(h);
+      }
+    }
+    for (final h in newList) {
+      final prev = oldById[h.id];
+      if (prev == null) {
+        _evalAddDictionaryAnchor(h);
+      } else if (prev.cfiRange != h.cfiRange ||
+          prev.entryId != h.entryId ||
+          prev.color != h.color) {
+        _evalRemoveDictionaryAnchor(prev);
+        _evalAddDictionaryAnchor(h);
+      }
+    }
+  }
+
+  void _evalAddDictionaryAnchor(ReaderDictionaryAnchor anchor) {
+    final annotation = jsonEncode({
+      'id': anchor.id,
+      'entryId': anchor.entryId,
+      'type': 'dictionary',
+      'value': 'dictionary:${anchor.id}',
+      'cfi': anchor.cfiRange,
+      'text': anchor.text,
+      'color': anchor.color ?? '#2F80ED',
+    });
+    _evaluateReaderCommand(
+      label: 'addDictionaryAnnotation',
+      expression: 'addAnnotation($annotation)',
+    );
+  }
+
+  void _evalRemoveDictionaryAnchor(ReaderDictionaryAnchor anchor) {
+    final escapedCfi = jsonEncode(anchor.cfiRange);
+    final escapedId = jsonEncode(anchor.id);
+    _evaluateReaderCommand(
+      label: 'removeDictionaryAnnotation',
+      expression: 'removeAnnotation($escapedCfi, true, $escapedId)',
     );
   }
 
@@ -371,6 +436,20 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
         if (data == null) return;
         final annotation = readerBridgeMap(data['annotation']);
         final id = annotation?['id'] as String?;
+        final type = annotation?['type'] as String?;
+        if (type == 'dictionary') {
+          final entryId = annotation?['entryId'] as String?;
+          if (id != null && entryId != null) {
+            widget.onDictionaryAnchorTapped?.call(
+              ReaderDictionaryAnchorTap(
+                anchorId: id,
+                entryId: entryId,
+                contextText: data['contextText'] as String?,
+              ),
+            );
+          }
+          return;
+        }
         if (id != null) widget.onHighlightTapped?.call(id);
       },
     );
@@ -468,6 +547,9 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   void _renderAnnotations() {
     for (final h in widget.highlights) {
       _evalAddAnnotation(h);
+    }
+    for (final anchor in widget.dictionaryAnchors) {
+      _evalAddDictionaryAnchor(anchor);
     }
     for (final bookmark in widget.bookmarks) {
       _evalAddBookmarkAnnotation(bookmark);
@@ -724,6 +806,17 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     _evaluateReaderCommand(
       label: 'clearSelection',
       expression:
+          "typeof window.clearSelection === 'function' ? window.clearSelection() : null",
+    );
+  }
+
+  /// Clear selection after a completed reader text action without consuming
+  /// the next page-turn click.
+  void clearSelectionAfterTextAction() {
+    _evaluateReaderCommand(
+      label: 'clearSelectionAfterTextAction',
+      expression:
+          "typeof window.clearSelectionAfterTextAction === 'function' ? window.clearSelectionAfterTextAction() : "
           "typeof window.clearSelection === 'function' ? window.clearSelection() : null",
     );
   }

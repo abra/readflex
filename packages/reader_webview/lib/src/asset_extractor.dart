@@ -25,7 +25,7 @@ class AssetExtractor {
   // Bump when bundled reader HTML/JS assets must be re-extracted even if the
   // app version/build number did not change, e.g. release-mode device testing.
   @visibleForTesting
-  static const assetRevision = 'reader_webview_assets_60';
+  static const assetRevision = 'reader_webview_assets_64';
 
   @visibleForTesting
   static String extractionVersionFor(String version) =>

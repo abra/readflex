@@ -295,6 +295,10 @@ class _FakeDictionaryRepository implements DictionaryRepository {
     SourceType? sourceType,
     List<String> usageExamples = const [],
     DateTime? addedAt,
+    String? anchorText,
+    String? anchorContext,
+    String? anchorCfiRange,
+    DictionaryAnchorKind? anchorKind,
   }) async {
     final entry = DictionaryEntry(
       id: 'entry-${entries.length + 1}',

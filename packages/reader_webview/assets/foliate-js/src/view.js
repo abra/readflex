@@ -427,6 +427,7 @@ export class View extends HTMLElement {
   }
   async addAnnotation(annotation, remove) {
     const { value } = annotation
+    const navigationValue = annotation.cfi ?? value
     if (value.startsWith(SEARCH_PREFIX)) {
       const cfi = value.replace(SEARCH_PREFIX, '')
       const { index, anchor } = await this.resolveNavigation(cfi)
@@ -446,19 +447,167 @@ export class View extends HTMLElement {
       }
       return
     }
-    const { index, anchor } = await this.resolveNavigation(value)
+    const { index, anchor } = await this.resolveNavigation(navigationValue)
     const obj = this.#getOverlayer(index)
     if (obj) {
       const { overlayer, doc } = obj
       overlayer.remove(value)
       if (!remove) {
         const range = doc ? anchor(doc) : anchor
-        const draw = (func, opts) => overlayer.add(value, range, func, opts)
-        this.#emit('draw-annotation', { draw, annotation, doc, range })
+        const drawRange = this.#annotationDrawRange(annotation, doc, range)
+        const draw = (func, opts) => overlayer.add(value, drawRange, func, opts)
+        this.#emit('draw-annotation', {
+          draw,
+          annotation,
+          doc,
+          range: drawRange,
+        })
       }
     }
     const label = this.#tocProgress.getProgress(index)?.label ?? ''
     return { index, label }
+  }
+  #annotationDrawRange(annotation, doc, range) {
+    if (annotation?.type !== 'dictionary') return range
+    return this.#dictionaryExpressionRange(annotation, doc, range) ?? range
+  }
+  #dictionaryExpressionRange(annotation, doc, range) {
+    const text = this.#normalizeDictionaryAnchorText(annotation?.text)
+    if (!doc || !range || !text || !text.includes(' ')) return null
+
+    const root = this.#dictionaryAnchorSearchRoot(doc, range)
+    if (!root) return null
+
+    return this.#findDictionaryExpressionRange({
+      doc,
+      root,
+      range,
+      text,
+    })
+  }
+  #normalizeDictionaryAnchorText(text) {
+    return typeof text === 'string'
+      ? text.replace(/\s+/g, ' ').trim().toLowerCase()
+      : ''
+  }
+  #dictionaryAnchorSearchRoot(doc, range) {
+    const node = range.commonAncestorContainer
+    const element = node?.nodeType === 1 ? node : node?.parentElement
+    return element?.closest?.(
+      'p, li, blockquote, h1, h2, h3, h4, h5, h6, figcaption, td, th'
+    ) ?? element ?? doc.body
+  }
+  #findDictionaryExpressionRange({ doc, root, range, text }) {
+    const index = this.#normalizedTextIndex(root)
+    const { normalizedText, positions, nodeStarts } = index
+    if (!normalizedText || positions.length === 0) return null
+
+    const selectedBounds = this.#rawRangeBounds(range, nodeStarts)
+    let best = null
+    let start = normalizedText.indexOf(text)
+    while (start >= 0) {
+      const end = start + text.length
+      if (this.#hasDictionaryTermBoundaries(normalizedText, start, end)) {
+        const candidate = this.#dictionaryRangeCandidate({
+          doc,
+          positions,
+          selectedBounds,
+          start,
+          end,
+        })
+        if (candidate && (!best || candidate.score < best.score)) {
+          best = candidate
+        }
+      }
+      start = normalizedText.indexOf(text, start + 1)
+    }
+    return best?.range ?? null
+  }
+  #normalizedTextIndex(root) {
+    const doc = root.ownerDocument
+    const walker = doc.createTreeWalker(
+      root,
+      doc.defaultView?.NodeFilter?.SHOW_TEXT ?? 4
+    )
+    const positions = []
+    const nodeStarts = new Map()
+    let normalizedText = ''
+    let rawOffset = 0
+    let lastWasSpace = true
+
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent ?? ''
+      nodeStarts.set(node, rawOffset)
+      for (let offset = 0; offset < text.length; offset++) {
+        const char = text[offset]
+        if (/\s/.test(char)) {
+          if (!lastWasSpace && normalizedText.length > 0) {
+            normalizedText += ' '
+            positions.push({
+              node,
+              offset,
+              endOffset: offset + 1,
+              rawStart: rawOffset + offset,
+              rawEnd: rawOffset + offset + 1,
+            })
+            lastWasSpace = true
+          }
+          continue
+        }
+
+        normalizedText += char.toLowerCase()
+        positions.push({
+          node,
+          offset,
+          endOffset: offset + 1,
+          rawStart: rawOffset + offset,
+          rawEnd: rawOffset + offset + 1,
+        })
+        lastWasSpace = false
+      }
+      rawOffset += text.length
+    }
+
+    return { normalizedText, positions, nodeStarts }
+  }
+  #rawRangeBounds(range, nodeStarts) {
+    const startBase = nodeStarts.get(range.startContainer)
+    const endBase = nodeStarts.get(range.endContainer)
+    if (startBase == null || endBase == null) return null
+    return {
+      start: startBase + range.startOffset,
+      end: endBase + range.endOffset,
+    }
+  }
+  #dictionaryRangeCandidate({ doc, positions, selectedBounds, start, end }) {
+    const first = positions[start]
+    const last = positions[end - 1]
+    if (!first || !last) return null
+
+    const range = doc.createRange()
+    range.setStart(first.node, first.offset)
+    range.setEnd(last.node, last.endOffset)
+    const text = range.toString().trim()
+    if (!text) return null
+
+    const rawStart = first.rawStart
+    const rawEnd = last.rawEnd
+    const score = selectedBounds
+      ? this.#dictionaryRangeDistance(rawStart, rawEnd, selectedBounds)
+      : start
+    return { range, score }
+  }
+  #dictionaryRangeDistance(start, end, selected) {
+    if (start <= selected.end && end >= selected.start) return 0
+    if (end < selected.start) return selected.start - end
+    return start - selected.end
+  }
+  #hasDictionaryTermBoundaries(text, start, end) {
+    return !this.#isDictionaryTermChar(text[start - 1]) &&
+      !this.#isDictionaryTermChar(text[end])
+  }
+  #isDictionaryTermChar(char) {
+    return typeof char === 'string' && /[a-z0-9']/.test(char)
   }
   deleteAnnotation(annotation) {
     return this.addAnnotation(annotation, true)
@@ -486,7 +635,8 @@ export class View extends HTMLElement {
   }
   async showAnnotation(annotation) {
     const { value } = annotation
-    const resolved = await this.goTo(value)
+    const navigationValue = annotation.cfi ?? value
+    const resolved = await this.goTo(navigationValue)
     if (resolved) {
       const { index, anchor } = resolved
       const { doc } = this.#getOverlayer(index)

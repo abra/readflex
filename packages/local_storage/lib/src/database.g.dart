@@ -3738,6 +3738,576 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
   }
 }
 
+class $DictionaryAnchorsTableTable extends DictionaryAnchorsTable
+    with TableInfo<$DictionaryAnchorsTableTable, DictionaryAnchorsTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DictionaryAnchorsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _entryIdMeta = const VerificationMeta(
+    'entryId',
+  );
+  @override
+  late final GeneratedColumn<String> entryId = GeneratedColumn<String>(
+    'entry_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceIdMeta = const VerificationMeta(
+    'sourceId',
+  );
+  @override
+  late final GeneratedColumn<String> sourceId = GeneratedColumn<String>(
+    'source_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceTypeMeta = const VerificationMeta(
+    'sourceType',
+  );
+  @override
+  late final GeneratedColumn<String> sourceType = GeneratedColumn<String>(
+    'source_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _anchorTextMeta = const VerificationMeta(
+    'anchorText',
+  );
+  @override
+  late final GeneratedColumn<String> anchorText = GeneratedColumn<String>(
+    'text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contextMeta = const VerificationMeta(
+    'context',
+  );
+  @override
+  late final GeneratedColumn<String> context = GeneratedColumn<String>(
+    'context',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cfiRangeMeta = const VerificationMeta(
+    'cfiRange',
+  );
+  @override
+  late final GeneratedColumn<String> cfiRange = GeneratedColumn<String>(
+    'cfi_range',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    entryId,
+    sourceId,
+    sourceType,
+    anchorText,
+    context,
+    cfiRange,
+    kind,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'dictionary_anchors_table';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DictionaryAnchorsTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('entry_id')) {
+      context.handle(
+        _entryIdMeta,
+        entryId.isAcceptableOrUnknown(data['entry_id']!, _entryIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_entryIdMeta);
+    }
+    if (data.containsKey('source_id')) {
+      context.handle(
+        _sourceIdMeta,
+        sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceIdMeta);
+    }
+    if (data.containsKey('source_type')) {
+      context.handle(
+        _sourceTypeMeta,
+        sourceType.isAcceptableOrUnknown(data['source_type']!, _sourceTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceTypeMeta);
+    }
+    if (data.containsKey('text')) {
+      context.handle(
+        _anchorTextMeta,
+        anchorText.isAcceptableOrUnknown(data['text']!, _anchorTextMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_anchorTextMeta);
+    }
+    if (data.containsKey('context')) {
+      context.handle(
+        _contextMeta,
+        this.context.isAcceptableOrUnknown(data['context']!, _contextMeta),
+      );
+    }
+    if (data.containsKey('cfi_range')) {
+      context.handle(
+        _cfiRangeMeta,
+        cfiRange.isAcceptableOrUnknown(data['cfi_range']!, _cfiRangeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cfiRangeMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DictionaryAnchorsTableData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DictionaryAnchorsTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      entryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entry_id'],
+      )!,
+      sourceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_id'],
+      )!,
+      sourceType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_type'],
+      )!,
+      anchorText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}text'],
+      )!,
+      context: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}context'],
+      ),
+      cfiRange: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cfi_range'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $DictionaryAnchorsTableTable createAlias(String alias) {
+    return $DictionaryAnchorsTableTable(attachedDatabase, alias);
+  }
+}
+
+class DictionaryAnchorsTableData extends DataClass
+    implements Insertable<DictionaryAnchorsTableData> {
+  final String id;
+  final String entryId;
+  final String sourceId;
+  final String sourceType;
+  final String anchorText;
+  final String? context;
+  final String cfiRange;
+  final String kind;
+  final String createdAt;
+  const DictionaryAnchorsTableData({
+    required this.id,
+    required this.entryId,
+    required this.sourceId,
+    required this.sourceType,
+    required this.anchorText,
+    this.context,
+    required this.cfiRange,
+    required this.kind,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['entry_id'] = Variable<String>(entryId);
+    map['source_id'] = Variable<String>(sourceId);
+    map['source_type'] = Variable<String>(sourceType);
+    map['text'] = Variable<String>(anchorText);
+    if (!nullToAbsent || context != null) {
+      map['context'] = Variable<String>(context);
+    }
+    map['cfi_range'] = Variable<String>(cfiRange);
+    map['kind'] = Variable<String>(kind);
+    map['created_at'] = Variable<String>(createdAt);
+    return map;
+  }
+
+  DictionaryAnchorsTableCompanion toCompanion(bool nullToAbsent) {
+    return DictionaryAnchorsTableCompanion(
+      id: Value(id),
+      entryId: Value(entryId),
+      sourceId: Value(sourceId),
+      sourceType: Value(sourceType),
+      anchorText: Value(anchorText),
+      context: context == null && nullToAbsent
+          ? const Value.absent()
+          : Value(context),
+      cfiRange: Value(cfiRange),
+      kind: Value(kind),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory DictionaryAnchorsTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DictionaryAnchorsTableData(
+      id: serializer.fromJson<String>(json['id']),
+      entryId: serializer.fromJson<String>(json['entryId']),
+      sourceId: serializer.fromJson<String>(json['sourceId']),
+      sourceType: serializer.fromJson<String>(json['sourceType']),
+      anchorText: serializer.fromJson<String>(json['anchorText']),
+      context: serializer.fromJson<String?>(json['context']),
+      cfiRange: serializer.fromJson<String>(json['cfiRange']),
+      kind: serializer.fromJson<String>(json['kind']),
+      createdAt: serializer.fromJson<String>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'entryId': serializer.toJson<String>(entryId),
+      'sourceId': serializer.toJson<String>(sourceId),
+      'sourceType': serializer.toJson<String>(sourceType),
+      'anchorText': serializer.toJson<String>(anchorText),
+      'context': serializer.toJson<String?>(context),
+      'cfiRange': serializer.toJson<String>(cfiRange),
+      'kind': serializer.toJson<String>(kind),
+      'createdAt': serializer.toJson<String>(createdAt),
+    };
+  }
+
+  DictionaryAnchorsTableData copyWith({
+    String? id,
+    String? entryId,
+    String? sourceId,
+    String? sourceType,
+    String? anchorText,
+    Value<String?> context = const Value.absent(),
+    String? cfiRange,
+    String? kind,
+    String? createdAt,
+  }) => DictionaryAnchorsTableData(
+    id: id ?? this.id,
+    entryId: entryId ?? this.entryId,
+    sourceId: sourceId ?? this.sourceId,
+    sourceType: sourceType ?? this.sourceType,
+    anchorText: anchorText ?? this.anchorText,
+    context: context.present ? context.value : this.context,
+    cfiRange: cfiRange ?? this.cfiRange,
+    kind: kind ?? this.kind,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  DictionaryAnchorsTableData copyWithCompanion(
+    DictionaryAnchorsTableCompanion data,
+  ) {
+    return DictionaryAnchorsTableData(
+      id: data.id.present ? data.id.value : this.id,
+      entryId: data.entryId.present ? data.entryId.value : this.entryId,
+      sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
+      sourceType: data.sourceType.present
+          ? data.sourceType.value
+          : this.sourceType,
+      anchorText: data.anchorText.present
+          ? data.anchorText.value
+          : this.anchorText,
+      context: data.context.present ? data.context.value : this.context,
+      cfiRange: data.cfiRange.present ? data.cfiRange.value : this.cfiRange,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DictionaryAnchorsTableData(')
+          ..write('id: $id, ')
+          ..write('entryId: $entryId, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('sourceType: $sourceType, ')
+          ..write('anchorText: $anchorText, ')
+          ..write('context: $context, ')
+          ..write('cfiRange: $cfiRange, ')
+          ..write('kind: $kind, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    entryId,
+    sourceId,
+    sourceType,
+    anchorText,
+    context,
+    cfiRange,
+    kind,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DictionaryAnchorsTableData &&
+          other.id == this.id &&
+          other.entryId == this.entryId &&
+          other.sourceId == this.sourceId &&
+          other.sourceType == this.sourceType &&
+          other.anchorText == this.anchorText &&
+          other.context == this.context &&
+          other.cfiRange == this.cfiRange &&
+          other.kind == this.kind &&
+          other.createdAt == this.createdAt);
+}
+
+class DictionaryAnchorsTableCompanion
+    extends UpdateCompanion<DictionaryAnchorsTableData> {
+  final Value<String> id;
+  final Value<String> entryId;
+  final Value<String> sourceId;
+  final Value<String> sourceType;
+  final Value<String> anchorText;
+  final Value<String?> context;
+  final Value<String> cfiRange;
+  final Value<String> kind;
+  final Value<String> createdAt;
+  final Value<int> rowid;
+  const DictionaryAnchorsTableCompanion({
+    this.id = const Value.absent(),
+    this.entryId = const Value.absent(),
+    this.sourceId = const Value.absent(),
+    this.sourceType = const Value.absent(),
+    this.anchorText = const Value.absent(),
+    this.context = const Value.absent(),
+    this.cfiRange = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DictionaryAnchorsTableCompanion.insert({
+    required String id,
+    required String entryId,
+    required String sourceId,
+    required String sourceType,
+    required String anchorText,
+    this.context = const Value.absent(),
+    required String cfiRange,
+    required String kind,
+    required String createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       entryId = Value(entryId),
+       sourceId = Value(sourceId),
+       sourceType = Value(sourceType),
+       anchorText = Value(anchorText),
+       cfiRange = Value(cfiRange),
+       kind = Value(kind),
+       createdAt = Value(createdAt);
+  static Insertable<DictionaryAnchorsTableData> custom({
+    Expression<String>? id,
+    Expression<String>? entryId,
+    Expression<String>? sourceId,
+    Expression<String>? sourceType,
+    Expression<String>? anchorText,
+    Expression<String>? context,
+    Expression<String>? cfiRange,
+    Expression<String>? kind,
+    Expression<String>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (entryId != null) 'entry_id': entryId,
+      if (sourceId != null) 'source_id': sourceId,
+      if (sourceType != null) 'source_type': sourceType,
+      if (anchorText != null) 'text': anchorText,
+      if (context != null) 'context': context,
+      if (cfiRange != null) 'cfi_range': cfiRange,
+      if (kind != null) 'kind': kind,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DictionaryAnchorsTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? entryId,
+    Value<String>? sourceId,
+    Value<String>? sourceType,
+    Value<String>? anchorText,
+    Value<String?>? context,
+    Value<String>? cfiRange,
+    Value<String>? kind,
+    Value<String>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return DictionaryAnchorsTableCompanion(
+      id: id ?? this.id,
+      entryId: entryId ?? this.entryId,
+      sourceId: sourceId ?? this.sourceId,
+      sourceType: sourceType ?? this.sourceType,
+      anchorText: anchorText ?? this.anchorText,
+      context: context ?? this.context,
+      cfiRange: cfiRange ?? this.cfiRange,
+      kind: kind ?? this.kind,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (entryId.present) {
+      map['entry_id'] = Variable<String>(entryId.value);
+    }
+    if (sourceId.present) {
+      map['source_id'] = Variable<String>(sourceId.value);
+    }
+    if (sourceType.present) {
+      map['source_type'] = Variable<String>(sourceType.value);
+    }
+    if (anchorText.present) {
+      map['text'] = Variable<String>(anchorText.value);
+    }
+    if (context.present) {
+      map['context'] = Variable<String>(context.value);
+    }
+    if (cfiRange.present) {
+      map['cfi_range'] = Variable<String>(cfiRange.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<String>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DictionaryAnchorsTableCompanion(')
+          ..write('id: $id, ')
+          ..write('entryId: $entryId, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('sourceType: $sourceType, ')
+          ..write('anchorText: $anchorText, ')
+          ..write('context: $context, ')
+          ..write('cfiRange: $cfiRange, ')
+          ..write('kind: $kind, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $ReviewItemsTableTable extends ReviewItemsTable
     with TableInfo<$ReviewItemsTableTable, ReviewItemsTableData> {
   @override
@@ -5861,6 +6431,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $DictionaryTableTable dictionaryTable = $DictionaryTableTable(
     this,
   );
+  late final $DictionaryAnchorsTableTable dictionaryAnchorsTable =
+      $DictionaryAnchorsTableTable(this);
   late final $ReviewItemsTableTable reviewItemsTable = $ReviewItemsTableTable(
     this,
   );
@@ -5893,6 +6465,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     highlightsTable,
     flashcardsTable,
     dictionaryTable,
+    dictionaryAnchorsTable,
     reviewItemsTable,
     reviewLogsTable,
     collectionsTable,
@@ -7707,6 +8280,305 @@ typedef $$DictionaryTableTableProcessedTableManager =
       DictionaryTableData,
       PrefetchHooks Function()
     >;
+typedef $$DictionaryAnchorsTableTableCreateCompanionBuilder =
+    DictionaryAnchorsTableCompanion Function({
+      required String id,
+      required String entryId,
+      required String sourceId,
+      required String sourceType,
+      required String anchorText,
+      Value<String?> context,
+      required String cfiRange,
+      required String kind,
+      required String createdAt,
+      Value<int> rowid,
+    });
+typedef $$DictionaryAnchorsTableTableUpdateCompanionBuilder =
+    DictionaryAnchorsTableCompanion Function({
+      Value<String> id,
+      Value<String> entryId,
+      Value<String> sourceId,
+      Value<String> sourceType,
+      Value<String> anchorText,
+      Value<String?> context,
+      Value<String> cfiRange,
+      Value<String> kind,
+      Value<String> createdAt,
+      Value<int> rowid,
+    });
+
+class $$DictionaryAnchorsTableTableFilterComposer
+    extends Composer<_$AppDatabase, $DictionaryAnchorsTableTable> {
+  $$DictionaryAnchorsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get entryId => $composableBuilder(
+    column: $table.entryId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceId => $composableBuilder(
+    column: $table.sourceId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceType => $composableBuilder(
+    column: $table.sourceType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get anchorText => $composableBuilder(
+    column: $table.anchorText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get context => $composableBuilder(
+    column: $table.context,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cfiRange => $composableBuilder(
+    column: $table.cfiRange,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DictionaryAnchorsTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $DictionaryAnchorsTableTable> {
+  $$DictionaryAnchorsTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get entryId => $composableBuilder(
+    column: $table.entryId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceId => $composableBuilder(
+    column: $table.sourceId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceType => $composableBuilder(
+    column: $table.sourceType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get anchorText => $composableBuilder(
+    column: $table.anchorText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get context => $composableBuilder(
+    column: $table.context,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cfiRange => $composableBuilder(
+    column: $table.cfiRange,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DictionaryAnchorsTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DictionaryAnchorsTableTable> {
+  $$DictionaryAnchorsTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get entryId =>
+      $composableBuilder(column: $table.entryId, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceId =>
+      $composableBuilder(column: $table.sourceId, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceType => $composableBuilder(
+    column: $table.sourceType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get anchorText => $composableBuilder(
+    column: $table.anchorText,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get context =>
+      $composableBuilder(column: $table.context, builder: (column) => column);
+
+  GeneratedColumn<String> get cfiRange =>
+      $composableBuilder(column: $table.cfiRange, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$DictionaryAnchorsTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DictionaryAnchorsTableTable,
+          DictionaryAnchorsTableData,
+          $$DictionaryAnchorsTableTableFilterComposer,
+          $$DictionaryAnchorsTableTableOrderingComposer,
+          $$DictionaryAnchorsTableTableAnnotationComposer,
+          $$DictionaryAnchorsTableTableCreateCompanionBuilder,
+          $$DictionaryAnchorsTableTableUpdateCompanionBuilder,
+          (
+            DictionaryAnchorsTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $DictionaryAnchorsTableTable,
+              DictionaryAnchorsTableData
+            >,
+          ),
+          DictionaryAnchorsTableData,
+          PrefetchHooks Function()
+        > {
+  $$DictionaryAnchorsTableTableTableManager(
+    _$AppDatabase db,
+    $DictionaryAnchorsTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DictionaryAnchorsTableTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$DictionaryAnchorsTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$DictionaryAnchorsTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> entryId = const Value.absent(),
+                Value<String> sourceId = const Value.absent(),
+                Value<String> sourceType = const Value.absent(),
+                Value<String> anchorText = const Value.absent(),
+                Value<String?> context = const Value.absent(),
+                Value<String> cfiRange = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DictionaryAnchorsTableCompanion(
+                id: id,
+                entryId: entryId,
+                sourceId: sourceId,
+                sourceType: sourceType,
+                anchorText: anchorText,
+                context: context,
+                cfiRange: cfiRange,
+                kind: kind,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String entryId,
+                required String sourceId,
+                required String sourceType,
+                required String anchorText,
+                Value<String?> context = const Value.absent(),
+                required String cfiRange,
+                required String kind,
+                required String createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => DictionaryAnchorsTableCompanion.insert(
+                id: id,
+                entryId: entryId,
+                sourceId: sourceId,
+                sourceType: sourceType,
+                anchorText: anchorText,
+                context: context,
+                cfiRange: cfiRange,
+                kind: kind,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DictionaryAnchorsTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DictionaryAnchorsTableTable,
+      DictionaryAnchorsTableData,
+      $$DictionaryAnchorsTableTableFilterComposer,
+      $$DictionaryAnchorsTableTableOrderingComposer,
+      $$DictionaryAnchorsTableTableAnnotationComposer,
+      $$DictionaryAnchorsTableTableCreateCompanionBuilder,
+      $$DictionaryAnchorsTableTableUpdateCompanionBuilder,
+      (
+        DictionaryAnchorsTableData,
+        BaseReferences<
+          _$AppDatabase,
+          $DictionaryAnchorsTableTable,
+          DictionaryAnchorsTableData
+        >,
+      ),
+      DictionaryAnchorsTableData,
+      PrefetchHooks Function()
+    >;
 typedef $$ReviewItemsTableTableCreateCompanionBuilder =
     ReviewItemsTableCompanion Function({
       required String itemId,
@@ -9069,6 +9941,11 @@ class $AppDatabaseManager {
       $$FlashcardsTableTableTableManager(_db, _db.flashcardsTable);
   $$DictionaryTableTableTableManager get dictionaryTable =>
       $$DictionaryTableTableTableManager(_db, _db.dictionaryTable);
+  $$DictionaryAnchorsTableTableTableManager get dictionaryAnchorsTable =>
+      $$DictionaryAnchorsTableTableTableManager(
+        _db,
+        _db.dictionaryAnchorsTable,
+      );
   $$ReviewItemsTableTableTableManager get reviewItemsTable =>
       $$ReviewItemsTableTableTableManager(_db, _db.reviewItemsTable);
   $$ReviewLogsTableTableTableManager get reviewLogsTable =>

@@ -24,12 +24,14 @@ class BookReaderWebView extends StatefulWidget {
     this.pageProgressionRtl = false,
     this.foliateStyle = const FoliateStyle(),
     this.highlights = const [],
+    this.dictionaryAnchors = const [],
     this.bookmarks = const [],
     this.onReady,
     this.onPositionChanged,
     this.onTextSelected,
     this.onTextDeselected,
     this.onHighlightTapped,
+    this.onDictionaryAnchorTapped,
     this.onTocChanged,
     this.onDocumentFeaturesChanged,
     this.onBookmarkChanged,
@@ -62,6 +64,9 @@ class BookReaderWebView extends StatefulWidget {
   /// Highlights to render as annotations on load.
   final List<ReaderHighlight> highlights;
 
+  /// Dictionary entries to render as source-text underlines on load.
+  final List<ReaderDictionaryAnchor> dictionaryAnchors;
+
   /// Bookmarks to render as foliate-js bookmark annotations on load.
   final List<ReaderBookmark> bookmarks;
 
@@ -79,6 +84,9 @@ class BookReaderWebView extends StatefulWidget {
 
   /// Fires when the user taps an existing highlight annotation.
   final void Function(String highlightId)? onHighlightTapped;
+
+  /// Fires when the user taps an existing dictionary underline annotation.
+  final void Function(ReaderDictionaryAnchorTap tap)? onDictionaryAnchorTapped;
 
   /// Fires when foliate-js has parsed the book's table of contents.
   final void Function(List<ReaderTocItem> items)? onTocChanged;

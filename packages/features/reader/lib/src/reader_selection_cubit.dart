@@ -15,6 +15,7 @@ class ReaderSelectionState extends Equatable {
     this.markedContextText,
     this.normalizedMarkedContextText,
     this.cfiRange,
+    this.normalizedCfiRange,
     this.pageNumber,
     this.scrollOffset,
     this.hasSelection = false,
@@ -40,6 +41,9 @@ class ReaderSelectionState extends Equatable {
   /// CFI range of the selected text.
   final String? cfiRange;
 
+  /// CFI range of the normalized lexical selection.
+  final String? normalizedCfiRange;
+
   /// Legacy optional page position.
   final int? pageNumber;
 
@@ -58,6 +62,7 @@ class ReaderSelectionState extends Equatable {
     Object? markedContextText = _absent,
     Object? normalizedMarkedContextText = _absent,
     Object? cfiRange = _absent,
+    Object? normalizedCfiRange = _absent,
     Object? pageNumber = _absent,
     Object? scrollOffset = _absent,
     bool? hasSelection,
@@ -79,6 +84,9 @@ class ReaderSelectionState extends Equatable {
         ? this.normalizedMarkedContextText
         : normalizedMarkedContextText as String?,
     cfiRange: cfiRange == _absent ? this.cfiRange : cfiRange as String?,
+    normalizedCfiRange: normalizedCfiRange == _absent
+        ? this.normalizedCfiRange
+        : normalizedCfiRange as String?,
     pageNumber: pageNumber == _absent ? this.pageNumber : pageNumber as int?,
     scrollOffset: scrollOffset == _absent
         ? this.scrollOffset
@@ -95,6 +103,7 @@ class ReaderSelectionState extends Equatable {
     markedContextText,
     normalizedMarkedContextText,
     cfiRange,
+    normalizedCfiRange,
     pageNumber,
     scrollOffset,
     hasSelection,
@@ -115,6 +124,7 @@ class ReaderSelectionCubit extends Cubit<ReaderSelectionState> {
     String? markedContextText,
     String? normalizedMarkedContextText,
     String? cfiRange,
+    String? normalizedCfiRange,
     int? pageNumber,
     double? scrollOffset,
   }) {
@@ -127,6 +137,7 @@ class ReaderSelectionCubit extends Cubit<ReaderSelectionState> {
         markedContextText: markedContextText,
         normalizedMarkedContextText: normalizedMarkedContextText,
         cfiRange: cfiRange,
+        normalizedCfiRange: normalizedCfiRange,
         pageNumber: pageNumber,
         scrollOffset: scrollOffset,
         hasSelection: true,

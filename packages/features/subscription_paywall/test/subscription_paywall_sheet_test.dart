@@ -29,15 +29,12 @@ void main() {
     expect(find.text('Unlock Premium Features'), findsOneWidget);
   });
 
-  testWidgets('renders three feature items', (tester) async {
+  testWidgets('renders active feature items', (tester) async {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    expect(
-      find.text('AI-powered translations with context'),
-      findsOneWidget,
-    );
-    expect(find.text('AI-generated flashcards'), findsOneWidget);
+    expect(find.text('AI-powered translations with context'), findsNothing);
+    expect(find.text('AI-generated flashcards'), findsNothing);
     expect(find.text('Cloud sync across devices'), findsOneWidget);
   });
 

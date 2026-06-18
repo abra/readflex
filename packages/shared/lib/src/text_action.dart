@@ -20,6 +20,7 @@ class TextSelectionContext {
     this.markedContextText,
     this.normalizedMarkedContextText,
     this.cfiRange,
+    this.normalizedCfiRange,
     this.pageNumber,
     this.scrollOffset,
   });
@@ -64,6 +65,10 @@ class TextSelectionContext {
 
   /// CFI range for the text-reader selection.
   final String? cfiRange;
+
+  /// CFI range for [normalizedSelectedText] when the reader expanded a partial
+  /// selection to complete lexical boundaries.
+  final String? normalizedCfiRange;
 
   /// Legacy optional page position.
   final int? pageNumber;

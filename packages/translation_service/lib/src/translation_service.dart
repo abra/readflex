@@ -179,6 +179,7 @@ class TranslationResult extends Equatable {
     this.usageExamples = const [],
     this.naturalEquivalents = const [],
     this.literalTranslation,
+    this.expressionTranslation,
     this.suggestedFullPhrase,
     this.notes,
   });
@@ -204,6 +205,9 @@ class TranslationResult extends Equatable {
   /// Optional literal target-language rendering when it helps explain idioms.
   final String? literalTranslation;
 
+  /// Optional dictionary-style translation for the expression head or pattern.
+  final TranslationTextPair? expressionTranslation;
+
   /// Optional full expression when the selected text is only part of it.
   final TranslationTextPair? suggestedFullPhrase;
 
@@ -223,6 +227,7 @@ class TranslationResult extends Equatable {
     usageExamples,
     naturalEquivalents,
     literalTranslation,
+    expressionTranslation,
     suggestedFullPhrase,
     notes,
   ];

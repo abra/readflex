@@ -21,6 +21,7 @@ class TranslateState extends Equatable {
     this.usageExamples = const [],
     this.naturalEquivalents = const [],
     this.literalTranslation,
+    this.expressionTranslation,
     this.suggestedFullPhrase,
     this.notes,
     this.savingEntryKey,
@@ -41,6 +42,7 @@ class TranslateState extends Equatable {
   final List<String> usageExamples;
   final List<String> naturalEquivalents;
   final String? literalTranslation;
+  final TranslationTextPair? expressionTranslation;
   final TranslationTextPair? suggestedFullPhrase;
   final TranslationTextPair? notes;
   final String? savingEntryKey;
@@ -63,6 +65,7 @@ class TranslateState extends Equatable {
     List<String>? usageExamples,
     List<String>? naturalEquivalents,
     Object? literalTranslation = _absent,
+    Object? expressionTranslation = _absent,
     Object? suggestedFullPhrase = _absent,
     Object? notes = _absent,
     Object? savingEntryKey = _absent,
@@ -90,6 +93,9 @@ class TranslateState extends Equatable {
     literalTranslation: literalTranslation == _absent
         ? this.literalTranslation
         : literalTranslation as String?,
+    expressionTranslation: expressionTranslation == _absent
+        ? this.expressionTranslation
+        : expressionTranslation as TranslationTextPair?,
     suggestedFullPhrase: suggestedFullPhrase == _absent
         ? this.suggestedFullPhrase
         : suggestedFullPhrase as TranslationTextPair?,
@@ -120,6 +126,7 @@ class TranslateState extends Equatable {
     usageExamples,
     naturalEquivalents,
     literalTranslation,
+    expressionTranslation,
     suggestedFullPhrase,
     notes,
     savingEntryKey,

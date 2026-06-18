@@ -170,6 +170,12 @@ void main() {
       expect(bookJs, contains('window.cancelSearch'));
       expect(bookJs, contains('window.goToBookmark'));
       expect(bookJs, contains('window.toggleBookmarkHere'));
+      expect(bookJs, contains('window.clearSelectionAfterTextAction'));
+      expect(
+        bookJs,
+        contains('__anxAllowNextClickAfterProgrammaticDeselect'),
+      );
+      expect(bookJs, contains('doc.__anxSuppressClick = !allowNextClick'));
       expect(bookJs, contains('window.pageLeft'));
       expect(bookJs, contains('window.pageRight'));
       expect(bookJs, contains('window.pageLeft = () => reader.view.goLeft()'));
@@ -445,7 +451,7 @@ void main() {
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_60"));
+      expect(assetExtractor, contains("reader_webview_assets_64"));
     });
 
     test('keeps same-node marked selection adjacent to punctuation', () {
@@ -595,6 +601,44 @@ void main() {
         bookJs,
         isNot(contains('reader.view.renderer.writingMode.startsWith')),
       );
+    });
+
+    test('dictionary annotations render as subtle dashed underlines', () {
+      final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
+      final overlayerJs = File(
+        'assets/foliate-js/src/overlayer.js',
+      ).readAsStringSync();
+
+      expect(
+        bookJs,
+        contains(
+          "else if (type === 'dictionary') draw(Overlayer.dashedUnderline",
+        ),
+      );
+      expect(bookJs, contains('opacity: 0.36'));
+      expect(bookJs, contains('dashArray: \'3 3\''));
+      expect(overlayerJs, contains('static dashedUnderline(rects'));
+      expect(overlayerJs, contains("g.setAttribute('stroke-dasharray'"));
+    });
+
+    test('dictionary annotations expand expression ranges locally', () {
+      final viewJs = File('assets/foliate-js/src/view.js').readAsStringSync();
+
+      expect(viewJs, contains('const drawRange = this.#annotationDrawRange'));
+      expect(
+        viewJs,
+        contains("#dictionaryExpressionRange(annotation, doc, range)"),
+      );
+      expect(viewJs, contains('!text.includes(\' \')'));
+      expect(viewJs, contains('#dictionaryAnchorSearchRoot(doc, range)'));
+      expect(
+        viewJs,
+        contains(
+          "'p, li, blockquote, h1, h2, h3, h4, h5, h6, figcaption, td, th'",
+        ),
+      );
+      expect(viewJs, contains('#findDictionaryExpressionRange'));
+      expect(viewJs, contains('#hasDictionaryTermBoundaries'));
     });
 
     test('skips full CSS rebuild for margin-only style changes', () {
@@ -1104,6 +1148,14 @@ void main() {
         webViewDart,
         contains(
           "typeof window.clearSelection === 'function' ? window.clearSelection() : null",
+        ),
+      );
+      expect(webViewDart, contains('void clearSelectionAfterTextAction()'));
+      expect(webViewDart, contains("label: 'clearSelectionAfterTextAction'"));
+      expect(
+        webViewDart,
+        contains(
+          'typeof window.clearSelectionAfterTextAction === \'function\'',
         ),
       );
     });

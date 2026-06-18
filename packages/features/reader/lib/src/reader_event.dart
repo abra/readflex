@@ -97,6 +97,12 @@ final class ReaderHighlightsRefreshed extends ReaderEvent {
   const ReaderHighlightsRefreshed();
 }
 
+/// Reloads dictionary source anchors after a TextAction saved or removed a
+/// dictionary entry.
+final class ReaderDictionaryAnchorsRefreshed extends ReaderEvent {
+  const ReaderDictionaryAnchorsRefreshed();
+}
+
 /// foliate-js parsed the book table of contents.
 final class ReaderTocUpdated extends ReaderEvent {
   const ReaderTocUpdated({required this.items});

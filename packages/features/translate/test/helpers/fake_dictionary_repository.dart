@@ -15,6 +15,7 @@ class FakeDictionaryRepository implements DictionaryRepository {
   Completer<void>? awaitGate;
 
   final List<DictionaryEntry> entries = [];
+  final List<DictionaryAnchor> anchors = [];
 
   @override
   Future<DictionaryEntry> addEntry({
@@ -27,6 +28,10 @@ class FakeDictionaryRepository implements DictionaryRepository {
     SourceType? sourceType,
     List<String> usageExamples = const [],
     DateTime? addedAt,
+    String? anchorText,
+    String? anchorContext,
+    String? anchorCfiRange,
+    DictionaryAnchorKind? anchorKind,
   }) async {
     if (awaitGate != null) await awaitGate!.future;
     if (shouldThrow) throw Exception('addEntry failed');
@@ -44,6 +49,24 @@ class FakeDictionaryRepository implements DictionaryRepository {
       addedAt: addedAt ?? DateTime.now(),
     );
     entries.add(entry);
+    if (sourceId != null &&
+        sourceType != null &&
+        anchorText != null &&
+        anchorCfiRange != null) {
+      anchors.add(
+        DictionaryAnchor(
+          id: 'da-${anchors.length + 1}',
+          entryId: entry.id,
+          sourceId: sourceId,
+          sourceType: sourceType,
+          text: anchorText,
+          context: anchorContext,
+          cfiRange: anchorCfiRange,
+          kind: anchorKind ?? DictionaryAnchorKind.exactSelection,
+          createdAt: addedAt ?? DateTime.now(),
+        ),
+      );
+    }
     return entry;
   }
 
@@ -51,5 +74,6 @@ class FakeDictionaryRepository implements DictionaryRepository {
   Future<void> deleteEntry(String id) async {
     if (shouldThrow) throw Exception('deleteEntry failed');
     entries.removeWhere((entry) => entry.id == id);
+    anchors.removeWhere((anchor) => anchor.entryId == id);
   }
 }

@@ -9,6 +9,7 @@ export 'src/models/article_text_direction.dart';
 export 'src/models/book.dart';
 export 'src/models/book_format.dart';
 export 'src/models/creation_source.dart';
+export 'src/models/dictionary_anchor.dart';
 export 'src/models/dictionary_entry.dart';
 export 'src/models/flashcard.dart';
 export 'src/models/fsrs_card_data.dart';

@@ -3,9 +3,13 @@ part of 'reader_screen.dart';
 /// Reads selection from [ReaderSelectionCubit] and source info from
 /// [ReaderBloc] to show/hide the text-action context panel.
 class _ContextPanelDriver extends StatelessWidget {
-  const _ContextPanelDriver({required this.textActions});
+  const _ContextPanelDriver({
+    required this.textActions,
+    required this.webViewKey,
+  });
 
   final List<TextAction> textActions;
+  final GlobalKey<BookReaderWebViewState> webViewKey;
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +28,7 @@ class _ContextPanelDriver extends StatelessWidget {
     }
 
     final bloc = context.read<ReaderBloc>();
+    final selectionCubit = context.read<ReaderSelectionCubit>();
     final colors = context.colors;
 
     return Positioned(
@@ -40,6 +45,7 @@ class _ContextPanelDriver extends StatelessWidget {
         sourceId: sourceId,
         sourceType: sourceType,
         selectionCfiRange: sel.cfiRange,
+        selectionNormalizedCfiRange: sel.normalizedCfiRange,
         selectionPageNumber: sel.pageNumber,
         selectionScrollOffset: sel.scrollOffset,
         textActions: textActions,
@@ -47,7 +53,13 @@ class _ContextPanelDriver extends StatelessWidget {
         iconColor: colors.onSurface,
         dividerColor: colors.outlineVariant,
         onActionCompleted: () {
-          if (!bloc.isClosed) bloc.add(const ReaderHighlightsRefreshed());
+          selectionCubit.deselect();
+          webViewKey.currentState?.clearSelectionAfterTextAction();
+          if (!bloc.isClosed) {
+            bloc
+              ..add(const ReaderHighlightsRefreshed())
+              ..add(const ReaderDictionaryAnchorsRefreshed());
+          }
         },
         onActionError: (e, st) {
           if (!bloc.isClosed) bloc.reportError(e, st);
@@ -121,6 +133,7 @@ class _ContextPanel extends StatelessWidget {
     required this.onActionCompleted,
     required this.onActionError,
     this.selectionCfiRange,
+    this.selectionNormalizedCfiRange,
     this.selectionPageNumber,
     this.selectionScrollOffset,
   });
@@ -140,6 +153,7 @@ class _ContextPanel extends StatelessWidget {
   final VoidCallback onActionCompleted;
   final void Function(Object error, StackTrace stack) onActionError;
   final String? selectionCfiRange;
+  final String? selectionNormalizedCfiRange;
   final int? selectionPageNumber;
   final double? selectionScrollOffset;
 
@@ -179,6 +193,7 @@ class _ContextPanel extends StatelessWidget {
                           sourceId: sourceId,
                           sourceType: sourceType,
                           cfiRange: selectionCfiRange,
+                          normalizedCfiRange: selectionNormalizedCfiRange,
                           pageNumber: selectionPageNumber,
                           scrollOffset: selectionScrollOffset,
                         ),

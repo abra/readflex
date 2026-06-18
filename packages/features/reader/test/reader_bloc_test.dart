@@ -6,11 +6,13 @@ import 'package:reader_webview/reader_webview.dart';
 
 import 'helpers/fake_article_repository.dart';
 import 'helpers/fake_book_repository.dart';
+import 'helpers/fake_dictionary_repository.dart';
 import 'helpers/fake_highlight_repository.dart';
 
 void main() {
   late FakeBookRepository bookRepository;
   late FakeHighlightRepository highlightRepository;
+  late FakeDictionaryRepository dictionaryRepository;
 
   final testBook = Book(
     id: 'book-1',
@@ -46,19 +48,35 @@ void main() {
     createdAt: DateTime(2024, 1, 3),
   );
 
+  final testDictionaryAnchor = DictionaryAnchor(
+    id: 'da-1',
+    entryId: 'de-1',
+    sourceId: 'book-1',
+    sourceType: SourceType.book,
+    text: 'Saved word',
+    cfiRange: 'epubcfi(/6/4!/4/2,/1:0,/1:10)',
+    kind: DictionaryAnchorKind.exactSelection,
+    createdAt: DateTime(2024, 1, 4),
+  );
+
   setUp(() {
     bookRepository = FakeBookRepository();
     highlightRepository = FakeHighlightRepository();
+    dictionaryRepository = FakeDictionaryRepository();
   });
+
+  tearDown(() => dictionaryRepository.dispose());
 
   ReaderBloc buildBloc() => ReaderBloc(
     bookRepository: bookRepository,
     highlightRepository: highlightRepository,
+    dictionaryRepository: dictionaryRepository,
   );
 
   ReaderBloc buildBlocWithInitialSource(Book source) => ReaderBloc(
     bookRepository: bookRepository,
     highlightRepository: highlightRepository,
+    dictionaryRepository: dictionaryRepository,
     initialSource: source,
   );
 
@@ -106,6 +124,7 @@ void main() {
         setUp: () {
           bookRepository.seedBook(testBook);
           highlightRepository.seedHighlights('book-1', [testHighlight]);
+          dictionaryRepository.seedAnchors('book-1', [testDictionaryAnchor]);
           bookRepository.seedBookmarks('book-1', [testBookmark]);
         },
         build: buildBloc,
@@ -118,6 +137,11 @@ void main() {
               .having((s) => s.title, 'title', 'Test Book')
               .having((s) => s.book, 'book', isNotNull)
               .having((s) => s.highlights, 'highlights', hasLength(1))
+              .having(
+                (s) => s.dictionaryAnchors,
+                'dictionaryAnchors',
+                hasLength(1),
+              )
               .having((s) => s.bookmarks, 'bookmarks', hasLength(1)),
         ],
         verify: (_) {
@@ -146,6 +170,7 @@ void main() {
             bookRepository: bookRepository,
             articleRepository: articleRepository,
             highlightRepository: highlightRepository,
+            dictionaryRepository: dictionaryRepository,
           );
         },
         act: (bloc) =>
@@ -753,6 +778,7 @@ void main() {
             bookRepository: bookRepository,
             articleRepository: articleRepository,
             highlightRepository: highlightRepository,
+            dictionaryRepository: dictionaryRepository,
           );
           addTearDown(bloc.close);
 
@@ -796,6 +822,7 @@ void main() {
             bookRepository: bookRepository,
             articleRepository: articleRepository,
             highlightRepository: highlightRepository,
+            dictionaryRepository: dictionaryRepository,
           );
           addTearDown(bloc.close);
 
@@ -840,6 +867,7 @@ void main() {
             bookRepository: bookRepository,
             articleRepository: articleRepository,
             highlightRepository: highlightRepository,
+            dictionaryRepository: dictionaryRepository,
           );
           addTearDown(bloc.close);
 
@@ -932,6 +960,43 @@ void main() {
           expect(identical(bloc.state.highlights, const []), isFalse);
         },
       );
+    });
+
+    group('ReaderDictionaryAnchorsRefreshed', () {
+      blocTest<ReaderBloc, ReaderState>(
+        'refetches dictionary anchors for current source',
+        setUp: () {
+          dictionaryRepository.seedAnchors('book-1', [testDictionaryAnchor]);
+        },
+        build: buildBloc,
+        seed: () => ReaderState(status: ReaderStatus.ready, book: testBook),
+        act: (bloc) => bloc.add(const ReaderDictionaryAnchorsRefreshed()),
+        expect: () => [
+          isA<ReaderState>().having(
+            (s) => s.dictionaryAnchors,
+            'dictionaryAnchors',
+            [testDictionaryAnchor],
+          ),
+        ],
+      );
+
+      test('repository changes refresh anchors for current source', () async {
+        final bloc = buildBlocWithInitialSource(testBook);
+        addTearDown(bloc.close);
+
+        final expectation = expectLater(
+          bloc.stream,
+          emits(
+            isA<ReaderState>().having(
+              (s) => s.dictionaryAnchors,
+              'dictionaryAnchors',
+              [testDictionaryAnchor],
+            ),
+          ),
+        );
+        dictionaryRepository.seedAnchors('book-1', [testDictionaryAnchor]);
+        await expectation;
+      });
     });
 
     group('ReaderBookmarkChanged', () {

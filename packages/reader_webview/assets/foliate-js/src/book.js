@@ -211,6 +211,7 @@ const handleSelection = (view, doc, index) => {
 
   const normalizedSelection = normalizeSelectionRange(range);
   const normalizedRange = normalizedSelection?.range ?? range;
+  const normalizedCfi = view.getCFI(index, normalizedRange);
   const contextText = buildRangeContextText(normalizedRange);
   const markedContextText = buildMarkedRangeContextText(range);
   const normalizedMarkedContextText =
@@ -221,6 +222,7 @@ const handleSelection = (view, doc, index) => {
     range,
     lang,
     cfi,
+    normalizedCfi,
     pos: position,
     text,
     normalizedText: normalizedSelection?.normalizedText ?? text,
@@ -236,6 +238,7 @@ const setSelectionHandler = (view, doc, index) => {
   let lastPointerUpRange = null;
   doc.__anxSelectionClearedAt = 0;
   doc.__anxSuppressClick = false;
+  doc.__anxAllowNextClickAfterProgrammaticDeselect = false;
 
   // Notify Flutter when the selection collapses so it can hide the context menu.
   const handleSelectionStateChange = () => {
@@ -250,8 +253,11 @@ const setSelectionHandler = (view, doc, index) => {
     if (!hasActiveSelection) return;
     hasActiveSelection = false;
     lastPointerUpRange = null;
-    doc.__anxSelectionClearedAt = Date.now();
-    doc.__anxSuppressClick = true;
+    const allowNextClick =
+      doc.__anxAllowNextClickAfterProgrammaticDeselect === true;
+    doc.__anxAllowNextClickAfterProgrammaticDeselect = false;
+    doc.__anxSelectionClearedAt = allowNextClick ? 0 : Date.now();
+    doc.__anxSuppressClick = !allowNextClick;
     callFlutter('onSelectionCleared');
   };
 
@@ -1074,6 +1080,13 @@ class Reader {
       const opts = { color, writingMode: rendererWritingMode() }
       if (type === 'highlight') draw(Overlayer.highlight, { ...opts })
       else if (type === 'underline') draw(Overlayer.underline, { ...opts })
+      else if (type === 'dictionary') draw(Overlayer.dashedUnderline, {
+        ...opts,
+        opacity: 0.36,
+        width: 1,
+        padding: 1.5,
+        dashArray: '3 3',
+      })
     })
 
     view.addEventListener('show-annotation', e => {
@@ -1117,13 +1130,15 @@ class Reader {
   renderAnnotation(annotations) {
     const annos = annotations ?? allAnnotations ?? []
     for (const anno of annos) {
-      const { value, type, color, note } = anno
+      const { value, type, color, note, cfi, entryId } = anno
       const annotation = {
         id: anno.id,
         value,
         type,
         color,
-        note
+        note,
+        cfi,
+        entryId
       }
 
       this.addAnnotation(annotation)
@@ -1133,6 +1148,13 @@ class Reader {
 
   showContextMenu() {
     return handleSelection(this.view, this.#doc, this.#index)
+  }
+
+  clearSelectionAfterTextAction() {
+    const contents = this.view?.renderer?.getContents?.() ?? []
+    for (const { doc } of contents)
+      doc.__anxAllowNextClickAfterProgrammaticDeselect = true
+    this.view?.deselect()
   }
 
   addAnnotation(annotation) {
@@ -1247,7 +1269,7 @@ class Reader {
   }
 
   #annotationCfiSpineIndex(annotation) {
-    const cfi = unwrapCFI(annotation?.value)
+    const cfi = unwrapCFI(annotation?.cfi ?? annotation?.value)
     const match = typeof cfi === 'string' ? cfi.match(/^\/\d+\/(\d+)/) : null
     const spinePosition = match ? Number(match[1]) : NaN
     const index = (spinePosition - 2) / 2
@@ -2424,6 +2446,8 @@ window.showContextMenu = () => {
 window.getSelection = () => reader.getSelection()
 
 window.clearSelection = () => reader.view.deselect()
+
+window.clearSelectionAfterTextAction = () => reader.clearSelectionAfterTextAction()
 
 window.addAnnotation = (annotation) => reader.addAnnotation(annotation)
 

@@ -88,6 +88,7 @@ class TranslateCubit extends Cubit<TranslateState> {
           usageExamples: result.usageExamples,
           naturalEquivalents: result.naturalEquivalents,
           literalTranslation: result.literalTranslation,
+          expressionTranslation: result.expressionTranslation,
           suggestedFullPhrase: result.suggestedFullPhrase,
           notes: result.notes,
           savingEntryKey: null,
@@ -116,6 +117,10 @@ class TranslateCubit extends Cubit<TranslateState> {
     List<String>? usageExamples,
     String? sourceId,
     SourceType? sourceType,
+    String? anchorText,
+    String? anchorContext,
+    String? anchorCfiRange,
+    DictionaryAnchorKind? anchorKind,
   }) async {
     final normalizedWord = word.trim();
     final resolvedTranslation = (translation ?? state.translatedText).trim();
@@ -149,6 +154,10 @@ class TranslateCubit extends Cubit<TranslateState> {
             state.expression?.partOfSpeech,
         context: context ?? state.dictionaryContextText,
         usageExamples: usageExamples ?? state.usageExamples,
+        anchorText: anchorText,
+        anchorContext: anchorContext ?? context ?? state.dictionaryContextText,
+        anchorCfiRange: anchorCfiRange,
+        anchorKind: anchorKind,
       );
       // Same isClosed-after-await guard as in `translate`: the user can
       // dismiss the sheet between addEntry and the FSRS register, which

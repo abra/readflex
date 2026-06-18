@@ -460,6 +460,7 @@ class ReaderSelection {
     this.markedContextText,
     this.normalizedMarkedContextText,
     this.cfiRange,
+    this.normalizedCfiRange,
     this.scrollOffset,
   });
 
@@ -483,6 +484,9 @@ class ReaderSelection {
   /// CFI range of the selection.
   final String? cfiRange;
 
+  /// CFI range of the normalized lexical selection.
+  final String? normalizedCfiRange;
+
   /// Legacy optional scroll position.
   final double? scrollOffset;
 
@@ -495,6 +499,7 @@ class ReaderSelection {
       markedContextText: _string(map['markedContextText']),
       normalizedMarkedContextText: _string(map['normalizedMarkedContextText']),
       cfiRange: _string(map['cfi']),
+      normalizedCfiRange: _string(map['normalizedCfi']),
       scrollOffset: _double(map['scrollOffset']),
     );
   }
@@ -722,6 +727,47 @@ class ReaderHighlight {
     if (cfiRange != null) 'cfiRange': cfiRange,
     if (color != null) 'color': color,
   };
+}
+
+/// Dictionary underline annotation rendered by the WebView.
+///
+/// Unlike [ReaderHighlight], [id] identifies the source anchor while
+/// [entryId] points to the saved dictionary item to show on tap.
+class ReaderDictionaryAnchor {
+  const ReaderDictionaryAnchor({
+    required this.id,
+    required this.entryId,
+    required this.text,
+    required this.cfiRange,
+    this.color,
+  });
+
+  final String id;
+  final String entryId;
+  final String text;
+  final String cfiRange;
+  final String? color;
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'entryId': entryId,
+    'text': text,
+    'cfiRange': cfiRange,
+    if (color != null) 'color': color,
+  };
+}
+
+/// Tap payload for a dictionary annotation.
+class ReaderDictionaryAnchorTap {
+  const ReaderDictionaryAnchorTap({
+    required this.anchorId,
+    required this.entryId,
+    this.contextText,
+  });
+
+  final String anchorId;
+  final String entryId;
+  final String? contextText;
 }
 
 /// A bookmark annotation the WebView should render and track against the

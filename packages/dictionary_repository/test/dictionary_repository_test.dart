@@ -157,5 +157,42 @@ void main() {
       final fetched = await repo.getEntryById(created.id);
       expect(fetched!.usageExamples, isEmpty);
     });
+
+    test('addEntry can create a source anchor atomically', () async {
+      final created = await repo.addEntry(
+        word: 'evening',
+        translation: 'вечером',
+        sourceId: 'book-1',
+        sourceType: SourceType.book,
+        anchorText: 'evening',
+        anchorContext: 'Good [[evening]].',
+        anchorCfiRange: 'epubcfi(/6/4!/4/2,/1:0,/1:7)',
+        anchorKind: DictionaryAnchorKind.normalizedSelection,
+      );
+
+      final anchors = await repo.getAnchorsBySource('book-1');
+
+      expect(anchors, hasLength(1));
+      expect(anchors.single.entryId, created.id);
+      expect(anchors.single.text, 'evening');
+      expect(anchors.single.context, 'Good [[evening]].');
+      expect(anchors.single.kind, DictionaryAnchorKind.normalizedSelection);
+    });
+
+    test('deleteEntry removes source anchors', () async {
+      final created = await repo.addEntry(
+        word: 'remove',
+        translation: 'удалить',
+        sourceId: 'book-1',
+        sourceType: SourceType.book,
+        anchorText: 'remove',
+        anchorCfiRange: 'epubcfi(/6/4)',
+      );
+      expect(await repo.getAnchorsByEntry(created.id), hasLength(1));
+
+      await repo.deleteEntry(created.id);
+
+      expect(await repo.getAnchorsByEntry(created.id), isEmpty);
+    });
   });
 }

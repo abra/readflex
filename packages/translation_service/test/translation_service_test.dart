@@ -557,9 +557,11 @@ void main() {
       expect(prompt, contains('selected deadline in meet a deadline'));
       expect(prompt, contains('selected crime in commit a crime'));
       expect(prompt, contains('selected more in the more I read'));
-      expect(prompt, contains('phrase.text = "the more...the more"'));
+      expect(prompt, contains('phrase.surface = "a night out"'));
+      expect(prompt, contains('phrase.lexical_unit = "a night out"'));
       expect(prompt, contains('selected only or but in not only'));
-      expect(prompt, contains('phrase.text = "not only...but also"'));
+      expect(prompt, contains('phrase.surface'));
+      expect(prompt, contains('phrase.lexical_unit'));
       expect(prompt, contains('Do not add keys outside'));
       expect(prompt, contains('Choose the response mode first'));
       expect(prompt, contains('Do not choose single_word until'));
@@ -592,10 +594,18 @@ void main() {
       expect(prompt, contains('selected fading in fading out the top image'));
       expect(prompt, contains('not увядание'));
       expect(prompt, contains('slash-delimited IPA'));
+      expect(
+        prompt,
+        contains('exact selected word, even when mode is word_in_expression'),
+      );
       expect(prompt, contains('"word_form"'));
       expect(prompt, contains('singular noun'));
       expect(prompt, contains('singular slash-delimited IPA'));
-      expect(prompt, contains('construction span to highlight'));
+      expect(prompt, contains('exact larger source span'));
+      expect(prompt, contains('dictionary-style source expression headword'));
+      expect(prompt, contains('phrase.translation must translate'));
+      expect(prompt, contains('suggested_full_phrase'));
+      expect(prompt, contains('send ... into'));
       expect(prompt, contains('Do not imply an inserted object is part'));
       expect(
         prompt,
@@ -604,20 +614,22 @@ void main() {
       expect(prompt, contains('looked at the term'));
       expect(prompt, contains('selected word is a lexical verb'));
       expect(prompt, contains('fading out'));
-      expect(prompt, contains('phrase.text = "fading out"'));
+      expect(prompt, contains('phrase.lexical_unit = "fade out"'));
       expect(prompt, contains('grammatical complete-sentence examples'));
       expect(prompt, contains('gerunds/present participles'));
+      expect(prompt, contains('third-person singular present verbs'));
+      expect(prompt, contains('sends -> lemma send'));
       expect(prompt, contains('grammatical_form gerund'));
       expect(
         prompt,
         contains('concise contextual target-language translation'),
       );
-      expect(prompt, contains('not an explanatory definition'));
+      expect(prompt, contains('not explanatory definitions'));
       expect(prompt, contains('ordinary compositional descriptive spans'));
       expect(prompt, contains('new security review'));
       expect(prompt, contains('red leather notebook'));
-      expect(prompt, isNot(contains('lexical_unit')));
-      expect(prompt, isNot(contains('canonical_pattern')));
+      expect(prompt, contains('lexical_unit'));
+      expect(prompt, contains('canonical_pattern'));
       expect(prompt, isNot(contains('selected_role')));
       expect(prompt, isNot(contains('natural_equivalents')));
     });
@@ -649,6 +661,7 @@ void main() {
       expect(result!.answerType, TranslationAnswerType.expressionExplanation);
       expect(result.translatedText, 'пинать');
       expect(result.expression!.surface, 'kick things off');
+      expect(result.expression!.lexicalUnit, isNull);
       expect(
         result.suggestedFullPhrase,
         const TranslationTextPair(
@@ -702,6 +715,8 @@ void main() {
               'mode': 'word_in_expression',
               'word': 'fading',
               'word_translation': 'исчезновение',
+              'part_of_speech': 'verb',
+              'transcription': '/ˈfeɪdɪŋ/',
               'word_form': {
                 'lemma': 'fade',
                 'form': 'gerund',
@@ -724,9 +739,42 @@ void main() {
       expect(result!.answerType, TranslationAnswerType.expressionExplanation);
       expect(result.translatedText, 'исчезновение');
       expect(result.expression!.surface, 'fading out');
+      expect(result.sense!.partOfSpeech, 'verb');
+      expect(result.sense!.transcription, '/ˈfeɪdɪŋ/');
       expect(result.sense!.lemma, 'fade');
       expect(result.sense!.lemmaTranscription, '/feɪd/');
       expect(result.sense!.grammaticalForm, 'gerund');
+    });
+
+    test('decodes third-person singular verb lemma', () {
+      final result = DeepSeekDirectTranslationClient.decodeModelPayloadForTesting(
+        jsonEncode({
+          'mode': 'single_word',
+          'word': 'sends',
+          'word_translation': 'отправляет',
+          'part_of_speech': 'verb',
+          'word_form': {
+            'lemma': 'send',
+            'form': 'third_person_singular',
+            'transcription': '/send/',
+          },
+          'definition': {
+            'source': 'To cause something to go from one place to another.',
+            'target':
+                'Заставлять что-либо переместиться из одного места в другое.',
+          },
+          'marked_sentence': 'It [[sends]] a signal.',
+        }),
+        originalText: 'sends',
+        sourceLanguage: 'en',
+        targetLanguage: 'ru',
+      );
+
+      expect(result, isNotNull);
+      expect(result!.sense!.partOfSpeech, 'verb');
+      expect(result.sense!.lemma, 'send');
+      expect(result.sense!.lemmaTranscription, '/send/');
+      expect(result.sense!.grammaticalForm, 'third_person_singular');
     });
 
     test('decodes minimal ordinary word payload', () {
@@ -1175,6 +1223,60 @@ void main() {
       expect(result!.usageExamples, [
         'She [[looked the word up]] later.',
       ]);
+    });
+
+    test('keeps minimal phrase surface separate from lexical unit', () {
+      final result =
+          DeepSeekDirectTranslationClient.decodeModelPayloadForTesting(
+            jsonEncode({
+              'mode': 'word_in_expression',
+              'word': 'sends',
+              'word_translation': 'посылает',
+              'definition': {
+                'source': 'To cause someone to enter a state.',
+                'target': 'Привести кого-либо в определенное состояние.',
+              },
+              'phrase': {
+                'surface': 'sends us into a dizzying spin',
+                'lexical_unit': 'send ... into',
+                'canonical_pattern': 'send someone/something into a state',
+                'translation':
+                    'приводить кого-либо или что-либо в определенное состояние',
+                'type': 'verb_pattern',
+              },
+              'suggested_full_phrase': {
+                'source': 'sends us into a dizzying spin',
+                'target': 'ввергает нас в головокружительное состояние',
+              },
+              'marked_sentence': 'It [[sends us into a dizzying spin]].',
+            }),
+            originalText: 'sends',
+            sourceLanguage: 'en',
+            targetLanguage: 'ru',
+          );
+
+      expect(result, isNotNull);
+      expect(result!.translatedText, 'посылает');
+      expect(result.expression!.surface, 'sends us into a dizzying spin');
+      expect(result.expression!.lexicalUnit, 'send ... into');
+      expect(
+        result.expression!.canonicalPattern,
+        'send someone/something into a state',
+      );
+      expect(
+        result.expressionTranslation,
+        const TranslationTextPair(
+          source: 'send ... into',
+          target: 'приводить кого-либо или что-либо в определенное состояние',
+        ),
+      );
+      expect(
+        result.suggestedFullPhrase,
+        const TranslationTextPair(
+          source: 'sends us into a dizzying spin',
+          target: 'ввергает нас в головокружительное состояние',
+        ),
+      );
     });
   });
 

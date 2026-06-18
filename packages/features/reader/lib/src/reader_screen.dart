@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
+import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -132,17 +133,21 @@ ReaderTapAxis _readerTapAxisForPageTurnStyle(ReaderPageTurnStyle style) {
 class _ReaderCallbacksScope extends InheritedWidget {
   const _ReaderCallbacksScope({
     required this.onStartMiniReview,
+    required this.onDictionaryEntryPressed,
     required super.child,
   });
 
   final void Function(BuildContext context, String sourceId)? onStartMiniReview;
+  final Future<void> Function(BuildContext context, String entryId)?
+  onDictionaryEntryPressed;
 
   static _ReaderCallbacksScope? of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<_ReaderCallbacksScope>();
 
   @override
   bool updateShouldNotify(_ReaderCallbacksScope old) =>
-      onStartMiniReview != old.onStartMiniReview;
+      onStartMiniReview != old.onStartMiniReview ||
+      onDictionaryEntryPressed != old.onDictionaryEntryPressed;
 }
 
 /// Full-screen reader for a book (route `/reader/:sourceId`).
@@ -159,6 +164,7 @@ class ReaderScreen extends StatelessWidget {
     required this.serverPort,
     required this.bookRepository,
     required this.highlightRepository,
+    required this.dictionaryRepository,
     required this.preferencesService,
     required this.screenControlService,
     required this.textActions,
@@ -170,6 +176,7 @@ class ReaderScreen extends StatelessWidget {
     this.onSourceOpened,
     this.onCheckDueItems,
     this.onStartMiniReview,
+    this.onDictionaryEntryPressed,
     super.key,
   });
 
@@ -178,6 +185,7 @@ class ReaderScreen extends StatelessWidget {
   final BookRepository bookRepository;
   final ArticleRepository? articleRepository;
   final HighlightRepository highlightRepository;
+  final DictionaryRepository dictionaryRepository;
   final PreferencesService preferencesService;
   final ScreenControlService screenControlService;
   final List<TextAction> textActions;
@@ -188,6 +196,8 @@ class ReaderScreen extends StatelessWidget {
   final VoidCallback? onSourceOpened;
   final Future<int> Function(String sourceId)? onCheckDueItems;
   final void Function(BuildContext context, String sourceId)? onStartMiniReview;
+  final Future<void> Function(BuildContext context, String entryId)?
+  onDictionaryEntryPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -195,6 +205,7 @@ class ReaderScreen extends StatelessWidget {
 
     return _ReaderCallbacksScope(
       onStartMiniReview: onStartMiniReview,
+      onDictionaryEntryPressed: onDictionaryEntryPressed,
       child: MultiBlocProvider(
         providers: [
           BlocProvider(
@@ -202,6 +213,7 @@ class ReaderScreen extends StatelessWidget {
               bookRepository: bookRepository,
               articleRepository: articleRepository,
               highlightRepository: highlightRepository,
+              dictionaryRepository: dictionaryRepository,
               initialSource: initialSource?.id == sourceId
                   ? initialSource
                   : null,

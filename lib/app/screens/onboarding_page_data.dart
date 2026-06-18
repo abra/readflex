@@ -28,21 +28,9 @@ const onboardingPages = [
         'Select text to create highlights. Add notes for deeper understanding.',
   ),
   OnboardingPageData(
-    icon: AppIcons.buildFlashcards,
-    title: 'Build flashcards',
+    icon: AppIcons.library,
+    title: 'Organize your library',
     description:
-        'Turn highlights into flashcards. AI helps generate hints and examples.',
-  ),
-  OnboardingPageData(
-    icon: AppIcons.translateLearn,
-    title: 'Translate & learn words',
-    description:
-        'Translate selections instantly. Save words to your personal dictionary.',
-  ),
-  OnboardingPageData(
-    icon: AppIcons.practiceRemember,
-    title: 'Practice & remember',
-    description:
-        'Spaced repetition helps you remember what you read. Review daily for best results.',
+        'Keep books and articles in one place and return to your reading progress.',
   ),
 ];

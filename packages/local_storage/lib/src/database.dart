@@ -16,6 +16,7 @@ import 'daos/review_items_dao.dart';
 import 'tables/articles_table.dart';
 import 'tables/books_table.dart';
 import 'tables/collections_table.dart';
+import 'tables/dictionary_anchors_table.dart';
 import 'tables/dictionary_table.dart';
 import 'tables/flashcards_table.dart';
 import 'tables/highlights_table.dart';
@@ -39,6 +40,7 @@ part 'database.g.dart';
     HighlightsTable,
     FlashcardsTable,
     DictionaryTable,
+    DictionaryAnchorsTable,
     ReviewItemsTable,
     ReviewLogsTable,
     CollectionsTable,
@@ -61,7 +63,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -70,6 +72,7 @@ class AppDatabase extends _$AppDatabase {
       await _createBookmarksTable();
       await _createArticlesIndexes();
       await _createIndexes();
+      await _createDictionaryAnchorIndexes();
       await _createCollectionIndexes();
     },
     onUpgrade: (migrator, from, to) async {
@@ -386,6 +389,10 @@ class AppDatabase extends _$AppDatabase {
         await migrator.createTable(collectionSourcesTable);
         await _createCollectionIndexes();
       }
+      if (from < 20) {
+        await migrator.createTable(dictionaryAnchorsTable);
+        await _createDictionaryAnchorIndexes();
+      }
     },
   );
 
@@ -532,6 +539,17 @@ class AppDatabase extends _$AppDatabase {
     await customStatement('''
       CREATE INDEX IF NOT EXISTS idx_dictionary_source
       ON dictionary_table (source_id)
+    ''');
+  }
+
+  Future<void> _createDictionaryAnchorIndexes() async {
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_dictionary_anchors_source
+      ON dictionary_anchors_table (source_id)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_dictionary_anchors_entry
+      ON dictionary_anchors_table (entry_id)
     ''');
   }
 }

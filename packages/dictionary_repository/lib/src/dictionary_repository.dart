@@ -4,6 +4,8 @@ import 'package:domain_models/domain_models.dart';
 import 'package:local_storage/local_storage.dart';
 import 'package:uuid/uuid.dart' show Uuid;
 
+import 'mappers/anchor_to_domain.dart';
+import 'mappers/anchor_to_storage.dart';
 import 'mappers/entry_to_domain.dart';
 import 'mappers/entry_to_storage.dart';
 
@@ -50,6 +52,24 @@ class DictionaryRepository {
     }
   }
 
+  Future<List<DictionaryAnchor>> getAnchorsBySource(String sourceId) async {
+    try {
+      final rows = await _dao.anchorsBySource(sourceId);
+      return rows.map((r) => r.toDomainModel()).toList();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  Future<List<DictionaryAnchor>> getAnchorsByEntry(String entryId) async {
+    try {
+      final rows = await _dao.anchorsByEntry(entryId);
+      return rows.map((r) => r.toDomainModel()).toList();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
   Future<int> getEntryCountBySource(String sourceId) async {
     try {
       return await _dao.entryCountBySource(sourceId);
@@ -87,8 +107,13 @@ class DictionaryRepository {
     SourceType? sourceType,
     List<String> usageExamples = const [],
     DateTime? addedAt,
+    String? anchorText,
+    String? anchorContext,
+    String? anchorCfiRange,
+    DictionaryAnchorKind? anchorKind,
   }) async {
     try {
+      final now = addedAt ?? DateTime.now();
       final entry = DictionaryEntry(
         id: _uuid.v4(),
         word: word,
@@ -99,11 +124,56 @@ class DictionaryRepository {
         sourceId: sourceId,
         sourceType: sourceType,
         usageExamples: usageExamples,
-        addedAt: addedAt ?? DateTime.now(),
+        addedAt: now,
       );
-      await _dao.insertEntry(entry.toStorageModel());
+      final anchor = _anchorForEntry(
+        entry: entry,
+        sourceId: sourceId,
+        sourceType: sourceType,
+        text: anchorText,
+        context: anchorContext,
+        cfiRange: anchorCfiRange,
+        kind: anchorKind,
+        createdAt: now,
+      );
+      await _db.transaction(() async {
+        await _dao.insertEntry(entry.toStorageModel());
+        if (anchor != null) {
+          await _dao.insertAnchor(anchor.toStorageModel());
+        }
+      });
       _notifyChanged();
       return entry;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  Future<DictionaryAnchor> addAnchor({
+    required String entryId,
+    required String sourceId,
+    required SourceType sourceType,
+    required String text,
+    required String cfiRange,
+    String? context,
+    DictionaryAnchorKind kind = DictionaryAnchorKind.exactSelection,
+    DateTime? createdAt,
+  }) async {
+    try {
+      final anchor = DictionaryAnchor(
+        id: _uuid.v4(),
+        entryId: entryId,
+        sourceId: sourceId,
+        sourceType: sourceType,
+        text: text,
+        context: _nonEmpty(context),
+        cfiRange: cfiRange,
+        kind: kind,
+        createdAt: createdAt ?? DateTime.now(),
+      );
+      await _dao.insertAnchor(anchor.toStorageModel());
+      _notifyChanged();
+      return anchor;
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }
@@ -134,9 +204,55 @@ class DictionaryRepository {
     }
   }
 
+  Future<void> deleteAnchorsBySource(String sourceId) async {
+    try {
+      await _dao.deleteAnchorsBySource(sourceId);
+      _notifyChanged();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
   Future<void> dispose() => _changes.close();
 
   void _notifyChanged() {
     if (!_changes.isClosed) _changes.add(null);
+  }
+
+  DictionaryAnchor? _anchorForEntry({
+    required DictionaryEntry entry,
+    required String? sourceId,
+    required SourceType? sourceType,
+    required String? text,
+    required String? context,
+    required String? cfiRange,
+    required DictionaryAnchorKind? kind,
+    required DateTime createdAt,
+  }) {
+    final normalizedSourceId = _nonEmpty(sourceId);
+    final normalizedText = _nonEmpty(text);
+    final normalizedCfiRange = _nonEmpty(cfiRange);
+    if (normalizedSourceId == null ||
+        sourceType == null ||
+        normalizedText == null ||
+        normalizedCfiRange == null) {
+      return null;
+    }
+    return DictionaryAnchor(
+      id: _uuid.v4(),
+      entryId: entry.id,
+      sourceId: normalizedSourceId,
+      sourceType: sourceType,
+      text: normalizedText,
+      context: _nonEmpty(context),
+      cfiRange: normalizedCfiRange,
+      kind: kind ?? DictionaryAnchorKind.exactSelection,
+      createdAt: createdAt,
+    );
+  }
+
+  String? _nonEmpty(String? value) {
+    final normalized = value?.trim();
+    return normalized == null || normalized.isEmpty ? null : normalized;
   }
 }

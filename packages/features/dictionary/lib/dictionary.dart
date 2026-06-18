@@ -5,3 +5,4 @@
 // only lists, searches, and inspects saved words.
 
 export 'src/dictionary_screen.dart';
+export 'src/dictionary_detail_sheet.dart';

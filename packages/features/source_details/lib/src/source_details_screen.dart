@@ -755,7 +755,9 @@ class _SourceProgressLine extends StatelessWidget {
   }
 }
 
-/// Summary rows for reviewable content connected to the current source.
+/// Summary rows for currently active reviewable content connected to the
+/// source. Flashcards and dictionary are intentionally hidden while those
+/// learning surfaces are frozen in the app shell.
 class _ReviewActions extends StatelessWidget {
   const _ReviewActions({required this.summary});
 
@@ -773,28 +775,6 @@ class _ReviewActions extends StatelessWidget {
             empty: 'No saved passages yet',
             singular: '1 saved passage',
             plural: 'saved passages',
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        _ReviewActionRow(
-          icon: AppIcons.flashcard,
-          title: 'Flashcards',
-          subtitle: _reviewSummaryLabel(
-            summary.flashcardCount,
-            empty: 'No cards created yet',
-            singular: '1 card created',
-            plural: 'cards created',
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        _ReviewActionRow(
-          icon: AppIcons.dictionary,
-          title: 'Dictionary',
-          subtitle: _reviewSummaryLabel(
-            summary.dictionaryEntryCount,
-            empty: 'No words collected yet',
-            singular: '1 word collected',
-            plural: 'words collected',
           ),
         ),
       ],
