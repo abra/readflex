@@ -1,8 +1,6 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:book_repository/book_repository.dart';
-import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:source_details/src/source_details_bloc.dart';
@@ -21,14 +19,10 @@ void main() {
   group('SourceDetailsBloc', () {
     late _FakeBookRepository repository;
     late _FakeHighlightRepository highlightRepository;
-    late _FakeFlashcardRepository flashcardRepository;
-    late _FakeDictionaryRepository dictionaryRepository;
 
     setUp(() {
       repository = _FakeBookRepository();
       highlightRepository = _FakeHighlightRepository();
-      flashcardRepository = _FakeFlashcardRepository();
-      dictionaryRepository = _FakeDictionaryRepository();
     });
 
     blocTest<SourceDetailsBloc, SourceDetailsState>(
@@ -37,8 +31,6 @@ void main() {
       build: () => _buildBloc(
         repository,
         highlightRepository,
-        flashcardRepository,
-        dictionaryRepository,
       ),
       act: (bloc) => bloc.add(const SourceDetailsLoadRequested('source-1')),
       wait: const Duration(milliseconds: 10),
@@ -57,14 +49,10 @@ void main() {
       setUp: () {
         repository.source = _source;
         highlightRepository.count = 2;
-        flashcardRepository.count = 3;
-        dictionaryRepository.count = 4;
       },
       build: () => _buildBloc(
         repository,
         highlightRepository,
-        flashcardRepository,
-        dictionaryRepository,
       ),
       act: (bloc) => bloc.add(const SourceDetailsLoadRequested('source-1')),
       wait: const Duration(milliseconds: 10),
@@ -76,8 +64,6 @@ void main() {
           readerBook: _source,
           reviewSummary: const SourceReviewSummary(
             highlightCount: 2,
-            flashcardCount: 3,
-            dictionaryEntryCount: 4,
           ),
         ),
       ],
@@ -92,14 +78,10 @@ void main() {
         );
         repository.source = comic;
         highlightRepository.count = 2;
-        flashcardRepository.count = 3;
-        dictionaryRepository.count = 4;
       },
       build: () => _buildBloc(
         repository,
         highlightRepository,
-        flashcardRepository,
-        dictionaryRepository,
       ),
       act: (bloc) => bloc.add(const SourceDetailsLoadRequested('source-1')),
       wait: const Duration(milliseconds: 10),
@@ -113,8 +95,6 @@ void main() {
       ],
       verify: (_) {
         expect(highlightRepository.callCount, 0);
-        expect(flashcardRepository.callCount, 0);
-        expect(dictionaryRepository.callCount, 0);
       },
     );
 
@@ -124,8 +104,6 @@ void main() {
       build: () => _buildBloc(
         repository,
         highlightRepository,
-        flashcardRepository,
-        dictionaryRepository,
         initialSource: _librarySource(_source),
       ),
       act: (bloc) => bloc.add(const SourceDetailsLoadRequested('source-1')),
@@ -144,8 +122,6 @@ void main() {
       build: () => _buildBloc(
         repository,
         highlightRepository,
-        flashcardRepository,
-        dictionaryRepository,
       ),
       act: (bloc) => bloc.add(const SourceDetailsLoadRequested('missing')),
       expect: () => [
@@ -160,8 +136,6 @@ void main() {
       build: () => _buildBloc(
         repository,
         highlightRepository,
-        flashcardRepository,
-        dictionaryRepository,
       ),
       act: (bloc) => bloc.add(const SourceDetailsLoadRequested('source-1')),
       expect: () => [
@@ -174,15 +148,11 @@ void main() {
 
 SourceDetailsBloc _buildBloc(
   _FakeBookRepository bookRepository,
-  _FakeHighlightRepository highlightRepository,
-  _FakeFlashcardRepository flashcardRepository,
-  _FakeDictionaryRepository dictionaryRepository, {
+  _FakeHighlightRepository highlightRepository, {
   LibrarySource? initialSource,
 }) => SourceDetailsBloc(
   bookRepository: bookRepository,
   highlightRepository: highlightRepository,
-  flashcardRepository: flashcardRepository,
-  dictionaryRepository: dictionaryRepository,
   initialSource: initialSource,
 );
 
@@ -206,34 +176,6 @@ class _FakeHighlightRepository implements HighlightRepository {
 
   @override
   Future<int> getHighlightCountBySource(String sourceId) async {
-    callCount++;
-    return count;
-  }
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
-class _FakeFlashcardRepository implements FlashcardRepository {
-  int count = 0;
-  int callCount = 0;
-
-  @override
-  Future<int> getFlashcardCountByDeck(String deckId) async {
-    callCount++;
-    return count;
-  }
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
-class _FakeDictionaryRepository implements DictionaryRepository {
-  int count = 0;
-  int callCount = 0;
-
-  @override
-  Future<int> getEntryCountBySource(String sourceId) async {
     callCount++;
     return count;
   }

@@ -4,6 +4,7 @@ set -e
 
 PASS=0
 FAIL=0
+FAILED_LABELS=()
 
 run() {
   local label=$1
@@ -16,6 +17,7 @@ run() {
     PASS=$((PASS + 1))
   else
     FAIL=$((FAIL + 1))
+    FAILED_LABELS+=("$label")
   fi
 }
 
@@ -32,16 +34,7 @@ run "collection_repository"        "flutter test test/" "$SCRIPT_DIR/packages/co
 run "article_extraction_service"   "dart test test/" "$SCRIPT_DIR/packages/article_extraction_service"
 run "article_repository"           "flutter test test/" "$SCRIPT_DIR/packages/article_repository"
 run "highlight_repository"         "flutter test test/" "$SCRIPT_DIR/packages/highlight_repository"
-run "dictionary_repository"        "flutter test test/" "$SCRIPT_DIR/packages/dictionary_repository"
-run "flashcard_repository"         "flutter test test/" "$SCRIPT_DIR/packages/flashcard_repository"
-run "review_scheduler"             "flutter test test/" "$SCRIPT_DIR/packages/review_scheduler"
-run "fsrs_repository"              "flutter test test/" "$SCRIPT_DIR/packages/fsrs_repository"
-run "translation_service"          "flutter test test/" "$SCRIPT_DIR/packages/translation_service"
-run "ai_service"                   "flutter test test/" "$SCRIPT_DIR/packages/ai_service"
-run "auth_service"                 "flutter test test/" "$SCRIPT_DIR/packages/auth_service"
 run "connectivity_service"         "flutter test test/" "$SCRIPT_DIR/packages/connectivity_service"
-run "subscription_service"         "flutter test test/" "$SCRIPT_DIR/packages/subscription_service"
-run "notification_service"         "flutter test test/" "$SCRIPT_DIR/packages/notification_service"
 run "device_screen_brightness"    "flutter test test/" "$SCRIPT_DIR/packages/device_screen_brightness"
 run "screen_control_service"       "flutter test test/" "$SCRIPT_DIR/packages/screen_control_service"
 run "preferences_service"         "flutter test test/" "$SCRIPT_DIR/packages/preferences_service"
@@ -51,20 +44,17 @@ run "reader_webview_js"           "node --test test_js/*.test.mjs" "$SCRIPT_DIR/
 run "toast_service"               "flutter test test/" "$SCRIPT_DIR/packages/toast_service"
 run "library"              "flutter test test/" "$SCRIPT_DIR/packages/features/library"
 run "import_flow"                  "flutter test test/" "$SCRIPT_DIR/packages/features/import_flow"
-run "home"                         "flutter test test/" "$SCRIPT_DIR/packages/features/home"
-run "profile"                      "flutter test test/" "$SCRIPT_DIR/packages/features/profile"
-run "dictionary"                   "flutter test test/" "$SCRIPT_DIR/packages/features/dictionary"
-run "practice"                     "flutter test test/" "$SCRIPT_DIR/packages/features/practice"
 run "highlight"                    "flutter test test/" "$SCRIPT_DIR/packages/features/highlight"
-run "flashcard"                    "flutter test test/" "$SCRIPT_DIR/packages/features/flashcard"
-run "translate"                    "flutter test test/" "$SCRIPT_DIR/packages/features/translate"
-run "subscription_paywall"         "flutter test test/" "$SCRIPT_DIR/packages/features/subscription_paywall"
 run "source_details"               "flutter test test/" "$SCRIPT_DIR/packages/features/source_details"
 run "reader"                       "flutter test test/" "$SCRIPT_DIR/packages/features/reader"
+run "translation_pack_builder"     "dart test test/" "$SCRIPT_DIR/tool/translation_pack_builder"
 
 echo ""
 echo "────────────────────────────"
 echo "  passed: $PASS  failed: $FAIL"
+if [ $FAIL -ne 0 ]; then
+  echo "  failed labels: ${FAILED_LABELS[*]}"
+fi
 echo "────────────────────────────"
 
 [ $FAIL -eq 0 ]

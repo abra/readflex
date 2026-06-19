@@ -4,7 +4,6 @@
 // knowledge of widgets, and the widget layer has no knowledge of
 // initialization logic.
 
-import 'package:auth_service/auth_service.dart';
 import 'package:connectivity_service/connectivity_service.dart'
     show ConnectivityScope;
 import 'package:flutter/widgets.dart';
@@ -25,12 +24,9 @@ class RootContext extends StatelessWidget {
       dependencies: compositionResult.dependencies,
       child: PreferencesScope(
         service: compositionResult.dependencies.preferencesService,
-        child: AuthScope(
-          service: compositionResult.dependencies.authService,
-          child: ConnectivityScope(
-            service: compositionResult.dependencies.connectivityService,
-            child: const MaterialContext(),
-          ),
+        child: ConnectivityScope(
+          service: compositionResult.dependencies.connectivityService,
+          child: const MaterialContext(),
         ),
       ),
     );

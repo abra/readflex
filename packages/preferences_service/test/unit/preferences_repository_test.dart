@@ -23,8 +23,6 @@ void main() {
 
       expect(prefs.themeMode, ThemeMode.system);
       expect(prefs.libraryLayoutMode, 'grid');
-      expect(prefs.translationTargetLanguageCode, 'ru');
-      expect(prefs.translationSourceLanguageCode, isNull);
       expect(prefs.readerThemeId, 'paper');
       expect(prefs.readerFontId, 'serif');
       expect(prefs.readerLayoutId, 'standard');
@@ -66,8 +64,6 @@ void main() {
         themeMode: ThemeMode.dark,
         locale: Locale('ru'),
         libraryLayoutMode: 'list',
-        translationTargetLanguageCode: 'en',
-        translationSourceLanguageCode: 'ru',
         readerThemeId: 'night',
         readerFontId: 'geist',
         readerLayoutId: 'comfortable',
@@ -123,8 +119,8 @@ void main() {
       final map = jsonDecode(raw!) as Map<String, Object?>;
 
       expect(map['readerLayoutId'], 'compact');
-      expect(map['translationTargetLanguageCode'], 'ru');
-      expect(map['translationSourceLanguageCode'], isNull);
+      expect(map.containsKey('translationTargetLanguageCode'), isFalse);
+      expect(map.containsKey('translationSourceLanguageCode'), isFalse);
       expect(map['readerTextAlignment'], 'justify');
       expect(map['readerInvertImagesInDark'], isFalse);
       expect(map['readerOverrideFont'], isFalse);
@@ -176,8 +172,6 @@ void main() {
         expect(prefs.readerUseBookLayout, isTrue);
         expect(prefs.readerPageTurnStyle, ReaderPageTurnStyle.horizontal);
         expect(prefs.readerSearchHistory, isEmpty);
-        expect(prefs.translationTargetLanguageCode, 'ru');
-        expect(prefs.translationSourceLanguageCode, isNull);
         expect(prefs.readerBrightness, isNull);
         expect(prefs.readerLastCustomBrightness, 0.7);
         expect(prefs.readerAppearanceOverrides, isEmpty);
@@ -216,24 +210,6 @@ void main() {
 
       expect(prefs.readerBrightness, 1.0);
       expect(prefs.readerLastCustomBrightness, 0.05);
-    });
-
-    test('load() normalizes unsupported translation language codes', () async {
-      final storage = PreferencesStorage();
-      await storage.setString(
-        _key,
-        jsonEncode(<String, Object?>{
-          '_schemaVersion': 10,
-          'translationTargetLanguageCode': 'xx',
-          'translationSourceLanguageCode': 'yy',
-        }),
-      );
-
-      final repo = PreferencesRepository(storage);
-      final prefs = await repo.load(_supportedCodes);
-
-      expect(prefs.translationTargetLanguageCode, 'ru');
-      expect(prefs.translationSourceLanguageCode, isNull);
     });
 
     test('load() clamps source reader brightness override from JSON', () async {
@@ -441,7 +417,7 @@ void main() {
       final raw = await storage.getString(_key);
       final map = jsonDecode(raw!) as Map<String, Object?>;
 
-      expect(map['_schemaVersion'], 10);
+      expect(map['_schemaVersion'], 11);
     });
 
     test(

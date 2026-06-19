@@ -39,23 +39,12 @@ class SourceDetailsState extends Equatable {
 class SourceReviewSummary extends Equatable {
   const SourceReviewSummary({
     required this.highlightCount,
-    required this.flashcardCount,
-    required this.dictionaryEntryCount,
   });
 
-  const SourceReviewSummary.empty()
-    : highlightCount = 0,
-      flashcardCount = 0,
-      dictionaryEntryCount = 0;
+  const SourceReviewSummary.empty() : highlightCount = 0;
 
   final int highlightCount;
-  final int flashcardCount;
-  final int dictionaryEntryCount;
 
   @override
-  List<Object?> get props => [
-    highlightCount,
-    flashcardCount,
-    dictionaryEntryCount,
-  ];
+  List<Object?> get props => [highlightCount];
 }

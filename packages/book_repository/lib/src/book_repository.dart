@@ -402,10 +402,9 @@ class BookRepository {
   ///
   ///   * [BookDeletionScope.keepLearningData] (default) — only the book
   ///     row, its highlights and the highlight FSRS state are purged.
-  ///     Saved flashcards keep their dead `deckId` (Practice surfaces
-  ///     them by id, not by deck) and dictionary entries are detached
-  ///     from the book by nulling their `sourceId`. The user keeps
-  ///     everything they explicitly added to learn.
+  ///     Dormant flashcard rows keep their dead `deckId`, and dictionary
+  ///     entries are detached from the book by nulling their `sourceId`.
+  ///     This preserves user-created learning data for future restoration.
   ///   * [BookDeletionScope.deleteEverything] — full cascade: every
   ///     row that referenced this book id is removed alongside the book.
   ///

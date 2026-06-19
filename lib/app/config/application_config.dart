@@ -52,33 +52,6 @@ class ApplicationConfig {
   /// Optional API key for the article extraction backend.
   String get articleCleanerApiKey =>
       const String.fromEnvironment('ARTICLE_CLEANER_API_KEY').trim();
-
-  /// Temporary direct DeepSeek key for translation enrichment.
-  ///
-  /// This is intentionally for local/internal builds only. Production should
-  /// send enrichment requests to a Readflex backend and keep provider keys
-  /// server-side.
-  String get deepSeekApiKey =>
-      const String.fromEnvironment('DEEPSEEK_API_KEY').trim();
-
-  /// Base URL for the DeepSeek-compatible chat completions endpoint.
-  String get deepSeekBaseUrl {
-    const configured = String.fromEnvironment('DEEPSEEK_BASE_URL');
-    final value = configured.trim();
-    if (value.isNotEmpty) return value;
-    return 'https://api.deepseek.com';
-  }
-
-  /// DeepSeek model used by the temporary direct translation client.
-  String get deepSeekModel {
-    const configured = String.fromEnvironment('DEEPSEEK_MODEL');
-    final value = configured.trim();
-    if (value.isNotEmpty) return value;
-    return 'deepseek-v4-pro';
-  }
-
-  /// Whether the app should wire the temporary direct DeepSeek client.
-  bool get enableDirectDeepSeekTranslation => deepSeekApiKey.isNotEmpty;
 }
 
 /// A special version of [ApplicationConfig] that is used in tests.

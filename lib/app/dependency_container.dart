@@ -4,26 +4,18 @@
 // singletons or a service locator. This keeps dependencies explicit and makes
 // them easy to substitute in tests via TestDependenciesContainer.
 
-import 'package:ai_service/ai_service.dart';
 import 'package:article_extraction_service/article_extraction_service.dart';
 import 'package:article_repository/article_repository.dart';
-import 'package:auth_service/auth_service.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:collection_repository/collection_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
-import 'package:dictionary_repository/dictionary_repository.dart';
-import 'package:flashcard_repository/flashcard_repository.dart';
-import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:monitoring/monitoring.dart';
-import 'package:notification_service/notification_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:reader_server/reader_server.dart';
 import 'package:readflex/app/config/application_config.dart';
 import 'package:screen_control_service/screen_control_service.dart';
-import 'package:subscription_service/subscription_service.dart';
-import 'package:translation_service/translation_service.dart';
 
 /// Container for global dependencies.
 class DependenciesContainer {
@@ -33,20 +25,12 @@ class DependenciesContainer {
     required this.errorReporter,
     required this.packageInfo,
     required this.preferencesService,
-    required this.authService,
     required this.articleExtractionService,
     required this.articleRepository,
     required this.bookRepository,
     required this.collectionRepository,
     required this.highlightRepository,
-    required this.flashcardRepository,
-    required this.dictionaryRepository,
-    required this.fsrsRepository,
-    required this.translationService,
-    required this.aiService,
-    required this.subscriptionService,
     required this.connectivityService,
-    required this.notificationService,
     required this.screenControlService,
     required this.readerServer,
   });
@@ -56,20 +40,12 @@ class DependenciesContainer {
   final ErrorReportingService errorReporter;
   final PackageInfo packageInfo;
   final PreferencesService preferencesService;
-  final AuthService authService;
   final ArticleExtractionService articleExtractionService;
   final ArticleRepository articleRepository;
   final BookRepository bookRepository;
   final CollectionRepository collectionRepository;
   final HighlightRepository highlightRepository;
-  final FlashcardRepository flashcardRepository;
-  final DictionaryRepository dictionaryRepository;
-  final FsrsRepository fsrsRepository;
-  final TranslationService translationService;
-  final AiService aiService;
-  final SubscriptionService subscriptionService;
   final ConnectivityService connectivityService;
-  final NotificationService notificationService;
   final ScreenControlService screenControlService;
   final ReaderServer readerServer;
 
@@ -101,24 +77,6 @@ class DependenciesContainer {
       articleRepository.dispose();
     } catch (e, st) {
       logger.warn('articleRepository.dispose failed', error: e, stackTrace: st);
-    }
-    try {
-      await dictionaryRepository.dispose();
-    } catch (e, st) {
-      logger.warn(
-        'dictionaryRepository.dispose failed',
-        error: e,
-        stackTrace: st,
-      );
-    }
-    try {
-      await translationService.dispose();
-    } catch (e, st) {
-      logger.warn(
-        'translationService.dispose failed',
-        error: e,
-        stackTrace: st,
-      );
     }
   }
 }

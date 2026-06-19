@@ -7,8 +7,8 @@ import 'theme/tokens/app_spacing.dart';
 /// Compact stat display: value + label, with optional icon and tap.
 ///
 /// Two visual modes:
-///   - With [icon] and [color] — icon sits above the value (home dashboard).
-///   - Without — plain value/label in a bordered container (profile stats).
+///   - With [icon] and [color] — icon sits above the value.
+///   - Without — plain value/label in a bordered container.
 class StatCard extends StatelessWidget {
   const StatCard({
     required this.value,

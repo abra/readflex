@@ -9,7 +9,6 @@ import 'package:reader/src/reader_ui_cubit.dart';
 import 'package:screen_control_service/screen_control_service.dart';
 
 import 'helpers/fake_book_repository.dart';
-import 'helpers/fake_dictionary_repository.dart';
 import 'helpers/fake_highlight_repository.dart';
 
 void main() {
@@ -83,7 +82,6 @@ void main() {
     final readerBloc = ReaderBloc(
       bookRepository: FakeBookRepository(),
       highlightRepository: FakeHighlightRepository(),
-      dictionaryRepository: FakeDictionaryRepository(),
       initialSource: book,
     );
     addTearDown(uiCubit.close);
@@ -127,7 +125,6 @@ void main() {
     final readerBloc = ReaderBloc(
       bookRepository: bookRepository,
       highlightRepository: FakeHighlightRepository(),
-      dictionaryRepository: FakeDictionaryRepository(),
     );
     addTearDown(uiCubit.close);
     addTearDown(readerBloc.close);

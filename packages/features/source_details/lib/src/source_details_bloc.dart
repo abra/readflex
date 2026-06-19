@@ -1,9 +1,7 @@
 import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
-import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
-import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 
@@ -14,15 +12,11 @@ class SourceDetailsBloc extends Bloc<SourceDetailsEvent, SourceDetailsState> {
   SourceDetailsBloc({
     required BookRepository bookRepository,
     required HighlightRepository highlightRepository,
-    required FlashcardRepository flashcardRepository,
-    required DictionaryRepository dictionaryRepository,
     ArticleRepository? articleRepository,
     LibrarySource? initialSource,
   }) : _bookRepository = bookRepository,
        _articleRepository = articleRepository,
        _highlightRepository = highlightRepository,
-       _flashcardRepository = flashcardRepository,
-       _dictionaryRepository = dictionaryRepository,
        super(
          initialSource == null
              ? const SourceDetailsState()
@@ -37,8 +31,6 @@ class SourceDetailsBloc extends Bloc<SourceDetailsEvent, SourceDetailsState> {
   final BookRepository _bookRepository;
   final ArticleRepository? _articleRepository;
   final HighlightRepository _highlightRepository;
-  final FlashcardRepository _flashcardRepository;
-  final DictionaryRepository _dictionaryRepository;
 
   Future<void> _onLoadRequested(
     SourceDetailsLoadRequested event,
@@ -94,15 +86,11 @@ class SourceDetailsBloc extends Bloc<SourceDetailsEvent, SourceDetailsState> {
   }
 
   Future<SourceReviewSummary> _loadReviewSummary(String sourceId) async {
-    final counts = await Future.wait<int>([
-      _highlightRepository.getHighlightCountBySource(sourceId),
-      _flashcardRepository.getFlashcardCountByDeck(sourceId),
-      _dictionaryRepository.getEntryCountBySource(sourceId),
-    ]);
+    final highlightCount = await _highlightRepository.getHighlightCountBySource(
+      sourceId,
+    );
     return SourceReviewSummary(
-      highlightCount: counts[0],
-      flashcardCount: counts[1],
-      dictionaryEntryCount: counts[2],
+      highlightCount: highlightCount,
     );
   }
 }

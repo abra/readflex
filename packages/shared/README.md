@@ -1,8 +1,8 @@
 # shared
 
 Cross-feature contracts. Currently hosts the `TextAction` plugin contract
-that lets the reader surface buttons from other features (highlight,
-flashcard, translate) without knowing anything about them.
+that lets the reader surface buttons from other features, such as highlight,
+without knowing anything about their persistence.
 
 This is the only contract package in the project that depends on Flutter —
 `TextAction.icon` is an `IconData`, and actions are executed with a
@@ -54,11 +54,9 @@ abstract class TextAction {
 class HighlightAction extends TextAction {
   const HighlightAction({
     required this.highlightRepository,
-    required this.fsrsRepository,
   });
 
   final HighlightRepository highlightRepository;
-  final FsrsRepository fsrsRepository;
 
   @override
   String get label => 'Highlight';
@@ -73,7 +71,6 @@ class HighlightAction extends TextAction {
   ) => showHighlightSheet(
     context,
     highlightRepository: highlightRepository,
-    fsrsRepository: fsrsRepository,
     selection: selection,
   );
 }
@@ -91,8 +88,6 @@ purely from the list — it never imports a feature package.
 shared → domain_models, flutter (widgets)
 features/reader       → shared   (consumes TextAction list)
 features/highlight    → shared   (implements TextAction)
-features/flashcard    → shared   (implements TextAction)
-features/translate    → shared   (implements TextAction)
 ```
 
 ---

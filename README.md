@@ -3,13 +3,12 @@
   <br/>Readflex
 </h1>
 
-<p align="center">Mobile reading app with highlights, flashcards, and translation.</p>
+<p align="center">Mobile reading app for books, articles, and highlights.</p>
 
 ## Overview
 
-Readflex is a Flutter reading app for books, articles, highlights, flashcards,
-and contextual translation. The codebase is split into small local packages
-instead of one large `lib/` tree.
+Readflex is a Flutter reading app for books, articles, and highlights. The
+codebase is split into small local packages instead of one large `lib/` tree.
 
 Start here:
 
@@ -56,8 +55,7 @@ Run the app:
 
 ```sh
 flutter run \
-  --dart-define=ARTICLE_CLEANER_BASE_URL=https://your-cleaner.example \
-  --dart-define=DEEPSEEK_API_KEY="$DEEPSEEK_API_KEY"
+  --dart-define=ARTICLE_CLEANER_BASE_URL=https://your-cleaner.example
 ```
 
 Common dart-defines:
@@ -66,22 +64,19 @@ Common dart-defines:
 |------|---------|
 | `ARTICLE_CLEANER_BASE_URL` | Article extraction backend base URL |
 | `ARTICLE_CLEANER_API_KEY` | Optional article cleaner API key |
-| `DEEPSEEK_API_KEY` | Enables direct DeepSeek translation in development |
-| `DEEPSEEK_BASE_URL` | Optional DeepSeek-compatible API endpoint |
-| `DEEPSEEK_MODEL` | Optional DeepSeek-compatible model name |
 
 Do not ship public builds with client-side API keys. Backend-backed production
-integrations should replace direct development clients and no-op service stubs.
+integrations should keep provider credentials server-side.
 
 Feature wiring follows `routing.dart -> Screen/Sheet -> Bloc/Cubit -> View`.
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the full convention.
 
 ## Current Production Gaps
 
-Some contracts are intentionally stubbed while the app is still being built:
+Some contracts are intentionally incomplete while the app is still being built:
 
-- Auth, AI generation, subscription, notification, analytics, and error
-  reporting are represented by no-op services in development composition.
-- Home and Practice screens still have placeholder sections.
-- Direct DeepSeek translation is a development path; production should keep API
-  keys server-side.
+- Error reporting is represented by a no-op reporter until a production
+  provider is wired.
+- The translation, dictionary, flashcard, practice, profile, subscription, auth,
+  AI, and notification surfaces are frozen and removed from the active package
+  graph. The last revision containing them is `189e2cc1`.

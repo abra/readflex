@@ -1,13 +1,12 @@
 # preferences_service
 
-User preferences: theme mode, locale, library layout, translation languages,
-global reader appearance, per-source reader appearance overrides, reader search
-history, and onboarding / setup flags. Backed by `shared_preferences` (JSON
-blob under a single key) and exposed to the UI via a reactive stream and an
-`InheritedModel` scope.
+User preferences: theme mode, locale, library layout, reader appearance,
+per-source reader appearance overrides, reader search history, and onboarding /
+setup flags. Backed by `shared_preferences` (JSON blob under a single key) and
+exposed to the UI via a reactive stream and an `InheritedModel` scope.
 
-This is **not** where auth tokens live — those go through `auth_service` /
-`flutter_secure_storage`.
+This is **not** where credentials belong; production credentials should go
+through a dedicated secure-storage backed service.
 
 ## Public API
 
@@ -30,8 +29,6 @@ This is **not** where auth tokens live — those go through `auth_service` /
 | `themeMode`                | `ThemeMode` | `system`    |
 | `locale`                   | `Locale`    | platform    |
 | `libraryLayoutMode`        | `String`    | `'grid'`    |
-| `translationTargetLanguageCode` | `String` | `'ru'`  |
-| `translationSourceLanguageCode` | `String?` | `null` |
 | `readerThemeId`            | `String`    | `'paper'`   |
 | `readerFontId`             | `String`    | `'serif'`   |
 | `readerLayoutId`           | `String`    | `'standard'`|
@@ -90,7 +87,5 @@ restores the last successfully-persisted value.
 Registered on `DependenciesContainer.preferencesService` in
 `lib/app/composition.dart` and exposed via `PreferencesScope` in
 `RootContext`. `MaterialContext` reads `themeModeOf(context)` to drive
-`MaterialApp.themeMode`; Profile edits global reader defaults and translation
-languages, Translate reads those language preferences through callbacks from
-`routing.dart`, and the reader applies per-source overrides through
+`MaterialApp.themeMode`; the reader applies per-source overrides through
 `ReaderAppearanceCubit`.

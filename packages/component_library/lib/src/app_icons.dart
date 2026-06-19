@@ -7,11 +7,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 /// to swap an icon or change icon sets, this is the only file to touch.
 abstract final class AppIcons {
   // ── Navigation ────────────────────────────────────────────
-  static const IconData home = LucideIcons.home;
   static const IconData library = LucideIcons.library;
-  static const IconData dictionary = LucideIcons.bookOpen;
-  static const IconData practice = LucideIcons.brain;
-  static const IconData profile = LucideIcons.user;
 
   // ── Actions ───────────────────────────────────────────────
   static const IconData add = LucideIcons.plus;
@@ -37,15 +33,14 @@ abstract final class AppIcons {
   static const IconData collection = LucideIcons.folder;
   static const IconData collectionAdd = LucideIcons.folderPlus;
   static const IconData collectionFavourites = LucideIcons.heart;
+  static const IconData author = LucideIcons.user;
   static const IconData highlight = LucideIcons.highlighter;
-  static const IconData flashcard = LucideIcons.layers;
   static const IconData quote = LucideIcons.quote;
   static const IconData check = LucideIcons.check;
   static const IconData clock = LucideIcons.clock;
   static const IconData global = LucideIcons.globe;
 
   // ── Reader ────────────────────────────────────────────────
-  static const IconData translate = LucideIcons.languages;
   static const IconData volumeUp = LucideIcons.volume2;
   static const IconData back = chevronLeft;
   static const IconData toc = LucideIcons.list;
@@ -69,21 +64,8 @@ abstract final class AppIcons {
   static const IconData systemMode = LucideIcons.monitor;
   static const IconData deviceMode = LucideIcons.smartphone;
 
-  // ── Settings / Profile ────────────────────────────────────
-  static const IconData textFields = LucideIcons.type;
+  // ── Metadata ──────────────────────────────────────────────
   static const IconData language = LucideIcons.globe;
-  static const IconData cloud = LucideIcons.cloud;
-  static const IconData download = LucideIcons.download;
-  static const IconData notifications = LucideIcons.bell;
-  static const IconData shield = LucideIcons.shield;
-  static const IconData info = LucideIcons.info;
-  static const IconData terms = LucideIcons.bookMarked;
-  static const IconData logOut = LucideIcons.logOut;
-
-  // ── Premium ───────────────────────────────────────────────
-  static const IconData premium = LucideIcons.crown;
-  static const IconData sparkles = LucideIcons.sparkles;
-  static const IconData cloudSync = LucideIcons.cloud;
 
   // ── Onboarding ────────────────────────────────────────────
   static const IconData readAnything = LucideIcons.bookOpen;

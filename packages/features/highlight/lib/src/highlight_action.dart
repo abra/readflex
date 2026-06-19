@@ -1,6 +1,5 @@
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
-import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:shared/shared.dart';
 
@@ -15,11 +14,9 @@ import 'highlight_sheet.dart';
 class HighlightAction extends TextAction {
   HighlightAction({
     required this.highlightRepository,
-    required this.fsrsRepository,
   });
 
   final HighlightRepository highlightRepository;
-  final FsrsRepository fsrsRepository;
 
   @override
   String get label => 'Highlight';
@@ -35,7 +32,6 @@ class HighlightAction extends TextAction {
     return showHighlightSheet(
       context,
       highlightRepository: highlightRepository,
-      fsrsRepository: fsrsRepository,
       selection: selection,
     );
   }

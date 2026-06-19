@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:highlight/highlight.dart';
 import 'package:shared/shared.dart';
 
-import 'helpers/fake_fsrs_repository.dart';
 import 'helpers/fake_highlight_repository.dart';
 
 const _selection = TextSelectionContext(
@@ -16,11 +15,9 @@ const _selection = TextSelectionContext(
 
 void main() {
   late FakeHighlightRepository repository;
-  late FakeFsrsRepository fsrsRepository;
 
   setUp(() {
     repository = FakeHighlightRepository();
-    fsrsRepository = FakeFsrsRepository();
   });
 
   Widget buildSubject() => MaterialApp(
@@ -29,7 +26,6 @@ void main() {
       body: SingleChildScrollView(
         child: HighlightSheet(
           highlightRepository: repository,
-          fsrsRepository: fsrsRepository,
           selection: _selection,
         ),
       ),

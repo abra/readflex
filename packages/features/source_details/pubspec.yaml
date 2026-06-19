@@ -17,10 +17,6 @@ dependencies:
     path: ../../book_repository
   article_repository:
     path: ../../article_repository
-  dictionary_repository:
-    path: ../../dictionary_repository
-  flashcard_repository:
-    path: ../../flashcard_repository
   highlight_repository:
     path: ../../highlight_repository
   component_library:

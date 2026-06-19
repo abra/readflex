@@ -26,12 +26,6 @@ A highlight is anchored by a `cfiRange` (via foliate-js), with an optional
 > columns for old rows and tests. Current reader selections primarily use
 > `cfiRange`.
 
-## Review state
-
-Highlights are reviewable (Readwise-style), but this repo does not track
-FSRS state. Scheduling and review state live in `fsrs_repository` — one
-centralized FSRS store for flashcards, highlights, and dictionary entries.
-
 ## Dependencies
 
 - `domain_models` — `Highlight`, `HighlightColor`, `SourceType`, `StorageException`

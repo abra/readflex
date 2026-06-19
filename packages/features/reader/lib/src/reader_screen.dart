@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
-import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -31,7 +30,6 @@ import 'reader_directional_layout.dart';
 import 'reader_keep_awake_cubit.dart';
 import 'reader_loading_indicator_style.dart';
 import 'reader_progress_label.dart';
-import 'reader_review_reminder_cubit.dart';
 import 'reader_search_cubit.dart';
 import 'reader_selection_cubit.dart';
 import 'reader_system_ui_overlay.dart';
@@ -45,9 +43,6 @@ part 'reader_screen_content.dart';
 part 'reader_screen_chrome.dart';
 part 'reader_screen_drawers.dart';
 part 'reader_screen_context_panel.dart';
-
-/// Approximate height of the context panel, used to offset the review banner.
-const _kContextPanelHeight = 80.0;
 
 // Text actions are shown only after the WebView reports an actual text
 // selection. Image-page formats are filtered in the selection callback so they
@@ -129,42 +124,20 @@ ReaderTapAxis _readerTapAxisForPageTurnStyle(ReaderPageTurnStyle style) {
       : ReaderTapAxis.horizontal;
 }
 
-/// Carries the optional mini-review callback down the reader widget tree.
-class _ReaderCallbacksScope extends InheritedWidget {
-  const _ReaderCallbacksScope({
-    required this.onStartMiniReview,
-    required this.onDictionaryEntryPressed,
-    required super.child,
-  });
-
-  final void Function(BuildContext context, String sourceId)? onStartMiniReview;
-  final Future<void> Function(BuildContext context, String entryId)?
-  onDictionaryEntryPressed;
-
-  static _ReaderCallbacksScope? of(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<_ReaderCallbacksScope>();
-
-  @override
-  bool updateShouldNotify(_ReaderCallbacksScope old) =>
-      onStartMiniReview != old.onStartMiniReview ||
-      onDictionaryEntryPressed != old.onDictionaryEntryPressed;
-}
-
 /// Full-screen reader for a book (route `/reader/:sourceId`).
 ///
 /// Composition only: wires [ReaderBloc] (source + highlights + position
 /// persistence), [ReaderUiCubit] (chrome/drawer/search-highlight state),
 /// [ReaderSearchCubit] (book-search state), and [ReaderSelectionCubit]
 /// (text selection) around an internal [_ReaderView]. [textActions] follow
-/// the plugin contract from `package:shared` — features like Highlight /
-/// Flashcard / Translate are wired in the composition root.
+/// the plugin contract from `package:shared` and are wired in the
+/// composition root.
 class ReaderScreen extends StatelessWidget {
   const ReaderScreen({
     required this.sourceId,
     required this.serverPort,
     required this.bookRepository,
     required this.highlightRepository,
-    required this.dictionaryRepository,
     required this.preferencesService,
     required this.screenControlService,
     required this.textActions,
@@ -174,9 +147,6 @@ class ReaderScreen extends StatelessWidget {
     this.initialSourceType = SourceType.book,
     this.onSearchHistoryChanged,
     this.onSourceOpened,
-    this.onCheckDueItems,
-    this.onStartMiniReview,
-    this.onDictionaryEntryPressed,
     super.key,
   });
 
@@ -185,7 +155,6 @@ class ReaderScreen extends StatelessWidget {
   final BookRepository bookRepository;
   final ArticleRepository? articleRepository;
   final HighlightRepository highlightRepository;
-  final DictionaryRepository dictionaryRepository;
   final PreferencesService preferencesService;
   final ScreenControlService screenControlService;
   final List<TextAction> textActions;
@@ -194,75 +163,58 @@ class ReaderScreen extends StatelessWidget {
   final SourceType initialSourceType;
   final ValueChanged<List<String>>? onSearchHistoryChanged;
   final VoidCallback? onSourceOpened;
-  final Future<int> Function(String sourceId)? onCheckDueItems;
-  final void Function(BuildContext context, String sourceId)? onStartMiniReview;
-  final Future<void> Function(BuildContext context, String entryId)?
-  onDictionaryEntryPressed;
 
   @override
   Widget build(BuildContext context) {
     debugLogScreenBuild('ReaderScreen(sourceId: $sourceId)');
 
-    return _ReaderCallbacksScope(
-      onStartMiniReview: onStartMiniReview,
-      onDictionaryEntryPressed: onDictionaryEntryPressed,
-      child: MultiBlocProvider(
-        providers: [
-          BlocProvider(
-            create: (_) => ReaderBloc(
-              bookRepository: bookRepository,
-              articleRepository: articleRepository,
-              highlightRepository: highlightRepository,
-              dictionaryRepository: dictionaryRepository,
-              initialSource: initialSource?.id == sourceId
-                  ? initialSource
-                  : null,
-              initialSourceType: initialSourceType,
-            )..add(ReaderSourceLoadRequested(sourceId: sourceId)),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => ReaderBloc(
+            bookRepository: bookRepository,
+            articleRepository: articleRepository,
+            highlightRepository: highlightRepository,
+            initialSource: initialSource?.id == sourceId ? initialSource : null,
+            initialSourceType: initialSourceType,
+          )..add(ReaderSourceLoadRequested(sourceId: sourceId)),
+        ),
+        BlocProvider(create: (_) => ReaderUiCubit()),
+        BlocProvider(
+          create: (_) => ReaderSearchCubit(
+            initialRecentQueries: initialSearchHistory,
+            onRecentQueriesChanged: onSearchHistoryChanged,
           ),
-          BlocProvider(create: (_) => ReaderUiCubit()),
-          BlocProvider(
-            create: (_) => ReaderSearchCubit(
-              initialRecentQueries: initialSearchHistory,
-              onRecentQueriesChanged: onSearchHistoryChanged,
-            ),
+        ),
+        BlocProvider(create: (_) => ReaderSelectionCubit()),
+        BlocProvider(
+          create: (_) => ReaderAppearanceCubit(
+            preferencesService: preferencesService,
+            sourceId: sourceId,
           ),
-          BlocProvider(create: (_) => ReaderSelectionCubit()),
-          BlocProvider(
-            create: (_) => ReaderAppearanceCubit(
-              preferencesService: preferencesService,
-              sourceId: sourceId,
-            ),
+        ),
+        BlocProvider(
+          create: (_) => ReaderBrightnessCubit(
+            preferencesService: preferencesService,
+            screenControlService: screenControlService,
+            sourceId: sourceId,
           ),
-          BlocProvider(
-            create: (_) => ReaderReviewReminderCubit(
-              sourceId: sourceId,
-              onCheckDueItems: onCheckDueItems,
-            ),
+        ),
+        BlocProvider(
+          create: (_) => ReaderKeepAwakeCubit(
+            screenControlService: screenControlService,
           ),
-          BlocProvider(
-            create: (_) => ReaderBrightnessCubit(
-              preferencesService: preferencesService,
-              screenControlService: screenControlService,
-              sourceId: sourceId,
-            ),
-          ),
-          BlocProvider(
-            create: (_) => ReaderKeepAwakeCubit(
-              screenControlService: screenControlService,
-            ),
-          ),
-        ],
-        child: Builder(
-          builder: (context) => _ReaderSourceOpenedNotifier(
-            onSourceOpened: onSourceOpened,
-            child: ReaderBrightnessLifecycleScope(
-              cubit: context.read<ReaderBrightnessCubit>(),
-              child: ReaderKeepAwakeDriver(
-                child: _ReaderView(
-                  serverPort: serverPort,
-                  textActions: textActions,
-                ),
+        ),
+      ],
+      child: Builder(
+        builder: (context) => _ReaderSourceOpenedNotifier(
+          onSourceOpened: onSourceOpened,
+          child: ReaderBrightnessLifecycleScope(
+            cubit: context.read<ReaderBrightnessCubit>(),
+            child: ReaderKeepAwakeDriver(
+              child: _ReaderView(
+                serverPort: serverPort,
+                textActions: textActions,
               ),
             ),
           ),

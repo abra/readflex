@@ -35,7 +35,8 @@ class PreferencesRepository {
   ///   8: raise the default reader side margin from 6% to 8%.
   ///   9: add global reader brightness with system/default represented by null.
   ///   10: add preferred translation target/source languages.
-  static const _currentSchemaVersion = 10;
+  ///   11: drop translation preferences from the active app schema.
+  static const _currentSchemaVersion = 11;
 
   final PreferencesStorage _storage;
 
@@ -70,14 +71,6 @@ class PreferencesRepository {
             map['libraryLayoutMode'] as String? ??
             map['catalogLayoutMode'] as String? ??
             'grid',
-        translationTargetLanguageCode:
-            Preferences.normalizeTranslationTargetLanguageCode(
-              map['translationTargetLanguageCode'] as String?,
-            ),
-        translationSourceLanguageCode:
-            Preferences.normalizeTranslationSourceLanguageCode(
-              map['translationSourceLanguageCode'] as String?,
-            ),
         readerThemeId: map['readerThemeId'] as String? ?? 'paper',
         readerFontId: fontId,
         readerLayoutId: map['readerLayoutId'] as String? ?? 'standard',
@@ -126,8 +119,6 @@ class PreferencesRepository {
       'themeMode': prefs.themeMode.name,
       'locale': prefs.locale.languageCode,
       'libraryLayoutMode': prefs.libraryLayoutMode,
-      'translationTargetLanguageCode': prefs.translationTargetLanguageCode,
-      'translationSourceLanguageCode': prefs.translationSourceLanguageCode,
       'readerThemeId': prefs.readerThemeId,
       'readerFontId': prefs.readerFontId,
       'readerLayoutId': prefs.readerLayoutId,

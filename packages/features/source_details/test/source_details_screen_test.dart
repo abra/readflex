@@ -1,9 +1,7 @@
 import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
-import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:highlight_repository/highlight_repository.dart';
@@ -34,15 +32,11 @@ void main() {
     late _FakeBookRepository repository;
     late _FakeArticleRepository articleRepository;
     late _FakeHighlightRepository highlightRepository;
-    late _FakeFlashcardRepository flashcardRepository;
-    late _FakeDictionaryRepository dictionaryRepository;
 
     setUp(() {
       repository = _FakeBookRepository()..source = _newSource;
       articleRepository = _FakeArticleRepository()..article = _article;
       highlightRepository = _FakeHighlightRepository()..count = 2;
-      flashcardRepository = _FakeFlashcardRepository()..count = 3;
-      dictionaryRepository = _FakeDictionaryRepository()..count = 4;
     });
 
     testWidgets('renders initial source details with start action', (
@@ -51,8 +45,6 @@ void main() {
       await tester.pumpSourceDetails(
         repository: repository,
         highlightRepository: highlightRepository,
-        flashcardRepository: flashcardRepository,
-        dictionaryRepository: dictionaryRepository,
         initialSource: LibrarySource.fromBook(_newSource),
       );
 
@@ -84,11 +76,7 @@ void main() {
       expect(find.byType(Hero), findsNothing);
       expect(find.text('Review'), findsOneWidget);
       expect(find.text('Highlights'), findsOneWidget);
-      expect(find.text('Flashcards'), findsNothing);
-      expect(find.text('Dictionary'), findsNothing);
       expect(find.text('2 saved passages'), findsOneWidget);
-      expect(find.text('3 cards created'), findsNothing);
-      expect(find.text('4 words collected'), findsNothing);
       expect(find.byIcon(AppIcons.chevronRight), findsOneWidget);
 
       final coverArt = tester.widget<AppCoverArt>(find.byType(AppCoverArt));
@@ -108,8 +96,6 @@ void main() {
       await tester.pumpSourceDetails(
         repository: repository,
         highlightRepository: highlightRepository,
-        flashcardRepository: flashcardRepository,
-        dictionaryRepository: dictionaryRepository,
         initialSource: LibrarySource.fromBook(longTitleSource),
       );
 
@@ -146,8 +132,6 @@ void main() {
         repository: repository,
         articleRepository: articleRepository,
         highlightRepository: highlightRepository,
-        flashcardRepository: flashcardRepository,
-        dictionaryRepository: dictionaryRepository,
         initialSource: LibrarySource.fromArticle(_article),
       );
 
@@ -201,8 +185,6 @@ void main() {
         repository: repository,
         articleRepository: articleRepository,
         highlightRepository: highlightRepository,
-        flashcardRepository: flashcardRepository,
-        dictionaryRepository: dictionaryRepository,
         initialSource: LibrarySource.fromArticle(_article),
         onArticleTitlePressed: (url, title) {
           openedUrl = url;
@@ -224,8 +206,6 @@ void main() {
       await tester.pumpSourceDetails(
         repository: repository,
         highlightRepository: highlightRepository,
-        flashcardRepository: flashcardRepository,
-        dictionaryRepository: dictionaryRepository,
         initialSource: LibrarySource.fromBook(_newSource),
         onArticleTitlePressed: (_, _) => didOpen = true,
       );
@@ -251,8 +231,6 @@ void main() {
         repository: repository,
         articleRepository: articleRepository,
         highlightRepository: highlightRepository,
-        flashcardRepository: flashcardRepository,
-        dictionaryRepository: dictionaryRepository,
         initialSource: LibrarySource.fromArticle(japaneseArticle),
       );
 
@@ -274,8 +252,6 @@ void main() {
         repository: repository,
         articleRepository: articleRepository,
         highlightRepository: highlightRepository,
-        flashcardRepository: flashcardRepository,
-        dictionaryRepository: dictionaryRepository,
         initialSource: LibrarySource.fromArticle(openedArticle),
       );
 
@@ -313,8 +289,6 @@ void main() {
         repository: repository,
         articleRepository: articleRepository,
         highlightRepository: highlightRepository,
-        flashcardRepository: flashcardRepository,
-        dictionaryRepository: dictionaryRepository,
         initialSource: LibrarySource.fromArticle(rtlArticle),
       );
 
@@ -347,8 +321,6 @@ void main() {
       await tester.pumpSourceDetails(
         repository: repository,
         highlightRepository: highlightRepository,
-        flashcardRepository: flashcardRepository,
-        dictionaryRepository: dictionaryRepository,
         initialSource: LibrarySource.fromBook(rtlBook),
       );
 
@@ -368,8 +340,6 @@ void main() {
       await tester.pumpSourceDetails(
         repository: repository,
         highlightRepository: highlightRepository,
-        flashcardRepository: flashcardRepository,
-        dictionaryRepository: dictionaryRepository,
         initialSource: LibrarySource.fromBook(comicSource),
       );
 
@@ -380,8 +350,6 @@ void main() {
       expect(find.text('New'), findsOneWidget);
       expect(find.text('Review'), findsNothing);
       expect(find.text('Highlights'), findsNothing);
-      expect(find.text('Flashcards'), findsNothing);
-      expect(find.text('Dictionary'), findsNothing);
       expect(find.byIcon(AppIcons.chevronRight), findsNothing);
     });
 
@@ -395,8 +363,6 @@ void main() {
       await tester.pumpSourceDetails(
         repository: repository,
         highlightRepository: highlightRepository,
-        flashcardRepository: flashcardRepository,
-        dictionaryRepository: dictionaryRepository,
         initialSource: LibrarySource.fromBook(openedSource),
       );
 
@@ -424,8 +390,6 @@ void main() {
         await tester.pumpSourceDetails(
           repository: repository,
           highlightRepository: highlightRepository,
-          flashcardRepository: flashcardRepository,
-          dictionaryRepository: dictionaryRepository,
           initialSource: LibrarySource.fromBook(openedSource),
           onReadPressed: (source, _) async => selectedSource = source,
         );
@@ -443,16 +407,12 @@ void main() {
       await tester.pumpSourceDetails(
         repository: repository,
         highlightRepository: highlightRepository,
-        flashcardRepository: flashcardRepository,
-        dictionaryRepository: dictionaryRepository,
         initialSource: LibrarySource.fromBook(_newSource),
         onReadPressed: (source, _) async {
           repository.source = source.copyWith(
             lastOpenedAt: DateTime(2026, 1, 2),
           );
           highlightRepository.count = 6;
-          flashcardRepository.count = 7;
-          dictionaryRepository.count = 8;
         },
       );
 
@@ -478,8 +438,6 @@ void main() {
       await tester.pumpSourceDetails(
         repository: repository,
         highlightRepository: highlightRepository,
-        flashcardRepository: flashcardRepository,
-        dictionaryRepository: dictionaryRepository,
         initialSource: LibrarySource.fromBook(_newSource),
       );
 
@@ -495,8 +453,6 @@ extension on WidgetTester {
   Future<void> pumpSourceDetails({
     required BookRepository repository,
     HighlightRepository? highlightRepository,
-    FlashcardRepository? flashcardRepository,
-    DictionaryRepository? dictionaryRepository,
     ArticleRepository? articleRepository,
     LibrarySource? initialSource,
     Future<void> Function(Book source, SourceType sourceType)? onReadPressed,
@@ -511,10 +467,6 @@ extension on WidgetTester {
           articleRepository: articleRepository,
           highlightRepository:
               highlightRepository ?? _FakeHighlightRepository(),
-          flashcardRepository:
-              flashcardRepository ?? _FakeFlashcardRepository(),
-          dictionaryRepository:
-              dictionaryRepository ?? _FakeDictionaryRepository(),
           initialSource: initialSource,
           onReadPressed: onReadPressed ?? (_, _) async {},
           onArticleTitlePressed: onArticleTitlePressed,
@@ -567,26 +519,6 @@ class _FakeHighlightRepository implements HighlightRepository {
 
   @override
   Future<int> getHighlightCountBySource(String sourceId) async => count;
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
-class _FakeFlashcardRepository implements FlashcardRepository {
-  int count = 0;
-
-  @override
-  Future<int> getFlashcardCountByDeck(String deckId) async => count;
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
-class _FakeDictionaryRepository implements DictionaryRepository {
-  int count = 0;
-
-  @override
-  Future<int> getEntryCountBySource(String sourceId) async => count;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

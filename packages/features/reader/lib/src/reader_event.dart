@@ -91,16 +91,9 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
   ];
 }
 
-/// Reloads the highlight list from storage after a TextAction
-/// (Highlight / Flashcard) mutated it.
+/// Reloads the highlight list from storage after a TextAction mutated it.
 final class ReaderHighlightsRefreshed extends ReaderEvent {
   const ReaderHighlightsRefreshed();
-}
-
-/// Reloads dictionary source anchors after a TextAction saved or removed a
-/// dictionary entry.
-final class ReaderDictionaryAnchorsRefreshed extends ReaderEvent {
-  const ReaderDictionaryAnchorsRefreshed();
 }
 
 /// foliate-js parsed the book table of contents.

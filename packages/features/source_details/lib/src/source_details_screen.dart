@@ -3,9 +3,7 @@ import 'dart:math' as math;
 import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
-import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flashcard_repository/flashcard_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:highlight_repository/highlight_repository.dart';
@@ -42,8 +40,6 @@ class SourceDetailsScreen extends StatelessWidget {
     required this.sourceId,
     required this.bookRepository,
     required this.highlightRepository,
-    required this.flashcardRepository,
-    required this.dictionaryRepository,
     required this.onReadPressed,
     this.articleRepository,
     this.initialSource,
@@ -55,8 +51,6 @@ class SourceDetailsScreen extends StatelessWidget {
   final BookRepository bookRepository;
   final ArticleRepository? articleRepository;
   final HighlightRepository highlightRepository;
-  final FlashcardRepository flashcardRepository;
-  final DictionaryRepository dictionaryRepository;
   final Future<void> Function(Book source, SourceType sourceType) onReadPressed;
   final LibrarySource? initialSource;
   final void Function(String url, String title)? onArticleTitlePressed;
@@ -70,8 +64,6 @@ class SourceDetailsScreen extends StatelessWidget {
         bookRepository: bookRepository,
         articleRepository: articleRepository,
         highlightRepository: highlightRepository,
-        flashcardRepository: flashcardRepository,
-        dictionaryRepository: dictionaryRepository,
         initialSource: initialSource,
       )..add(SourceDetailsLoadRequested(sourceId)),
       child: SourceDetailsView(
@@ -756,8 +748,7 @@ class _SourceProgressLine extends StatelessWidget {
 }
 
 /// Summary rows for currently active reviewable content connected to the
-/// source. Flashcards and dictionary are intentionally hidden while those
-/// learning surfaces are frozen in the app shell.
+/// source.
 class _ReviewActions extends StatelessWidget {
   const _ReviewActions({required this.summary});
 

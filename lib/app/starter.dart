@@ -7,7 +7,6 @@
 
 import 'dart:async';
 
-import 'package:dev_data/dev_data.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -87,15 +86,6 @@ Future<void> starter() async {
         // Start the local HTTP server that serves book files to the
         // reader WebView.
         await deps.readerServer.start();
-
-        // Dev-only seed: keeps sample dictionary data available for
-        // development while the public Dictionary surface is frozen.
-        if (config.isDev) {
-          await seedDictionary(
-            dictionaryRepository: deps.dictionaryRepository,
-            fsrsRepository: deps.fsrsRepository,
-          );
-        }
 
         runApp(RootContext(compositionResult: compositionResult));
       } on Object catch (e, stackTrace) {

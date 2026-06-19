@@ -6,20 +6,14 @@
 
 import 'dart:io';
 
-import 'package:ai_service/ai_service.dart';
 import 'package:article_extraction_service/article_extraction_service.dart';
 import 'package:article_repository/article_repository.dart';
-import 'package:auth_service/auth_service.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:collection_repository/collection_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
-import 'package:dictionary_repository/dictionary_repository.dart';
-import 'package:flashcard_repository/flashcard_repository.dart';
-import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:local_storage/local_storage.dart';
 import 'package:monitoring/monitoring.dart';
-import 'package:notification_service/notification_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -28,8 +22,6 @@ import 'package:reader_server/reader_server.dart';
 import 'package:readflex/app/config/application_config.dart';
 import 'package:readflex/app/dependency_container.dart';
 import 'package:screen_control_service/screen_control_service.dart';
-import 'package:subscription_service/subscription_service.dart';
-import 'package:translation_service/translation_service.dart';
 
 /// Creates the [Logger] instance and attaches any provided observers.
 Logger createAppLogger({List<LogObserver> observers = const []}) {
@@ -136,33 +128,13 @@ Future<DependenciesContainer> createDependenciesContainer(
   );
   final collectionRepository = CollectionRepository(database: database);
   final highlightRepository = HighlightRepository(database: database);
-  final flashcardRepository = FlashcardRepository(database: database);
-  final dictionaryRepository = DictionaryRepository(database: database);
-  final fsrsRepository = FsrsRepository(database: database);
 
   // ─── Preferences ───
   final preferencesService = await PreferencesService.create(
     supportedCodes: config.supportedLocaleCodes,
   );
 
-  // TODO: replace Noop stubs with real implementations.
-  final authService = NoopAuthService();
-  final remoteTranslationClient = config.enableDirectDeepSeekTranslation
-      ? DeepSeekDirectTranslationClient(
-          apiKey: config.deepSeekApiKey,
-          baseUri: Uri.parse(config.deepSeekBaseUrl),
-          model: config.deepSeekModel,
-        )
-      : null;
-  final translationService = BundledTranslationService(
-    remoteTranslationClient: remoteTranslationClient,
-    preferRemoteTranslation: remoteTranslationClient != null,
-    enableDevelopmentEchoFallback: false,
-  );
-  const aiService = NoopAiService();
-  const subscriptionService = NoopSubscriptionService();
   final connectivityService = await ConnectivityPlusService.create();
-  const notificationService = NoopNotificationService();
   final screenControlService = WakelockScreenControlService();
   final articleExtractionService = TrafilaturaArticleExtractionService(
     baseUri: Uri.parse(config.articleCleanerBaseUrl),
@@ -177,20 +149,12 @@ Future<DependenciesContainer> createDependenciesContainer(
     errorReporter: errorReporter,
     packageInfo: packageInfo,
     preferencesService: preferencesService,
-    authService: authService,
     articleExtractionService: articleExtractionService,
     articleRepository: articleRepository,
     bookRepository: bookRepository,
     collectionRepository: collectionRepository,
     highlightRepository: highlightRepository,
-    flashcardRepository: flashcardRepository,
-    dictionaryRepository: dictionaryRepository,
-    fsrsRepository: fsrsRepository,
-    translationService: translationService,
-    aiService: aiService,
-    subscriptionService: subscriptionService,
     connectivityService: connectivityService,
-    notificationService: notificationService,
     screenControlService: screenControlService,
     readerServer: readerServer,
   );

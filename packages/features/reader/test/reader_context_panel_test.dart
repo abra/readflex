@@ -19,7 +19,7 @@ void main() {
     );
     expect(
       contextPanelSource,
-      contains('ReaderDictionaryAnchorsRefreshed'),
+      contains('ReaderHighlightsRefreshed'),
     );
   });
 }

@@ -172,8 +172,8 @@ class ReaderAppearancePreferences {
 
 /// Optional per-source reader appearance overrides.
 ///
-/// `null` means "inherit the global reader preference". This keeps Profile as
-/// the global default while allowing an individual source to override only
+/// `null` means "inherit the global reader preference". This keeps the app-wide
+/// reader defaults separate while allowing an individual source to override only
 /// the fields the user changed from the in-reader `T` controls.
 class ReaderAppearanceOverride {
   const ReaderAppearanceOverride({
@@ -388,8 +388,6 @@ class Preferences {
     this.themeMode = ThemeMode.system,
     this.locale = const Locale('en'),
     this.libraryLayoutMode = 'grid',
-    this.translationTargetLanguageCode = defaultTranslationTargetLanguageCode,
-    this.translationSourceLanguageCode,
     this.readerThemeId = 'paper',
     this.readerFontId = 'serif',
     this.readerLayoutId = 'standard',
@@ -411,16 +409,9 @@ class Preferences {
     this.hasCompletedSetup = false,
   });
 
-  static const defaultTranslationTargetLanguageCode = 'ru';
-  static const supportedTranslationLanguageCodes = ['en', 'ru'];
-
   final ThemeMode themeMode;
   final Locale locale;
   final String libraryLayoutMode;
-  final String translationTargetLanguageCode;
-
-  /// `null` means the translation feature should detect the source language.
-  final String? translationSourceLanguageCode;
   final String readerThemeId;
   final String readerFontId;
   final String readerLayoutId;
@@ -446,26 +437,6 @@ class Preferences {
 
   /// Whether the user has completed the initial setup (added first content).
   final bool hasCompletedSetup;
-
-  static bool isSupportedTranslationLanguageCode(String code) {
-    return supportedTranslationLanguageCodes.contains(code);
-  }
-
-  static String normalizeTranslationTargetLanguageCode(String? code) {
-    final normalized = code?.trim().toLowerCase();
-    if (normalized != null && isSupportedTranslationLanguageCode(normalized)) {
-      return normalized;
-    }
-    return defaultTranslationTargetLanguageCode;
-  }
-
-  static String? normalizeTranslationSourceLanguageCode(String? code) {
-    final normalized = code?.trim().toLowerCase();
-    if (normalized != null && isSupportedTranslationLanguageCode(normalized)) {
-      return normalized;
-    }
-    return null;
-  }
 
   ReaderAppearancePreferences get readerAppearance =>
       ReaderAppearancePreferences(
@@ -502,8 +473,6 @@ class Preferences {
     ThemeMode? themeMode,
     Locale? locale,
     String? libraryLayoutMode,
-    String? translationTargetLanguageCode,
-    Object? translationSourceLanguageCode = _unset,
     String? readerThemeId,
     String? readerFontId,
     String? readerLayoutId,
@@ -527,18 +496,6 @@ class Preferences {
     themeMode: themeMode ?? this.themeMode,
     locale: locale ?? this.locale,
     libraryLayoutMode: libraryLayoutMode ?? this.libraryLayoutMode,
-    translationTargetLanguageCode: normalizeTranslationTargetLanguageCode(
-      translationTargetLanguageCode ?? this.translationTargetLanguageCode,
-    ),
-    translationSourceLanguageCode:
-        identical(
-          translationSourceLanguageCode,
-          _unset,
-        )
-        ? this.translationSourceLanguageCode
-        : normalizeTranslationSourceLanguageCode(
-            translationSourceLanguageCode as String?,
-          ),
     readerThemeId: readerThemeId ?? this.readerThemeId,
     readerFontId: readerFontId ?? this.readerFontId,
     readerLayoutId: readerLayoutId ?? this.readerLayoutId,
@@ -574,10 +531,6 @@ class Preferences {
           themeMode == other.themeMode &&
           locale == other.locale &&
           libraryLayoutMode == other.libraryLayoutMode &&
-          translationTargetLanguageCode ==
-              other.translationTargetLanguageCode &&
-          translationSourceLanguageCode ==
-              other.translationSourceLanguageCode &&
           readerThemeId == other.readerThemeId &&
           readerFontId == other.readerFontId &&
           readerLayoutId == other.readerLayoutId &&
@@ -607,8 +560,6 @@ class Preferences {
     themeMode,
     locale,
     libraryLayoutMode,
-    translationTargetLanguageCode,
-    translationSourceLanguageCode,
     readerThemeId,
     readerFontId,
     readerLayoutId,

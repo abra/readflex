@@ -7,14 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:highlight/highlight.dart';
 import 'package:import_flow/import_flow.dart';
-import 'package:profile/profile.dart';
 import 'package:reader/reader.dart';
 import 'package:readflex/app/dependency_container.dart';
 import 'package:readflex/app/screens/first_import_screen.dart';
 import 'package:readflex/app/screens/onboarding_screen.dart';
 import 'package:readflex/app/screens/splash_screen.dart';
 import 'package:source_details/source_details.dart';
-import 'package:subscription_paywall/subscription_paywall.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 const _currentBookImportTermsVersion = 1;
@@ -24,9 +22,7 @@ const _readflexPrivacyUrl = 'https://abra.github.io/readflex/privacy/';
 abstract final class AppRoutes {
   static const root = '/';
   static const splash = '/splash';
-  static const home = '/home';
   static const library = '/library';
-  static const profile = '/profile';
   static const onboarding = '/onboarding';
   static const firstImport = '/first-import';
   static const sourceDetailsPath = '/source/:sourceId';
@@ -55,7 +51,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
         return _resolveEntryRoute(deps);
       }
 
-      if (location == AppRoutes.home || location == AppRoutes.library) {
+      if (location == AppRoutes.library) {
         return _redirectMainIfNeeded(deps);
       }
 
@@ -71,11 +67,6 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
         builder: (context, state) => SplashScreen(
           onReady: () => context.go(AppRoutes.root),
         ),
-      ),
-      GoRoute(
-        path: AppRoutes.home,
-        redirect: (context, state) => AppRoutes.library,
-        builder: (context, state) => const SizedBox.shrink(),
       ),
       GoRoute(
         path: AppRoutes.library,
@@ -124,21 +115,6 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
         ),
       ),
       GoRoute(
-        path: AppRoutes.profile,
-        builder: (context, state) => ProfileScreen(
-          authService: deps.authService,
-          subscriptionService: deps.subscriptionService,
-          preferencesService: deps.preferencesService,
-          // Auth is still backed by NoopAuthService in composition;
-          // keep this stub until a real sign-in route or sheet exists.
-          onSignInPressed: () {},
-          onPremiumPressed: () => showSubscriptionPaywallSheet(
-            context,
-            subscriptionService: deps.subscriptionService,
-          ),
-        ),
-      ),
-      GoRoute(
         path: AppRoutes.sourceDetailsPath,
         builder: (context, state) {
           final sourceId = state.pathParameters['sourceId']!;
@@ -150,8 +126,6 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
             bookRepository: deps.bookRepository,
             articleRepository: deps.articleRepository,
             highlightRepository: deps.highlightRepository,
-            flashcardRepository: deps.flashcardRepository,
-            dictionaryRepository: deps.dictionaryRepository,
             onReadPressed: (source, sourceType) async {
               await context.push(
                 AppRoutes.reader(source.id),
@@ -189,7 +163,6 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
               bookRepository: deps.bookRepository,
               articleRepository: deps.articleRepository,
               highlightRepository: deps.highlightRepository,
-              dictionaryRepository: deps.dictionaryRepository,
               preferencesService: deps.preferencesService,
               screenControlService: deps.screenControlService,
               onSourceOpened: _onSourceOpenedFromRoute(state),
@@ -205,7 +178,6 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
               textActions: [
                 HighlightAction(
                   highlightRepository: deps.highlightRepository,
-                  fsrsRepository: deps.fsrsRepository,
                 ),
               ],
             ),

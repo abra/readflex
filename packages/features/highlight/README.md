@@ -15,7 +15,6 @@ class HighlightAction extends TextAction { ... }   // reader plug-in
 Future<void> showHighlightSheet(
   BuildContext context, {
   required HighlightRepository highlightRepository,
-  required FsrsRepository fsrsRepository,
   required TextSelectionContext selection,
 });
 ```
@@ -25,8 +24,8 @@ composition root (`routing.dart`). It carries its own repository
 dependencies so the reader stays source-agnostic. `label` is `Highlight`,
 `icon` is `AppIcons.highlight`.
 
-`showHighlightSheet` is used directly by non-reader flows (e.g. editing a
-highlight from the Practice or Highlights list).
+`showHighlightSheet` can also be used directly by non-reader flows that need
+the same highlight creation UI.
 
 ## Architecture
 
@@ -35,12 +34,7 @@ Single `HighlightCubit` (state in `highlight_state.dart`, `part of`).
 - Status machine: `idle → saving → success | failure`
 - Fields tracked: `selectedColor` (defaults to `HighlightColor.yellow`),
   `note`
-- On `save()` the cubit calls `HighlightRepository.addHighlight(...)`, then
-  registers the new highlight in `FsrsRepository.createReviewItem(...)` so
-  it shows up in the review queue. The FSRS call is wrapped in its own
-  try/catch and treated as non-fatal: the highlight is already saved, a
-  missing FSRS row just means the highlight won't surface in review until
-  re-registered.
+- On `save()` the cubit calls `HighlightRepository.addHighlight(...)`.
 - Sheet uses `BlocConsumer` to auto-pop on `success`; `failure` renders an
   inline error line above the save button.
 
@@ -50,9 +44,8 @@ tinted with the currently selected highlight color (from `AppColorsExt`).
 ## Dependencies
 
 - `highlight_repository` — persistence
-- `fsrs_repository` — review-item registration
 - `shared` — `TextAction`, `TextSelectionContext`
-- `domain_models` — `HighlightColor`, `SourceType`, `ReviewableType`
+- `domain_models` — `HighlightColor`, `SourceType`
 - `component_library` — `ActionBottomSheetLayout`, `SelectionPreviewCard`,
   `ButtonLoadingIndicator`, `showAppBottomSheet`, `AppColorsExt`
 - `flutter_bloc`, `equatable`

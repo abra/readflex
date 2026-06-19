@@ -25,6 +25,11 @@ Barrel exports `AppDatabase` and every DAO:
 Generated Drift data classes (`BooksTableData`, `HighlightsTableData`, …)
 and companions are also reachable through the DAO exports.
 
+`FlashcardsDao`, `DictionaryDao`, and `ReviewItemsDao` are dormant in the
+current app surface. They remain exported so existing databases keep migrating
+cleanly and the frozen learning features can be restored from history without a
+destructive schema reset.
+
 ---
 
 ## Tables
@@ -124,9 +129,7 @@ in-memory executor.
 local_storage → drift, sqlite3_flutter_libs, path_provider, path
         ▲
         │
-        ├── article_repository, book_repository, highlight_repository
-        ├── flashcard_repository, dictionary_repository
-        └── fsrs_repository
+        └── article_repository, book_repository, highlight_repository
 ```
 
 No feature package ever imports `local_storage` directly — features go

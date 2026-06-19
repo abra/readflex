@@ -27,6 +27,9 @@ from Dart names) a `toStorageString()` helper.
 | `ReviewLog`       | Single review event, persisted for history and statistics |
 | `FsrsCardData`    | Embedded FSRS v6 state (stability, difficulty, due date)  |
 
+Flashcard, dictionary, and FSRS models are dormant in the current app surface.
+They stay in `domain_models` for storage compatibility and future restoration.
+
 ## Enums
 
 | Enum                   | Values                                        |
@@ -84,9 +87,9 @@ for the canonical shape.
 domain_models  (pure Dart, only depends on equatable)
         ▲
         │
-        ├── shared, local_storage, review_scheduler
+        ├── shared, local_storage
         ├── *_repository packages
-        ├── services (auth, translation, ai, …)
+        ├── service packages
         └── features/*
 ```
 

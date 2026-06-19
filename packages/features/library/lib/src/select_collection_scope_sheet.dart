@@ -361,7 +361,7 @@ class _CollectionScopeRow extends StatelessWidget {
       LibraryCollectionScopeType.favourites => AppIcons.collectionFavourites,
       LibraryCollectionScopeType.manual => AppIcons.collection,
       LibraryCollectionScopeType.site => AppIcons.global,
-      LibraryCollectionScopeType.author => AppIcons.profile,
+      LibraryCollectionScopeType.author => AppIcons.author,
     };
   }
 }

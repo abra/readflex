@@ -2,7 +2,6 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:shared/shared.dart';
 
@@ -13,14 +12,12 @@ import 'highlight_cubit.dart';
 Future<void> showHighlightSheet(
   BuildContext context, {
   required HighlightRepository highlightRepository,
-  required FsrsRepository fsrsRepository,
   required TextSelectionContext selection,
 }) {
   return showAppBottomSheet<void>(
     context,
     builder: (_) => HighlightSheet(
       highlightRepository: highlightRepository,
-      fsrsRepository: fsrsRepository,
       selection: selection,
     ),
   );
@@ -34,13 +31,11 @@ Future<void> showHighlightSheet(
 class HighlightSheet extends StatelessWidget {
   const HighlightSheet({
     required this.highlightRepository,
-    required this.fsrsRepository,
     required this.selection,
     super.key,
   });
 
   final HighlightRepository highlightRepository;
-  final FsrsRepository fsrsRepository;
   final TextSelectionContext selection;
 
   @override
@@ -48,7 +43,6 @@ class HighlightSheet extends StatelessWidget {
     return BlocProvider(
       create: (_) => HighlightCubit(
         highlightRepository: highlightRepository,
-        fsrsRepository: fsrsRepository,
       ),
       child: _HighlightSheetView(selection: selection),
     );
