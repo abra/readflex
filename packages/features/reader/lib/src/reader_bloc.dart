@@ -130,6 +130,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             title: updatedBook.title,
             book: updatedBook,
             sourceType: SourceType.book,
+            articleUrl: null,
             pageProgressionRtl: _inferredBookPageProgressionRtl(updatedBook),
             highlights: highlights,
             bookmarks: bookmarks,
@@ -154,6 +155,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             title: readerBook.title,
             book: readerBook,
             sourceType: SourceType.article,
+            articleUrl: updatedArticle.url,
             pageProgressionRtl: _inferredArticlePageProgressionRtl(
               updatedArticle,
             ),

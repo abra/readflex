@@ -18,7 +18,7 @@ BLoC and layout cubit internally.
 | `bookRepository`      | `BookRepository`                    | Book list + delete                           |
 | `articleRepository`   | `ArticleRepository?`                | Optional article list + delete               |
 | `preferencesService`  | `PreferencesService`                | Persist list/grid layout choice              |
-| `onSourcePressed`     | `Future<void> Function(...)`        | Open source details/reader, then refresh     |
+| `onSourcePressed`     | `Future<void> Function(...)`        | Open reader, then refresh                    |
 | `onAddPressed`        | `AsyncCallback`                     | Open the import-flow bottom sheet            |
 
 ## Architecture

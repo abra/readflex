@@ -4,8 +4,8 @@ import 'source_cover_tokens.dart';
 
 /// Shared physical frame for source covers.
 ///
-/// Keeps the cover treatment identical across Library and SourceDetails, which
-/// is important for stable Hero flights: the same clipped frame, binding shade,
+/// Keeps the cover treatment identical across Library surfaces, which is
+/// important for stable Hero flights: the same clipped frame, binding shade,
 /// and cover shadow should participate on both route endpoints.
 class AppSourceCoverFrame extends StatelessWidget {
   const AppSourceCoverFrame({

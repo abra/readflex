@@ -45,7 +45,6 @@ run "toast_service"               "flutter test test/" "$SCRIPT_DIR/packages/toa
 run "library"              "flutter test test/" "$SCRIPT_DIR/packages/features/library"
 run "import_flow"                  "flutter test test/" "$SCRIPT_DIR/packages/features/import_flow"
 run "highlight"                    "flutter test test/" "$SCRIPT_DIR/packages/features/highlight"
-run "source_details"               "flutter test test/" "$SCRIPT_DIR/packages/features/source_details"
 run "reader"                       "flutter test test/" "$SCRIPT_DIR/packages/features/reader"
 
 echo ""

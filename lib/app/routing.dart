@@ -12,7 +12,6 @@ import 'package:readflex/app/dependency_container.dart';
 import 'package:readflex/app/screens/first_import_screen.dart';
 import 'package:readflex/app/screens/onboarding_screen.dart';
 import 'package:readflex/app/screens/splash_screen.dart';
-import 'package:source_details/source_details.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 const _currentBookImportTermsVersion = 1;
@@ -25,10 +24,8 @@ abstract final class AppRoutes {
   static const library = '/library';
   static const onboarding = '/onboarding';
   static const firstImport = '/first-import';
-  static const sourceDetailsPath = '/source/:sourceId';
   static const readerPath = '/reader/:sourceId';
 
-  static String sourceDetails(String sourceId) => '/source/$sourceId';
   static String reader(String sourceId) => '/reader/$sourceId';
 }
 
@@ -76,9 +73,9 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
           collectionRepository: deps.collectionRepository,
           preferencesService: deps.preferencesService,
           onSourcePressed: (source, {onSourceOpened}) => context.push(
-            AppRoutes.sourceDetails(source.id),
-            extra: _SourceDetailsRouteExtra(
-              initialSource: source,
+            AppRoutes.reader(source.id),
+            extra: _ReaderRouteExtra(
+              initialSourceType: source.sourceType,
               onSourceOpened: onSourceOpened,
             ),
           ),
@@ -115,34 +112,6 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
         ),
       ),
       GoRoute(
-        path: AppRoutes.sourceDetailsPath,
-        builder: (context, state) {
-          final sourceId = state.pathParameters['sourceId']!;
-          final initialSource = _initialSourceFromRoute(state);
-          final onSourceOpened = _onSourceOpenedFromRoute(state);
-          return SourceDetailsScreen(
-            sourceId: sourceId,
-            initialSource: initialSource,
-            bookRepository: deps.bookRepository,
-            articleRepository: deps.articleRepository,
-            highlightRepository: deps.highlightRepository,
-            onReadPressed: (source, sourceType) async {
-              await context.push(
-                AppRoutes.reader(source.id),
-                extra: _ReaderRouteExtra(
-                  initialSource: source,
-                  initialSourceType: sourceType,
-                  onSourceOpened: onSourceOpened,
-                ),
-              );
-            },
-            onArticleTitlePressed: (url, title) {
-              unawaited(_openArticleUrl(url));
-            },
-          );
-        },
-      ),
-      GoRoute(
         path: AppRoutes.readerPath,
         // fullscreenDialog: true disables the iOS left-edge back-swipe
         // gesture (CupertinoPageTransition gates that gesture on
@@ -166,6 +135,9 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
               preferencesService: deps.preferencesService,
               screenControlService: deps.screenControlService,
               onSourceOpened: _onSourceOpenedFromRoute(state),
+              onArticleTitlePressed: (url, title) {
+                unawaited(_openArticleUrl(url));
+              },
               initialSearchHistory:
                   deps.preferencesService.current.readerSearchHistory,
               onSearchHistoryChanged: (queries) {
@@ -252,18 +224,6 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
   );
 }
 
-/// GoRouter payload for opening source details without reloading the source
-/// before the first frame.
-class _SourceDetailsRouteExtra {
-  const _SourceDetailsRouteExtra({
-    this.initialSource,
-    this.onSourceOpened,
-  });
-
-  final LibrarySource? initialSource;
-  final VoidCallback? onSourceOpened;
-}
-
 Future<void> _openArticleUrl(String rawUrl) => _openExternalUrl(rawUrl);
 
 Future<void> _openExternalUrl(String rawUrl) async {
@@ -277,38 +237,16 @@ Future<void> _openExternalUrl(String rawUrl) async {
   }
 }
 
-/// GoRouter payload for opening the reader with a warm source and a post-open
+/// GoRouter payload for opening the reader with source type and a post-open
 /// refresh callback from the previous screen.
 class _ReaderRouteExtra {
   const _ReaderRouteExtra({
-    this.initialSource,
     this.initialSourceType = SourceType.book,
     this.onSourceOpened,
   });
 
-  final Book? initialSource;
   final SourceType initialSourceType;
   final VoidCallback? onSourceOpened;
-}
-
-LibrarySource? _initialSourceFromRoute(GoRouterState state) {
-  final sourceId = state.pathParameters['sourceId'];
-  final extra = state.extra;
-  if (sourceId == null) {
-    return null;
-  }
-
-  final source = switch (extra) {
-    LibrarySource source => source,
-    Book source => LibrarySource.fromBook(source),
-    Article source => LibrarySource.fromArticle(source),
-    _SourceDetailsRouteExtra(:final initialSource) => initialSource,
-    _ => null,
-  };
-  if (source?.id != sourceId) {
-    return null;
-  }
-  return source;
 }
 
 Book? _initialReaderSourceFromRoute(GoRouterState state) {
@@ -318,7 +256,6 @@ Book? _initialReaderSourceFromRoute(GoRouterState state) {
 
   final source = switch (extra) {
     Book source => source,
-    _ReaderRouteExtra(:final initialSource) => initialSource,
     _ => null,
   };
   if (source?.id != sourceId) return null;
@@ -334,7 +271,6 @@ SourceType _initialReaderSourceTypeFromRoute(GoRouterState state) {
 
 VoidCallback? _onSourceOpenedFromRoute(GoRouterState state) {
   return switch (state.extra) {
-    _SourceDetailsRouteExtra(:final onSourceOpened) => onSourceOpened,
     _ReaderRouteExtra(:final onSourceOpened) => onSourceOpened,
     _ => null,
   };

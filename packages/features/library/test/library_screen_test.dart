@@ -264,7 +264,7 @@ void main() {
     expect(settledFab.onPressed, isNotNull);
   });
 
-  testWidgets('refreshes and resorts after source details return delay', (
+  testWidgets('refreshes and resorts after reader route return delay', (
     tester,
   ) async {
     final newest = Book(
@@ -350,7 +350,7 @@ void main() {
     );
   });
 
-  testWidgets('refreshes before source details returns when reader opens', (
+  testWidgets('refreshes before reader route returns when source opens', (
     tester,
   ) async {
     final newest = Book(

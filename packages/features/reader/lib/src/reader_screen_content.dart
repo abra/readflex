@@ -6,10 +6,12 @@ class _ReaderView extends StatelessWidget {
   const _ReaderView({
     required this.serverPort,
     required this.textActions,
+    this.onArticleTitlePressed,
   });
 
   final int serverPort;
   final List<TextAction> textActions;
+  final void Function(String url, String title)? onArticleTitlePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +28,7 @@ class _ReaderView extends StatelessWidget {
                 status: status,
                 serverPort: serverPort,
                 textActions: textActions,
+                onArticleTitlePressed: onArticleTitlePressed,
               ),
             ),
           ),
@@ -41,11 +44,13 @@ class _ReaderBody extends StatelessWidget {
     required this.status,
     required this.serverPort,
     required this.textActions,
+    this.onArticleTitlePressed,
   });
 
   final ReaderStatus status;
   final int serverPort;
   final List<TextAction> textActions;
+  final void Function(String url, String title)? onArticleTitlePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -79,6 +84,7 @@ class _ReaderBody extends StatelessWidget {
       ReaderStatus.ready => _ReadyContent(
         serverPort: serverPort,
         textActions: textActions,
+        onArticleTitlePressed: onArticleTitlePressed,
       ),
     };
   }
@@ -89,16 +95,19 @@ class _ReadyContent extends StatelessWidget {
   const _ReadyContent({
     required this.serverPort,
     required this.textActions,
+    this.onArticleTitlePressed,
   });
 
   final int serverPort;
   final List<TextAction> textActions;
+  final void Function(String url, String title)? onArticleTitlePressed;
 
   @override
   Widget build(BuildContext context) {
     return _ReadyContentBody(
       serverPort: serverPort,
       textActions: textActions,
+      onArticleTitlePressed: onArticleTitlePressed,
     );
   }
 }
@@ -108,10 +117,12 @@ class _ReadyContentBody extends StatefulWidget {
   const _ReadyContentBody({
     required this.serverPort,
     required this.textActions,
+    this.onArticleTitlePressed,
   });
 
   final int serverPort;
   final List<TextAction> textActions;
+  final void Function(String url, String title)? onArticleTitlePressed;
 
   @override
   State<_ReadyContentBody> createState() => _ReadyContentBodyState();
@@ -340,7 +351,9 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
               appearance: appearance,
               visible: webViewReady,
             ),
-            const _ReaderTopChromeDriver(),
+            _ReaderTopChromeDriver(
+              onArticleTitlePressed: widget.onArticleTitlePressed,
+            ),
             const _ReaderPageBookmarkIndicatorDriver(),
             const ReaderBrightnessChromeDriver(),
             _ReaderBottomChromeDriver(

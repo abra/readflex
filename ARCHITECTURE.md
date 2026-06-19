@@ -162,7 +162,6 @@ must remain replaceable.
 |---------|------------|---------------------------|
 | `library_feature` (`packages/features/library`) | Library tab, source search/filter/list/grid, collection management. | `article_repository`, `book_repository`, `collection_repository`, `component_library`, `domain_models`, `preferences_service`, `toast_service` |
 | `import_flow` | Import bottom sheet for books/articles. | `book_repository`, `component_library`, `domain_models`, `monitoring`, `reader_webview` |
-| `source_details` | Details screen for books/articles/comics and highlight summary data. | `article_repository`, `book_repository`, `component_library`, `domain_models`, `highlight_repository` |
 | `reader` | Full-screen reader route and reader UI state. | `article_repository`, `book_repository`, `component_library`, `domain_models`, `highlight_repository`, `preferences_service`, `reader_webview`, `screen_control_service`, `shared` |
 | `highlight` | Reader text action and highlight bottom sheet. | `component_library`, `domain_models`, `highlight_repository`, `shared` |
 

@@ -633,7 +633,9 @@ class _ReaderPageBookmarkIndicator extends StatelessWidget {
 
 /// Pulls title and chrome visibility from blocs/cubits for the top chrome bar.
 class _ReaderTopChromeDriver extends StatelessWidget {
-  const _ReaderTopChromeDriver();
+  const _ReaderTopChromeDriver({this.onArticleTitlePressed});
+
+  final void Function(String url, String title)? onArticleTitlePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -647,11 +649,23 @@ class _ReaderTopChromeDriver extends StatelessWidget {
       (b) =>
           b.state.title.isNotEmpty ? b.state.title : b.state.book?.title ?? '',
     );
+    final articleUrl = context.select<ReaderBloc, String?>(
+      (b) =>
+          b.state.sourceType == SourceType.article ? b.state.articleUrl : null,
+    );
+    final trimmedArticleUrl = articleUrl?.trim() ?? '';
+    final onTitlePressed =
+        onArticleTitlePressed != null &&
+            trimmedArticleUrl.isNotEmpty &&
+            title.trim().isNotEmpty
+        ? () => onArticleTitlePressed!(trimmedArticleUrl, title)
+        : null;
     final colors = context.colors;
 
     return _ReaderTopChrome(
       visible: chromeVisible && !_selectionActionsVisible(hasSelection),
       title: title,
+      onTitlePressed: onTitlePressed,
       panelColor: colors.surface,
       titleColor: colors.onSurface,
       dividerColor: colors.outlineVariant,
@@ -663,6 +677,7 @@ class _ReaderTopChrome extends StatelessWidget {
   const _ReaderTopChrome({
     required this.visible,
     required this.title,
+    this.onTitlePressed,
     required this.panelColor,
     required this.titleColor,
     required this.dividerColor,
@@ -670,6 +685,7 @@ class _ReaderTopChrome extends StatelessWidget {
 
   final bool visible;
   final String title;
+  final VoidCallback? onTitlePressed;
   final Color panelColor;
   final Color titleColor;
   final Color dividerColor;
@@ -677,6 +693,31 @@ class _ReaderTopChrome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final chromeAnimCurve = visible ? _kChromeAnimCurve : _kChromeHideAnimCurve;
+    final titleText = Text(
+      title,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.center,
+      style: context.text.bodyMedium.copyWith(
+        fontFamily: ReaderFontPreset.serif.fontFamily,
+        color: titleColor,
+      ),
+    );
+    final titleChild = onTitlePressed == null
+        ? titleText
+        : Tooltip(
+            message: 'Open original article',
+            child: Semantics(
+              button: true,
+              label: 'Open original article',
+              value: title,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onTitlePressed,
+                child: titleText,
+              ),
+            ),
+          );
 
     return Positioned(
       left: 0,
@@ -711,18 +752,7 @@ class _ReaderTopChrome extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.lg,
                     ),
-                    child: Center(
-                      child: Text(
-                        title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: context.text.bodyMedium.copyWith(
-                          fontFamily: ReaderFontPreset.serif.fontFamily,
-                          color: titleColor,
-                        ),
-                      ),
-                    ),
+                    child: Center(child: titleChild),
                   ),
                 ),
               ),

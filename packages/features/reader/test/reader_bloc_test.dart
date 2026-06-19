@@ -117,6 +117,7 @@ void main() {
               .having((s) => s.status, 'status', ReaderStatus.ready)
               .having((s) => s.title, 'title', 'Test Book')
               .having((s) => s.book, 'book', isNotNull)
+              .having((s) => s.articleUrl, 'articleUrl', isNull)
               .having((s) => s.highlights, 'highlights', hasLength(1))
               .having((s) => s.bookmarks, 'bookmarks', hasLength(1)),
         ],
@@ -760,6 +761,7 @@ void main() {
           await bloc.stream.firstWhere(
             (s) => s.status == ReaderStatus.ready,
           );
+          expect(bloc.state.articleUrl, 'https://example.com/article');
           expect(articleRepository.updateCallCount, 1);
 
           bloc.add(
@@ -1105,10 +1107,24 @@ void main() {
       });
 
       test('copyWith preserves unrelated fields', () {
-        final state = ReaderState(title: 'T', book: testBook);
+        final state = ReaderState(
+          title: 'T',
+          book: testBook,
+          articleUrl: 'https://example.com/article',
+        );
         final copy = state.copyWith(highlights: []);
         expect(copy.title, 'T');
         expect(copy.book, testBook);
+        expect(copy.articleUrl, 'https://example.com/article');
+      });
+
+      test('copyWith can clear articleUrl by passing null explicitly', () {
+        final state = ReaderState(
+          book: testBook,
+          articleUrl: 'https://example.com/article',
+        );
+        final copy = state.copyWith(articleUrl: null);
+        expect(copy.articleUrl, isNull);
       });
 
       test(

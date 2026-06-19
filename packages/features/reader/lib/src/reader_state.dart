@@ -10,6 +10,7 @@ class ReaderState extends Equatable {
     this.title = '',
     this.book,
     this.sourceType = SourceType.book,
+    this.articleUrl,
     this.pageProgressionRtl = false,
     this.highlights = const [],
     this.bookmarks = const [],
@@ -32,6 +33,7 @@ class ReaderState extends Equatable {
   final String title;
   final Book? book;
   final SourceType sourceType;
+  final String? articleUrl;
   final bool pageProgressionRtl;
   final List<Highlight> highlights;
   final List<SourceBookmark> bookmarks;
@@ -74,6 +76,7 @@ class ReaderState extends Equatable {
     String? title,
     Object? book = _absent,
     SourceType? sourceType,
+    Object? articleUrl = _absent,
     bool? pageProgressionRtl,
     List<Highlight>? highlights,
     List<SourceBookmark>? bookmarks,
@@ -95,6 +98,7 @@ class ReaderState extends Equatable {
     title: title ?? this.title,
     book: book == _absent ? this.book : book as Book?,
     sourceType: sourceType ?? this.sourceType,
+    articleUrl: articleUrl == _absent ? this.articleUrl : articleUrl as String?,
     pageProgressionRtl: pageProgressionRtl ?? this.pageProgressionRtl,
     highlights: highlights ?? this.highlights,
     bookmarks: bookmarks ?? this.bookmarks,
@@ -135,6 +139,7 @@ class ReaderState extends Equatable {
     title,
     book,
     sourceType,
+    articleUrl,
     pageProgressionRtl,
     highlights,
     bookmarks,

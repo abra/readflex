@@ -21,7 +21,6 @@ PACKAGES = \
 	packages/features/library \
 	packages/features/import_flow \
 	packages/features/highlight \
-	packages/features/source_details \
 	packages/features/reader
 
 ROOT_ANALYZE_PATHS = lib test benchmarks

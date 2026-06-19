@@ -147,6 +147,7 @@ class ReaderScreen extends StatelessWidget {
     this.initialSourceType = SourceType.book,
     this.onSearchHistoryChanged,
     this.onSourceOpened,
+    this.onArticleTitlePressed,
     super.key,
   });
 
@@ -163,6 +164,7 @@ class ReaderScreen extends StatelessWidget {
   final SourceType initialSourceType;
   final ValueChanged<List<String>>? onSearchHistoryChanged;
   final VoidCallback? onSourceOpened;
+  final void Function(String url, String title)? onArticleTitlePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -215,6 +217,7 @@ class ReaderScreen extends StatelessWidget {
               child: _ReaderView(
                 serverPort: serverPort,
                 textActions: textActions,
+                onArticleTitlePressed: onArticleTitlePressed,
               ),
             ),
           ),

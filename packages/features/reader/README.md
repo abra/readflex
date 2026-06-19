@@ -22,6 +22,7 @@ class ReaderScreen extends StatelessWidget {
     SourceType initialSourceType = SourceType.book,
     ValueChanged<List<String>>? onSearchHistoryChanged,
     VoidCallback? onSourceOpened,
+    void Function(String url, String title)? onArticleTitlePressed,
   });
 }
 ```
@@ -30,7 +31,9 @@ class ReaderScreen extends StatelessWidget {
 `ArticleRepository` is provided, article sources are converted into reader
 books through `ArticleRepository.toReaderBook`. `initialSource` and
 `initialSourceType` let the route avoid a loading flash when the source was
-already loaded by Library/SourceDetails.
+already loaded by the previous route. For articles, `onArticleTitlePressed`
+lets the composition root open the original article URL from the top reader
+chrome without coupling the reader package to `url_launcher`.
 
 ## TextAction plugin system
 
