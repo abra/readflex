@@ -137,9 +137,8 @@ void main() {
 
     // Co-deletion: deleting a highlight must also remove its
     // `review_items_table` row in the same transaction. Without this,
-    // the highlight disappears from the UI but the FSRS row keeps
-    // surfacing in `getDueItems()` forever, since the DAO only checks
-    // `next_review_at` and doesn't join back to the highlights table.
+    // the highlight disappears from the UI but its FSRS row can still
+    // surface in due-review queries.
     test('deleteHighlight also removes FSRS review row', () async {
       final created = await repo.addHighlight(
         sourceId: 's1',

@@ -10,10 +10,9 @@ const _uuid = Uuid();
 /// Domain repository for text highlights.
 ///
 /// Wraps [HighlightsDao] from `local_storage` and turns low-level DB errors
-/// into [StorageException]. The matching FSRS review row in
-/// `review_items_table` is owned by `FsrsRepository` but co-deleted from
-/// here in the same transaction so a deleted highlight never leaves an
-/// orphan FSRS entry behind (which `getDueItems()` would surface forever).
+/// into [StorageException]. Matching FSRS review rows are co-deleted here in
+/// the same transaction so a deleted highlight never leaves orphan review
+/// state behind.
 class HighlightRepository {
   HighlightRepository({required AppDatabase database})
     : _db = database,

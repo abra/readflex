@@ -622,23 +622,4 @@ void main() {
       expect(map['color'], '#FFE600');
     });
   });
-
-  group('ReaderDictionaryAnchor', () {
-    test('toMap includes dictionary anchor fields', () {
-      const anchor = ReaderDictionaryAnchor(
-        id: 'da-1',
-        entryId: 'de-1',
-        text: 'Saved word',
-        cfiRange: 'epubcfi(/6/4!/4/2,/1:0,/1:10)',
-        color: '#2F80ED',
-      );
-
-      final map = anchor.toMap();
-      expect(map['id'], 'da-1');
-      expect(map['entryId'], 'de-1');
-      expect(map['text'], 'Saved word');
-      expect(map['cfiRange'], 'epubcfi(/6/4!/4/2,/1:0,/1:10)');
-      expect(map['color'], '#2F80ED');
-    });
-  });
 }

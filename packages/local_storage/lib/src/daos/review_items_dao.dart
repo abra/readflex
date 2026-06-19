@@ -7,9 +7,11 @@ import '../tables/review_logs_table.dart';
 part 'review_items_dao.g.dart';
 
 /// CRUD + due-queue queries over [ReviewItemsTable] and append-only writes
-/// to [ReviewLogsTable]. Backs `FsrsRepository`, which wraps errors in
-/// `StorageException`. Hot paths ([dueItems], [dueItemsBySource]) are
-/// served by composite indexes created in `AppDatabase._createIndexes`.
+/// to [ReviewLogsTable].
+///
+/// Dormant review rows remain part of the schema for migration compatibility.
+/// Hot paths ([dueItems], [dueItemsBySource]) are served by composite indexes
+/// created in `AppDatabase._createIndexes`.
 @DriftAccessor(tables: [ReviewItemsTable, ReviewLogsTable])
 class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
     with _$ReviewItemsDaoMixin {
@@ -106,17 +108,17 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
   Future<void> deleteItem(String itemId) =>
       (delete(reviewItemsTable)..where((t) => t.itemId.equals(itemId))).go();
 
-  /// Bulk-removes review items by their source. Used when a book is
-  /// deleted with the "delete everything" scope so its FSRS state for
-  /// highlights/flashcards/dictionary doesn't linger in `dueItems()`.
+  /// Bulk-removes review items by their source. Used when a source is deleted
+  /// with the "delete everything" scope so dormant FSRS state does not linger
+  /// in due-review queries.
   Future<void> deleteItemsBySource(String sourceId) => (delete(
     reviewItemsTable,
   )..where((t) => t.sourceId.equals(sourceId))).go();
 
   /// Bulk-removes review items by source AND item type. Used by the
-  /// "keep learning data" delete scope: only highlight FSRS state is
-  /// purged with the book; flashcard/dictionary FSRS rows stay so
-  /// retained-as-cards-and-words still surface in Practice.
+  /// "keep learning data" delete scope: highlight FSRS state is purged with
+  /// the source, while dormant flashcard/dictionary rows stay available for
+  /// future restoration.
   Future<void> deleteItemsBySourceAndType(
     String sourceId,
     String itemType,

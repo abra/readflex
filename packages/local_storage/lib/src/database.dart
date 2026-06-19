@@ -158,7 +158,7 @@ class AppDatabase extends _$AppDatabase {
         // Normalize FSRS state out of per-entity tables into a single
         // review_items_table. Motivation: FSRS fields were duplicated across
         // flashcards / highlights / dictionary, each with its own schema and
-        // its own mapper. A single table lets FsrsRepository operate
+        // its own mapper. A single table lets review logic operate
         // generically over any ReviewableType, enables cross-type queries
         // (due items, mastered items, logs) with a single join, and makes
         // adding new reviewable types a one-line change instead of a

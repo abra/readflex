@@ -3,8 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Current in-WebView text selection, mirrored into Flutter so the context
 /// panel can drive its show/hide animation and pass position metadata to
-/// TextAction handlers. [contextText] carries surrounding text for
-/// contextual translation. [cfiRange] is populated whenever [hasSelection] is
+/// TextAction handlers. [contextText] carries surrounding text for lexical
+/// actions. [cfiRange] is populated whenever [hasSelection] is
 /// true; [pageNumber] and [scrollOffset] are legacy optional position fields.
 class ReaderSelectionState extends Equatable {
   const ReaderSelectionState({

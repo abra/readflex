@@ -428,8 +428,8 @@ class BookRepository {
               ReviewableType.highlight.name,
             );
             await _db.highlightsDao.deleteHighlightsBySource(id);
-            // Detach saved words from the source so the user still sees
-            // them in Dictionary without dangling FK-style references.
+            // Detach saved word rows from the source without leaving
+            // dangling FK-style references.
             await _db.dictionaryDao.clearSourceForEntries(id);
           case BookDeletionScope.deleteEverything:
             await _db.reviewItemsDao.deleteItemsBySource(id);

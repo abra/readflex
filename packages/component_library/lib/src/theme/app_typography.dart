@@ -35,8 +35,8 @@ abstract final class AppTypography {
       height: 1.08,
       fontWeight: FontWeight.w600,
     ),
-    // Screen titles (Library, Dictionary, Profile, etc.) use these
-    // roles. Serif fits a content-first reader app — same family as
+    // Top-level screen titles use these roles. Serif fits a content-first
+    // reader app — same family as
     // book covers / chapter titles in Apple Books, Libby, Kobo. Sans
     // is reserved for `title*` (smaller in-screen section headers)
     // and `body*` / `label*` where density wins over character.

@@ -36,7 +36,7 @@ position + annotation glue.
 `onSelectionEnd` carries both the exact selected text and, when the user
 selects only part of a word/span, a lexical `normalizedText` expanded to
 complete word boundaries. Text actions can preserve the exact selection for
-highlights while using the normalized fields for translation.
+highlights while using the normalized fields for future lexical actions.
 
 ## Reader document normalization
 

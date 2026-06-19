@@ -472,7 +472,7 @@ class ReaderSelection {
   /// Reader-side selection shape, e.g. exact, partial_word, partial_span.
   final String? selectionKind;
 
-  /// Surrounding sentence/paragraph excerpt for context-aware translation.
+  /// Surrounding sentence/paragraph excerpt for lexical text actions.
   final String? contextText;
 
   /// Same excerpt with the exact selected range wrapped in [[...]].
@@ -727,47 +727,6 @@ class ReaderHighlight {
     if (cfiRange != null) 'cfiRange': cfiRange,
     if (color != null) 'color': color,
   };
-}
-
-/// Dictionary underline annotation rendered by the WebView.
-///
-/// Unlike [ReaderHighlight], [id] identifies the source anchor while
-/// [entryId] points to the saved dictionary item to show on tap.
-class ReaderDictionaryAnchor {
-  const ReaderDictionaryAnchor({
-    required this.id,
-    required this.entryId,
-    required this.text,
-    required this.cfiRange,
-    this.color,
-  });
-
-  final String id;
-  final String entryId;
-  final String text;
-  final String cfiRange;
-  final String? color;
-
-  Map<String, dynamic> toMap() => {
-    'id': id,
-    'entryId': entryId,
-    'text': text,
-    'cfiRange': cfiRange,
-    if (color != null) 'color': color,
-  };
-}
-
-/// Tap payload for a dictionary annotation.
-class ReaderDictionaryAnchorTap {
-  const ReaderDictionaryAnchorTap({
-    required this.anchorId,
-    required this.entryId,
-    this.contextText,
-  });
-
-  final String anchorId;
-  final String entryId;
-  final String? contextText;
 }
 
 /// A bookmark annotation the WebView should render and track against the
