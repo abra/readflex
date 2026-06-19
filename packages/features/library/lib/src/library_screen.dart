@@ -576,9 +576,8 @@ class _LibraryFab extends StatelessWidget {
       foregroundColor: colors.onPrimary,
       shape: const CircleBorder(),
       elevation: 3,
-      // Tab branches stay alive in StatefulShellRoute, so the Library
-      // and Dictionary FABs would otherwise share the default Hero tag
-      // during route transitions and trigger a duplicate-hero assertion.
+      // Keep the FAB out of Hero transitions; this screen can be opened
+      // beside other FAB-based surfaces when frozen tabs are re-enabled.
       heroTag: null,
       child: const Icon(AppIcons.add, size: 24),
     );

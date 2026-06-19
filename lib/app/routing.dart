@@ -6,7 +6,6 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:highlight/highlight.dart';
-import 'package:home/home.dart';
 import 'package:import_flow/import_flow.dart';
 import 'package:profile/profile.dart';
 import 'package:reader/reader.dart';
@@ -14,7 +13,6 @@ import 'package:readflex/app/dependency_container.dart';
 import 'package:readflex/app/screens/first_import_screen.dart';
 import 'package:readflex/app/screens/onboarding_screen.dart';
 import 'package:readflex/app/screens/splash_screen.dart';
-import 'package:readflex/app/screens/tab_container_screen.dart';
 import 'package:source_details/source_details.dart';
 import 'package:subscription_paywall/subscription_paywall.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -49,7 +47,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
     redirect: (context, state) {
       final location = state.uri.path;
 
-      // Only `/` and `/home` need async redirect logic (onboarding /
+      // Only entry routes need async redirect logic (onboarding /
       // first-import guards). Every other path returns null synchronously
       // so GoRouter finalises the route in one pass without an
       // intermediate build-destroy-rebuild cycle.
@@ -57,8 +55,8 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
         return _resolveEntryRoute(deps);
       }
 
-      if (location == AppRoutes.home) {
-        return _redirectHomeIfNeeded(deps);
+      if (location == AppRoutes.home || location == AppRoutes.library) {
+        return _redirectMainIfNeeded(deps);
       }
 
       return null;
@@ -74,101 +72,71 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
           onReady: () => context.go(AppRoutes.root),
         ),
       ),
-      StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) => TabContainerScreen(
-          navigationShell: navigationShell,
+      GoRoute(
+        path: AppRoutes.home,
+        redirect: (context, state) => AppRoutes.library,
+        builder: (context, state) => const SizedBox.shrink(),
+      ),
+      GoRoute(
+        path: AppRoutes.library,
+        builder: (context, state) => LibraryScreen(
+          bookRepository: deps.bookRepository,
+          articleRepository: deps.articleRepository,
+          collectionRepository: deps.collectionRepository,
+          preferencesService: deps.preferencesService,
+          onSourcePressed: (source, {onSourceOpened}) => context.push(
+            AppRoutes.sourceDetails(source.id),
+            extra: _SourceDetailsRouteExtra(
+              initialSource: source,
+              onSourceOpened: onSourceOpened,
+            ),
+          ),
+          onAddPressed: () async {
+            await showImportFlowSheet(
+              context,
+              onPickBookFile: pickBookFile,
+              onImportBook: (file, {onProgress}) => importBookFile(
+                sourceFile: file,
+                bookRepository: deps.bookRepository,
+                readerServerPort: deps.readerServer.port,
+                logger: deps.logger,
+                onProgress: onProgress,
+              ),
+              onImportArticle: (url, {onStage}) => _importArticleUrl(
+                deps,
+                url,
+                onStage: onStage,
+              ),
+              isBookImportTermsAccepted: () =>
+                  deps.preferencesService.hasAcceptedBookImportTerms(
+                    _currentBookImportTermsVersion,
+                  ),
+              acceptBookImportTerms: () =>
+                  deps.preferencesService.acceptBookImportTerms(
+                    _currentBookImportTermsVersion,
+                  ),
+              onOpenTerms: () => _openExternalUrl(_readflexTermsUrl),
+              onOpenPrivacy: () => _openExternalUrl(
+                _readflexPrivacyUrl,
+              ),
+            );
+          },
         ),
-        branches: [
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: AppRoutes.home,
-                builder: (context, state) => HomeScreen(
-                  bookRepository: deps.bookRepository,
-                  highlightRepository: deps.highlightRepository,
-                  fsrsRepository: deps.fsrsRepository,
-                  onBookPressed: (book) => context.push(
-                    AppRoutes.sourceDetails(book.id),
-                    extra: LibrarySource.fromBook(book),
-                  ),
-                  // Practice is frozen at the app shell for now. Home keeps
-                  // the callback contract because its dashboard is still a
-                  // placeholder and may re-enable this surface later.
-                  onPracticePressed: () {},
-                ),
-              ),
-            ],
+      ),
+      GoRoute(
+        path: AppRoutes.profile,
+        builder: (context, state) => ProfileScreen(
+          authService: deps.authService,
+          subscriptionService: deps.subscriptionService,
+          preferencesService: deps.preferencesService,
+          // Auth is still backed by NoopAuthService in composition;
+          // keep this stub until a real sign-in route or sheet exists.
+          onSignInPressed: () {},
+          onPremiumPressed: () => showSubscriptionPaywallSheet(
+            context,
+            subscriptionService: deps.subscriptionService,
           ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: AppRoutes.library,
-                builder: (context, state) => LibraryScreen(
-                  bookRepository: deps.bookRepository,
-                  articleRepository: deps.articleRepository,
-                  collectionRepository: deps.collectionRepository,
-                  preferencesService: deps.preferencesService,
-                  onSourcePressed: (source, {onSourceOpened}) => context.push(
-                    AppRoutes.sourceDetails(source.id),
-                    extra: _SourceDetailsRouteExtra(
-                      initialSource: source,
-                      onSourceOpened: onSourceOpened,
-                    ),
-                  ),
-                  onAddPressed: () async {
-                    await showImportFlowSheet(
-                      context,
-                      onPickBookFile: pickBookFile,
-                      onImportBook: (file, {onProgress}) => importBookFile(
-                        sourceFile: file,
-                        bookRepository: deps.bookRepository,
-                        readerServerPort: deps.readerServer.port,
-                        logger: deps.logger,
-                        onProgress: onProgress,
-                      ),
-                      onImportArticle: (url, {onStage}) => _importArticleUrl(
-                        deps,
-                        url,
-                        onStage: onStage,
-                      ),
-                      isBookImportTermsAccepted: () =>
-                          deps.preferencesService.hasAcceptedBookImportTerms(
-                            _currentBookImportTermsVersion,
-                          ),
-                      acceptBookImportTerms: () =>
-                          deps.preferencesService.acceptBookImportTerms(
-                            _currentBookImportTermsVersion,
-                          ),
-                      onOpenTerms: () => _openExternalUrl(_readflexTermsUrl),
-                      onOpenPrivacy: () => _openExternalUrl(
-                        _readflexPrivacyUrl,
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: AppRoutes.profile,
-                builder: (context, state) => ProfileScreen(
-                  authService: deps.authService,
-                  subscriptionService: deps.subscriptionService,
-                  preferencesService: deps.preferencesService,
-                  // Auth is still backed by NoopAuthService in composition;
-                  // keep this stub until a real sign-in route or sheet exists.
-                  onSignInPressed: () {},
-                  onPremiumPressed: () => showSubscriptionPaywallSheet(
-                    context,
-                    subscriptionService: deps.subscriptionService,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
       GoRoute(
         path: AppRoutes.sourceDetailsPath,
@@ -298,13 +266,13 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
             deps.preferencesService.update(
               (p) => p.copyWith(hasCompletedSetup: true),
             );
-            context.go(AppRoutes.home);
+            context.go(AppRoutes.library);
           },
           onSkipPressed: () {
             deps.preferencesService.update(
               (p) => p.copyWith(hasCompletedSetup: true),
             );
-            context.go(AppRoutes.home);
+            context.go(AppRoutes.library);
           },
         ),
       ),
@@ -417,11 +385,11 @@ Future<Article?> _importArticleUrl(
 }
 
 Future<String> _resolveEntryRoute(DependenciesContainer deps) async {
-  final redirect = await _redirectHomeIfNeeded(deps);
-  return redirect ?? AppRoutes.home;
+  final redirect = await _redirectMainIfNeeded(deps);
+  return redirect ?? AppRoutes.library;
 }
 
-Future<String?> _redirectHomeIfNeeded(DependenciesContainer deps) async {
+Future<String?> _redirectMainIfNeeded(DependenciesContainer deps) async {
   final prefs = deps.preferencesService.current;
 
   if (!prefs.onboardingCompleted) {
@@ -438,7 +406,7 @@ Future<String?> _redirectHomeIfNeeded(DependenciesContainer deps) async {
         return AppRoutes.firstImport;
       }
     } catch (e, st) {
-      // Storage failure during redirect — fall through to home where the
+      // Storage failure during redirect — fall through to Library where the
       // BLoC has its own error handling and can show a proper error state.
       deps.logger.warn(
         'redirect content check failed',

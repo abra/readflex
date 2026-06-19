@@ -355,8 +355,8 @@ class _DictionaryFab extends StatelessWidget {
       foregroundColor: selectionActive ? cs.onError : cs.onPrimary,
       shape: const CircleBorder(),
       elevation: 3,
-      // Tab branches stay alive in StatefulShellRoute, so two FABs
-      // would otherwise share the default Hero tag and clash.
+      // Keep the FAB out of Hero transitions; this surface is currently
+      // frozen but can still be exercised in isolation by tests.
       heroTag: null,
       child: Icon(
         selectionActive ? AppIcons.delete : AppIcons.add,

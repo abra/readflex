@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'onboarding_page_data.dart';
 
-/// Five-screen onboarding intro.
+/// Onboarding intro shown before the first import.
 ///
 /// On completion, marks first launch as done and calls [onComplete].
 class OnboardingScreen extends StatefulWidget {
