@@ -131,6 +131,42 @@ void main() {
     expect(find.text('Example'), findsWidgets);
   });
 
+  testWidgets('list row title can wrap to four lines', (tester) async {
+    const longTitle =
+        'A very long saved article title that needs four readable lines in list mode';
+    final source = LibrarySource.fromArticle(
+      Article(
+        id: 'a-long-title',
+        title: longTitle,
+        url: 'https://example.com/long-title',
+        siteName: 'Example',
+        contentPath: '/articles/a-long-title/article.json',
+        addedAt: DateTime(2026),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: SizedBox(
+            width: 320,
+            child: BookLibraryListTile(
+              source: source,
+              showTopDivider: false,
+              onTap: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final title = tester.widget<Text>(find.text(longTitle));
+
+    expect(title.maxLines, 4);
+    expect(title.overflow, TextOverflow.ellipsis);
+  });
+
   testWidgets('RTL list row aligns source info to the right edge', (
     tester,
   ) async {

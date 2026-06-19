@@ -13,9 +13,8 @@ const double _kListSelectionCheckInset = AppSpacing.xs;
 
 /// List-mode row for a library source.
 ///
-/// Layout: 44×60 cover on the left, two-line text column on the right
-/// (title + author + a meta strip with the format + progress). A top
-/// hairline is drawn except on the first row (see [showTopDivider]).
+/// Layout: 60×90 cover on the left, title/metadata column on the right,
+/// and a top hairline except on the first row (see [showTopDivider]).
 class BookLibraryListTile extends StatelessWidget {
   const BookLibraryListTile({
     required this.source,
@@ -133,7 +132,7 @@ class BookLibraryListTile extends StatelessWidget {
 /// Layout scaffold for the source list tile. Owns the row geometry
 /// (60×90 cover, 14dp gap, title/meta column).
 ///
-/// Layout: up-to-3-line title on top, single combined meta strip
+/// Layout: up-to-4-line title on top, single combined meta strip
 /// underneath (subtitle prepended in front of the type-specific
 /// segments). Top hairline drawn for all rows except the first.
 TextDirection _sourceTextDirection(LibrarySource source) {
@@ -241,7 +240,7 @@ class _ListRowShell extends StatelessWidget {
                         title,
                         textAlign: TextAlign.start,
                         textDirection: textDirection,
-                        maxLines: 3,
+                        maxLines: 4,
                         overflow: TextOverflow.ellipsis,
                         style: context.text.sourceListTitle.copyWith(
                           color: colors.onSurface,
