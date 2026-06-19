@@ -4,18 +4,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'library_bloc.dart';
 import 'library_layout_cubit.dart';
+import 'library_display_sheet.dart';
 import 'library_theme_cubit.dart';
-import 'library_theme_sheet.dart';
 
 /// Alpha applied to muted meta text on the header ("N items" counter,
 /// inactive segment label colours). Matches `_kMutedAlpha` in the tile files.
 const double _kMutedAlpha = 0.55;
 
 /// Top-of-screen sticky header for the library: serif title + item counter,
-/// a search field, the filter-segment pills, and the list/grid toggle.
+/// display menu, search field, and filter-segment pills.
 ///
 /// Pure presentation — all state changes are surfaced via the three
-/// callbacks and are expected to hit the library BLoC / layout cubit in the
+/// callbacks and are expected to hit the library BLoC / UI cubits in the
 /// parent. The FAB is deliberately not part of the header; it lives on
 /// [Scaffold.floatingActionButton] (see readwell_demo).
 class LibraryHeader extends StatelessWidget {
@@ -79,9 +79,7 @@ class LibraryHeader extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
-                    const _ThemeModeButton(),
-                    const SizedBox(width: AppSpacing.xs),
-                    const _LayoutToggle(),
+                    const _DisplayMenuButton(),
                   ],
                 ),
               ),
@@ -288,72 +286,23 @@ class _FilterSegments extends StatelessWidget {
   };
 }
 
-class _ThemeModeButton extends StatelessWidget {
-  const _ThemeModeButton();
+class _DisplayMenuButton extends StatelessWidget {
+  const _DisplayMenuButton();
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<LibraryThemeCubit, ThemeMode>(
-      builder: (context, mode) {
-        return Tooltip(
-          message: 'Theme: ${_labelFor(mode)}',
-          child: _HeaderIconButton(
-            key: const ValueKey('libraryHeaderThemeButton'),
-            icon: _iconFor(mode),
-            iconColor: context.colors.onSurface.withValues(alpha: 0.78),
-            onTap: () => showLibraryThemeSheet(
-              context: context,
-              cubit: context.read<LibraryThemeCubit>(),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  IconData _iconFor(ThemeMode mode) => switch (mode) {
-    ThemeMode.light => AppIcons.lightMode,
-    ThemeMode.dark => AppIcons.darkMode,
-    ThemeMode.system => AppIcons.deviceMode,
-  };
-
-  String _labelFor(ThemeMode mode) => switch (mode) {
-    ThemeMode.light => 'Light',
-    ThemeMode.dark => 'Dark',
-    ThemeMode.system => 'System',
-  };
-}
-
-/// Two-button toggle that switches the library between list and grid
-/// layouts. Bound to [LibraryLayoutCubit] so the active mode persists in
-/// user preferences.
-class _LayoutToggle extends StatelessWidget {
-  const _LayoutToggle();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<LibraryLayoutCubit, LibraryLayoutMode>(
-      builder: (context, mode) {
-        final cubit = context.read<LibraryLayoutCubit>();
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _LayoutToggleButton(
-              key: const ValueKey('libraryHeaderListButton'),
-              icon: AppIcons.viewList,
-              active: mode == LibraryLayoutMode.list,
-              onTap: () => cubit.setLayoutMode(LibraryLayoutMode.list),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            _LayoutToggleButton(
-              key: const ValueKey('libraryHeaderGridButton'),
-              icon: AppIcons.viewGrid,
-              active: mode == LibraryLayoutMode.grid,
-              onTap: () => cubit.setLayoutMode(LibraryLayoutMode.grid),
-            ),
-          ],
-        );
-      },
+    return Tooltip(
+      message: 'Display options',
+      child: _HeaderIconButton(
+        key: const ValueKey('libraryHeaderDisplayButton'),
+        icon: AppIcons.moreVertical,
+        iconColor: context.colors.onSurface.withValues(alpha: 0.78),
+        onTap: () => showLibraryDisplaySheet(
+          context: context,
+          layoutCubit: context.read<LibraryLayoutCubit>(),
+          themeCubit: context.read<LibraryThemeCubit>(),
+        ),
+      ),
     );
   }
 }
@@ -364,12 +313,10 @@ class _HeaderIconButton extends StatelessWidget {
     required this.icon,
     required this.iconColor,
     required this.onTap,
-    this.backgroundColor = Colors.transparent,
   });
 
   final IconData icon;
   final Color iconColor;
-  final Color backgroundColor;
   final VoidCallback onTap;
 
   @override
@@ -378,7 +325,7 @@ class _HeaderIconButton extends StatelessWidget {
       color: Colors.transparent,
       child: Ink(
         decoration: BoxDecoration(
-          color: backgroundColor,
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
         child: InkWell(
@@ -393,37 +340,6 @@ class _HeaderIconButton extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// One cell of the layout toggle — a 40×40 tappable square that fills when
-/// active and fades to 55% muted when inactive.
-class _LayoutToggleButton extends StatelessWidget {
-  const _LayoutToggleButton({
-    super.key,
-    required this.icon,
-    required this.active,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    // Demo button: 40x40 (→ AppSizes.iconButtonSize), radius 10 (→ sm=8,
-    // −2), icon 20 (→ AppIconSize.sm). Active surface is `cs.secondary`,
-    // active icon uses full onSurface, inactive uses onSurface @ 55%.
-    return _HeaderIconButton(
-      icon: icon,
-      iconColor: active
-          ? colors.onSurface
-          : colors.onSurface.withValues(alpha: _kMutedAlpha),
-      backgroundColor: active ? colors.secondary : Colors.transparent,
-      onTap: onTap,
     );
   }
 }

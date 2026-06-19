@@ -89,7 +89,7 @@ void main() {
     expect(find.text('1 items'), findsOneWidget);
   });
 
-  testWidgets('theme button opens appearance sheet and persists selection', (
+  testWidgets('display button opens view and appearance sheet', (
     tester,
   ) async {
     bookRepository.seedBooks([_book]);
@@ -97,21 +97,36 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    expect(find.byIcon(AppIcons.deviceMode), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('libraryHeaderDisplayButton')),
+      findsOneWidget,
+    );
+    expect(find.byIcon(AppIcons.viewList), findsNothing);
+    expect(find.byIcon(AppIcons.viewGrid), findsNothing);
+    expect(find.byIcon(AppIcons.deviceMode), findsNothing);
 
-    await tester.tap(find.byIcon(AppIcons.deviceMode));
+    await tester.tap(find.byKey(const ValueKey('libraryHeaderDisplayButton')));
     await tester.pumpAndSettle();
 
+    expect(find.text('Display'), findsOneWidget);
+    expect(find.text('View'), findsOneWidget);
     expect(find.text('Appearance'), findsOneWidget);
+    expect(find.text('List'), findsOneWidget);
+    expect(find.text('Grid'), findsOneWidget);
     expect(find.text('System'), findsOneWidget);
     expect(find.text('Light'), findsOneWidget);
     expect(find.text('Dark'), findsOneWidget);
+
+    await tester.tap(find.text('List'));
+    await tester.pumpAndSettle();
+
+    expect(preferencesService.current.libraryLayoutMode, 'list');
 
     await tester.tap(find.text('Dark'));
     await tester.pumpAndSettle();
 
     expect(preferencesService.current.themeMode, ThemeMode.dark);
-    expect(find.byIcon(AppIcons.darkMode), findsOneWidget);
+    expect(find.text('Display'), findsOneWidget);
   });
 
   testWidgets('header actions stay aligned to the right edge', (tester) async {
@@ -121,12 +136,12 @@ void main() {
     await tester.pump();
 
     final scaffoldRect = tester.getRect(find.byType(Scaffold));
-    final gridButtonRect = tester.getRect(
-      find.byKey(const ValueKey('libraryHeaderGridButton')),
+    final displayButtonRect = tester.getRect(
+      find.byKey(const ValueKey('libraryHeaderDisplayButton')),
     );
 
     expect(
-      gridButtonRect.right,
+      displayButtonRect.right,
       closeTo(scaffoldRect.right - AppSpacing.lg, 1),
     );
   });
