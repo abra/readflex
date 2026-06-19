@@ -39,13 +39,17 @@ void main() {
     );
   });
 
-  Widget buildSubject({ArticleRepository? articleRepository}) => MaterialApp(
+  Widget buildSubject({
+    ArticleRepository? articleRepository,
+    bool isOffline = false,
+  }) => MaterialApp(
     theme: AppTheme.light(),
     home: LibraryScreen(
       bookRepository: bookRepository,
       articleRepository: articleRepository,
       collectionRepository: collectionRepository,
       preferencesService: preferencesService,
+      isOffline: isOffline,
       onSourcePressed: (_, {onSourceOpened}) async {},
       onAddPressed: () async {},
     ),
@@ -144,6 +148,40 @@ void main() {
       displayButtonRect.right,
       closeTo(scaffoldRect.right - AppSpacing.lg, 1),
     );
+  });
+
+  testWidgets('shows offline status next to Library title', (tester) async {
+    bookRepository.seedBooks([_book]);
+
+    await tester.pumpWidget(buildSubject(isOffline: true));
+    await tester.pump();
+
+    final titleRect = tester.getRect(find.text('Library'));
+    final statusRect = tester.getRect(find.text('offline'));
+    final statusText = tester.widget<Text>(find.text('offline'));
+
+    expect(find.byIcon(AppIcons.offline), findsOneWidget);
+    expect(statusRect.left, greaterThan(titleRect.right));
+    expect(statusText.style?.color, AppTheme.light().ext.warning);
+  });
+
+  testWidgets('hides offline status while reserving header space', (
+    tester,
+  ) async {
+    bookRepository.seedBooks([_book]);
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    final statusOpacity = tester.widget<Opacity>(
+      find.ancestor(
+        of: find.text('offline'),
+        matching: find.byType(Opacity),
+      ),
+    );
+
+    expect(statusOpacity.opacity, 0);
+    expect(find.byIcon(AppIcons.offline), findsOneWidget);
   });
 
   testWidgets('shows search field', (tester) async {

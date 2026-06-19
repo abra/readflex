@@ -39,6 +39,7 @@ class LibraryScreen extends StatelessWidget {
     required this.onSourcePressed,
     required this.onAddPressed,
     this.articleRepository,
+    this.isOffline = false,
     super.key,
   });
 
@@ -46,6 +47,7 @@ class LibraryScreen extends StatelessWidget {
   final ArticleRepository? articleRepository;
   final CollectionRepository collectionRepository;
   final PreferencesService preferencesService;
+  final bool isOffline;
   final Future<void> Function(
     LibrarySource source, {
     VoidCallback? onSourceOpened,
@@ -89,6 +91,7 @@ class LibraryScreen extends StatelessWidget {
         ),
       ],
       child: _LibraryView(
+        isOffline: isOffline,
         onSourcePressed: onSourcePressed,
         onAddPressed: onAddPressed,
       ),
@@ -105,10 +108,12 @@ class LibraryScreen extends StatelessWidget {
 /// fresh.
 class _LibraryView extends StatefulWidget {
   const _LibraryView({
+    required this.isOffline,
     required this.onSourcePressed,
     required this.onAddPressed,
   });
 
+  final bool isOffline;
   final Future<void> Function(
     LibrarySource source, {
     VoidCallback? onSourceOpened,
@@ -376,6 +381,7 @@ class _LibraryViewState extends State<_LibraryView> {
                         children: [
                           LibraryHeader(
                             state: state,
+                            isOffline: widget.isOffline,
                             searchController: _searchController,
                             onSearchChanged: (query) =>
                                 bloc.add(LibrarySearchQueryChanged(query)),

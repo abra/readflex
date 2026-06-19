@@ -21,7 +21,6 @@ export 'src/empty_state.dart';
 export 'src/error_state.dart';
 export 'src/media_collection_card.dart';
 export 'src/marked_text.dart';
-export 'src/offline_banner.dart';
 export 'src/search_field.dart';
 export 'src/section_label.dart';
 export 'src/selection_preview_card.dart';

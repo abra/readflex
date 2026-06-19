@@ -21,6 +21,7 @@ const double _kMutedAlpha = 0.55;
 class LibraryHeader extends StatelessWidget {
   const LibraryHeader({
     required this.state,
+    required this.isOffline,
     required this.searchController,
     required this.onSearchChanged,
     required this.onFilterChanged,
@@ -30,6 +31,7 @@ class LibraryHeader extends StatelessWidget {
   });
 
   final LibraryState state;
+  final bool isOffline;
   final TextEditingController searchController;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<LibraryFilter> onFilterChanged;
@@ -60,6 +62,8 @@ class LibraryHeader extends StatelessWidget {
                   color: colors.onSurface,
                 ),
               ),
+              const SizedBox(width: AppSpacing.sm),
+              _LibraryOfflineStatus(visible: isOffline),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Row(
@@ -100,6 +104,39 @@ class LibraryHeader extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
         ],
+      ),
+    );
+  }
+}
+
+class _LibraryOfflineStatus extends StatelessWidget {
+  const _LibraryOfflineStatus({required this.visible});
+
+  final bool visible;
+
+  @override
+  Widget build(BuildContext context) {
+    final warning = context.appColors.warning;
+
+    return Opacity(
+      opacity: visible ? 1 : 0,
+      child: IgnorePointer(
+        ignoring: true,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(AppIcons.offline, size: AppIconSize.xs, color: warning),
+            const SizedBox(width: AppSpacing.xxs),
+            Text(
+              'offline',
+              maxLines: 1,
+              style: context.text.labelSmall.copyWith(
+                color: warning,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

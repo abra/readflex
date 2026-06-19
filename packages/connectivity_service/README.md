@@ -1,7 +1,7 @@
 # connectivity_service
 
 Reactive network connectivity monitor. The app shell subscribes to the stream
-to show the offline banner. Treat the status as a UX signal only: a visible
+to surface offline state in feature UI. Treat the status as a UX signal only: a visible
 network interface does not guarantee that a backend request will succeed.
 
 Production composition wires `ConnectivityPlusService.create()`, backed by
@@ -26,9 +26,7 @@ isolated development surfaces.
 ## Usage
 
 ```dart
-ConnectivityScope.of(context) == ConnectivityStatus.offline
-    ? const OfflineBanner()
-    : const SizedBox.shrink();
+final isOffline = ConnectivityScope.of(context) == ConnectivityStatus.offline;
 ```
 
 ## Where it fits

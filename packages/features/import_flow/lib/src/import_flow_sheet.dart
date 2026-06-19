@@ -19,6 +19,8 @@ import 'import_flow_result.dart';
 ///   * [onImportBook] takes that file, parses metadata, and persists
 ///     the book — exposing byte-level progress through `onProgress` so
 ///     the sheet can show a real progress bar.
+///   * [isOffline] / [isOfflineStream] disable article import because it
+///     depends on network extraction; local book uploads remain available.
 ///   * [onOpenTerms] and [onOpenPrivacy] open legal documents outside
 ///     the sheet; the cubit never launches URLs directly.
 ///
@@ -29,6 +31,8 @@ Future<ImportFlowResult?> showImportFlowSheet(
   required PickBookFile onPickBookFile,
   required ImportBookFile onImportBook,
   required ImportArticleUrl onImportArticle,
+  bool isOffline = false,
+  Stream<bool>? isOfflineStream,
   IsBookImportTermsAccepted? isBookImportTermsAccepted,
   AcceptBookImportTerms? acceptBookImportTerms,
   Future<void> Function()? onOpenTerms,
@@ -45,6 +49,8 @@ Future<ImportFlowResult?> showImportFlowSheet(
         acceptBookImportTerms: acceptBookImportTerms,
       ),
       child: _ImportFlowSheet(
+        isOffline: isOffline,
+        isOfflineStream: isOfflineStream,
         onOpenTerms: onOpenTerms ?? _noopFuture,
         onOpenPrivacy: onOpenPrivacy ?? _noopFuture,
       ),
@@ -55,44 +61,59 @@ Future<ImportFlowResult?> showImportFlowSheet(
 /// Import-flow shell bound to [ImportFlowCubit].
 class _ImportFlowSheet extends StatelessWidget {
   const _ImportFlowSheet({
+    required this.isOffline,
+    required this.isOfflineStream,
     required this.onOpenTerms,
     required this.onOpenPrivacy,
   });
 
+  final bool isOffline;
+  final Stream<bool>? isOfflineStream;
   final Future<void> Function() onOpenTerms;
   final Future<void> Function() onOpenPrivacy;
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ImportFlowCubit, ImportFlowState>(
-      builder: (context, state) {
-        // Hard-pin all states to the same body height so the
-        // sheet never resizes between menu / uploading / done /
-        // failure. Action-heavy states control their own spacing so
-        // controls stay visually close to their related content.
-        return SizedBox(
-          height: 280,
-          child: _ImportFlowStepSwitcher(
-            state: state,
-            child: KeyedSubtree(
-              key: ValueKey(state.runtimeType),
-              child: switch (state) {
-                ImportFlowMenu() => const _MenuView(),
-                ImportFlowBookTermsRequired() => _BookTermsView(
-                  onOpenTerms: onOpenTerms,
-                  onOpenPrivacy: onOpenPrivacy,
+    return StreamBuilder<bool>(
+      stream: isOfflineStream,
+      initialData: isOffline,
+      builder: (context, snapshot) {
+        final isOffline = snapshot.data ?? this.isOffline;
+        return BlocBuilder<ImportFlowCubit, ImportFlowState>(
+          builder: (context, state) {
+            // Hard-pin all states to the same body height so the
+            // sheet never resizes between menu / uploading / done /
+            // failure. Action-heavy states control their own spacing so
+            // controls stay visually close to their related content.
+            return SizedBox(
+              height: 280,
+              child: _ImportFlowStepSwitcher(
+                state: state,
+                child: KeyedSubtree(
+                  key: ValueKey(state.runtimeType),
+                  child: switch (state) {
+                    ImportFlowMenu() => _MenuView(isOffline: isOffline),
+                    ImportFlowBookTermsRequired() => _BookTermsView(
+                      onOpenTerms: onOpenTerms,
+                      onOpenPrivacy: onOpenPrivacy,
+                    ),
+                    ImportFlowArticleUrlEntry() => _ArticleUrlEntryView(
+                      isOffline: isOffline,
+                    ),
+                    ImportFlowBookUploading() => _BookUploadingView(
+                      state: state,
+                    ),
+                    ImportFlowArticleUploading() => _ArticleUploadingView(
+                      state: state,
+                    ),
+                    ImportFlowBookDone() => _BookDoneView(state: state),
+                    ImportFlowArticleDone() => _ArticleDoneView(state: state),
+                    ImportFlowFailure() => _FailureView(state: state),
+                  },
                 ),
-                ImportFlowArticleUrlEntry() => const _ArticleUrlEntryView(),
-                ImportFlowBookUploading() => _BookUploadingView(state: state),
-                ImportFlowArticleUploading() => _ArticleUploadingView(
-                  state: state,
-                ),
-                ImportFlowBookDone() => _BookDoneView(state: state),
-                ImportFlowArticleDone() => _ArticleDoneView(state: state),
-                ImportFlowFailure() => _FailureView(state: state),
-              },
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -265,11 +286,14 @@ int _navigationDepth(ImportFlowState state) {
 /// Initial picker — title + Upload Book tile at the top, Cancel
 /// anchored to the bottom of the fixed sheet body.
 class _MenuView extends StatelessWidget {
-  const _MenuView();
+  const _MenuView({required this.isOffline});
+
+  final bool isOffline;
 
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<ImportFlowCubit>();
+    final warning = context.appColors.warning;
 
     return Padding(
       padding: _kStatusViewPadding,
@@ -287,10 +311,11 @@ class _MenuView extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           AppActionCard(
-            icon: AppIcons.global,
+            icon: isOffline ? AppIcons.offline : AppIcons.global,
             title: 'Save Article',
             subtitle: 'Paste a web URL for offline reading',
-            onTap: cubit.showArticleUrlEntry,
+            iconColor: isOffline ? warning : null,
+            onTap: isOffline ? null : cubit.showArticleUrlEntry,
           ),
           const Spacer(),
           _PlainTextButton(
@@ -502,7 +527,9 @@ class _PlainTextButton extends StatelessWidget {
 
 /// URL entry step for article import.
 class _ArticleUrlEntryView extends StatefulWidget {
-  const _ArticleUrlEntryView();
+  const _ArticleUrlEntryView({required this.isOffline});
+
+  final bool isOffline;
 
   @override
   State<_ArticleUrlEntryView> createState() => _ArticleUrlEntryViewState();
@@ -564,7 +591,7 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
                 height: 48,
               ),
             ),
-            onSubmitted: cubit.importArticle,
+            onSubmitted: widget.isOffline ? null : cubit.importArticle,
           ),
           const SizedBox(height: AppSpacing.md),
           _ArticleUrlHints(color: muted),
@@ -580,7 +607,9 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: FilledButton(
-                  onPressed: () => cubit.importArticle(_controller.text),
+                  onPressed: widget.isOffline
+                      ? null
+                      : () => cubit.importArticle(_controller.text),
                   child: const Text('Save'),
                 ),
               ),

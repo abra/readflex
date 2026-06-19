@@ -58,6 +58,128 @@ void main() {
     expect(find.text('Cancel'), findsOneWidget);
   });
 
+  testWidgets('offline menu disables article import action', (tester) async {
+    var articleImportCalls = 0;
+
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          isOffline: true,
+          onPickBookFile: () async => null,
+          onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (_, {onStage}) async {
+            articleImportCalls += 1;
+            return null;
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    final offlineIcon = tester.widget<Icon>(find.byIcon(AppIcons.offline));
+    expect(offlineIcon.color, AppTheme.light().ext.warning);
+    expect(find.byIcon(AppIcons.global), findsNothing);
+
+    await tester.tap(find.text('Save Article'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add to Library'), findsOneWidget);
+    expect(
+      find.text('Creates a clean article for offline reading.'),
+      findsNothing,
+    );
+    expect(articleImportCalls, 0);
+  });
+
+  testWidgets('open menu reacts when connectivity comes back online', (
+    tester,
+  ) async {
+    final isOfflineController = StreamController<bool>();
+    addTearDown(isOfflineController.close);
+
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          isOffline: true,
+          isOfflineStream: isOfflineController.stream,
+          onPickBookFile: () async => null,
+          onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (_, {onStage}) async => null,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(AppIcons.offline), findsOneWidget);
+    expect(find.byIcon(AppIcons.global), findsNothing);
+
+    isOfflineController.add(false);
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byIcon(AppIcons.global), findsOneWidget);
+    expect(find.byIcon(AppIcons.offline), findsNothing);
+
+    await tester.tap(find.text('Save Article'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Creates a clean article for offline reading.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('article url form disables save while offline', (tester) async {
+    var articleImportCalls = 0;
+    final isOfflineController = StreamController<bool>();
+    addTearDown(isOfflineController.close);
+
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          isOfflineStream: isOfflineController.stream,
+          onPickBookFile: () async => null,
+          onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (_, {onStage}) async {
+            articleImportCalls += 1;
+            return null;
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Article'));
+    await tester.pumpAndSettle();
+
+    isOfflineController.add(true);
+    await tester.pump();
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), 'https://example.com/a');
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+
+    expect(articleImportCalls, 0);
+
+    isOfflineController.add(false);
+    await tester.pump();
+    await tester.pump();
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+
+    expect(articleImportCalls, 1);
+  });
+
   testWidgets('cancel button dismisses the sheet', (tester) async {
     await tester.pumpWidget(
       _TestHost(

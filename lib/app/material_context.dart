@@ -12,7 +12,6 @@ import 'package:go_router/go_router.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex/app/app_system_ui_mode.dart';
-import 'package:readflex/app/connectivity_banner_host.dart';
 import 'package:reader_server/reader_server.dart';
 import 'package:readflex/app/dependency_scope.dart';
 import 'package:readflex/app/routing.dart';
@@ -99,19 +98,7 @@ class _MaterialContextState extends State<MaterialContext>
                   brightness: theme.brightness,
                   backgroundColor: theme.scaffoldBackgroundColor,
                 ),
-                child: ListenableBuilder(
-                  listenable: _router.routeInformationProvider,
-                  builder: (context, _) {
-                    final currentPath =
-                        _router.routeInformationProvider.value.uri.path;
-                    return _MediaQueryRootOverride(
-                      child: AppConnectivityBannerHost(
-                        currentPath: currentPath,
-                        child: child!,
-                      ),
-                    );
-                  },
-                ),
+                child: _MediaQueryRootOverride(child: child!),
               ),
             );
           },

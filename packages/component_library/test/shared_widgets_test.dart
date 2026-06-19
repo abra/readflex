@@ -944,32 +944,6 @@ void main() {
     expect(find.text('Title Only'), findsOneWidget);
   });
 
-  testWidgets('OfflineBanner renders default message and icon', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light(),
-        home: const Scaffold(body: OfflineBanner()),
-      ),
-    );
-
-    expect(find.text('Offline'), findsOneWidget);
-    expect(find.byIcon(AppIcons.offline), findsOneWidget);
-  });
-
-  testWidgets('OfflineBanner renders custom message', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light(),
-        home: const Scaffold(
-          body: OfflineBanner(message: 'No connection'),
-        ),
-      ),
-    );
-
-    expect(find.text('No connection'), findsOneWidget);
-    expect(find.text('Offline'), findsNothing);
-  });
-
   testWidgets('MediaCollectionCard calls onTap', (tester) async {
     var tapped = false;
 

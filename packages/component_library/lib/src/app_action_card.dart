@@ -13,6 +13,7 @@ class AppActionCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     this.onTap,
+    this.iconColor,
     this.trailing,
     super.key,
   });
@@ -21,6 +22,7 @@ class AppActionCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback? onTap;
+  final Color? iconColor;
   final Widget? trailing;
 
   @override
@@ -34,7 +36,10 @@ class AppActionCard extends StatelessWidget {
     final muted = enabled
         ? cs.onSurface.withValues(alpha: 0.55)
         : cs.onSurface.withValues(alpha: 0.36);
-    final primary = enabled ? cs.primary : cs.onSurface.withValues(alpha: 0.28);
+    final defaultIconColor = enabled
+        ? cs.primary
+        : cs.onSurface.withValues(alpha: 0.28);
+    final effectiveIconColor = iconColor ?? defaultIconColor;
 
     return Material(
       color: cs.surfaceContainerHighest.withValues(alpha: enabled ? 0.6 : 0.36),
@@ -53,11 +58,13 @@ class AppActionCard extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: primary.withValues(alpha: enabled ? 0.10 : 0.08),
+                  color: effectiveIconColor.withValues(
+                    alpha: enabled ? 0.10 : 0.08,
+                  ),
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
-                child: Icon(icon, size: 18, color: primary),
+                child: Icon(icon, size: 18, color: effectiveIconColor),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(

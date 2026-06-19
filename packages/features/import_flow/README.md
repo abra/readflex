@@ -15,6 +15,8 @@ Future<ImportFlowResult?> showImportFlowSheet(
   required PickBookFile onPickBookFile,
   required ImportBookFile onImportBook,
   required ImportArticleUrl onImportArticle,
+  bool isOffline = false,
+  Stream<bool>? isOfflineStream,
   IsBookImportTermsAccepted? isBookImportTermsAccepted,
   AcceptBookImportTerms? acceptBookImportTerms,
   Future<void> Function()? onOpenTerms,
@@ -29,6 +31,9 @@ Future<ImportFlowResult?> showImportFlowSheet(
   metadata with `BookMetadataExtractor` from `reader_webview` (foliate-js via
   local HTTP server) and persists via `BookRepository`.
 - `onImportArticle` — imports a cleaned article from a URL.
+- `isOffline` / `isOfflineStream` — disable and live-update the article URL
+  path when the app shell knows there is no network. Book uploads stay
+  available because they are local.
 - `isBookImportTermsAccepted` / `acceptBookImportTerms` — optional gate for
   book uploads; callers normally back this with persisted preferences.
 - `onOpenTerms` / `onOpenPrivacy` — optional external legal-link callbacks.

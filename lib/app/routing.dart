@@ -1,6 +1,8 @@
-import 'dart:async' show unawaited;
+import 'dart:async' show Stream, unawaited;
 
 import 'package:article_extraction_service/article_extraction_service.dart';
+import 'package:connectivity_service/connectivity_service.dart'
+    show ConnectivityScope, ConnectivityStatus;
 import 'package:library_feature/library_feature.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
@@ -67,49 +69,56 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
       ),
       GoRoute(
         path: AppRoutes.library,
-        builder: (context, state) => LibraryScreen(
-          bookRepository: deps.bookRepository,
-          articleRepository: deps.articleRepository,
-          collectionRepository: deps.collectionRepository,
-          preferencesService: deps.preferencesService,
-          onSourcePressed: (source, {onSourceOpened}) => context.push(
-            AppRoutes.reader(source.id),
-            extra: _ReaderRouteExtra(
-              initialSourceType: source.sourceType,
-              onSourceOpened: onSourceOpened,
+        builder: (context, state) {
+          final isOffline =
+              ConnectivityScope.of(context) == ConnectivityStatus.offline;
+          return LibraryScreen(
+            bookRepository: deps.bookRepository,
+            articleRepository: deps.articleRepository,
+            collectionRepository: deps.collectionRepository,
+            preferencesService: deps.preferencesService,
+            isOffline: isOffline,
+            onSourcePressed: (source, {onSourceOpened}) => context.push(
+              AppRoutes.reader(source.id),
+              extra: _ReaderRouteExtra(
+                initialSourceType: source.sourceType,
+                onSourceOpened: onSourceOpened,
+              ),
             ),
-          ),
-          onAddPressed: () async {
-            await showImportFlowSheet(
-              context,
-              onPickBookFile: pickBookFile,
-              onImportBook: (file, {onProgress}) => importBookFile(
-                sourceFile: file,
-                bookRepository: deps.bookRepository,
-                readerServerPort: deps.readerServer.port,
-                logger: deps.logger,
-                onProgress: onProgress,
-              ),
-              onImportArticle: (url, {onStage}) => _importArticleUrl(
-                deps,
-                url,
-                onStage: onStage,
-              ),
-              isBookImportTermsAccepted: () =>
-                  deps.preferencesService.hasAcceptedBookImportTerms(
-                    _currentBookImportTermsVersion,
-                  ),
-              acceptBookImportTerms: () =>
-                  deps.preferencesService.acceptBookImportTerms(
-                    _currentBookImportTermsVersion,
-                  ),
-              onOpenTerms: () => _openExternalUrl(_readflexTermsUrl),
-              onOpenPrivacy: () => _openExternalUrl(
-                _readflexPrivacyUrl,
-              ),
-            );
-          },
-        ),
+            onAddPressed: () async {
+              await showImportFlowSheet(
+                context,
+                isOffline: isOffline,
+                isOfflineStream: _isOfflineStream(deps),
+                onPickBookFile: pickBookFile,
+                onImportBook: (file, {onProgress}) => importBookFile(
+                  sourceFile: file,
+                  bookRepository: deps.bookRepository,
+                  readerServerPort: deps.readerServer.port,
+                  logger: deps.logger,
+                  onProgress: onProgress,
+                ),
+                onImportArticle: (url, {onStage}) => _importArticleUrl(
+                  deps,
+                  url,
+                  onStage: onStage,
+                ),
+                isBookImportTermsAccepted: () =>
+                    deps.preferencesService.hasAcceptedBookImportTerms(
+                      _currentBookImportTermsVersion,
+                    ),
+                acceptBookImportTerms: () =>
+                    deps.preferencesService.acceptBookImportTerms(
+                      _currentBookImportTermsVersion,
+                    ),
+                onOpenTerms: () => _openExternalUrl(_readflexTermsUrl),
+                onOpenPrivacy: () => _openExternalUrl(
+                  _readflexPrivacyUrl,
+                ),
+              );
+            },
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.readerPath,
@@ -169,59 +178,71 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
       ),
       GoRoute(
         path: AppRoutes.firstImport,
-        builder: (context, state) => FirstImportScreen(
-          onAddPressed: () async {
-            // Trust the sheet's own result instead of probing the
-            // library afterwards. The result is the canonical signal
-            // that an import succeeded, and checking repositories would
-            // have to scan rows to answer the same question.
-            final result = await showImportFlowSheet(
-              context,
-              onPickBookFile: pickBookFile,
-              onImportBook: (file, {onProgress}) => importBookFile(
-                sourceFile: file,
-                bookRepository: deps.bookRepository,
-                readerServerPort: deps.readerServer.port,
-                logger: deps.logger,
-                onProgress: onProgress,
-              ),
-              onImportArticle: (url, {onStage}) => _importArticleUrl(
-                deps,
-                url,
-                onStage: onStage,
-              ),
-              isBookImportTermsAccepted: () =>
-                  deps.preferencesService.hasAcceptedBookImportTerms(
-                    _currentBookImportTermsVersion,
-                  ),
-              acceptBookImportTerms: () =>
-                  deps.preferencesService.acceptBookImportTerms(
-                    _currentBookImportTermsVersion,
-                  ),
-              onOpenTerms: () => _openExternalUrl(_readflexTermsUrl),
-              onOpenPrivacy: () => _openExternalUrl(
-                _readflexPrivacyUrl,
-              ),
-            );
-            return result == ImportFlowResult.bookImported ||
-                result == ImportFlowResult.articleImported;
-          },
-          onContentAdded: () {
-            deps.preferencesService.update(
-              (p) => p.copyWith(hasCompletedSetup: true),
-            );
-            context.go(AppRoutes.library);
-          },
-          onSkipPressed: () {
-            deps.preferencesService.update(
-              (p) => p.copyWith(hasCompletedSetup: true),
-            );
-            context.go(AppRoutes.library);
-          },
-        ),
+        builder: (context, state) {
+          final isOffline =
+              ConnectivityScope.of(context) == ConnectivityStatus.offline;
+          return FirstImportScreen(
+            onAddPressed: () async {
+              // Trust the sheet's own result instead of probing the
+              // library afterwards. The result is the canonical signal
+              // that an import succeeded, and checking repositories would
+              // have to scan rows to answer the same question.
+              final result = await showImportFlowSheet(
+                context,
+                isOffline: isOffline,
+                isOfflineStream: _isOfflineStream(deps),
+                onPickBookFile: pickBookFile,
+                onImportBook: (file, {onProgress}) => importBookFile(
+                  sourceFile: file,
+                  bookRepository: deps.bookRepository,
+                  readerServerPort: deps.readerServer.port,
+                  logger: deps.logger,
+                  onProgress: onProgress,
+                ),
+                onImportArticle: (url, {onStage}) => _importArticleUrl(
+                  deps,
+                  url,
+                  onStage: onStage,
+                ),
+                isBookImportTermsAccepted: () =>
+                    deps.preferencesService.hasAcceptedBookImportTerms(
+                      _currentBookImportTermsVersion,
+                    ),
+                acceptBookImportTerms: () =>
+                    deps.preferencesService.acceptBookImportTerms(
+                      _currentBookImportTermsVersion,
+                    ),
+                onOpenTerms: () => _openExternalUrl(_readflexTermsUrl),
+                onOpenPrivacy: () => _openExternalUrl(
+                  _readflexPrivacyUrl,
+                ),
+              );
+              return result == ImportFlowResult.bookImported ||
+                  result == ImportFlowResult.articleImported;
+            },
+            onContentAdded: () {
+              deps.preferencesService.update(
+                (p) => p.copyWith(hasCompletedSetup: true),
+              );
+              context.go(AppRoutes.library);
+            },
+            onSkipPressed: () {
+              deps.preferencesService.update(
+                (p) => p.copyWith(hasCompletedSetup: true),
+              );
+              context.go(AppRoutes.library);
+            },
+          );
+        },
       ),
     ],
   );
+}
+
+Stream<bool> _isOfflineStream(DependenciesContainer deps) {
+  return deps.connectivityService.statusStream
+      .map((status) => status == ConnectivityStatus.offline)
+      .distinct();
 }
 
 Future<void> _openArticleUrl(String rawUrl) => _openExternalUrl(rawUrl);
