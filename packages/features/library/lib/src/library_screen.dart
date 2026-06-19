@@ -15,6 +15,7 @@ import 'library_bloc.dart';
 import 'library_body.dart';
 import 'library_header.dart';
 import 'library_layout_cubit.dart';
+import 'library_theme_cubit.dart';
 import 'manage_collection_cubit.dart';
 import 'manage_collection_sheet.dart';
 import 'library_selection_cubit.dart';
@@ -67,6 +68,11 @@ class LibraryScreen extends StatelessWidget {
         ),
         BlocProvider(
           create: (_) => LibraryLayoutCubit(
+            preferencesService: preferencesService,
+          ),
+        ),
+        BlocProvider(
+          create: (_) => LibraryThemeCubit(
             preferencesService: preferencesService,
           ),
         ),

@@ -134,7 +134,7 @@ Future<DependenciesContainer> createDependenciesContainer(
     supportedCodes: config.supportedLocaleCodes,
   );
 
-  final connectivityService = await ConnectivityPlusService.create();
+  final connectivityService = await createConnectivityService(config, logger);
   final screenControlService = WakelockScreenControlService();
   final articleExtractionService = TrafilaturaArticleExtractionService(
     baseUri: Uri.parse(config.articleCleanerBaseUrl),
@@ -158,4 +158,32 @@ Future<DependenciesContainer> createDependenciesContainer(
     screenControlService: screenControlService,
     readerServer: readerServer,
   );
+}
+
+/// Creates connectivity service, optionally forced by a debug dart-define.
+Future<ConnectivityService> createConnectivityService(
+  ApplicationConfig config,
+  Logger logger,
+) async {
+  final override = config.connectivityStatusOverride.trim().toLowerCase();
+  return switch (override) {
+    '' => ConnectivityPlusService.create(),
+    'online' => _fixedConnectivityService(ConnectivityStatus.online, logger),
+    'offline' => _fixedConnectivityService(ConnectivityStatus.offline, logger),
+    _ => throw StateError(
+      'Unsupported READFLEX_CONNECTIVITY_STATUS="$override". '
+      'Use "online", "offline", or leave it empty.',
+    ),
+  };
+}
+
+ConnectivityService _fixedConnectivityService(
+  ConnectivityStatus status,
+  Logger logger,
+) {
+  logger.warn(
+    'Connectivity status forced to ${status.name} by '
+    'READFLEX_CONNECTIVITY_STATUS.',
+  );
+  return FixedConnectivityService(status);
 }

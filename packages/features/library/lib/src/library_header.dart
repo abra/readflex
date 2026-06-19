@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'library_bloc.dart';
 import 'library_layout_cubit.dart';
+import 'library_theme_cubit.dart';
+import 'library_theme_sheet.dart';
 
 /// Alpha applied to muted meta text on the header ("N items" counter,
 /// inactive segment label colours). Matches `_kMutedAlpha` in the tile files.
@@ -58,15 +60,31 @@ class LibraryHeader extends StatelessWidget {
                   color: colors.onSurface,
                 ),
               ),
-              const Spacer(),
-              Text(
-                '${state.totalCount} items',
-                style: context.text.screenCounter.copyWith(
-                  color: colors.onSurface.withValues(alpha: _kMutedAlpha),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        '${state.totalCount} items',
+                        textAlign: TextAlign.end,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.text.screenCounter.copyWith(
+                          color: colors.onSurface.withValues(
+                            alpha: _kMutedAlpha,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    const _ThemeModeButton(),
+                    const SizedBox(width: AppSpacing.xs),
+                    const _LayoutToggle(),
+                  ],
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              const _LayoutToggle(),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -270,6 +288,42 @@ class _FilterSegments extends StatelessWidget {
   };
 }
 
+class _ThemeModeButton extends StatelessWidget {
+  const _ThemeModeButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<LibraryThemeCubit, ThemeMode>(
+      builder: (context, mode) {
+        return Tooltip(
+          message: 'Theme: ${_labelFor(mode)}',
+          child: _HeaderIconButton(
+            key: const ValueKey('libraryHeaderThemeButton'),
+            icon: _iconFor(mode),
+            iconColor: context.colors.onSurface.withValues(alpha: 0.78),
+            onTap: () => showLibraryThemeSheet(
+              context: context,
+              cubit: context.read<LibraryThemeCubit>(),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  IconData _iconFor(ThemeMode mode) => switch (mode) {
+    ThemeMode.light => AppIcons.lightMode,
+    ThemeMode.dark => AppIcons.darkMode,
+    ThemeMode.system => AppIcons.deviceMode,
+  };
+
+  String _labelFor(ThemeMode mode) => switch (mode) {
+    ThemeMode.light => 'Light',
+    ThemeMode.dark => 'Dark',
+    ThemeMode.system => 'System',
+  };
+}
+
 /// Two-button toggle that switches the library between list and grid
 /// layouts. Bound to [LibraryLayoutCubit] so the active mode persists in
 /// user preferences.
@@ -285,12 +339,14 @@ class _LayoutToggle extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _LayoutToggleButton(
+              key: const ValueKey('libraryHeaderListButton'),
               icon: AppIcons.viewList,
               active: mode == LibraryLayoutMode.list,
               onTap: () => cubit.setLayoutMode(LibraryLayoutMode.list),
             ),
             const SizedBox(width: AppSpacing.xs),
             _LayoutToggleButton(
+              key: const ValueKey('libraryHeaderGridButton'),
               icon: AppIcons.viewGrid,
               active: mode == LibraryLayoutMode.grid,
               onTap: () => cubit.setLayoutMode(LibraryLayoutMode.grid),
@@ -302,10 +358,50 @@ class _LayoutToggle extends StatelessWidget {
   }
 }
 
+class _HeaderIconButton extends StatelessWidget {
+  const _HeaderIconButton({
+    super.key,
+    required this.icon,
+    required this.iconColor,
+    required this.onTap,
+    this.backgroundColor = Colors.transparent,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final Color backgroundColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: SizedBox(
+            width: AppSizes.chipHeight,
+            height: AppSizes.chipHeight,
+            child: Center(
+              child: Icon(icon, size: AppIconSize.sm, color: iconColor),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// One cell of the layout toggle — a 40×40 tappable square that fills when
 /// active and fades to 55% muted when inactive.
 class _LayoutToggleButton extends StatelessWidget {
   const _LayoutToggleButton({
+    super.key,
     required this.icon,
     required this.active,
     required this.onTap,
@@ -321,31 +417,13 @@ class _LayoutToggleButton extends StatelessWidget {
     // Demo button: 40x40 (→ AppSizes.iconButtonSize), radius 10 (→ sm=8,
     // −2), icon 20 (→ AppIconSize.sm). Active surface is `cs.secondary`,
     // active icon uses full onSurface, inactive uses onSurface @ 55%.
-    return Material(
-      color: Colors.transparent,
-      child: Ink(
-        decoration: BoxDecoration(
-          color: active ? colors.secondary : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-        ),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          child: SizedBox(
-            width: AppSizes.chipHeight,
-            height: AppSizes.chipHeight,
-            child: Center(
-              child: Icon(
-                icon,
-                size: AppIconSize.sm,
-                color: active
-                    ? colors.onSurface
-                    : colors.onSurface.withValues(alpha: _kMutedAlpha),
-              ),
-            ),
-          ),
-        ),
-      ),
+    return _HeaderIconButton(
+      icon: icon,
+      iconColor: active
+          ? colors.onSurface
+          : colors.onSurface.withValues(alpha: _kMutedAlpha),
+      backgroundColor: active ? colors.secondary : Colors.transparent,
+      onTap: onTap,
     );
   }
 }

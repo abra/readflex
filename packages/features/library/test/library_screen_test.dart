@@ -89,6 +89,48 @@ void main() {
     expect(find.text('1 items'), findsOneWidget);
   });
 
+  testWidgets('theme button opens appearance sheet and persists selection', (
+    tester,
+  ) async {
+    bookRepository.seedBooks([_book]);
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    expect(find.byIcon(AppIcons.deviceMode), findsOneWidget);
+
+    await tester.tap(find.byIcon(AppIcons.deviceMode));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Appearance'), findsOneWidget);
+    expect(find.text('System'), findsOneWidget);
+    expect(find.text('Light'), findsOneWidget);
+    expect(find.text('Dark'), findsOneWidget);
+
+    await tester.tap(find.text('Dark'));
+    await tester.pumpAndSettle();
+
+    expect(preferencesService.current.themeMode, ThemeMode.dark);
+    expect(find.byIcon(AppIcons.darkMode), findsOneWidget);
+  });
+
+  testWidgets('header actions stay aligned to the right edge', (tester) async {
+    bookRepository.seedBooks([_book]);
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    final scaffoldRect = tester.getRect(find.byType(Scaffold));
+    final gridButtonRect = tester.getRect(
+      find.byKey(const ValueKey('libraryHeaderGridButton')),
+    );
+
+    expect(
+      gridButtonRect.right,
+      closeTo(scaffoldRect.right - AppSpacing.lg, 1),
+    );
+  });
+
   testWidgets('shows search field', (tester) async {
     bookRepository.seedBooks([_book]);
 

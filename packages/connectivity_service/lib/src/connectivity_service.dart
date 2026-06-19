@@ -38,3 +38,20 @@ class NoopConnectivityService implements ConnectivityService {
   @override
   void dispose() {}
 }
+
+/// Fixed status implementation for tests, previews, and debug overrides.
+class FixedConnectivityService implements ConnectivityService {
+  const FixedConnectivityService(this.status);
+
+  @override
+  final ConnectivityStatus status;
+
+  @override
+  Stream<ConnectivityStatus> get statusStream => const Stream.empty();
+
+  @override
+  Future<void> refresh() async {}
+
+  @override
+  void dispose() {}
+}

@@ -52,6 +52,10 @@ class ApplicationConfig {
   /// Optional API key for the article extraction backend.
   String get articleCleanerApiKey =>
       const String.fromEnvironment('ARTICLE_CLEANER_API_KEY').trim();
+
+  /// Optional debug override for network status: `online` or `offline`.
+  String get connectivityStatusOverride =>
+      const String.fromEnvironment('READFLEX_CONNECTIVITY_STATUS').trim();
 }
 
 /// A special version of [ApplicationConfig] that is used in tests.

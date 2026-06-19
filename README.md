@@ -64,6 +64,7 @@ Common dart-defines:
 |------|---------|
 | `ARTICLE_CLEANER_BASE_URL` | Article extraction backend base URL |
 | `ARTICLE_CLEANER_API_KEY` | Optional article cleaner API key |
+| `READFLEX_CONNECTIVITY_STATUS` | Optional debug override: `online` or `offline` |
 
 Do not ship public builds with client-side API keys. Backend-backed production
 integrations should keep provider credentials server-side.
