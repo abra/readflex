@@ -183,7 +183,8 @@ class LibraryState extends Equatable {
         sources
             .where(
               (source) =>
-                  _collectionScopeKey(source.author) == collectionScope.id,
+                  _collectionScopeKey(_authorLabelForSource(source)) ==
+                  collectionScope.id,
             )
             .toList(),
     };
@@ -278,11 +279,24 @@ String? _siteLabelForSource(LibrarySource source) {
   if (source.sourceType != SourceType.article) return null;
   final sourceName = source.sourceName?.trim();
   if (sourceName != null && sourceName.isNotEmpty) return sourceName;
+  return _siteDomainForSource(source);
+}
+
+String? _authorLabelForSource(LibrarySource source) {
+  final author = source.author?.trim();
+  if (author == null || author.isEmpty) return null;
+  if (source.sourceType != SourceType.article) return author;
+  final domain = _siteDomainForSource(source);
+  if (domain == null || domain.isEmpty) return author;
+  return '$author ($domain)';
+}
+
+String? _siteDomainForSource(LibrarySource source) {
   final originalUrl = source.originalUrl;
   if (originalUrl == null) return null;
   final host = Uri.tryParse(originalUrl)?.host.trim();
   if (host == null || host.isEmpty) return null;
-  return host;
+  return host.startsWith('www.') ? host.substring(4) : host;
 }
 
 String _collectionScopeKey(String? value) => value?.trim().toLowerCase() ?? '';

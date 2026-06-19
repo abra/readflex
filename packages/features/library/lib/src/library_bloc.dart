@@ -289,7 +289,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     return _buildSmartScopes(
       sources: sources,
       type: LibraryCollectionScopeType.author,
-      labelFor: (source) => source.author,
+      labelFor: _authorLabelForSource,
     );
   }
 

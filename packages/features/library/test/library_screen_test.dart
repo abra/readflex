@@ -553,20 +553,21 @@ void main() {
       const ValueKey('collectionScopeRow-site-tproger'),
     );
     final authorRow = find.byKey(
-      const ValueKey('collectionScopeRow-author-seiken'),
+      const ValueKey('collectionScopeRow-author-seiken (tproger.ru)'),
     );
 
     expect(searchField, findsOneWidget);
     expect(manualRow, findsOneWidget);
     expect(siteRow, findsOneWidget);
     expect(authorRow, findsOneWidget);
+    expect(find.text('Seiken (tproger.ru)'), findsOneWidget);
 
     await tester.enterText(searchField, 'tpro');
     await tester.pumpAndSettle();
 
     expect(manualRow, findsNothing);
     expect(siteRow, findsOneWidget);
-    expect(authorRow, findsNothing);
+    expect(authorRow, findsOneWidget);
 
     await tester.enterText(searchField, 'missing');
     await tester.pumpAndSettle();
@@ -722,7 +723,7 @@ void main() {
       const ValueKey('collectionScopeRow-site-tproger'),
     );
     final authorRow = find.byKey(
-      const ValueKey('collectionScopeRow-author-seiken'),
+      const ValueKey('collectionScopeRow-author-seiken (tproger.ru)'),
     );
 
     expect(manualRow, findsOneWidget);

@@ -465,6 +465,45 @@ void main() {
       expect(state.visibleItems, [LibrarySource.fromArticle(tproger)]);
     });
 
+    test(
+      'visibleItems applies article author collection scope with domain',
+      () {
+        final tproger = Article(
+          id: 'article-1',
+          title: 'Localization',
+          url: 'https://tproger.ru/a',
+          siteName: 'Tproger',
+          author: 'Seiken',
+          contentPath: '/articles/a/content.json',
+          addedAt: DateTime(2026, 1, 1),
+        );
+        final example = Article(
+          id: 'article-2',
+          title: 'AI',
+          url: 'https://example.com/a',
+          siteName: 'Example',
+          author: 'Seiken',
+          contentPath: '/articles/b/content.json',
+          addedAt: DateTime(2026, 1, 2),
+        );
+        const scope = LibraryCollectionScope.smart(
+          type: LibraryCollectionScopeType.author,
+          id: 'seiken (tproger.ru)',
+          label: 'Seiken (tproger.ru)',
+          sourceCount: 1,
+        );
+
+        final state = LibraryState(
+          status: LibraryStatus.success,
+          articles: [tproger, example],
+          collectionScopes: const [scope],
+          selectedCollectionScope: scope,
+        );
+
+        expect(state.visibleItems, [LibrarySource.fromArticle(tproger)]);
+      },
+    );
+
     test('isEmpty is true when no books', () {
       final state = LibraryState(status: LibraryStatus.success);
       expect(state.isEmpty, isTrue);
