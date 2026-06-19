@@ -47,7 +47,6 @@ run "import_flow"                  "flutter test test/" "$SCRIPT_DIR/packages/fe
 run "highlight"                    "flutter test test/" "$SCRIPT_DIR/packages/features/highlight"
 run "source_details"               "flutter test test/" "$SCRIPT_DIR/packages/features/source_details"
 run "reader"                       "flutter test test/" "$SCRIPT_DIR/packages/features/reader"
-run "translation_pack_builder"     "dart test test/" "$SCRIPT_DIR/tool/translation_pack_builder"
 
 echo ""
 echo "────────────────────────────"

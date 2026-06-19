@@ -5,7 +5,7 @@ import 'theme/tokens/app_radius.dart';
 import 'theme/tokens/app_sizes.dart';
 import 'theme/tokens/app_spacing.dart';
 
-/// Pill-shaped filter chip used by Library and Dictionary header rows.
+/// Pill-shaped filter chip used by compact filter rows.
 ///
 /// One body, two-tone selected/unselected. Optional [count] is rendered
 /// next to the [label] in a slightly muted shade so the eye reads the

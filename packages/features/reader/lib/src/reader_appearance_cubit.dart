@@ -44,9 +44,9 @@ class ReaderAppearanceState extends Equatable {
 
 /// Reader-local appearance controller.
 ///
-/// Profile owns the global reader defaults. This cubit stores only the fields
-/// changed for the current source, so future global changes still flow through
-/// unless a book-specific override exists for that exact trait.
+/// App preferences own the global reader defaults. This cubit stores only the
+/// fields changed for the current source, so future global changes still flow
+/// through unless a book-specific override exists for that exact trait.
 class ReaderAppearanceCubit extends Cubit<ReaderAppearanceState> {
   ReaderAppearanceCubit({
     required PreferencesService preferencesService,

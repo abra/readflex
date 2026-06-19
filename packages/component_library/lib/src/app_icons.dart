@@ -61,7 +61,6 @@ abstract final class AppIcons {
   static const IconData lightMode = LucideIcons.sun;
   static const IconData darkMode = LucideIcons.moon;
   static const IconData brightnessLow = LucideIcons.sunDim;
-  static const IconData systemMode = LucideIcons.monitor;
   static const IconData deviceMode = LucideIcons.smartphone;
 
   // ── Metadata ──────────────────────────────────────────────
@@ -70,9 +69,6 @@ abstract final class AppIcons {
   // ── Onboarding ────────────────────────────────────────────
   static const IconData readAnything = LucideIcons.bookOpen;
   static const IconData highlightSave = LucideIcons.highlighter;
-  static const IconData buildFlashcards = LucideIcons.layers;
-  static const IconData translateLearn = LucideIcons.languages;
-  static const IconData practiceRemember = LucideIcons.brain;
 
   // ── States ────────────────────────────────────────────────
   static const IconData error = LucideIcons.alertCircle;

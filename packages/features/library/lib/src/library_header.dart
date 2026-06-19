@@ -250,7 +250,7 @@ class _CollectionScopeButton extends StatelessWidget {
 
 /// Horizontally scrolling strip of filter chips
 /// (`All / Books / Comics / New`). Built on the shared
-/// [AppFilterChip] so Library and Dictionary look the same.
+/// [AppFilterChip] to keep Library filters visually consistent.
 class _FilterSegments extends StatelessWidget {
   const _FilterSegments({required this.active, required this.onChanged});
 

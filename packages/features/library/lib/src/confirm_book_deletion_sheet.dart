@@ -43,9 +43,9 @@ class _ConfirmBookDeletionSheetState extends State<_ConfirmBookDeletionSheet> {
         : 'Delete ${widget.count} items?';
     final body = isSingle
         ? 'This removes the library item and your highlights. '
-              'Saved words and flashcards stay in your library.'
+              'Archived learning data is kept.'
         : 'This removes the library items and your highlights. '
-              'Saved words and flashcards stay in your library.';
+              'Archived learning data is kept.';
 
     return ActionBottomSheetLayout(
       title: title,
@@ -61,9 +61,9 @@ class _ConfirmBookDeletionSheetState extends State<_ConfirmBookDeletionSheet> {
         children: [
           Text(body, style: context.text.bodyMedium),
           const SizedBox(height: AppSpacing.md),
-          // Opt-in to the destructive cascade. Default = keep learning
-          // data, since "I deleted my last item and lost my whole
-          // vocabulary" is a worse failure mode than leftover orphan rows.
+          // Opt-in to the destructive cascade. Default = keep archived
+          // learning data so old study rows survive while those surfaces
+          // remain frozen.
           InkWell(
             onTap: () => setState(
               () => _alsoDeleteLearningData = !_alsoDeleteLearningData,
@@ -81,7 +81,7 @@ class _ConfirmBookDeletionSheetState extends State<_ConfirmBookDeletionSheet> {
                   const SizedBox(width: AppSpacing.xs),
                   Expanded(
                     child: Text(
-                      'Also delete saved words and flashcards',
+                      'Also delete archived learning data',
                       style: context.text.bodyMedium,
                     ),
                   ),

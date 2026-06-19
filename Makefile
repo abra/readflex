@@ -24,9 +24,6 @@ PACKAGES = \
 	packages/features/source_details \
 	packages/features/reader
 
-TOOLS = \
-	tool/translation_pack_builder
-
 ROOT_ANALYZE_PATHS = lib test benchmarks
 
 ## Install dependencies for root and all packages
@@ -35,10 +32,6 @@ get:
 	@for pkg in $(PACKAGES); do \
 		echo "▶ pub get $$pkg"; \
 		(cd $$pkg && flutter pub get); \
-	done
-	@for tool in $(TOOLS); do \
-		echo "▶ pub get $$tool"; \
-		(cd $$tool && dart pub get); \
 	done
 
 ## Format all Dart code
@@ -51,10 +44,6 @@ analyze:
 	@for pkg in $(PACKAGES); do \
 		echo "▶ analyze $$pkg"; \
 		(cd $$pkg && flutter analyze); \
-	done
-	@for tool in $(TOOLS); do \
-		echo "▶ analyze $$tool"; \
-		(cd $$tool && dart analyze); \
 	done
 
 ## Run all tests across packages

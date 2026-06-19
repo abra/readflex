@@ -6,7 +6,7 @@ import 'package:flutter/widgets.dart';
 /// anchor back to the source.
 ///
 /// [contextText] is the surrounding sentence/paragraph excerpt supplied by
-/// the reader runtime for contextual translation. [pageNumber] and
+/// the reader runtime for context-aware actions. [pageNumber] and
 /// [scrollOffset] are legacy optional position fields. Current text-reader
 /// selections primarily use [cfiRange].
 class TextSelectionContext {
@@ -49,14 +49,14 @@ class TextSelectionContext {
   /// Same excerpt with the normalized lexical range wrapped in [[...]].
   final String? normalizedMarkedContextText;
 
-  /// Text that translation should use when selection was partial.
-  String get textForTranslation {
+  /// Text that an action should use when selection was partial.
+  String get effectiveSelectedText {
     final normalized = normalizedSelectedText?.trim();
     return normalized == null || normalized.isEmpty ? selectedText : normalized;
   }
 
-  /// Marked context that translation should use when selection was partial.
-  String? get markedContextTextForTranslation {
+  /// Marked context that an action should use when selection was partial.
+  String? get effectiveMarkedContextText {
     final normalized = normalizedMarkedContextText?.trim();
     return normalized == null || normalized.isEmpty
         ? markedContextText

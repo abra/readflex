@@ -29,13 +29,13 @@ void main() {
     expect(selection.normalizedMarkedContextText, 'Well, [[hello there]].');
     expect(selection.cfiRange, 'exact-cfi');
     expect(selection.normalizedCfiRange, 'normalized-cfi');
-    expect(selection.textForTranslation, 'hello there');
-    expect(selection.markedContextTextForTranslation, 'Well, [[hello there]].');
+    expect(selection.effectiveSelectedText, 'hello there');
+    expect(selection.effectiveMarkedContextText, 'Well, [[hello there]].');
     expect(selection.scrollOffset, 42);
   });
 
   test(
-    'TextSelectionContext falls back to exact selection for translation',
+    'TextSelectionContext falls back to exact selection for actions',
     () {
       const selection = TextSelectionContext(
         selectedText: 'hello',
@@ -44,9 +44,9 @@ void main() {
         markedContextText: 'Well, [[hello]] there.',
       );
 
-      expect(selection.textForTranslation, 'hello');
+      expect(selection.effectiveSelectedText, 'hello');
       expect(
-        selection.markedContextTextForTranslation,
+        selection.effectiveMarkedContextText,
         'Well, [[hello]] there.',
       );
     },
