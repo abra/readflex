@@ -7,7 +7,8 @@ import 'reader_appearance_cubit.dart';
 
 const double _sizeButtonSize = 36;
 const double _compactControlHeight = AppSizes.buttonHeight;
-const double _themeSwatchSize = 44;
+const double _themeSwatchWidth = 58;
+const double _themeSwatchHeight = 36;
 const double _textScaleEpsilon = 0.001;
 
 Future<void> showReaderAppearanceSheet(
@@ -32,7 +33,7 @@ class _ReaderAppearanceSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ActionBottomSheetLayout(
-      title: 'Aa',
+      title: 'Appearance',
       headerTrailing: const _ResetAppearanceButton(),
       headerSpacing: AppSpacing.md,
       child: const SingleChildScrollView(
@@ -67,18 +68,20 @@ class _LayeredAppearanceControls extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _PanelHeader(title: 'Theme'),
+        SizedBox(height: AppSpacing.xs),
         _ThemeSwatchLevel(),
-        _AppearanceLevelDivider(),
+        SizedBox(height: AppSpacing.md),
         _FontAndSizeLevel(),
-        _AppearanceLevelDivider(),
+        SizedBox(height: AppSpacing.sm),
         _LineHeightAndTurningLevel(),
-        _AppearanceLevelDivider(),
-        _PanelHeader(title: 'MARGINS', trailing: _SideMarginValue()),
-        SizedBox(height: AppSpacing.sm),
+        SizedBox(height: AppSpacing.md),
+        _PanelHeader(title: 'Margins', trailing: _SideMarginValue()),
+        SizedBox(height: AppSpacing.xs),
         _MarginControl(),
-        _AppearanceLevelDivider(),
-        _PanelHeader(title: 'ALIGNMENT'),
-        SizedBox(height: AppSpacing.sm),
+        SizedBox(height: AppSpacing.md),
+        _PanelHeader(title: 'Alignment'),
+        SizedBox(height: AppSpacing.xs),
         _AlignmentControl(),
       ],
     );
@@ -95,7 +98,13 @@ class _PanelHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        SectionLabel(label: title),
+        Text(
+          title,
+          style: context.text.labelSmall.copyWith(
+            color: context.colors.onSurface.withValues(alpha: 0.55),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         if (trailing != null) ...[
           const Spacer(),
           trailing!,
@@ -114,7 +123,7 @@ class _ThemeSwatchLevel extends StatelessWidget {
       (c) => c.state.effectiveAppearance.themeId,
     );
     final cubit = context.read<ReaderAppearanceCubit>();
-    return _AppearanceLevel(
+    return _AppearancePanel(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -159,23 +168,23 @@ class _ThemeSwatchButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: _themeSwatchSize,
-                height: _themeSwatchSize,
+                width: _themeSwatchWidth,
+                height: _themeSwatchHeight,
                 decoration: BoxDecoration(
                   color: theme.backgroundColor,
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                   border: Border.all(
                     color: active ? cs.primary : context.appColors.divider,
                     width: active ? 2 : 1,
                   ),
                 ),
                 alignment: Alignment.center,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
+                child: Text(
+                  'Aa',
+                  style: text.titleSmall.copyWith(
                     color: theme.primaryTextColor,
-                    shape: BoxShape.circle,
+                    fontWeight: FontWeight.w700,
                   ),
-                  child: const SizedBox(width: 8, height: 8),
                 ),
               ),
               const SizedBox(height: AppSpacing.xs),
@@ -204,14 +213,16 @@ class _FontAndSizeLevel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
-      children: [
-        Expanded(child: _FontCycleControl()),
-        SizedBox(width: AppSpacing.md),
-        _VerticalAppearanceDivider(),
-        SizedBox(width: AppSpacing.md),
-        Expanded(child: _CompactSizeControl()),
-      ],
+    return const _AppearancePanel(
+      child: Row(
+        children: [
+          Expanded(child: _FontCycleControl()),
+          SizedBox(width: AppSpacing.md),
+          _VerticalAppearanceDivider(),
+          SizedBox(width: AppSpacing.md),
+          Expanded(child: _CompactSizeControl()),
+        ],
+      ),
     );
   }
 }
@@ -376,33 +387,52 @@ class _LineHeightAndTurningLevel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _PanelHeader(title: 'LINE HEIGHT'),
-              SizedBox(height: AppSpacing.sm),
-              _LineSpacingControl(),
-            ],
+    return const _AppearancePanel(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _PanelHeader(title: 'Line height'),
+                SizedBox(height: AppSpacing.sm),
+                _LineSpacingControl(),
+              ],
+            ),
           ),
-        ),
-        SizedBox(width: AppSpacing.md),
-        _VerticalAppearanceDivider(),
-        SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _PanelHeader(title: 'TURNING'),
-              SizedBox(height: AppSpacing.sm),
-              _PageTurnControl(),
-            ],
+          SizedBox(width: AppSpacing.md),
+          _VerticalAppearanceDivider(),
+          SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _PanelHeader(title: 'Turning'),
+                SizedBox(height: AppSpacing.sm),
+                _PageTurnControl(),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AppearancePanel extends StatelessWidget {
+  const _AppearancePanel({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      child: child,
     );
   }
 }
@@ -431,19 +461,6 @@ class _AppearanceLevel extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: content,
-    );
-  }
-}
-
-class _AppearanceLevelDivider extends StatelessWidget {
-  const _AppearanceLevelDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Divider(
-      height: AppSpacing.md,
-      thickness: 1,
-      color: context.appColors.divider.withValues(alpha: 0.45),
     );
   }
 }
@@ -477,26 +494,37 @@ class _AlignmentControl extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _ChoiceButton(
-            label: 'Start',
-            active: alignment == ReaderTextAlignment.start,
-            onTap: () => cubit.setTextAlignment(ReaderTextAlignment.start),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: _ChoiceButton(
-            label: 'End',
-            active: alignment == ReaderTextAlignment.end,
-            onTap: () => cubit.setTextAlignment(ReaderTextAlignment.end),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: _ChoiceButton(
-            label: 'Justify',
-            active: alignment == ReaderTextAlignment.justify,
-            onTap: () => cubit.setTextAlignment(ReaderTextAlignment.justify),
+          child: _AppearancePanel(
+            child: Row(
+              children: [
+                Expanded(
+                  child: _ChoiceButton(
+                    label: 'Start',
+                    active: alignment == ReaderTextAlignment.start,
+                    onTap: () =>
+                        cubit.setTextAlignment(ReaderTextAlignment.start),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: _ChoiceButton(
+                    label: 'End',
+                    active: alignment == ReaderTextAlignment.end,
+                    onTap: () =>
+                        cubit.setTextAlignment(ReaderTextAlignment.end),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: _ChoiceButton(
+                    label: 'Justify',
+                    active: alignment == ReaderTextAlignment.justify,
+                    onTap: () =>
+                        cubit.setTextAlignment(ReaderTextAlignment.justify),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -558,7 +586,9 @@ class _IconChoiceButton extends StatelessWidget {
         onPressed: onTap,
         visualDensity: VisualDensity.compact,
         style: IconButton.styleFrom(
-          backgroundColor: Colors.transparent,
+          backgroundColor: active
+              ? cs.primary.withValues(alpha: 0.10)
+              : Colors.transparent,
           disabledBackgroundColor: Colors.transparent,
           foregroundColor: active
               ? cs.primary
@@ -587,7 +617,6 @@ class _ChoiceButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.colors;
-    final divider = context.appColors.divider;
     final text = context.text;
     return GestureDetector(
       onTap: onTap,
@@ -599,16 +628,16 @@ class _ChoiceButton extends StatelessWidget {
           vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
-          color: active ? cs.onSurface : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(
-            color: active ? cs.onSurface : divider,
-          ),
+          color: active
+              ? cs.primary.withValues(alpha: 0.10)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
         child: Text(
           label,
           style: text.bodyMedium.copyWith(
-            color: active ? cs.surface : cs.onSurface.withValues(alpha: 0.72),
+            color: active ? cs.primary : cs.onSurface.withValues(alpha: 0.72),
+            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
           ),
         ),
       ),
@@ -717,38 +746,40 @@ class _MarginControl extends StatelessWidget {
       (c) => c.state.effectiveAppearance.sideMargin,
     );
     final cubit = context.read<ReaderAppearanceCubit>();
-    return Row(
-      children: [
-        _SizeButton(
-          icon: AppIcons.remove,
-          onTap: () {
-            final value = sideMargin - ReaderAppearanceCubit.sideMarginStep;
-            cubit.previewSideMargin(value);
-            cubit.commitSideMargin(value);
-          },
-        ),
-        Expanded(
-          child: Slider(
-            value: sideMargin,
-            min: ReaderAppearanceCubit.minSideMargin,
-            max: ReaderAppearanceCubit.maxSideMargin,
-            divisions:
-                (ReaderAppearanceCubit.maxSideMargin -
-                        ReaderAppearanceCubit.minSideMargin)
-                    .round(),
-            onChanged: cubit.previewSideMargin,
-            onChangeEnd: cubit.commitSideMargin,
+    return _AppearancePanel(
+      child: Row(
+        children: [
+          _SizeButton(
+            icon: AppIcons.remove,
+            onTap: () {
+              final value = sideMargin - ReaderAppearanceCubit.sideMarginStep;
+              cubit.previewSideMargin(value);
+              cubit.commitSideMargin(value);
+            },
           ),
-        ),
-        _SizeButton(
-          icon: AppIcons.add,
-          onTap: () {
-            final value = sideMargin + ReaderAppearanceCubit.sideMarginStep;
-            cubit.previewSideMargin(value);
-            cubit.commitSideMargin(value);
-          },
-        ),
-      ],
+          Expanded(
+            child: Slider(
+              value: sideMargin,
+              min: ReaderAppearanceCubit.minSideMargin,
+              max: ReaderAppearanceCubit.maxSideMargin,
+              divisions:
+                  (ReaderAppearanceCubit.maxSideMargin -
+                          ReaderAppearanceCubit.minSideMargin)
+                      .round(),
+              onChanged: cubit.previewSideMargin,
+              onChangeEnd: cubit.commitSideMargin,
+            ),
+          ),
+          _SizeButton(
+            icon: AppIcons.add,
+            onTap: () {
+              final value = sideMargin + ReaderAppearanceCubit.sideMarginStep;
+              cubit.previewSideMargin(value);
+              cubit.commitSideMargin(value);
+            },
+          ),
+        ],
+      ),
     );
   }
 }

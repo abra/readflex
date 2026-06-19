@@ -31,16 +31,15 @@ void main() {
     await cubit.close();
   });
 
-  testWidgets('renders layered Aa sheet without tabs or preview', (
+  testWidgets('renders compact appearance sheet without tabs or preview', (
     tester,
   ) async {
     await tester.openAppearanceSheet(cubit);
 
-    expect(find.text('Aa'), findsOneWidget);
+    expect(find.text('Appearance'), findsOneWidget);
     expect(find.text('Reset'), findsOneWidget);
-    expect(find.text('Font'), findsNothing);
+    expect(find.text('Theme'), findsOneWidget);
     expect(find.text('Layout'), findsNothing);
-    expect(find.text('Theme'), findsNothing);
     expect(find.text('Paper'), findsOneWidget);
     expect(find.text('Warm'), findsOneWidget);
     expect(find.text('Graphite'), findsOneWidget);
@@ -52,12 +51,12 @@ void main() {
     expect(fontLabel.style?.fontSize, greaterThanOrEqualTo(20));
     expect(decreaseLabel.style?.fontSize, 20);
     expect(increaseLabel.style?.fontSize, 24);
-    expect(find.text('LINE HEIGHT'), findsOneWidget);
-    expect(find.text('TURNING'), findsOneWidget);
-    expect(find.text('MARGINS'), findsOneWidget);
-    expect(find.text('ALIGNMENT'), findsOneWidget);
+    expect(find.text('Line height'), findsOneWidget);
+    expect(find.text('Turning'), findsOneWidget);
+    expect(find.text('Margins'), findsOneWidget);
+    expect(find.text('Alignment'), findsOneWidget);
     expect(find.text('PREVIEW'), findsNothing);
-    expect(find.byType(Divider), findsAtLeastNWidgets(4));
+    expect(find.byType(Divider), findsNothing);
     expect(find.byType(VerticalDivider), findsNWidgets(2));
   });
 
@@ -171,7 +170,10 @@ void main() {
 
     final horizontalStyle = iconButtonFor(AppIcons.pageTurnHorizontal).style!;
     expect(horizontalStyle.foregroundColor?.resolve({}), primary);
-    expect(horizontalStyle.backgroundColor?.resolve({}), Colors.transparent);
+    expect(
+      horizontalStyle.backgroundColor?.resolve({}),
+      primary.withValues(alpha: 0.10),
+    );
     expect(horizontalStyle.overlayColor?.resolve({}), Colors.transparent);
 
     await tester.tap(find.byIcon(AppIcons.pageTurnVertical));
@@ -179,7 +181,10 @@ void main() {
 
     final verticalStyle = iconButtonFor(AppIcons.pageTurnVertical).style!;
     expect(verticalStyle.foregroundColor?.resolve({}), primary);
-    expect(verticalStyle.backgroundColor?.resolve({}), Colors.transparent);
+    expect(
+      verticalStyle.backgroundColor?.resolve({}),
+      primary.withValues(alpha: 0.10),
+    );
     expect(verticalStyle.overlayColor?.resolve({}), Colors.transparent);
     expect(
       cubit.state.effectiveAppearance.pageTurnStyle,
