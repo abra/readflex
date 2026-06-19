@@ -632,6 +632,18 @@ void main() {
       find.descendant(of: fadeStack, matching: find.byType(ListView)),
       findsOneWidget,
     );
+    final listView = tester.widget<ListView>(
+      find.descendant(of: fadeStack, matching: find.byType(ListView)),
+    );
+    expect(
+      listView.padding,
+      const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        0,
+        AppSpacing.xl,
+        AppSpacing.lg,
+      ),
+    );
   });
 
   testWidgets('collection scope rows do not show pressed overlay', (
@@ -718,6 +730,11 @@ void main() {
     expect(authorRow, findsOneWidget);
     expect(tester.getSize(manualRow).height, tester.getSize(siteRow).height);
     expect(tester.getSize(manualRow).height, tester.getSize(authorRow).height);
+
+    final sheet = find.byType(ActionBottomSheetLayout);
+    final visibleGapBelowAuthor =
+        tester.getBottomLeft(sheet).dy - tester.getBottomLeft(authorRow).dy;
+    expect(visibleGapBelowAuthor, greaterThanOrEqualTo(AppSpacing.lg));
   });
 
   testWidgets('manual collection management removes a source', (
@@ -957,6 +974,13 @@ void main() {
     expect(
       find.descendant(of: fadeStack, matching: find.byType(ListView)),
       findsOneWidget,
+    );
+    final listView = tester.widget<ListView>(
+      find.descendant(of: fadeStack, matching: find.byType(ListView)),
+    );
+    expect(
+      listView.padding,
+      const EdgeInsets.only(bottom: AppSpacing.lg),
     );
     expect(
       find.descendant(of: fadeStack, matching: find.byType(ScrollEdgeFade)),

@@ -6,6 +6,13 @@ import 'library_bloc.dart';
 const double _collectionScopeRowHeight = 48;
 const double _collectionScopeResultsMaxHeight = 420;
 const double _collectionScopeSectionChromeHeight = 36;
+const double _collectionScopeBottomBreathingRoom = AppSpacing.xl;
+const EdgeInsets _collectionScopeListPadding = EdgeInsets.fromLTRB(
+  AppSpacing.xl,
+  0,
+  AppSpacing.xl,
+  AppSpacing.lg,
+);
 
 sealed class LibraryCollectionScopeSheetResult {
   const LibraryCollectionScopeSheetResult();
@@ -78,7 +85,8 @@ class _CollectionScopeSheetState extends State<_CollectionScopeSheet> {
     final rowCount = state.collectionScopes.length;
     final contentHeight =
         rowCount * _collectionScopeRowHeight +
-        sectionCount * _collectionScopeSectionChromeHeight;
+        sectionCount * _collectionScopeSectionChromeHeight +
+        _collectionScopeBottomBreathingRoom;
     return contentHeight > _collectionScopeResultsMaxHeight
         ? _collectionScopeResultsMaxHeight
         : contentHeight;
@@ -177,7 +185,7 @@ class _CollectionScopeSections extends StatelessWidget {
     return ScrollEdgeFadeStack(
       showBottomFade: false,
       child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+        padding: _collectionScopeListPadding,
         children: [
           _ScopeSection(
             scopes: favouriteScopes,

@@ -47,6 +47,9 @@ const EdgeInsets _sheetActionsPadding = EdgeInsets.fromLTRB(
   AppSpacing.xl,
   AppSpacing.lg,
 );
+const EdgeInsets _collectionSourcesListPadding = EdgeInsets.only(
+  bottom: AppSpacing.lg,
+);
 
 Future<ManageCollectionSheetResult?> showManageCollectionSheet({
   required BuildContext context,
@@ -675,7 +678,7 @@ class _CollectionSourcesList extends StatelessWidget {
         child: ScrollEdgeFadeStack(
           child: ListView.builder(
             shrinkWrap: true,
-            padding: EdgeInsets.zero,
+            padding: _collectionSourcesListPadding,
             itemCount: visibleSources.length,
             itemBuilder: (context, index) {
               final source = visibleSources[index];
