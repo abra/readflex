@@ -184,6 +184,19 @@ class ReaderAppearanceCubit extends Cubit<ReaderAppearanceState> {
     _sideMarginCommitTimer = Timer(_commitDebounce, _flushSideMargin);
   }
 
+  Future<void> resetSideMargin() async {
+    _pendingSideMargin = null;
+    _sideMarginCommitTimer?.cancel();
+    _sideMarginCommitTimer = null;
+    final defaultSideMargin = ReaderAppearancePreferences.defaults.sideMargin;
+    final next = state.sourceOverride.copyWith(
+      sideMargin: state.globalAppearance.sideMargin == defaultSideMargin
+          ? null
+          : defaultSideMargin,
+    );
+    await _persistOverride(next);
+  }
+
   Future<void> reset() async {
     _textScaleCommitTimer?.cancel();
     _lineHeightCommitTimer?.cancel();

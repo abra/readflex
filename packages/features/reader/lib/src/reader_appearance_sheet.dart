@@ -11,6 +11,7 @@ const double _compactControlSurfaceHeight = _compactControlHeight + 6;
 const double _segmentedControlPadding = 3;
 const double _marginsControlWidth = 152;
 const double _pageTurnControlWidth = 116;
+const double _textSizeControlWidth = 192;
 const double _themeSwatchHeight = 36;
 const double _textScaleEpsilon = 0.001;
 
@@ -220,7 +221,10 @@ class _FontAndSizeLevel extends StatelessWidget {
           SizedBox(width: AppSpacing.md),
           _VerticalAppearanceDivider(),
           SizedBox(width: AppSpacing.md),
-          Expanded(child: _CompactSizeControl()),
+          SizedBox(
+            width: _textSizeControlWidth,
+            child: _CompactSizeControl(),
+          ),
         ],
       ),
     );
@@ -300,6 +304,10 @@ class _CompactSizeControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textScale = context.select<ReaderAppearanceCubit, double>(
+      (c) => c.state.effectiveAppearance.textScale,
+    );
+    final cubit = context.read<ReaderAppearanceCubit>();
     return _AppearanceLevel(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -312,7 +320,12 @@ class _CompactSizeControl extends StatelessWidget {
               -ReaderAppearanceCubit.textScaleStep,
             ),
           ),
-          const SizedBox(width: AppSpacing.lg),
+          const SizedBox(width: AppSpacing.sm),
+          _TextScaleValueButton(
+            textScale: textScale,
+            onTap: cubit.resetTextScale,
+          ),
+          const SizedBox(width: AppSpacing.sm),
           _CompactTextSizeButton(
             label: 'A+',
             large: true,
@@ -322,6 +335,43 @@ class _CompactSizeControl extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TextScaleValueButton extends StatelessWidget {
+  const _TextScaleValueButton({required this.textScale, required this.onTap});
+
+  final double textScale;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = '${(textScale * 100).round()}%';
+    return Tooltip(
+      message: 'Reset text size',
+      child: Semantics(
+        button: true,
+        label: 'Reset text size',
+        value: label,
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: SizedBox(
+            width: 48,
+            height: _compactControlHeight,
+            child: Center(
+              child: Text(
+                label,
+                style: context.text.labelLarge.copyWith(
+                  color: context.colors.onSurface.withValues(alpha: 0.72),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -733,7 +783,10 @@ class _MarginControl extends StatelessWidget {
                 }
               : null,
         ),
-        _MarginValueBadge(sideMargin: sideMargin),
+        _MarginValueBadge(
+          sideMargin: sideMargin,
+          onTap: cubit.resetSideMargin,
+        ),
         _StepIconButton(
           icon: AppIcons.add,
           onTap: canIncrease
@@ -751,27 +804,59 @@ class _MarginControl extends StatelessWidget {
 }
 
 class _MarginValueBadge extends StatelessWidget {
-  const _MarginValueBadge({required this.sideMargin});
+  const _MarginValueBadge({required this.sideMargin, required this.onTap});
 
   final double sideMargin;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return _ValueBadge(
+      label: '${sideMargin.round()}%',
+      tooltip: 'Reset page margins',
+      onTap: onTap,
+    );
+  }
+}
+
+class _ValueBadge extends StatelessWidget {
+  const _ValueBadge({
+    required this.label,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final String label;
+  final String tooltip;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final cs = context.colors;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.38),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-      ),
-      child: SizedBox(
-        width: 48,
-        height: _compactControlSurfaceHeight,
-        child: Center(
-          child: Text(
-            '${sideMargin.round()}%',
-            style: context.text.labelLarge.copyWith(
-              color: cs.onSurface,
-              fontWeight: FontWeight.w600,
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        label: tooltip,
+        value: label,
+        child: Material(
+          color: cs.surfaceContainerHighest.withValues(alpha: 0.38),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            child: SizedBox(
+              width: 48,
+              height: _compactControlSurfaceHeight,
+              child: Center(
+                child: Text(
+                  label,
+                  style: context.text.labelLarge.copyWith(
+                    color: cs.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ),
           ),
         ),

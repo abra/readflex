@@ -204,6 +204,15 @@ void main() {
       preferencesService.readerAppearanceOverrideFor(_sourceId)?.sideMargin,
       9,
     );
+
+    await tester.tap(find.text('9%'));
+    await tester.pumpAndSettle();
+
+    expect(cubit.state.effectiveAppearance.sideMargin, 8);
+    expect(
+      preferencesService.readerAppearanceOverrideFor(_sourceId)?.sideMargin,
+      isNull,
+    );
   });
 
   testWidgets('persists font changes and resets source override from header', (
@@ -231,16 +240,28 @@ void main() {
   ) async {
     await tester.openAppearanceSheet(cubit);
 
+    expect(find.text('100%'), findsOneWidget);
+
     await tester.tap(find.text('A+'));
     await tester.pump();
 
     expect(cubit.state.effectiveAppearance.textScale, closeTo(1.05, 0.001));
+    expect(find.text('105%'), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(
       preferencesService.readerAppearanceOverrideFor(_sourceId)?.textScale,
       closeTo(1.05, 0.001),
+    );
+
+    await tester.tap(find.text('105%'));
+    await tester.pumpAndSettle();
+
+    expect(cubit.state.effectiveAppearance.textScale, 1);
+    expect(
+      preferencesService.readerAppearanceOverrideFor(_sourceId)?.textScale,
+      isNull,
     );
   });
 

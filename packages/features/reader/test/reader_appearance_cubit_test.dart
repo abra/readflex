@@ -275,6 +275,37 @@ void main() {
     );
 
     blocTest<ReaderAppearanceCubit, ReaderAppearanceState>(
+      'resetSideMargin clears only the side margin override',
+      build: () => ReaderAppearanceCubit(
+        preferencesService: preferencesService,
+        sourceId: _sourceId,
+      ),
+      act: (cubit) async {
+        await cubit.setFont('sans');
+        cubit.previewSideMargin(10);
+        await cubit.resetSideMargin();
+      },
+      expect: () => [
+        isA<ReaderAppearanceState>()
+            .having((s) => s.effectiveAppearance.fontId, 'fontId', 'sans')
+            .having((s) => s.effectiveAppearance.sideMargin, 'sideMargin', 8),
+        isA<ReaderAppearanceState>()
+            .having((s) => s.effectiveAppearance.fontId, 'fontId', 'sans')
+            .having((s) => s.effectiveAppearance.sideMargin, 'sideMargin', 10),
+        isA<ReaderAppearanceState>()
+            .having((s) => s.effectiveAppearance.fontId, 'fontId', 'sans')
+            .having((s) => s.effectiveAppearance.sideMargin, 'sideMargin', 8),
+      ],
+      verify: (_) {
+        final override = preferencesService.readerAppearanceOverrideFor(
+          _sourceId,
+        );
+        expect(override?.fontId, 'sans');
+        expect(override?.sideMargin, isNull);
+      },
+    );
+
+    blocTest<ReaderAppearanceCubit, ReaderAppearanceState>(
       'reset clears the source override',
       build: () => ReaderAppearanceCubit(
         preferencesService: preferencesService,
