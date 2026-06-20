@@ -777,7 +777,13 @@ class _BookUploadStatusContent extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Center(child: CenteredCircularProgressIndicator()),
+        const SizedBox(height: _kBookUploadProgressReserveHeight),
+        const Center(
+          child: _StatusIconSlot(
+            key: ValueKey('importFlowStatusIcon'),
+            child: CenteredCircularProgressIndicator(),
+          ),
+        ),
         const SizedBox(height: AppSpacing.md),
         Text(
           'Uploading book...',
@@ -802,16 +808,19 @@ class _BookUploadStatusContent extends StatelessWidget {
             color: progressColor,
           ),
         ),
-        if (progress != null) ...[
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            '${(progress! * 100).clamp(0, 100).toInt()}%',
-            textAlign: TextAlign.center,
-            style: detailStyle.copyWith(
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-        ],
+        const SizedBox(height: AppSpacing.xs),
+        SizedBox(
+          height: _kBookUploadProgressLabelHeight,
+          child: progress == null
+              ? null
+              : Text(
+                  '${(progress! * 100).clamp(0, 100).toInt()}%',
+                  textAlign: TextAlign.center,
+                  style: detailStyle.copyWith(
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+        ),
       ],
     );
   }
@@ -832,6 +841,7 @@ class _ArticleUploadingView extends StatelessWidget {
       reserveActionSpace: true,
       content: _StatusContent(
         icon: const _StatusIconSlot(
+          key: ValueKey('importFlowStatusIcon'),
           child: CenteredCircularProgressIndicator(),
         ),
         title: _articleUploadingTitle(state.stage),
@@ -937,6 +947,9 @@ class _StatusContent extends StatelessWidget {
 }
 
 const _kStatusActionHeight = 48.0;
+const _kBookUploadProgressLabelHeight = 16.0;
+const _kBookUploadProgressReserveHeight =
+    AppSpacing.md + 6 + AppSpacing.xs + _kBookUploadProgressLabelHeight;
 
 /// Insets used by the title-less status views (uploading, done,
 /// failure) so they line up with the [_MenuView]'s ActionBottomSheet
@@ -1063,6 +1076,7 @@ class _SuccessLayout extends StatelessWidget {
       content: _StatusContent(
         icon: _StatusIconSlot(
           child: _IconDisc(
+            key: const ValueKey('importFlowStatusIcon'),
             child: Icon(AppIcons.check, color: cs.primary, size: 24),
           ),
         ),
@@ -1081,7 +1095,7 @@ class _SuccessLayout extends StatelessWidget {
 }
 
 class _StatusIconSlot extends StatelessWidget {
-  const _StatusIconSlot({required this.child});
+  const _StatusIconSlot({required this.child, super.key});
 
   final Widget child;
 
@@ -1099,7 +1113,7 @@ class _StatusIconSlot extends StatelessWidget {
 /// for spinners, checkmarks and the error icon in the various
 /// transient states.
 class _IconDisc extends StatelessWidget {
-  const _IconDisc({required this.child, this.tint});
+  const _IconDisc({required this.child, this.tint, super.key});
 
   final Widget child;
 

@@ -384,6 +384,69 @@ void main() {
     );
   });
 
+  testWidgets('book upload status icon matches article upload position', (
+    tester,
+  ) async {
+    final articleImportCompleter = Completer<Article?>();
+
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => null,
+          onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (_, {onStage}) => articleImportCompleter.future,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Article'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'https://example.com/a');
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    final articleIconRect = tester.getRect(
+      find.byKey(const ValueKey('importFlowStatusIcon')),
+    );
+
+    articleImportCompleter.complete(_fakeArticle(title: 'Saved article'));
+    await tester.pump();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    final bookImportCompleter = Completer<Book?>();
+
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => File('/tmp/Test.epub'),
+          onImportBook: (file, {onProgress}) => bookImportCompleter.future,
+          onImportArticle: (_, {onStage}) async => null,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Upload Book'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    final bookIconRect = tester.getRect(
+      find.byKey(const ValueKey('importFlowStatusIcon')),
+    );
+
+    expect(bookIconRect.size, equals(articleIconRect.size));
+    expect(bookIconRect.center.dx, closeTo(articleIconRect.center.dx, 0.1));
+    expect(bookIconRect.center.dy, closeTo(articleIconRect.center.dy, 0.1));
+  });
+
   testWidgets('book upload requires accepting terms before file picker', (
     tester,
   ) async {
@@ -536,9 +599,19 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Upload Book'));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
 
     expect(find.text('Uploading book...'), findsOneWidget);
     expect(find.text('Test.epub'), findsOneWidget);
+    final uploadingIconRect = tester.getRect(
+      find.byKey(const ValueKey('importFlowStatusIcon')),
+    );
+    expect(uploadingIconRect.size, equals(const Size(56, 56)));
+    final progressIndicatorRect = tester.getRect(
+      find.byType(CircularProgressIndicator),
+    );
+    expect(progressIndicatorRect.width, lessThan(uploadingIconRect.width));
+    expect(progressIndicatorRect.height, lessThan(uploadingIconRect.height));
 
     importCompleter.complete(_fakeBook());
     await tester.pump();
@@ -552,6 +625,19 @@ void main() {
 
     expect(find.text('Book added!'), findsOneWidget);
     expect(find.text('Test.epub'), findsOneWidget);
+
+    final successIconRect = tester.getRect(
+      find.byKey(const ValueKey('importFlowStatusIcon')),
+    );
+    expect(successIconRect.size, equals(uploadingIconRect.size));
+    expect(
+      successIconRect.center.dx,
+      closeTo(uploadingIconRect.center.dx, 0.1),
+    );
+    expect(
+      successIconRect.center.dy,
+      closeTo(uploadingIconRect.center.dy, 0.1),
+    );
   });
 
   testWidgets('successful comic import shows Comic added!', (tester) async {
