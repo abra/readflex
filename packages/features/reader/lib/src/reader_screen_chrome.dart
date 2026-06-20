@@ -693,31 +693,11 @@ class _ReaderTopChrome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final chromeAnimCurve = visible ? _kChromeAnimCurve : _kChromeHideAnimCurve;
-    final titleText = Text(
-      title,
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-      textAlign: TextAlign.center,
-      style: context.text.bodyMedium.copyWith(
-        fontFamily: ReaderFontPreset.serif.fontFamily,
-        color: titleColor,
-      ),
+    final baseTitleStyle = context.text.bodyMedium.copyWith(
+      fontFamily: ReaderFontPreset.serif.fontFamily,
+      color: titleColor,
+      height: _kReaderTopChromeTitleLineHeight,
     );
-    final titleChild = onTitlePressed == null
-        ? titleText
-        : Tooltip(
-            message: 'Open original article',
-            child: Semantics(
-              button: true,
-              label: 'Open original article',
-              value: title,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onTitlePressed,
-                child: titleText,
-              ),
-            ),
-          );
 
     return Positioned(
       left: 0,
@@ -750,9 +730,41 @@ class _ReaderTopChrome extends StatelessWidget {
                   height: _kReaderTopChromeHeight,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg,
+                      horizontal: AppSpacing.md,
                     ),
-                    child: Center(child: titleChild),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final titleStyle = readerTopChromeTitleStyleForText(
+                          title: title,
+                          baseStyle: baseTitleStyle,
+                          textDirection: Directionality.of(context),
+                          maxWidth: constraints.maxWidth,
+                        );
+                        final titleText = Text(
+                          title,
+                          maxLines: _kReaderTopChromeTitleMaxLines,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: titleStyle,
+                        );
+                        final titleChild = onTitlePressed == null
+                            ? titleText
+                            : Tooltip(
+                                message: 'Open original article',
+                                child: Semantics(
+                                  button: true,
+                                  label: 'Open original article',
+                                  value: title,
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: onTitlePressed,
+                                    child: titleText,
+                                  ),
+                                ),
+                              );
+                        return Center(child: titleChild);
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -762,6 +774,56 @@ class _ReaderTopChrome extends StatelessWidget {
       ),
     );
   }
+}
+
+@visibleForTesting
+TextStyle readerTopChromeTitleStyleForText({
+  required String title,
+  required TextStyle baseStyle,
+  required TextDirection textDirection,
+  required double maxWidth,
+}) {
+  final baseFontSize = baseStyle.fontSize ?? 14.0;
+  final minFontSize = _kReaderTopChromeMinTitleFontSize
+      .clamp(
+        0.0,
+        baseFontSize,
+      )
+      .toDouble();
+
+  for (
+    var fontSize = baseFontSize;
+    fontSize >= minFontSize;
+    fontSize -= _kReaderTopChromeTitleFontStep
+  ) {
+    final style = baseStyle.copyWith(fontSize: fontSize);
+    if (_readerTopChromeTitleFits(
+      title: title,
+      style: style,
+      textDirection: textDirection,
+      maxWidth: maxWidth,
+    )) {
+      return style;
+    }
+  }
+
+  return baseStyle.copyWith(fontSize: minFontSize);
+}
+
+bool _readerTopChromeTitleFits({
+  required String title,
+  required TextStyle style,
+  required TextDirection textDirection,
+  required double maxWidth,
+}) {
+  final painter = TextPainter(
+    text: TextSpan(text: title, style: style),
+    textAlign: TextAlign.center,
+    textDirection: textDirection,
+    maxLines: _kReaderTopChromeTitleMaxLines,
+    ellipsis: '...',
+  )..layout(maxWidth: maxWidth);
+  return !painter.didExceedMaxLines;
 }
 
 /// Combines chrome visibility from [ReaderUiCubit], selection state from
