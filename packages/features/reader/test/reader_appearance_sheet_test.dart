@@ -51,13 +51,13 @@ void main() {
     expect(fontLabel.style?.fontSize, greaterThanOrEqualTo(20));
     expect(decreaseLabel.style?.fontSize, 20);
     expect(increaseLabel.style?.fontSize, 24);
-    expect(find.text('Line height'), findsOneWidget);
-    expect(find.text('Turning'), findsOneWidget);
-    expect(find.text('Margins'), findsOneWidget);
-    expect(find.text('Alignment'), findsOneWidget);
+    expect(find.text('Line spacing'), findsOneWidget);
+    expect(find.text('Page turn'), findsOneWidget);
+    expect(find.text('Page margins'), findsOneWidget);
+    expect(find.text('Text alignment'), findsOneWidget);
     expect(find.text('PREVIEW'), findsNothing);
     expect(find.byType(Divider), findsNothing);
-    expect(find.byType(VerticalDivider), findsNWidgets(2));
+    expect(find.byType(VerticalDivider), findsNWidgets(3));
   });
 
   testWidgets('theme swatches persist reader theme', (tester) async {
@@ -120,11 +120,11 @@ void main() {
   testWidgets('persists text alignment from layout panel', (tester) async {
     await tester.openAppearanceSheet(cubit);
 
-    expect(find.text('Start'), findsOneWidget);
-    expect(find.text('End'), findsOneWidget);
-    expect(find.text('Justify'), findsOneWidget);
+    expect(find.text('Start'), findsNothing);
+    expect(find.text('End'), findsNothing);
+    expect(find.text('Justify'), findsNothing);
 
-    await tester.tap(find.text('End'));
+    await tester.tap(find.byIcon(AppIcons.alignEnd));
     await tester.pumpAndSettle();
 
     expect(
@@ -136,7 +136,7 @@ void main() {
       ReaderTextAlignment.end,
     );
 
-    await tester.tap(find.text('Justify'));
+    await tester.tap(find.byIcon(AppIcons.alignJustify));
     await tester.pumpAndSettle();
 
     expect(
@@ -158,34 +158,22 @@ void main() {
 
     expect(find.byIcon(AppIcons.pageTurnHorizontal), findsOneWidget);
     expect(find.byIcon(AppIcons.pageTurnVertical), findsOneWidget);
+    expect(find.text('Horizontal'), findsNothing);
+    expect(find.text('Vertical'), findsNothing);
     expect(find.text('Instant'), findsNothing);
-    IconButton iconButtonFor(IconData icon) {
-      return tester.widget<IconButton>(
-        find.ancestor(
-          of: find.byIcon(icon),
-          matching: find.byType(IconButton),
-        ),
-      );
-    }
 
-    final horizontalStyle = iconButtonFor(AppIcons.pageTurnHorizontal).style!;
-    expect(horizontalStyle.foregroundColor?.resolve({}), primary);
-    expect(
-      horizontalStyle.backgroundColor?.resolve({}),
-      primary.withValues(alpha: 0.10),
+    final horizontalIcon = tester.widget<Icon>(
+      find.byIcon(AppIcons.pageTurnHorizontal),
     );
-    expect(horizontalStyle.overlayColor?.resolve({}), Colors.transparent);
+    expect(horizontalIcon.color, primary);
 
     await tester.tap(find.byIcon(AppIcons.pageTurnVertical));
     await tester.pumpAndSettle();
 
-    final verticalStyle = iconButtonFor(AppIcons.pageTurnVertical).style!;
-    expect(verticalStyle.foregroundColor?.resolve({}), primary);
-    expect(
-      verticalStyle.backgroundColor?.resolve({}),
-      primary.withValues(alpha: 0.10),
+    final verticalIcon = tester.widget<Icon>(
+      find.byIcon(AppIcons.pageTurnVertical),
     );
-    expect(verticalStyle.overlayColor?.resolve({}), Colors.transparent);
+    expect(verticalIcon.color, primary);
     expect(
       cubit.state.effectiveAppearance.pageTurnStyle,
       ReaderPageTurnStyle.vertical,
@@ -193,6 +181,28 @@ void main() {
     expect(
       preferencesService.readerAppearanceOverrideFor(_sourceId)?.pageTurnStyle,
       ReaderPageTurnStyle.vertical,
+    );
+  });
+
+  testWidgets('margin stepper previews and persists side margin', (
+    tester,
+  ) async {
+    await tester.openAppearanceSheet(cubit);
+
+    expect(find.byType(Slider), findsNothing);
+    expect(find.text('8%'), findsWidgets);
+
+    await tester.tap(find.byIcon(AppIcons.add));
+    await tester.pump();
+
+    expect(cubit.state.effectiveAppearance.sideMargin, 9);
+    expect(find.text('9%'), findsWidgets);
+
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(
+      preferencesService.readerAppearanceOverrideFor(_sourceId)?.sideMargin,
+      9,
     );
   });
 

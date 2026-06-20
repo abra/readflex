@@ -47,6 +47,9 @@ abstract final class AppIcons {
   static const IconData font = LucideIcons.type;
   static const IconData pageTurnHorizontal = LucideIcons.arrowLeftRight;
   static const IconData pageTurnVertical = LucideIcons.arrowUpDown;
+  static const IconData alignStart = LucideIcons.alignLeft;
+  static const IconData alignEnd = LucideIcons.alignRight;
+  static const IconData alignJustify = LucideIcons.alignJustify;
   static const IconData share = LucideIcons.share2;
 
   // ── Layout ────────────────────────────────────────────────
