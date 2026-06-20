@@ -54,46 +54,49 @@ void main() {
       expect(find.text('TAP AREA'), findsNWidgets(2));
     });
 
-    testWidgets('shows persistent vertical edge lines only when available', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        Directionality(
-          textDirection: TextDirection.ltr,
-          child: SizedBox(
-            width: 300,
-            height: 600,
-            child: Stack(
-              children: [
-                ReaderTapEdgeIndicator(
-                  readerTheme: ReaderThemePreset.paper.data,
-                  axis: ReaderTapAxis.vertical,
-                  pageProgressionRtl: false,
-                  canGoPrevious: false,
-                  canGoNext: true,
-                  contentTopMargin: 65,
-                  contentBottomMargin: 35,
-                  contentSideMargin: 8,
-                ),
-              ],
+    testWidgets(
+      'shows persistent vertical side edge lines only when available',
+      (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: SizedBox(
+              width: 300,
+              height: 600,
+              child: Stack(
+                children: [
+                  ReaderTapEdgeIndicator(
+                    readerTheme: ReaderThemePreset.paper.data,
+                    axis: ReaderTapAxis.vertical,
+                    pageProgressionRtl: false,
+                    canGoPrevious: false,
+                    canGoNext: true,
+                    contentTopMargin: 65,
+                    contentBottomMargin: 35,
+                    contentSideMargin: 8,
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(find.byKey(const Key('readerTapEdgeTop')), findsNothing);
-      expect(find.byKey(const Key('readerTapEdgeBottom')), findsOneWidget);
-      expect(find.byKey(const Key('readerTapEdgeLeft')), findsNothing);
-      expect(find.byKey(const Key('readerTapEdgeRight')), findsNothing);
+        expect(find.byKey(const Key('readerTapEdgeTop')), findsNothing);
+        expect(find.byKey(const Key('readerTapEdgeBottom')), findsNothing);
+        expect(find.byKey(const Key('readerTapEdgeLeft')), findsNothing);
+        expect(find.byKey(const Key('readerTapEdgeRight')), findsOneWidget);
 
-      final bottomLine = tester.widget<Positioned>(
-        find.byKey(const Key('readerTapEdgeBottom')),
-      );
-      expect(bottomLine.bottom, 29.0);
-      expect(bottomLine.left, 386.0);
-      expect(bottomLine.width, 28.0);
-      expect(bottomLine.height, 2.0);
-    });
+        final rightLine = tester.widget<Positioned>(
+          find.byKey(const Key('readerTapEdgeRight')),
+        );
+        expect(rightLine.right, 4.0);
+        expect(rightLine.top, 302.5);
+        expect(rightLine.width, 2.0);
+        expect(rightLine.height, 25.0);
+      },
+    );
 
     testWidgets('hides persistent edge lines while reader page is not ready', (
       tester,

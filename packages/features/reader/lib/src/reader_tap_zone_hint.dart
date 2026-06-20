@@ -56,9 +56,11 @@ class ReaderTapEdgeIndicator extends StatelessWidget {
               sideMarginPercent: contentSideMargin,
             );
             return Stack(
-              children: axis == ReaderTapAxis.vertical
-                  ? _verticalLines(metrics, color)
-                  : _horizontalLines(metrics, color),
+              children: _sideLines(
+                metrics,
+                color,
+                respectRtlProgression: axis == ReaderTapAxis.horizontal,
+              ),
             );
           },
         ),
@@ -66,37 +68,17 @@ class ReaderTapEdgeIndicator extends StatelessWidget {
     );
   }
 
-  List<Widget> _verticalLines(_ReaderTapEdgeMetrics metrics, Color color) {
-    final lineWidth = (metrics.contentWidth * 0.07)
-        .clamp(_kReaderTapEdgeMinLength, _kReaderTapEdgeMaxLength)
-        .toDouble();
-    final lineLeft =
-        metrics.contentLeft + (metrics.contentWidth - lineWidth) / 2;
-    return [
-      if (canGoPrevious)
-        Positioned(
-          key: const Key('readerTapEdgeTop'),
-          left: lineLeft,
-          top: metrics.topLineInset,
-          width: lineWidth,
-          height: _kReaderTapEdgeThickness,
-          child: _ReaderTapEdgeLine(color: color),
-        ),
-      if (canGoNext)
-        Positioned(
-          key: const Key('readerTapEdgeBottom'),
-          left: lineLeft,
-          bottom: metrics.bottomLineInset,
-          width: lineWidth,
-          height: _kReaderTapEdgeThickness,
-          child: _ReaderTapEdgeLine(color: color),
-        ),
-    ];
-  }
-
-  List<Widget> _horizontalLines(_ReaderTapEdgeMetrics metrics, Color color) {
-    final canGoLeft = pageProgressionRtl ? canGoNext : canGoPrevious;
-    final canGoRight = pageProgressionRtl ? canGoPrevious : canGoNext;
+  List<Widget> _sideLines(
+    _ReaderTapEdgeMetrics metrics,
+    Color color, {
+    required bool respectRtlProgression,
+  }) {
+    final canGoLeft = respectRtlProgression && pageProgressionRtl
+        ? canGoNext
+        : canGoPrevious;
+    final canGoRight = respectRtlProgression && pageProgressionRtl
+        ? canGoPrevious
+        : canGoNext;
     final lineHeight = (metrics.contentHeight * 0.05)
         .clamp(_kReaderTapEdgeMinLength, _kReaderTapEdgeMaxLength)
         .toDouble();
@@ -152,19 +134,6 @@ class _ReaderTapEdgeMetrics {
 
   double get contentHeight =>
       (height - contentTop - contentBottom).clamp(0.0, height).toDouble();
-
-  double get topLineInset => _lineInsetForMargin(contentTop);
-
-  double get bottomLineInset => _lineInsetForMargin(contentBottom);
-
-  double get leftLineInset => _lineInsetForMargin(contentLeft);
-
-  double get rightLineInset => _lineInsetForMargin(contentRight);
-
-  static double _lineInsetForMargin(double margin) =>
-      (margin - _kReaderTapEdgeInset - _kReaderTapEdgeThickness)
-          .clamp(0.0, margin)
-          .toDouble();
 }
 
 class _ReaderTapEdgeLine extends StatelessWidget {
@@ -274,61 +243,39 @@ class _ReaderTapZoneHintOverlay extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final height = constraints.maxHeight;
+        final previousIcon = axis == ReaderTapAxis.vertical
+            ? Icons.keyboard_arrow_up_rounded
+            : Icons.keyboard_arrow_left_rounded;
+        final nextIcon = axis == ReaderTapAxis.vertical
+            ? Icons.keyboard_arrow_down_rounded
+            : Icons.keyboard_arrow_right_rounded;
         return Stack(
-          children: axis == ReaderTapAxis.vertical
-              ? [
-                  Positioned(
-                    left: 0,
-                    top: 0,
-                    width: width,
-                    height: height * readerTopTapZoneEnd,
-                    child: _ReaderTapZoneHintPanel(
-                      icon: Icons.keyboard_arrow_up_rounded,
-                      fill: fill,
-                      border: border,
-                      iconColor: icon,
-                    ),
-                  ),
-                  Positioned(
-                    left: 0,
-                    bottom: 0,
-                    width: width,
-                    height: height * (1 - readerBottomTapZoneStart),
-                    child: _ReaderTapZoneHintPanel(
-                      icon: Icons.keyboard_arrow_down_rounded,
-                      fill: fill,
-                      border: border,
-                      iconColor: icon,
-                    ),
-                  ),
-                ]
-              : [
-                  Positioned(
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: width * readerLeftTapZoneEnd,
-                    child: _ReaderTapZoneHintPanel(
-                      icon: Icons.keyboard_arrow_left_rounded,
-                      fill: fill,
-                      border: border,
-                      iconColor: icon,
-                    ),
-                  ),
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: width * (1 - readerRightTapZoneStart),
-                    child: _ReaderTapZoneHintPanel(
-                      icon: Icons.keyboard_arrow_right_rounded,
-                      fill: fill,
-                      border: border,
-                      iconColor: icon,
-                    ),
-                  ),
-                ],
+          children: [
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: width * readerLeftTapZoneEnd,
+              child: _ReaderTapZoneHintPanel(
+                icon: previousIcon,
+                fill: fill,
+                border: border,
+                iconColor: icon,
+              ),
+            ),
+            Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              width: width * (1 - readerRightTapZoneStart),
+              child: _ReaderTapZoneHintPanel(
+                icon: nextIcon,
+                fill: fill,
+                border: border,
+                iconColor: icon,
+              ),
+            ),
+          ],
         );
       },
     );

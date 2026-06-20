@@ -3,11 +3,9 @@ import 'package:reader/src/reader_tap_action.dart';
 
 void main() {
   group('readerTapActionFor', () {
-    test('uses horizontal symmetric zones and vertical weighted zones', () {
+    test('uses the same side tap zones for all page turn styles', () {
       expect(readerLeftTapZoneEnd, 0.30);
       expect(readerRightTapZoneStart, 0.70);
-      expect(readerTopTapZoneEnd, 0.40);
-      expect(readerBottomTapZoneStart, 0.80);
     });
 
     test('uses physical left and right tap zones when chrome is hidden', () {
@@ -56,11 +54,20 @@ void main() {
     });
 
     test(
-      'uses full-width top and bottom tap zones for vertical page turns',
+      'uses side tap zones for vertical page turns',
       () {
         expect(
           readerTapActionFor(
             x: 0.10,
+            y: 0.90,
+            chromeVisible: false,
+            axis: ReaderTapAxis.vertical,
+          ),
+          ReaderTapAction.leftPage,
+        );
+        expect(
+          readerTapActionFor(
+            x: 0.10,
             y: 0.10,
             chromeVisible: false,
             axis: ReaderTapAxis.vertical,
@@ -70,15 +77,6 @@ void main() {
         expect(
           readerTapActionFor(
             x: 0.90,
-            y: 0.10,
-            chromeVisible: false,
-            axis: ReaderTapAxis.vertical,
-          ),
-          ReaderTapAction.leftPage,
-        );
-        expect(
-          readerTapActionFor(
-            x: 0.10,
             y: 0.90,
             chromeVisible: false,
             axis: ReaderTapAxis.vertical,
@@ -88,7 +86,7 @@ void main() {
         expect(
           readerTapActionFor(
             x: 0.90,
-            y: 0.90,
+            y: 0.10,
             chromeVisible: false,
             axis: ReaderTapAxis.vertical,
           ),
@@ -96,8 +94,8 @@ void main() {
         );
         expect(
           readerTapActionFor(
-            x: 0.10,
-            y: 0.45,
+            x: 0.50,
+            y: 0.10,
             chromeVisible: false,
             axis: ReaderTapAxis.vertical,
           ),
@@ -105,8 +103,8 @@ void main() {
         );
         expect(
           readerTapActionFor(
-            x: 0.90,
-            y: 0.60,
+            x: 0.50,
+            y: 0.90,
             chromeVisible: false,
             axis: ReaderTapAxis.vertical,
           ),
@@ -138,8 +136,8 @@ void main() {
       );
       expect(
         readerTapCommandFor(
-          x: 0.50,
-          y: 0.10,
+          x: 0.10,
+          y: 0.50,
           chromeVisible: false,
           axis: ReaderTapAxis.vertical,
         ),
@@ -147,8 +145,8 @@ void main() {
       );
       expect(
         readerTapCommandFor(
-          x: 0.50,
-          y: 0.90,
+          x: 0.90,
+          y: 0.50,
           chromeVisible: false,
           axis: ReaderTapAxis.vertical,
         ),

@@ -19,8 +19,6 @@ enum ReaderTapAxis {
 
 const readerLeftTapZoneEnd = 0.30;
 const readerRightTapZoneStart = 0.70;
-const readerTopTapZoneEnd = 0.40;
-const readerBottomTapZoneStart = 0.80;
 
 ReaderTapAction readerTapActionFor({
   required double x,
@@ -29,11 +27,6 @@ ReaderTapAction readerTapActionFor({
   ReaderTapAxis axis = ReaderTapAxis.horizontal,
 }) {
   if (chromeVisible) return ReaderTapAction.toggleChrome;
-  if (axis == ReaderTapAxis.vertical) {
-    if (y <= readerTopTapZoneEnd) return ReaderTapAction.leftPage;
-    if (y >= readerBottomTapZoneStart) return ReaderTapAction.rightPage;
-    return ReaderTapAction.toggleChrome;
-  }
   if (x <= readerLeftTapZoneEnd) return ReaderTapAction.leftPage;
   if (x >= readerRightTapZoneStart) return ReaderTapAction.rightPage;
   return ReaderTapAction.toggleChrome;
