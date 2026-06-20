@@ -55,7 +55,7 @@ void main() {
     });
 
     testWidgets(
-      'shows persistent vertical side edge lines only when available',
+      'shows persistent vertical top and bottom edge lines only when available',
       (
         tester,
       ) async {
@@ -84,17 +84,17 @@ void main() {
         );
 
         expect(find.byKey(const Key('readerTapEdgeTop')), findsNothing);
-        expect(find.byKey(const Key('readerTapEdgeBottom')), findsNothing);
+        expect(find.byKey(const Key('readerTapEdgeBottom')), findsOneWidget);
         expect(find.byKey(const Key('readerTapEdgeLeft')), findsNothing);
-        expect(find.byKey(const Key('readerTapEdgeRight')), findsOneWidget);
+        expect(find.byKey(const Key('readerTapEdgeRight')), findsNothing);
 
-        final rightLine = tester.widget<Positioned>(
-          find.byKey(const Key('readerTapEdgeRight')),
+        final bottomLine = tester.widget<Positioned>(
+          find.byKey(const Key('readerTapEdgeBottom')),
         );
-        expect(rightLine.right, 4.0);
-        expect(rightLine.top, 302.5);
-        expect(rightLine.width, 2.0);
-        expect(rightLine.height, 25.0);
+        expect(bottomLine.bottom, 29.0);
+        expect(bottomLine.left, 386.0);
+        expect(bottomLine.width, 28.0);
+        expect(bottomLine.height, 2.0);
       },
     );
 

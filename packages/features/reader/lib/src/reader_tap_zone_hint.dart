@@ -56,16 +56,46 @@ class ReaderTapEdgeIndicator extends StatelessWidget {
               sideMarginPercent: contentSideMargin,
             );
             return Stack(
-              children: _sideLines(
-                metrics,
-                color,
-                respectRtlProgression: axis == ReaderTapAxis.horizontal,
-              ),
+              children: axis == ReaderTapAxis.vertical
+                  ? _verticalLines(metrics, color)
+                  : _sideLines(
+                      metrics,
+                      color,
+                      respectRtlProgression: true,
+                    ),
             );
           },
         ),
       ),
     );
+  }
+
+  List<Widget> _verticalLines(_ReaderTapEdgeMetrics metrics, Color color) {
+    final lineWidth = (metrics.contentWidth * 0.07)
+        .clamp(_kReaderTapEdgeMinLength, _kReaderTapEdgeMaxLength)
+        .toDouble();
+    final lineLeft =
+        metrics.contentLeft + (metrics.contentWidth - lineWidth) / 2;
+    return [
+      if (canGoPrevious)
+        Positioned(
+          key: const Key('readerTapEdgeTop'),
+          left: lineLeft,
+          top: metrics.topLineInset,
+          width: lineWidth,
+          height: _kReaderTapEdgeThickness,
+          child: _ReaderTapEdgeLine(color: color),
+        ),
+      if (canGoNext)
+        Positioned(
+          key: const Key('readerTapEdgeBottom'),
+          left: lineLeft,
+          bottom: metrics.bottomLineInset,
+          width: lineWidth,
+          height: _kReaderTapEdgeThickness,
+          child: _ReaderTapEdgeLine(color: color),
+        ),
+    ];
   }
 
   List<Widget> _sideLines(
@@ -134,6 +164,15 @@ class _ReaderTapEdgeMetrics {
 
   double get contentHeight =>
       (height - contentTop - contentBottom).clamp(0.0, height).toDouble();
+
+  double get topLineInset => _lineInsetForMargin(contentTop);
+
+  double get bottomLineInset => _lineInsetForMargin(contentBottom);
+
+  static double _lineInsetForMargin(double margin) =>
+      (margin - _kReaderTapEdgeInset - _kReaderTapEdgeThickness)
+          .clamp(0.0, margin)
+          .toDouble();
 }
 
 class _ReaderTapEdgeLine extends StatelessWidget {
