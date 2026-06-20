@@ -9,6 +9,9 @@ import 'library_layout_cubit.dart';
 import 'library_list_view.dart';
 import 'library_selection_cubit.dart';
 
+const _layoutTransitionDuration = Duration(milliseconds: 180);
+const _layoutTransitionOffset = 8.0;
+
 /// Scrollable body of the library: renders the right layout (list / grid)
 /// for the current user preference, or one of two empty states if there's
 /// nothing to show.
@@ -78,7 +81,7 @@ class LibraryBody extends StatelessWidget {
           >(
             selector: (state) => state,
             builder: (context, selection) {
-              return switch (layoutMode) {
+              final child = switch (layoutMode) {
                 LibraryLayoutMode.list => LibraryListView(
                   sources: visibleItems,
                   selection: selection,
@@ -95,10 +98,54 @@ class LibraryBody extends StatelessWidget {
                   onSourceLongPressed: onSourceLongPressed,
                 ),
               };
+
+              return _LibraryLayoutTransition(
+                layoutMode: layoutMode,
+                child: child,
+              );
             },
           );
         },
       ),
+    );
+  }
+}
+
+class _LibraryLayoutTransition extends StatelessWidget {
+  const _LibraryLayoutTransition({
+    required this.layoutMode,
+    required this.child,
+  });
+
+  final LibraryLayoutMode layoutMode;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final animationDisabled =
+        MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    if (animationDisabled) {
+      return KeyedSubtree(
+        key: ValueKey(layoutMode),
+        child: child,
+      );
+    }
+
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(layoutMode),
+      tween: Tween(begin: 0, end: 1),
+      duration: _layoutTransitionDuration,
+      curve: Curves.easeOutCubic,
+      child: child,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, (1 - value) * _layoutTransitionOffset),
+            child: child,
+          ),
+        );
+      },
     );
   }
 }

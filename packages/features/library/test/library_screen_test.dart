@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:article_repository/article_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:library_feature/library_feature.dart';
+import 'package:library_feature/src/library_grid_view.dart';
+import 'package:library_feature/src/library_list_view.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -131,6 +133,26 @@ void main() {
 
     expect(preferencesService.current.themeMode, ThemeMode.dark);
     expect(find.text('Display'), findsOneWidget);
+  });
+
+  testWidgets('switches layout without mounting both scroll views', (
+    tester,
+  ) async {
+    bookRepository.seedBooks([_book]);
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    expect(find.byType(LibraryGridView), findsOneWidget);
+    expect(find.byType(LibraryListView), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('libraryHeaderDisplayButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('List'));
+    await tester.pump();
+
+    expect(find.byType(LibraryGridView), findsNothing);
+    expect(find.byType(LibraryListView), findsOneWidget);
   });
 
   testWidgets('header actions stay aligned to the right edge', (tester) async {
