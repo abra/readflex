@@ -50,5 +50,5 @@ Non-fatal repository errors from delete/load go through `addError` + a
 - `preferences_service` — layout persistence
 - `domain_models` — `Book`, `Article`, `LibrarySource`
 - `component_library` — theme, `SearchField`, `ScrollEdgeFade`, `EmptyState`,
-  `ErrorState`, `MediaCollectionCard`, `AppIcons`, `AppSpacing`, `AppRadius`
+  `ErrorState`, `AppIcons`, `AppSpacing`, `AppRadius`
 - `flutter_bloc`, `equatable`, `stream_transform` (for debounce)
