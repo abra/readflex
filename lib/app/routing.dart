@@ -247,9 +247,9 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
   );
 }
 
+/// Returns an offline flag stream for sheets that can outlive their route
+/// builder and must react while they remain visible.
 Stream<bool> _isOfflineStream(DependenciesContainer deps) {
-  // Bottom sheets can stay open after their route builder ran. Feed them a
-  // stream so network-dependent actions react while the sheet is visible.
   return deps.connectivityService.statusStream
       .map((status) => status == ConnectivityStatus.offline)
       .distinct();
@@ -257,9 +257,9 @@ Stream<bool> _isOfflineStream(DependenciesContainer deps) {
 
 Future<void> _openArticleUrl(String rawUrl) => _openExternalUrl(rawUrl);
 
+/// Opens an external HTTP(S) URL without letting launcher failures affect app
+/// navigation or reader state.
 Future<void> _openExternalUrl(String rawUrl) async {
-  // External links are best-effort UI actions: malformed URLs or launcher
-  // failures should never break navigation or reader state.
   final uri = Uri.tryParse(rawUrl.trim());
   if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) return;
 
@@ -282,9 +282,9 @@ class _ReaderRouteExtra {
   final VoidCallback? onSourceOpened;
 }
 
+/// Returns a preloaded reader source only when the route payload matches the
+/// source id in the path.
 Book? _initialReaderSourceFromRoute(GoRouterState state) {
-  // Optional fast path for routes that already have the loaded Book. Ignore it
-  // if the payload does not match the path id to avoid opening stale content.
   final sourceId = state.pathParameters['sourceId'];
   final extra = state.extra;
   if (sourceId == null) return null;
@@ -297,31 +297,29 @@ Book? _initialReaderSourceFromRoute(GoRouterState state) {
   return source;
 }
 
+/// Returns the source type carried by the reader route metadata.
 SourceType _initialReaderSourceTypeFromRoute(GoRouterState state) {
-  // Source type lives in route metadata because ReaderScreen handles both books
-  // and article-backed reader books through the same route.
   return switch (state.extra) {
     _ReaderRouteExtra(:final initialSourceType) => initialSourceType,
     _ => SourceType.book,
   };
 }
 
+/// Returns the callback used by the previous screen to refresh after a real
+/// reader open event.
 VoidCallback? _onSourceOpenedFromRoute(GoRouterState state) {
-  // Library passes this callback so it can refresh "recently opened" state only
-  // after the reader records a real open event.
   return switch (state.extra) {
     _ReaderRouteExtra(:final onSourceOpened) => onSourceOpened,
     _ => null,
   };
 }
 
+/// Adapts the import sheet contract to article extraction and storage services.
 Future<Article?> _importArticleUrl(
   DependenciesContainer deps,
   String url, {
   void Function(ImportFlowArticleStage stage)? onStage,
 }) async {
-  // Adapter between the import feature contract and app services: the sheet
-  // knows about stages/errors, while extraction/storage stay app dependencies.
   final ExtractedArticle article;
   try {
     onStage?.call(ImportFlowArticleStage.fetching);
@@ -333,15 +331,15 @@ Future<Article?> _importArticleUrl(
   return deps.articleRepository.addExtractedArticle(article);
 }
 
+/// Resolves the root route into the first concrete screen the user should see.
 Future<String> _resolveEntryRoute(DependenciesContainer deps) async {
-  // Root route is only a decision point; users should land on a real screen.
   final redirect = await _redirectMainIfNeeded(deps);
   return redirect ?? AppRoutes.library;
 }
 
+/// Applies first-run redirects without rechecking storage on every normal route
+/// transition.
 Future<String?> _redirectMainIfNeeded(DependenciesContainer deps) async {
-  // Startup guard for first-run flow. It is intentionally narrow so normal
-  // navigation does not re-check storage on every route transition.
   final prefs = deps.preferencesService.current;
 
   if (!prefs.onboardingCompleted) {
