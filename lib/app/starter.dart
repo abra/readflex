@@ -20,8 +20,13 @@ import 'package:readflex/app/frame_timing_tracing.dart';
 import 'package:readflex/app/root_context.dart';
 import 'package:readflex/app/screens/initialization_failed_screen.dart';
 
+// Prints dirty widget rebuilds to the console during rebuild audits.
 const _traceBuilds = bool.fromEnvironment('READFLEX_TRACE_BUILDS');
+
+// Emits Flutter build profiling events for inspection in DevTools Timeline.
 const _profileBuilds = bool.fromEnvironment('READFLEX_PROFILE_BUILDS');
+
+// Limits build profiling noise to user widgets when framework widgets are not useful.
 const _profileUserBuilds = bool.fromEnvironment(
   'READFLEX_PROFILE_USER_BUILDS',
 );

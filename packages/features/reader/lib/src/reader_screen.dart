@@ -68,6 +68,8 @@ const _kReaderBrightnessChromeDragHeight =
     _kReaderBrightnessChromeHeight - AppSpacing.sm * 2;
 
 const _kReaderTocTileEstimatedHeight = 60.0;
+
+// Reader-only trace switch for correlating screen rebuilds with reader events.
 const _traceReaderBuilds = bool.fromEnvironment(
   'READFLEX_TRACE_READER_BUILDS',
 );

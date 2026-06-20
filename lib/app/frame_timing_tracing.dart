@@ -2,9 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:monitoring/monitoring.dart';
 
+// Logs frames whose build, raster, or total time exceeds the configured budget.
 const _traceFrameTimings = bool.fromEnvironment(
   'READFLEX_TRACE_FRAME_TIMINGS',
 );
+
+// Jank budget in milliseconds; use 16 for 60fps checks or 33 for 30fps checks.
 const _frameTimingBudgetMs = int.fromEnvironment(
   'READFLEX_TRACE_FRAME_TIMING_BUDGET_MS',
   defaultValue: 16,

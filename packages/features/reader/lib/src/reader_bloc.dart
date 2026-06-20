@@ -13,6 +13,7 @@ part 'reader_event.dart';
 
 part 'reader_state.dart';
 
+// Shares the reader trace flag with the screen so bloc events align with UI logs.
 const _traceReaderBuilds = bool.fromEnvironment(
   'READFLEX_TRACE_READER_BUILDS',
 );
