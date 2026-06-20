@@ -380,8 +380,8 @@ class ReaderAppearanceOverride {
 }
 
 /// Immutable snapshot of every user-configurable preference in the app —
-/// app theme, locale, library layout, reader appearance, and onboarding
-/// flags. Loaded at startup, mutated via [PreferencesService.update], and
+/// app theme, locale, library layout, reader appearance, and onboarding.
+/// Loaded at startup, mutated via [PreferencesService.update], and
 /// surfaced to widgets through [PreferencesScope].
 class Preferences {
   const Preferences({
@@ -406,7 +406,6 @@ class Preferences {
     this.readerAppearanceOverrides = const {},
     this.bookImportTermsAcceptedVersion = 0,
     this.onboardingCompleted = false,
-    this.hasCompletedSetup = false,
   });
 
   final ThemeMode themeMode;
@@ -434,9 +433,6 @@ class Preferences {
 
   /// Whether the user has completed the onboarding flow.
   final bool onboardingCompleted;
-
-  /// Whether the user has completed the initial setup (added first content).
-  final bool hasCompletedSetup;
 
   ReaderAppearancePreferences get readerAppearance =>
       ReaderAppearancePreferences(
@@ -491,7 +487,6 @@ class Preferences {
     Map<String, ReaderAppearanceOverride>? readerAppearanceOverrides,
     int? bookImportTermsAcceptedVersion,
     bool? onboardingCompleted,
-    bool? hasCompletedSetup,
   }) => Preferences(
     themeMode: themeMode ?? this.themeMode,
     locale: locale ?? this.locale,
@@ -521,7 +516,6 @@ class Preferences {
     bookImportTermsAcceptedVersion:
         bookImportTermsAcceptedVersion ?? this.bookImportTermsAcceptedVersion,
     onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
-    hasCompletedSetup: hasCompletedSetup ?? this.hasCompletedSetup,
   );
 
   @override
@@ -552,8 +546,7 @@ class Preferences {
           ) &&
           bookImportTermsAcceptedVersion ==
               other.bookImportTermsAcceptedVersion &&
-          onboardingCompleted == other.onboardingCompleted &&
-          hasCompletedSetup == other.hasCompletedSetup;
+          onboardingCompleted == other.onboardingCompleted;
 
   @override
   int get hashCode => Object.hashAll([
@@ -578,7 +571,6 @@ class Preferences {
     _hashReaderAppearanceOverrides(readerAppearanceOverrides),
     bookImportTermsAcceptedVersion,
     onboardingCompleted,
-    hasCompletedSetup,
   ]);
 }
 

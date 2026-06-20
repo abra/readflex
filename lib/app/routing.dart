@@ -11,9 +11,7 @@ import 'package:highlight/highlight.dart';
 import 'package:import_flow/import_flow.dart';
 import 'package:reader/reader.dart';
 import 'package:readflex/app/dependency_container.dart';
-import 'package:readflex/app/screens/first_import_screen.dart';
 import 'package:readflex/app/screens/onboarding_screen.dart';
-import 'package:readflex/app/screens/splash_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // Bump when the book import terms text changes so users are asked to accept
@@ -25,10 +23,8 @@ const _readflexPrivacyUrl = 'https://abra.github.io/readflex/privacy/';
 /// App route paths used by screens and route redirects.
 abstract final class AppRoutes {
   static const root = '/';
-  static const splash = '/splash';
   static const library = '/library';
   static const onboarding = '/onboarding';
-  static const firstImport = '/first-import';
   static const readerPath = '/reader/:sourceId';
 
   static String reader(String sourceId) => '/reader/$sourceId';
@@ -50,9 +46,8 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
     redirect: (context, state) {
       final location = state.uri.path;
 
-      // Only entry routes need async redirect logic (onboarding /
-      // first-import guards). Every other path returns null synchronously
-      // so GoRouter finalises the route in one pass without an
+      // Only entry routes need redirect logic. Every other path returns null
+      // synchronously so GoRouter finalises the route in one pass without an
       // intermediate build-destroy-rebuild cycle.
       if (location == AppRoutes.root) {
         return _resolveEntryRoute(deps);
@@ -68,12 +63,6 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
       GoRoute(
         path: AppRoutes.root,
         builder: (context, state) => const SizedBox.shrink(),
-      ),
-      GoRoute(
-        path: AppRoutes.splash,
-        builder: (context, state) => SplashScreen(
-          onReady: () => context.go(AppRoutes.root),
-        ),
       ),
       GoRoute(
         path: AppRoutes.library,
@@ -180,68 +169,9 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
             deps.preferencesService.update(
               (p) => p.copyWith(onboardingCompleted: true),
             );
-            context.go(AppRoutes.firstImport);
+            context.go(AppRoutes.library);
           },
         ),
-      ),
-      GoRoute(
-        path: AppRoutes.firstImport,
-        builder: (context, state) {
-          final isOffline =
-              ConnectivityScope.of(context) == ConnectivityStatus.offline;
-          return FirstImportScreen(
-            onAddPressed: () async {
-              // Trust the sheet's own result instead of probing the
-              // library afterwards. The result is the canonical signal
-              // that an import succeeded, and checking repositories would
-              // have to scan rows to answer the same question.
-              final result = await showImportFlowSheet(
-                context,
-                isOffline: isOffline,
-                isOfflineStream: _isOfflineStream(deps),
-                onPickBookFile: pickBookFile,
-                onImportBook: (file, {onProgress}) => importBookFile(
-                  sourceFile: file,
-                  bookRepository: deps.bookRepository,
-                  readerServerPort: deps.readerServer.port,
-                  logger: deps.logger,
-                  onProgress: onProgress,
-                ),
-                onImportArticle: (url, {onStage}) => _importArticleUrl(
-                  deps,
-                  url,
-                  onStage: onStage,
-                ),
-                isBookImportTermsAccepted: () =>
-                    deps.preferencesService.hasAcceptedBookImportTerms(
-                      _currentBookImportTermsVersion,
-                    ),
-                acceptBookImportTerms: () =>
-                    deps.preferencesService.acceptBookImportTerms(
-                      _currentBookImportTermsVersion,
-                    ),
-                onOpenTerms: () => _openExternalUrl(_readflexTermsUrl),
-                onOpenPrivacy: () => _openExternalUrl(
-                  _readflexPrivacyUrl,
-                ),
-              );
-              return result == ImportFlowResult.bookImported ||
-                  result == ImportFlowResult.articleImported;
-            },
-            onContentAdded: () {
-              deps.preferencesService.update(
-                (p) => p.copyWith(hasCompletedSetup: true),
-              );
-              context.go(AppRoutes.library);
-            },
-            onSkipPressed: () {
-              deps.preferencesService.update(
-                (p) => p.copyWith(hasCompletedSetup: true),
-              );
-              context.go(AppRoutes.library);
-            },
-          );
-        },
       ),
     ],
   );
@@ -332,44 +262,16 @@ Future<Article?> _importArticleUrl(
 }
 
 /// Resolves the root route into the first concrete screen the user should see.
-Future<String> _resolveEntryRoute(DependenciesContainer deps) async {
-  final redirect = await _redirectMainIfNeeded(deps);
-  return redirect ?? AppRoutes.library;
-}
+String _resolveEntryRoute(DependenciesContainer deps) =>
+    _redirectMainIfNeeded(deps) ?? AppRoutes.library;
 
 /// Applies first-run redirects without rechecking storage on every normal route
 /// transition.
-Future<String?> _redirectMainIfNeeded(DependenciesContainer deps) async {
+String? _redirectMainIfNeeded(DependenciesContainer deps) {
   final prefs = deps.preferencesService.current;
 
   if (!prefs.onboardingCompleted) {
     return AppRoutes.onboarding;
-  }
-
-  if (!prefs.hasCompletedSetup) {
-    try {
-      final (books, articles) = await (
-        deps.bookRepository.getBooks(),
-        deps.articleRepository.getArticles(),
-      ).wait;
-      if (books.isEmpty && articles.isEmpty) {
-        return AppRoutes.firstImport;
-      }
-    } catch (e, st) {
-      // Storage failure during redirect — fall through to Library where the
-      // BLoC has its own error handling and can show a proper error state.
-      deps.logger.warn(
-        'redirect content check failed',
-        error: e,
-        stackTrace: st,
-      );
-      return null;
-    }
-
-    // User somehow has content already — mark setup as complete.
-    await deps.preferencesService.update(
-      (p) => p.copyWith(hasCompletedSetup: true),
-    );
   }
 
   return null;

@@ -275,7 +275,7 @@ feature package      UI and state management
 - It imports all feature package public barrels.
 - It passes repositories/services from `DependenciesContainer`.
 - It creates navigation callbacks and result callbacks.
-- It gates entry routes such as onboarding and first import.
+- It gates entry routes such as onboarding.
 Features should express navigation needs through callbacks. They should not
 call GoRouter to navigate to sibling features directly.
 

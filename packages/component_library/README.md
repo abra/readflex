@@ -124,21 +124,17 @@ Reusable presentation-only widgets used across features:
 
 | Widget                              | Purpose                                        |
 |-------------------------------------|------------------------------------------------|
-| `AppBottomActionBar`                | Thumb-friendly route-level action bar          |
 | `ActionBottomSheetLayout`           | Bottom sheet shell with header and content     |
 | `BottomSheetHeader`                 | Bottom sheet title row                         |
 | `ButtonLoadingIndicator`            | Compact circular progress for buttons          |
 | `CenteredCircularProgressIndicator` | Centered loading spinner                       |
 | `EmptyState`                        | Centered empty state message                   |
 | `ErrorState`                        | Error message with retry button                |
-| `MediaCollectionCard`               | Card with media area, metadata, optional badge |
 | `AppSourceCover` / `AppSourceCoverFrame` | Shared source cover rendering and frame |
 | `SourceCoverHero`                   | Stable Hero wrapper for covers                 |
 | `SearchField`                       | App search field                               |
-| `SettingsGroup` / `SettingsRow`     | Settings list primitives                       |
 | `ScrollEdgeFadeStack`               | Scroll-edge fade/scrim wrapper                 |
 | `SelectionPreviewCard`              | Compact preview of selected text               |
-| `StatCard`                          | Small metric card                              |
 
 ## What Belongs Here
 

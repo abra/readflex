@@ -43,7 +43,6 @@ void main() {
       expect(prefs.readerLastCustomBrightness, 0.7);
       expect(prefs.readerAppearanceOverrides, isEmpty);
       expect(prefs.onboardingCompleted, isFalse);
-      expect(prefs.hasCompletedSetup, isFalse);
     });
 
     test('copyWith updates selected fields', () {

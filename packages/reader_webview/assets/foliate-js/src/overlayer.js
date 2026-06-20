@@ -125,43 +125,6 @@ export class Overlayer {
         }
         return g
     }
-    static dashedUnderline(rects, options = {}) {
-        const {
-            color = 'red',
-            width: strokeWidth = 1,
-            padding = 1,
-            opacity = .5,
-            dashArray = '3 3',
-            writingMode,
-        } = options
-        const g = createSVGElement('g')
-        g.setAttribute('fill', 'none')
-        g.setAttribute('stroke', color)
-        g.setAttribute('stroke-width', strokeWidth)
-        g.setAttribute('stroke-linecap', 'round')
-        g.setAttribute('stroke-dasharray', dashArray)
-        g.style.opacity = opacity
-        if (writingMode === 'vertical-rl' || writingMode === 'vertical-lr')
-            for (const { right, top, height } of rects) {
-                const el = createSVGElement('line')
-                const x = right - strokeWidth / 2 + padding
-                el.setAttribute('x1', x)
-                el.setAttribute('y1', top)
-                el.setAttribute('x2', x)
-                el.setAttribute('y2', top + height)
-                g.append(el)
-            }
-        else for (const { left, bottom, width } of rects) {
-            const el = createSVGElement('line')
-            const y = bottom - strokeWidth / 2 + padding
-            el.setAttribute('x1', left)
-            el.setAttribute('y1', y)
-            el.setAttribute('x2', left + width)
-            el.setAttribute('y2', y)
-            g.append(el)
-        }
-        return g
-    }
     static strikethrough(rects, options = {}) {
         const { color = 'red', width: strokeWidth = 2, writingMode } = options
         const g = createSVGElement('g')

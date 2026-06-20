@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'onboarding_page_data.dart';
 
-/// Onboarding intro shown before the first import.
+/// Onboarding intro shown on the first app launch.
 ///
 /// On completion, marks first launch as done and calls [onComplete].
 class OnboardingScreen extends StatefulWidget {

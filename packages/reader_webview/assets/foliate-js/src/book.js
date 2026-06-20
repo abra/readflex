@@ -1080,13 +1080,6 @@ class Reader {
       const opts = { color, writingMode: rendererWritingMode() }
       if (type === 'highlight') draw(Overlayer.highlight, { ...opts })
       else if (type === 'underline') draw(Overlayer.underline, { ...opts })
-      else if (type === 'dictionary') draw(Overlayer.dashedUnderline, {
-        ...opts,
-        opacity: 0.36,
-        width: 1,
-        padding: 1.5,
-        dashArray: '3 3',
-      })
     })
 
     view.addEventListener('show-annotation', e => {

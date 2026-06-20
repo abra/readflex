@@ -1,8 +1,8 @@
 # preferences_service
 
 User preferences: theme mode, locale, library layout, reader appearance,
-per-source reader appearance overrides, reader search history, and onboarding /
-setup flags. Backed by `shared_preferences` (JSON blob under a single key) and
+per-source reader appearance overrides, reader search history, and onboarding.
+Backed by `shared_preferences` (JSON blob under a single key) and
 exposed to the UI via a reactive stream and an `InheritedModel` scope.
 
 This is **not** where credentials belong; production credentials should go
@@ -47,7 +47,6 @@ through a dedicated secure-storage backed service.
 | `readerAppearanceOverrides`| `Map<String, ReaderAppearanceOverride>` | `{}` |
 | `bookImportTermsAcceptedVersion` | `int`  | `0`         |
 | `onboardingCompleted`      | `bool`      | `false`     |
-| `hasCompletedSetup`        | `bool`      | `false`     |
 
 ## Usage
 

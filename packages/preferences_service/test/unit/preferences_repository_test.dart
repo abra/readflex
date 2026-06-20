@@ -40,7 +40,6 @@ void main() {
       expect(prefs.readerLastCustomBrightness, 0.7);
       expect(prefs.readerAppearanceOverrides, isEmpty);
       expect(prefs.onboardingCompleted, isFalse);
-      expect(prefs.hasCompletedSetup, isFalse);
     });
 
     test('load() reads legacy catalog layout preference', () async {
@@ -92,7 +91,6 @@ void main() {
           ),
         },
         onboardingCompleted: true,
-        hasCompletedSetup: true,
       );
 
       await repo.save(source);
@@ -154,7 +152,6 @@ void main() {
             'readerTextScale': 1.0,
             'readerLineHeight': 1.55,
             'onboardingCompleted': true,
-            'hasCompletedSetup': true,
             // no readerLayoutId, no readerInvertImagesInDark
           }),
         );

@@ -98,7 +98,6 @@ class PreferencesRepository {
         bookImportTermsAcceptedVersion:
             (map['bookImportTermsAcceptedVersion'] as num?)?.toInt() ?? 0,
         onboardingCompleted: map['onboardingCompleted'] as bool? ?? false,
-        hasCompletedSetup: map['hasCompletedSetup'] as bool? ?? false,
       );
     } catch (e, st) {
       // Corrupt JSON on disk: log and fall back to defaults so the app can
@@ -139,7 +138,6 @@ class PreferencesRepository {
       ),
       'bookImportTermsAcceptedVersion': prefs.bookImportTermsAcceptedVersion,
       'onboardingCompleted': prefs.onboardingCompleted,
-      'hasCompletedSetup': prefs.hasCompletedSetup,
     };
     await _storage.setString(_key, jsonEncode(map));
   }
