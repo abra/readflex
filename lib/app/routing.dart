@@ -16,10 +16,13 @@ import 'package:readflex/app/screens/onboarding_screen.dart';
 import 'package:readflex/app/screens/splash_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+// Bump when the book import terms text changes so users are asked to accept
+// the updated terms before importing another local book.
 const _currentBookImportTermsVersion = 1;
 const _readflexTermsUrl = 'https://abra.github.io/readflex/terms/';
 const _readflexPrivacyUrl = 'https://abra.github.io/readflex/privacy/';
 
+/// App route paths used by screens and route redirects.
 abstract final class AppRoutes {
   static const root = '/';
   static const splash = '/splash';
@@ -31,6 +34,11 @@ abstract final class AppRoutes {
   static String reader(String sourceId) => '/reader/$sourceId';
 }
 
+/// Builds the app router and wires app-level dependencies into route surfaces.
+///
+/// This file is intentionally the navigation composition root: routes may pass
+/// repositories/services into Screen or Sheet entry points, while Views stay
+/// isolated behind feature BLoCs/Cubits.
 GoRouter buildRouter({required DependenciesContainer deps}) {
   deps.logger.debug('buildRouter: GoRouter created');
 
@@ -240,6 +248,8 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
 }
 
 Stream<bool> _isOfflineStream(DependenciesContainer deps) {
+  // Bottom sheets can stay open after their route builder ran. Feed them a
+  // stream so network-dependent actions react while the sheet is visible.
   return deps.connectivityService.statusStream
       .map((status) => status == ConnectivityStatus.offline)
       .distinct();
@@ -248,6 +258,8 @@ Stream<bool> _isOfflineStream(DependenciesContainer deps) {
 Future<void> _openArticleUrl(String rawUrl) => _openExternalUrl(rawUrl);
 
 Future<void> _openExternalUrl(String rawUrl) async {
+  // External links are best-effort UI actions: malformed URLs or launcher
+  // failures should never break navigation or reader state.
   final uri = Uri.tryParse(rawUrl.trim());
   if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) return;
 
@@ -271,6 +283,8 @@ class _ReaderRouteExtra {
 }
 
 Book? _initialReaderSourceFromRoute(GoRouterState state) {
+  // Optional fast path for routes that already have the loaded Book. Ignore it
+  // if the payload does not match the path id to avoid opening stale content.
   final sourceId = state.pathParameters['sourceId'];
   final extra = state.extra;
   if (sourceId == null) return null;
@@ -284,6 +298,8 @@ Book? _initialReaderSourceFromRoute(GoRouterState state) {
 }
 
 SourceType _initialReaderSourceTypeFromRoute(GoRouterState state) {
+  // Source type lives in route metadata because ReaderScreen handles both books
+  // and article-backed reader books through the same route.
   return switch (state.extra) {
     _ReaderRouteExtra(:final initialSourceType) => initialSourceType,
     _ => SourceType.book,
@@ -291,6 +307,8 @@ SourceType _initialReaderSourceTypeFromRoute(GoRouterState state) {
 }
 
 VoidCallback? _onSourceOpenedFromRoute(GoRouterState state) {
+  // Library passes this callback so it can refresh "recently opened" state only
+  // after the reader records a real open event.
   return switch (state.extra) {
     _ReaderRouteExtra(:final onSourceOpened) => onSourceOpened,
     _ => null,
@@ -302,6 +320,8 @@ Future<Article?> _importArticleUrl(
   String url, {
   void Function(ImportFlowArticleStage stage)? onStage,
 }) async {
+  // Adapter between the import feature contract and app services: the sheet
+  // knows about stages/errors, while extraction/storage stay app dependencies.
   final ExtractedArticle article;
   try {
     onStage?.call(ImportFlowArticleStage.fetching);
@@ -314,11 +334,14 @@ Future<Article?> _importArticleUrl(
 }
 
 Future<String> _resolveEntryRoute(DependenciesContainer deps) async {
+  // Root route is only a decision point; users should land on a real screen.
   final redirect = await _redirectMainIfNeeded(deps);
   return redirect ?? AppRoutes.library;
 }
 
 Future<String?> _redirectMainIfNeeded(DependenciesContainer deps) async {
+  // Startup guard for first-run flow. It is intentionally narrow so normal
+  // navigation does not re-check storage on every route transition.
   final prefs = deps.preferencesService.current;
 
   if (!prefs.onboardingCompleted) {
