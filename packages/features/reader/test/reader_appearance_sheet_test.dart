@@ -87,6 +87,35 @@ void main() {
     );
   });
 
+  testWidgets('font label shows Open Sans without ellipsis', (tester) async {
+    await tester.openAppearanceSheet(cubit);
+
+    final initialDotsTop = tester
+        .getTopLeft(find.byKey(const ValueKey('reader-font-page-dots')))
+        .dy;
+
+    await tester.tap(find.text('Literata'));
+    await tester.pumpAndSettle();
+    final ptSerifDotsTop = tester
+        .getTopLeft(find.byKey(const ValueKey('reader-font-page-dots')))
+        .dy;
+
+    await tester.tap(find.text('PT Serif'));
+    await tester.pumpAndSettle();
+    final openSansDotsTop = tester
+        .getTopLeft(find.byKey(const ValueKey('reader-font-page-dots')))
+        .dy;
+
+    final fontLabel = tester.widget<Text>(
+      find.byKey(const ValueKey('reader-font-label')),
+    );
+
+    expect(fontLabel.data, 'Open Sans');
+    expect(fontLabel.overflow, isNull);
+    expect(ptSerifDotsTop, closeTo(initialDotsTop, 0.1));
+    expect(openSansDotsTop, closeTo(initialDotsTop, 0.1));
+  });
+
   testWidgets('appearance sheet does not reserve fixed tab body height', (
     tester,
   ) async {

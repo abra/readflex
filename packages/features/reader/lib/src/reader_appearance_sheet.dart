@@ -12,6 +12,7 @@ const double _segmentedControlPadding = 3;
 const double _marginsControlWidth = 152;
 const double _pageTurnControlWidth = 116;
 const double _textSizeControlWidth = 192;
+const double _fontLabelHeight = 29;
 const double _themeSwatchHeight = 36;
 const double _textScaleEpsilon = 0.001;
 
@@ -254,18 +255,28 @@ class _FontCycleControl extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            preset.label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: text.titleLarge.copyWith(
-              fontFamily: preset.fontFamily,
-              color: cs.onSurface,
-              fontWeight: FontWeight.w600,
+          SizedBox(
+            height: _fontLabelHeight,
+            width: double.infinity,
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  preset.label,
+                  key: const ValueKey('reader-font-label'),
+                  maxLines: 1,
+                  style: text.titleLarge.copyWith(
+                    fontFamily: preset.fontFamily,
+                    color: cs.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Row(
+            key: const ValueKey('reader-font-page-dots'),
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               for (var i = 0; i < ReaderFontPreset.values.length; i++)
