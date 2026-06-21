@@ -865,6 +865,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
           normalizedMarkedContextText: selection.normalizedMarkedContextText,
           cfiRange: selection.cfiRange,
           normalizedCfiRange: selection.normalizedCfiRange,
+          position: selection.position,
         );
       },
       onTextDeselected: () => selectionCubit.deselect(),

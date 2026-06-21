@@ -1,4 +1,5 @@
-import 'package:domain_models/domain_models.dart' show SourceType;
+import 'package:domain_models/domain_models.dart'
+    show HighlightColor, SourceType;
 import 'package:flutter/widgets.dart';
 
 /// Payload delivered to a [TextAction] when the user selects text in the
@@ -91,4 +92,16 @@ abstract class TextAction {
   /// `await` this to run side effects (e.g. refresh) after the sheet
   /// closes.
   Future<void> onExecute(BuildContext context, TextSelectionContext selection);
+}
+
+/// Text action that can save a highlight with a caller-selected color.
+///
+/// Reader UI uses this specialized contract to render a compact highlight
+/// popup without depending on the concrete highlight feature package.
+abstract class ColorHighlightTextAction extends TextAction {
+  Future<void> onExecuteWithColor(
+    BuildContext context,
+    TextSelectionContext selection,
+    HighlightColor color,
+  );
 }

@@ -461,6 +461,7 @@ class ReaderSelection {
     this.normalizedMarkedContextText,
     this.cfiRange,
     this.normalizedCfiRange,
+    this.position,
     this.scrollOffset,
   });
 
@@ -487,6 +488,9 @@ class ReaderSelection {
   /// CFI range of the normalized lexical selection.
   final String? normalizedCfiRange;
 
+  /// Normalized viewport rectangle of the selected text.
+  final ReaderSelectionPosition? position;
+
   /// Legacy optional scroll position.
   final double? scrollOffset;
 
@@ -500,9 +504,63 @@ class ReaderSelection {
       normalizedMarkedContextText: _string(map['normalizedMarkedContextText']),
       cfiRange: _string(map['cfi']),
       normalizedCfiRange: _string(map['normalizedCfi']),
+      position: ReaderSelectionPosition.fromValue(map['pos']),
       scrollOffset: _double(map['scrollOffset']),
     );
   }
+}
+
+/// Selection bounds reported by the WebView as normalized viewport fractions.
+///
+/// Values are clamped to 0..1 so malformed JavaScript payloads cannot place
+/// Flutter overlays outside the reader surface.
+class ReaderSelectionPosition {
+  const ReaderSelectionPosition({
+    required this.left,
+    required this.top,
+    required this.right,
+    required this.bottom,
+  });
+
+  final double left;
+  final double top;
+  final double right;
+  final double bottom;
+
+  static ReaderSelectionPosition? fromValue(Object? value) {
+    final map = readerBridgeMap(value);
+    if (map == null) return null;
+    final left = _double(map['left']);
+    final top = _double(map['top']);
+    final right = _double(map['right']);
+    final bottom = _double(map['bottom']);
+    if (left == null || top == null || right == null || bottom == null) {
+      return null;
+    }
+
+    return ReaderSelectionPosition(
+      left: _clampFraction(left),
+      top: _clampFraction(top),
+      right: _clampFraction(right),
+      bottom: _clampFraction(bottom),
+    );
+  }
+
+  static double _clampFraction(double value) =>
+      value.clamp(0.0, 1.0).toDouble();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is ReaderSelectionPosition &&
+            other.left == left &&
+            other.top == top &&
+            other.right == right &&
+            other.bottom == bottom;
+  }
+
+  @override
+  int get hashCode => Object.hash(left, top, right, bottom);
 }
 
 /// Appearance bundle for the foliate-js book reader. Passed as the

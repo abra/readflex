@@ -58,6 +58,13 @@ void main() {
     expect(action.label, 'Fake');
     expect(action.icon, Icons.add);
   });
+
+  test('ColorHighlightTextAction contract can be implemented', () {
+    final action = _FakeColorHighlightTextAction();
+
+    expect(action.label, 'Highlight');
+    expect(action.icon, Icons.edit);
+  });
 }
 
 class _FakeTextAction extends TextAction {
@@ -71,5 +78,26 @@ class _FakeTextAction extends TextAction {
   Future<void> onExecute(
     BuildContext context,
     TextSelectionContext selection,
+  ) async {}
+}
+
+class _FakeColorHighlightTextAction extends ColorHighlightTextAction {
+  @override
+  IconData get icon => Icons.edit;
+
+  @override
+  String get label => 'Highlight';
+
+  @override
+  Future<void> onExecute(
+    BuildContext context,
+    TextSelectionContext selection,
+  ) async {}
+
+  @override
+  Future<void> onExecuteWithColor(
+    BuildContext context,
+    TextSelectionContext selection,
+    HighlightColor color,
   ) async {}
 }

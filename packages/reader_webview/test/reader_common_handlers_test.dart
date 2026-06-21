@@ -12,6 +12,7 @@ void main() {
         'contextText': 'Before selected text after.',
         'markedContextText': 'Before [[selected text]] after.',
         'normalizedMarkedContextText': 'Before [[Selected text]] after.',
+        'pos': {'left': 0.1, 'top': 0.2, 'right': 0.3, 'bottom': 0.4},
       });
 
       expect(selection, isNotNull);
@@ -24,6 +25,10 @@ void main() {
         selection.normalizedMarkedContextText,
         'Before [[Selected text]] after.',
       );
+      expect(selection.position?.left, 0.1);
+      expect(selection.position?.top, 0.2);
+      expect(selection.position?.right, 0.3);
+      expect(selection.position?.bottom, 0.4);
       expect(selection.cfiRange, 'epubcfi(/6/4)');
     });
 
@@ -64,6 +69,25 @@ void main() {
       expect(parseReaderTapPayload({'x': 'left', 'y': 0.5}), isNull);
       expect(parseReaderTapPayload({'x': 0.5}), isNull);
       expect(parseReaderTapPayload('not-json'), isNull);
+    });
+  });
+
+  group('baseReaderSettings', () {
+    test('keeps text selection but disables the native action menu', () {
+      final settings = baseReaderSettings();
+
+      expect(settings.disableContextMenu, isTrue);
+      expect(settings.disableLongPressContextMenuOnLinks, isTrue);
+      expect(settings.isTextInteractionEnabled, isNot(false));
+    });
+  });
+
+  group('readerContextMenu', () {
+    test('hides default native edit-menu items', () {
+      final contextMenu = readerContextMenu();
+
+      expect(contextMenu.settings?.hideDefaultSystemContextMenuItems, isTrue);
+      expect(contextMenu.menuItems, isEmpty);
     });
   });
 }

@@ -478,6 +478,7 @@ void main() {
         'contextText': 'Both fields in context.',
         'markedContextText': '[[Both fields]] in context.',
         'normalizedMarkedContextText': '[[Both fields normalized]] in context.',
+        'pos': {'left': 0.2, 'top': 0.3, 'right': 0.6, 'bottom': 0.4},
         'scrollOffset': 0.3,
       });
 
@@ -492,7 +493,52 @@ void main() {
         selection.normalizedMarkedContextText,
         '[[Both fields normalized]] in context.',
       );
+      expect(selection.position, isNotNull);
+      expect(selection.position!.left, 0.2);
+      expect(selection.position!.top, 0.3);
+      expect(selection.position!.right, 0.6);
+      expect(selection.position!.bottom, 0.4);
       expect(selection.scrollOffset, 0.3);
+    });
+
+    test('fromMap clamps malformed selection position fractions', () {
+      final selection = ReaderSelection.fromMap({
+        'text': 'Positioned text',
+        'pos': {'left': -0.5, 'top': 0.25, 'right': 1.4, 'bottom': 0.75},
+      });
+
+      expect(selection.position, isNotNull);
+      expect(selection.position!.left, 0);
+      expect(selection.position!.top, 0.25);
+      expect(selection.position!.right, 1);
+      expect(selection.position!.bottom, 0.75);
+    });
+
+    test('fromMap ignores malformed selection position', () {
+      final selection = ReaderSelection.fromMap({
+        'text': 'Positioned text',
+        'pos': {'left': 0.1, 'top': 'up', 'right': 0.3, 'bottom': 0.4},
+      });
+
+      expect(selection.position, isNull);
+    });
+
+    test('selection positions compare by value', () {
+      const a = ReaderSelectionPosition(
+        left: 0.1,
+        top: 0.2,
+        right: 0.3,
+        bottom: 0.4,
+      );
+      const b = ReaderSelectionPosition(
+        left: 0.1,
+        top: 0.2,
+        right: 0.3,
+        bottom: 0.4,
+      );
+
+      expect(a, equals(b));
+      expect(a.hashCode, b.hashCode);
     });
 
     test('fromMap tolerates malformed bridge values', () {

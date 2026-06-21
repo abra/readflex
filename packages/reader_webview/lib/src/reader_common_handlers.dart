@@ -64,12 +64,20 @@ void registerSharedReaderHandlers(
 }
 
 /// Base [InAppWebViewSettings] for the reader WebView: zoom off,
-/// transparent background, hybrid composition, JS enabled, DevTools
-/// inspectable only in debug.
+/// transparent background, hybrid composition, JS enabled, native text
+/// action menu off, DevTools inspectable only in debug.
 InAppWebViewSettings baseReaderSettings() => InAppWebViewSettings(
   supportZoom: false,
   transparentBackground: true,
   isInspectable: kDebugMode,
   useHybridComposition: true,
   javaScriptEnabled: true,
+  disableContextMenu: true,
+  disableLongPressContextMenuOnLinks: true,
+);
+
+/// Hides default native edit-menu items such as iOS "Copy Link with Highlight"
+/// while keeping WebView text selection available for the reader popup.
+ContextMenu readerContextMenu() => ContextMenu(
+  settings: ContextMenuSettings(hideDefaultSystemContextMenuItems: true),
 );

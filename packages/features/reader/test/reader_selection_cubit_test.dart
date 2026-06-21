@@ -1,6 +1,7 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
+import 'package:reader_webview/reader_webview.dart';
 
 void main() {
   group('ReaderSelectionCubit', () {
@@ -31,6 +32,12 @@ void main() {
           normalizedMarkedContextText: 'Say [[Hello world]] again.',
           cfiRange: 'epubcfi(/6/4)',
           normalizedCfiRange: 'epubcfi(/6/6)',
+          position: const ReaderSelectionPosition(
+            left: 0.2,
+            top: 0.3,
+            right: 0.4,
+            bottom: 0.5,
+          ),
           pageNumber: 42,
         ),
         expect: () => [
@@ -64,6 +71,16 @@ void main() {
                 'normalizedCfiRange',
                 'epubcfi(/6/6)',
               )
+              .having(
+                (s) => s.position,
+                'position',
+                const ReaderSelectionPosition(
+                  left: 0.2,
+                  top: 0.3,
+                  right: 0.4,
+                  bottom: 0.5,
+                ),
+              )
               .having((s) => s.pageNumber, 'pageNumber', 42)
               .having((s) => s.scrollOffset, 'scrollOffset', isNull),
         ],
@@ -95,6 +112,12 @@ void main() {
           contextText: 'Some text in context.',
           normalizedMarkedContextText: '[[Some text]] in context.',
           cfiRange: 'epubcfi(/6/4)',
+          position: ReaderSelectionPosition(
+            left: 0.1,
+            top: 0.2,
+            right: 0.3,
+            bottom: 0.4,
+          ),
           pageNumber: 10,
           hasSelection: true,
         ),
@@ -133,6 +156,12 @@ void main() {
           normalizedMarkedContextText: '[[text]]',
           cfiRange: 'cfi',
           normalizedCfiRange: 'normalized-cfi',
+          position: ReaderSelectionPosition(
+            left: 0.1,
+            top: 0.2,
+            right: 0.3,
+            bottom: 0.4,
+          ),
           hasSelection: true,
         );
         final copy = state.copyWith(pageNumber: 5);
@@ -144,6 +173,15 @@ void main() {
         expect(copy.normalizedMarkedContextText, '[[text]]');
         expect(copy.cfiRange, 'cfi');
         expect(copy.normalizedCfiRange, 'normalized-cfi');
+        expect(
+          copy.position,
+          const ReaderSelectionPosition(
+            left: 0.1,
+            top: 0.2,
+            right: 0.3,
+            bottom: 0.4,
+          ),
+        );
         expect(copy.hasSelection, isTrue);
         expect(copy.pageNumber, 5);
       });

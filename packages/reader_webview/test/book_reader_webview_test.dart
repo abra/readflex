@@ -8,7 +8,21 @@ String readBookReaderWebViewLibrarySource() => [
   'lib/src/book_reader_webview_helpers.dart',
   'lib/src/book_reader_webview_widget.dart',
   'lib/src/book_reader_webview_state.dart',
-].map((path) => File(path).readAsStringSync()).join('\n');
+].map(_readPackageSource).join('\n');
+
+String _readPackageSource(String packagePath) =>
+    _packageFile(packagePath).readAsStringSync();
+
+File _packageFile(String packagePath) {
+  final candidates = [
+    File(packagePath),
+    File('packages/reader_webview/$packagePath'),
+  ];
+  for (final file in candidates) {
+    if (file.existsSync()) return file;
+  }
+  return candidates.first;
+}
 
 void main() {
   group('resolveInitialReaderLocation', () {
@@ -66,6 +80,12 @@ void main() {
         contains('onTapped: (x, y) => widget.onTapped?.call(x, y)'),
       );
       expect(webViewDart, isNot(contains('onTapped: widget.onTapped')));
+    });
+
+    test('passes the reader context menu to the platform WebView', () {
+      final webViewDart = readBookReaderWebViewLibrarySource();
+
+      expect(webViewDart, contains('contextMenu: readerContextMenu()'));
     });
   });
 
@@ -151,12 +171,8 @@ void main() {
 
   group('foliate bootstrap', () {
     test('always uses the modern app bridge', () {
-      final indexHtml = File(
-        'assets/foliate-js/index.html',
-      ).readAsStringSync();
-      final bookJs = File(
-        'assets/foliate-js/src/book.js',
-      ).readAsStringSync();
+      final indexHtml = _readPackageSource('assets/foliate-js/index.html');
+      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
 
       expect(indexHtml, isNot(contains('shouldUseModernBundle')));
       expect(indexHtml, isNot(contains('./dist/bundle.js')));
@@ -171,10 +187,21 @@ void main() {
       expect(bookJs, contains('window.goToBookmark'));
       expect(bookJs, contains('window.toggleBookmarkHere'));
       expect(bookJs, contains('window.clearSelectionAfterTextAction'));
+      expect(bookJs, contains('installNativeTextActionMenuGuard(doc)'));
+      expect(bookJs, contains('clearSelectionForNativeTextActionMenu(doc)'));
+      expect(
+        bookJs,
+        contains("style.id = 'readflex-native-text-action-menu-guard'"),
+      );
+      expect(bookJs, contains('-webkit-touch-callout: none !important;'));
+      expect(bookJs, contains('body {\n        -webkit-user-select: text;'));
+      expect(bookJs, contains("doc.addEventListener('contextmenu'"));
+      expect(bookJs, contains('event.preventDefault();'));
       expect(
         bookJs,
         contains('__anxAllowNextClickAfterProgrammaticDeselect'),
       );
+      expect(bookJs, contains('__readflexSuppressNextSelectionCleared'));
       expect(bookJs, contains('doc.__anxSuppressClick = !allowNextClick'));
       expect(bookJs, contains('window.pageLeft'));
       expect(bookJs, contains('window.pageRight'));
@@ -191,9 +218,7 @@ void main() {
     });
 
     test('uses a safe footnote dialog fallback on Android WebView', () {
-      final bookJs = File(
-        'assets/foliate-js/src/book.js',
-      ).readAsStringSync();
+      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
 
       expect(bookJs, contains('const openFootnoteDialog = () =>'));
       expect(
@@ -217,9 +242,7 @@ void main() {
     });
 
     test('pull-down bookmark does not render transient feedback icon', () {
-      final bookJs = File(
-        'assets/foliate-js/src/book.js',
-      ).readAsStringSync();
+      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
 
       expect(bookJs, isNot(contains('bookmark-feedback-icon')));
       expect(bookJs, isNot(contains('showBookmarkFeedback')));
@@ -227,12 +250,8 @@ void main() {
     });
 
     test('bookmark state is refreshed after stored annotations render', () {
-      final bookJs = File(
-        'assets/foliate-js/src/book.js',
-      ).readAsStringSync();
-      final viewJs = File(
-        'assets/foliate-js/src/view.js',
-      ).readAsStringSync();
+      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
+      final viewJs = _readPackageSource('assets/foliate-js/src/view.js');
       final webViewDart = readBookReaderWebViewLibrarySource();
 
       expect(bookJs, contains('window.refreshBookmarkState'));
@@ -323,9 +342,7 @@ void main() {
     });
 
     test('bookmark drawer text comes from the visible page range', () {
-      final bookJs = File(
-        'assets/foliate-js/src/book.js',
-      ).readAsStringSync();
+      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
 
       expect(
         bookJs,
@@ -341,18 +358,14 @@ void main() {
     });
 
     test('keeps default search off Intl Segmenter', () {
-      final searchJs = File(
-        'assets/foliate-js/src/search.js',
-      ).readAsStringSync();
+      final searchJs = _readPackageSource('assets/foliate-js/src/search.js');
 
       expect(searchJs, contains("granularity !== 'word'"));
       expect(searchJs, contains('return simpleSearch(strs, query, options)'));
     });
 
     test('resolves XHTML cover pages to their nested image', () {
-      final epubJs = File(
-        'assets/foliate-js/src/epub.js',
-      ).readAsStringSync();
+      final epubJs = _readPackageSource('assets/foliate-js/src/epub.js');
 
       expect(epubJs, contains('cover.mediaType === MIME.XHTML'));
       expect(epubJs, contains("doc.querySelector('img, image')"));
@@ -364,9 +377,7 @@ void main() {
     test(
       'keeps preformatted content wrapped without aggressive word breaks',
       () {
-        final bookJs = File(
-          'assets/foliate-js/src/book.js',
-        ).readAsStringSync();
+        final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
 
         expect(bookJs, contains('pre {'));
         expect(bookJs, contains('white-space: pre-wrap !important;'));
@@ -380,9 +391,7 @@ void main() {
     );
 
     test('applies reader background color inside the iframe document', () {
-      final bookJs = File(
-        'assets/foliate-js/src/book.js',
-      ).readAsStringSync();
+      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
 
       expect(
         bookJs,
@@ -418,13 +427,11 @@ void main() {
     });
 
     test('extracts and uses the document normalizer asset', () {
-      final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
-      final normalizerJs = File(
+      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
+      final normalizerJs = _readPackageSource(
         'assets/foliate-js/src/readflex_document_normalizer.js',
-      ).readAsStringSync();
-      final assetExtractor = File(
-        'lib/src/asset_extractor.dart',
-      ).readAsStringSync();
+      );
+      final assetExtractor = _readPackageSource('lib/src/asset_extractor.dart');
 
       expect(
         bookJs,
@@ -455,7 +462,7 @@ void main() {
     });
 
     test('keeps same-node marked selection adjacent to punctuation', () {
-      final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
+      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
 
       expect(
         bookJs,
@@ -472,7 +479,7 @@ void main() {
     });
 
     test('does not dump full reader style changes to console', () {
-      final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
+      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
 
       expect(bookJs, isNot(contains("console.log('changeStyle'")));
       expect(bookJs, isNot(contains('JSON.stringify(style)')));
@@ -493,10 +500,8 @@ void main() {
     });
 
     test('bundles only supported format adapters', () {
-      final assetExtractor = File(
-        'lib/src/asset_extractor.dart',
-      ).readAsStringSync();
-      final pubspec = File('pubspec.yaml').readAsStringSync();
+      final assetExtractor = _readPackageSource('lib/src/asset_extractor.dart');
+      final pubspec = _readPackageSource('pubspec.yaml');
 
       expect(assetExtractor, contains('assets/foliate-js/src/pdf.js'));
       expect(assetExtractor, contains('assets/foliate-js/src/fb2.js'));
@@ -505,24 +510,30 @@ void main() {
       expect(assetExtractor, isNot(contains('translator.js')));
       expect(pubspec, isNot(contains('assets/foliate-js/dist/')));
       expect(pubspec, isNot(contains('assets/foliate-js/src/opds.js')));
-      expect(File('assets/foliate-js/dist/bundle.js').existsSync(), isFalse);
-      expect(File('assets/foliate-js/src/opds.js').existsSync(), isFalse);
       expect(
-        File('assets/foliate-js/src/uri-template.js').existsSync(),
+        _packageFile('assets/foliate-js/dist/bundle.js').existsSync(),
+        isFalse,
+      );
+      expect(
+        _packageFile('assets/foliate-js/src/opds.js').existsSync(),
+        isFalse,
+      );
+      expect(
+        _packageFile('assets/foliate-js/src/uri-template.js').existsSync(),
         isFalse,
       );
     });
 
     test('closes foliate book resources when view is closed', () {
-      final viewJs = File('assets/foliate-js/src/view.js').readAsStringSync();
+      final viewJs = _readPackageSource('assets/foliate-js/src/view.js');
 
       expect(viewJs, contains('this.book?.destroy?.()'));
     });
 
     test('fixed-layout animates page turns when animation is enabled', () {
-      final fixedLayoutJs = File(
+      final fixedLayoutJs = _readPackageSource(
         'assets/foliate-js/src/fixed-layout.js',
-      ).readAsStringSync();
+      );
 
       expect(fixedLayoutJs, contains('#shouldAnimate(direction)'));
       expect(fixedLayoutJs, contains("this.hasAttribute('animated')"));
@@ -565,7 +576,7 @@ void main() {
     });
 
     test('fixed-layout swipe follows the configured page-turn axis', () {
-      final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
+      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
 
       expect(bookJs, contains('swipe-flip-fixed-layout'));
       expect(
@@ -591,7 +602,7 @@ void main() {
     });
 
     test('comic fixed-layout renderer gets a safe horizontal writing mode', () {
-      final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
+      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
 
       expect(bookJs, contains('const rendererWritingMode = () => {'));
       expect(
@@ -614,7 +625,7 @@ void main() {
     });
 
     test('skips full CSS rebuild for margin-only style changes', () {
-      final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
+      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
 
       expect(bookJs, contains('const readerCSSKeys = ['));
       expect(
@@ -663,10 +674,10 @@ void main() {
     });
 
     test("keeps vertical page turn on the paginated layout", () {
-      final bookJs = File("assets/foliate-js/src/book.js").readAsStringSync();
-      final paginatorJs = File(
+      final bookJs = _readPackageSource("assets/foliate-js/src/book.js");
+      final paginatorJs = _readPackageSource(
         "assets/foliate-js/src/paginator.js",
-      ).readAsStringSync();
+      );
 
       expect(bookJs, contains("case 'vertical':"));
       expect(bookJs, contains("turn.scroll = false"));
@@ -787,9 +798,9 @@ void main() {
       );
     });
     test('guards pagination while iframe document body is unavailable', () {
-      final paginatorJs = File(
+      final paginatorJs = _readPackageSource(
         'assets/foliate-js/src/paginator.js',
-      ).readAsStringSync();
+      );
 
       expect(paginatorJs, contains('if (!doc?.body) return'));
       expect(paginatorJs, contains('if (!el?.style) return'));
@@ -801,13 +812,13 @@ void main() {
     });
 
     test('infers RTL direction when article language metadata is missing', () {
-      final viewJs = File('assets/foliate-js/src/view.js').readAsStringSync();
-      final normalizerJs = File(
+      final viewJs = _readPackageSource('assets/foliate-js/src/view.js');
+      final normalizerJs = _readPackageSource(
         'assets/foliate-js/src/readflex_document_normalizer.js',
-      ).readAsStringSync();
-      final paginatorJs = File(
+      );
+      final paginatorJs = _readPackageSource(
         'assets/foliate-js/src/paginator.js',
-      ).readAsStringSync();
+      );
 
       expect(viewJs, contains('directionCountsFromText'));
       expect(viewJs, contains('normalizeDocumentLanguageAndDirection'));
@@ -845,10 +856,10 @@ void main() {
     });
 
     test('stabilizes inferred page progression for mixed-language books', () {
-      final viewJs = File('assets/foliate-js/src/view.js').readAsStringSync();
-      final paginatorJs = File(
+      final viewJs = _readPackageSource('assets/foliate-js/src/view.js');
+      final paginatorJs = _readPackageSource(
         'assets/foliate-js/src/paginator.js',
-      ).readAsStringSync();
+      );
 
       expect(
         viewJs,
@@ -893,8 +904,8 @@ void main() {
     });
 
     test('guards NCX TOC items without direct hrefs', () {
-      final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
-      final epubJs = File('assets/foliate-js/src/epub.js').readAsStringSync();
+      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
+      final epubJs = _readPackageSource('assets/foliate-js/src/epub.js');
 
       expect(epubJs, contains('const firstNavigableHref = items => items'));
       expect(epubJs, contains(r"$content?.getAttribute('src')"));
@@ -922,14 +933,14 @@ void main() {
     });
 
     test('surfaces page progression direction to Dart', () {
-      final bookJs = File('assets/foliate-js/src/book.js').readAsStringSync();
-      final viewJs = File('assets/foliate-js/src/view.js').readAsStringSync();
-      final paginatorJs = File(
+      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
+      final viewJs = _readPackageSource('assets/foliate-js/src/view.js');
+      final paginatorJs = _readPackageSource(
         'assets/foliate-js/src/paginator.js',
-      ).readAsStringSync();
-      final fixedLayoutJs = File(
+      );
+      final fixedLayoutJs = _readPackageSource(
         'assets/foliate-js/src/fixed-layout.js',
-      ).readAsStringSync();
+      );
       final webViewDart = readBookReaderWebViewLibrarySource();
 
       expect(webViewDart, contains('void pageLeft()'));

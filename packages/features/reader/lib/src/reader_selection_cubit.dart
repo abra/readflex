@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:reader_webview/reader_webview.dart';
 
 /// Current in-WebView text selection, mirrored into Flutter so the context
 /// panel can drive its show/hide animation and pass position metadata to
@@ -16,6 +17,7 @@ class ReaderSelectionState extends Equatable {
     this.normalizedMarkedContextText,
     this.cfiRange,
     this.normalizedCfiRange,
+    this.position,
     this.pageNumber,
     this.scrollOffset,
     this.hasSelection = false,
@@ -44,6 +46,9 @@ class ReaderSelectionState extends Equatable {
   /// CFI range of the normalized lexical selection.
   final String? normalizedCfiRange;
 
+  /// Normalized viewport rectangle used to anchor reader selection popups.
+  final ReaderSelectionPosition? position;
+
   /// Legacy optional page position.
   final int? pageNumber;
 
@@ -63,6 +68,7 @@ class ReaderSelectionState extends Equatable {
     Object? normalizedMarkedContextText = _absent,
     Object? cfiRange = _absent,
     Object? normalizedCfiRange = _absent,
+    Object? position = _absent,
     Object? pageNumber = _absent,
     Object? scrollOffset = _absent,
     bool? hasSelection,
@@ -87,6 +93,9 @@ class ReaderSelectionState extends Equatable {
     normalizedCfiRange: normalizedCfiRange == _absent
         ? this.normalizedCfiRange
         : normalizedCfiRange as String?,
+    position: position == _absent
+        ? this.position
+        : position as ReaderSelectionPosition?,
     pageNumber: pageNumber == _absent ? this.pageNumber : pageNumber as int?,
     scrollOffset: scrollOffset == _absent
         ? this.scrollOffset
@@ -104,6 +113,7 @@ class ReaderSelectionState extends Equatable {
     normalizedMarkedContextText,
     cfiRange,
     normalizedCfiRange,
+    position,
     pageNumber,
     scrollOffset,
     hasSelection,
@@ -125,6 +135,7 @@ class ReaderSelectionCubit extends Cubit<ReaderSelectionState> {
     String? normalizedMarkedContextText,
     String? cfiRange,
     String? normalizedCfiRange,
+    ReaderSelectionPosition? position,
     int? pageNumber,
     double? scrollOffset,
   }) {
@@ -138,6 +149,7 @@ class ReaderSelectionCubit extends Cubit<ReaderSelectionState> {
         normalizedMarkedContextText: normalizedMarkedContextText,
         cfiRange: cfiRange,
         normalizedCfiRange: normalizedCfiRange,
+        position: position,
         pageNumber: pageNumber,
         scrollOffset: scrollOffset,
         hasSelection: true,

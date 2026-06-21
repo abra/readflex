@@ -7,6 +7,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('AppShadows popover paints all-around floating depth', () {
+    expect(AppShadows.popover, hasLength(2));
+    expect(AppShadows.popover.first.offset.dx, 0);
+    expect(AppShadows.popover.first.offset.dy, greaterThan(0));
+    expect(AppShadows.popover.first.blurRadius, greaterThan(12));
+  });
+
   testWidgets('AppSourceCoverFrame renders cover and overlay content', (
     tester,
   ) async {

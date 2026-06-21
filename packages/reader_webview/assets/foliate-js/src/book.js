@@ -77,6 +77,62 @@ const getSelectionRange = (selection) => {
   return range.collapsed ? null : range;
 };
 
+const isAppleTouchRuntime = () => (
+  /iP(?:hone|ad|od)/.test(navigator.userAgent)
+  || (navigator.platform.includes('Mac') && navigator.maxTouchPoints > 1)
+);
+
+const installNativeTextActionMenuGuard = doc => {
+  if (!doc || doc.__readflexNativeTextActionMenuGuard === true) return;
+  doc.__readflexNativeTextActionMenuGuard = true;
+
+  const root = doc.documentElement;
+  if (root?.style) root.style.webkitTouchCallout = 'none';
+  if (doc.body?.style) doc.body.style.webkitTouchCallout = 'none';
+
+  if (!doc.getElementById('readflex-native-text-action-menu-guard')) {
+    const style = doc.createElement('style');
+    style.id = 'readflex-native-text-action-menu-guard';
+    style.textContent = `
+      html, body, body * {
+        -webkit-touch-callout: none !important;
+      }
+
+      body {
+        -webkit-user-select: text;
+        user-select: text;
+      }
+    `;
+    doc.head?.append(style);
+  }
+
+  if (!isAppleTouchRuntime()) return;
+
+  doc.addEventListener('contextmenu', event => {
+    if (!getSelectionRange(doc.getSelection?.())) return;
+    event.preventDefault();
+    event.stopPropagation();
+  }, { capture: true });
+};
+
+const clearSelectionForNativeTextActionMenu = doc => {
+  if (!isAppleTouchRuntime()) return;
+
+  const selection = doc?.getSelection?.();
+  if (!getSelectionRange(selection)) return;
+
+  doc.__readflexSuppressNextSelectionCleared = true;
+  doc.__anxSelectionClearedAt = Date.now();
+  doc.__anxSuppressClick = true;
+  selection.removeAllRanges();
+
+  setTimeout(() => {
+    if (doc.__readflexSuppressNextSelectionCleared === true) {
+      doc.__readflexSuppressNextSelectionCleared = false;
+    }
+  }, 250);
+};
+
 const unwrapCFI = cfi => cfi?.match(/^epubcfi\((.+)\)$/)?.[1] ?? cfi
 
 const CONTEXT_WINDOW_CHARS = 200;
@@ -231,14 +287,18 @@ const handleSelection = (view, doc, index) => {
     markedContextText,
     normalizedMarkedContextText
   });
+  clearSelectionForNativeTextActionMenu(doc);
 };
 
 const setSelectionHandler = (view, doc, index) => {
+  installNativeTextActionMenuGuard(doc);
+
   let hasActiveSelection = false;
   let lastPointerUpRange = null;
   doc.__anxSelectionClearedAt = 0;
   doc.__anxSuppressClick = false;
   doc.__anxAllowNextClickAfterProgrammaticDeselect = false;
+  doc.__readflexSuppressNextSelectionCleared = false;
 
   // Notify Flutter when the selection collapses so it can hide the context menu.
   const handleSelectionStateChange = () => {
@@ -251,6 +311,14 @@ const setSelectionHandler = (view, doc, index) => {
     }
 
     if (!hasActiveSelection) return;
+    if (doc.__readflexSuppressNextSelectionCleared === true) {
+      doc.__readflexSuppressNextSelectionCleared = false;
+      hasActiveSelection = false;
+      lastPointerUpRange = null;
+      doc.__anxSelectionClearedAt = Date.now();
+      doc.__anxSuppressClick = true;
+      return;
+    }
     hasActiveSelection = false;
     lastPointerUpRange = null;
     const allowNextClick =

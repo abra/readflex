@@ -29,4 +29,18 @@ abstract final class AppShadows {
       offset: Offset(0, -4),
     ),
   ];
+
+  /// Soft all-around shadow for small floating controls placed over content.
+  static const List<BoxShadow> popover = [
+    BoxShadow(
+      color: Color(0x26000000),
+      blurRadius: 18,
+      offset: Offset(0, 8),
+    ),
+    BoxShadow(
+      color: Color(0x14000000),
+      blurRadius: 4,
+      offset: Offset(0, 1),
+    ),
+  ];
 }

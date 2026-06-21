@@ -240,6 +240,7 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     return InAppWebView(
       initialUrlRequest: URLRequest(url: WebUri(_indexUrl)),
       initialSettings: baseReaderSettings(),
+      contextMenu: readerContextMenu(),
       onWebViewCreated: _onWebViewCreated,
       onConsoleMessage: _onConsoleMessage,
       // TEMP — see _recoveringFromCrash field doc for context.

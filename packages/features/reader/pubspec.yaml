@@ -32,6 +32,8 @@ dependencies:
     path: ../../reader_webview
   screen_control_service:
     path: ../../screen_control_service
+  toast_service:
+    path: ../../toast_service
 
 dev_dependencies:
   flutter_test:

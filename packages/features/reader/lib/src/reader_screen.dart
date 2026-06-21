@@ -13,6 +13,7 @@ import 'package:preferences_service/preferences_service.dart';
 import 'package:reader_webview/reader_webview.dart';
 import 'package:screen_control_service/screen_control_service.dart';
 import 'package:shared/shared.dart';
+import 'package:toast_service/toast_service.dart';
 
 import 'book_custom_css.dart';
 import 'reader_appearance_cubit.dart';
