@@ -208,6 +208,7 @@ void main() {
         bookJs,
         contains('opacity: annotation.opacity ?? READFLEX_HIGHLIGHT_OPACITY'),
       );
+      expect(bookJs, contains('mixBlendMode: annotation.mixBlendMode'));
       expect(
         bookJs,
         contains('radius: annotation.radius ?? READFLEX_HIGHLIGHT_RADIUS'),
@@ -491,7 +492,7 @@ void main() {
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_66"));
+      expect(assetExtractor, contains("reader_webview_assets_67"));
     });
 
     test('keeps same-node marked selection adjacent to punctuation', () {
@@ -1179,8 +1180,16 @@ void main() {
       expect(
         webViewDart,
         contains(
-          r'window.showSelectionHighlightPreview($escapedCfi, $escapedColor)',
+          r'window.showSelectionHighlightPreview($preview)',
         ),
+      );
+      expect(
+        webViewDart,
+        contains("'opacity': ?opacity"),
+      );
+      expect(
+        webViewDart,
+        contains("'mixBlendMode': ?mixBlendMode"),
       );
       expect(webViewDart, contains('void clearSelectionHighlightPreview()'));
       expect(

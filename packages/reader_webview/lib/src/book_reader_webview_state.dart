@@ -86,7 +86,10 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       final prev = oldById[h.id];
       if (prev == null) {
         _evalAddAnnotation(h);
-      } else if (prev.cfiRange != h.cfiRange || prev.color != h.color) {
+      } else if (prev.cfiRange != h.cfiRange ||
+          prev.color != h.color ||
+          prev.opacity != h.opacity ||
+          prev.mixBlendMode != h.mixBlendMode) {
         if (prev.cfiRange != null) _evalRemoveAnnotation(prev.cfiRange!);
         _evalAddAnnotation(h);
       }
@@ -120,6 +123,8 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       'type': 'highlight',
       'value': h.cfiRange,
       'color': h.color ?? '#FFE600',
+      if (h.opacity != null) 'opacity': h.opacity,
+      if (h.mixBlendMode != null) 'mixBlendMode': h.mixBlendMode,
     });
     _evaluateReaderCommand(
       label: 'addAnnotation',
@@ -744,14 +749,20 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   void showSelectionHighlightPreview({
     required String cfiRange,
     required String color,
+    double? opacity,
+    String? mixBlendMode,
   }) {
-    final escapedCfi = jsonEncode(cfiRange);
-    final escapedColor = jsonEncode(color);
+    final preview = jsonEncode({
+      'cfi': cfiRange,
+      'color': color,
+      'opacity': ?opacity,
+      'mixBlendMode': ?mixBlendMode,
+    });
     _evaluateReaderCommand(
       label: 'showSelectionHighlightPreview',
       expression:
           "typeof window.showSelectionHighlightPreview === 'function' ? "
-          "window.showSelectionHighlightPreview($escapedCfi, $escapedColor) : null",
+          "window.showSelectionHighlightPreview($preview) : null",
     );
   }
 
@@ -782,6 +793,8 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       'type': 'highlight',
       'value': highlight.cfiRange,
       'color': highlight.color ?? '#FFE600',
+      'opacity': ?highlight.opacity,
+      'mixBlendMode': ?highlight.mixBlendMode,
     });
     _evaluateReaderCommand(
       label: 'addAnnotation',

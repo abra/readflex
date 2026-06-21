@@ -47,6 +47,11 @@ void main() {
       contentSource,
       contains('color: readerHighlightCssColor(h.color, theme)'),
     );
+    expect(contentSource, contains('opacity: readerHighlightOpacity(theme)'));
+    expect(
+      contentSource,
+      contains('mixBlendMode: readerHighlightBlendMode(theme)'),
+    );
     expect(contentSource, contains('final currentState = bloc.state;'));
     expect(
       contentSource,
@@ -54,6 +59,14 @@ void main() {
     );
     expect(contentSource, contains('chapterTitle: currentState.chapterTitle'));
     expect(contextPanelSource, contains('showSelectionHighlightPreview'));
+    expect(
+      contextPanelSource,
+      contains('opacity: readerHighlightOpacity(readerTheme)'),
+    );
+    expect(
+      contextPanelSource,
+      contains('mixBlendMode: readerHighlightBlendMode(readerTheme)'),
+    );
     expect(contextPanelSource, contains('clearSelectionHighlightPreview'));
     expect(contextPanelSource, contains('onPreviewColorChanged'));
     expect(contextPanelSource, contains('onPreviewCleared'));

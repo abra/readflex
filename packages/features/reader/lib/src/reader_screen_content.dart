@@ -654,6 +654,8 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
           text: h.text,
           cfiRange: h.cfiRange,
           color: readerHighlightCssColor(h.color, theme),
+          opacity: readerHighlightOpacity(theme),
+          mixBlendMode: readerHighlightBlendMode(theme),
         ),
     ];
   }

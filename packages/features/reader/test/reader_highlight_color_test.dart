@@ -34,4 +34,20 @@ void main() {
       expect(readerHighlightCssColor(HighlightColor.purple, theme), '#472b64');
     });
   });
+
+  group('reader highlight overlay style', () {
+    test('uses multiply blending on light reader themes', () {
+      final theme = ReaderThemePreset.paper.data;
+
+      expect(readerHighlightBlendMode(theme), 'multiply');
+      expect(readerHighlightOpacity(theme), 0.82);
+    });
+
+    test('uses lighten blending on dark reader themes', () {
+      final theme = ReaderThemePreset.night.data;
+
+      expect(readerHighlightBlendMode(theme), 'lighten');
+      expect(readerHighlightOpacity(theme), 0.72);
+    });
+  });
 }

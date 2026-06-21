@@ -1217,6 +1217,7 @@ class Reader {
       const opts = {
         color,
         opacity: annotation.opacity ?? READFLEX_HIGHLIGHT_OPACITY,
+        mixBlendMode: annotation.mixBlendMode,
         radius: annotation.radius ?? READFLEX_HIGHLIGHT_RADIUS,
         verticalInset:
           annotation.verticalInset ?? READFLEX_HIGHLIGHT_VERTICAL_INSET,
@@ -1295,7 +1296,7 @@ class Reader {
     this.view?.deselect()
   }
 
-  showSelectionHighlightPreview({ cfi, color }) {
+  showSelectionHighlightPreview({ cfi, color, opacity, mixBlendMode }) {
     if (!cfi || !color) return
     this.clearSelectionHighlightPreview()
     this.addAnnotation({
@@ -1304,7 +1305,8 @@ class Reader {
       value: `${READFLEX_SELECTION_PREVIEW_HIGHLIGHT_VALUE_PREFIX}${cfi}`,
       cfi,
       color,
-      opacity: READFLEX_SELECTION_PREVIEW_HIGHLIGHT_OPACITY,
+      opacity: opacity ?? READFLEX_SELECTION_PREVIEW_HIGHLIGHT_OPACITY,
+      mixBlendMode,
     })
   }
 
@@ -2604,8 +2606,8 @@ window.clearSelection = () => reader.view.deselect()
 
 window.clearSelectionAfterTextAction = () => reader.clearSelectionAfterTextAction()
 
-window.showSelectionHighlightPreview = (cfi, color) =>
-  reader.showSelectionHighlightPreview({ cfi, color })
+window.showSelectionHighlightPreview = options =>
+  reader.showSelectionHighlightPreview(options ?? {})
 
 window.clearSelectionHighlightPreview = () => reader.clearSelectionHighlightPreview()
 

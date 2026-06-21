@@ -651,6 +651,8 @@ void main() {
       expect(map['text'], 'Highlighted text');
       expect(map.containsKey('cfiRange'), isFalse);
       expect(map.containsKey('color'), isFalse);
+      expect(map.containsKey('opacity'), isFalse);
+      expect(map.containsKey('mixBlendMode'), isFalse);
     });
 
     test('toMap includes optional fields when set', () {
@@ -659,6 +661,8 @@ void main() {
         text: 'Book highlight',
         cfiRange: 'epubcfi(/6/4!/4/2,/1:0,/1:15)',
         color: '#FFE600',
+        opacity: 0.82,
+        mixBlendMode: 'multiply',
       );
 
       final map = highlight.toMap();
@@ -666,6 +670,8 @@ void main() {
       expect(map['text'], 'Book highlight');
       expect(map['cfiRange'], 'epubcfi(/6/4!/4/2,/1:0,/1:15)');
       expect(map['color'], '#FFE600');
+      expect(map['opacity'], 0.82);
+      expect(map['mixBlendMode'], 'multiply');
     });
   });
 

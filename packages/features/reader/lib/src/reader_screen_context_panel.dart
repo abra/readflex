@@ -123,6 +123,8 @@ class _ContextPanelDriver extends StatelessWidget {
       webViewKey.currentState?.showSelectionHighlightPreview(
         cfiRange: cfiRange,
         color: readerHighlightCssColor(color, readerTheme),
+        opacity: readerHighlightOpacity(readerTheme),
+        mixBlendMode: readerHighlightBlendMode(readerTheme),
       );
     }
 
