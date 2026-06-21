@@ -143,6 +143,17 @@ const clearSelectionForAnnotationMenu = doc => {
   selection.removeAllRanges();
 };
 
+const allowImmediateClickAfterTextAction = doc => {
+  if (!doc) return;
+
+  // iOS menu suppression may clear selection before the action is saved. In
+  // that path no selectionchange fires here, so reset tap suppression directly.
+  doc.__readflexSuppressNextSelectionCleared = false;
+  doc.__anxAllowNextClickAfterProgrammaticDeselect = true;
+  doc.__anxSelectionClearedAt = 0;
+  doc.__anxSuppressClick = false;
+};
+
 const unwrapCFI = cfi => cfi?.match(/^epubcfi\((.+)\)$/)?.[1] ?? cfi
 
 const CONTEXT_WINDOW_CHARS = 200;
@@ -1280,7 +1291,7 @@ class Reader {
     this.clearSelectionHighlightPreview()
     const contents = this.view?.renderer?.getContents?.() ?? []
     for (const { doc } of contents)
-      doc.__anxAllowNextClickAfterProgrammaticDeselect = true
+      allowImmediateClickAfterTextAction(doc)
     this.view?.deselect()
   }
 

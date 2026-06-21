@@ -491,7 +491,7 @@ void main() {
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_65"));
+      expect(assetExtractor, contains("reader_webview_assets_66"));
     });
 
     test('keeps same-node marked selection adjacent to punctuation', () {
@@ -1187,6 +1187,23 @@ void main() {
         webViewDart,
         contains("label: 'clearSelectionHighlightPreview'"),
       );
+    });
+
+    test('does not suppress the first tap after completed text action', () {
+      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
+
+      expect(bookJs, contains('const allowImmediateClickAfterTextAction'));
+      expect(
+        bookJs,
+        contains('doc.__readflexSuppressNextSelectionCleared = false;'),
+      );
+      expect(
+        bookJs,
+        contains('doc.__anxAllowNextClickAfterProgrammaticDeselect = true;'),
+      );
+      expect(bookJs, contains('doc.__anxSelectionClearedAt = 0;'));
+      expect(bookJs, contains('doc.__anxSuppressClick = false;'));
+      expect(bookJs, contains('allowImmediateClickAfterTextAction(doc)'));
     });
   });
 
