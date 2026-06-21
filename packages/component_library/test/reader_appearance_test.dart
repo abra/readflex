@@ -44,6 +44,7 @@ void main() {
       expect(theme.backgroundColor, const Color(0xFF0F1115));
       expect(theme.primaryTextColor, const Color(0xFFBCC1CA));
       expect(theme.accentColor, const Color(0xFF9AA4B2));
+      expect(theme.highlightYellow, const Color(0xFF63551D));
     });
 
     test('night theme uses neutral slate colors for low-glare reading', () {
@@ -52,6 +53,7 @@ void main() {
       expect(theme.backgroundColor, const Color(0xFF242830));
       expect(theme.primaryTextColor, const Color(0xFFABB2BF));
       expect(theme.secondaryTextColor, const Color(0xFFB5C0C2));
+      expect(theme.highlightBlue, const Color(0xFF294056));
     });
   });
 }

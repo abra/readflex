@@ -96,6 +96,30 @@ final class ReaderHighlightsRefreshed extends ReaderEvent {
   const ReaderHighlightsRefreshed();
 }
 
+/// Removes a saved highlight, then refreshes the reader annotation list.
+final class ReaderHighlightDeleteRequested extends ReaderEvent {
+  const ReaderHighlightDeleteRequested({required this.highlightId});
+
+  final String highlightId;
+
+  @override
+  List<Object?> get props => [highlightId];
+}
+
+/// Changes the color of a saved highlight.
+final class ReaderHighlightColorChangeRequested extends ReaderEvent {
+  const ReaderHighlightColorChangeRequested({
+    required this.highlightId,
+    required this.color,
+  });
+
+  final String highlightId;
+  final HighlightColor color;
+
+  @override
+  List<Object?> get props => [highlightId, color];
+}
+
 /// foliate-js parsed the book table of contents.
 final class ReaderTocUpdated extends ReaderEvent {
   const ReaderTocUpdated({required this.items});

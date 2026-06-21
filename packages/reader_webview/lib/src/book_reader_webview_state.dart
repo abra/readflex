@@ -370,9 +370,8 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
         if (args.isEmpty) return;
         final data = readerBridgeMap(args.first);
         if (data == null) return;
-        final annotation = readerBridgeMap(data['annotation']);
-        final id = annotation?['id'] as String?;
-        if (id != null) widget.onHighlightTapped?.call(id);
+        final tap = ReaderHighlightTap.fromMap(data);
+        if (tap != null) widget.onHighlightTapped?.call(tap);
       },
     );
 
@@ -737,6 +736,32 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       expression:
           "typeof window.clearSelectionAfterTextAction === 'function' ? window.clearSelectionAfterTextAction() : "
           "typeof window.clearSelection === 'function' ? window.clearSelection() : null",
+    );
+  }
+
+  /// Render a temporary highlight over the active selection after the native
+  /// WebView selection is cleared to suppress iOS edit menus.
+  void showSelectionHighlightPreview({
+    required String cfiRange,
+    required String color,
+  }) {
+    final escapedCfi = jsonEncode(cfiRange);
+    final escapedColor = jsonEncode(color);
+    _evaluateReaderCommand(
+      label: 'showSelectionHighlightPreview',
+      expression:
+          "typeof window.showSelectionHighlightPreview === 'function' ? "
+          "window.showSelectionHighlightPreview($escapedCfi, $escapedColor) : null",
+    );
+  }
+
+  /// Remove the temporary selection highlight preview, if one is visible.
+  void clearSelectionHighlightPreview() {
+    _evaluateReaderCommand(
+      label: 'clearSelectionHighlightPreview',
+      expression:
+          "typeof window.clearSelectionHighlightPreview === 'function' ? "
+          "window.clearSelectionHighlightPreview() : null",
     );
   }
 

@@ -585,7 +585,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
   bool _foliateReady = false;
 
   /// Memoization for the domain → bridge highlight mapping. This widget
-  /// rebuilds for many reasons unrelated to highlights (theme tap,
+  /// rebuilds for many reasons unrelated to highlights (chrome tap,
   /// font/layout change in ReaderAppearanceCubit, the loading-scrim flip,
   /// etc.); without a cache the `.map(...).toList()` re-allocates the
   /// `ReaderHighlight` list every time.
@@ -595,9 +595,10 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
   /// which would invalidate a `late final` cache on each tick. The
   /// underlying `state.highlights` reference, in contrast, only
   /// changes on `ReaderHighlightsRefreshed` — so widget-state cache
-  /// keyed on `identical(...)` of that reference hits on every
-  /// non-highlights rebuild.
+  /// keyed on `identical(...)` of that reference and the reader theme
+  /// hits on every non-highlights, non-theme rebuild.
   List<Highlight>? _lastHighlightsRef;
+  ReaderThemeData? _lastHighlightsTheme;
   List<ReaderHighlight>? _cachedReaderHighlights;
   List<SourceBookmark>? _lastBookmarksRef;
   List<ReaderBookmark>? _cachedReaderBookmarks;
@@ -619,15 +620,26 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     }
   }
 
-  List<ReaderHighlight> _readerHighlightsFor(List<Highlight> source) {
+  List<ReaderHighlight> _readerHighlightsFor(
+    List<Highlight> source,
+    ReaderThemeData theme,
+  ) {
     final cached = _cachedReaderHighlights;
-    if (cached != null && identical(source, _lastHighlightsRef)) {
+    if (cached != null &&
+        identical(source, _lastHighlightsRef) &&
+        _lastHighlightsTheme == theme) {
       return cached;
     }
     _lastHighlightsRef = source;
+    _lastHighlightsTheme = theme;
     return _cachedReaderHighlights = [
       for (final h in source)
-        ReaderHighlight(id: h.id, text: h.text, cfiRange: h.cfiRange),
+        ReaderHighlight(
+          id: h.id,
+          text: h.text,
+          cfiRange: h.cfiRange,
+          color: readerHighlightCssColor(h.color, theme),
+        ),
     ];
   }
 
@@ -678,6 +690,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     final bloc = context.read<ReaderBloc>();
     final uiCubit = context.read<ReaderUiCubit>();
     final selectionCubit = context.read<ReaderSelectionCubit>();
+    final highlightFocusCubit = context.read<ReaderHighlightFocusCubit>();
     // Subscribe specifically to the highlights list. `state.highlights`
     // is a fresh list instance only on `ReaderHighlightsRefreshed`
     // emits — page turns and other state changes preserve the same
@@ -689,7 +702,10 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       (b) => b.state.bookmarks,
     );
     final state = bloc.state;
-    final highlights = _readerHighlightsFor(highlightsState);
+    final highlights = _readerHighlightsFor(
+      highlightsState,
+      widget.readerTheme,
+    );
     final bookmarks = _readerBookmarksFor(bookmarksState);
     final appearance = context
         .select<ReaderAppearanceCubit, ReaderAppearancePreferences>(
@@ -710,6 +726,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     final tapAxis = _readerTapAxisForPageTurnStyle(appearance.pageTurnStyle);
 
     void onTapped(double x, double y) {
+      highlightFocusCubit.clear();
       switch (readerTapCommandFor(
         x: x,
         y: y,
@@ -850,6 +867,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         );
       },
       onTextSelected: (selection) {
+        highlightFocusCubit.clear();
         if (isImagePageFormat(bloc.state.book?.format)) {
           selectionCubit.deselect();
           widget.webViewKey?.currentState?.clearSelection();
@@ -869,6 +887,12 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         );
       },
       onTextDeselected: () => selectionCubit.deselect(),
+      onHighlightTapped: (tap) {
+        uiCubit.hideChrome();
+        selectionCubit.deselect();
+        widget.webViewKey?.currentState?.clearSelection();
+        highlightFocusCubit.focus(tap);
+      },
       onTapped: onTapped,
     );
 

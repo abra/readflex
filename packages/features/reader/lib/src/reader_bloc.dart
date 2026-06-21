@@ -23,6 +23,13 @@ void _debugTraceReaderBloc(String message) {
   debugPrint('[reader-trace] $message');
 }
 
+Highlight? _highlightById(List<Highlight> highlights, String id) {
+  for (final highlight in highlights) {
+    if (highlight.id == id) return highlight;
+  }
+  return null;
+}
+
 /// Owns the loaded book and its highlights for the reader screen.
 ///
 /// Responsibilities:
@@ -61,6 +68,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     on<ReaderSourceLoadRequested>(_onSourceLoadRequested);
     on<ReaderBookPositionUpdated>(_onBookPositionUpdated);
     on<ReaderHighlightsRefreshed>(_onHighlightsRefreshed);
+    on<ReaderHighlightDeleteRequested>(_onHighlightDeleteRequested);
+    on<ReaderHighlightColorChangeRequested>(
+      _onHighlightColorChangeRequested,
+    );
     on<ReaderTocUpdated>(_onTocUpdated);
     on<ReaderDocumentFeaturesUpdated>(_onDocumentFeaturesUpdated);
     on<ReaderBookmarkChanged>(_onBookmarkChanged);
@@ -324,6 +335,47 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     final sourceId = state.sourceId;
     if (sourceId == null) return;
     try {
+      final highlights = await _highlightRepository.getHighlightsBySource(
+        sourceId,
+      );
+      emit(state.copyWith(highlights: highlights));
+    } catch (e, st) {
+      addError(e, st);
+    }
+  }
+
+  Future<void> _onHighlightDeleteRequested(
+    ReaderHighlightDeleteRequested event,
+    Emitter<ReaderState> emit,
+  ) async {
+    final sourceId = state.sourceId;
+    if (sourceId == null) return;
+
+    try {
+      await _highlightRepository.deleteHighlight(event.highlightId);
+      final highlights = await _highlightRepository.getHighlightsBySource(
+        sourceId,
+      );
+      emit(state.copyWith(highlights: highlights));
+    } catch (e, st) {
+      addError(e, st);
+    }
+  }
+
+  Future<void> _onHighlightColorChangeRequested(
+    ReaderHighlightColorChangeRequested event,
+    Emitter<ReaderState> emit,
+  ) async {
+    final sourceId = state.sourceId;
+    if (sourceId == null) return;
+
+    final highlight = _highlightById(state.highlights, event.highlightId);
+    if (highlight == null || highlight.color == event.color) return;
+
+    try {
+      await _highlightRepository.updateHighlight(
+        highlight.copyWith(color: event.color),
+      );
       final highlights = await _highlightRepository.getHighlightsBySource(
         sourceId,
       );

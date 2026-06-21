@@ -133,10 +133,28 @@ const clearSelectionForNativeTextActionMenu = doc => {
   }, 250);
 };
 
+const clearSelectionForAnnotationMenu = doc => {
+  clearSelectionForNativeTextActionMenu(doc);
+
+  if (isAppleTouchRuntime()) return;
+
+  const selection = doc?.getSelection?.();
+  if (!getSelectionRange(selection)) return;
+  selection.removeAllRanges();
+};
+
 const unwrapCFI = cfi => cfi?.match(/^epubcfi\((.+)\)$/)?.[1] ?? cfi
 
 const CONTEXT_WINDOW_CHARS = 200;
 const MAX_CONTEXT_CHARS = 600;
+const READFLEX_HIGHLIGHT_OPACITY = '0.62';
+const READFLEX_HIGHLIGHT_RADIUS = 3;
+const READFLEX_HIGHLIGHT_VERTICAL_INSET = 1.5;
+const READFLEX_SELECTION_PREVIEW_HIGHLIGHT_ID =
+  '__readflex-selection-preview-highlight';
+const READFLEX_SELECTION_PREVIEW_HIGHLIGHT_VALUE_PREFIX =
+  '__readflex-selection-preview-highlight:';
+const READFLEX_SELECTION_PREVIEW_HIGHLIGHT_OPACITY = '0.50';
 
 const _collapseWhitespace = (text) =>
   typeof text === 'string'
@@ -247,6 +265,34 @@ const buildMarkedRangeContextText = (range) => {
   );
 };
 
+const annotationHitForRange = (view, index, range) => {
+  const contents = view?.renderer?.getContents?.() ?? [];
+  const content = contents.find(x => x.index === index && x.overlayer);
+  if (!content) return null;
+
+  const rects = Array.from(range.getClientRects())
+    .filter(rect => rect.width > 0 && rect.height > 0);
+  for (const rect of rects) {
+    const points = [
+      { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
+      { x: rect.left + 1, y: rect.top + rect.height / 2 },
+      { x: rect.right - 1, y: rect.top + rect.height / 2 },
+    ];
+    for (const point of points) {
+      const [value, annotationRange] = content.overlayer.hitTest(point);
+      if (!value) continue;
+      if (value.startsWith(READFLEX_SELECTION_PREVIEW_HIGHLIGHT_VALUE_PREFIX)) {
+        continue;
+      }
+      const annotation = globalThis.reader?.annotationsByValue?.get(value);
+      if (annotation?.type === 'highlight') {
+        return { annotation, range: annotationRange };
+      }
+    }
+  }
+  return null;
+};
+
 const handleSelection = (view, doc, index) => {
   const selection = doc.getSelection();
   const range = getSelectionRange(selection);
@@ -254,6 +300,18 @@ const handleSelection = (view, doc, index) => {
   if (!range) return;
 
   const position = getPosition(range);
+  const annotationHit = annotationHitForRange(view, index, range);
+  if (annotationHit) {
+    const annotationRange = annotationHit.range ?? range;
+    clearSelectionForAnnotationMenu(doc);
+    onAnnotationClick({
+      annotation: annotationHit.annotation,
+      pos: getPosition(annotationRange) ?? position,
+      contextText: buildRangeContextText(annotationRange)
+    });
+    return;
+  }
+
   const cfi = view.getCFI(index, range);
   const lang = 'en-US'
 
@@ -1145,7 +1203,14 @@ class Reader {
     view.addEventListener('draw-annotation', e => {
       const { draw, annotation } = e.detail
       const { color, type } = annotation
-      const opts = { color, writingMode: rendererWritingMode() }
+      const opts = {
+        color,
+        opacity: annotation.opacity ?? READFLEX_HIGHLIGHT_OPACITY,
+        radius: annotation.radius ?? READFLEX_HIGHLIGHT_RADIUS,
+        verticalInset:
+          annotation.verticalInset ?? READFLEX_HIGHLIGHT_VERTICAL_INSET,
+        writingMode: rendererWritingMode(),
+      }
       if (type === 'highlight') draw(Overlayer.highlight, { ...opts })
       else if (type === 'underline') draw(Overlayer.underline, { ...opts })
     })
@@ -1212,10 +1277,28 @@ class Reader {
   }
 
   clearSelectionAfterTextAction() {
+    this.clearSelectionHighlightPreview()
     const contents = this.view?.renderer?.getContents?.() ?? []
     for (const { doc } of contents)
       doc.__anxAllowNextClickAfterProgrammaticDeselect = true
     this.view?.deselect()
+  }
+
+  showSelectionHighlightPreview({ cfi, color }) {
+    if (!cfi || !color) return
+    this.clearSelectionHighlightPreview()
+    this.addAnnotation({
+      id: READFLEX_SELECTION_PREVIEW_HIGHLIGHT_ID,
+      type: 'highlight',
+      value: `${READFLEX_SELECTION_PREVIEW_HIGHLIGHT_VALUE_PREFIX}${cfi}`,
+      cfi,
+      color,
+      opacity: READFLEX_SELECTION_PREVIEW_HIGHLIGHT_OPACITY,
+    })
+  }
+
+  clearSelectionHighlightPreview() {
+    this.removeAnnotation(null, false, READFLEX_SELECTION_PREVIEW_HIGHLIGHT_ID)
   }
 
   addAnnotation(annotation) {
@@ -2509,6 +2592,11 @@ window.getSelection = () => reader.getSelection()
 window.clearSelection = () => reader.view.deselect()
 
 window.clearSelectionAfterTextAction = () => reader.clearSelectionAfterTextAction()
+
+window.showSelectionHighlightPreview = (cfi, color) =>
+  reader.showSelectionHighlightPreview({ cfi, color })
+
+window.clearSelectionHighlightPreview = () => reader.clearSelectionHighlightPreview()
 
 window.addAnnotation = (annotation) => reader.addAnnotation(annotation)
 

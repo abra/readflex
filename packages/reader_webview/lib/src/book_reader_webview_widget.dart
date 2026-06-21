@@ -78,7 +78,7 @@ class BookReaderWebView extends StatefulWidget {
   final VoidCallback? onTextDeselected;
 
   /// Fires when the user taps an existing highlight annotation.
-  final void Function(String highlightId)? onHighlightTapped;
+  final void Function(ReaderHighlightTap tap)? onHighlightTapped;
 
   /// Fires when foliate-js has parsed the book's table of contents.
   final void Function(List<ReaderTocItem> items)? onTocChanged;

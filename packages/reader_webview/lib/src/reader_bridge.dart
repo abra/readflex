@@ -563,6 +563,43 @@ class ReaderSelectionPosition {
   int get hashCode => Object.hash(left, top, right, bottom);
 }
 
+/// Tap event emitted when the user taps an existing highlight annotation.
+class ReaderHighlightTap {
+  const ReaderHighlightTap({
+    required this.highlightId,
+    this.position,
+    this.contextText,
+  });
+
+  final String highlightId;
+  final ReaderSelectionPosition? position;
+  final String? contextText;
+
+  static ReaderHighlightTap? fromMap(Map<String, dynamic> map) {
+    final annotation = readerBridgeMap(map['annotation']) ?? map;
+    final id = _nonEmptyString(annotation['id']);
+    if (id == null) return null;
+
+    return ReaderHighlightTap(
+      highlightId: id,
+      position: ReaderSelectionPosition.fromValue(map['pos']),
+      contextText: _string(map['contextText']),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is ReaderHighlightTap &&
+            other.highlightId == highlightId &&
+            other.position == position &&
+            other.contextText == contextText;
+  }
+
+  @override
+  int get hashCode => Object.hash(highlightId, position, contextText);
+}
+
 /// Appearance bundle for the foliate-js book reader. Passed as the
 /// `style` query param on the initial `index.html` load and via
 /// `changeStyle()` thereafter. Field names mirror the JS object keys that

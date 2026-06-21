@@ -28,6 +28,8 @@ import 'reader_color_utils.dart';
 import 'reader_device_font_scale.dart';
 import 'reader_drawer_messages.dart';
 import 'reader_directional_layout.dart';
+import 'reader_highlight_focus_cubit.dart';
+import 'reader_highlight_color.dart';
 import 'reader_keep_awake_cubit.dart';
 import 'reader_loading_indicator_style.dart';
 import 'reader_progress_label.dart';
@@ -196,6 +198,7 @@ class ReaderScreen extends StatelessWidget {
           ),
         ),
         BlocProvider(create: (_) => ReaderSelectionCubit()),
+        BlocProvider(create: (_) => ReaderHighlightFocusCubit()),
         BlocProvider(
           create: (_) => ReaderAppearanceCubit(
             preferencesService: preferencesService,

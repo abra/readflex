@@ -936,6 +936,160 @@ void main() {
       );
     });
 
+    group('ReaderHighlightDeleteRequested', () {
+      blocTest<ReaderBloc, ReaderState>(
+        'deletes highlight and refreshes highlights for current source',
+        setUp: () {
+          highlightRepository.seedHighlights('book-1', [
+            testHighlight,
+            Highlight(
+              id: 'h-2',
+              sourceId: 'book-1',
+              sourceType: SourceType.book,
+              text: 'Remaining highlight',
+              createdAt: DateTime(2024, 1, 3),
+            ),
+          ]);
+        },
+        build: buildBloc,
+        seed: () => ReaderState(status: ReaderStatus.ready, book: testBook),
+        act: (bloc) => bloc.add(
+          const ReaderHighlightDeleteRequested(highlightId: 'h-1'),
+        ),
+        expect: () => [
+          isA<ReaderState>()
+              .having((s) => s.highlights, 'highlights', hasLength(1))
+              .having((s) => s.highlights.single.id, 'highlight id', 'h-2'),
+        ],
+        verify: (_) {
+          expect(highlightRepository.deletedHighlightIds, ['h-1']);
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'emits nothing when no source loaded',
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          const ReaderHighlightDeleteRequested(highlightId: 'h-1'),
+        ),
+        expect: () => <ReaderState>[],
+        verify: (_) {
+          expect(highlightRepository.deletedHighlightIds, isEmpty);
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'reports error when repository throws',
+        setUp: () {
+          highlightRepository.shouldThrow = true;
+        },
+        build: buildBloc,
+        seed: () => ReaderState(status: ReaderStatus.ready, book: testBook),
+        act: (bloc) => bloc.add(
+          const ReaderHighlightDeleteRequested(highlightId: 'h-1'),
+        ),
+        expect: () => <ReaderState>[],
+        errors: () => [isA<Exception>()],
+      );
+    });
+
+    group('ReaderHighlightColorChangeRequested', () {
+      blocTest<ReaderBloc, ReaderState>(
+        'updates highlight color and refreshes highlights for current source',
+        setUp: () {
+          highlightRepository.seedHighlights('book-1', [testHighlight]);
+        },
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          book: testBook,
+          highlights: [testHighlight],
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderHighlightColorChangeRequested(
+            highlightId: 'h-1',
+            color: HighlightColor.blue,
+          ),
+        ),
+        expect: () => [
+          isA<ReaderState>()
+              .having(
+                (s) => s.highlights.single.color,
+                'highlight color',
+                HighlightColor.blue,
+              )
+              .having((s) => s.highlights.single.id, 'highlight id', 'h-1'),
+        ],
+        verify: (_) {
+          expect(highlightRepository.updatedHighlights, hasLength(1));
+          expect(
+            highlightRepository.updatedHighlights.single.color,
+            HighlightColor.blue,
+          );
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'emits nothing when color is already selected',
+        setUp: () {
+          highlightRepository.seedHighlights('book-1', [testHighlight]);
+        },
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          book: testBook,
+          highlights: [testHighlight],
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderHighlightColorChangeRequested(
+            highlightId: 'h-1',
+            color: HighlightColor.yellow,
+          ),
+        ),
+        expect: () => <ReaderState>[],
+        verify: (_) {
+          expect(highlightRepository.updatedHighlights, isEmpty);
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'emits nothing when no source loaded',
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          const ReaderHighlightColorChangeRequested(
+            highlightId: 'h-1',
+            color: HighlightColor.blue,
+          ),
+        ),
+        expect: () => <ReaderState>[],
+        verify: (_) {
+          expect(highlightRepository.updatedHighlights, isEmpty);
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'reports error when repository throws',
+        setUp: () {
+          highlightRepository.seedHighlights('book-1', [testHighlight]);
+          highlightRepository.shouldThrow = true;
+        },
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          book: testBook,
+          highlights: [testHighlight],
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderHighlightColorChangeRequested(
+            highlightId: 'h-1',
+            color: HighlightColor.blue,
+          ),
+        ),
+        expect: () => <ReaderState>[],
+        errors: () => [isA<Exception>()],
+      );
+    });
+
     group('ReaderBookmarkChanged', () {
       blocTest<ReaderBloc, ReaderState>(
         'adds bookmark for current source',

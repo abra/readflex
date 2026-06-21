@@ -182,6 +182,8 @@ export class Overlayer {
             padding = 0,
             opacity = 'var(--overlayer-highlight-opacity, .3)',
             mixBlendMode = 'var(--overlayer-highlight-blend-mode, normal)',
+            radius = 0,
+            verticalInset = 0,
         } = options
         const g = createSVGElement('g')
         g.setAttribute('fill', color)
@@ -189,10 +191,18 @@ export class Overlayer {
         g.style.mixBlendMode = mixBlendMode
         for (const { left, top, height, width } of rects) {
             const el = createSVGElement('rect')
+            const safeVerticalInset = Math.max(
+                0,
+                Math.min(verticalInset, Math.max(0, height / 2 - 1)),
+            )
             el.setAttribute('x', left - padding)
-            el.setAttribute('y', top - padding)
-            el.setAttribute('height', height + padding * 2)
+            el.setAttribute('y', top + safeVerticalInset - padding)
+            el.setAttribute('height', height - safeVerticalInset * 2 + padding * 2)
             el.setAttribute('width', width + padding * 2)
+            if (radius) {
+                el.setAttribute('rx', radius)
+                el.setAttribute('ry', radius)
+            }
             g.append(el)
         }
         return g

@@ -668,4 +668,43 @@ void main() {
       expect(map['color'], '#FFE600');
     });
   });
+
+  group('ReaderHighlightTap', () {
+    test('fromMap parses annotation id and position', () {
+      final tap = ReaderHighlightTap.fromMap({
+        'annotation': {'id': 'h-1'},
+        'pos': {'left': 0.1, 'top': 0.2, 'right': 0.3, 'bottom': 0.4},
+        'contextText': 'Highlighted sentence.',
+      });
+
+      expect(tap, isNotNull);
+      expect(tap!.highlightId, 'h-1');
+      expect(
+        tap.position,
+        const ReaderSelectionPosition(
+          left: 0.1,
+          top: 0.2,
+          right: 0.3,
+          bottom: 0.4,
+        ),
+      );
+      expect(tap.contextText, 'Highlighted sentence.');
+    });
+
+    test('fromMap tolerates legacy raw annotation payload', () {
+      final tap = ReaderHighlightTap.fromMap({'id': 'h-legacy'});
+
+      expect(tap, isNotNull);
+      expect(tap!.highlightId, 'h-legacy');
+      expect(tap.position, isNull);
+    });
+
+    test('fromMap rejects missing annotation id', () {
+      final tap = ReaderHighlightTap.fromMap({
+        'annotation': {'value': 'epubcfi(/6/4)'},
+      });
+
+      expect(tap, isNull);
+    });
+  });
 }

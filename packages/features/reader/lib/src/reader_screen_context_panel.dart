@@ -1,11 +1,18 @@
 part of 'reader_screen.dart';
 
-const _kHighlightPopupWidth = 292.0;
+const _kHighlightPopupColorCount = 5;
+const _kHighlightSwatchSize = 24.0;
+const _kHighlightSwatchTapSize = 40.0;
+const _kHighlightPopupHorizontalPadding = AppSpacing.xs;
+const _kHighlightPopupDividerWidth = AppSpacing.sm;
+const _kHighlightPopupWidth =
+    _kHighlightPopupColorCount * _kHighlightSwatchTapSize +
+    _kHighlightPopupDividerWidth +
+    _kHighlightSwatchTapSize +
+    _kHighlightPopupHorizontalPadding * 2;
 const _kHighlightPopupHeight = 52.0;
 const _kHighlightPopupGap = AppSpacing.sm;
 const _kHighlightPopupHorizontalInset = AppSpacing.lg;
-const _kHighlightSwatchSize = 24.0;
-const _kHighlightSwatchTapSize = 40.0;
 
 /// Reads selection from [ReaderSelectionCubit] and source info from
 /// [ReaderBloc] to show/hide the text-action context panel.
@@ -29,14 +36,69 @@ class _ContextPanelDriver extends StatelessWidget {
     final sourceType = context.select<ReaderBloc, SourceType>(
       (b) => b.state.sourceType,
     );
+    final highlightFocus = context
+        .select<ReaderHighlightFocusCubit, ReaderHighlightFocusState>(
+          (c) => c.state,
+        );
+    final focusedHighlight = context.select<ReaderBloc, Highlight?>(
+      (b) => _focusedHighlightById(
+        b.state.highlights,
+        highlightFocus.highlightId,
+      ),
+    );
 
-    if (!_selectionActionsVisible(sel.hasSelection) || sourceId == null) {
+    if (sourceId == null) {
       return const SizedBox.shrink();
     }
 
     final bloc = context.read<ReaderBloc>();
     final selectionCubit = context.read<ReaderSelectionCubit>();
+    final highlightFocusCubit = context.read<ReaderHighlightFocusCubit>();
     final colors = context.colors;
+    final appearance = context.select<ReaderAppearanceCubit, String>(
+      (c) => c.state.effectiveAppearance.themeId,
+    );
+    final readerTheme = ReaderThemePreset.fromId(appearance).data;
+
+    if (!_selectionActionsVisible(sel.hasSelection)) {
+      if (!highlightFocus.hasHighlight || focusedHighlight == null) {
+        return const SizedBox.shrink();
+      }
+      return Positioned.fill(
+        child: _SavedHighlightPopup(
+          position: highlightFocus.position,
+          selectedColor: focusedHighlight.color,
+          readerTheme: readerTheme,
+          panelColor: colors.surface,
+          destructiveColor: Theme.of(context).colorScheme.error,
+          dividerColor: colors.outlineVariant,
+          onDismiss: highlightFocusCubit.clear,
+          onColorChanged: (color) {
+            if (color == focusedHighlight.color) return;
+            bloc.add(
+              ReaderHighlightColorChangeRequested(
+                highlightId: focusedHighlight.id,
+                color: color,
+              ),
+            );
+          },
+          onDelete: () {
+            highlightFocusCubit.clear();
+            bloc.add(
+              ReaderHighlightDeleteRequested(
+                highlightId: focusedHighlight.id,
+              ),
+            );
+            showToast(
+              context,
+              type: NotificationType.success,
+              message: 'Highlight removed',
+            );
+          },
+        ),
+      );
+    }
+
     final selection = TextSelectionContext(
       selectedText: sel.selectedText,
       normalizedSelectedText: sel.normalizedSelectedText,
@@ -53,8 +115,22 @@ class _ContextPanelDriver extends StatelessWidget {
     );
     final highlightAction = _highlightActionFor(textActions);
 
+    void showHighlightPreview(HighlightColor color) {
+      final cfiRange = sel.cfiRange;
+      if (cfiRange == null || cfiRange.isEmpty) return;
+      webViewKey.currentState?.showSelectionHighlightPreview(
+        cfiRange: cfiRange,
+        color: readerHighlightCssColor(color, readerTheme),
+      );
+    }
+
+    void clearHighlightPreview() {
+      webViewKey.currentState?.clearSelectionHighlightPreview();
+    }
+
     void dismissSelection() {
       selectionCubit.deselect();
+      highlightFocusCubit.clear();
       webViewKey.currentState?.clearSelectionAfterTextAction();
     }
 
@@ -85,9 +161,12 @@ class _ContextPanelDriver extends StatelessWidget {
           action: highlightAction,
           selection: selection,
           selectionPosition: sel.position,
+          readerTheme: readerTheme,
           panelColor: colors.surface,
           foregroundColor: colors.onSurface,
           dividerColor: colors.outlineVariant,
+          onPreviewColorChanged: showHighlightPreview,
+          onPreviewCleared: clearHighlightPreview,
           onDismiss: dismissSelection,
           onActionCompleted: completeHighlightAction,
           onActionError: handleActionError,
@@ -132,14 +211,159 @@ ColorHighlightTextAction? _highlightActionFor(List<TextAction> actions) {
   return null;
 }
 
+Highlight? _focusedHighlightById(List<Highlight> highlights, String? id) {
+  if (id == null || id.isEmpty) return null;
+  for (final highlight in highlights) {
+    if (highlight.id == id) return highlight;
+  }
+  return null;
+}
+
+double _highlightPopupLeft({
+  required BoxConstraints constraints,
+  required double horizontalInset,
+  required double width,
+  required ReaderSelectionPosition? position,
+}) {
+  final centerX = position == null
+      ? constraints.maxWidth / 2
+      : ((position.left + position.right) / 2) * constraints.maxWidth;
+  final minLeft = horizontalInset;
+  final maxLeft = (constraints.maxWidth - width - horizontalInset).clamp(
+    minLeft,
+    constraints.maxWidth,
+  );
+  return (centerX - width / 2).clamp(minLeft, maxLeft).toDouble();
+}
+
+double _highlightPopupTop({
+  required BoxConstraints constraints,
+  required EdgeInsets mediaPadding,
+  required ReaderSelectionPosition? position,
+}) {
+  final minTop = mediaPadding.top + AppSpacing.sm;
+  final availableMaxTop =
+      constraints.maxHeight -
+      mediaPadding.bottom -
+      _kHighlightPopupHeight -
+      AppSpacing.sm;
+  final maxTop = availableMaxTop <= minTop ? minTop : availableMaxTop;
+  if (position == null) return maxTop;
+
+  final selectionTop = position.top * constraints.maxHeight;
+  final selectionBottom = position.bottom * constraints.maxHeight;
+  final aboveTop = selectionTop - _kHighlightPopupHeight - _kHighlightPopupGap;
+  final belowTop = selectionBottom + _kHighlightPopupGap;
+  final preferredTop = aboveTop >= minTop ? aboveTop : belowTop;
+  return preferredTop.clamp(minTop, maxTop).toDouble();
+}
+
+double _highlightPopupHorizontalInset(double maxWidth) {
+  if (maxWidth <= _kHighlightPopupHorizontalInset * 2) return 0;
+  return _kHighlightPopupHorizontalInset;
+}
+
+double _highlightPopupWidth(double maxWidth, double horizontalInset) {
+  final availableWidth = maxWidth - horizontalInset * 2;
+  if (availableWidth <= 0) return 0;
+  return availableWidth < _kHighlightPopupWidth
+      ? availableWidth
+      : _kHighlightPopupWidth;
+}
+
+/// Compact floating edit menu for an already saved highlight.
+class _SavedHighlightPopup extends StatelessWidget {
+  const _SavedHighlightPopup({
+    required this.selectedColor,
+    required this.readerTheme,
+    required this.panelColor,
+    required this.destructiveColor,
+    required this.dividerColor,
+    required this.onDismiss,
+    required this.onColorChanged,
+    required this.onDelete,
+    this.position,
+  });
+
+  final ReaderSelectionPosition? position;
+  final HighlightColor selectedColor;
+  final ReaderThemeData readerTheme;
+  final Color panelColor;
+  final Color destructiveColor;
+  final Color dividerColor;
+  final VoidCallback onDismiss;
+  final ValueChanged<HighlightColor> onColorChanged;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final mediaPadding = MediaQuery.paddingOf(context);
+        final horizontalInset = _highlightPopupHorizontalInset(
+          constraints.maxWidth,
+        );
+        final width = _highlightPopupWidth(
+          constraints.maxWidth,
+          horizontalInset,
+        );
+        final left = _highlightPopupLeft(
+          constraints: constraints,
+          horizontalInset: horizontalInset,
+          width: width,
+          position: position,
+        );
+        final top = _highlightPopupTop(
+          constraints: constraints,
+          mediaPadding: mediaPadding,
+          position: position,
+        );
+
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: onDismiss,
+                child: const SizedBox.expand(),
+              ),
+            ),
+            Positioned(
+              left: left,
+              top: top,
+              width: width,
+              height: _kHighlightPopupHeight,
+              child: _HighlightPopupSurface(
+                selectedColor: selectedColor,
+                saving: false,
+                readerTheme: readerTheme,
+                panelColor: panelColor,
+                actionColor: destructiveColor,
+                actionIcon: AppIcons.delete,
+                actionTooltip: 'Remove highlight',
+                dividerColor: dividerColor,
+                onColorChanged: onColorChanged,
+                onAction: onDelete,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 /// Compact floating highlight menu anchored to the active WebView selection.
 class _HighlightSelectionPopup extends StatefulWidget {
   const _HighlightSelectionPopup({
     required this.action,
     required this.selection,
+    required this.readerTheme,
     required this.panelColor,
     required this.foregroundColor,
     required this.dividerColor,
+    required this.onPreviewColorChanged,
+    required this.onPreviewCleared,
     required this.onDismiss,
     required this.onActionCompleted,
     required this.onActionError,
@@ -149,9 +373,12 @@ class _HighlightSelectionPopup extends StatefulWidget {
   final ColorHighlightTextAction action;
   final TextSelectionContext selection;
   final ReaderSelectionPosition? selectionPosition;
+  final ReaderThemeData readerTheme;
   final Color panelColor;
   final Color foregroundColor;
   final Color dividerColor;
+  final ValueChanged<HighlightColor> onPreviewColorChanged;
+  final VoidCallback onPreviewCleared;
   final VoidCallback onDismiss;
   final VoidCallback onActionCompleted;
   final void Function(Object error, StackTrace stack) onActionError;
@@ -164,6 +391,31 @@ class _HighlightSelectionPopup extends StatefulWidget {
 class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
   HighlightColor _selectedColor = HighlightColor.yellow;
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.onPreviewColorChanged(_selectedColor);
+  }
+
+  @override
+  void didUpdateWidget(covariant _HighlightSelectionPopup oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selection.cfiRange != widget.selection.cfiRange) {
+      _selectedColor = HighlightColor.yellow;
+      widget.onPreviewColorChanged(_selectedColor);
+      return;
+    }
+    if (oldWidget.readerTheme != widget.readerTheme) {
+      widget.onPreviewColorChanged(_selectedColor);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.onPreviewCleared();
+    super.dispose();
+  }
 
   Future<void> _save() async {
     if (_saving) return;
@@ -195,13 +447,13 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
           constraints.maxWidth,
           horizontalInset,
         );
-        final left = _popupLeft(
+        final left = _highlightPopupLeft(
           constraints: constraints,
           horizontalInset: horizontalInset,
           width: width,
           position: widget.selectionPosition,
         );
-        final top = _popupTop(
+        final top = _highlightPopupTop(
           constraints: constraints,
           mediaPadding: mediaPadding,
           position: widget.selectionPosition,
@@ -224,14 +476,18 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
               child: _HighlightPopupSurface(
                 selectedColor: _selectedColor,
                 saving: _saving,
+                readerTheme: widget.readerTheme,
                 panelColor: widget.panelColor,
-                foregroundColor: widget.foregroundColor,
+                actionColor: widget.foregroundColor,
+                actionIcon: AppIcons.highlight,
+                actionTooltip: 'Highlight',
                 dividerColor: widget.dividerColor,
                 onColorChanged: (color) {
                   if (_saving || _selectedColor == color) return;
                   setState(() => _selectedColor = color);
+                  widget.onPreviewColorChanged(color);
                 },
-                onSave: _save,
+                onAction: _save,
               ),
             ),
           ],
@@ -239,79 +495,32 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
       },
     );
   }
-
-  double _popupLeft({
-    required BoxConstraints constraints,
-    required double horizontalInset,
-    required double width,
-    required ReaderSelectionPosition? position,
-  }) {
-    final centerX = position == null
-        ? constraints.maxWidth / 2
-        : ((position.left + position.right) / 2) * constraints.maxWidth;
-    final minLeft = horizontalInset;
-    final maxLeft = (constraints.maxWidth - width - horizontalInset).clamp(
-      minLeft,
-      constraints.maxWidth,
-    );
-    return (centerX - width / 2).clamp(minLeft, maxLeft).toDouble();
-  }
-
-  double _popupTop({
-    required BoxConstraints constraints,
-    required EdgeInsets mediaPadding,
-    required ReaderSelectionPosition? position,
-  }) {
-    final minTop = mediaPadding.top + AppSpacing.sm;
-    final availableMaxTop =
-        constraints.maxHeight -
-        mediaPadding.bottom -
-        _kHighlightPopupHeight -
-        AppSpacing.sm;
-    final maxTop = availableMaxTop <= minTop ? minTop : availableMaxTop;
-    if (position == null) return maxTop;
-
-    final selectionTop = position.top * constraints.maxHeight;
-    final selectionBottom = position.bottom * constraints.maxHeight;
-    final aboveTop =
-        selectionTop - _kHighlightPopupHeight - _kHighlightPopupGap;
-    final belowTop = selectionBottom + _kHighlightPopupGap;
-    final preferredTop = aboveTop >= minTop ? aboveTop : belowTop;
-    return preferredTop.clamp(minTop, maxTop).toDouble();
-  }
-
-  double _highlightPopupHorizontalInset(double maxWidth) {
-    if (maxWidth <= _kHighlightPopupHorizontalInset * 2) return 0;
-    return _kHighlightPopupHorizontalInset;
-  }
-
-  double _highlightPopupWidth(double maxWidth, double horizontalInset) {
-    final availableWidth = maxWidth - horizontalInset * 2;
-    if (availableWidth <= 0) return 0;
-    return availableWidth < _kHighlightPopupWidth
-        ? availableWidth
-        : _kHighlightPopupWidth;
-  }
 }
 
 class _HighlightPopupSurface extends StatelessWidget {
   const _HighlightPopupSurface({
     required this.selectedColor,
     required this.saving,
+    required this.readerTheme,
     required this.panelColor,
-    required this.foregroundColor,
+    required this.actionColor,
+    required this.actionIcon,
+    required this.actionTooltip,
     required this.dividerColor,
     required this.onColorChanged,
-    required this.onSave,
+    required this.onAction,
   });
 
   final HighlightColor selectedColor;
   final bool saving;
+  final ReaderThemeData readerTheme;
   final Color panelColor;
-  final Color foregroundColor;
+  final Color actionColor;
+  final IconData actionIcon;
+  final String actionTooltip;
   final Color dividerColor;
   final ValueChanged<HighlightColor> onColorChanged;
-  final VoidCallback onSave;
+  final VoidCallback onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -331,12 +540,15 @@ class _HighlightPopupSurface extends StatelessWidget {
         borderRadius: radius,
         clipBehavior: Clip.antiAlias,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          padding: const EdgeInsets.symmetric(
+            horizontal: _kHighlightPopupHorizontalPadding,
+          ),
           child: Row(
             children: [
               for (final color in HighlightColor.values)
                 _HighlightColorButton(
                   color: color,
+                  readerTheme: readerTheme,
                   selected: selectedColor == color,
                   enabled: !saving,
                   onPressed: () => onColorChanged(color),
@@ -346,24 +558,24 @@ class _HighlightPopupSurface extends StatelessWidget {
                 child: VerticalDivider(
                   color: dividerColor,
                   thickness: 1,
-                  width: AppSpacing.sm,
+                  width: _kHighlightPopupDividerWidth,
                 ),
               ),
               SizedBox(
                 width: _kHighlightSwatchTapSize,
                 height: _kHighlightSwatchTapSize,
                 child: Tooltip(
-                  message: 'Highlight',
+                  message: actionTooltip,
                   child: InkResponse(
                     radius: _kHighlightSwatchTapSize / 2,
-                    onTap: saving ? null : onSave,
+                    onTap: saving ? null : onAction,
                     child: Center(
                       child: saving
                           ? const ButtonLoadingIndicator(size: AppIconSize.sm)
                           : Icon(
-                              AppIcons.highlight,
+                              actionIcon,
                               size: AppIconSize.sm,
-                              color: foregroundColor,
+                              color: actionColor,
                             ),
                     ),
                   ),
@@ -380,19 +592,21 @@ class _HighlightPopupSurface extends StatelessWidget {
 class _HighlightColorButton extends StatelessWidget {
   const _HighlightColorButton({
     required this.color,
+    required this.readerTheme,
     required this.selected,
     required this.enabled,
     required this.onPressed,
   });
 
   final HighlightColor color;
+  final ReaderThemeData readerTheme;
   final bool selected;
   final bool enabled;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final swatch = _colorForHighlight(context, color);
+    final swatch = readerHighlightColor(color, readerTheme);
     final borderColor = context.colors.onSurface.withValues(
       alpha: selected ? 0.72 : 0.16,
     );
@@ -424,17 +638,6 @@ class _HighlightColorButton extends StatelessWidget {
       ),
     );
   }
-}
-
-Color _colorForHighlight(BuildContext context, HighlightColor color) {
-  final ext = context.appColors;
-  return switch (color) {
-    HighlightColor.yellow => ext.highlightYellow,
-    HighlightColor.green => ext.highlightGreen,
-    HighlightColor.blue => ext.highlightBlue,
-    HighlightColor.pink => ext.highlightPink,
-    HighlightColor.purple => ext.highlightPurple,
-  };
 }
 
 /// Bottom action strip shown for an active text selection.

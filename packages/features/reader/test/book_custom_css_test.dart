@@ -13,6 +13,11 @@ void main() {
       secondaryTextColor: Color(0xFF76685B),
       dividerColor: Color(0xFFD9CAB4),
       accentColor: Color(0xFFB86A2D),
+      highlightYellow: Color(0xFFF6E7AC),
+      highlightGreen: Color(0xFFBCE6D1),
+      highlightBlue: Color(0xFFC2D9F0),
+      highlightPink: Color(0xFFEAB8C9),
+      highlightPurple: Color(0xFFD1BAE8),
     );
 
     const darkTheme = ReaderThemeData(
@@ -23,6 +28,11 @@ void main() {
       secondaryTextColor: Color(0xFFBAAD9B),
       dividerColor: Color(0xFF403730),
       accentColor: Color(0xFFD08A4A),
+      highlightYellow: Color(0xFF63551D),
+      highlightGreen: Color(0xFF284838),
+      highlightBlue: Color(0xFF294056),
+      highlightPink: Color(0xFF642B3E),
+      highlightPurple: Color(0xFF472B64),
     );
 
     test('emits accent link color from theme', () {

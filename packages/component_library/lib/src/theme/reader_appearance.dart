@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_typography.dart';
+import 'tokens/primitive_colors.dart';
 
 /// User-selectable reader surface presets.
 enum ReaderThemePreset {
@@ -81,6 +82,11 @@ class ReaderThemeData {
     required this.secondaryTextColor,
     required this.dividerColor,
     required this.accentColor,
+    required this.highlightYellow,
+    required this.highlightGreen,
+    required this.highlightBlue,
+    required this.highlightPink,
+    required this.highlightPurple,
   });
 
   final Color backgroundColor;
@@ -90,6 +96,11 @@ class ReaderThemeData {
   final Color secondaryTextColor;
   final Color dividerColor;
   final Color accentColor;
+  final Color highlightYellow;
+  final Color highlightGreen;
+  final Color highlightBlue;
+  final Color highlightPink;
+  final Color highlightPurple;
 
   @override
   bool operator ==(Object other) =>
@@ -101,7 +112,12 @@ class ReaderThemeData {
           primaryTextColor == other.primaryTextColor &&
           secondaryTextColor == other.secondaryTextColor &&
           dividerColor == other.dividerColor &&
-          accentColor == other.accentColor;
+          accentColor == other.accentColor &&
+          highlightYellow == other.highlightYellow &&
+          highlightGreen == other.highlightGreen &&
+          highlightBlue == other.highlightBlue &&
+          highlightPink == other.highlightPink &&
+          highlightPurple == other.highlightPurple;
 
   @override
   int get hashCode => Object.hash(
@@ -112,6 +128,11 @@ class ReaderThemeData {
     secondaryTextColor,
     dividerColor,
     accentColor,
+    highlightYellow,
+    highlightGreen,
+    highlightBlue,
+    highlightPink,
+    highlightPurple,
   );
 }
 
@@ -125,6 +146,11 @@ extension ReaderThemePresetX on ReaderThemePreset {
       secondaryTextColor: Color(0xFF6B655E),
       dividerColor: Color(0xFFE5E1D9),
       accentColor: Color(0xFFB85A2A),
+      highlightYellow: PrimitiveColors.highlightYellowLight,
+      highlightGreen: PrimitiveColors.highlightGreenLight,
+      highlightBlue: PrimitiveColors.highlightBlueLight,
+      highlightPink: PrimitiveColors.highlightPinkLight,
+      highlightPurple: PrimitiveColors.highlightPurpleLight,
     ),
     ReaderThemePreset.warm => const ReaderThemeData(
       backgroundColor: Color(0xFFF3E4CF),
@@ -134,6 +160,11 @@ extension ReaderThemePresetX on ReaderThemePreset {
       secondaryTextColor: Color(0xFF7C664F),
       dividerColor: Color(0xFFD8C0A0),
       accentColor: Color(0xFFC07A39),
+      highlightYellow: PrimitiveColors.highlightYellowLight,
+      highlightGreen: PrimitiveColors.highlightGreenLight,
+      highlightBlue: PrimitiveColors.highlightBlueLight,
+      highlightPink: PrimitiveColors.highlightPinkLight,
+      highlightPurple: PrimitiveColors.highlightPurpleLight,
     ),
     ReaderThemePreset.mist => const ReaderThemeData(
       backgroundColor: Color(0xFF0F1115),
@@ -143,6 +174,11 @@ extension ReaderThemePresetX on ReaderThemePreset {
       secondaryTextColor: Color(0xFF9299A6),
       dividerColor: Color(0xFF2A2F38),
       accentColor: Color(0xFF9AA4B2),
+      highlightYellow: PrimitiveColors.highlightYellowDark,
+      highlightGreen: PrimitiveColors.highlightGreenDark,
+      highlightBlue: PrimitiveColors.highlightBlueDark,
+      highlightPink: PrimitiveColors.highlightPinkDark,
+      highlightPurple: PrimitiveColors.highlightPurpleDark,
     ),
     ReaderThemePreset.night => const ReaderThemeData(
       backgroundColor: Color(0xFF242830),
@@ -152,6 +188,11 @@ extension ReaderThemePresetX on ReaderThemePreset {
       secondaryTextColor: Color(0xFFB5C0C2),
       dividerColor: Color(0xFF5A6466),
       accentColor: Color(0xFFD08A4A),
+      highlightYellow: PrimitiveColors.highlightYellowDark,
+      highlightGreen: PrimitiveColors.highlightGreenDark,
+      highlightBlue: PrimitiveColors.highlightBlueDark,
+      highlightPink: PrimitiveColors.highlightPinkDark,
+      highlightPurple: PrimitiveColors.highlightPurpleDark,
     ),
   };
 }

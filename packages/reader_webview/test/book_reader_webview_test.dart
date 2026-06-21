@@ -173,6 +173,9 @@ void main() {
     test('always uses the modern app bridge', () {
       final indexHtml = _readPackageSource('assets/foliate-js/index.html');
       final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
+      final overlayerJs = _readPackageSource(
+        'assets/foliate-js/src/overlayer.js',
+      );
 
       expect(indexHtml, isNot(contains('shouldUseModernBundle')));
       expect(indexHtml, isNot(contains('./dist/bundle.js')));
@@ -187,8 +190,38 @@ void main() {
       expect(bookJs, contains('window.goToBookmark'));
       expect(bookJs, contains('window.toggleBookmarkHere'));
       expect(bookJs, contains('window.clearSelectionAfterTextAction'));
+      expect(bookJs, contains('window.showSelectionHighlightPreview'));
+      expect(bookJs, contains('window.clearSelectionHighlightPreview'));
+      expect(bookJs, contains('annotationHitForRange'));
+      expect(bookJs, contains('clearSelectionForAnnotationMenu(doc)'));
+      expect(bookJs, contains('globalThis.reader?.annotationsByValue'));
       expect(bookJs, contains('installNativeTextActionMenuGuard(doc)'));
       expect(bookJs, contains('clearSelectionForNativeTextActionMenu(doc)'));
+      expect(bookJs, contains('READFLEX_HIGHLIGHT_OPACITY'));
+      expect(bookJs, contains('READFLEX_HIGHLIGHT_RADIUS'));
+      expect(bookJs, contains('READFLEX_HIGHLIGHT_VERTICAL_INSET'));
+      expect(
+        bookJs,
+        contains('READFLEX_SELECTION_PREVIEW_HIGHLIGHT_OPACITY'),
+      );
+      expect(
+        bookJs,
+        contains('opacity: annotation.opacity ?? READFLEX_HIGHLIGHT_OPACITY'),
+      );
+      expect(
+        bookJs,
+        contains('radius: annotation.radius ?? READFLEX_HIGHLIGHT_RADIUS'),
+      );
+      expect(
+        bookJs,
+        contains(
+          'annotation.verticalInset ?? READFLEX_HIGHLIGHT_VERTICAL_INSET',
+        ),
+      );
+      expect(overlayerJs, contains('verticalInset = 0'));
+      expect(overlayerJs, contains('safeVerticalInset'));
+      expect(overlayerJs, contains("el.setAttribute('rx', radius)"));
+      expect(overlayerJs, contains("el.setAttribute('ry', radius)"));
       expect(
         bookJs,
         contains("style.id = 'readflex-native-text-action-menu-guard'"),
@@ -1140,6 +1173,19 @@ void main() {
         contains(
           'typeof window.clearSelectionAfterTextAction === \'function\'',
         ),
+      );
+      expect(webViewDart, contains('void showSelectionHighlightPreview({'));
+      expect(webViewDart, contains("label: 'showSelectionHighlightPreview'"));
+      expect(
+        webViewDart,
+        contains(
+          r'window.showSelectionHighlightPreview($escapedCfi, $escapedColor)',
+        ),
+      );
+      expect(webViewDart, contains('void clearSelectionHighlightPreview()'));
+      expect(
+        webViewDart,
+        contains("label: 'clearSelectionHighlightPreview'"),
       );
     });
   });
