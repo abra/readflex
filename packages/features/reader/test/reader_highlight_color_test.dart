@@ -41,6 +41,7 @@ void main() {
 
       expect(readerHighlightBlendMode(theme), 'multiply');
       expect(readerHighlightOpacity(theme), 0.82);
+      expect(readerHighlightVerticalOffset(theme), 2);
     });
 
     test('uses lighten blending on dark reader themes', () {
@@ -48,6 +49,7 @@ void main() {
 
       expect(readerHighlightBlendMode(theme), 'lighten');
       expect(readerHighlightOpacity(theme), 0.72);
+      expect(readerHighlightVerticalOffset(theme), 2);
     });
   });
 }

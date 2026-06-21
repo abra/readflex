@@ -1218,6 +1218,7 @@ class Reader {
         color,
         opacity: annotation.opacity ?? READFLEX_HIGHLIGHT_OPACITY,
         mixBlendMode: annotation.mixBlendMode,
+        verticalOffset: annotation.verticalOffset,
         radius: annotation.radius ?? READFLEX_HIGHLIGHT_RADIUS,
         verticalInset:
           annotation.verticalInset ?? READFLEX_HIGHLIGHT_VERTICAL_INSET,
@@ -1296,7 +1297,13 @@ class Reader {
     this.view?.deselect()
   }
 
-  showSelectionHighlightPreview({ cfi, color, opacity, mixBlendMode }) {
+  showSelectionHighlightPreview({
+    cfi,
+    color,
+    opacity,
+    mixBlendMode,
+    verticalOffset,
+  }) {
     if (!cfi || !color) return
     this.clearSelectionHighlightPreview()
     this.addAnnotation({
@@ -1307,6 +1314,7 @@ class Reader {
       color,
       opacity: opacity ?? READFLEX_SELECTION_PREVIEW_HIGHLIGHT_OPACITY,
       mixBlendMode,
+      verticalOffset,
     })
   }
 

@@ -798,8 +798,8 @@ class FoliateStyle {
 
 /// A highlight annotation the WebView should render. The [cfiRange] pins
 /// the annotation to exact text in the EPUB. [color] overrides the
-/// default yellow when set. [opacity] and [mixBlendMode] tune contrast
-/// without changing the saved domain model.
+/// default yellow when set. [opacity], [mixBlendMode], and [verticalOffset]
+/// tune contrast and placement without changing the saved domain model.
 class ReaderHighlight {
   const ReaderHighlight({
     required this.id,
@@ -808,6 +808,7 @@ class ReaderHighlight {
     this.color,
     this.opacity,
     this.mixBlendMode,
+    this.verticalOffset,
   });
 
   final String id;
@@ -825,6 +826,9 @@ class ReaderHighlight {
   /// CSS mix-blend-mode for the SVG highlight overlay.
   final String? mixBlendMode;
 
+  /// Positive Y offset, in CSS pixels, for the SVG highlight overlay.
+  final double? verticalOffset;
+
   Map<String, dynamic> toMap() => {
     'id': id,
     'text': text,
@@ -832,6 +836,7 @@ class ReaderHighlight {
     if (color != null) 'color': color,
     if (opacity != null) 'opacity': opacity,
     if (mixBlendMode != null) 'mixBlendMode': mixBlendMode,
+    if (verticalOffset != null) 'verticalOffset': verticalOffset,
   };
 }
 

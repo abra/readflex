@@ -89,7 +89,8 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       } else if (prev.cfiRange != h.cfiRange ||
           prev.color != h.color ||
           prev.opacity != h.opacity ||
-          prev.mixBlendMode != h.mixBlendMode) {
+          prev.mixBlendMode != h.mixBlendMode ||
+          prev.verticalOffset != h.verticalOffset) {
         if (prev.cfiRange != null) _evalRemoveAnnotation(prev.cfiRange!);
         _evalAddAnnotation(h);
       }
@@ -125,6 +126,7 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       'color': h.color ?? '#FFE600',
       if (h.opacity != null) 'opacity': h.opacity,
       if (h.mixBlendMode != null) 'mixBlendMode': h.mixBlendMode,
+      if (h.verticalOffset != null) 'verticalOffset': h.verticalOffset,
     });
     _evaluateReaderCommand(
       label: 'addAnnotation',
@@ -751,12 +753,14 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     required String color,
     double? opacity,
     String? mixBlendMode,
+    double? verticalOffset,
   }) {
     final preview = jsonEncode({
       'cfi': cfiRange,
       'color': color,
       'opacity': ?opacity,
       'mixBlendMode': ?mixBlendMode,
+      'verticalOffset': ?verticalOffset,
     });
     _evaluateReaderCommand(
       label: 'showSelectionHighlightPreview',
@@ -795,6 +799,7 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       'color': highlight.color ?? '#FFE600',
       'opacity': ?highlight.opacity,
       'mixBlendMode': ?highlight.mixBlendMode,
+      'verticalOffset': ?highlight.verticalOffset,
     });
     _evaluateReaderCommand(
       label: 'addAnnotation',

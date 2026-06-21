@@ -125,6 +125,7 @@ class _ContextPanelDriver extends StatelessWidget {
         color: readerHighlightCssColor(color, readerTheme),
         opacity: readerHighlightOpacity(readerTheme),
         mixBlendMode: readerHighlightBlendMode(readerTheme),
+        verticalOffset: readerHighlightVerticalOffset(readerTheme),
       );
     }
 

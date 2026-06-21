@@ -27,3 +27,7 @@ String readerHighlightBlendMode(ReaderThemeData theme) {
 double readerHighlightOpacity(ReaderThemeData theme) {
   return theme.backgroundColor.computeLuminance() >= 0.5 ? 0.82 : 0.72;
 }
+
+double readerHighlightVerticalOffset(ReaderThemeData _) {
+  return 2;
+}

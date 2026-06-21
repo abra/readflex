@@ -184,6 +184,7 @@ export class Overlayer {
             mixBlendMode = 'var(--overlayer-highlight-blend-mode, normal)',
             radius = 0,
             verticalInset = 0,
+            verticalOffset = 0,
         } = options
         const g = createSVGElement('g')
         g.setAttribute('fill', color)
@@ -196,7 +197,8 @@ export class Overlayer {
                 Math.min(verticalInset, Math.max(0, height / 2 - 1)),
             )
             el.setAttribute('x', left - padding)
-            el.setAttribute('y', top + safeVerticalInset - padding)
+            const y = top + safeVerticalInset + verticalOffset - padding
+            el.setAttribute('y', y)
             el.setAttribute('height', height - safeVerticalInset * 2 + padding * 2)
             el.setAttribute('width', width + padding * 2)
             if (radius) {

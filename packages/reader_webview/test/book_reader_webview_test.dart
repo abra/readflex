@@ -209,6 +209,7 @@ void main() {
         contains('opacity: annotation.opacity ?? READFLEX_HIGHLIGHT_OPACITY'),
       );
       expect(bookJs, contains('mixBlendMode: annotation.mixBlendMode'));
+      expect(bookJs, contains('verticalOffset: annotation.verticalOffset'));
       expect(
         bookJs,
         contains('radius: annotation.radius ?? READFLEX_HIGHLIGHT_RADIUS'),
@@ -220,7 +221,9 @@ void main() {
         ),
       );
       expect(overlayerJs, contains('verticalInset = 0'));
+      expect(overlayerJs, contains('verticalOffset = 0'));
       expect(overlayerJs, contains('safeVerticalInset'));
+      expect(overlayerJs, contains('safeVerticalInset + verticalOffset'));
       expect(overlayerJs, contains("el.setAttribute('rx', radius)"));
       expect(overlayerJs, contains("el.setAttribute('ry', radius)"));
       expect(
@@ -492,7 +495,7 @@ void main() {
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_67"));
+      expect(assetExtractor, contains("reader_webview_assets_68"));
     });
 
     test('keeps same-node marked selection adjacent to punctuation', () {
@@ -1190,6 +1193,10 @@ void main() {
       expect(
         webViewDart,
         contains("'mixBlendMode': ?mixBlendMode"),
+      );
+      expect(
+        webViewDart,
+        contains("'verticalOffset': ?verticalOffset"),
       );
       expect(webViewDart, contains('void clearSelectionHighlightPreview()'));
       expect(

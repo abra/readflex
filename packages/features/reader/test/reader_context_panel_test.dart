@@ -52,6 +52,10 @@ void main() {
       contentSource,
       contains('mixBlendMode: readerHighlightBlendMode(theme)'),
     );
+    expect(
+      contentSource,
+      contains('verticalOffset: readerHighlightVerticalOffset(theme)'),
+    );
     expect(contentSource, contains('final currentState = bloc.state;'));
     expect(
       contentSource,
@@ -66,6 +70,10 @@ void main() {
     expect(
       contextPanelSource,
       contains('mixBlendMode: readerHighlightBlendMode(readerTheme)'),
+    );
+    expect(
+      contextPanelSource,
+      contains('verticalOffset: readerHighlightVerticalOffset(readerTheme)'),
     );
     expect(contextPanelSource, contains('clearSelectionHighlightPreview'));
     expect(contextPanelSource, contains('onPreviewColorChanged'));

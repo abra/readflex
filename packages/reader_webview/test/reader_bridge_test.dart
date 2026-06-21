@@ -653,6 +653,7 @@ void main() {
       expect(map.containsKey('color'), isFalse);
       expect(map.containsKey('opacity'), isFalse);
       expect(map.containsKey('mixBlendMode'), isFalse);
+      expect(map.containsKey('verticalOffset'), isFalse);
     });
 
     test('toMap includes optional fields when set', () {
@@ -663,6 +664,7 @@ void main() {
         color: '#FFE600',
         opacity: 0.82,
         mixBlendMode: 'multiply',
+        verticalOffset: 2,
       );
 
       final map = highlight.toMap();
@@ -672,6 +674,7 @@ void main() {
       expect(map['color'], '#FFE600');
       expect(map['opacity'], 0.82);
       expect(map['mixBlendMode'], 'multiply');
+      expect(map['verticalOffset'], 2);
     });
   });
 
