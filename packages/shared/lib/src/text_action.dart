@@ -27,6 +27,7 @@ class TextSelectionContext {
     this.scrollOffset,
     this.progress,
     this.chapterTitle,
+    this.containedHighlightIds = const [],
   });
 
   /// The exact text the user selected.
@@ -85,6 +86,9 @@ class TextSelectionContext {
 
   /// Visible chapter title at selection time.
   final String? chapterTitle;
+
+  /// Existing highlights strictly contained inside the current selection.
+  final List<String> containedHighlightIds;
 }
 
 /// Contract for reader context-panel actions.

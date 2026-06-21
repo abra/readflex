@@ -56,6 +56,11 @@ class HighlightsDao extends DatabaseAccessor<AppDatabase>
   Future<void> deleteHighlight(String id) =>
       (delete(highlightsTable)..where((t) => t.id.equals(id))).go();
 
+  Future<void> deleteHighlightsByIds(List<String> ids) {
+    if (ids.isEmpty) return Future.value();
+    return (delete(highlightsTable)..where((t) => t.id.isIn(ids))).go();
+  }
+
   Future<void> deleteHighlightsBySource(String sourceId) =>
       (delete(highlightsTable)..where((t) => t.sourceId.equals(sourceId))).go();
 }

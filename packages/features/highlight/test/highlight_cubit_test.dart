@@ -161,6 +161,27 @@ void main() {
       },
     );
 
+    blocTest<HighlightCubit, HighlightSheetState>(
+      'save replaces highlights contained by the new selection',
+      build: () => HighlightCubit(
+        highlightRepository: repository,
+      ),
+      act: (cubit) => cubit.save(
+        text: 'Longer text',
+        sourceId: 'book-1',
+        sourceType: SourceType.book,
+        replaceHighlightIds: const ['h-small'],
+      ),
+      expect: () => [
+        const HighlightSheetState(status: HighlightSheetStatus.saving),
+        const HighlightSheetState(status: HighlightSheetStatus.success),
+      ],
+      verify: (_) {
+        expect(repository.replacedHighlightIds, ['h-small']);
+        expect(repository.highlights.single.text, 'Longer text');
+      },
+    );
+
     // Race-protection: user can dismiss the sheet while addHighlight
     // is in flight; cubit closes and the post-await emit would throw
     // StateError. Guard makes save() a no-op past close — but the

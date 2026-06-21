@@ -18,6 +18,14 @@ const _selection = TextSelectionContext(
   chapterTitle: 'Chapter 4',
 );
 
+const _selectionWithContainedHighlight = TextSelectionContext(
+  selectedText: 'Important longer passage',
+  sourceId: 'book-1',
+  sourceType: SourceType.book,
+  cfiRange: 'epubcfi(/6/4!/4/2,/1:0,/1:30)',
+  containedHighlightIds: ['h-small'],
+);
+
 void main() {
   group('HighlightAction', () {
     late FakeHighlightRepository repository;
@@ -84,6 +92,27 @@ void main() {
       );
 
       expect(repository.highlights.single.color, HighlightColor.green);
+    });
+
+    testWidgets('replaces highlights contained by the new selection', (
+      tester,
+    ) async {
+      late BuildContext buildContext;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) {
+              buildContext = context;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      await action.onExecute(buildContext, _selectionWithContainedHighlight);
+
+      expect(repository.replacedHighlightIds, ['h-small']);
+      expect(repository.highlights.single.text, 'Important longer passage');
     });
   });
 }

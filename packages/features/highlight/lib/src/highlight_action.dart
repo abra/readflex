@@ -47,6 +47,7 @@ class HighlightAction extends ColorHighlightTextAction {
       scrollOffset: selection.scrollOffset,
       progress: selection.progress,
       chapterTitle: selection.chapterTitle,
+      replaceHighlightIds: selection.containedHighlightIds,
     );
   }
 }

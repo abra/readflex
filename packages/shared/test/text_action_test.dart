@@ -19,6 +19,7 @@ void main() {
       scrollOffset: 42,
       progress: 0.42,
       chapterTitle: 'Chapter 4',
+      containedHighlightIds: ['h-1'],
     );
 
     expect(selection.selectedText, 'hello');
@@ -36,6 +37,7 @@ void main() {
     expect(selection.scrollOffset, 42);
     expect(selection.progress, 0.42);
     expect(selection.chapterTitle, 'Chapter 4');
+    expect(selection.containedHighlightIds, ['h-1']);
   });
 
   test(

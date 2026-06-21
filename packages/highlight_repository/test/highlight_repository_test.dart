@@ -240,5 +240,68 @@ void main() {
       final fetched = await repo.getHighlightById(h.id);
       expect(fetched!.color, HighlightColor.blue);
     });
+
+    test(
+      'addHighlight replaces contained highlights and review rows',
+      () async {
+        final contained = await repo.addHighlight(
+          sourceId: 's1',
+          sourceType: SourceType.book,
+          text: 'Small',
+        );
+        final keep = await repo.addHighlight(
+          sourceId: 's1',
+          sourceType: SourceType.book,
+          text: 'Keep',
+        );
+        await db.reviewItemsDao.upsertItem(
+          ReviewItemsTableCompanion.insert(
+            itemId: contained.id,
+            itemType: ReviewableType.highlight.name,
+            sourceId: const Value('s1'),
+          ),
+        );
+
+        final replacement = await repo.addHighlight(
+          sourceId: 's1',
+          sourceType: SourceType.book,
+          text: 'Large',
+          replaceHighlightIds: [contained.id],
+        );
+
+        final highlights = await repo.getHighlightsBySource('s1');
+        expect(
+          highlights.map((h) => h.id),
+          containsAll([keep.id, replacement.id]),
+        );
+        expect(highlights.map((h) => h.id), isNot(contains(contained.id)));
+        expect(await db.reviewItemsDao.byItemId(contained.id), isNull);
+      },
+    );
+
+    test('addHighlight replacement ignores ids from other sources', () async {
+      final other = await repo.addHighlight(
+        sourceId: 'other',
+        sourceType: SourceType.book,
+        text: 'Other source',
+      );
+      await db.reviewItemsDao.upsertItem(
+        ReviewItemsTableCompanion.insert(
+          itemId: other.id,
+          itemType: ReviewableType.highlight.name,
+          sourceId: const Value('other'),
+        ),
+      );
+
+      await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.book,
+        text: 'Large',
+        replaceHighlightIds: [other.id],
+      );
+
+      expect(await repo.getHighlightById(other.id), isNotNull);
+      expect(await db.reviewItemsDao.byItemId(other.id), isNotNull);
+    });
   });
 }

@@ -480,6 +480,7 @@ void main() {
         'normalizedMarkedContextText': '[[Both fields normalized]] in context.',
         'pos': {'left': 0.2, 'top': 0.3, 'right': 0.6, 'bottom': 0.4},
         'scrollOffset': 0.3,
+        'containedHighlightIds': ['h-1', '', 42, 'h-2'],
       });
 
       expect(selection.text, 'Both fields');
@@ -499,6 +500,7 @@ void main() {
       expect(selection.position!.right, 0.6);
       expect(selection.position!.bottom, 0.4);
       expect(selection.scrollOffset, 0.3);
+      expect(selection.containedHighlightIds, ['h-1', 'h-2']);
     });
 
     test('fromMap clamps malformed selection position fractions', () {
@@ -551,6 +553,7 @@ void main() {
       expect(selection.text, '');
       expect(selection.cfiRange, isNull);
       expect(selection.scrollOffset, isNull);
+      expect(selection.containedHighlightIds, isEmpty);
     });
   });
 

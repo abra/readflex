@@ -87,6 +87,7 @@ class HighlightRepository {
     double? progress,
     String? chapterTitle,
     HighlightColor color = HighlightColor.yellow,
+    List<String> replaceHighlightIds = const [],
   }) async {
     try {
       final highlight = Highlight(
@@ -103,7 +104,18 @@ class HighlightRepository {
         color: color,
         createdAt: DateTime.now(),
       );
-      await _dao.insertHighlight(highlight.toStorageModel());
+      await _db.transaction(() async {
+        if (replaceHighlightIds.isNotEmpty) {
+          final replaceIds = replaceHighlightIds.toSet().toList();
+          final sourceScopedIds = [
+            for (final row in await _dao.highlightsByIds(replaceIds))
+              if (row.sourceId == sourceId) row.id,
+          ];
+          await _db.reviewItemsDao.deleteItemsByIds(sourceScopedIds);
+          await _dao.deleteHighlightsByIds(sourceScopedIds);
+        }
+        await _dao.insertHighlight(highlight.toStorageModel());
+      });
       return highlight;
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);

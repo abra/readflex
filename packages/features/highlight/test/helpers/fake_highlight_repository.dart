@@ -15,6 +15,7 @@ class FakeHighlightRepository implements HighlightRepository {
   Completer<void>? awaitGate;
 
   final List<Highlight> highlights = [];
+  final List<String> replacedHighlightIds = [];
 
   @override
   Future<Highlight> addHighlight({
@@ -28,9 +29,16 @@ class FakeHighlightRepository implements HighlightRepository {
     double? progress,
     String? chapterTitle,
     HighlightColor color = HighlightColor.yellow,
+    List<String> replaceHighlightIds = const [],
   }) async {
     if (awaitGate != null) await awaitGate!.future;
     if (shouldThrow) throw Exception('addHighlight failed');
+    replacedHighlightIds.addAll(replaceHighlightIds);
+    if (replaceHighlightIds.isNotEmpty) {
+      highlights.removeWhere(
+        (highlight) => replaceHighlightIds.contains(highlight.id),
+      );
+    }
 
     final highlight = Highlight(
       id: 'h-${highlights.length + 1}',

@@ -58,6 +58,14 @@ double? _double(Object? value) => value is num ? value.toDouble() : null;
 
 bool? _bool(Object? value) => value is bool ? value : null;
 
+List<String> _stringList(Object? value) {
+  final list = readerBridgeList(value) ?? const [];
+  return [
+    for (final item in list)
+      if (item is String && item.trim().isNotEmpty) item,
+  ];
+}
+
 /// Document-level capabilities reported by the reader runtime.
 ///
 /// Some formats expose optional structures such as a table of contents.
@@ -463,6 +471,7 @@ class ReaderSelection {
     this.normalizedCfiRange,
     this.position,
     this.scrollOffset,
+    this.containedHighlightIds = const [],
   });
 
   final String text;
@@ -494,6 +503,9 @@ class ReaderSelection {
   /// Legacy optional scroll position.
   final double? scrollOffset;
 
+  /// Existing highlights strictly contained inside this selection.
+  final List<String> containedHighlightIds;
+
   factory ReaderSelection.fromMap(Map<String, dynamic> map) {
     return ReaderSelection(
       text: _string(map['text']) ?? '',
@@ -506,6 +518,7 @@ class ReaderSelection {
       normalizedCfiRange: _string(map['normalizedCfi']),
       position: ReaderSelectionPosition.fromValue(map['pos']),
       scrollOffset: _double(map['scrollOffset']),
+      containedHighlightIds: _stringList(map['containedHighlightIds']),
     );
   }
 }

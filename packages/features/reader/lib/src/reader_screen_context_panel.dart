@@ -114,6 +114,7 @@ class _ContextPanelDriver extends StatelessWidget {
       scrollOffset: sel.scrollOffset,
       progress: sel.progress,
       chapterTitle: sel.chapterTitle,
+      containedHighlightIds: sel.containedHighlightIds,
     );
     final highlightAction = _highlightActionFor(textActions);
 

@@ -24,6 +24,7 @@ class ReaderSelectionState extends Equatable {
     this.scrollOffset,
     this.progress,
     this.chapterTitle,
+    this.containedHighlightIds = const [],
     this.hasSelection = false,
   });
 
@@ -65,6 +66,9 @@ class ReaderSelectionState extends Equatable {
   /// Visible chapter title at selection time.
   final String? chapterTitle;
 
+  /// Existing highlights strictly contained inside the current selection.
+  final List<String> containedHighlightIds;
+
   final bool hasSelection;
 
   static const _absent = Object();
@@ -83,6 +87,7 @@ class ReaderSelectionState extends Equatable {
     Object? scrollOffset = _absent,
     Object? progress = _absent,
     Object? chapterTitle = _absent,
+    Object? containedHighlightIds = _absent,
     bool? hasSelection,
   }) => ReaderSelectionState(
     selectedText: selectedText ?? this.selectedText,
@@ -116,6 +121,9 @@ class ReaderSelectionState extends Equatable {
     chapterTitle: chapterTitle == _absent
         ? this.chapterTitle
         : chapterTitle as String?,
+    containedHighlightIds: containedHighlightIds == _absent
+        ? this.containedHighlightIds
+        : containedHighlightIds as List<String>,
     hasSelection: hasSelection ?? this.hasSelection,
   );
 
@@ -134,6 +142,7 @@ class ReaderSelectionState extends Equatable {
     scrollOffset,
     progress,
     chapterTitle,
+    containedHighlightIds,
     hasSelection,
   ];
 }
@@ -158,6 +167,7 @@ class ReaderSelectionCubit extends Cubit<ReaderSelectionState> {
     double? scrollOffset,
     double? progress,
     String? chapterTitle,
+    List<String> containedHighlightIds = const [],
   }) {
     emit(
       ReaderSelectionState(
@@ -174,6 +184,7 @@ class ReaderSelectionCubit extends Cubit<ReaderSelectionState> {
         scrollOffset: scrollOffset,
         progress: progress,
         chapterTitle: chapterTitle,
+        containedHighlightIds: containedHighlightIds,
         hasSelection: true,
       ),
     );

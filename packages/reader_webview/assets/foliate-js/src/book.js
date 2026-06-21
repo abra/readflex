@@ -304,6 +304,51 @@ const annotationHitForRange = (view, index, range) => {
   return null;
 };
 
+const rangeStrictlyContainsRange = (outer, inner) => {
+  try {
+    const startCmp = outer.compareBoundaryPoints(Range.START_TO_START, inner);
+    const endCmp = outer.compareBoundaryPoints(Range.END_TO_END, inner);
+    return startCmp <= 0 && endCmp >= 0 && (startCmp < 0 || endCmp > 0);
+  } catch {
+    return false;
+  }
+};
+
+const containedHighlightIdsForRange = (view, index, doc, range) => {
+  const annotations = globalThis.reader?.annotations?.get(index) ?? [];
+  const ids = [];
+  for (const annotation of annotations) {
+    if (annotation?.type !== 'highlight' || !annotation.id) continue;
+    if (annotation.id === READFLEX_SELECTION_PREVIEW_HIGHLIGHT_ID) continue;
+    const value = annotation.cfi ?? annotation.value;
+    if (!value?.trim?.()) continue;
+    if (value.startsWith(READFLEX_SELECTION_PREVIEW_HIGHLIGHT_VALUE_PREFIX)) {
+      continue;
+    }
+    let resolved;
+    try {
+      resolved = view.resolveNavigation(value);
+    } catch {
+      continue;
+    }
+    if (resolved?.index !== index || !resolved.anchor) continue;
+    try {
+      const annotationRange = typeof resolved.anchor === 'function'
+        ? resolved.anchor(doc)
+        : resolved.anchor;
+      if (
+        annotationRange &&
+        rangeStrictlyContainsRange(range, annotationRange)
+      ) {
+        ids.push(annotation.id);
+      }
+    } catch {
+      continue;
+    }
+  }
+  return ids;
+};
+
 const handleSelection = (view, doc, index) => {
   const selection = doc.getSelection();
   const range = getSelectionRange(selection);
@@ -341,6 +386,8 @@ const handleSelection = (view, doc, index) => {
   const markedContextText = buildMarkedRangeContextText(range);
   const normalizedMarkedContextText =
     buildMarkedRangeContextText(normalizedRange);
+  const containedHighlightIds =
+    containedHighlightIdsForRange(view, index, doc, range);
 
   onSelectionEnd({
     index,
@@ -354,7 +401,8 @@ const handleSelection = (view, doc, index) => {
     selectionKind: normalizedSelection?.selectionKind ?? 'exact',
     contextText,
     markedContextText,
-    normalizedMarkedContextText
+    normalizedMarkedContextText,
+    containedHighlightIds
   });
   clearSelectionForNativeTextActionMenu(doc);
 };

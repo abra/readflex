@@ -905,6 +905,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
           position: selection.position,
           progress: currentState.book?.readingProgress,
           chapterTitle: currentState.chapterTitle,
+          containedHighlightIds: selection.containedHighlightIds,
         );
       },
       onTextDeselected: () => selectionCubit.deselect(),

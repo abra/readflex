@@ -193,6 +193,9 @@ void main() {
       expect(bookJs, contains('window.showSelectionHighlightPreview'));
       expect(bookJs, contains('window.clearSelectionHighlightPreview'));
       expect(bookJs, contains('annotationHitForRange'));
+      expect(bookJs, contains('containedHighlightIdsForRange'));
+      expect(bookJs, contains('rangeStrictlyContainsRange'));
+      expect(bookJs, contains('containedHighlightIds'));
       expect(bookJs, contains('clearSelectionForAnnotationMenu(doc)'));
       expect(bookJs, contains('globalThis.reader?.annotationsByValue'));
       expect(bookJs, contains('installNativeTextActionMenuGuard(doc)'));

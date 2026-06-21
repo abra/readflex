@@ -19,6 +19,7 @@ void main() {
       expect(cubit.state.scrollOffset, isNull);
       expect(cubit.state.progress, isNull);
       expect(cubit.state.chapterTitle, isNull);
+      expect(cubit.state.containedHighlightIds, isEmpty);
     });
 
     group('select', () {
@@ -43,6 +44,7 @@ void main() {
           pageNumber: 42,
           progress: 0.36,
           chapterTitle: 'Chapter 3',
+          containedHighlightIds: const ['h-small'],
         ),
         expect: () => [
           isA<ReaderSelectionState>()
@@ -88,7 +90,12 @@ void main() {
               .having((s) => s.pageNumber, 'pageNumber', 42)
               .having((s) => s.scrollOffset, 'scrollOffset', isNull)
               .having((s) => s.progress, 'progress', 0.36)
-              .having((s) => s.chapterTitle, 'chapterTitle', 'Chapter 3'),
+              .having((s) => s.chapterTitle, 'chapterTitle', 'Chapter 3')
+              .having(
+                (s) => s.containedHighlightIds,
+                'containedHighlightIds',
+                ['h-small'],
+              ),
         ],
       );
 
@@ -166,6 +173,7 @@ void main() {
           normalizedCfiRange: 'normalized-cfi',
           progress: 0.1,
           chapterTitle: 'One',
+          containedHighlightIds: ['h-small'],
           position: ReaderSelectionPosition(
             left: 0.1,
             top: 0.2,
@@ -185,6 +193,7 @@ void main() {
         expect(copy.normalizedCfiRange, 'normalized-cfi');
         expect(copy.progress, 0.1);
         expect(copy.chapterTitle, 'One');
+        expect(copy.containedHighlightIds, ['h-small']);
         expect(
           copy.position,
           const ReaderSelectionPosition(
