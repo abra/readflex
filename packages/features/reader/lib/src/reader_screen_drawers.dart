@@ -6,18 +6,22 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
     required this.visible,
     required this.format,
     required this.pageProgressionRtl,
+    required this.readerTheme,
     required this.onClose,
     required this.onItemSelected,
     required this.onBookmarkSelected,
+    required this.onHighlightSelected,
     required this.onBookmarkDeleted,
   });
 
   final bool visible;
   final BookFormat? format;
   final bool pageProgressionRtl;
+  final ReaderThemeData readerTheme;
   final VoidCallback onClose;
   final ValueChanged<ReaderTocItem> onItemSelected;
   final ValueChanged<SourceBookmark> onBookmarkSelected;
+  final ValueChanged<Highlight> onHighlightSelected;
   final ValueChanged<SourceBookmark> onBookmarkDeleted;
 
   @override
@@ -27,6 +31,9 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
     );
     final bookmarks = context.select<ReaderBloc, List<SourceBookmark>>(
       (b) => b.state.bookmarks,
+    );
+    final highlights = context.select<ReaderBloc, List<Highlight>>(
+      (b) => b.state.highlights,
     );
     final currentProgress = context.select<ReaderBloc, double?>(
       (b) => b.state.book?.readingProgress,
@@ -40,8 +47,10 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
       visible: visible,
       format: format,
       pageProgressionRtl: pageProgressionRtl,
+      readerTheme: readerTheme,
       tocItems: tocItems,
       bookmarks: bookmarks,
+      highlights: highlights,
       currentProgress: currentProgress,
       currentChapterTitle: currentChapterTitle,
       panelColor: colors.surface,
@@ -49,6 +58,7 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
       onClose: onClose,
       onItemSelected: onItemSelected,
       onBookmarkSelected: onBookmarkSelected,
+      onHighlightSelected: onHighlightSelected,
       onBookmarkDeleted: onBookmarkDeleted,
     );
   }
@@ -60,8 +70,10 @@ class _ReaderTocDrawer extends StatelessWidget {
     required this.visible,
     required this.format,
     required this.pageProgressionRtl,
+    required this.readerTheme,
     required this.tocItems,
     required this.bookmarks,
+    required this.highlights,
     required this.currentProgress,
     required this.currentChapterTitle,
     required this.panelColor,
@@ -69,14 +81,17 @@ class _ReaderTocDrawer extends StatelessWidget {
     required this.onClose,
     required this.onItemSelected,
     required this.onBookmarkSelected,
+    required this.onHighlightSelected,
     required this.onBookmarkDeleted,
   });
 
   final bool visible;
   final BookFormat? format;
   final bool pageProgressionRtl;
+  final ReaderThemeData readerTheme;
   final List<ReaderTocItem> tocItems;
   final List<SourceBookmark> bookmarks;
+  final List<Highlight> highlights;
   final double? currentProgress;
   final String? currentChapterTitle;
   final Color panelColor;
@@ -84,6 +99,7 @@ class _ReaderTocDrawer extends StatelessWidget {
   final VoidCallback onClose;
   final ValueChanged<ReaderTocItem> onItemSelected;
   final ValueChanged<SourceBookmark> onBookmarkSelected;
+  final ValueChanged<Highlight> onHighlightSelected;
   final ValueChanged<SourceBookmark> onBookmarkDeleted;
 
   @override
@@ -104,13 +120,16 @@ class _ReaderTocDrawer extends StatelessWidget {
                 format: format,
                 visible: visible,
                 pageProgressionRtl: pageProgressionRtl,
+                readerTheme: readerTheme,
                 tocItems: tocItems,
                 bookmarks: bookmarks,
+                highlights: highlights,
                 currentProgress: currentProgress,
                 currentChapterTitle: currentChapterTitle,
                 onClose: onClose,
                 onItemSelected: onItemSelected,
                 onBookmarkSelected: onBookmarkSelected,
+                onHighlightSelected: onHighlightSelected,
                 onBookmarkDeleted: onBookmarkDeleted,
               ),
             ),
@@ -128,26 +147,32 @@ class _ReaderTocDrawerContent extends StatefulWidget {
     required this.format,
     required this.visible,
     required this.pageProgressionRtl,
+    required this.readerTheme,
     required this.tocItems,
     required this.bookmarks,
+    required this.highlights,
     required this.currentProgress,
     required this.currentChapterTitle,
     required this.onClose,
     required this.onItemSelected,
     required this.onBookmarkSelected,
+    required this.onHighlightSelected,
     required this.onBookmarkDeleted,
   });
 
   final BookFormat? format;
   final bool visible;
   final bool pageProgressionRtl;
+  final ReaderThemeData readerTheme;
   final List<ReaderTocItem> tocItems;
   final List<SourceBookmark> bookmarks;
+  final List<Highlight> highlights;
   final double? currentProgress;
   final String? currentChapterTitle;
   final VoidCallback onClose;
   final ValueChanged<ReaderTocItem> onItemSelected;
   final ValueChanged<SourceBookmark> onBookmarkSelected;
+  final ValueChanged<Highlight> onHighlightSelected;
   final ValueChanged<SourceBookmark> onBookmarkDeleted;
 
   @override
@@ -158,13 +183,16 @@ class _ReaderTocDrawerContent extends StatefulWidget {
 class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
   final _chaptersSearchController = TextEditingController();
   final _bookmarksSearchController = TextEditingController();
+  final _highlightsSearchController = TextEditingController();
   String _chaptersQuery = '';
   String _bookmarksQuery = '';
+  String _highlightsQuery = '';
 
   @override
   void dispose() {
     _chaptersSearchController.dispose();
     _bookmarksSearchController.dispose();
+    _highlightsSearchController.dispose();
     super.dispose();
   }
 
@@ -173,7 +201,7 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
     final colors = context.colors;
 
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Column(
         children: [
           Padding(
@@ -205,6 +233,7 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
             ),
           ),
           TabBar(
+            labelPadding: EdgeInsets.zero,
             tabs: const [
               Tab(
                 child: _ReaderDrawerTabLabel(
@@ -216,6 +245,12 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
                 child: _ReaderDrawerTabLabel(
                   icon: AppIcons.bookmark,
                   label: 'Bookmarks',
+                ),
+              ),
+              Tab(
+                child: _ReaderDrawerTabLabel(
+                  icon: AppIcons.highlight,
+                  label: 'Highlights',
                 ),
               ),
             ],
@@ -252,6 +287,17 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
                   onBookmarkSelected: widget.onBookmarkSelected,
                   onBookmarkDeleted: widget.onBookmarkDeleted,
                 ),
+                _ReaderHighlightsTab(
+                  controller: _highlightsSearchController,
+                  pageProgressionRtl: widget.pageProgressionRtl,
+                  readerTheme: widget.readerTheme,
+                  query: _highlightsQuery,
+                  highlights: widget.highlights,
+                  onQueryChanged: (value) {
+                    setState(() => _highlightsQuery = value);
+                  },
+                  onHighlightSelected: widget.onHighlightSelected,
+                ),
               ],
             ),
           ),
@@ -277,12 +323,14 @@ class _ReaderDrawerTabLabel extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(icon, size: AppIconSize.sm),
-        const SizedBox(width: AppSpacing.xs),
+        const SizedBox(width: AppSpacing.xxs),
         Flexible(
           child: Text(
             label,
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            overflow: TextOverflow.visible,
+            softWrap: false,
+            style: context.text.labelSmall,
           ),
         ),
       ],
@@ -675,6 +723,169 @@ class _ReaderBookmarkListTile extends StatelessWidget {
         onPressed: onDelete,
       ),
       onTap: onTap,
+    );
+  }
+}
+
+class _ReaderHighlightsTab extends StatelessWidget {
+  const _ReaderHighlightsTab({
+    required this.controller,
+    required this.pageProgressionRtl,
+    required this.readerTheme,
+    required this.query,
+    required this.highlights,
+    required this.onQueryChanged,
+    required this.onHighlightSelected,
+  });
+
+  final TextEditingController controller;
+  final bool pageProgressionRtl;
+  final ReaderThemeData readerTheme;
+  final String query;
+  final List<Highlight> highlights;
+  final ValueChanged<String> onQueryChanged;
+  final ValueChanged<Highlight> onHighlightSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final listBottomPadding = _readerDrawerListBottomPadding(context);
+    final filteredHighlights = filterReaderHighlights(highlights, query);
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: SearchField(
+            controller: controller,
+            hintText: 'Search highlights',
+            onChanged: onQueryChanged,
+          ),
+        ),
+        Expanded(
+          child: _ReaderDrawerContentFrame(
+            child: filteredHighlights.isEmpty
+                ? _ReaderDrawerEmptyState(
+                    icon: highlights.isEmpty
+                        ? AppIcons.highlight
+                        : AppIcons.searchOff,
+                    message: highlights.isEmpty
+                        ? 'No highlights yet'
+                        : 'No matching highlights',
+                  )
+                : ScrollEdgeFadeStack(
+                    child: ListView.builder(
+                      padding: EdgeInsets.only(bottom: listBottomPadding),
+                      itemCount: filteredHighlights.length,
+                      itemBuilder: (context, index) {
+                        final highlight = filteredHighlights[index];
+                        return _ReaderHighlightListTile(
+                          highlight: highlight,
+                          pageProgressionRtl: pageProgressionRtl,
+                          readerTheme: readerTheme,
+                          onTap: () => onHighlightSelected(highlight),
+                        );
+                      },
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReaderHighlightListTile extends StatelessWidget {
+  const _ReaderHighlightListTile({
+    required this.highlight,
+    required this.pageProgressionRtl,
+    required this.readerTheme,
+    required this.onTap,
+  });
+
+  final Highlight highlight;
+  final bool pageProgressionRtl;
+  final ReaderThemeData readerTheme;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = highlight.text.trim();
+    final note = highlight.note?.trim();
+    final hasLocation = highlight.cfiRange?.isNotEmpty ?? false;
+    final pageLabel = highlight.pageNumber == null
+        ? null
+        : 'Page ${highlight.pageNumber}';
+    final subtitle = [
+      if (note != null && note.isNotEmpty) note,
+      ?pageLabel,
+      if (!hasLocation) 'Location unavailable',
+    ].join(' · ');
+
+    return ListTile(
+      enabled: hasLocation,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xxs,
+      ),
+      minVerticalPadding: AppSpacing.xs,
+      leading: _ReaderHighlightColorDot(
+        color: readerHighlightColor(highlight.color, readerTheme),
+      ),
+      title: Text(
+        text.isEmpty ? 'Highlighted text' : text,
+        textAlign: readerDirectionalTextAlign(
+          pageProgressionRtl: pageProgressionRtl,
+        ),
+        textDirection: readerDirectionalTextDirection(
+          pageProgressionRtl: pageProgressionRtl,
+        ),
+        maxLines: 3,
+        overflow: TextOverflow.ellipsis,
+        style: context.text.bodyMedium.copyWith(
+          color: hasLocation ? colors.onSurface : colors.onSurfaceVariant,
+        ),
+      ),
+      subtitle: subtitle.isEmpty
+          ? null
+          : Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xxs),
+              child: Text(
+                subtitle,
+                textAlign: readerDirectionalTextAlign(
+                  pageProgressionRtl: pageProgressionRtl,
+                ),
+                textDirection: readerDirectionalTextDirection(
+                  pageProgressionRtl: pageProgressionRtl,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.text.bodySmall.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+            ),
+      onTap: hasLocation ? onTap : null,
+    );
+  }
+}
+
+class _ReaderHighlightColorDot extends StatelessWidget {
+  const _ReaderHighlightColorDot({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+        border: Border.all(
+          color: context.colors.onSurface.withValues(alpha: 0.16),
+        ),
+      ),
+      child: const SizedBox.square(dimension: 18),
     );
   }
 }

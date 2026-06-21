@@ -236,6 +236,13 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     _closeTocDrawer(restoreChrome: false);
   }
 
+  void _goToHighlight(Highlight highlight) {
+    final cfiRange = highlight.cfiRange;
+    if (cfiRange == null || cfiRange.isEmpty) return;
+    _webViewKey.currentState?.goToCfi(cfiRange);
+    _closeTocDrawer(restoreChrome: false);
+  }
+
   void _deleteBookmark(SourceBookmark bookmark) {
     context.read<ReaderBloc>().add(
       ReaderBookmarkChanged(
@@ -372,9 +379,11 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
             _ReaderTocDrawerVisibilityDriver(
               format: format,
               pageProgressionRtl: pageProgressionRtl,
+              readerTheme: readerTheme,
               onClose: _closeTocDrawer,
               onItemSelected: _goToTocItem,
               onBookmarkSelected: _goToBookmark,
+              onHighlightSelected: _goToHighlight,
               onBookmarkDeleted: _deleteBookmark,
             ),
             _ReaderSearchDrawerVisibilityDriver(
@@ -431,17 +440,21 @@ class _ReaderTocDrawerVisibilityDriver extends StatelessWidget {
   const _ReaderTocDrawerVisibilityDriver({
     required this.format,
     required this.pageProgressionRtl,
+    required this.readerTheme,
     required this.onClose,
     required this.onItemSelected,
     required this.onBookmarkSelected,
+    required this.onHighlightSelected,
     required this.onBookmarkDeleted,
   });
 
   final BookFormat? format;
   final bool pageProgressionRtl;
+  final ReaderThemeData readerTheme;
   final void Function({bool restoreChrome}) onClose;
   final ValueChanged<ReaderTocItem> onItemSelected;
   final ValueChanged<SourceBookmark> onBookmarkSelected;
+  final ValueChanged<Highlight> onHighlightSelected;
   final ValueChanged<SourceBookmark> onBookmarkDeleted;
 
   @override
@@ -454,9 +467,11 @@ class _ReaderTocDrawerVisibilityDriver extends StatelessWidget {
       visible: visible,
       format: format,
       pageProgressionRtl: pageProgressionRtl,
+      readerTheme: readerTheme,
       onClose: onClose,
       onItemSelected: onItemSelected,
       onBookmarkSelected: onBookmarkSelected,
+      onHighlightSelected: onHighlightSelected,
       onBookmarkDeleted: onBookmarkDeleted,
     );
   }
