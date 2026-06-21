@@ -22,11 +22,19 @@ void main() {
         sourceId: 's1',
         sourceType: SourceType.book,
         text: 'Selected text',
+        progress: 0.42,
+        chapterTitle: 'Chapter 4',
       );
       expect(h.text, 'Selected text');
       expect(h.sourceType, SourceType.book);
       expect(h.id, isNotEmpty);
       expect(h.color, HighlightColor.yellow);
+      expect(h.progress, 0.42);
+      expect(h.chapterTitle, 'Chapter 4');
+
+      final fetched = await repo.getHighlightById(h.id);
+      expect(fetched!.progress, 0.42);
+      expect(fetched.chapterTitle, 'Chapter 4');
     });
 
     test('getHighlights returns all highlights', () async {

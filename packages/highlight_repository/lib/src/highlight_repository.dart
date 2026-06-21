@@ -84,6 +84,8 @@ class HighlightRepository {
     String? cfiRange,
     int? pageNumber,
     double? scrollOffset,
+    double? progress,
+    String? chapterTitle,
     HighlightColor color = HighlightColor.yellow,
   }) async {
     try {
@@ -96,6 +98,8 @@ class HighlightRepository {
         cfiRange: cfiRange,
         pageNumber: pageNumber,
         scrollOffset: scrollOffset,
+        progress: progress,
+        chapterTitle: chapterTitle,
         color: color,
         createdAt: DateTime.now(),
       );

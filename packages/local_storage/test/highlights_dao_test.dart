@@ -20,19 +20,27 @@ void main() {
     String sourceType = 'book',
     String highlightText = 'Selected text',
     String createdAt = '2026-01-01T00:00:00.000Z',
+    double? progress,
+    String? chapterTitle,
   }) => HighlightsTableCompanion.insert(
     id: id,
     sourceId: sourceId,
     sourceType: sourceType,
     highlightText: highlightText,
+    progress: Value(progress),
+    chapterTitle: Value(chapterTitle),
     createdAt: createdAt,
   );
 
   test('insert and retrieve highlight', () async {
-    await dao.insertHighlight(makeHighlight());
+    await dao.insertHighlight(
+      makeHighlight(progress: 0.42, chapterTitle: 'Chapter 4'),
+    );
     final highlights = await dao.allHighlights();
     expect(highlights, hasLength(1));
     expect(highlights.first.highlightText, 'Selected text');
+    expect(highlights.first.progress, 0.42);
+    expect(highlights.first.chapterTitle, 'Chapter 4');
   });
 
   test('highlightCount returns total highlight count', () async {

@@ -6,7 +6,8 @@ import 'package:drift/drift.dart';
 /// `review_items_table`.
 ///
 /// [pageNumber] and [scrollOffset] are legacy positional columns kept for old
-/// rows and tests. Current reader selections are anchored by [cfiRange].
+/// rows and tests. Current reader selections are anchored by [cfiRange], with
+/// [progress] and [chapterTitle] providing drawer-friendly location labels.
 class HighlightsTable extends Table {
   TextColumn get id => text()();
 
@@ -22,6 +23,10 @@ class HighlightsTable extends Table {
   IntColumn get pageNumber => integer().nullable()();
 
   RealColumn get scrollOffset => real().nullable()();
+
+  RealColumn get progress => real().nullable()();
+
+  TextColumn get chapterTitle => text().nullable()();
 
   TextColumn get color => text().withDefault(
     const Constant('yellow'),

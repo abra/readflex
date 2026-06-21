@@ -813,12 +813,10 @@ class _ReaderHighlightListTile extends StatelessWidget {
     final text = highlight.text.trim();
     final note = highlight.note?.trim();
     final hasLocation = highlight.cfiRange?.isNotEmpty ?? false;
-    final pageLabel = highlight.pageNumber == null
-        ? null
-        : 'Page ${highlight.pageNumber}';
+    final locationLabel = readerHighlightLocationLabel(highlight);
     final subtitle = [
       if (note != null && note.isNotEmpty) note,
-      ?pageLabel,
+      ?locationLabel,
       if (!hasLocation) 'Location unavailable',
     ].join(' · ');
 

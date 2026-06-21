@@ -1,5 +1,7 @@
 import 'package:domain_models/domain_models.dart';
 
+import 'reader_highlight_location_label.dart';
+
 List<Highlight> filterReaderHighlights(
   List<Highlight> highlights,
   String query,
@@ -18,7 +20,7 @@ String _highlightSearchText(Highlight highlight) {
     highlight.text,
     highlight.note,
     highlight.cfiRange,
-    highlight.pageNumber == null ? null : 'page ${highlight.pageNumber}',
+    readerHighlightLocationLabel(highlight),
     highlight.color.name,
   ].whereType<String>().map(_normalizeHighlightQuery).join(' ');
 }

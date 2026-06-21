@@ -11,6 +11,8 @@ const _selection = TextSelectionContext(
   selectedText: 'Important passage',
   sourceId: 'book-1',
   sourceType: SourceType.book,
+  progress: 0.42,
+  chapterTitle: 'Chapter 4',
 );
 
 void main() {
@@ -87,6 +89,8 @@ void main() {
     expect(repository.highlights, hasLength(1));
     expect(repository.highlights.first.text, 'Important passage');
     expect(repository.highlights.first.sourceId, 'book-1');
+    expect(repository.highlights.first.progress, 0.42);
+    expect(repository.highlights.first.chapterTitle, 'Chapter 4');
   });
 
   testWidgets('note is passed to repository on save', (tester) async {

@@ -883,7 +883,8 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       },
       onTextSelected: (selection) {
         highlightFocusCubit.clear();
-        if (isImagePageFormat(bloc.state.book?.format)) {
+        final currentState = bloc.state;
+        if (isImagePageFormat(currentState.book?.format)) {
           selectionCubit.deselect();
           widget.webViewKey?.currentState?.clearSelection();
           return;
@@ -899,6 +900,8 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
           cfiRange: selection.cfiRange,
           normalizedCfiRange: selection.normalizedCfiRange,
           position: selection.position,
+          progress: currentState.book?.readingProgress,
+          chapterTitle: currentState.chapterTitle,
         );
       },
       onTextDeselected: () => selectionCubit.deselect(),

@@ -6,7 +6,9 @@ import 'package:reader_webview/reader_webview.dart';
 /// panel can drive its show/hide animation and pass position metadata to
 /// TextAction handlers. [contextText] carries surrounding text for lexical
 /// actions. [cfiRange] is populated whenever [hasSelection] is
-/// true; [pageNumber] and [scrollOffset] are legacy optional position fields.
+/// true. [progress] and [chapterTitle] mirror the current reader location when
+/// the selection was made; [pageNumber] and [scrollOffset] are legacy optional
+/// position fields.
 class ReaderSelectionState extends Equatable {
   const ReaderSelectionState({
     this.selectedText = '',
@@ -20,6 +22,8 @@ class ReaderSelectionState extends Equatable {
     this.position,
     this.pageNumber,
     this.scrollOffset,
+    this.progress,
+    this.chapterTitle,
     this.hasSelection = false,
   });
 
@@ -55,6 +59,12 @@ class ReaderSelectionState extends Equatable {
   /// Legacy optional scroll position.
   final double? scrollOffset;
 
+  /// Normalized reading progress at selection time.
+  final double? progress;
+
+  /// Visible chapter title at selection time.
+  final String? chapterTitle;
+
   final bool hasSelection;
 
   static const _absent = Object();
@@ -71,6 +81,8 @@ class ReaderSelectionState extends Equatable {
     Object? position = _absent,
     Object? pageNumber = _absent,
     Object? scrollOffset = _absent,
+    Object? progress = _absent,
+    Object? chapterTitle = _absent,
     bool? hasSelection,
   }) => ReaderSelectionState(
     selectedText: selectedText ?? this.selectedText,
@@ -100,6 +112,10 @@ class ReaderSelectionState extends Equatable {
     scrollOffset: scrollOffset == _absent
         ? this.scrollOffset
         : scrollOffset as double?,
+    progress: progress == _absent ? this.progress : progress as double?,
+    chapterTitle: chapterTitle == _absent
+        ? this.chapterTitle
+        : chapterTitle as String?,
     hasSelection: hasSelection ?? this.hasSelection,
   );
 
@@ -116,6 +132,8 @@ class ReaderSelectionState extends Equatable {
     position,
     pageNumber,
     scrollOffset,
+    progress,
+    chapterTitle,
     hasSelection,
   ];
 }
@@ -138,6 +156,8 @@ class ReaderSelectionCubit extends Cubit<ReaderSelectionState> {
     ReaderSelectionPosition? position,
     int? pageNumber,
     double? scrollOffset,
+    double? progress,
+    String? chapterTitle,
   }) {
     emit(
       ReaderSelectionState(
@@ -152,6 +172,8 @@ class ReaderSelectionCubit extends Cubit<ReaderSelectionState> {
         position: position,
         pageNumber: pageNumber,
         scrollOffset: scrollOffset,
+        progress: progress,
+        chapterTitle: chapterTitle,
         hasSelection: true,
       ),
     );

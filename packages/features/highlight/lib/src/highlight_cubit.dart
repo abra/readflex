@@ -32,6 +32,8 @@ class HighlightCubit extends Cubit<HighlightSheetState> {
     String? cfiRange,
     int? pageNumber,
     double? scrollOffset,
+    double? progress,
+    String? chapterTitle,
   }) async {
     emit(state.copyWith(status: HighlightSheetStatus.saving));
 
@@ -45,6 +47,8 @@ class HighlightCubit extends Cubit<HighlightSheetState> {
         cfiRange: cfiRange,
         pageNumber: pageNumber,
         scrollOffset: scrollOffset,
+        progress: progress,
+        chapterTitle: chapterTitle,
       );
       // Sheet may be dismissed mid-save; the cubit is then closed and
       // emit would throw StateError. Bail instead — the highlight

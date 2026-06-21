@@ -47,6 +47,12 @@ void main() {
       contentSource,
       contains('color: readerHighlightCssColor(h.color, theme)'),
     );
+    expect(contentSource, contains('final currentState = bloc.state;'));
+    expect(
+      contentSource,
+      contains('progress: currentState.book?.readingProgress'),
+    );
+    expect(contentSource, contains('chapterTitle: currentState.chapterTitle'));
     expect(contextPanelSource, contains('showSelectionHighlightPreview'));
     expect(contextPanelSource, contains('clearSelectionHighlightPreview'));
     expect(contextPanelSource, contains('onPreviewColorChanged'));

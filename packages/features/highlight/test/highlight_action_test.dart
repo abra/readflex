@@ -14,6 +14,8 @@ const _selection = TextSelectionContext(
   cfiRange: 'epubcfi(/6/4)',
   pageNumber: 12,
   scrollOffset: 0.5,
+  progress: 0.42,
+  chapterTitle: 'Chapter 4',
 );
 
 void main() {
@@ -57,6 +59,8 @@ void main() {
       expect(highlight.cfiRange, 'epubcfi(/6/4)');
       expect(highlight.pageNumber, 12);
       expect(highlight.scrollOffset, 0.5);
+      expect(highlight.progress, 0.42);
+      expect(highlight.chapterTitle, 'Chapter 4');
       expect(highlight.color, HighlightColor.yellow);
     });
 

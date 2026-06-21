@@ -2052,6 +2052,28 @@ class $HighlightsTableTable extends HighlightsTable
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _progressMeta = const VerificationMeta(
+    'progress',
+  );
+  @override
+  late final GeneratedColumn<double> progress = GeneratedColumn<double>(
+    'progress',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _chapterTitleMeta = const VerificationMeta(
+    'chapterTitle',
+  );
+  @override
+  late final GeneratedColumn<String> chapterTitle = GeneratedColumn<String>(
+    'chapter_title',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _colorMeta = const VerificationMeta('color');
   @override
   late final GeneratedColumn<String> color = GeneratedColumn<String>(
@@ -2083,6 +2105,8 @@ class $HighlightsTableTable extends HighlightsTable
     cfiRange,
     pageNumber,
     scrollOffset,
+    progress,
+    chapterTitle,
     color,
     createdAt,
   ];
@@ -2157,6 +2181,21 @@ class $HighlightsTableTable extends HighlightsTable
         ),
       );
     }
+    if (data.containsKey('progress')) {
+      context.handle(
+        _progressMeta,
+        progress.isAcceptableOrUnknown(data['progress']!, _progressMeta),
+      );
+    }
+    if (data.containsKey('chapter_title')) {
+      context.handle(
+        _chapterTitleMeta,
+        chapterTitle.isAcceptableOrUnknown(
+          data['chapter_title']!,
+          _chapterTitleMeta,
+        ),
+      );
+    }
     if (data.containsKey('color')) {
       context.handle(
         _colorMeta,
@@ -2212,6 +2251,14 @@ class $HighlightsTableTable extends HighlightsTable
         DriftSqlType.double,
         data['${effectivePrefix}scroll_offset'],
       ),
+      progress: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}progress'],
+      ),
+      chapterTitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}chapter_title'],
+      ),
       color: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}color'],
@@ -2239,6 +2286,8 @@ class HighlightsTableData extends DataClass
   final String? cfiRange;
   final int? pageNumber;
   final double? scrollOffset;
+  final double? progress;
+  final String? chapterTitle;
   final String color;
   final String createdAt;
   const HighlightsTableData({
@@ -2250,6 +2299,8 @@ class HighlightsTableData extends DataClass
     this.cfiRange,
     this.pageNumber,
     this.scrollOffset,
+    this.progress,
+    this.chapterTitle,
     required this.color,
     required this.createdAt,
   });
@@ -2272,6 +2323,12 @@ class HighlightsTableData extends DataClass
     if (!nullToAbsent || scrollOffset != null) {
       map['scroll_offset'] = Variable<double>(scrollOffset);
     }
+    if (!nullToAbsent || progress != null) {
+      map['progress'] = Variable<double>(progress);
+    }
+    if (!nullToAbsent || chapterTitle != null) {
+      map['chapter_title'] = Variable<String>(chapterTitle);
+    }
     map['color'] = Variable<String>(color);
     map['created_at'] = Variable<String>(createdAt);
     return map;
@@ -2293,6 +2350,12 @@ class HighlightsTableData extends DataClass
       scrollOffset: scrollOffset == null && nullToAbsent
           ? const Value.absent()
           : Value(scrollOffset),
+      progress: progress == null && nullToAbsent
+          ? const Value.absent()
+          : Value(progress),
+      chapterTitle: chapterTitle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(chapterTitle),
       color: Value(color),
       createdAt: Value(createdAt),
     );
@@ -2312,6 +2375,8 @@ class HighlightsTableData extends DataClass
       cfiRange: serializer.fromJson<String?>(json['cfiRange']),
       pageNumber: serializer.fromJson<int?>(json['pageNumber']),
       scrollOffset: serializer.fromJson<double?>(json['scrollOffset']),
+      progress: serializer.fromJson<double?>(json['progress']),
+      chapterTitle: serializer.fromJson<String?>(json['chapterTitle']),
       color: serializer.fromJson<String>(json['color']),
       createdAt: serializer.fromJson<String>(json['createdAt']),
     );
@@ -2328,6 +2393,8 @@ class HighlightsTableData extends DataClass
       'cfiRange': serializer.toJson<String?>(cfiRange),
       'pageNumber': serializer.toJson<int?>(pageNumber),
       'scrollOffset': serializer.toJson<double?>(scrollOffset),
+      'progress': serializer.toJson<double?>(progress),
+      'chapterTitle': serializer.toJson<String?>(chapterTitle),
       'color': serializer.toJson<String>(color),
       'createdAt': serializer.toJson<String>(createdAt),
     };
@@ -2342,6 +2409,8 @@ class HighlightsTableData extends DataClass
     Value<String?> cfiRange = const Value.absent(),
     Value<int?> pageNumber = const Value.absent(),
     Value<double?> scrollOffset = const Value.absent(),
+    Value<double?> progress = const Value.absent(),
+    Value<String?> chapterTitle = const Value.absent(),
     String? color,
     String? createdAt,
   }) => HighlightsTableData(
@@ -2353,6 +2422,8 @@ class HighlightsTableData extends DataClass
     cfiRange: cfiRange.present ? cfiRange.value : this.cfiRange,
     pageNumber: pageNumber.present ? pageNumber.value : this.pageNumber,
     scrollOffset: scrollOffset.present ? scrollOffset.value : this.scrollOffset,
+    progress: progress.present ? progress.value : this.progress,
+    chapterTitle: chapterTitle.present ? chapterTitle.value : this.chapterTitle,
     color: color ?? this.color,
     createdAt: createdAt ?? this.createdAt,
   );
@@ -2374,6 +2445,10 @@ class HighlightsTableData extends DataClass
       scrollOffset: data.scrollOffset.present
           ? data.scrollOffset.value
           : this.scrollOffset,
+      progress: data.progress.present ? data.progress.value : this.progress,
+      chapterTitle: data.chapterTitle.present
+          ? data.chapterTitle.value
+          : this.chapterTitle,
       color: data.color.present ? data.color.value : this.color,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
@@ -2390,6 +2465,8 @@ class HighlightsTableData extends DataClass
           ..write('cfiRange: $cfiRange, ')
           ..write('pageNumber: $pageNumber, ')
           ..write('scrollOffset: $scrollOffset, ')
+          ..write('progress: $progress, ')
+          ..write('chapterTitle: $chapterTitle, ')
           ..write('color: $color, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -2406,6 +2483,8 @@ class HighlightsTableData extends DataClass
     cfiRange,
     pageNumber,
     scrollOffset,
+    progress,
+    chapterTitle,
     color,
     createdAt,
   );
@@ -2421,6 +2500,8 @@ class HighlightsTableData extends DataClass
           other.cfiRange == this.cfiRange &&
           other.pageNumber == this.pageNumber &&
           other.scrollOffset == this.scrollOffset &&
+          other.progress == this.progress &&
+          other.chapterTitle == this.chapterTitle &&
           other.color == this.color &&
           other.createdAt == this.createdAt);
 }
@@ -2434,6 +2515,8 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
   final Value<String?> cfiRange;
   final Value<int?> pageNumber;
   final Value<double?> scrollOffset;
+  final Value<double?> progress;
+  final Value<String?> chapterTitle;
   final Value<String> color;
   final Value<String> createdAt;
   final Value<int> rowid;
@@ -2446,6 +2529,8 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
     this.cfiRange = const Value.absent(),
     this.pageNumber = const Value.absent(),
     this.scrollOffset = const Value.absent(),
+    this.progress = const Value.absent(),
+    this.chapterTitle = const Value.absent(),
     this.color = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2459,6 +2544,8 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
     this.cfiRange = const Value.absent(),
     this.pageNumber = const Value.absent(),
     this.scrollOffset = const Value.absent(),
+    this.progress = const Value.absent(),
+    this.chapterTitle = const Value.absent(),
     this.color = const Value.absent(),
     required String createdAt,
     this.rowid = const Value.absent(),
@@ -2476,6 +2563,8 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
     Expression<String>? cfiRange,
     Expression<int>? pageNumber,
     Expression<double>? scrollOffset,
+    Expression<double>? progress,
+    Expression<String>? chapterTitle,
     Expression<String>? color,
     Expression<String>? createdAt,
     Expression<int>? rowid,
@@ -2489,6 +2578,8 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
       if (cfiRange != null) 'cfi_range': cfiRange,
       if (pageNumber != null) 'page_number': pageNumber,
       if (scrollOffset != null) 'scroll_offset': scrollOffset,
+      if (progress != null) 'progress': progress,
+      if (chapterTitle != null) 'chapter_title': chapterTitle,
       if (color != null) 'color': color,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
@@ -2504,6 +2595,8 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
     Value<String?>? cfiRange,
     Value<int?>? pageNumber,
     Value<double?>? scrollOffset,
+    Value<double?>? progress,
+    Value<String?>? chapterTitle,
     Value<String>? color,
     Value<String>? createdAt,
     Value<int>? rowid,
@@ -2517,6 +2610,8 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
       cfiRange: cfiRange ?? this.cfiRange,
       pageNumber: pageNumber ?? this.pageNumber,
       scrollOffset: scrollOffset ?? this.scrollOffset,
+      progress: progress ?? this.progress,
+      chapterTitle: chapterTitle ?? this.chapterTitle,
       color: color ?? this.color,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
@@ -2550,6 +2645,12 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
     if (scrollOffset.present) {
       map['scroll_offset'] = Variable<double>(scrollOffset.value);
     }
+    if (progress.present) {
+      map['progress'] = Variable<double>(progress.value);
+    }
+    if (chapterTitle.present) {
+      map['chapter_title'] = Variable<String>(chapterTitle.value);
+    }
     if (color.present) {
       map['color'] = Variable<String>(color.value);
     }
@@ -2573,6 +2674,8 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
           ..write('cfiRange: $cfiRange, ')
           ..write('pageNumber: $pageNumber, ')
           ..write('scrollOffset: $scrollOffset, ')
+          ..write('progress: $progress, ')
+          ..write('chapterTitle: $chapterTitle, ')
           ..write('color: $color, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
@@ -7391,6 +7494,8 @@ typedef $$HighlightsTableTableCreateCompanionBuilder =
       Value<String?> cfiRange,
       Value<int?> pageNumber,
       Value<double?> scrollOffset,
+      Value<double?> progress,
+      Value<String?> chapterTitle,
       Value<String> color,
       required String createdAt,
       Value<int> rowid,
@@ -7405,6 +7510,8 @@ typedef $$HighlightsTableTableUpdateCompanionBuilder =
       Value<String?> cfiRange,
       Value<int?> pageNumber,
       Value<double?> scrollOffset,
+      Value<double?> progress,
+      Value<String?> chapterTitle,
       Value<String> color,
       Value<String> createdAt,
       Value<int> rowid,
@@ -7456,6 +7563,16 @@ class $$HighlightsTableTableFilterComposer
 
   ColumnFilters<double> get scrollOffset => $composableBuilder(
     column: $table.scrollOffset,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get progress => $composableBuilder(
+    column: $table.progress,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get chapterTitle => $composableBuilder(
+    column: $table.chapterTitle,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7519,6 +7636,16 @@ class $$HighlightsTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get progress => $composableBuilder(
+    column: $table.progress,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get chapterTitle => $composableBuilder(
+    column: $table.chapterTitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get color => $composableBuilder(
     column: $table.color,
     builder: (column) => ColumnOrderings(column),
@@ -7568,6 +7695,14 @@ class $$HighlightsTableTableAnnotationComposer
 
   GeneratedColumn<double> get scrollOffset => $composableBuilder(
     column: $table.scrollOffset,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get progress =>
+      $composableBuilder(column: $table.progress, builder: (column) => column);
+
+  GeneratedColumn<String> get chapterTitle => $composableBuilder(
+    column: $table.chapterTitle,
     builder: (column) => column,
   );
 
@@ -7623,6 +7758,8 @@ class $$HighlightsTableTableTableManager
                 Value<String?> cfiRange = const Value.absent(),
                 Value<int?> pageNumber = const Value.absent(),
                 Value<double?> scrollOffset = const Value.absent(),
+                Value<double?> progress = const Value.absent(),
+                Value<String?> chapterTitle = const Value.absent(),
                 Value<String> color = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -7635,6 +7772,8 @@ class $$HighlightsTableTableTableManager
                 cfiRange: cfiRange,
                 pageNumber: pageNumber,
                 scrollOffset: scrollOffset,
+                progress: progress,
+                chapterTitle: chapterTitle,
                 color: color,
                 createdAt: createdAt,
                 rowid: rowid,
@@ -7649,6 +7788,8 @@ class $$HighlightsTableTableTableManager
                 Value<String?> cfiRange = const Value.absent(),
                 Value<int?> pageNumber = const Value.absent(),
                 Value<double?> scrollOffset = const Value.absent(),
+                Value<double?> progress = const Value.absent(),
+                Value<String?> chapterTitle = const Value.absent(),
                 Value<String> color = const Value.absent(),
                 required String createdAt,
                 Value<int> rowid = const Value.absent(),
@@ -7661,6 +7802,8 @@ class $$HighlightsTableTableTableManager
                 cfiRange: cfiRange,
                 pageNumber: pageNumber,
                 scrollOffset: scrollOffset,
+                progress: progress,
+                chapterTitle: chapterTitle,
                 color: color,
                 createdAt: createdAt,
                 rowid: rowid,

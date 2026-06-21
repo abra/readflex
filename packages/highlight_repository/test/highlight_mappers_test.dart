@@ -19,6 +19,8 @@ void main() {
         cfiRange: 'epubcfi(/6/4)',
         pageNumber: 42,
         scrollOffset: 0.5,
+        progress: 0.42,
+        chapterTitle: 'Chapter 4',
         color: 'blue',
         createdAt: now.toIso8601String(),
       );
@@ -33,6 +35,8 @@ void main() {
       expect(hl.cfiRange, 'epubcfi(/6/4)');
       expect(hl.pageNumber, 42);
       expect(hl.scrollOffset, 0.5);
+      expect(hl.progress, 0.42);
+      expect(hl.chapterTitle, 'Chapter 4');
       expect(hl.color, HighlightColor.blue);
       expect(hl.createdAt, now);
     });
@@ -47,6 +51,8 @@ void main() {
         cfiRange: null,
         pageNumber: null,
         scrollOffset: null,
+        progress: null,
+        chapterTitle: null,
         color: 'yellow',
         createdAt: now.toIso8601String(),
       );
@@ -57,6 +63,8 @@ void main() {
       expect(hl.cfiRange, isNull);
       expect(hl.pageNumber, isNull);
       expect(hl.scrollOffset, isNull);
+      expect(hl.progress, isNull);
+      expect(hl.chapterTitle, isNull);
     });
 
     test('falls back to epoch for invalid date', () {
@@ -69,6 +77,8 @@ void main() {
         cfiRange: null,
         pageNumber: null,
         scrollOffset: null,
+        progress: null,
+        chapterTitle: null,
         color: 'yellow',
         createdAt: 'bad',
       );
@@ -91,6 +101,8 @@ void main() {
         cfiRange: 'epubcfi(/6/4)',
         pageNumber: 42,
         scrollOffset: 0.5,
+        progress: 0.42,
+        chapterTitle: 'Chapter 4',
         color: HighlightColor.blue,
         createdAt: now,
       );
@@ -105,6 +117,8 @@ void main() {
       expect(companion.cfiRange, const Value('epubcfi(/6/4)'));
       expect(companion.pageNumber, const Value(42));
       expect(companion.scrollOffset, const Value(0.5));
+      expect(companion.progress, const Value(0.42));
+      expect(companion.chapterTitle, const Value('Chapter 4'));
       expect(companion.color, const Value('blue'));
       expect(companion.createdAt, Value(now.toIso8601String()));
     });
@@ -128,6 +142,8 @@ void main() {
         cfiRange: companion.cfiRange.value,
         pageNumber: companion.pageNumber.value,
         scrollOffset: companion.scrollOffset.value,
+        progress: companion.progress.value,
+        chapterTitle: companion.chapterTitle.value,
         color: companion.color.value,
         createdAt: companion.createdAt.value,
       );

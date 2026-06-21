@@ -25,6 +25,8 @@ class FakeHighlightRepository implements HighlightRepository {
     String? cfiRange,
     int? pageNumber,
     double? scrollOffset,
+    double? progress,
+    String? chapterTitle,
     HighlightColor color = HighlightColor.yellow,
   }) async {
     if (awaitGate != null) await awaitGate!.future;
@@ -39,6 +41,8 @@ class FakeHighlightRepository implements HighlightRepository {
       cfiRange: cfiRange,
       pageNumber: pageNumber,
       scrollOffset: scrollOffset,
+      progress: progress,
+      chapterTitle: chapterTitle,
       color: color,
       createdAt: DateTime.now(),
     );

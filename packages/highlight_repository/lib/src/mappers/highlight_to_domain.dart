@@ -13,6 +13,8 @@ extension HighlightToDomain on HighlightsTableData {
     cfiRange: cfiRange,
     pageNumber: pageNumber,
     scrollOffset: scrollOffset,
+    progress: progress,
+    chapterTitle: chapterTitle,
     color: HighlightColor.from(color),
     createdAt: DateTime.tryParse(createdAt) ?? _epoch,
   );

@@ -17,6 +17,8 @@ void main() {
       cfiRange: 'exact-cfi',
       normalizedCfiRange: 'normalized-cfi',
       scrollOffset: 42,
+      progress: 0.42,
+      chapterTitle: 'Chapter 4',
     );
 
     expect(selection.selectedText, 'hello');
@@ -32,6 +34,8 @@ void main() {
     expect(selection.effectiveSelectedText, 'hello there');
     expect(selection.effectiveMarkedContextText, 'Well, [[hello there]].');
     expect(selection.scrollOffset, 42);
+    expect(selection.progress, 0.42);
+    expect(selection.chapterTitle, 'Chapter 4');
   });
 
   test(

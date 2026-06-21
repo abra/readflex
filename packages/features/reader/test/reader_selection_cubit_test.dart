@@ -17,6 +17,8 @@ void main() {
       expect(cubit.state.cfiRange, isNull);
       expect(cubit.state.pageNumber, isNull);
       expect(cubit.state.scrollOffset, isNull);
+      expect(cubit.state.progress, isNull);
+      expect(cubit.state.chapterTitle, isNull);
     });
 
     group('select', () {
@@ -39,6 +41,8 @@ void main() {
             bottom: 0.5,
           ),
           pageNumber: 42,
+          progress: 0.36,
+          chapterTitle: 'Chapter 3',
         ),
         expect: () => [
           isA<ReaderSelectionState>()
@@ -82,7 +86,9 @@ void main() {
                 ),
               )
               .having((s) => s.pageNumber, 'pageNumber', 42)
-              .having((s) => s.scrollOffset, 'scrollOffset', isNull),
+              .having((s) => s.scrollOffset, 'scrollOffset', isNull)
+              .having((s) => s.progress, 'progress', 0.36)
+              .having((s) => s.chapterTitle, 'chapterTitle', 'Chapter 3'),
         ],
       );
 
@@ -119,6 +125,8 @@ void main() {
             bottom: 0.4,
           ),
           pageNumber: 10,
+          progress: 0.25,
+          chapterTitle: 'Chapter 1',
           hasSelection: true,
         ),
         act: (c) => c.deselect(),
@@ -156,6 +164,8 @@ void main() {
           normalizedMarkedContextText: '[[text]]',
           cfiRange: 'cfi',
           normalizedCfiRange: 'normalized-cfi',
+          progress: 0.1,
+          chapterTitle: 'One',
           position: ReaderSelectionPosition(
             left: 0.1,
             top: 0.2,
@@ -173,6 +183,8 @@ void main() {
         expect(copy.normalizedMarkedContextText, '[[text]]');
         expect(copy.cfiRange, 'cfi');
         expect(copy.normalizedCfiRange, 'normalized-cfi');
+        expect(copy.progress, 0.1);
+        expect(copy.chapterTitle, 'One');
         expect(
           copy.position,
           const ReaderSelectionPosition(

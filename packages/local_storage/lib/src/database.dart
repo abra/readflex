@@ -63,7 +63,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -393,6 +393,9 @@ class AppDatabase extends _$AppDatabase {
         await migrator.createTable(dictionaryAnchorsTable);
         await _createDictionaryAnchorIndexes();
       }
+      if (from < 21) {
+        await _addHighlightLocationMetadata();
+      }
     },
   );
 
@@ -490,6 +493,15 @@ class AppDatabase extends _$AppDatabase {
     );
     await customStatement(
       'ALTER TABLE bookmarks_table ADD COLUMN anchor_section_page INTEGER',
+    );
+  }
+
+  Future<void> _addHighlightLocationMetadata() async {
+    await customStatement(
+      'ALTER TABLE highlights_table ADD COLUMN progress REAL',
+    );
+    await customStatement(
+      'ALTER TABLE highlights_table ADD COLUMN chapter_title TEXT',
     );
   }
 

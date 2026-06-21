@@ -12,6 +12,8 @@ extension HighlightToStorage on Highlight {
     cfiRange: Value(cfiRange),
     pageNumber: Value(pageNumber),
     scrollOffset: Value(scrollOffset),
+    progress: Value(progress),
+    chapterTitle: Value(chapterTitle),
     color: Value(color.name),
     createdAt: Value(createdAt.toIso8601String()),
   );

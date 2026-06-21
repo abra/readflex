@@ -45,6 +45,8 @@ class HighlightAction extends ColorHighlightTextAction {
       cfiRange: selection.cfiRange,
       pageNumber: selection.pageNumber,
       scrollOffset: selection.scrollOffset,
+      progress: selection.progress,
+      chapterTitle: selection.chapterTitle,
     );
   }
 }

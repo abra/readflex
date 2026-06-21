@@ -53,6 +53,15 @@ void main() {
       final h = highlight().copyWith(color: HighlightColor.blue);
       expect(h.color, HighlightColor.blue);
     });
+
+    test('updates location metadata', () {
+      final h = highlight().copyWith(
+        progress: 0.42,
+        chapterTitle: 'Chapter 4',
+      );
+      expect(h.progress, 0.42);
+      expect(h.chapterTitle, 'Chapter 4');
+    });
   });
 
   group('Highlight equality', () {

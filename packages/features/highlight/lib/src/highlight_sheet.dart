@@ -156,6 +156,8 @@ class _HighlightSheetView extends StatelessWidget {
                         cfiRange: selection.cfiRange,
                         pageNumber: selection.pageNumber,
                         scrollOffset: selection.scrollOffset,
+                        progress: selection.progress,
+                        chapterTitle: selection.chapterTitle,
                       ),
                 child: isSaving
                     ? const ButtonLoadingIndicator()

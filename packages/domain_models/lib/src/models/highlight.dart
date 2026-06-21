@@ -18,6 +18,8 @@ class Highlight extends Equatable {
     this.cfiRange,
     this.pageNumber,
     this.scrollOffset,
+    this.progress,
+    this.chapterTitle,
     this.color = HighlightColor.yellow,
   });
 
@@ -29,6 +31,8 @@ class Highlight extends Equatable {
   final String? cfiRange;
   final int? pageNumber;
   final double? scrollOffset;
+  final double? progress;
+  final String? chapterTitle;
   final HighlightColor color;
   final DateTime createdAt;
 
@@ -40,6 +44,8 @@ class Highlight extends Equatable {
     Object? cfiRange = _absent,
     Object? pageNumber = _absent,
     Object? scrollOffset = _absent,
+    Object? progress = _absent,
+    Object? chapterTitle = _absent,
     HighlightColor? color,
   }) => Highlight(
     id: id,
@@ -52,6 +58,10 @@ class Highlight extends Equatable {
     scrollOffset: scrollOffset == _absent
         ? this.scrollOffset
         : scrollOffset as double?,
+    progress: progress == _absent ? this.progress : progress as double?,
+    chapterTitle: chapterTitle == _absent
+        ? this.chapterTitle
+        : chapterTitle as String?,
     color: color ?? this.color,
     createdAt: createdAt,
   );
@@ -66,6 +76,8 @@ class Highlight extends Equatable {
     cfiRange,
     pageNumber,
     scrollOffset,
+    progress,
+    chapterTitle,
     color,
     createdAt,
   ];

@@ -7,7 +7,8 @@ import 'package:flutter/widgets.dart';
 /// anchor back to the source.
 ///
 /// [contextText] is the surrounding sentence/paragraph excerpt supplied by
-/// the reader runtime for context-aware actions. [pageNumber] and
+/// the reader runtime for context-aware actions. [progress] and [chapterTitle]
+/// describe the reader location at selection time; [pageNumber] and
 /// [scrollOffset] are legacy optional position fields. Current text-reader
 /// selections primarily use [cfiRange].
 class TextSelectionContext {
@@ -24,6 +25,8 @@ class TextSelectionContext {
     this.normalizedCfiRange,
     this.pageNumber,
     this.scrollOffset,
+    this.progress,
+    this.chapterTitle,
   });
 
   /// The exact text the user selected.
@@ -76,6 +79,12 @@ class TextSelectionContext {
 
   /// Legacy optional scroll position.
   final double? scrollOffset;
+
+  /// Normalized reading progress at selection time.
+  final double? progress;
+
+  /// Visible chapter title at selection time.
+  final String? chapterTitle;
 }
 
 /// Contract for reader context-panel actions.

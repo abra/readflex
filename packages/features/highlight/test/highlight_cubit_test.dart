@@ -148,12 +148,16 @@ void main() {
         cfiRange: 'epubcfi(/6/4)',
         pageNumber: 42,
         scrollOffset: 0.75,
+        progress: 0.31,
+        chapterTitle: 'Chapter 2',
       ),
       verify: (_) {
         final h = repository.highlights.first;
         expect(h.cfiRange, 'epubcfi(/6/4)');
         expect(h.pageNumber, 42);
         expect(h.scrollOffset, 0.75);
+        expect(h.progress, 0.31);
+        expect(h.chapterTitle, 'Chapter 2');
       },
     );
 
