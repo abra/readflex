@@ -37,6 +37,37 @@ void main() {
       expect(fetched.chapterTitle, 'Chapter 4');
     });
 
+    test('addImageAreaHighlight creates image-area highlight', () async {
+      final h = await repo.addImageAreaHighlight(
+        sourceId: 'comic-1',
+        sourceType: SourceType.book,
+        pageIndex: 2,
+        x: 0.1,
+        y: 0.2,
+        width: 0.3,
+        height: 0.4,
+        progress: 0.25,
+        chapterTitle: '0003.jpg',
+        color: HighlightColor.green,
+      );
+
+      expect(h.kind, HighlightKind.imageArea);
+      expect(h.text, 'Page highlight');
+      expect(h.imageArea, isNotNull);
+      expect(h.imageArea!.pageIndex, 2);
+      expect(h.imageArea!.x, 0.1);
+      expect(h.imageArea!.y, 0.2);
+      expect(h.imageArea!.width, 0.3);
+      expect(h.imageArea!.height, 0.4);
+      expect(h.pageNumber, 3);
+      expect(h.progress, 0.25);
+      expect(h.chapterTitle, '0003.jpg');
+      expect(h.color, HighlightColor.green);
+
+      final fetched = await repo.getHighlightById(h.id);
+      expect(fetched, h);
+    });
+
     test('getHighlights returns all highlights', () async {
       await repo.addHighlight(
         sourceId: 's1',

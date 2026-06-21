@@ -25,7 +25,24 @@ void main() {
     color: HighlightColor.blue,
     createdAt: DateTime(2026, 5, 17, 1),
   );
-  final highlights = [first, second];
+  final imageArea = Highlight(
+    id: 'highlight-3',
+    sourceId: 'book-1',
+    sourceType: SourceType.book,
+    text: 'Page highlight',
+    kind: HighlightKind.imageArea,
+    imageArea: const HighlightImageArea(
+      pageIndex: 7,
+      x: 0.1,
+      y: 0.2,
+      width: 0.3,
+      height: 0.4,
+    ),
+    pageNumber: 8,
+    color: HighlightColor.green,
+    createdAt: DateTime(2026, 5, 17, 2),
+  );
+  final highlights = [first, second, imageArea];
 
   test('returns all highlights for an empty query', () {
     expect(filterReaderHighlights(highlights, '  '), highlights);
@@ -61,5 +78,14 @@ void main() {
 
   test('falls back to legacy page labels', () {
     expect(readerHighlightLocationLabel(second), 'Page 42');
+  });
+
+  test('treats text CFI and image-area highlights as navigable', () {
+    expect(readerHighlightHasNavigableLocation(first), isTrue);
+    expect(readerHighlightHasNavigableLocation(imageArea), isTrue);
+  });
+
+  test('does not treat legacy page-only highlights as navigable', () {
+    expect(readerHighlightHasNavigableLocation(second), isFalse);
   });
 }

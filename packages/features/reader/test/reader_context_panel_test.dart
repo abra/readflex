@@ -78,7 +78,30 @@ void main() {
     expect(contextPanelSource, contains('clearSelectionHighlightPreview'));
     expect(contextPanelSource, contains('onPreviewColorChanged'));
     expect(contextPanelSource, contains('onPreviewCleared'));
+    expect(contextPanelSource, contains('_ImageHighlightSelectionPopup'));
+    expect(
+      contextPanelSource,
+      isNot(contains('onDismiss: dismissImageSelection')),
+    );
     expect(contextPanelSource, contains('widget.onPreviewColorChanged(color)'));
+    expect(
+      contextPanelSource,
+      contains(
+        'onPopupInteractionStarted: imageSelectionCubit.protectNextClear',
+      ),
+    );
+    expect(contextPanelSource, contains('onControlsBoundsChanged'));
+    expect(contextPanelSource, contains('_kImageHighlightPopupGap'));
+    expect(
+      contextPanelSource,
+      contains('setImageAreaSelectionControlsBounds'),
+    );
+    expect(
+      contextPanelSource,
+      contains('clearImageAreaSelectionControlsBounds'),
+    );
+    expect(contextPanelSource, contains('allowNextTap: true'));
+    expect(contentSource, contains('consumeProtectedClear()'));
     expect(contextPanelSource, contains('actionIcon: AppIcons.delete'));
     expect(contextPanelSource, contains('actionIcon: AppIcons.highlight'));
     expect(contentSource, contains('onHighlightTapped: (tap)'));

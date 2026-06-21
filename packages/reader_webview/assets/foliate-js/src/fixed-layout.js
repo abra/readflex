@@ -210,6 +210,7 @@ export class FixedLayout extends HTMLElement {
         if (isCanvasImageSource(src)) {
             const doc = writeCanvasImageDocument(iframe, src)
             doc.position = position
+            doc.readflexSectionIndex = index
             this.dispatchEvent(new CustomEvent('load', { detail: { doc, index } }))
             return {
                 element, iframe,
@@ -223,6 +224,7 @@ export class FixedLayout extends HTMLElement {
                 iframe.removeEventListener('load', onload)
                 const doc = iframe.contentDocument
                 doc.position = position
+                doc.readflexSectionIndex = index
                 this.dispatchEvent(new CustomEvent('load', { detail: { doc, index } }))
                 // Image-backed fixed pages can fire iframe `load` before
                 // the image bitmap is decoded, leaving naturalWidth/Height
@@ -558,7 +560,7 @@ export class FixedLayout extends HTMLElement {
     getContents() {
         return Array.from(this.#root.querySelectorAll('iframe'), frame => ({
             doc: frame.contentDocument,
-            // TODO: index, overlayer
+            index: frame.contentDocument?.readflexSectionIndex,
         }))
     }
     destroy() {

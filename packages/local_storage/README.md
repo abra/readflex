@@ -46,6 +46,11 @@ Entity tables (flashcards/highlights/dictionary) hold only domain
 fields; nothing reviewable is duplicated across tables. This was the
 v3→v4 migration — see the comment in `database.dart`.
 
+`highlights_table` stores both text and image-page highlights. Text highlights
+use `cfi_range`; image-page highlights use `kind = imageArea`,
+`image_page_index`, and normalized rectangle columns. Repositories expose this
+as one `Highlight` domain model with `HighlightKind`.
+
 `bookmarks_table` is a small custom-SQL table owned by `BookRepository`
 rather than a generated DAO because bookmark operations are source-scoped and
 do not need cross-feature query composition yet. It stores both the navigation

@@ -1999,6 +1999,16 @@ class $HighlightsTableTable extends HighlightsTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('text'),
+  );
   static const VerificationMeta _highlightTextMeta = const VerificationMeta(
     'highlightText',
   );
@@ -2028,6 +2038,61 @@ class $HighlightsTableTable extends HighlightsTable
     aliasedName,
     true,
     type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _imagePageIndexMeta = const VerificationMeta(
+    'imagePageIndex',
+  );
+  @override
+  late final GeneratedColumn<int> imagePageIndex = GeneratedColumn<int>(
+    'image_page_index',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _imageAreaXMeta = const VerificationMeta(
+    'imageAreaX',
+  );
+  @override
+  late final GeneratedColumn<double> imageAreaX = GeneratedColumn<double>(
+    'image_area_x',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _imageAreaYMeta = const VerificationMeta(
+    'imageAreaY',
+  );
+  @override
+  late final GeneratedColumn<double> imageAreaY = GeneratedColumn<double>(
+    'image_area_y',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _imageAreaWidthMeta = const VerificationMeta(
+    'imageAreaWidth',
+  );
+  @override
+  late final GeneratedColumn<double> imageAreaWidth = GeneratedColumn<double>(
+    'image_area_width',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _imageAreaHeightMeta = const VerificationMeta(
+    'imageAreaHeight',
+  );
+  @override
+  late final GeneratedColumn<double> imageAreaHeight = GeneratedColumn<double>(
+    'image_area_height',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
   static const VerificationMeta _pageNumberMeta = const VerificationMeta(
@@ -2100,9 +2165,15 @@ class $HighlightsTableTable extends HighlightsTable
     id,
     sourceId,
     sourceType,
+    kind,
     highlightText,
     note,
     cfiRange,
+    imagePageIndex,
+    imageAreaX,
+    imageAreaY,
+    imageAreaWidth,
+    imageAreaHeight,
     pageNumber,
     scrollOffset,
     progress,
@@ -2143,6 +2214,12 @@ class $HighlightsTableTable extends HighlightsTable
     } else if (isInserting) {
       context.missing(_sourceTypeMeta);
     }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    }
     if (data.containsKey('highlight_text')) {
       context.handle(
         _highlightTextMeta,
@@ -2164,6 +2241,51 @@ class $HighlightsTableTable extends HighlightsTable
       context.handle(
         _cfiRangeMeta,
         cfiRange.isAcceptableOrUnknown(data['cfi_range']!, _cfiRangeMeta),
+      );
+    }
+    if (data.containsKey('image_page_index')) {
+      context.handle(
+        _imagePageIndexMeta,
+        imagePageIndex.isAcceptableOrUnknown(
+          data['image_page_index']!,
+          _imagePageIndexMeta,
+        ),
+      );
+    }
+    if (data.containsKey('image_area_x')) {
+      context.handle(
+        _imageAreaXMeta,
+        imageAreaX.isAcceptableOrUnknown(
+          data['image_area_x']!,
+          _imageAreaXMeta,
+        ),
+      );
+    }
+    if (data.containsKey('image_area_y')) {
+      context.handle(
+        _imageAreaYMeta,
+        imageAreaY.isAcceptableOrUnknown(
+          data['image_area_y']!,
+          _imageAreaYMeta,
+        ),
+      );
+    }
+    if (data.containsKey('image_area_width')) {
+      context.handle(
+        _imageAreaWidthMeta,
+        imageAreaWidth.isAcceptableOrUnknown(
+          data['image_area_width']!,
+          _imageAreaWidthMeta,
+        ),
+      );
+    }
+    if (data.containsKey('image_area_height')) {
+      context.handle(
+        _imageAreaHeightMeta,
+        imageAreaHeight.isAcceptableOrUnknown(
+          data['image_area_height']!,
+          _imageAreaHeightMeta,
+        ),
       );
     }
     if (data.containsKey('page_number')) {
@@ -2231,6 +2353,10 @@ class $HighlightsTableTable extends HighlightsTable
         DriftSqlType.string,
         data['${effectivePrefix}source_type'],
       )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
       highlightText: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}highlight_text'],
@@ -2242,6 +2368,26 @@ class $HighlightsTableTable extends HighlightsTable
       cfiRange: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}cfi_range'],
+      ),
+      imagePageIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}image_page_index'],
+      ),
+      imageAreaX: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}image_area_x'],
+      ),
+      imageAreaY: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}image_area_y'],
+      ),
+      imageAreaWidth: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}image_area_width'],
+      ),
+      imageAreaHeight: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}image_area_height'],
       ),
       pageNumber: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -2281,9 +2427,15 @@ class HighlightsTableData extends DataClass
   final String id;
   final String sourceId;
   final String sourceType;
+  final String kind;
   final String highlightText;
   final String? note;
   final String? cfiRange;
+  final int? imagePageIndex;
+  final double? imageAreaX;
+  final double? imageAreaY;
+  final double? imageAreaWidth;
+  final double? imageAreaHeight;
   final int? pageNumber;
   final double? scrollOffset;
   final double? progress;
@@ -2294,9 +2446,15 @@ class HighlightsTableData extends DataClass
     required this.id,
     required this.sourceId,
     required this.sourceType,
+    required this.kind,
     required this.highlightText,
     this.note,
     this.cfiRange,
+    this.imagePageIndex,
+    this.imageAreaX,
+    this.imageAreaY,
+    this.imageAreaWidth,
+    this.imageAreaHeight,
     this.pageNumber,
     this.scrollOffset,
     this.progress,
@@ -2310,12 +2468,28 @@ class HighlightsTableData extends DataClass
     map['id'] = Variable<String>(id);
     map['source_id'] = Variable<String>(sourceId);
     map['source_type'] = Variable<String>(sourceType);
+    map['kind'] = Variable<String>(kind);
     map['highlight_text'] = Variable<String>(highlightText);
     if (!nullToAbsent || note != null) {
       map['note'] = Variable<String>(note);
     }
     if (!nullToAbsent || cfiRange != null) {
       map['cfi_range'] = Variable<String>(cfiRange);
+    }
+    if (!nullToAbsent || imagePageIndex != null) {
+      map['image_page_index'] = Variable<int>(imagePageIndex);
+    }
+    if (!nullToAbsent || imageAreaX != null) {
+      map['image_area_x'] = Variable<double>(imageAreaX);
+    }
+    if (!nullToAbsent || imageAreaY != null) {
+      map['image_area_y'] = Variable<double>(imageAreaY);
+    }
+    if (!nullToAbsent || imageAreaWidth != null) {
+      map['image_area_width'] = Variable<double>(imageAreaWidth);
+    }
+    if (!nullToAbsent || imageAreaHeight != null) {
+      map['image_area_height'] = Variable<double>(imageAreaHeight);
     }
     if (!nullToAbsent || pageNumber != null) {
       map['page_number'] = Variable<int>(pageNumber);
@@ -2339,11 +2513,27 @@ class HighlightsTableData extends DataClass
       id: Value(id),
       sourceId: Value(sourceId),
       sourceType: Value(sourceType),
+      kind: Value(kind),
       highlightText: Value(highlightText),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
       cfiRange: cfiRange == null && nullToAbsent
           ? const Value.absent()
           : Value(cfiRange),
+      imagePageIndex: imagePageIndex == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imagePageIndex),
+      imageAreaX: imageAreaX == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imageAreaX),
+      imageAreaY: imageAreaY == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imageAreaY),
+      imageAreaWidth: imageAreaWidth == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imageAreaWidth),
+      imageAreaHeight: imageAreaHeight == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imageAreaHeight),
       pageNumber: pageNumber == null && nullToAbsent
           ? const Value.absent()
           : Value(pageNumber),
@@ -2370,9 +2560,15 @@ class HighlightsTableData extends DataClass
       id: serializer.fromJson<String>(json['id']),
       sourceId: serializer.fromJson<String>(json['sourceId']),
       sourceType: serializer.fromJson<String>(json['sourceType']),
+      kind: serializer.fromJson<String>(json['kind']),
       highlightText: serializer.fromJson<String>(json['highlightText']),
       note: serializer.fromJson<String?>(json['note']),
       cfiRange: serializer.fromJson<String?>(json['cfiRange']),
+      imagePageIndex: serializer.fromJson<int?>(json['imagePageIndex']),
+      imageAreaX: serializer.fromJson<double?>(json['imageAreaX']),
+      imageAreaY: serializer.fromJson<double?>(json['imageAreaY']),
+      imageAreaWidth: serializer.fromJson<double?>(json['imageAreaWidth']),
+      imageAreaHeight: serializer.fromJson<double?>(json['imageAreaHeight']),
       pageNumber: serializer.fromJson<int?>(json['pageNumber']),
       scrollOffset: serializer.fromJson<double?>(json['scrollOffset']),
       progress: serializer.fromJson<double?>(json['progress']),
@@ -2388,9 +2584,15 @@ class HighlightsTableData extends DataClass
       'id': serializer.toJson<String>(id),
       'sourceId': serializer.toJson<String>(sourceId),
       'sourceType': serializer.toJson<String>(sourceType),
+      'kind': serializer.toJson<String>(kind),
       'highlightText': serializer.toJson<String>(highlightText),
       'note': serializer.toJson<String?>(note),
       'cfiRange': serializer.toJson<String?>(cfiRange),
+      'imagePageIndex': serializer.toJson<int?>(imagePageIndex),
+      'imageAreaX': serializer.toJson<double?>(imageAreaX),
+      'imageAreaY': serializer.toJson<double?>(imageAreaY),
+      'imageAreaWidth': serializer.toJson<double?>(imageAreaWidth),
+      'imageAreaHeight': serializer.toJson<double?>(imageAreaHeight),
       'pageNumber': serializer.toJson<int?>(pageNumber),
       'scrollOffset': serializer.toJson<double?>(scrollOffset),
       'progress': serializer.toJson<double?>(progress),
@@ -2404,9 +2606,15 @@ class HighlightsTableData extends DataClass
     String? id,
     String? sourceId,
     String? sourceType,
+    String? kind,
     String? highlightText,
     Value<String?> note = const Value.absent(),
     Value<String?> cfiRange = const Value.absent(),
+    Value<int?> imagePageIndex = const Value.absent(),
+    Value<double?> imageAreaX = const Value.absent(),
+    Value<double?> imageAreaY = const Value.absent(),
+    Value<double?> imageAreaWidth = const Value.absent(),
+    Value<double?> imageAreaHeight = const Value.absent(),
     Value<int?> pageNumber = const Value.absent(),
     Value<double?> scrollOffset = const Value.absent(),
     Value<double?> progress = const Value.absent(),
@@ -2417,9 +2625,21 @@ class HighlightsTableData extends DataClass
     id: id ?? this.id,
     sourceId: sourceId ?? this.sourceId,
     sourceType: sourceType ?? this.sourceType,
+    kind: kind ?? this.kind,
     highlightText: highlightText ?? this.highlightText,
     note: note.present ? note.value : this.note,
     cfiRange: cfiRange.present ? cfiRange.value : this.cfiRange,
+    imagePageIndex: imagePageIndex.present
+        ? imagePageIndex.value
+        : this.imagePageIndex,
+    imageAreaX: imageAreaX.present ? imageAreaX.value : this.imageAreaX,
+    imageAreaY: imageAreaY.present ? imageAreaY.value : this.imageAreaY,
+    imageAreaWidth: imageAreaWidth.present
+        ? imageAreaWidth.value
+        : this.imageAreaWidth,
+    imageAreaHeight: imageAreaHeight.present
+        ? imageAreaHeight.value
+        : this.imageAreaHeight,
     pageNumber: pageNumber.present ? pageNumber.value : this.pageNumber,
     scrollOffset: scrollOffset.present ? scrollOffset.value : this.scrollOffset,
     progress: progress.present ? progress.value : this.progress,
@@ -2434,11 +2654,27 @@ class HighlightsTableData extends DataClass
       sourceType: data.sourceType.present
           ? data.sourceType.value
           : this.sourceType,
+      kind: data.kind.present ? data.kind.value : this.kind,
       highlightText: data.highlightText.present
           ? data.highlightText.value
           : this.highlightText,
       note: data.note.present ? data.note.value : this.note,
       cfiRange: data.cfiRange.present ? data.cfiRange.value : this.cfiRange,
+      imagePageIndex: data.imagePageIndex.present
+          ? data.imagePageIndex.value
+          : this.imagePageIndex,
+      imageAreaX: data.imageAreaX.present
+          ? data.imageAreaX.value
+          : this.imageAreaX,
+      imageAreaY: data.imageAreaY.present
+          ? data.imageAreaY.value
+          : this.imageAreaY,
+      imageAreaWidth: data.imageAreaWidth.present
+          ? data.imageAreaWidth.value
+          : this.imageAreaWidth,
+      imageAreaHeight: data.imageAreaHeight.present
+          ? data.imageAreaHeight.value
+          : this.imageAreaHeight,
       pageNumber: data.pageNumber.present
           ? data.pageNumber.value
           : this.pageNumber,
@@ -2460,9 +2696,15 @@ class HighlightsTableData extends DataClass
           ..write('id: $id, ')
           ..write('sourceId: $sourceId, ')
           ..write('sourceType: $sourceType, ')
+          ..write('kind: $kind, ')
           ..write('highlightText: $highlightText, ')
           ..write('note: $note, ')
           ..write('cfiRange: $cfiRange, ')
+          ..write('imagePageIndex: $imagePageIndex, ')
+          ..write('imageAreaX: $imageAreaX, ')
+          ..write('imageAreaY: $imageAreaY, ')
+          ..write('imageAreaWidth: $imageAreaWidth, ')
+          ..write('imageAreaHeight: $imageAreaHeight, ')
           ..write('pageNumber: $pageNumber, ')
           ..write('scrollOffset: $scrollOffset, ')
           ..write('progress: $progress, ')
@@ -2478,9 +2720,15 @@ class HighlightsTableData extends DataClass
     id,
     sourceId,
     sourceType,
+    kind,
     highlightText,
     note,
     cfiRange,
+    imagePageIndex,
+    imageAreaX,
+    imageAreaY,
+    imageAreaWidth,
+    imageAreaHeight,
     pageNumber,
     scrollOffset,
     progress,
@@ -2495,9 +2743,15 @@ class HighlightsTableData extends DataClass
           other.id == this.id &&
           other.sourceId == this.sourceId &&
           other.sourceType == this.sourceType &&
+          other.kind == this.kind &&
           other.highlightText == this.highlightText &&
           other.note == this.note &&
           other.cfiRange == this.cfiRange &&
+          other.imagePageIndex == this.imagePageIndex &&
+          other.imageAreaX == this.imageAreaX &&
+          other.imageAreaY == this.imageAreaY &&
+          other.imageAreaWidth == this.imageAreaWidth &&
+          other.imageAreaHeight == this.imageAreaHeight &&
           other.pageNumber == this.pageNumber &&
           other.scrollOffset == this.scrollOffset &&
           other.progress == this.progress &&
@@ -2510,9 +2764,15 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
   final Value<String> id;
   final Value<String> sourceId;
   final Value<String> sourceType;
+  final Value<String> kind;
   final Value<String> highlightText;
   final Value<String?> note;
   final Value<String?> cfiRange;
+  final Value<int?> imagePageIndex;
+  final Value<double?> imageAreaX;
+  final Value<double?> imageAreaY;
+  final Value<double?> imageAreaWidth;
+  final Value<double?> imageAreaHeight;
   final Value<int?> pageNumber;
   final Value<double?> scrollOffset;
   final Value<double?> progress;
@@ -2524,9 +2784,15 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
     this.id = const Value.absent(),
     this.sourceId = const Value.absent(),
     this.sourceType = const Value.absent(),
+    this.kind = const Value.absent(),
     this.highlightText = const Value.absent(),
     this.note = const Value.absent(),
     this.cfiRange = const Value.absent(),
+    this.imagePageIndex = const Value.absent(),
+    this.imageAreaX = const Value.absent(),
+    this.imageAreaY = const Value.absent(),
+    this.imageAreaWidth = const Value.absent(),
+    this.imageAreaHeight = const Value.absent(),
     this.pageNumber = const Value.absent(),
     this.scrollOffset = const Value.absent(),
     this.progress = const Value.absent(),
@@ -2539,9 +2805,15 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
     required String id,
     required String sourceId,
     required String sourceType,
+    this.kind = const Value.absent(),
     required String highlightText,
     this.note = const Value.absent(),
     this.cfiRange = const Value.absent(),
+    this.imagePageIndex = const Value.absent(),
+    this.imageAreaX = const Value.absent(),
+    this.imageAreaY = const Value.absent(),
+    this.imageAreaWidth = const Value.absent(),
+    this.imageAreaHeight = const Value.absent(),
     this.pageNumber = const Value.absent(),
     this.scrollOffset = const Value.absent(),
     this.progress = const Value.absent(),
@@ -2558,9 +2830,15 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
     Expression<String>? id,
     Expression<String>? sourceId,
     Expression<String>? sourceType,
+    Expression<String>? kind,
     Expression<String>? highlightText,
     Expression<String>? note,
     Expression<String>? cfiRange,
+    Expression<int>? imagePageIndex,
+    Expression<double>? imageAreaX,
+    Expression<double>? imageAreaY,
+    Expression<double>? imageAreaWidth,
+    Expression<double>? imageAreaHeight,
     Expression<int>? pageNumber,
     Expression<double>? scrollOffset,
     Expression<double>? progress,
@@ -2573,9 +2851,15 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
       if (id != null) 'id': id,
       if (sourceId != null) 'source_id': sourceId,
       if (sourceType != null) 'source_type': sourceType,
+      if (kind != null) 'kind': kind,
       if (highlightText != null) 'highlight_text': highlightText,
       if (note != null) 'note': note,
       if (cfiRange != null) 'cfi_range': cfiRange,
+      if (imagePageIndex != null) 'image_page_index': imagePageIndex,
+      if (imageAreaX != null) 'image_area_x': imageAreaX,
+      if (imageAreaY != null) 'image_area_y': imageAreaY,
+      if (imageAreaWidth != null) 'image_area_width': imageAreaWidth,
+      if (imageAreaHeight != null) 'image_area_height': imageAreaHeight,
       if (pageNumber != null) 'page_number': pageNumber,
       if (scrollOffset != null) 'scroll_offset': scrollOffset,
       if (progress != null) 'progress': progress,
@@ -2590,9 +2874,15 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
     Value<String>? id,
     Value<String>? sourceId,
     Value<String>? sourceType,
+    Value<String>? kind,
     Value<String>? highlightText,
     Value<String?>? note,
     Value<String?>? cfiRange,
+    Value<int?>? imagePageIndex,
+    Value<double?>? imageAreaX,
+    Value<double?>? imageAreaY,
+    Value<double?>? imageAreaWidth,
+    Value<double?>? imageAreaHeight,
     Value<int?>? pageNumber,
     Value<double?>? scrollOffset,
     Value<double?>? progress,
@@ -2605,9 +2895,15 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
       id: id ?? this.id,
       sourceId: sourceId ?? this.sourceId,
       sourceType: sourceType ?? this.sourceType,
+      kind: kind ?? this.kind,
       highlightText: highlightText ?? this.highlightText,
       note: note ?? this.note,
       cfiRange: cfiRange ?? this.cfiRange,
+      imagePageIndex: imagePageIndex ?? this.imagePageIndex,
+      imageAreaX: imageAreaX ?? this.imageAreaX,
+      imageAreaY: imageAreaY ?? this.imageAreaY,
+      imageAreaWidth: imageAreaWidth ?? this.imageAreaWidth,
+      imageAreaHeight: imageAreaHeight ?? this.imageAreaHeight,
       pageNumber: pageNumber ?? this.pageNumber,
       scrollOffset: scrollOffset ?? this.scrollOffset,
       progress: progress ?? this.progress,
@@ -2630,6 +2926,9 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
     if (sourceType.present) {
       map['source_type'] = Variable<String>(sourceType.value);
     }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
     if (highlightText.present) {
       map['highlight_text'] = Variable<String>(highlightText.value);
     }
@@ -2638,6 +2937,21 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
     }
     if (cfiRange.present) {
       map['cfi_range'] = Variable<String>(cfiRange.value);
+    }
+    if (imagePageIndex.present) {
+      map['image_page_index'] = Variable<int>(imagePageIndex.value);
+    }
+    if (imageAreaX.present) {
+      map['image_area_x'] = Variable<double>(imageAreaX.value);
+    }
+    if (imageAreaY.present) {
+      map['image_area_y'] = Variable<double>(imageAreaY.value);
+    }
+    if (imageAreaWidth.present) {
+      map['image_area_width'] = Variable<double>(imageAreaWidth.value);
+    }
+    if (imageAreaHeight.present) {
+      map['image_area_height'] = Variable<double>(imageAreaHeight.value);
     }
     if (pageNumber.present) {
       map['page_number'] = Variable<int>(pageNumber.value);
@@ -2669,9 +2983,15 @@ class HighlightsTableCompanion extends UpdateCompanion<HighlightsTableData> {
           ..write('id: $id, ')
           ..write('sourceId: $sourceId, ')
           ..write('sourceType: $sourceType, ')
+          ..write('kind: $kind, ')
           ..write('highlightText: $highlightText, ')
           ..write('note: $note, ')
           ..write('cfiRange: $cfiRange, ')
+          ..write('imagePageIndex: $imagePageIndex, ')
+          ..write('imageAreaX: $imageAreaX, ')
+          ..write('imageAreaY: $imageAreaY, ')
+          ..write('imageAreaWidth: $imageAreaWidth, ')
+          ..write('imageAreaHeight: $imageAreaHeight, ')
           ..write('pageNumber: $pageNumber, ')
           ..write('scrollOffset: $scrollOffset, ')
           ..write('progress: $progress, ')
@@ -7489,9 +7809,15 @@ typedef $$HighlightsTableTableCreateCompanionBuilder =
       required String id,
       required String sourceId,
       required String sourceType,
+      Value<String> kind,
       required String highlightText,
       Value<String?> note,
       Value<String?> cfiRange,
+      Value<int?> imagePageIndex,
+      Value<double?> imageAreaX,
+      Value<double?> imageAreaY,
+      Value<double?> imageAreaWidth,
+      Value<double?> imageAreaHeight,
       Value<int?> pageNumber,
       Value<double?> scrollOffset,
       Value<double?> progress,
@@ -7505,9 +7831,15 @@ typedef $$HighlightsTableTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> sourceId,
       Value<String> sourceType,
+      Value<String> kind,
       Value<String> highlightText,
       Value<String?> note,
       Value<String?> cfiRange,
+      Value<int?> imagePageIndex,
+      Value<double?> imageAreaX,
+      Value<double?> imageAreaY,
+      Value<double?> imageAreaWidth,
+      Value<double?> imageAreaHeight,
       Value<int?> pageNumber,
       Value<double?> scrollOffset,
       Value<double?> progress,
@@ -7541,6 +7873,11 @@ class $$HighlightsTableTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get highlightText => $composableBuilder(
     column: $table.highlightText,
     builder: (column) => ColumnFilters(column),
@@ -7553,6 +7890,31 @@ class $$HighlightsTableTableFilterComposer
 
   ColumnFilters<String> get cfiRange => $composableBuilder(
     column: $table.cfiRange,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get imagePageIndex => $composableBuilder(
+    column: $table.imagePageIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get imageAreaX => $composableBuilder(
+    column: $table.imageAreaX,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get imageAreaY => $composableBuilder(
+    column: $table.imageAreaY,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get imageAreaWidth => $composableBuilder(
+    column: $table.imageAreaWidth,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get imageAreaHeight => $composableBuilder(
+    column: $table.imageAreaHeight,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7611,6 +7973,11 @@ class $$HighlightsTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get highlightText => $composableBuilder(
     column: $table.highlightText,
     builder: (column) => ColumnOrderings(column),
@@ -7623,6 +7990,31 @@ class $$HighlightsTableTableOrderingComposer
 
   ColumnOrderings<String> get cfiRange => $composableBuilder(
     column: $table.cfiRange,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get imagePageIndex => $composableBuilder(
+    column: $table.imagePageIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get imageAreaX => $composableBuilder(
+    column: $table.imageAreaX,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get imageAreaY => $composableBuilder(
+    column: $table.imageAreaY,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get imageAreaWidth => $composableBuilder(
+    column: $table.imageAreaWidth,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get imageAreaHeight => $composableBuilder(
+    column: $table.imageAreaHeight,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -7677,6 +8069,9 @@ class $$HighlightsTableTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
   GeneratedColumn<String> get highlightText => $composableBuilder(
     column: $table.highlightText,
     builder: (column) => column,
@@ -7687,6 +8082,31 @@ class $$HighlightsTableTableAnnotationComposer
 
   GeneratedColumn<String> get cfiRange =>
       $composableBuilder(column: $table.cfiRange, builder: (column) => column);
+
+  GeneratedColumn<int> get imagePageIndex => $composableBuilder(
+    column: $table.imagePageIndex,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get imageAreaX => $composableBuilder(
+    column: $table.imageAreaX,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get imageAreaY => $composableBuilder(
+    column: $table.imageAreaY,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get imageAreaWidth => $composableBuilder(
+    column: $table.imageAreaWidth,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get imageAreaHeight => $composableBuilder(
+    column: $table.imageAreaHeight,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get pageNumber => $composableBuilder(
     column: $table.pageNumber,
@@ -7753,9 +8173,15 @@ class $$HighlightsTableTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> sourceId = const Value.absent(),
                 Value<String> sourceType = const Value.absent(),
+                Value<String> kind = const Value.absent(),
                 Value<String> highlightText = const Value.absent(),
                 Value<String?> note = const Value.absent(),
                 Value<String?> cfiRange = const Value.absent(),
+                Value<int?> imagePageIndex = const Value.absent(),
+                Value<double?> imageAreaX = const Value.absent(),
+                Value<double?> imageAreaY = const Value.absent(),
+                Value<double?> imageAreaWidth = const Value.absent(),
+                Value<double?> imageAreaHeight = const Value.absent(),
                 Value<int?> pageNumber = const Value.absent(),
                 Value<double?> scrollOffset = const Value.absent(),
                 Value<double?> progress = const Value.absent(),
@@ -7767,9 +8193,15 @@ class $$HighlightsTableTableTableManager
                 id: id,
                 sourceId: sourceId,
                 sourceType: sourceType,
+                kind: kind,
                 highlightText: highlightText,
                 note: note,
                 cfiRange: cfiRange,
+                imagePageIndex: imagePageIndex,
+                imageAreaX: imageAreaX,
+                imageAreaY: imageAreaY,
+                imageAreaWidth: imageAreaWidth,
+                imageAreaHeight: imageAreaHeight,
                 pageNumber: pageNumber,
                 scrollOffset: scrollOffset,
                 progress: progress,
@@ -7783,9 +8215,15 @@ class $$HighlightsTableTableTableManager
                 required String id,
                 required String sourceId,
                 required String sourceType,
+                Value<String> kind = const Value.absent(),
                 required String highlightText,
                 Value<String?> note = const Value.absent(),
                 Value<String?> cfiRange = const Value.absent(),
+                Value<int?> imagePageIndex = const Value.absent(),
+                Value<double?> imageAreaX = const Value.absent(),
+                Value<double?> imageAreaY = const Value.absent(),
+                Value<double?> imageAreaWidth = const Value.absent(),
+                Value<double?> imageAreaHeight = const Value.absent(),
                 Value<int?> pageNumber = const Value.absent(),
                 Value<double?> scrollOffset = const Value.absent(),
                 Value<double?> progress = const Value.absent(),
@@ -7797,9 +8235,15 @@ class $$HighlightsTableTableTableManager
                 id: id,
                 sourceId: sourceId,
                 sourceType: sourceType,
+                kind: kind,
                 highlightText: highlightText,
                 note: note,
                 cfiRange: cfiRange,
+                imagePageIndex: imagePageIndex,
+                imageAreaX: imageAreaX,
+                imageAreaY: imageAreaY,
+                imageAreaWidth: imageAreaWidth,
+                imageAreaHeight: imageAreaHeight,
                 pageNumber: pageNumber,
                 scrollOffset: scrollOffset,
                 progress: progress,

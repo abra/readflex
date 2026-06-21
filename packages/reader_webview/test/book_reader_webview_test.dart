@@ -498,7 +498,61 @@ void main() {
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_68"));
+      expect(assetExtractor, contains("reader_webview_assets_83"));
+    });
+
+    test('wires image-area highlight selection and rendering bridge', () {
+      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
+      final fixedLayoutJs = _readPackageSource(
+        'assets/foliate-js/src/fixed-layout.js',
+      );
+      final webViewState = _readPackageSource(
+        'lib/src/book_reader_webview_state.dart',
+      );
+
+      expect(bookJs, contains('installImageAreaSelectionHandler'));
+      expect(bookJs, contains("callFlutter('onImageAreaSelected'"));
+      expect(bookJs, contains("annotation.type === 'image-area-highlight'"));
+      expect(bookJs, contains('imageAreaRectFromCenter'));
+      expect(bookJs, contains('resizeImageAreaRect'));
+      expect(bookJs, contains('dataset.imageAreaHandle'));
+      expect(bookJs, contains('READFLEX_IMAGE_AREA_BORDER_WIDTH = 8'));
+      expect(bookJs, contains('READFLEX_IMAGE_AREA_HANDLE_SIZE = 40'));
+      expect(bookJs, contains('READFLEX_IMAGE_AREA_FILL_ALPHA = 0.2'));
+      expect(bookJs, contains('READFLEX_IMAGE_AREA_CONTROLS_HIT_SLOP = 0.006'));
+      expect(bookJs, contains('imageAreaAnnotationHit'));
+      expect(bookJs, contains('imageAreaAnnotationPosition'));
+      expect(bookJs, contains('pointerEvents: preview ? \'auto\' : \'none\''));
+      expect(bookJs, contains('onAnnotationClick({'));
+      expect(bookJs, isNot(contains('installSavedImageAreaHighlightGuard')));
+      expect(bookJs, isNot(contains('installSavedImageAreaHighlightHandler')));
+      expect(bookJs, contains("callFlutter('onSelectionCleared')"));
+      expect(bookJs, contains('const shouldSuppressTap'));
+      expect(bookJs, contains('const clearTapSuppression'));
+      expect(bookJs, contains('__readflexClearImageAreaSelectionDraft'));
+      expect(bookJs, contains('allowNextTap'));
+      expect(bookJs, contains('cancelDraft(event)'));
+      expect(bookJs, contains('WebkitTouchCallout'));
+      expect(bookJs, contains('imageAreaFillColor(color)'));
+      expect(
+        bookJs,
+        contains(
+          r'border: `${READFLEX_IMAGE_AREA_BORDER_WIDTH}px solid ${color}`',
+        ),
+      );
+      expect(bookJs, contains('window.showImageAreaSelectionPreview'));
+      expect(bookJs, contains('window.clearImageAreaSelectionPreview'));
+      expect(bookJs, contains('window.setImageAreaSelectionControlsBounds'));
+      expect(bookJs, contains('window.clearImageAreaSelectionControlsBounds'));
+      expect(bookJs, contains('imageAreaEventHitsControls'));
+      expect(fixedLayoutJs, contains('doc.readflexSectionIndex = index'));
+      expect(webViewState, contains("handlerName: 'onImageAreaSelected'"));
+      expect(webViewState, contains("'type': 'image-area-highlight'"));
+      expect(webViewState, contains('showImageAreaSelectionPreview'));
+      expect(
+        webViewState,
+        contains('setImageAreaSelectionControlsBounds'),
+      );
     });
 
     test('keeps same-node marked selection adjacent to punctuation', () {

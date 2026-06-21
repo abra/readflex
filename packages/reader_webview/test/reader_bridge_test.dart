@@ -642,6 +642,62 @@ void main() {
     });
   });
 
+  group('ReaderImageAreaSelection', () {
+    test('fromMap parses page index, rect, and popup position', () {
+      final selection = ReaderImageAreaSelection.fromMap({
+        'pageIndex': 2,
+        'rect': {'x': 0.1, 'y': 0.2, 'width': 0.3, 'height': 0.4},
+        'pos': {'left': 0.2, 'top': 0.3, 'right': 0.5, 'bottom': 0.6},
+      });
+
+      expect(selection, isNotNull);
+      expect(selection!.pageIndex, 2);
+      expect(selection.rect.x, 0.1);
+      expect(selection.rect.y, 0.2);
+      expect(selection.rect.width, closeTo(0.3, 0.000001));
+      expect(selection.rect.height, closeTo(0.4, 0.000001));
+      expect(
+        selection.position,
+        const ReaderSelectionPosition(
+          left: 0.2,
+          top: 0.3,
+          right: 0.5,
+          bottom: 0.6,
+        ),
+      );
+    });
+
+    test('fromMap clamps rect to visible image bounds', () {
+      final selection = ReaderImageAreaSelection.fromMap({
+        'pageIndex': 1,
+        'rect': {'x': -0.1, 'y': 0.2, 'width': 1.5, 'height': 1.2},
+      });
+
+      expect(selection, isNotNull);
+      expect(selection!.rect.x, 0);
+      expect(selection.rect.y, 0.2);
+      expect(selection.rect.width, 1);
+      expect(selection.rect.height, 0.8);
+    });
+
+    test('fromMap rejects malformed area selections', () {
+      expect(
+        ReaderImageAreaSelection.fromMap({
+          'pageIndex': -1,
+          'rect': {'x': 0, 'y': 0, 'width': 0.2, 'height': 0.2},
+        }),
+        isNull,
+      );
+      expect(
+        ReaderImageAreaSelection.fromMap({
+          'pageIndex': 0,
+          'rect': {'x': 0.4, 'y': 0.4, 'width': 0, 'height': 0.2},
+        }),
+        isNull,
+      );
+    });
+  });
+
   group('ReaderHighlight', () {
     test('toMap includes required fields', () {
       const highlight = ReaderHighlight(
@@ -653,6 +709,8 @@ void main() {
       expect(map['id'], 'h-1');
       expect(map['text'], 'Highlighted text');
       expect(map.containsKey('cfiRange'), isFalse);
+      expect(map.containsKey('imagePageIndex'), isFalse);
+      expect(map.containsKey('imageArea'), isFalse);
       expect(map.containsKey('color'), isFalse);
       expect(map.containsKey('opacity'), isFalse);
       expect(map.containsKey('mixBlendMode'), isFalse);
@@ -678,6 +736,35 @@ void main() {
       expect(map['opacity'], 0.82);
       expect(map['mixBlendMode'], 'multiply');
       expect(map['verticalOffset'], 2);
+    });
+
+    test('toMap includes image-area fields when set', () {
+      const highlight = ReaderHighlight(
+        id: 'h-image',
+        text: 'Image highlight',
+        imagePageIndex: 4,
+        imageArea: ReaderImageAreaRect(
+          x: 0.1,
+          y: 0.2,
+          width: 0.3,
+          height: 0.4,
+        ),
+        color: '#FFE600',
+        opacity: 0.34,
+      );
+
+      final map = highlight.toMap();
+
+      expect(map['imagePageIndex'], 4);
+      expect(map['imageArea'], {
+        'x': 0.1,
+        'y': 0.2,
+        'width': 0.3,
+        'height': 0.4,
+      });
+      expect(map['color'], '#FFE600');
+      expect(map['opacity'], 0.34);
+      expect(highlight.isImageArea, isTrue);
     });
   });
 

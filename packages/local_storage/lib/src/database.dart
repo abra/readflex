@@ -63,7 +63,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 21;
+  int get schemaVersion => 22;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -396,6 +396,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 21) {
         await _addHighlightLocationMetadata();
       }
+      if (from < 22) {
+        await _addHighlightImageAreaMetadata();
+      }
     },
   );
 
@@ -502,6 +505,27 @@ class AppDatabase extends _$AppDatabase {
     );
     await customStatement(
       'ALTER TABLE highlights_table ADD COLUMN chapter_title TEXT',
+    );
+  }
+
+  Future<void> _addHighlightImageAreaMetadata() async {
+    await customStatement(
+      "ALTER TABLE highlights_table ADD COLUMN kind TEXT NOT NULL DEFAULT 'text'",
+    );
+    await customStatement(
+      'ALTER TABLE highlights_table ADD COLUMN image_page_index INTEGER',
+    );
+    await customStatement(
+      'ALTER TABLE highlights_table ADD COLUMN image_area_x REAL',
+    );
+    await customStatement(
+      'ALTER TABLE highlights_table ADD COLUMN image_area_y REAL',
+    );
+    await customStatement(
+      'ALTER TABLE highlights_table ADD COLUMN image_area_width REAL',
+    );
+    await customStatement(
+      'ALTER TABLE highlights_table ADD COLUMN image_area_height REAL',
     );
   }
 

@@ -28,6 +28,7 @@ class BookReaderWebView extends StatefulWidget {
     this.onReady,
     this.onPositionChanged,
     this.onTextSelected,
+    this.onImageAreaSelected,
     this.onTextDeselected,
     this.onHighlightTapped,
     this.onTocChanged,
@@ -73,6 +74,9 @@ class BookReaderWebView extends StatefulWidget {
 
   /// Fires when the user selects text.
   final void Function(ReaderSelection selection)? onTextSelected;
+
+  /// Fires when the user selects a normalized region on an image page.
+  final void Function(ReaderImageAreaSelection selection)? onImageAreaSelected;
 
   /// Fires when the user clears the selection.
   final VoidCallback? onTextDeselected;

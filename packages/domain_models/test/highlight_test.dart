@@ -62,6 +62,24 @@ void main() {
       expect(h.progress, 0.42);
       expect(h.chapterTitle, 'Chapter 4');
     });
+
+    test('updates image-area metadata', () {
+      const area = HighlightImageArea(
+        pageIndex: 2,
+        x: 0.1,
+        y: 0.2,
+        width: 0.3,
+        height: 0.4,
+      );
+      final h = highlight().copyWith(
+        kind: HighlightKind.imageArea,
+        imageArea: area,
+      );
+
+      expect(h.kind, HighlightKind.imageArea);
+      expect(h.imageArea, area);
+      expect(h.isImageArea, isTrue);
+    });
   });
 
   group('Highlight equality', () {
@@ -82,6 +100,18 @@ void main() {
 
     test('returns yellow for unknown', () {
       expect(HighlightColor.from('unknown'), HighlightColor.yellow);
+    });
+  });
+
+  group('HighlightKind.from()', () {
+    test('returns imageArea for storage values', () {
+      expect(HighlightKind.from('imageArea'), HighlightKind.imageArea);
+      expect(HighlightKind.from('image_area'), HighlightKind.imageArea);
+    });
+
+    test('returns text for unknown values', () {
+      expect(HighlightKind.from(null), HighlightKind.text);
+      expect(HighlightKind.from('unknown'), HighlightKind.text);
     });
   });
 }

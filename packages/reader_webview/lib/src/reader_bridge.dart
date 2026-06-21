@@ -613,6 +613,106 @@ class ReaderHighlightTap {
   int get hashCode => Object.hash(highlightId, position, contextText);
 }
 
+class ReaderImageAreaRect {
+  const ReaderImageAreaRect({
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+  });
+
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+
+  static ReaderImageAreaRect? fromValue(Object? value) {
+    final map = readerBridgeMap(value);
+    if (map == null) return null;
+    final x = _double(map['x']);
+    final y = _double(map['y']);
+    final width = _double(map['width']);
+    final height = _double(map['height']);
+    if (x == null || y == null || width == null || height == null) {
+      return null;
+    }
+
+    final left = _clampFraction(x);
+    final top = _clampFraction(y);
+    final right = _clampFraction(x + width);
+    final bottom = _clampFraction(y + height);
+    final normalizedWidth = right - left;
+    final normalizedHeight = bottom - top;
+    if (normalizedWidth <= 0 || normalizedHeight <= 0) return null;
+
+    return ReaderImageAreaRect(
+      x: left,
+      y: top,
+      width: normalizedWidth,
+      height: normalizedHeight,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'x': x,
+    'y': y,
+    'width': width,
+    'height': height,
+  };
+
+  static double _clampFraction(double value) =>
+      value.clamp(0.0, 1.0).toDouble();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is ReaderImageAreaRect &&
+            other.x == x &&
+            other.y == y &&
+            other.width == width &&
+            other.height == height;
+  }
+
+  @override
+  int get hashCode => Object.hash(x, y, width, height);
+}
+
+/// Image-page area selection surfaced from comic/fixed-layout pages.
+class ReaderImageAreaSelection {
+  const ReaderImageAreaSelection({
+    required this.pageIndex,
+    required this.rect,
+    this.position,
+  });
+
+  final int pageIndex;
+  final ReaderImageAreaRect rect;
+  final ReaderSelectionPosition? position;
+
+  static ReaderImageAreaSelection? fromMap(Map<String, dynamic> map) {
+    final pageIndex = _int(map['pageIndex']);
+    final rect = ReaderImageAreaRect.fromValue(map['rect']);
+    if (pageIndex == null || pageIndex < 0 || rect == null) return null;
+    return ReaderImageAreaSelection(
+      pageIndex: pageIndex,
+      rect: rect,
+      position: ReaderSelectionPosition.fromValue(map['pos']),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is ReaderImageAreaSelection &&
+            other.pageIndex == pageIndex &&
+            other.rect == rect &&
+            other.position == position;
+  }
+
+  @override
+  int get hashCode => Object.hash(pageIndex, rect, position);
+}
+
 /// Appearance bundle for the foliate-js book reader. Passed as the
 /// `style` query param on the initial `index.html` load and via
 /// `changeStyle()` thereafter. Field names mirror the JS object keys that
@@ -818,6 +918,8 @@ class ReaderHighlight {
     required this.id,
     required this.text,
     this.cfiRange,
+    this.imagePageIndex,
+    this.imageArea,
     this.color,
     this.opacity,
     this.mixBlendMode,
@@ -829,6 +931,12 @@ class ReaderHighlight {
 
   /// For books: CFI range for exact positioning.
   final String? cfiRange;
+
+  /// For image-page sources: zero-based page index.
+  final int? imagePageIndex;
+
+  /// For image-page sources: normalized rectangle inside [imagePageIndex].
+  final ReaderImageAreaRect? imageArea;
 
   /// Hex color override (e.g. '#FFE600').
   final String? color;
@@ -842,10 +950,14 @@ class ReaderHighlight {
   /// Positive Y offset, in CSS pixels, for the SVG highlight overlay.
   final double? verticalOffset;
 
+  bool get isImageArea => imagePageIndex != null && imageArea != null;
+
   Map<String, dynamic> toMap() => {
     'id': id,
     'text': text,
     if (cfiRange != null) 'cfiRange': cfiRange,
+    if (imagePageIndex != null) 'imagePageIndex': imagePageIndex,
+    if (imageArea != null) 'imageArea': imageArea!.toMap(),
     if (color != null) 'color': color,
     if (opacity != null) 'opacity': opacity,
     if (mixBlendMode != null) 'mixBlendMode': mixBlendMode,

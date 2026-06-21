@@ -12,6 +12,7 @@ const _kHighlightPopupWidth =
     _kHighlightPopupHorizontalPadding * 2;
 const _kHighlightPopupHeight = 52.0;
 const _kHighlightPopupGap = AppSpacing.sm;
+const _kImageHighlightPopupGap = AppSpacing.xl;
 const _kHighlightPopupHorizontalInset = AppSpacing.lg;
 
 /// Reads selection from [ReaderSelectionCubit] and source info from
@@ -30,6 +31,10 @@ class _ContextPanelDriver extends StatelessWidget {
     final sel = context.select<ReaderSelectionCubit, ReaderSelectionState>(
       (c) => c.state,
     );
+    final imageSel = context
+        .select<ReaderImageSelectionCubit, ReaderImageSelectionState>(
+          (c) => c.state,
+        );
     final sourceId = context.select<ReaderBloc, String?>(
       (b) => b.state.sourceId,
     );
@@ -53,6 +58,8 @@ class _ContextPanelDriver extends StatelessWidget {
 
     final bloc = context.read<ReaderBloc>();
     final selectionCubit = context.read<ReaderSelectionCubit>();
+    final imageSelectionCubit = context.read<ReaderImageSelectionCubit>();
+    final imageHighlightCubit = context.read<ReaderImageHighlightCubit>();
     final highlightFocusCubit = context.read<ReaderHighlightFocusCubit>();
     final colors = context.colors;
     final appearance = context.select<ReaderAppearanceCubit, String>(
@@ -60,7 +67,76 @@ class _ContextPanelDriver extends StatelessWidget {
     );
     final readerTheme = ReaderThemePreset.fromId(appearance).data;
 
+    void dismissImageSelection() {
+      imageSelectionCubit.deselect();
+      webViewKey.currentState?.clearImageAreaSelectionPreview(
+        allowNextTap: true,
+      );
+      webViewKey.currentState?.clearImageAreaSelectionControlsBounds();
+    }
+
+    void showImageHighlightPreview(HighlightColor color) {
+      final pageIndex = imageSel.pageIndex;
+      final rect = imageSel.rect;
+      if (pageIndex == null || rect == null) return;
+      webViewKey.currentState?.showImageAreaSelectionPreview(
+        pageIndex: pageIndex,
+        rect: rect,
+        color: readerHighlightCssColor(color, readerTheme),
+        opacity: readerHighlightOpacity(readerTheme),
+      );
+    }
+
+    void clearImageHighlightPreview() {
+      webViewKey.currentState?.clearImageAreaSelectionPreview();
+      webViewKey.currentState?.clearImageAreaSelectionControlsBounds();
+    }
+
     if (!_selectionActionsVisible(sel.hasSelection)) {
+      if (imageSel.hasSelection &&
+          imageSel.pageIndex != null &&
+          imageSel.rect != null) {
+        return Positioned.fill(
+          child: _ImageHighlightSelectionPopup(
+            sourceId: sourceId,
+            sourceType: sourceType,
+            pageIndex: imageSel.pageIndex!,
+            rect: imageSel.rect!,
+            progress: imageSel.progress,
+            chapterTitle: imageSel.chapterTitle,
+            selectionPosition: imageSel.position,
+            imageHighlightCubit: imageHighlightCubit,
+            readerTheme: readerTheme,
+            panelColor: colors.surface,
+            foregroundColor: colors.onSurface,
+            dividerColor: colors.outlineVariant,
+            onPopupInteractionStarted: imageSelectionCubit.protectNextClear,
+            onControlsBoundsChanged:
+                webViewKey.currentState?.setImageAreaSelectionControlsBounds,
+            onPreviewColorChanged: showImageHighlightPreview,
+            onPreviewCleared: clearImageHighlightPreview,
+            onActionCompleted: () {
+              dismissImageSelection();
+              if (!bloc.isClosed) {
+                bloc.add(const ReaderHighlightsRefreshed());
+              }
+              showToast(
+                context,
+                type: NotificationType.success,
+                message: 'Highlight saved',
+              );
+            },
+            onActionError: (error, stack) {
+              if (!bloc.isClosed) bloc.reportError(error, stack);
+              showToast(
+                context,
+                type: NotificationType.error,
+                message: 'Failed to save highlight',
+              );
+            },
+          ),
+        );
+      }
       if (!highlightFocus.hasHighlight || focusedHighlight == null) {
         return const SizedBox.shrink();
       }
@@ -246,6 +322,7 @@ double _highlightPopupTop({
   required BoxConstraints constraints,
   required EdgeInsets mediaPadding,
   required ReaderSelectionPosition? position,
+  double gap = _kHighlightPopupGap,
 }) {
   final minTop = mediaPadding.top + AppSpacing.sm;
   final availableMaxTop =
@@ -258,8 +335,8 @@ double _highlightPopupTop({
 
   final selectionTop = position.top * constraints.maxHeight;
   final selectionBottom = position.bottom * constraints.maxHeight;
-  final aboveTop = selectionTop - _kHighlightPopupHeight - _kHighlightPopupGap;
-  final belowTop = selectionBottom + _kHighlightPopupGap;
+  final aboveTop = selectionTop - _kHighlightPopupHeight - gap;
+  final belowTop = selectionBottom + gap;
   final preferredTop = aboveTop >= minTop ? aboveTop : belowTop;
   return preferredTop.clamp(minTop, maxTop).toDouble();
 }
@@ -275,6 +352,180 @@ double _highlightPopupWidth(double maxWidth, double horizontalInset) {
   return availableWidth < _kHighlightPopupWidth
       ? availableWidth
       : _kHighlightPopupWidth;
+}
+
+/// Compact floating highlight menu anchored to an image-page area selection.
+class _ImageHighlightSelectionPopup extends StatefulWidget {
+  const _ImageHighlightSelectionPopup({
+    required this.sourceId,
+    required this.sourceType,
+    required this.pageIndex,
+    required this.rect,
+    required this.imageHighlightCubit,
+    required this.readerTheme,
+    required this.panelColor,
+    required this.foregroundColor,
+    required this.dividerColor,
+    required this.onPopupInteractionStarted,
+    required this.onControlsBoundsChanged,
+    required this.onPreviewColorChanged,
+    required this.onPreviewCleared,
+    required this.onActionCompleted,
+    required this.onActionError,
+    this.progress,
+    this.chapterTitle,
+    this.selectionPosition,
+  });
+
+  final String sourceId;
+  final SourceType sourceType;
+  final int pageIndex;
+  final ReaderImageAreaRect rect;
+  final double? progress;
+  final String? chapterTitle;
+  final ReaderSelectionPosition? selectionPosition;
+  final ReaderImageHighlightCubit imageHighlightCubit;
+  final ReaderThemeData readerTheme;
+  final Color panelColor;
+  final Color foregroundColor;
+  final Color dividerColor;
+  final VoidCallback onPopupInteractionStarted;
+  final ValueChanged<ReaderSelectionPosition>? onControlsBoundsChanged;
+  final ValueChanged<HighlightColor> onPreviewColorChanged;
+  final VoidCallback onPreviewCleared;
+  final VoidCallback onActionCompleted;
+  final void Function(Object error, StackTrace stack) onActionError;
+
+  @override
+  State<_ImageHighlightSelectionPopup> createState() =>
+      _ImageHighlightSelectionPopupState();
+}
+
+class _ImageHighlightSelectionPopupState
+    extends State<_ImageHighlightSelectionPopup> {
+  HighlightColor _selectedColor = HighlightColor.yellow;
+  bool _saving = false;
+
+  void _sendControlsBounds(ReaderSelectionPosition bounds) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      widget.onControlsBoundsChanged?.call(bounds);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.onPreviewColorChanged(_selectedColor);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ImageHighlightSelectionPopup oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.pageIndex != widget.pageIndex ||
+        oldWidget.rect != widget.rect ||
+        oldWidget.readerTheme != widget.readerTheme) {
+      widget.onPreviewColorChanged(_selectedColor);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.onPreviewCleared();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      await widget.imageHighlightCubit.save(
+        sourceId: widget.sourceId,
+        sourceType: widget.sourceType,
+        pageIndex: widget.pageIndex,
+        rect: widget.rect,
+        color: _selectedColor,
+        progress: widget.progress,
+        chapterTitle: widget.chapterTitle,
+      );
+      if (!mounted) return;
+      widget.onActionCompleted();
+    } catch (error, stack) {
+      if (!mounted) return;
+      widget.onActionError(error, stack);
+      setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final mediaPadding = MediaQuery.paddingOf(context);
+        final horizontalInset = _highlightPopupHorizontalInset(
+          constraints.maxWidth,
+        );
+        final width = _highlightPopupWidth(
+          constraints.maxWidth,
+          horizontalInset,
+        );
+        final left = _highlightPopupLeft(
+          constraints: constraints,
+          horizontalInset: horizontalInset,
+          width: width,
+          position: widget.selectionPosition,
+        );
+        final top = _highlightPopupTop(
+          constraints: constraints,
+          mediaPadding: mediaPadding,
+          position: widget.selectionPosition,
+          gap: _kImageHighlightPopupGap,
+        );
+        if (constraints.maxWidth > 0 && constraints.maxHeight > 0) {
+          _sendControlsBounds(
+            ReaderSelectionPosition(
+              left: (left / constraints.maxWidth).clamp(0.0, 1.0).toDouble(),
+              top: (top / constraints.maxHeight).clamp(0.0, 1.0).toDouble(),
+              right: ((left + width) / constraints.maxWidth)
+                  .clamp(0.0, 1.0)
+                  .toDouble(),
+              bottom: ((top + _kHighlightPopupHeight) / constraints.maxHeight)
+                  .clamp(0.0, 1.0)
+                  .toDouble(),
+            ),
+          );
+        }
+
+        return Stack(
+          children: [
+            Positioned(
+              left: left,
+              top: top,
+              width: width,
+              height: _kHighlightPopupHeight,
+              child: _HighlightPopupSurface(
+                selectedColor: _selectedColor,
+                saving: _saving,
+                readerTheme: widget.readerTheme,
+                panelColor: widget.panelColor,
+                actionColor: widget.foregroundColor,
+                actionIcon: AppIcons.highlight,
+                actionTooltip: 'Highlight',
+                dividerColor: widget.dividerColor,
+                onInteractionStarted: widget.onPopupInteractionStarted,
+                onColorChanged: (color) {
+                  if (_saving || _selectedColor == color) return;
+                  setState(() => _selectedColor = color);
+                  widget.onPreviewColorChanged(color);
+                },
+                onAction: _save,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 /// Compact floating edit menu for an already saved highlight.
@@ -515,6 +766,7 @@ class _HighlightPopupSurface extends StatelessWidget {
     required this.dividerColor,
     required this.onColorChanged,
     required this.onAction,
+    this.onInteractionStarted,
   });
 
   final HighlightColor selectedColor;
@@ -527,67 +779,72 @@ class _HighlightPopupSurface extends StatelessWidget {
   final Color dividerColor;
   final ValueChanged<HighlightColor> onColorChanged;
   final VoidCallback onAction;
+  final VoidCallback? onInteractionStarted;
 
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(AppRadius.full);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: panelColor,
-        borderRadius: radius,
-        border: Border.all(
-          color: dividerColor.withValues(alpha: 0.72),
-          width: 1 / MediaQuery.devicePixelRatioOf(context),
-        ),
-        boxShadow: AppShadows.popover,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: radius,
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: _kHighlightPopupHorizontalPadding,
+    return Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: (_) => onInteractionStarted?.call(),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: panelColor,
+          borderRadius: radius,
+          border: Border.all(
+            color: dividerColor.withValues(alpha: 0.72),
+            width: 1 / MediaQuery.devicePixelRatioOf(context),
           ),
-          child: Row(
-            children: [
-              for (final color in HighlightColor.values)
-                _HighlightColorButton(
-                  color: color,
-                  readerTheme: readerTheme,
-                  selected: selectedColor == color,
-                  enabled: !saving,
-                  onPressed: () => onColorChanged(color),
+          boxShadow: AppShadows.popover,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: radius,
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: _kHighlightPopupHorizontalPadding,
+            ),
+            child: Row(
+              children: [
+                for (final color in HighlightColor.values)
+                  _HighlightColorButton(
+                    color: color,
+                    readerTheme: readerTheme,
+                    selected: selectedColor == color,
+                    enabled: !saving,
+                    onPressed: () => onColorChanged(color),
+                  ),
+                SizedBox(
+                  height: AppSizes.chipHeight,
+                  child: VerticalDivider(
+                    color: dividerColor,
+                    thickness: 1,
+                    width: _kHighlightPopupDividerWidth,
+                  ),
                 ),
-              SizedBox(
-                height: AppSizes.chipHeight,
-                child: VerticalDivider(
-                  color: dividerColor,
-                  thickness: 1,
-                  width: _kHighlightPopupDividerWidth,
-                ),
-              ),
-              SizedBox(
-                width: _kHighlightSwatchTapSize,
-                height: _kHighlightSwatchTapSize,
-                child: Tooltip(
-                  message: actionTooltip,
-                  child: InkResponse(
-                    radius: _kHighlightSwatchTapSize / 2,
-                    onTap: saving ? null : onAction,
-                    child: Center(
-                      child: saving
-                          ? const ButtonLoadingIndicator(size: AppIconSize.sm)
-                          : Icon(
-                              actionIcon,
-                              size: AppIconSize.sm,
-                              color: actionColor,
-                            ),
+                SizedBox(
+                  width: _kHighlightSwatchTapSize,
+                  height: _kHighlightSwatchTapSize,
+                  child: Tooltip(
+                    message: actionTooltip,
+                    child: InkResponse(
+                      radius: _kHighlightSwatchTapSize / 2,
+                      onTap: saving ? null : onAction,
+                      child: Center(
+                        child: saving
+                            ? const ButtonLoadingIndicator(size: AppIconSize.sm)
+                            : Icon(
+                                actionIcon,
+                                size: AppIconSize.sm,
+                                color: actionColor,
+                              ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

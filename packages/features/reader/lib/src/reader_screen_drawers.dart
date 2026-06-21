@@ -812,7 +812,7 @@ class _ReaderHighlightListTile extends StatelessWidget {
     final colors = context.colors;
     final text = highlight.text.trim();
     final note = highlight.note?.trim();
-    final hasLocation = highlight.cfiRange?.isNotEmpty ?? false;
+    final hasLocation = readerHighlightHasNavigableLocation(highlight);
     final locationLabel = readerHighlightLocationLabel(highlight);
     final subtitle = [
       if (note != null && note.isNotEmpty) note,

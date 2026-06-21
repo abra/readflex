@@ -122,6 +122,48 @@ class HighlightRepository {
     }
   }
 
+  Future<Highlight> addImageAreaHighlight({
+    required String sourceId,
+    required SourceType sourceType,
+    required int pageIndex,
+    required double x,
+    required double y,
+    required double width,
+    required double height,
+    String? note,
+    double? progress,
+    String? chapterTitle,
+    HighlightColor color = HighlightColor.yellow,
+  }) async {
+    try {
+      final imageArea = HighlightImageArea(
+        pageIndex: pageIndex,
+        x: x,
+        y: y,
+        width: width,
+        height: height,
+      );
+      final highlight = Highlight(
+        id: _uuid.v4(),
+        sourceId: sourceId,
+        sourceType: sourceType,
+        text: 'Page highlight',
+        kind: HighlightKind.imageArea,
+        note: note,
+        imageArea: imageArea,
+        pageNumber: pageIndex + 1,
+        progress: progress,
+        chapterTitle: chapterTitle,
+        color: color,
+        createdAt: DateTime.now(),
+      );
+      await _dao.insertHighlight(highlight.toStorageModel());
+      return highlight;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
   Future<Highlight> updateHighlight(Highlight highlight) async {
     try {
       await _dao.updateHighlight(highlight.toStorageModel());

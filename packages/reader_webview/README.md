@@ -15,18 +15,19 @@ can serve them over localhost.
 | `BookReaderWebView`      | Widget    | Loads foliate-js `index.html`, which fetches the book file from `/book/<path>`. Emits position, selection, search, highlight-tap and bookmark events; accepts imperative calls (goToCfi, pageLeft/pageRight, nextPage, changeStyle, addAnnotation, toggleBookmark). |
 | `AssetExtractor`         | Utility   | Copies bundled foliate-js assets from rootBundle to a target directory. Version-gated via app version plus reader asset revision: unchanged version skips, changed version re-writes everything. |
 | `BookMetadataExtractor`  | Utility   | Spawns a `HeadlessInAppWebView` running foliate-js in import mode to extract `{title, author, description, coverData, coverMimeType}` from any supported format. Used by the import flow. |
-| Bridge types             | Models    | `BookPosition`, `ReaderSelection`, `ReaderHighlight`, `ReaderBookmark`, `ReaderBookmarkChange`, `FoliateStyle` — DTOs exchanged with JS. |
+| Bridge types             | Models    | `BookPosition`, `ReaderSelection`, `ReaderImageAreaSelection`, `ReaderHighlight`, `ReaderBookmark`, `ReaderBookmarkChange`, `FoliateStyle` — DTOs exchanged with JS. |
 
 ## JS <-> Flutter bridge
 
 ```
-JS -> Flutter:  onLoadEnd, onRelocated, onSelectionEnd, onSelectionCleared,
-                onAnnotationClick, onClick, onSearch, handleBookmark,
-                onJsError
-Flutter -> JS:  goToCfi, pageLeft, pageRight, nextPage, prevPage,
+JS -> Flutter:  onLoadEnd, onRelocated, onSelectionEnd, onImageAreaSelected,
+                onSelectionCleared, onAnnotationClick, onClick, onSearch,
+                handleBookmark, onJsError
+Flutter -> JS:  goToCfi, goToSectionIndex, pageLeft, pageRight, nextPage, prevPage,
                 changeStyle, addAnnotation,
                 removeAnnotation, toggleBookmarkHere, startSearch,
-                cancelSearch, clearSearch
+                cancelSearch, clearSearch, showImageAreaSelectionPreview,
+                clearImageAreaSelectionPreview
 ```
 
 Shared selection/click handlers are registered by
@@ -37,6 +38,10 @@ position + annotation glue.
 selects only part of a word/span, a lexical `normalizedText` expanded to
 complete word boundaries. Text actions can preserve the exact selection for
 highlights while using the normalized fields for future lexical actions.
+
+`onImageAreaSelected` is the image-page counterpart used by comics/fixed-layout
+pages. It carries a zero-based page index, a normalized rectangle relative to
+the visible page image, and a viewport position for the floating highlight menu.
 
 ## Reader document normalization
 

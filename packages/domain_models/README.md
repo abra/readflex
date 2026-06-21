@@ -20,7 +20,7 @@ from Dart names) a `toStorageString()` helper.
 | `ExtractedArticle` | Cleaner response before local persistence assigns paths  |
 | `LibrarySource`   | Unified library/details projection for books and articles |
 | `SourceBookmark`  | Bookmark anchored to a source with CFI/page metadata      |
-| `Highlight`       | Text highlight attached to a reading source               |
+| `Highlight`       | Text or image-area highlight attached to a reading source |
 | `Flashcard`       | Flashcard with front/back and creation source             |
 | `DictionaryEntry` | Saved word or phrase with translation and usage examples  |
 | `ReviewItem`      | FSRS state for a reviewable item (flashcard/highlight/…)  |
@@ -38,6 +38,7 @@ They stay in `domain_models` for storage compatibility and future restoration.
 | `BookFormat`           | `epub`, `fb2`, `mobi`, `pdf`, `azw3`, `cbz`   |
 | `ArticleTextDirection` | `ltr`, `rtl`                                  |
 | `HighlightColor`       | `yellow`, `green`, `blue`, `pink`, `purple`   |
+| `HighlightKind`        | `text`, `imageArea`                           |
 | `ReviewableType`       | `flashcard`, `highlight`, `dictionary`        |
 | `FsrsState`            | `newCard`, `learning`, `review`, `relearning` |
 | `Rating`               | `again`, `hard`, `good`, `easy`               |

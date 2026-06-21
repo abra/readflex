@@ -237,6 +237,12 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   }
 
   void _goToHighlight(Highlight highlight) {
+    final imageArea = highlight.imageArea;
+    if (imageArea != null) {
+      _webViewKey.currentState?.goToSectionIndex(imageArea.pageIndex);
+      _closeTocDrawer(restoreChrome: false);
+      return;
+    }
     final cfiRange = highlight.cfiRange;
     if (cfiRange == null || cfiRange.isEmpty) return;
     _webViewKey.currentState?.goToCfi(cfiRange);
@@ -653,12 +659,24 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
           id: h.id,
           text: h.text,
           cfiRange: h.cfiRange,
+          imagePageIndex: h.imageArea?.pageIndex,
+          imageArea: _readerImageAreaFor(h.imageArea),
           color: readerHighlightCssColor(h.color, theme),
           opacity: readerHighlightOpacity(theme),
           mixBlendMode: readerHighlightBlendMode(theme),
           verticalOffset: readerHighlightVerticalOffset(theme),
         ),
     ];
+  }
+
+  ReaderImageAreaRect? _readerImageAreaFor(HighlightImageArea? area) {
+    if (area == null) return null;
+    return ReaderImageAreaRect(
+      x: area.x,
+      y: area.y,
+      width: area.width,
+      height: area.height,
+    );
   }
 
   List<ReaderBookmark> _readerBookmarksFor(List<SourceBookmark> source) {
@@ -708,6 +726,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     final bloc = context.read<ReaderBloc>();
     final uiCubit = context.read<ReaderUiCubit>();
     final selectionCubit = context.read<ReaderSelectionCubit>();
+    final imageSelectionCubit = context.read<ReaderImageSelectionCubit>();
     final highlightFocusCubit = context.read<ReaderHighlightFocusCubit>();
     // Subscribe specifically to the highlights list. `state.highlights`
     // is a fresh list instance only on `ReaderHighlightsRefreshed`
@@ -886,6 +905,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       },
       onTextSelected: (selection) {
         highlightFocusCubit.clear();
+        imageSelectionCubit.deselect();
         final currentState = bloc.state;
         if (isImagePageFormat(currentState.book?.format)) {
           selectionCubit.deselect();
@@ -908,10 +928,29 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
           containedHighlightIds: selection.containedHighlightIds,
         );
       },
-      onTextDeselected: () => selectionCubit.deselect(),
+      onImageAreaSelected: (selection) {
+        final currentState = bloc.state;
+        if (!isImagePageFormat(currentState.book?.format)) return;
+        highlightFocusCubit.clear();
+        selectionCubit.deselect();
+        uiCubit.hideChrome();
+        imageSelectionCubit.select(
+          pageIndex: selection.pageIndex,
+          rect: selection.rect,
+          position: selection.position,
+          progress: currentState.book?.readingProgress,
+          chapterTitle: currentState.chapterTitle,
+        );
+      },
+      onTextDeselected: () {
+        if (imageSelectionCubit.consumeProtectedClear()) return;
+        selectionCubit.deselect();
+        imageSelectionCubit.deselect();
+      },
       onHighlightTapped: (tap) {
         uiCubit.hideChrome();
         selectionCubit.deselect();
+        imageSelectionCubit.deselect();
         widget.webViewKey?.currentState?.clearSelection();
         highlightFocusCubit.focus(tap);
       },

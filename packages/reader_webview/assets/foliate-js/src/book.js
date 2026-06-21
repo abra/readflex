@@ -17,9 +17,532 @@ const { EPUB } = await import('./epub.js')
 
 var isPdf = false;
 
-const getPosition = (target) => {
-  const clamp01 = value => Math.min(Math.max(value, 0), 1);
+const READFLEX_IMAGE_AREA_ROOT_ID = 'readflex-image-area-highlights';
+const READFLEX_IMAGE_AREA_PREVIEW_ID = '__readflex-image-area-preview';
+const READFLEX_IMAGE_AREA_LONG_PRESS_MS = 280;
+const READFLEX_IMAGE_AREA_MOVE_TOLERANCE = 10;
+const READFLEX_IMAGE_AREA_MIN_SIZE = 0.015;
+const READFLEX_IMAGE_AREA_DEFAULT_WIDTH = 0.32;
+const READFLEX_IMAGE_AREA_DEFAULT_HEIGHT = 0.22;
+const READFLEX_IMAGE_AREA_BORDER_WIDTH = 8;
+const READFLEX_IMAGE_AREA_HANDLE_SIZE = 40;
+const READFLEX_IMAGE_AREA_TOUCH_SUPPRESS_MS = 900;
+const READFLEX_IMAGE_AREA_CONTROLS_HIT_SLOP = 0.006;
+const READFLEX_IMAGE_AREA_FILL_ALPHA = 0.2;
 
+let imageAreaSelectionControlsBounds = null;
+
+const clamp01 = value => Math.min(Math.max(Number(value) || 0, 0), 1);
+const clampRange = (value, min, max) => Math.min(Math.max(value, min), max);
+
+const imageAreaPageImage = doc => doc?.querySelector?.('img');
+
+const setImageAreaSelectionControlsBounds = bounds => {
+  const left = clamp01(bounds?.left);
+  const top = clamp01(bounds?.top);
+  const right = clamp01(bounds?.right);
+  const bottom = clamp01(bounds?.bottom);
+  imageAreaSelectionControlsBounds =
+    right > left && bottom > top ? { left, top, right, bottom } : null;
+};
+
+const clearImageAreaSelectionControlsBounds = () => {
+  imageAreaSelectionControlsBounds = null;
+};
+
+const imageAreaEventPoint = event => {
+  const touch = event?.touches?.[0] ?? event?.changedTouches?.[0];
+  const x = Number.isFinite(event?.clientX) ? event.clientX : touch?.clientX;
+  const y = Number.isFinite(event?.clientY) ? event.clientY : touch?.clientY;
+  return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;
+};
+
+const imageAreaEventViewportPoint = (doc, event) => {
+  const point = imageAreaEventPoint(event);
+  if (!point) return null;
+  const frame = doc?.defaultView?.frameElement;
+  const frameRect = frame?.getBoundingClientRect?.() ?? { left: 0, top: 0 };
+  const transform = frame ? getComputedStyle(frame).transform : '';
+  const match = transform.match(/matrix\((.+)\)/);
+  const values = match ? match[1].split(/\s*,\s*/).map(Number) : null;
+  const scaleX = Number.isFinite(values?.[0]) ? values[0] : 1;
+  const scaleY = Number.isFinite(values?.[3]) ? values[3] : scaleX;
+  return {
+    x: clamp01((frameRect.left + point.x * scaleX) / window.innerWidth),
+    y: clamp01((frameRect.top + point.y * scaleY) / window.innerHeight),
+  };
+};
+
+const imageAreaEventHitsControls = (doc, event) => {
+  const bounds = imageAreaSelectionControlsBounds;
+  if (!bounds) return false;
+  const point = imageAreaEventViewportPoint(doc, event);
+  if (!point) return false;
+  const slop = READFLEX_IMAGE_AREA_CONTROLS_HIT_SLOP;
+  return point.x >= bounds.left - slop &&
+    point.x <= bounds.right + slop &&
+    point.y >= bounds.top - slop &&
+    point.y <= bounds.bottom + slop;
+};
+
+const imageAreaRoot = doc => {
+  if (!doc?.body) return null;
+  let root = doc.getElementById(READFLEX_IMAGE_AREA_ROOT_ID);
+  if (root) return root;
+  root = doc.createElement('div');
+  root.id = READFLEX_IMAGE_AREA_ROOT_ID;
+  Object.assign(root.style, {
+    position: 'fixed',
+    inset: '0',
+    pointerEvents: 'none',
+    zIndex: '2147483647',
+  });
+  doc.body.append(root);
+  return root;
+};
+
+const imageAreaViewportPosition = (doc, rect) => {
+  const img = imageAreaPageImage(doc);
+  const imgRect = img?.getBoundingClientRect?.();
+  if (!imgRect || imgRect.width <= 0 || imgRect.height <= 0) return null;
+  const frame = doc.defaultView?.frameElement;
+  const frameRect = frame?.getBoundingClientRect?.() ?? { left: 0, top: 0 };
+  const transform = frame ? getComputedStyle(frame).transform : '';
+  const match = transform.match(/matrix\((.+)\)/);
+  const values = match ? match[1].split(/\s*,\s*/).map(Number) : null;
+  const scaleX = Number.isFinite(values?.[0]) ? values[0] : 1;
+  const scaleY = Number.isFinite(values?.[3]) ? values[3] : scaleX;
+  const left = frameRect.left + (imgRect.left + rect.x * imgRect.width) * scaleX;
+  const top = frameRect.top + (imgRect.top + rect.y * imgRect.height) * scaleY;
+  const right = left + rect.width * imgRect.width * scaleX;
+  const bottom = top + rect.height * imgRect.height * scaleY;
+  return {
+    left: clamp01(left / window.innerWidth),
+    top: clamp01(top / window.innerHeight),
+    right: clamp01(right / window.innerWidth),
+    bottom: clamp01(bottom / window.innerHeight),
+  };
+};
+
+const imageAreaRectFromCenter = (doc, point) => {
+  const img = imageAreaPageImage(doc);
+  const imgRect = img?.getBoundingClientRect?.();
+  if (!imgRect || imgRect.width <= 0 || imgRect.height <= 0) return null;
+  const centerX = clamp01((point.x - imgRect.left) / imgRect.width);
+  const centerY = clamp01((point.y - imgRect.top) / imgRect.height);
+  const width = Math.min(READFLEX_IMAGE_AREA_DEFAULT_WIDTH, 1);
+  const height = Math.min(READFLEX_IMAGE_AREA_DEFAULT_HEIGHT, 1);
+  return {
+    x: clampRange(centerX - width / 2, 0, 1 - width),
+    y: clampRange(centerY - height / 2, 0, 1 - height),
+    width,
+    height,
+  };
+};
+
+const moveImageAreaRect = (rect, dx, dy) => ({
+  ...rect,
+  x: clampRange(rect.x + dx, 0, 1 - rect.width),
+  y: clampRange(rect.y + dy, 0, 1 - rect.height),
+});
+
+const resizeImageAreaRect = (rect, handle, dx, dy) => {
+  let left = rect.x;
+  let top = rect.y;
+  let right = rect.x + rect.width;
+  let bottom = rect.y + rect.height;
+
+  if (handle.includes('w')) {
+    left = clampRange(left + dx, 0, right - READFLEX_IMAGE_AREA_MIN_SIZE);
+  }
+  if (handle.includes('e')) {
+    right = clampRange(right + dx, left + READFLEX_IMAGE_AREA_MIN_SIZE, 1);
+  }
+  if (handle.includes('n')) {
+    top = clampRange(top + dy, 0, bottom - READFLEX_IMAGE_AREA_MIN_SIZE);
+  }
+  if (handle.includes('s')) {
+    bottom = clampRange(bottom + dy, top + READFLEX_IMAGE_AREA_MIN_SIZE, 1);
+  }
+
+  return {
+    x: left,
+    y: top,
+    width: right - left,
+    height: bottom - top,
+  };
+};
+
+const clearImageAreaPreview = doc => {
+  doc?.getElementById?.(READFLEX_IMAGE_AREA_PREVIEW_ID)?.remove();
+};
+
+const imageAreaFillColor = color => {
+  const match = String(color ?? '').match(/^#?([0-9a-f]{6})$/i);
+  if (!match) return `rgba(255, 230, 0, ${READFLEX_IMAGE_AREA_FILL_ALPHA})`;
+  const hex = match[1];
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${READFLEX_IMAGE_AREA_FILL_ALPHA})`;
+};
+
+const imageAreaPreviewStyle = doc => {
+  const preview = doc?.getElementById?.(READFLEX_IMAGE_AREA_PREVIEW_ID);
+  const opacity = Number(preview?.dataset?.imageAreaOpacity);
+  return {
+    color: preview?.dataset?.imageAreaColor ?? '#FFE600',
+    opacity: Number.isFinite(opacity) ? opacity : 0.12,
+  };
+};
+
+const imageAreaHandleCursor = handle =>
+  handle === 'nw' || handle === 'se' ? 'nwse-resize' : 'nesw-resize';
+
+const imageAreaRelativePoint = (doc, event) => {
+  const img = imageAreaPageImage(doc);
+  const imgRect = img?.getBoundingClientRect?.();
+  const point = imageAreaEventPoint(event);
+  if (!imgRect || !point || imgRect.width <= 0 || imgRect.height <= 0) {
+    return null;
+  }
+  return {
+    x: (point.x - imgRect.left) / imgRect.width,
+    y: (point.y - imgRect.top) / imgRect.height,
+  };
+};
+
+const imageAreaAnnotationHit = (reader, doc, index, event) => {
+  const point = imageAreaRelativePoint(doc, event);
+  if (!point) return null;
+  const annotations = reader?.annotations?.get(index) ?? [];
+  for (let i = annotations.length - 1; i >= 0; i--) {
+    const annotation = annotations[i];
+    const rect = annotation?.rect;
+    if (annotation?.type !== 'image-area-highlight' || !annotation.id || !rect) {
+      continue;
+    }
+    if (point.x >= rect.x &&
+      point.x <= rect.x + rect.width &&
+      point.y >= rect.y &&
+      point.y <= rect.y + rect.height) {
+      return annotation;
+    }
+  }
+  return null;
+};
+
+const imageAreaAnnotationPosition = (doc, annotation) =>
+  imageAreaViewportPosition(doc, annotation?.rect);
+
+const addImageAreaHandles = (doc, element) => {
+  const color = element.dataset.imageAreaColor ?? '#FFE600';
+  for (const handle of ['nw', 'ne', 'sw', 'se']) {
+    const marker = doc.createElement('span');
+    marker.dataset.imageAreaHandle = handle;
+    Object.assign(marker.style, {
+      position: 'absolute',
+      width: `${READFLEX_IMAGE_AREA_HANDLE_SIZE}px`,
+      height: `${READFLEX_IMAGE_AREA_HANDLE_SIZE}px`,
+      borderRadius: '999px',
+      background: color,
+      border: '3px solid rgba(255,255,255,.95)',
+      boxShadow: '0 2px 8px rgba(0,0,0,.28)',
+      boxSizing: 'border-box',
+      touchAction: 'none',
+      cursor: imageAreaHandleCursor(handle),
+    });
+    if (handle.includes('n')) marker.style.top = `${-READFLEX_IMAGE_AREA_HANDLE_SIZE / 2}px`;
+    if (handle.includes('s')) marker.style.bottom = `${-READFLEX_IMAGE_AREA_HANDLE_SIZE / 2}px`;
+    if (handle.includes('w')) marker.style.left = `${-READFLEX_IMAGE_AREA_HANDLE_SIZE / 2}px`;
+    if (handle.includes('e')) marker.style.right = `${-READFLEX_IMAGE_AREA_HANDLE_SIZE / 2}px`;
+    element.append(marker);
+  }
+};
+
+const drawImageArea = (doc, annotation, { preview = false } = {}) => {
+  const root = imageAreaRoot(doc);
+  const img = imageAreaPageImage(doc);
+  const imgRect = img?.getBoundingClientRect?.();
+  const rect = annotation?.rect;
+  if (!root || !imgRect || !rect) return null;
+  const color = annotation.color ?? '#FFE600';
+  const element = doc.createElement('div');
+  element.dataset.annotationId = annotation.id ?? '';
+  if (preview) {
+    element.id = READFLEX_IMAGE_AREA_PREVIEW_ID;
+    element.dataset.imageAreaPreview = 'true';
+    element.dataset.imageAreaColor = color;
+    element.dataset.imageAreaOpacity = String(annotation.opacity ?? 0.12);
+  }
+  Object.assign(element.style, {
+    position: 'fixed',
+    left: `${imgRect.left + rect.x * imgRect.width}px`,
+    top: `${imgRect.top + rect.y * imgRect.height}px`,
+    width: `${rect.width * imgRect.width}px`,
+    height: `${rect.height * imgRect.height}px`,
+    boxSizing: 'border-box',
+    border: `${READFLEX_IMAGE_AREA_BORDER_WIDTH}px solid ${color}`,
+    borderRadius: '4px',
+    padding: '0',
+    margin: '0',
+    background: imageAreaFillColor(color),
+    pointerEvents: preview ? 'auto' : 'none',
+    boxShadow: preview ? 'inset 0 0 0 1px rgba(0,0,0,.10)' : 'none',
+    appearance: 'none',
+    WebkitAppearance: 'none',
+    WebkitTouchCallout: 'none',
+    WebkitUserSelect: 'none',
+    userSelect: 'none',
+    WebkitUserDrag: 'none',
+    touchAction: 'none',
+    cursor: preview ? 'move' : 'default',
+  });
+  if (preview) addImageAreaHandles(doc, element);
+  root.append(element);
+  return element;
+};
+
+const renderImageAreaAnnotations = (reader, doc, index) => {
+  const root = imageAreaRoot(doc);
+  if (!root) return;
+  for (const child of Array.from(root.children)) {
+    if (child.id !== READFLEX_IMAGE_AREA_PREVIEW_ID) child.remove();
+  }
+  const annotations = reader?.annotations?.get(index) ?? [];
+  for (const annotation of annotations) {
+    if (annotation?.type === 'image-area-highlight') {
+      drawImageArea(doc, annotation);
+    }
+  }
+};
+
+const installImageAreaSelectionHandler = (reader, doc, index) => {
+  if (!doc || doc.__readflexImageAreaSelectionHandler) return;
+  doc.__readflexImageAreaSelectionHandler = true;
+  let currentRect = null;
+  let edit = null;
+  let press = null;
+  let timer = null;
+  let suppressTouchUntil = 0;
+
+  const clearTimer = () => {
+    if (timer) clearTimeout(timer);
+    timer = null;
+  };
+  const resetPress = () => {
+    clearTimer();
+    press = null;
+  };
+  const suppressTap = () => {
+    suppressTouchUntil = Date.now() + READFLEX_IMAGE_AREA_TOUCH_SUPPRESS_MS;
+    doc.__anxSuppressClick = true;
+    doc.__anxSelectionClearedAt = Date.now();
+  };
+  const clearTapSuppression = () => {
+    suppressTouchUntil = 0;
+    doc.__anxSuppressClick = false;
+    doc.__anxSelectionClearedAt = 0;
+  };
+  const shouldSuppressTap = () => Date.now() < suppressTouchUntil;
+  const clearDraft = ({ allowNextTap = false } = {}) => {
+    currentRect = null;
+    edit = null;
+    resetPress();
+    clearImageAreaPreview(doc);
+    if (allowNextTap) clearTapSuppression();
+  };
+  doc.__readflexClearImageAreaSelectionDraft = clearDraft;
+  const cancelDraft = event => {
+    clearDraft();
+    callFlutter('onSelectionCleared');
+    suppressTap();
+    stop(event);
+  };
+  const stop = event => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  const stopIfSuppressed = event => {
+    if (shouldSuppressTap()) stop(event);
+  };
+  const emitSelection = rect => callFlutter('onImageAreaSelected', {
+    pageIndex: index,
+    rect,
+    pos: imageAreaViewportPosition(doc, rect),
+  });
+  const drawPreview = rect => {
+    const { color, opacity } = imageAreaPreviewStyle(doc);
+    clearImageAreaPreview(doc);
+    drawImageArea(doc, {
+      id: READFLEX_IMAGE_AREA_PREVIEW_ID,
+      rect,
+      color,
+      opacity,
+    }, { preview: true });
+  };
+  const beginEdit = (event, mode, rect) => {
+    edit = {
+      mode,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startRect: rect,
+    };
+    event.target?.setPointerCapture?.(event.pointerId);
+    suppressTap();
+    stop(event);
+  };
+  const updateEdit = event => {
+    if (!edit || event.pointerId !== edit.pointerId) return currentRect;
+    const imgRect = imageAreaPageImage(doc)?.getBoundingClientRect?.();
+    if (!imgRect || imgRect.width <= 0 || imgRect.height <= 0) return currentRect;
+    const dx = (event.clientX - edit.startX) / imgRect.width;
+    const dy = (event.clientY - edit.startY) / imgRect.height;
+    currentRect = edit.mode === 'move'
+      ? moveImageAreaRect(edit.startRect, dx, dy)
+      : resizeImageAreaRect(
+        edit.startRect,
+        edit.mode.replace('resize:', ''),
+        dx,
+        dy,
+      );
+    drawPreview(currentRect);
+    return currentRect;
+  };
+
+  doc.addEventListener('pointerdown', event => {
+    if (event.button != null && event.button !== 0) return;
+    const preview = event.target?.closest?.('[data-image-area-preview="true"]');
+    if (preview) {
+      if (!currentRect) return;
+      const handle = event.target?.dataset?.imageAreaHandle;
+      beginEdit(event, handle ? `resize:${handle}` : 'move', currentRect);
+      return;
+    }
+    if (imageAreaEventHitsControls(doc, event)) {
+      resetPress();
+      suppressTap();
+      stop(event);
+      return;
+    }
+    if (currentRect) {
+      cancelDraft(event);
+      return;
+    }
+    if (!imageAreaPageImage(doc)) return;
+    const annotation = imageAreaAnnotationHit(reader, doc, index, event);
+    press = {
+      x: event.clientX,
+      y: event.clientY,
+      pointerId: event.pointerId,
+      target: event.target,
+      annotation,
+    };
+    clearTimer();
+    timer = setTimeout(() => {
+      if (!press) return;
+      if (press.annotation) {
+        onAnnotationClick({
+          annotation: press.annotation,
+          pos: imageAreaAnnotationPosition(doc, press.annotation),
+          contextText: '',
+        });
+        suppressTap();
+        resetPress();
+        return;
+      }
+      const rect = imageAreaRectFromCenter(doc, press);
+      if (!rect) {
+        resetPress();
+        return;
+      }
+      currentRect = rect;
+      clearImageAreaPreview(doc);
+      drawPreview(currentRect);
+      emitSelection(currentRect);
+      edit = {
+        mode: 'move',
+        pointerId: press.pointerId,
+        startX: press.x,
+        startY: press.y,
+        startRect: currentRect,
+      };
+      press.target?.setPointerCapture?.(press.pointerId);
+      suppressTap();
+      resetPress();
+    }, READFLEX_IMAGE_AREA_LONG_PRESS_MS);
+  }, true);
+
+  doc.addEventListener('pointermove', event => {
+    if (edit && event.pointerId === edit.pointerId) {
+      stop(event);
+      updateEdit(event);
+      return;
+    }
+    if (shouldSuppressTap()) {
+      stop(event);
+      return;
+    }
+    if (!press || event.pointerId !== press.pointerId) return;
+    const dx = Math.abs(event.clientX - press.x);
+    const dy = Math.abs(event.clientY - press.y);
+    if (Math.max(dx, dy) > READFLEX_IMAGE_AREA_MOVE_TOLERANCE) {
+      resetPress();
+    }
+  }, true);
+
+  doc.addEventListener('pointerup', event => {
+    if (edit && event.pointerId === edit.pointerId) {
+      stop(event);
+      const rect = updateEdit(event);
+      edit = null;
+      if (rect) emitSelection(rect);
+      return;
+    }
+    if (shouldSuppressTap()) {
+      stop(event);
+      return;
+    }
+    if (press && event.pointerId === press.pointerId) {
+      resetPress();
+    }
+  }, true);
+
+  doc.addEventListener('pointercancel', () => {
+    edit = null;
+    resetPress();
+  }, true);
+
+  doc.addEventListener('click', event => {
+    stopIfSuppressed(event);
+  }, true);
+
+  doc.addEventListener('touchstart', event => {
+    const preview = event.target?.closest?.('[data-image-area-preview="true"]');
+    if (preview) {
+      stopIfSuppressed(event);
+      return;
+    }
+    if (imageAreaEventHitsControls(doc, event)) {
+      resetPress();
+      suppressTap();
+      stop(event);
+      return;
+    }
+    if (currentRect && !preview) {
+      cancelDraft(event);
+      return;
+    }
+    stopIfSuppressed(event);
+  }, { capture: true, passive: false });
+
+  doc.addEventListener('touchend', event => {
+    stopIfSuppressed(event);
+  }, { capture: true, passive: false });
+};
+
+const getPosition = (target) => {
   const frameRect = (framePos, elementRect, scaleX = 1, scaleY = 1) => {
     return {
       left: scaleX * elementRect.left + framePos.left,
@@ -1255,8 +1778,13 @@ class Reader {
     view.addEventListener('create-overlay', e => {
       const { index } = e.detail
       const list = this.annotations.get(index)
-      if (list) for (const annotation of list)
-        this.view.addAnnotation(annotation)
+      if (list) for (const annotation of list) {
+        if (annotation.type === 'image-area-highlight') {
+          this.#renderVisibleImageAreaAnnotations()
+        } else {
+          this.view.addAnnotation(annotation)
+        }
+      }
     })
 
     view.addEventListener('draw-annotation', e => {
@@ -1370,6 +1898,31 @@ class Reader {
     this.removeAnnotation(null, false, READFLEX_SELECTION_PREVIEW_HIGHLIGHT_ID)
   }
 
+  showImageAreaSelectionPreview({ pageIndex, rect, color, opacity }) {
+    const contents = this.view?.renderer?.getContents?.() ?? []
+    for (const content of contents) {
+      const doc = content.doc
+      if (!doc || content.index !== pageIndex) continue
+      clearImageAreaPreview(doc)
+      drawImageArea(doc, {
+        id: READFLEX_IMAGE_AREA_PREVIEW_ID,
+        rect,
+        color: color ?? '#FFE600',
+        opacity: opacity ?? 0.28,
+      }, { preview: true })
+      return
+    }
+  }
+
+  clearImageAreaSelectionPreview({ allowNextTap = false } = {}) {
+    const contents = this.view?.renderer?.getContents?.() ?? []
+    for (const { doc } of contents) {
+      const clearDraft = doc?.__readflexClearImageAreaSelectionDraft
+      if (typeof clearDraft === 'function') clearDraft({ allowNextTap })
+      else clearImageAreaPreview(doc)
+    }
+  }
+
   addAnnotation(annotation) {
     annotation = this.#normalizedBookmarkAnnotation(annotation)
     const { value } = annotation
@@ -1392,6 +1945,8 @@ class Reader {
           id: annotation.id,
         }
       }
+    } else if (annotation.type === 'image-area-highlight') {
+      this.#renderVisibleImageAreaAnnotations()
     } else {
       this.view.addAnnotation(annotation)
     }
@@ -1476,6 +2031,11 @@ class Reader {
 
     if (this.#isBookmarkAnchorInteger(annotation?.anchorSectionIndex)) {
       return Number(annotation.anchorSectionIndex)
+    }
+
+    if (annotation?.type === 'image-area-highlight' &&
+      this.#isBookmarkAnchorInteger(annotation.pageIndex)) {
+      return Number(annotation.pageIndex)
     }
 
     return null
@@ -1982,7 +2542,11 @@ class Reader {
     this.annotationsByValue.delete(value)
     if (annotation.id) this.annotationsById.delete(annotation.id)
 
-    this.view.addAnnotation(annotation, true)
+    if (annotation.type === 'image-area-highlight') {
+      this.#renderVisibleImageAreaAnnotations()
+    } else {
+      this.view.addAnnotation(annotation, true)
+    }
 
     const currentAnchor = this.#bookmarkAnchorFromLocation(this.view.lastLocation)
     if (
@@ -2003,6 +2567,8 @@ class Reader {
     this.#doc = doc
     this.#index = index
     setSelectionHandler(this.view, doc, index)
+    installImageAreaSelectionHandler(this, doc, index)
+    renderImageAreaAnnotations(this, doc, index)
     // Wire iframe touch events into the readflex gesture dispatcher so
     // any registered handler (CBZ swipe, future pinch-zoom, etc.) sees
     // them regardless of which renderer (paginator / fixed-layout) loaded
@@ -2027,6 +2593,7 @@ class Reader {
       ? `Page ${pageItem.label}`
       : `Loc ${location.current}`
     this.#checkCurrentPageBookmark()
+    this.#renderVisibleImageAreaAnnotations()
     onRelocated({
       cfi,
       fraction,
@@ -2038,6 +2605,15 @@ class Reader {
       reason,
       bookmark: this.#bookmarkInfo,
     })
+  }
+
+  #renderVisibleImageAreaAnnotations() {
+    const contents = this.view?.renderer?.getContents?.() ?? []
+    for (const { doc, index } of contents) {
+      if (doc && Number.isInteger(index)) {
+        renderImageAreaAnnotations(this, doc, index)
+      }
+    }
   }
 
   #onClickView({ detail: { x, y } }) {
@@ -2610,6 +3186,8 @@ window.goToHref = href => reader.view.goTo(href)
 
 window.goToCfi = cfi => reader.view.goTo(cfi)
 
+window.goToSectionIndex = index => reader.view.goTo(Number(index))
+
 window.goToPercent = percent => reader.view.goToFraction(percent)
 
 window.goToBookmark = target => reader.goToBookmark(target)
@@ -2666,6 +3244,18 @@ window.showSelectionHighlightPreview = options =>
   reader.showSelectionHighlightPreview(options ?? {})
 
 window.clearSelectionHighlightPreview = () => reader.clearSelectionHighlightPreview()
+
+window.showImageAreaSelectionPreview = options =>
+  reader.showImageAreaSelectionPreview(options ?? {})
+
+window.clearImageAreaSelectionPreview = options =>
+  reader.clearImageAreaSelectionPreview(options ?? {})
+
+window.setImageAreaSelectionControlsBounds = bounds =>
+  setImageAreaSelectionControlsBounds(bounds ?? null)
+
+window.clearImageAreaSelectionControlsBounds = () =>
+  clearImageAreaSelectionControlsBounds()
 
 window.addAnnotation = (annotation) => reader.addAnnotation(annotation)
 

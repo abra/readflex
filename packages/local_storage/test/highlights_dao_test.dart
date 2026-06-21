@@ -18,6 +18,7 @@ void main() {
     String id = 'h1',
     String sourceId = 's1',
     String sourceType = 'book',
+    String kind = 'text',
     String highlightText = 'Selected text',
     String createdAt = '2026-01-01T00:00:00.000Z',
     double? progress,
@@ -26,6 +27,7 @@ void main() {
     id: id,
     sourceId: sourceId,
     sourceType: sourceType,
+    kind: Value(kind),
     highlightText: highlightText,
     progress: Value(progress),
     chapterTitle: Value(chapterTitle),
@@ -41,6 +43,34 @@ void main() {
     expect(highlights.first.highlightText, 'Selected text');
     expect(highlights.first.progress, 0.42);
     expect(highlights.first.chapterTitle, 'Chapter 4');
+  });
+
+  test('insert and retrieve image-area highlight metadata', () async {
+    await dao.insertHighlight(
+      HighlightsTableCompanion.insert(
+        id: 'h-image',
+        sourceId: 'comic-1',
+        sourceType: 'book',
+        kind: const Value('imageArea'),
+        highlightText: 'Image highlight',
+        imagePageIndex: const Value(2),
+        imageAreaX: const Value(0.1),
+        imageAreaY: const Value(0.2),
+        imageAreaWidth: const Value(0.3),
+        imageAreaHeight: const Value(0.4),
+        createdAt: '2026-01-01T00:00:00.000Z',
+      ),
+    );
+
+    final highlight = await dao.highlightById('h-image');
+
+    expect(highlight, isNotNull);
+    expect(highlight!.kind, 'imageArea');
+    expect(highlight.imagePageIndex, 2);
+    expect(highlight.imageAreaX, 0.1);
+    expect(highlight.imageAreaY, 0.2);
+    expect(highlight.imageAreaWidth, 0.3);
+    expect(highlight.imageAreaHeight, 0.4);
   });
 
   test('highlightCount returns total highlight count', () async {

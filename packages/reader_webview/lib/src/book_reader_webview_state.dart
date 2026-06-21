@@ -78,8 +78,8 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
 
     for (final h in oldList) {
       final next = newById[h.id];
-      if (next == null && h.cfiRange != null) {
-        _evalRemoveAnnotation(h.cfiRange!);
+      if (next == null) {
+        _evalRemoveReaderHighlight(h);
       }
     }
     for (final h in newList) {
@@ -87,11 +87,13 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       if (prev == null) {
         _evalAddAnnotation(h);
       } else if (prev.cfiRange != h.cfiRange ||
+          prev.imagePageIndex != h.imagePageIndex ||
+          prev.imageArea != h.imageArea ||
           prev.color != h.color ||
           prev.opacity != h.opacity ||
           prev.mixBlendMode != h.mixBlendMode ||
           prev.verticalOffset != h.verticalOffset) {
-        if (prev.cfiRange != null) _evalRemoveAnnotation(prev.cfiRange!);
+        _evalRemoveReaderHighlight(prev);
         _evalAddAnnotation(h);
       }
     }
@@ -118,20 +120,40 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   }
 
   void _evalAddAnnotation(ReaderHighlight h) {
-    if (h.cfiRange == null) return;
-    final annotation = jsonEncode({
-      'id': h.id,
-      'type': 'highlight',
-      'value': h.cfiRange,
-      'color': h.color ?? '#FFE600',
-      if (h.opacity != null) 'opacity': h.opacity,
-      if (h.mixBlendMode != null) 'mixBlendMode': h.mixBlendMode,
-      if (h.verticalOffset != null) 'verticalOffset': h.verticalOffset,
-    });
+    final annotation = h.isImageArea
+        ? jsonEncode({
+            'id': h.id,
+            'type': 'image-area-highlight',
+            'value': 'image-area:${h.id}',
+            'pageIndex': h.imagePageIndex,
+            'rect': h.imageArea!.toMap(),
+            'color': h.color ?? '#FFE600',
+            if (h.opacity != null) 'opacity': h.opacity,
+          })
+        : jsonEncode({
+            'id': h.id,
+            'type': 'highlight',
+            'value': h.cfiRange,
+            'color': h.color ?? '#FFE600',
+            if (h.opacity != null) 'opacity': h.opacity,
+            if (h.mixBlendMode != null) 'mixBlendMode': h.mixBlendMode,
+            if (h.verticalOffset != null) 'verticalOffset': h.verticalOffset,
+          });
+    if (!h.isImageArea && h.cfiRange == null) return;
     _evaluateReaderCommand(
       label: 'addAnnotation',
       expression: 'addAnnotation($annotation)',
     );
+  }
+
+  void _evalRemoveReaderHighlight(ReaderHighlight highlight) {
+    if (highlight.cfiRange != null) {
+      _evalRemoveAnnotation(highlight.cfiRange!);
+      return;
+    }
+    if (highlight.isImageArea) {
+      _evalRemoveAnnotationById(highlight.id);
+    }
   }
 
   void _evalRemoveAnnotation(String cfiRange) {
@@ -139,6 +161,14 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     _evaluateReaderCommand(
       label: 'removeAnnotation',
       expression: 'removeAnnotation($escaped)',
+    );
+  }
+
+  void _evalRemoveAnnotationById(String id) {
+    final escapedId = jsonEncode(id);
+    _evaluateReaderCommand(
+      label: 'removeAnnotationById',
+      expression: 'removeAnnotation(null, false, $escapedId)',
     );
   }
 
@@ -383,6 +413,17 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     );
 
     controller.addJavaScriptHandler(
+      handlerName: 'onImageAreaSelected',
+      callback: (args) {
+        if (args.isEmpty) return;
+        final data = readerBridgeMap(args.first);
+        if (data == null) return;
+        final selection = ReaderImageAreaSelection.fromMap(data);
+        if (selection != null) widget.onImageAreaSelected?.call(selection);
+      },
+    );
+
+    controller.addJavaScriptHandler(
       handlerName: 'onSetToc',
       callback: (args) {
         if (args.isEmpty) return;
@@ -496,6 +537,16 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     _evaluateReaderCommand(
       label: 'goToCfi',
       expression: 'goToCfi($escaped)',
+    );
+  }
+
+  /// Navigate to a zero-based book section index. Used by image-page
+  /// highlights where there is no text CFI.
+  void goToSectionIndex(int index) {
+    if (index < 0) return;
+    _evaluateReaderCommand(
+      label: 'goToSectionIndex',
+      expression: 'goToSectionIndex($index)',
     );
   }
 
@@ -780,6 +831,64 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     );
   }
 
+  /// Render or update the temporary image-area highlight preview.
+  void showImageAreaSelectionPreview({
+    required int pageIndex,
+    required ReaderImageAreaRect rect,
+    required String color,
+    double? opacity,
+  }) {
+    final preview = jsonEncode({
+      'pageIndex': pageIndex,
+      'rect': rect.toMap(),
+      'color': color,
+      'opacity': ?opacity,
+    });
+    _evaluateReaderCommand(
+      label: 'showImageAreaSelectionPreview',
+      expression:
+          "typeof window.showImageAreaSelectionPreview === 'function' ? "
+          "window.showImageAreaSelectionPreview($preview) : null",
+    );
+  }
+
+  /// Remove the temporary image-area highlight preview, if one is visible.
+  void clearImageAreaSelectionPreview({bool allowNextTap = false}) {
+    final payload = jsonEncode({'allowNextTap': allowNextTap});
+    _evaluateReaderCommand(
+      label: 'clearImageAreaSelectionPreview',
+      expression:
+          "typeof window.clearImageAreaSelectionPreview === 'function' ? "
+          "window.clearImageAreaSelectionPreview($payload) : null",
+    );
+  }
+
+  /// Tell WebView which viewport area is occupied by Flutter image controls.
+  void setImageAreaSelectionControlsBounds(ReaderSelectionPosition bounds) {
+    final payload = jsonEncode({
+      'left': bounds.left,
+      'top': bounds.top,
+      'right': bounds.right,
+      'bottom': bounds.bottom,
+    });
+    _evaluateReaderCommand(
+      label: 'setImageAreaSelectionControlsBounds',
+      expression:
+          "typeof window.setImageAreaSelectionControlsBounds === 'function' ? "
+          "window.setImageAreaSelectionControlsBounds($payload) : null",
+    );
+  }
+
+  /// Clear the Flutter image-controls hit-test exclusion area inside WebView.
+  void clearImageAreaSelectionControlsBounds() {
+    _evaluateReaderCommand(
+      label: 'clearImageAreaSelectionControlsBounds',
+      expression:
+          "typeof window.clearImageAreaSelectionControlsBounds === 'function' ? "
+          "window.clearImageAreaSelectionControlsBounds() : null",
+    );
+  }
+
   /// Update style from Flutter.
   void changeStyle(FoliateStyle style) {
     final json = jsonEncode(style.toMap());
@@ -791,16 +900,28 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
 
   /// Add a highlight annotation.
   void addAnnotation(ReaderHighlight highlight) {
-    if (highlight.cfiRange == null) return;
-    final annotation = jsonEncode({
-      'id': highlight.id,
-      'type': 'highlight',
-      'value': highlight.cfiRange,
-      'color': highlight.color ?? '#FFE600',
-      'opacity': ?highlight.opacity,
-      'mixBlendMode': ?highlight.mixBlendMode,
-      'verticalOffset': ?highlight.verticalOffset,
-    });
+    if (!highlight.isImageArea && highlight.cfiRange == null) return;
+    final annotation = jsonEncode(
+      highlight.isImageArea
+          ? {
+              'id': highlight.id,
+              'type': 'image-area-highlight',
+              'value': 'image-area:${highlight.id}',
+              'pageIndex': highlight.imagePageIndex,
+              'rect': highlight.imageArea!.toMap(),
+              'color': highlight.color ?? '#FFE600',
+              'opacity': ?highlight.opacity,
+            }
+          : {
+              'id': highlight.id,
+              'type': 'highlight',
+              'value': highlight.cfiRange,
+              'color': highlight.color ?? '#FFE600',
+              'opacity': ?highlight.opacity,
+              'mixBlendMode': ?highlight.mixBlendMode,
+              'verticalOffset': ?highlight.verticalOffset,
+            },
+    );
     _evaluateReaderCommand(
       label: 'addAnnotation',
       expression: 'addAnnotation($annotation)',

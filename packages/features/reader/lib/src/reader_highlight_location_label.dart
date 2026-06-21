@@ -1,5 +1,10 @@
 import 'package:domain_models/domain_models.dart';
 
+bool readerHighlightHasNavigableLocation(Highlight highlight) {
+  return (highlight.cfiRange?.isNotEmpty ?? false) ||
+      highlight.imageArea != null;
+}
+
 String? readerHighlightLocationLabel(Highlight highlight) {
   final progress = highlight.progress;
   if (progress != null) {
