@@ -24,8 +24,8 @@ const READFLEX_IMAGE_AREA_MOVE_TOLERANCE = 10;
 const READFLEX_IMAGE_AREA_MIN_SIZE = 0.015;
 const READFLEX_IMAGE_AREA_DEFAULT_WIDTH = 0.213333;
 const READFLEX_IMAGE_AREA_DEFAULT_HEIGHT = 0.146667;
-const READFLEX_IMAGE_AREA_BORDER_WIDTH = 8;
-const READFLEX_IMAGE_AREA_HANDLE_SIZE = 40;
+const READFLEX_IMAGE_AREA_BORDER_WIDTH = 16;
+const READFLEX_IMAGE_AREA_HANDLE_SIZE = 80;
 const READFLEX_IMAGE_AREA_TOUCH_SUPPRESS_MS = 900;
 const READFLEX_IMAGE_AREA_CONTROLS_HIT_SLOP = 0.006;
 const READFLEX_IMAGE_AREA_FILL_ALPHA = 0.2;
@@ -177,6 +177,21 @@ const clearImageAreaPreview = doc => {
   doc?.getElementById?.(READFLEX_IMAGE_AREA_PREVIEW_ID)?.remove();
 };
 
+const positionImageAreaElement = (doc, element, rect) => {
+  const img = imageAreaPageImage(doc);
+  const imgRect = img?.getBoundingClientRect?.();
+  if (!element || !imgRect || !rect || imgRect.width <= 0 || imgRect.height <= 0) {
+    return false;
+  }
+  Object.assign(element.style, {
+    left: `${imgRect.left + rect.x * imgRect.width}px`,
+    top: `${imgRect.top + rect.y * imgRect.height}px`,
+    width: `${rect.width * imgRect.width}px`,
+    height: `${rect.height * imgRect.height}px`,
+  });
+  return true;
+};
+
 const imageAreaFillColor = color => {
   const match = String(color ?? '').match(/^#?([0-9a-f]{6})$/i);
   if (!match) return `rgba(255, 230, 0, ${READFLEX_IMAGE_AREA_FILL_ALPHA})`;
@@ -262,10 +277,8 @@ const addImageAreaHandles = (doc, element) => {
 
 const drawImageArea = (doc, annotation, { preview = false } = {}) => {
   const root = imageAreaRoot(doc);
-  const img = imageAreaPageImage(doc);
-  const imgRect = img?.getBoundingClientRect?.();
   const rect = annotation?.rect;
-  if (!root || !imgRect || !rect) return null;
+  if (!root || !rect) return null;
   const color = annotation.color ?? '#FFE600';
   const element = doc.createElement('div');
   element.dataset.annotationId = annotation.id ?? '';
@@ -277,10 +290,6 @@ const drawImageArea = (doc, annotation, { preview = false } = {}) => {
   }
   Object.assign(element.style, {
     position: 'fixed',
-    left: `${imgRect.left + rect.x * imgRect.width}px`,
-    top: `${imgRect.top + rect.y * imgRect.height}px`,
-    width: `${rect.width * imgRect.width}px`,
-    height: `${rect.height * imgRect.height}px`,
     boxSizing: 'border-box',
     border: `${READFLEX_IMAGE_AREA_BORDER_WIDTH}px solid ${color}`,
     borderRadius: '4px',
@@ -298,9 +307,36 @@ const drawImageArea = (doc, annotation, { preview = false } = {}) => {
     touchAction: 'none',
     cursor: preview ? 'move' : 'default',
   });
+  if (!positionImageAreaElement(doc, element, rect)) return null;
   if (preview) addImageAreaHandles(doc, element);
   root.append(element);
   return element;
+};
+
+const renderImageAreaPreview = (doc, annotation) => {
+  const rect = annotation?.rect;
+  if (!rect) return null;
+  const color = annotation.color ?? '#FFE600';
+  const opacity = annotation.opacity ?? 0.12;
+  const existing = doc?.getElementById?.(READFLEX_IMAGE_AREA_PREVIEW_ID);
+  if (!existing) {
+    return drawImageArea(doc, { ...annotation, color, opacity }, { preview: true });
+  }
+
+  existing.dataset.imageAreaColor = color;
+  existing.dataset.imageAreaOpacity = String(opacity);
+  Object.assign(existing.style, {
+    border: `${READFLEX_IMAGE_AREA_BORDER_WIDTH}px solid ${color}`,
+    background: imageAreaFillColor(color),
+  });
+  for (const marker of existing.querySelectorAll?.('[data-image-area-handle]') ?? []) {
+    marker.style.background = color;
+  }
+  if (!positionImageAreaElement(doc, existing, rect)) return null;
+  if (!existing.querySelector?.('[data-image-area-handle]')) {
+    addImageAreaHandles(doc, existing);
+  }
+  return existing;
 };
 
 const renderImageAreaAnnotations = (reader, doc, index) => {
@@ -360,7 +396,7 @@ const installImageAreaSelectionHandler = (reader, doc, index) => {
     stop(event);
   };
   const stop = event => {
-    event.preventDefault();
+    if (event.cancelable !== false) event.preventDefault();
     event.stopPropagation();
   };
   const stopIfSuppressed = event => {
@@ -373,13 +409,12 @@ const installImageAreaSelectionHandler = (reader, doc, index) => {
   });
   const drawPreview = rect => {
     const { color, opacity } = imageAreaPreviewStyle(doc);
-    clearImageAreaPreview(doc);
-    drawImageArea(doc, {
+    renderImageAreaPreview(doc, {
       id: READFLEX_IMAGE_AREA_PREVIEW_ID,
       rect,
       color,
       opacity,
-    }, { preview: true });
+    });
   };
   const beginEdit = (event, mode, rect) => {
     edit = {
@@ -393,12 +428,12 @@ const installImageAreaSelectionHandler = (reader, doc, index) => {
     suppressTap();
     stop(event);
   };
-  const updateEdit = event => {
-    if (!edit || event.pointerId !== edit.pointerId) return currentRect;
+  const updateEditFromPoint = point => {
+    if (!edit || !point) return currentRect;
     const imgRect = imageAreaPageImage(doc)?.getBoundingClientRect?.();
     if (!imgRect || imgRect.width <= 0 || imgRect.height <= 0) return currentRect;
-    const dx = (event.clientX - edit.startX) / imgRect.width;
-    const dy = (event.clientY - edit.startY) / imgRect.height;
+    const dx = (point.x - edit.startX) / imgRect.width;
+    const dy = (point.y - edit.startY) / imgRect.height;
     currentRect = edit.mode === 'move'
       ? moveImageAreaRect(edit.startRect, dx, dy)
       : resizeImageAreaRect(
@@ -409,6 +444,10 @@ const installImageAreaSelectionHandler = (reader, doc, index) => {
       );
     drawPreview(currentRect);
     return currentRect;
+  };
+  const updateEdit = event => {
+    if (!edit || event.pointerId !== edit.pointerId) return currentRect;
+    return updateEditFromPoint(imageAreaEventPoint(event));
   };
 
   doc.addEventListener('pointerdown', event => {
@@ -509,8 +548,11 @@ const installImageAreaSelectionHandler = (reader, doc, index) => {
     }
   }, true);
 
-  doc.addEventListener('pointercancel', () => {
-    edit = null;
+  doc.addEventListener('pointercancel', event => {
+    if (edit && event.pointerId === edit.pointerId) {
+      stop(event);
+      return;
+    }
     resetPress();
   }, true);
 
@@ -537,8 +579,43 @@ const installImageAreaSelectionHandler = (reader, doc, index) => {
     stopIfSuppressed(event);
   }, { capture: true, passive: false });
 
+  doc.addEventListener('touchmove', event => {
+    if (edit) {
+      stop(event);
+      updateEditFromPoint(imageAreaEventPoint(event));
+      return;
+    }
+    if (shouldSuppressTap()) {
+      stop(event);
+      return;
+    }
+    if (!press) return;
+    const point = imageAreaEventPoint(event);
+    if (!point) return;
+    const dx = Math.abs(point.x - press.x);
+    const dy = Math.abs(point.y - press.y);
+    if (Math.max(dx, dy) > READFLEX_IMAGE_AREA_MOVE_TOLERANCE) {
+      resetPress();
+      return;
+    }
+    stop(event);
+  }, { capture: true, passive: false });
+
   doc.addEventListener('touchend', event => {
+    if (edit) {
+      stop(event);
+      const rect = updateEditFromPoint(imageAreaEventPoint(event));
+      edit = null;
+      if (rect) emitSelection(rect);
+      return;
+    }
     stopIfSuppressed(event);
+  }, { capture: true, passive: false });
+
+  doc.addEventListener('touchcancel', event => {
+    if (!edit) return;
+    stop(event);
+    edit = null;
   }, { capture: true, passive: false });
 };
 
@@ -1903,13 +1980,12 @@ class Reader {
     for (const content of contents) {
       const doc = content.doc
       if (!doc || content.index !== pageIndex) continue
-      clearImageAreaPreview(doc)
-      drawImageArea(doc, {
+      renderImageAreaPreview(doc, {
         id: READFLEX_IMAGE_AREA_PREVIEW_ID,
         rect,
         color: color ?? '#FFE600',
         opacity: opacity ?? 0.28,
-      }, { preview: true })
+      })
       return
     }
   }

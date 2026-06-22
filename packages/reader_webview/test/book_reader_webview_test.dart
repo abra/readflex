@@ -498,7 +498,7 @@ void main() {
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_84"));
+      expect(assetExtractor, contains("reader_webview_assets_87"));
     });
 
     test('wires image-area highlight selection and rendering bridge', () {
@@ -517,9 +517,11 @@ void main() {
       expect(bookJs, contains('READFLEX_IMAGE_AREA_DEFAULT_WIDTH = 0.213333'));
       expect(bookJs, contains('READFLEX_IMAGE_AREA_DEFAULT_HEIGHT = 0.146667'));
       expect(bookJs, contains('resizeImageAreaRect'));
+      expect(bookJs, contains('positionImageAreaElement'));
+      expect(bookJs, contains('renderImageAreaPreview'));
       expect(bookJs, contains('dataset.imageAreaHandle'));
-      expect(bookJs, contains('READFLEX_IMAGE_AREA_BORDER_WIDTH = 8'));
-      expect(bookJs, contains('READFLEX_IMAGE_AREA_HANDLE_SIZE = 40'));
+      expect(bookJs, contains('READFLEX_IMAGE_AREA_BORDER_WIDTH = 16'));
+      expect(bookJs, contains('READFLEX_IMAGE_AREA_HANDLE_SIZE = 80'));
       expect(bookJs, contains('READFLEX_IMAGE_AREA_FILL_ALPHA = 0.2'));
       expect(bookJs, contains('READFLEX_IMAGE_AREA_CONTROLS_HIT_SLOP = 0.006'));
       expect(bookJs, contains('imageAreaAnnotationHit'));
@@ -531,9 +533,13 @@ void main() {
       expect(bookJs, contains("callFlutter('onSelectionCleared')"));
       expect(bookJs, contains('const shouldSuppressTap'));
       expect(bookJs, contains('const clearTapSuppression'));
+      expect(bookJs, contains('const updateEditFromPoint'));
+      expect(bookJs, contains('event.cancelable !== false'));
       expect(bookJs, contains('__readflexClearImageAreaSelectionDraft'));
       expect(bookJs, contains('allowNextTap'));
       expect(bookJs, contains('cancelDraft(event)'));
+      expect(bookJs, contains("doc.addEventListener('touchmove'"));
+      expect(bookJs, contains("doc.addEventListener('touchcancel'"));
       expect(bookJs, contains('WebkitTouchCallout'));
       expect(bookJs, contains('imageAreaFillColor(color)'));
       expect(
