@@ -498,7 +498,7 @@ void main() {
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_83"));
+      expect(assetExtractor, contains("reader_webview_assets_84"));
     });
 
     test('wires image-area highlight selection and rendering bridge', () {
@@ -513,7 +513,9 @@ void main() {
       expect(bookJs, contains('installImageAreaSelectionHandler'));
       expect(bookJs, contains("callFlutter('onImageAreaSelected'"));
       expect(bookJs, contains("annotation.type === 'image-area-highlight'"));
-      expect(bookJs, contains('imageAreaRectFromCenter'));
+      expect(bookJs, contains('imageAreaRectFromOrigin'));
+      expect(bookJs, contains('READFLEX_IMAGE_AREA_DEFAULT_WIDTH = 0.213333'));
+      expect(bookJs, contains('READFLEX_IMAGE_AREA_DEFAULT_HEIGHT = 0.146667'));
       expect(bookJs, contains('resizeImageAreaRect'));
       expect(bookJs, contains('dataset.imageAreaHandle'));
       expect(bookJs, contains('READFLEX_IMAGE_AREA_BORDER_WIDTH = 8'));

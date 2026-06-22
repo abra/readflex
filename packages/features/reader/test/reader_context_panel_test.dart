@@ -84,6 +84,8 @@ void main() {
       isNot(contains('onDismiss: dismissImageSelection')),
     );
     expect(contextPanelSource, contains('widget.onPreviewColorChanged(color)'));
+    expect(contextPanelSource, contains('AppIcons.check'));
+    expect(contextPanelSource, contains('computeLuminance()'));
     expect(
       contextPanelSource,
       contains(

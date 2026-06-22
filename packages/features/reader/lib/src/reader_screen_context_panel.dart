@@ -870,8 +870,11 @@ class _HighlightColorButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final swatch = readerHighlightColor(color, readerTheme);
+    final checkColor = swatch.computeLuminance() > 0.45
+        ? Colors.black.withValues(alpha: 0.78)
+        : Colors.white.withValues(alpha: 0.92);
     final borderColor = context.colors.onSurface.withValues(
-      alpha: selected ? 0.72 : 0.16,
+      alpha: selected ? 0.42 : 0.16,
     );
     return SizedBox(
       width: _kHighlightSwatchTapSize,
@@ -885,6 +888,7 @@ class _HighlightColorButton extends StatelessWidget {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 120),
               curve: Curves.easeOutCubic,
+              alignment: Alignment.center,
               width: selected ? _kHighlightSwatchSize : 20,
               height: selected ? _kHighlightSwatchSize : 20,
               decoration: BoxDecoration(
@@ -895,6 +899,13 @@ class _HighlightColorButton extends StatelessWidget {
                   width: selected ? 2 : 1,
                 ),
               ),
+              child: selected
+                  ? Icon(
+                      AppIcons.check,
+                      size: AppIconSize.xs,
+                      color: checkColor,
+                    )
+                  : null,
             ),
           ),
         ),
