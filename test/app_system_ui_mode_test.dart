@@ -23,7 +23,7 @@ void main() {
           .setMockMethodCallHandler(SystemChannels.platform, null);
     });
 
-    testWidgets('hides the bottom system overlay while app is mounted', (
+    testWidgets('keeps top and bottom system overlays visible', (
       tester,
     ) async {
       await tester.pumpWidget(const AppSystemUiMode(child: SizedBox()));
@@ -35,10 +35,13 @@ void main() {
           'SystemChrome.setSystemUIChangeListener',
         ]),
       );
-      expect(calls.first.arguments, ['SystemUiOverlay.top']);
+      expect(calls.first.arguments, [
+        'SystemUiOverlay.top',
+        'SystemUiOverlay.bottom',
+      ]);
     });
 
-    testWidgets('does not restore the bottom overlay when disposed', (
+    testWidgets('does not restore overlays when disposed', (
       tester,
     ) async {
       await tester.pumpWidget(const AppSystemUiMode(child: SizedBox()));

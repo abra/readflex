@@ -23,6 +23,7 @@ import 'select_collection_scope_sheet.dart';
 import 'confirm_book_deletion_sheet.dart';
 
 const _sourceRouteReturnRefreshDelay = Duration(milliseconds: 320);
+const _libraryFabBottomLift = AppSpacing.sm;
 
 /// Entry point for the Library tab.
 ///
@@ -347,10 +348,15 @@ class _LibraryViewState extends State<_LibraryView> {
       child: _LibrarySelectionPopScope(
         onCancelSelection: () => context.read<LibrarySelectionCubit>().clear(),
         child: Scaffold(
-          floatingActionButton: _LibraryFabDriver(
-            addInFlight: _addInFlight,
-            onAddPressed: () => _handleAdd(context),
-            onDeletePressed: () => _handleDeleteSelected(context),
+          floatingActionButton: Padding(
+            padding: const EdgeInsetsDirectional.only(
+              bottom: _libraryFabBottomLift,
+            ),
+            child: _LibraryFabDriver(
+              addInFlight: _addInFlight,
+              onAddPressed: () => _handleAdd(context),
+              onDeletePressed: () => _handleDeleteSelected(context),
+            ),
           ),
           body: Stack(
             children: [
@@ -516,7 +522,10 @@ class _LibraryAddCollectionFabDriver extends StatelessWidget {
 
         return PositionedDirectional(
           start: AppSpacing.lg,
-          bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.lg,
+          bottom:
+              MediaQuery.paddingOf(context).bottom +
+              AppSpacing.lg +
+              _libraryFabBottomLift,
           child: _LibraryAddCollectionFab(
             onAddToCollectionPressed: onAddToCollectionPressed,
           ),

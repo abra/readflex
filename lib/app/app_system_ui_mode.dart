@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-/// Keeps the app fullscreen while preserving the top status overlay.
+/// Keeps the app chrome visible while restoring system overlays after app
+/// lifecycle and metric changes.
 class AppSystemUiMode extends StatefulWidget {
   const AppSystemUiMode({required this.child, super.key});
 
@@ -56,7 +57,7 @@ class _AppSystemUiModeState extends State<AppSystemUiMode>
   Future<void> _applyAppMode() {
     return SystemChrome.setEnabledSystemUIMode(
       SystemUiMode.manual,
-      overlays: [SystemUiOverlay.top],
+      overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
     );
   }
 

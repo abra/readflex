@@ -233,6 +233,22 @@ void main() {
     expect(find.byType(FloatingActionButton), findsOneWidget);
   });
 
+  testWidgets('keeps FAB above the bottom edge', (tester) async {
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    final paddingAncestors = find.ancestor(
+      of: find.byIcon(AppIcons.add),
+      matching: find.byType(Padding),
+    );
+    final hasBottomLift = paddingAncestors.evaluate().any((element) {
+      final padding = (element.widget as Padding).padding;
+      return padding == const EdgeInsetsDirectional.only(bottom: AppSpacing.sm);
+    });
+
+    expect(hasBottomLift, isTrue);
+  });
+
   testWidgets('FAB guards against double-tap while import is in-flight', (
     tester,
   ) async {
