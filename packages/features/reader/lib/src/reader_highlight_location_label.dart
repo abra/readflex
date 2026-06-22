@@ -6,6 +6,13 @@ bool readerHighlightHasNavigableLocation(Highlight highlight) {
 }
 
 String? readerHighlightLocationLabel(Highlight highlight) {
+  if (highlight.isImageArea) {
+    final chapterTitle = highlight.chapterTitle?.trim();
+    if (chapterTitle != null && chapterTitle.isNotEmpty) {
+      return chapterTitle;
+    }
+  }
+
   final progress = highlight.progress;
   if (progress != null) {
     final percentage = (progress * 100).clamp(0, 100).round();

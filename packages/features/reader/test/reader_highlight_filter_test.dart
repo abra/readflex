@@ -76,6 +76,15 @@ void main() {
     expect(readerHighlightLocationLabel(first), 'Dependency Injection · 42%');
   });
 
+  test('formats image-area highlight locations without progress percent', () {
+    final comicHighlight = imageArea.copyWith(
+      progress: 0.42,
+      chapterTitle: '0008.jpg',
+    );
+
+    expect(readerHighlightLocationLabel(comicHighlight), '0008.jpg');
+  });
+
   test('falls back to legacy page labels', () {
     expect(readerHighlightLocationLabel(second), 'Page 42');
   });
