@@ -498,7 +498,7 @@ void main() {
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_87"));
+      expect(assetExtractor, contains("reader_webview_assets_89"));
     });
 
     test('wires image-area highlight selection and rendering bridge', () {
@@ -514,15 +514,17 @@ void main() {
       expect(bookJs, contains("callFlutter('onImageAreaSelected'"));
       expect(bookJs, contains("annotation.type === 'image-area-highlight'"));
       expect(bookJs, contains('imageAreaRectFromOrigin'));
+      expect(bookJs, contains('centerX - width / 2'));
+      expect(bookJs, contains('centerY - height / 2'));
       expect(bookJs, contains('READFLEX_IMAGE_AREA_DEFAULT_WIDTH = 0.213333'));
       expect(bookJs, contains('READFLEX_IMAGE_AREA_DEFAULT_HEIGHT = 0.146667'));
       expect(bookJs, contains('resizeImageAreaRect'));
       expect(bookJs, contains('positionImageAreaElement'));
       expect(bookJs, contains('renderImageAreaPreview'));
       expect(bookJs, contains('dataset.imageAreaHandle'));
-      expect(bookJs, contains('READFLEX_IMAGE_AREA_BORDER_WIDTH = 16'));
-      expect(bookJs, contains('READFLEX_IMAGE_AREA_HANDLE_SIZE = 80'));
-      expect(bookJs, contains('READFLEX_IMAGE_AREA_FILL_ALPHA = 0.2'));
+      expect(bookJs, contains('READFLEX_IMAGE_AREA_BORDER_WIDTH = 24'));
+      expect(bookJs, contains('READFLEX_IMAGE_AREA_HANDLE_SIZE = 96'));
+      expect(bookJs, contains('READFLEX_IMAGE_AREA_FILL_ALPHA = 0.3'));
       expect(bookJs, contains('READFLEX_IMAGE_AREA_CONTROLS_HIT_SLOP = 0.006'));
       expect(bookJs, contains('imageAreaAnnotationHit'));
       expect(bookJs, contains('imageAreaAnnotationPosition'));

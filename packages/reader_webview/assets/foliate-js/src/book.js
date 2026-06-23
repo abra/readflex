@@ -24,11 +24,11 @@ const READFLEX_IMAGE_AREA_MOVE_TOLERANCE = 10;
 const READFLEX_IMAGE_AREA_MIN_SIZE = 0.015;
 const READFLEX_IMAGE_AREA_DEFAULT_WIDTH = 0.213333;
 const READFLEX_IMAGE_AREA_DEFAULT_HEIGHT = 0.146667;
-const READFLEX_IMAGE_AREA_BORDER_WIDTH = 16;
-const READFLEX_IMAGE_AREA_HANDLE_SIZE = 80;
+const READFLEX_IMAGE_AREA_BORDER_WIDTH = 24;
+const READFLEX_IMAGE_AREA_HANDLE_SIZE = 96;
 const READFLEX_IMAGE_AREA_TOUCH_SUPPRESS_MS = 900;
 const READFLEX_IMAGE_AREA_CONTROLS_HIT_SLOP = 0.006;
-const READFLEX_IMAGE_AREA_FILL_ALPHA = 0.2;
+const READFLEX_IMAGE_AREA_FILL_ALPHA = 0.3;
 
 let imageAreaSelectionControlsBounds = null;
 
@@ -130,8 +130,10 @@ const imageAreaRectFromOrigin = (doc, point) => {
   if (!imgRect || imgRect.width <= 0 || imgRect.height <= 0) return null;
   const width = Math.min(READFLEX_IMAGE_AREA_DEFAULT_WIDTH, 1);
   const height = Math.min(READFLEX_IMAGE_AREA_DEFAULT_HEIGHT, 1);
-  const x = clampRange((point.x - imgRect.left) / imgRect.width, 0, 1 - width);
-  const y = clampRange((point.y - imgRect.top) / imgRect.height, 0, 1 - height);
+  const centerX = (point.x - imgRect.left) / imgRect.width;
+  const centerY = (point.y - imgRect.top) / imgRect.height;
+  const x = clampRange(centerX - width / 2, 0, 1 - width);
+  const y = clampRange(centerY - height / 2, 0, 1 - height);
   return {
     x,
     y,
