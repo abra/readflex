@@ -14,18 +14,22 @@ returns an `ExtractedArticle` domain model that can be persisted by
 
 ## Current Behavior
 
-`TrafilaturaArticleExtractionService` first downloads the article HTML on the
-client and posts that HTML to `/v1/extract-html`. This preserves the resolved
-URL, content type, language/direction hints, and some image metadata from the
-original document.
+`TrafilaturaArticleExtractionService` uses a server-first hybrid strategy. It
+first posts the URL to `/v1/extract`, where the article-cleaner backend fetches
+and parses the page. A `422` response with `detail.code: "extract_failed"` is
+retried once with recall-favoring settings before fallback is considered.
 
-When the local download is blocked or extraction fails in ways the backend can
-recover from, it falls back to `/v1/extract`, where the backend fetches the URL
-itself. A `422` "could not extract" response is retried once with recall-favoring
-settings before surfacing an error.
+If the backend reports a recoverable fetch or extraction failure with
+`detail.code` equal to `fetch_failed`, `extract_failed`, or `unsafe_redirect`,
+the service downloads the article HTML on the client and posts that HTML to
+`/v1/extract-html`. This fallback preserves the resolved URL, content type,
+language/direction hints, and some image metadata from the original document.
 
-The service caps downloaded HTML at `defaultMaxDownloadBytes` and applies a
-request timeout so article import cannot hang indefinitely.
+Cleaner authentication, validation, timeout, and connection failures are not
+retried through client HTML because they do not indicate that another fetch path
+would succeed. Client-side fallback downloads are capped at
+`defaultMaxDownloadBytes` and use the same request timeout so article import
+cannot hang indefinitely.
 
 ## Configuration
 

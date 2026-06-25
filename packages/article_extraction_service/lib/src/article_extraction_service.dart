@@ -8,16 +8,26 @@ abstract class ArticleExtractionService {
 }
 
 class ArticleExtractionException implements Exception {
-  const ArticleExtractionException(this.message, {this.statusCode});
+  const ArticleExtractionException(
+    this.message, {
+    this.statusCode,
+    this.errorCode,
+  });
 
   final String message;
   final int? statusCode;
+  final String? errorCode;
 
   @override
   String toString() {
     final code = statusCode;
-    return code == null
-        ? 'ArticleExtractionException: $message'
-        : 'ArticleExtractionException($code): $message';
+    final cleanerCode = errorCode;
+    final prefix = code == null
+        ? 'ArticleExtractionException'
+        : 'ArticleExtractionException($code)';
+    if (cleanerCode == null || cleanerCode.isEmpty) {
+      return '$prefix: $message';
+    }
+    return '$prefix[$cleanerCode]: $message';
   }
 }

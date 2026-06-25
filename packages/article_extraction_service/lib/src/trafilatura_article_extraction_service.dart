@@ -31,16 +31,21 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
 
   @override
   Future<ExtractedArticle> extract(String url) async {
-    final _DownloadedArticleDocument article;
+    _validateArticleUrl(url);
+
     try {
-      article = await _downloadArticle(url);
+      return await _extractFromServer(url);
     } on ArticleExtractionException catch (e) {
-      if (_shouldFallbackToServerExtraction(e)) {
-        return _extractFromServer(url);
-      }
-      rethrow;
+      if (!_shouldFallbackToClientHtml(e)) rethrow;
     }
 
+    final article = await _downloadArticle(url);
+    return _extractFromDownloadedHtml(article);
+  }
+
+  Future<ExtractedArticle> _extractFromDownloadedHtml(
+    _DownloadedArticleDocument article,
+  ) async {
     final uri = _baseUri.resolve('/v1/extract-html');
     try {
       final response = await _postExtractHtml(
@@ -56,13 +61,7 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
           favorPrecision: false,
           favorRecall: true,
         );
-        if (_shouldFallbackToServerExtractionResponse(retryResponse)) {
-          return _extractFromServer(url);
-        }
         return _decodeArticleResponse(retryResponse, article);
-      }
-      if (_shouldFallbackToServerExtractionResponse(response)) {
-        return _extractFromServer(url);
       }
       return _decodeArticleResponse(response, article);
     } on TimeoutException {
@@ -114,12 +113,7 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
   }
 
   Future<_DownloadedArticleDocument> _downloadArticle(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri == null ||
-        !(uri.scheme == 'http' || uri.scheme == 'https') ||
-        !uri.hasAuthority) {
-      throw const ArticleExtractionException('Enter a valid article URL');
-    }
+    final uri = _validateArticleUrl(url);
 
     try {
       final request = http.Request('GET', uri)
@@ -221,9 +215,11 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
     _DownloadedArticleDocument article,
   ) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      final error = _errorPayloadFor(response);
       throw ArticleExtractionException(
-        _errorMessageFor(response),
+        error.message,
         statusCode: response.statusCode,
+        errorCode: error.code,
       );
     }
 
@@ -237,37 +233,45 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
 
   bool _shouldRetryWithRecall(http.Response response) {
     if (response.statusCode != 422) return false;
-    return _errorMessageFor(
-      response,
-    ).toLowerCase().contains('could not extract');
+    final error = _errorPayloadFor(response);
+    return error.code == 'extract_failed' ||
+        error.message.toLowerCase().contains('could not extract');
   }
 
-  bool _shouldFallbackToServerExtraction(ArticleExtractionException error) {
-    if (error.statusCode == null) {
-      final message = error.message.toLowerCase();
-      return message == 'could not download article url' ||
-          message == 'article url download timed out';
+  bool _shouldFallbackToClientHtml(ArticleExtractionException error) {
+    final code = error.errorCode;
+    if (code != null && code.isNotEmpty) {
+      return _clientHtmlFallbackErrorCodes.contains(code);
     }
 
+    final message = error.message.toLowerCase();
     return switch (error.statusCode) {
-      401 || 403 => true,
-      422 => error.message.toLowerCase().contains('could not extract'),
+      422 => message.contains('could not extract'),
+      502 || 508 => true,
       _ => false,
     };
-  }
-
-  bool _shouldFallbackToServerExtractionResponse(http.Response response) {
-    if (response.statusCode == 401 || response.statusCode == 403) return true;
-    if (response.statusCode != 422) return false;
-    return _errorMessageFor(
-      response,
-    ).toLowerCase().contains('could not extract');
   }
 
   @override
   void dispose() {
     if (_ownsClient) _httpClient.close();
   }
+}
+
+const _clientHtmlFallbackErrorCodes = {
+  'fetch_failed',
+  'extract_failed',
+  'unsafe_redirect',
+};
+
+Uri _validateArticleUrl(String url) {
+  final uri = Uri.tryParse(url);
+  if (uri == null ||
+      !(uri.scheme == 'http' || uri.scheme == 'https') ||
+      !uri.hasAuthority) {
+    throw const ArticleExtractionException('Enter a valid article URL');
+  }
+  return uri;
 }
 
 Map<String, String> _cleanerHeaders(String? apiKey) {
@@ -618,25 +622,44 @@ ExtractedArticle _articleFromJson(Map<String, dynamic> json) {
   );
 }
 
-String _errorMessageFor(http.Response response) {
+_CleanerErrorPayload _errorPayloadFor(http.Response response) {
   try {
     final decoded = jsonDecode(utf8.decode(response.bodyBytes));
     if (decoded is Map) {
       final detail =
           decoded['detail'] ?? decoded['message'] ?? decoded['error'];
-      if (detail is String && detail.trim().isNotEmpty) return detail;
+      if (detail is Map) {
+        final message = _string(detail['message']);
+        return _CleanerErrorPayload(
+          code: _string(detail['code']),
+          message: message == null || message.trim().isEmpty
+              ? _defaultErrorMessageFor(response.statusCode)
+              : message,
+        );
+      }
+      if (detail is String && detail.trim().isNotEmpty) {
+        return _CleanerErrorPayload(message: detail);
+      }
       if (detail is List) {
         final messages = detail
             .whereType<Map>()
             .map(_validationMessage)
             .where((message) => message.isNotEmpty)
             .toList(growable: false);
-        if (messages.isNotEmpty) return messages.join('\n');
+        if (messages.isNotEmpty) {
+          return _CleanerErrorPayload(message: messages.join('\n'));
+        }
       }
     }
   } catch (_) {}
 
-  return switch (response.statusCode) {
+  return _CleanerErrorPayload(
+    message: _defaultErrorMessageFor(response.statusCode),
+  );
+}
+
+String _defaultErrorMessageFor(int statusCode) {
+  return switch (statusCode) {
     401 || 403 => 'Article cleaner authentication failed',
     413 => 'Article is too large to import',
     422 => 'This URL cannot be extracted',
@@ -644,6 +667,14 @@ String _errorMessageFor(http.Response response) {
     508 => 'Article cleaner stopped an unsafe redirect',
     _ => 'Article extraction failed',
   };
+}
+
+/// Error payload returned by recent article-cleaner backends.
+class _CleanerErrorPayload {
+  const _CleanerErrorPayload({this.code, required this.message});
+
+  final String? code;
+  final String message;
 }
 
 String _validationMessage(Map<dynamic, dynamic> error) {
