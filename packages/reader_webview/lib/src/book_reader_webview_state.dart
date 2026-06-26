@@ -254,6 +254,7 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       initialCfi: widget.initialCfi,
       initialProgress: widget.initialProgress,
       recoveringFromCrash: _recoveringFromCrash,
+      isArticle: _effectiveArticle,
     );
     final params = {
       'url': jsonEncode(_bookUrl),

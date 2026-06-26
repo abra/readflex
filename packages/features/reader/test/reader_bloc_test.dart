@@ -639,6 +639,87 @@ void main() {
         },
       );
 
+      blocTest<ReaderBloc, ReaderState>(
+        'ignores unstable generated article zero-page bootstrap position',
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          sourceType: SourceType.article,
+          title: testBook.title,
+          book: testBook.copyWith(readingProgress: 1),
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/2!/4)',
+            progress: 0,
+            bookTotalPages: 4,
+            chapterCurrentPage: 1,
+            chapterTotalPages: 0,
+            atStart: true,
+            atEnd: true,
+          ),
+        ),
+        wait: const Duration(milliseconds: 700),
+        expect: () => <ReaderState>[],
+        verify: (_) {
+          expect(bookRepository.updateCallCount, 0);
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'ignores unstable generated article overcounted chapter pages',
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          sourceType: SourceType.article,
+          title: testBook.title,
+          book: testBook.copyWith(readingProgress: 1),
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/2!/4/2,/2,/12/1:39)',
+            progress: 0.09090909090909091,
+            bookCurrentPage: 0,
+            bookTotalPages: 4,
+            chapterCurrentPage: 1,
+            chapterTotalPages: 11,
+          ),
+        ),
+        wait: const Duration(milliseconds: 700),
+        expect: () => <ReaderState>[],
+        verify: (_) {
+          expect(bookRepository.updateCallCount, 0);
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'keeps stable generated article page metrics',
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          sourceType: SourceType.article,
+          title: testBook.title,
+          book: testBook.copyWith(readingProgress: 0.6),
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/2!/4/2,/40/1:272,/46/1:57)',
+            progress: 1,
+            bookCurrentPage: 2,
+            bookTotalPages: 4,
+            chapterCurrentPage: 5,
+            chapterTotalPages: 5,
+            atEnd: true,
+          ),
+        ),
+        wait: const Duration(milliseconds: 700),
+        verify: (bloc) {
+          expect(bloc.state.book?.readingProgress, 1);
+          expect(bloc.state.chapterCurrentPage, 5);
+          expect(bloc.state.chapterTotalPages, 5);
+        },
+      );
+
       // Drag-to-seek can fire ~10 ReaderBookPositionUpdated per
       // second. We must NOT do a DB write per event — debounce to a
       // single trailing write 500ms after the last event, holding

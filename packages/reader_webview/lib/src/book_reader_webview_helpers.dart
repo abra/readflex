@@ -10,6 +10,7 @@ ReaderInitialLocation resolveInitialReaderLocation({
   required String? initialCfi,
   required double? initialProgress,
   required bool recoveringFromCrash,
+  required bool isArticle,
 }) {
   final cfi = switch (initialCfi) {
     final String value when value.isNotEmpty => value,
@@ -20,7 +21,13 @@ ReaderInitialLocation resolveInitialReaderLocation({
     _ => null,
   };
 
-  if (recoveringFromCrash) {
+  // End-of-article CFIs can land foliate-js in trailing buffer columns and make
+  // it expose blank pages after restore. Progress restore keeps the last page
+  // stable while preserving exact CFI restore for books and mid-article opens.
+  final shouldRestoreArticleEndByProgress =
+      isArticle && progress != null && progress >= 0.999;
+
+  if (recoveringFromCrash || shouldRestoreArticleEndByProgress) {
     return ReaderInitialLocation(cfi: null, progress: progress);
   }
   if (cfi != null) {

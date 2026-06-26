@@ -199,6 +199,18 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     Emitter<ReaderState> emit,
   ) async {
     if (state.book == null) return;
+    if (_isUnstableArticlePosition(
+      sourceType: state.sourceType,
+      event: event,
+    )) {
+      _debugTraceReaderBloc(
+        'ReaderBookPositionUpdated skip unstable article position '
+        'progress=${event.progress.toStringAsFixed(3)} '
+        'bookPage=${event.bookCurrentPage}/${event.bookTotalPages} '
+        'chapterPage=${event.chapterCurrentPage}/${event.chapterTotalPages}',
+      );
+      return;
+    }
 
     // foliate-js's paginator allows navigation onto two blank trailing
     // columns past the actual content (`atEnd: page >= pages - 2`).
@@ -513,6 +525,23 @@ int? _positivePageTotal(int? value) {
 int? _visibleArticlePage(int? value) {
   if (value == null) return null;
   return value < 1 ? 1 : value;
+}
+
+bool _isUnstableArticlePosition({
+  required SourceType sourceType,
+  required ReaderBookPositionUpdated event,
+}) {
+  if (sourceType != SourceType.article) return false;
+
+  final chapterTotal = event.chapterTotalPages;
+  if (chapterTotal == 0) return true;
+
+  final bookTotal = event.bookTotalPages;
+  if (bookTotal == null || bookTotal <= 0 || chapterTotal == null) {
+    return false;
+  }
+
+  return chapterTotal > bookTotal + 1;
 }
 
 bool _inferredBookPageProgressionRtl(Book book) {

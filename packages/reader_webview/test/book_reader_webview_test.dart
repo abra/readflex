@@ -31,6 +31,7 @@ void main() {
         initialCfi: 'epubcfi(/6/14!/4/2)',
         initialProgress: 0.73,
         recoveringFromCrash: false,
+        isArticle: false,
       );
 
       expect(location.cfi, 'epubcfi(/6/14!/4/2)');
@@ -42,6 +43,7 @@ void main() {
         initialCfi: null,
         initialProgress: 0.73,
         recoveringFromCrash: false,
+        isArticle: false,
       );
 
       expect(location.cfi, isNull);
@@ -53,6 +55,7 @@ void main() {
         initialCfi: 'epubcfi(/6/14!/4/2)',
         initialProgress: 0.73,
         recoveringFromCrash: true,
+        isArticle: false,
       );
 
       expect(location.cfi, isNull);
@@ -64,9 +67,46 @@ void main() {
         initialCfi: null,
         initialProgress: 0,
         recoveringFromCrash: false,
+        isArticle: false,
       );
 
       expect(location.cfi, isNull);
+      expect(location.progress, isNull);
+    });
+
+    test('keeps exact CFI for books even at the end', () {
+      final location = resolveInitialReaderLocation(
+        initialCfi: 'epubcfi(/6/14!/4/2)',
+        initialProgress: 1,
+        recoveringFromCrash: false,
+        isArticle: false,
+      );
+
+      expect(location.cfi, 'epubcfi(/6/14!/4/2)');
+      expect(location.progress, isNull);
+    });
+
+    test('uses progress for generated articles restored at the end', () {
+      final location = resolveInitialReaderLocation(
+        initialCfi: 'epubcfi(/6/2!/4/2,/40/1:272,/46/1:57)',
+        initialProgress: 1,
+        recoveringFromCrash: false,
+        isArticle: true,
+      );
+
+      expect(location.cfi, isNull);
+      expect(location.progress, 1);
+    });
+
+    test('keeps exact CFI for generated articles before the end', () {
+      final location = resolveInitialReaderLocation(
+        initialCfi: 'epubcfi(/6/2!/4/2,/32,/40/1:272)',
+        initialProgress: 0.8,
+        recoveringFromCrash: false,
+        isArticle: true,
+      );
+
+      expect(location.cfi, 'epubcfi(/6/2!/4/2,/32,/40/1:272)');
       expect(location.progress, isNull);
     });
   });
@@ -498,7 +538,7 @@ void main() {
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_89"));
+      expect(assetExtractor, contains("reader_webview_assets_91"));
     });
 
     test('wires image-area highlight selection and rendering bridge', () {
@@ -521,6 +561,12 @@ void main() {
       expect(bookJs, contains('resizeImageAreaRect'));
       expect(bookJs, contains('positionImageAreaElement'));
       expect(bookJs, contains('renderImageAreaPreview'));
+      expect(bookJs, contains('return body.textContent?.trim() ? null : img'));
+      expect(
+        bookJs,
+        contains("annotation => annotation?.type === 'image-area-highlight'"),
+      );
+      expect(bookJs, contains('annotations.length === 0'));
       expect(bookJs, contains('dataset.imageAreaHandle'));
       expect(bookJs, contains('READFLEX_IMAGE_AREA_BORDER_WIDTH = 24'));
       expect(bookJs, contains('READFLEX_IMAGE_AREA_HANDLE_SIZE = 96'));
@@ -587,6 +633,38 @@ void main() {
 
       expect(bookJs, isNot(contains("console.log('changeStyle'")));
       expect(bookJs, isNot(contains('JSON.stringify(style)')));
+    });
+
+    test('restores saved progress without booting through the start page', () {
+      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
+
+      expect(
+        bookJs,
+        contains(
+          'const progressRestore = cfi ? null : '
+          'readflexInitialProgressRestore(progress)',
+        ),
+      );
+      expect(
+        bookJs,
+        contains(
+          'if (!cfi && progressRestore == null)\n'
+          '      this.view.renderer.next()',
+        ),
+      );
+      expect(
+        bookJs,
+        contains(
+          'if (progressRestore == null) await this.view.init({ lastLocation: cfi })',
+        ),
+      );
+      expect(bookJs, contains('await this.view.goToFraction(progressRestore)'));
+    });
+
+    test('keeps progress restore just before the hard end boundary', () {
+      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
+
+      expect(bookJs, contains('return value >= 1 ? 0.999999 : value'));
     });
 
     test('limits WebContent crash recovery to one eligible reload', () {

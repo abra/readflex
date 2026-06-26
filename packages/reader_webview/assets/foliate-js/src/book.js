@@ -35,7 +35,13 @@ let imageAreaSelectionControlsBounds = null;
 const clamp01 = value => Math.min(Math.max(Number(value) || 0, 0), 1);
 const clampRange = (value, min, max) => Math.min(Math.max(value, min), max);
 
-const imageAreaPageImage = doc => doc?.querySelector?.('img');
+const imageAreaPageImage = doc => {
+  const body = doc?.body;
+  if (!body) return null;
+  const img = body.querySelector?.('img');
+  if (!img) return null;
+  return body.textContent?.trim() ? null : img;
+};
 
 const setImageAreaSelectionControlsBounds = bounds => {
   const left = clamp01(bounds?.left);
@@ -342,16 +348,22 @@ const renderImageAreaPreview = (doc, annotation) => {
 };
 
 const renderImageAreaAnnotations = (reader, doc, index) => {
+  const annotations = (reader?.annotations?.get(index) ?? [])
+    .filter(annotation => annotation?.type === 'image-area-highlight');
+  const existingRoot = doc?.getElementById?.(READFLEX_IMAGE_AREA_ROOT_ID);
+  if (!imageAreaPageImage(doc) || annotations.length === 0) {
+    if (!existingRoot?.querySelector?.(`#${READFLEX_IMAGE_AREA_PREVIEW_ID}`)) {
+      existingRoot?.remove();
+    }
+    return;
+  }
   const root = imageAreaRoot(doc);
   if (!root) return;
   for (const child of Array.from(root.children)) {
     if (child.id !== READFLEX_IMAGE_AREA_PREVIEW_ID) child.remove();
   }
-  const annotations = reader?.annotations?.get(index) ?? [];
   for (const annotation of annotations) {
-    if (annotation?.type === 'image-area-highlight') {
-      drawImageArea(doc, annotation);
-    }
+    drawImageArea(doc, annotation);
   }
 };
 
@@ -1310,6 +1322,12 @@ const getView = async file => {
   return view
 }
 
+const readflexInitialProgressRestore = progress => {
+  const value = Number(progress)
+  if (!Number.isFinite(value) || value <= 0 || value > 1) return null
+  return value >= 1 ? 0.999999 : value
+}
+
 const escapeCSSString = value => value
   .replaceAll('\\', '\\\\')
   .replaceAll('"', '\\"')
@@ -1833,17 +1851,18 @@ class Reader {
     this.view.addEventListener('doctouchend', this.#onTouchEnd.bind(this))
 
     setStyle()
-    if (!cfi)
+    const progressRestore = cfi ? null : readflexInitialProgressRestore(progress)
+    if (!cfi && progressRestore == null)
       this.view.renderer.next()
     this.setView(this.view)
-    await this.view.init({ lastLocation: cfi })
-    // iOS fallback path: if restoring by deep CFI crashed the WebContent
-    // process, Flutter reloads this page with `cfi=null` but preserves the
-    // last known progress fraction. Jump there after init so the book reopens
-    // near the saved spot instead of from the cover.
-    if (!cfi && Number.isFinite(progress) && progress > 0 && progress <= 1) {
+    if (progressRestore == null) await this.view.init({ lastLocation: cfi })
+    // Progress restore is used by the iOS deep-CFI crash fallback and by
+    // generated articles saved at the end. Skip the normal no-CFI boot page
+    // advance; routing through the start first can make foliate-js expose blank
+    // trailing article pages after it jumps to the saved end position.
+    if (progressRestore != null) {
       try {
-        await this.view.goToFraction(progress)
+        await this.view.goToFraction(progressRestore)
       } catch (e) {
         console.warn('goToFraction fallback failed', e)
       }
