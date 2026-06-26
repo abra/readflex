@@ -19,20 +19,26 @@ class _ReaderView extends StatelessWidget {
       extendBodyBehindAppBar: true,
       extendBody: true,
       resizeToAvoidBottomInset: false,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: BlocSelector<ReaderBloc, ReaderState, ReaderStatus>(
-              selector: (state) => state.status,
-              builder: (context, status) => _ReaderBody(
-                status: status,
-                serverPort: serverPort,
-                textActions: textActions,
-                onArticleTitlePressed: onArticleTitlePressed,
+      body: ReaderRouteMountGate(
+        delay: _kReaderWebViewRouteMountDelay,
+        builder: (context, canMountWebView) {
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: BlocSelector<ReaderBloc, ReaderState, ReaderStatus>(
+                  selector: (state) => state.status,
+                  builder: (context, status) => _ReaderBody(
+                    status: status,
+                    canMountWebView: canMountWebView,
+                    serverPort: serverPort,
+                    textActions: textActions,
+                    onArticleTitlePressed: onArticleTitlePressed,
+                  ),
+                ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -42,12 +48,14 @@ class _ReaderView extends StatelessWidget {
 class _ReaderBody extends StatelessWidget {
   const _ReaderBody({
     required this.status,
+    required this.canMountWebView,
     required this.serverPort,
     required this.textActions,
     this.onArticleTitlePressed,
   });
 
   final ReaderStatus status;
+  final bool canMountWebView;
   final int serverPort;
   final List<TextAction> textActions;
   final void Function(String url, String title)? onArticleTitlePressed;
@@ -81,11 +89,19 @@ class _ReaderBody extends StatelessWidget {
           ],
         ),
       ),
-      ReaderStatus.ready => _ReadyContent(
-        serverPort: serverPort,
-        textActions: textActions,
-        onArticleTitlePressed: onArticleTitlePressed,
-      ),
+      ReaderStatus.ready =>
+        canMountWebView
+            ? _ReadyContent(
+                serverPort: serverPort,
+                textActions: textActions,
+                onArticleTitlePressed: onArticleTitlePressed,
+              )
+            : ColoredBox(
+                color: readerTheme.backgroundColor,
+                child: Center(
+                  child: _ReaderLoadingIndicator(theme: readerTheme),
+                ),
+              ),
     };
   }
 }
