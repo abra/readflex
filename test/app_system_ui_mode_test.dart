@@ -1,5 +1,7 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex/app/app_system_ui_mode.dart';
 
@@ -41,6 +43,85 @@ void main() {
       ]);
     });
 
+    testWidgets('lets descendants hide and restore the bottom overlay', (
+      tester,
+    ) async {
+      AppSystemUiModeController? controller;
+
+      await tester.pumpWidget(
+        AppSystemUiMode(
+          child: Builder(
+            builder: (context) {
+              controller = AppSystemUiMode.maybeOf(context);
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+
+      calls.clear();
+      await controller!.hideBottomSystemOverlay();
+
+      expect(calls.single.method, 'SystemChrome.setEnabledSystemUIOverlays');
+      expect(calls.single.arguments, ['SystemUiOverlay.top']);
+
+      calls.clear();
+      await controller!.showBottomSystemOverlay();
+
+      expect(calls.single.method, 'SystemChrome.setEnabledSystemUIOverlays');
+      expect(calls.single.arguments, [
+        'SystemUiOverlay.top',
+        'SystemUiOverlay.bottom',
+      ]);
+    });
+
+    testWidgets('restores a hidden bottom overlay when route pop starts', (
+      tester,
+    ) async {
+      final navigatorKey = GlobalKey<NavigatorState>();
+
+      await tester.pumpWidget(
+        AppSystemUiMode(
+          child: MaterialApp(
+            navigatorKey: navigatorKey,
+            home: const SizedBox(),
+          ),
+        ),
+      );
+
+      calls.clear();
+      unawaited(
+        navigatorKey.currentState!.push<void>(
+          PageRouteBuilder<void>(
+            transitionDuration: const Duration(milliseconds: 100),
+            reverseTransitionDuration: const Duration(milliseconds: 100),
+            pageBuilder: (context, animation, secondaryAnimation) {
+              return const AppBottomSystemOverlayVisibility(
+                visible: false,
+                child: SizedBox(),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(_hasOverlayCall(calls, ['SystemUiOverlay.top']), isTrue);
+
+      calls.clear();
+      navigatorKey.currentState!.pop();
+      await tester.pump();
+
+      expect(
+        _hasOverlayCall(calls, [
+          'SystemUiOverlay.top',
+          'SystemUiOverlay.bottom',
+        ]),
+        isTrue,
+      );
+    });
+
     testWidgets('does not restore overlays when disposed', (
       tester,
     ) async {
@@ -52,5 +133,21 @@ void main() {
         isNot(contains('SystemChrome.restoreSystemUIOverlays')),
       );
     });
+  });
+}
+
+bool _hasOverlayCall(List<MethodCall> calls, List<String> overlays) {
+  return calls.any((call) {
+    if (call.method != 'SystemChrome.setEnabledSystemUIOverlays') {
+      return false;
+    }
+    final arguments = call.arguments;
+    if (arguments is! List<Object?> || arguments.length != overlays.length) {
+      return false;
+    }
+    for (var i = 0; i < overlays.length; i += 1) {
+      if (arguments[i] != overlays[i]) return false;
+    }
+    return true;
   });
 }

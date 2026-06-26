@@ -5,11 +5,13 @@ import 'package:connectivity_service/connectivity_service.dart'
     show ConnectivityScope, ConnectivityStatus;
 import 'package:library_feature/library_feature.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:highlight/highlight.dart';
 import 'package:import_flow/import_flow.dart';
 import 'package:reader/reader.dart';
+import 'package:readflex/app/app_system_ui_mode.dart';
 import 'package:readflex/app/dependency_container.dart';
 import 'package:readflex/app/screens/onboarding_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -130,34 +132,36 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
           return MaterialPage(
             key: state.pageKey,
             fullscreenDialog: true,
-            child: ReaderScreen(
-              sourceId: sourceId,
-              initialSource: initialSource,
-              initialSourceType: _initialReaderSourceTypeFromRoute(state),
-              serverPort: deps.readerServer.port,
-              bookRepository: deps.bookRepository,
-              articleRepository: deps.articleRepository,
-              highlightRepository: deps.highlightRepository,
-              preferencesService: deps.preferencesService,
-              screenControlService: deps.screenControlService,
-              onSourceOpened: _onSourceOpenedFromRoute(state),
-              onArticleTitlePressed: (url, title) {
-                unawaited(_openArticleUrl(url));
-              },
-              initialSearchHistory:
-                  deps.preferencesService.current.readerSearchHistory,
-              onSearchHistoryChanged: (queries) {
-                unawaited(
-                  deps.preferencesService.update(
-                    (prefs) => prefs.copyWith(readerSearchHistory: queries),
+            child: _AndroidReaderSystemNavigationBarMode(
+              child: ReaderScreen(
+                sourceId: sourceId,
+                initialSource: initialSource,
+                initialSourceType: _initialReaderSourceTypeFromRoute(state),
+                serverPort: deps.readerServer.port,
+                bookRepository: deps.bookRepository,
+                articleRepository: deps.articleRepository,
+                highlightRepository: deps.highlightRepository,
+                preferencesService: deps.preferencesService,
+                screenControlService: deps.screenControlService,
+                onSourceOpened: _onSourceOpenedFromRoute(state),
+                onArticleTitlePressed: (url, title) {
+                  unawaited(_openArticleUrl(url));
+                },
+                initialSearchHistory:
+                    deps.preferencesService.current.readerSearchHistory,
+                onSearchHistoryChanged: (queries) {
+                  unawaited(
+                    deps.preferencesService.update(
+                      (prefs) => prefs.copyWith(readerSearchHistory: queries),
+                    ),
+                  );
+                },
+                textActions: [
+                  HighlightAction(
+                    highlightRepository: deps.highlightRepository,
                   ),
-                );
-              },
-              textActions: [
-                HighlightAction(
-                  highlightRepository: deps.highlightRepository,
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },
@@ -183,6 +187,22 @@ Stream<bool> _isOfflineStream(DependenciesContainer deps) {
   return deps.connectivityService.statusStream
       .map((status) => status == ConnectivityStatus.offline)
       .distinct();
+}
+
+/// Reader uses the full screen for content. On Android devices configured with
+/// three-button navigation, hiding only the bottom system overlay keeps those
+/// buttons from covering the reading area while leaving the app status bar
+/// policy unchanged.
+class _AndroidReaderSystemNavigationBarMode extends StatelessWidget {
+  const _AndroidReaderSystemNavigationBarMode({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (defaultTargetPlatform != TargetPlatform.android) return child;
+    return AppBottomSystemOverlayVisibility(visible: false, child: child);
+  }
 }
 
 Future<void> _openArticleUrl(String rawUrl) => _openExternalUrl(rawUrl);
