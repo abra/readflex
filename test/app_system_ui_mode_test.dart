@@ -75,6 +75,31 @@ void main() {
       ]);
     });
 
+    testWidgets('reapplies a hidden bottom overlay when requested again', (
+      tester,
+    ) async {
+      AppSystemUiModeController? controller;
+
+      await tester.pumpWidget(
+        AppSystemUiMode(
+          child: Builder(
+            builder: (context) {
+              controller = AppSystemUiMode.maybeOf(context);
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+
+      await controller!.hideBottomSystemOverlay();
+
+      calls.clear();
+      await controller!.hideBottomSystemOverlay();
+
+      expect(calls.single.method, 'SystemChrome.setEnabledSystemUIOverlays');
+      expect(calls.single.arguments, ['SystemUiOverlay.top']);
+    });
+
     testWidgets('restores a hidden bottom overlay when route pop starts', (
       tester,
     ) async {

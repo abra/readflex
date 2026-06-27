@@ -79,12 +79,12 @@ class _AppSystemUiModeState extends State<AppSystemUiMode>
   }
 
   Future<void> _setBottomSystemOverlayVisible(bool visible) {
-    if (_bottomSystemOverlayVisible == visible) {
+    if (_bottomSystemOverlayVisible == visible && visible) {
       return Future<void>.value();
     }
     _bottomSystemOverlayVisible = visible;
     _restoreRetryTimer?.cancel();
-    return _applyAppMode();
+    return _applyAppModeWithRetry();
   }
 
   Future<void> _handleSystemUiChanged(bool systemOverlaysAreVisible) async {
@@ -97,7 +97,11 @@ class _AppSystemUiModeState extends State<AppSystemUiMode>
     if (_bottomSystemOverlayVisible) {
       unawaited(SystemChrome.restoreSystemUIOverlays());
     }
-    unawaited(_applyAppMode());
+    unawaited(_applyAppModeWithRetry());
+  }
+
+  Future<void> _applyAppModeWithRetry() {
+    final result = _applyAppMode();
     _restoreRetryTimer?.cancel();
     _restoreRetryTimer = Timer(_restoreRetryDelay, () {
       if (!mounted) return;
@@ -106,6 +110,7 @@ class _AppSystemUiModeState extends State<AppSystemUiMode>
       }
       unawaited(_applyAppMode());
     });
+    return result;
   }
 }
 
