@@ -393,6 +393,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        theme: AppTheme.light(),
         home: Builder(
           builder: (context) {
             return Scaffold(
@@ -458,6 +459,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        theme: AppTheme.light(),
         home: MediaQuery(
           data: const MediaQueryData(padding: EdgeInsets.zero),
           child: Builder(
@@ -501,6 +503,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        theme: AppTheme.light(),
         home: Builder(
           builder: (context) {
             return Scaffold(
@@ -657,6 +660,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        theme: AppTheme.light(),
         home: Scaffold(
           body: ErrorState(
             message: 'Something went wrong',
