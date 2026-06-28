@@ -720,6 +720,64 @@ void main() {
         },
       );
 
+      blocTest<ReaderBloc, ReaderState>(
+        'uses pending article seek when Android reports zero progress '
+        'without useful page metrics',
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          sourceType: SourceType.article,
+          title: testBook.title,
+          book: testBook,
+        ),
+        act: (bloc) {
+          bloc
+            ..add(const ReaderSeekRequested(progress: 0.5))
+            ..add(
+              const ReaderBookPositionUpdated(
+                cfi: 'epubcfi(android-after-seek)',
+                progress: 0,
+                atStart: true,
+              ),
+            );
+        },
+        wait: const Duration(milliseconds: 50),
+        verify: (bloc) {
+          expect(bloc.state.book?.currentCfi, 'epubcfi(android-after-seek)');
+          expect(bloc.state.book?.readingProgress, 0.5);
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'keeps valid article page metrics instead of pending seek target',
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          sourceType: SourceType.article,
+          title: testBook.title,
+          book: testBook,
+        ),
+        act: (bloc) {
+          bloc
+            ..add(const ReaderSeekRequested(progress: 0.5))
+            ..add(
+              const ReaderBookPositionUpdated(
+                cfi: 'epubcfi(valid-page-after-seek)',
+                progress: 0,
+                chapterCurrentPage: 3,
+                chapterTotalPages: 5,
+              ),
+            );
+        },
+        wait: const Duration(milliseconds: 50),
+        verify: (bloc) {
+          expect(bloc.state.book?.currentCfi, 'epubcfi(valid-page-after-seek)');
+          expect(bloc.state.book?.readingProgress, 0.6);
+          expect(bloc.state.chapterCurrentPage, 3);
+          expect(bloc.state.chapterTotalPages, 5);
+        },
+      );
+
       // Drag-to-seek can fire ~10 ReaderBookPositionUpdated per
       // second. We must NOT do a DB write per event — debounce to a
       // single trailing write 500ms after the last event, holding

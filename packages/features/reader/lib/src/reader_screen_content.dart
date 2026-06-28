@@ -155,6 +155,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
 
   void _seekFraction(double fraction) {
     context.read<ReaderUiCubit>().clearReaderSearch();
+    context.read<ReaderBloc>().add(ReaderSeekRequested(progress: fraction));
     _webViewKey.currentState?.goToFraction(fraction);
   }
 

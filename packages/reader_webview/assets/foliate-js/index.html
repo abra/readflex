@@ -22,6 +22,7 @@
 <style>
     html {
       height: 100vh;
+      height: var(--readflex-viewport-height, 100dvh);
       overflow: hidden;
     }
 
@@ -29,6 +30,7 @@
       user-select: none;
       margin: 0 !important;
       height: 100vh;
+      height: var(--readflex-viewport-height, 100dvh);
     }
 
 
@@ -104,6 +106,24 @@
           stack: reason && reason.stack ? String(reason.stack) : null,
         });
       };
+
+      const updateReadflexViewportHeight = () => {
+        const viewport = window.visualViewport;
+        const height = viewport && Number.isFinite(viewport.height)
+          ? viewport.height
+          : window.innerHeight;
+        if (!Number.isFinite(height) || height <= 0) return;
+        document.documentElement.style.setProperty(
+          '--readflex-viewport-height',
+          `${height}px`,
+        );
+      };
+      updateReadflexViewportHeight();
+      window.addEventListener('resize', updateReadflexViewportHeight);
+      window.visualViewport?.addEventListener(
+        'resize',
+        updateReadflexViewportHeight,
+      );
 
       const loadScript = (src, options = {}) => new Promise((resolve, reject) => {
         const script = document.createElement('script');

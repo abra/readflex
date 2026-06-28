@@ -91,6 +91,21 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
   ];
 }
 
+/// User released the bottom progress slider at [progress].
+///
+/// The WebView still performs the actual navigation, then reports the final
+/// location through [ReaderBookPositionUpdated]. The bloc keeps this target
+/// briefly so Android WebView article relocations that bounce back to 0% right
+/// after a programmatic seek cannot reset the reader state to the beginning.
+final class ReaderSeekRequested extends ReaderEvent {
+  const ReaderSeekRequested({required this.progress});
+
+  final double progress;
+
+  @override
+  List<Object?> get props => [progress];
+}
+
 /// Reloads the highlight list from storage after a TextAction mutated it.
 final class ReaderHighlightsRefreshed extends ReaderEvent {
   const ReaderHighlightsRefreshed();

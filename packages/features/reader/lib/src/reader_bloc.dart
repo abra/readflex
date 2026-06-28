@@ -67,6 +67,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
        ) {
     on<ReaderSourceLoadRequested>(_onSourceLoadRequested);
     on<ReaderBookPositionUpdated>(_onBookPositionUpdated);
+    on<ReaderSeekRequested>(_onSeekRequested);
     on<ReaderHighlightsRefreshed>(_onHighlightsRefreshed);
     on<ReaderHighlightDeleteRequested>(_onHighlightDeleteRequested);
     on<ReaderHighlightColorChangeRequested>(
@@ -87,12 +88,17 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   /// `onRelocated`. State is still emitted on every event so UI stays in sync.
   Book? _pendingPersist;
   Timer? _persistTimer;
+  double? _pendingArticleSeekProgress;
+  Timer? _pendingArticleSeekTimer;
   static const _persistDebounce = Duration(milliseconds: 500);
+  static const _pendingArticleSeekTimeout = Duration(seconds: 5);
+  static const _articleSeekBounceThreshold = 0.02;
 
   @override
   Future<void> close() async {
     _persistTimer?.cancel();
     _persistTimer = null;
+    _clearPendingArticleSeek();
     // Flush whatever's pending so closing the reader (or hot
     // restart) doesn't drop the latest position. Awaited so the
     // write actually completes before the bloc's stream closes.
@@ -106,6 +112,27 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       }
     }
     return super.close();
+  }
+
+  void _onSeekRequested(
+    ReaderSeekRequested event,
+    Emitter<ReaderState> emit,
+  ) {
+    _clearPendingArticleSeek();
+    if (state.sourceType != SourceType.article) return;
+
+    final progress = _clampProgress(event.progress);
+    if (progress <= 0) return;
+
+    _pendingArticleSeekProgress = progress;
+    _pendingArticleSeekTimer = Timer(
+      _pendingArticleSeekTimeout,
+      _clearPendingArticleSeek,
+    );
+    _debugTraceReaderBloc(
+      'ReaderSeekRequested pending article seek '
+      'progress=${progress.toStringAsFixed(3)}',
+    );
   }
 
   Future<void> _onSourceLoadRequested(
@@ -199,10 +226,16 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     Emitter<ReaderState> emit,
   ) async {
     if (state.book == null) return;
-    if (_isUnstableArticlePosition(
-      sourceType: state.sourceType,
+    final pendingArticleSeekProgress = _pendingArticleSeekProgress;
+    final seekProgressOverride = _articleSeekProgressOverride(
       event: event,
-    )) {
+      pendingProgress: pendingArticleSeekProgress,
+    );
+    if (_isUnstableArticlePosition(
+          sourceType: state.sourceType,
+          event: event,
+        ) &&
+        seekProgressOverride == null) {
       _debugTraceReaderBloc(
         'ReaderBookPositionUpdated skip unstable article position '
         'progress=${event.progress.toStringAsFixed(3)} '
@@ -210,6 +243,19 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         'chapterPage=${event.chapterCurrentPage}/${event.chapterTotalPages}',
       );
       return;
+    }
+    if (seekProgressOverride != null) {
+      _debugTraceReaderBloc(
+        'ReaderBookPositionUpdated use pending article seek '
+        'target=${seekProgressOverride.toStringAsFixed(3)} '
+        'reported=${event.progress.toStringAsFixed(3)} '
+        'bookPage=${event.bookCurrentPage}/${event.bookTotalPages} '
+        'chapterPage=${event.chapterCurrentPage}/${event.chapterTotalPages}',
+      );
+    } else if (state.sourceType == SourceType.article &&
+        pendingArticleSeekProgress != null &&
+        event.progress > 0) {
+      _clearPendingArticleSeek();
     }
 
     // foliate-js's paginator allows navigation onto two blank trailing
@@ -223,7 +269,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     final isPhantomEnd = event.atEnd && total != null && total > 0;
     final isSinglePageArticle =
         state.sourceType == SourceType.article && total == 1;
-    final clampedProgress = event.progress.clamp(0.0, 1.0).toDouble();
+    final clampedProgress = _clampProgress(
+      seekProgressOverride ?? event.progress,
+    );
     final progress = isPhantomEnd || isSinglePageArticle
         ? 1.0
         : _articleVisiblePageProgress(
@@ -319,6 +367,36 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     } catch (e, st) {
       addError(e, st);
     }
+  }
+
+  void _clearPendingArticleSeek() {
+    _pendingArticleSeekTimer?.cancel();
+    _pendingArticleSeekTimer = null;
+    _pendingArticleSeekProgress = null;
+  }
+
+  double? _articleSeekProgressOverride({
+    required ReaderBookPositionUpdated event,
+    required double? pendingProgress,
+  }) {
+    if (state.sourceType != SourceType.article || pendingProgress == null) {
+      return null;
+    }
+    if (pendingProgress <= 0 || event.atEnd) return null;
+
+    final reportedProgress = _clampProgress(event.progress);
+    if (reportedProgress > _articleSeekBounceThreshold) return null;
+
+    final chapterTotalPages = _positivePageTotal(event.chapterTotalPages);
+    final chapterCurrentPage = _visibleArticlePage(event.chapterCurrentPage);
+    final hasUsefulChapterPosition =
+        chapterTotalPages != null &&
+        chapterTotalPages > 1 &&
+        chapterCurrentPage != null &&
+        chapterCurrentPage > 1;
+    if (hasUsefulChapterPosition) return null;
+
+    return pendingProgress;
   }
 
   Future<void> _persistReaderBook(Book book) async {
@@ -525,6 +603,13 @@ int? _positivePageTotal(int? value) {
 int? _visibleArticlePage(int? value) {
   if (value == null) return null;
   return value < 1 ? 1 : value;
+}
+
+double _clampProgress(double progress) {
+  if (!progress.isFinite) return 0;
+  if (progress < 0) return 0;
+  if (progress > 1) return 1;
+  return progress;
 }
 
 bool _isUnstableArticlePosition({

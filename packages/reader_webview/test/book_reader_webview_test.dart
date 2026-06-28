@@ -538,7 +538,7 @@ void main() {
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_91"));
+      expect(assetExtractor, contains("reader_webview_assets_92"));
     });
 
     test('wires image-area highlight selection and rendering bridge', () {
@@ -665,6 +665,28 @@ void main() {
       final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
 
       expect(bookJs, contains('return value >= 1 ? 0.999999 : value'));
+    });
+
+    test('keeps article slider seek progress when Android reports zero', () {
+      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
+
+      expect(bookJs, contains('let readflexPendingSeekFraction = null'));
+      expect(bookJs, contains('const readflexSeekFallbackWindowMs = 1500'));
+      expect(
+        bookJs,
+        contains("globalThis.readflexSourceType !== 'article'"),
+      );
+      expect(bookJs, contains('return pending'));
+      expect(bookJs, contains('window.goToPercent = percent => {'));
+      expect(bookJs, contains('readflexRememberSeekFraction(percent)'));
+    });
+
+    test('sizes the reader document from the visual viewport', () {
+      final html = _readPackageSource('assets/foliate-js/index.html');
+
+      expect(html, contains('--readflex-viewport-height'));
+      expect(html, contains('const updateReadflexViewportHeight = () => {'));
+      expect(html, contains('window.visualViewport?.addEventListener('));
     });
 
     test('limits WebContent crash recovery to one eligible reload', () {

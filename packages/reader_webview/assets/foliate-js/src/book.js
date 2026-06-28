@@ -3044,6 +3044,55 @@ const callFlutter = (name, data) => {
   window.flutter_inappwebview.callHandler(name, data)
 }
 
+let readflexPendingSeekFraction = null
+let readflexPendingSeekTimer = null
+
+const readflexSeekFallbackWindowMs = 1500
+
+const readflexClampFraction = value => {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return null
+  return Math.max(0, Math.min(1, number))
+}
+
+const readflexClearPendingSeekFraction = () => {
+  readflexPendingSeekFraction = null
+  if (readflexPendingSeekTimer) {
+    clearTimeout(readflexPendingSeekTimer)
+    readflexPendingSeekTimer = null
+  }
+}
+
+const readflexRememberSeekFraction = value => {
+  const fraction = readflexClampFraction(value)
+  if (fraction == null) return null
+  readflexPendingSeekFraction = fraction
+  if (readflexPendingSeekTimer) clearTimeout(readflexPendingSeekTimer)
+  readflexPendingSeekTimer = setTimeout(() => {
+    readflexPendingSeekFraction = null
+    readflexPendingSeekTimer = null
+  }, readflexSeekFallbackWindowMs)
+  return fraction
+}
+
+const readflexRelocatedPercentage = (currentInfo, atEnd) => {
+  const reported = readflexClampFraction(currentInfo.fraction) ?? 0
+  const pending = readflexPendingSeekFraction
+  if (
+    globalThis.readflexSourceType !== 'article' ||
+    pending == null ||
+    pending <= 0 ||
+    atEnd
+  ) {
+    return reported
+  }
+  if (reported > 0) {
+    readflexClearPendingSeekFraction()
+    return reported
+  }
+  return pending
+}
+
 const emitDocumentFeatures = () => {
   const features = reader?.view?.book?.features
   if (!features) return
@@ -3204,7 +3253,6 @@ const onRelocated = (currentInfo) => {
   const bookTotalPages = currentInfo.location.total
   const bookCurrentPage = currentInfo.location.current
   const cfi = currentInfo.cfi
-  const percentage = currentInfo.fraction
   // foliate-js's paginator considers the last two trailing columns
   // "blank buffer" (atEnd: page >= pages - 2). On those pages it
   // reports fraction=0 / current=0 even though the user is at the
@@ -3212,6 +3260,7 @@ const onRelocated = (currentInfo) => {
   // numbers instead of trying to filter the event by heuristics.
   const atEnd = reader.view.renderer.atEnd ?? false
   const atStart = reader.view.renderer.atStart ?? false
+  const percentage = readflexRelocatedPercentage(currentInfo, atEnd)
 
   // sizeTotal is the byte length of all linear sections, i.e. what
   // foliate-js itself uses to compute `bookCurrentPage` and
@@ -3285,7 +3334,10 @@ window.goToCfi = cfi => reader.view.goTo(cfi)
 
 window.goToSectionIndex = index => reader.view.goTo(Number(index))
 
-window.goToPercent = percent => reader.view.goToFraction(percent)
+window.goToPercent = percent => {
+  const fraction = readflexRememberSeekFraction(percent) ?? 0
+  return reader.view.goToFraction(fraction)
+}
 
 window.goToBookmark = target => reader.goToBookmark(target)
 
