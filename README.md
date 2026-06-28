@@ -14,6 +14,8 @@ Start here:
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — project shape, package boundaries, and
   handoff rules.
+- [C4_MODEL.md](C4_MODEL.md) — system context, container, component, and
+  code-level architecture views.
 - `packages/*/README.md` — public APIs and implementation notes for each
   package.
 - [benchmarks/README.md](benchmarks/README.md) — opt-in performance checks.
