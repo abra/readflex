@@ -8,6 +8,8 @@ const double _kGridCoverInset = AppSpacing.xxs;
 const double _kFormatBadgeTextReserve = 24.0;
 const double _kProgressOverlayReserve = 16.0;
 const double _kProgressOverlayInset = AppSpacing.xxs;
+const _kProgressFillAnimationDuration = Duration(milliseconds: 240);
+const _kProgressFillAnimationCurve = Curves.easeOutCubic;
 
 /// Grid-mode tile for a library source.
 ///
@@ -32,8 +34,9 @@ class BookLibraryGridTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final coverImage = appSourceCoverImageFromPath(source.coverImagePath);
     final isArticle = source.sourceType == SourceType.article;
-    final showsProgressOverlay =
-        source.readingProgress > 0 && !source.isFinished;
+    final hasReadingActivity =
+        source.lastOpenedAt != null || source.readingProgress > 0;
+    final showsProgressOverlay = hasReadingActivity && !source.isFinished;
     final coverTextDirection = _sourceTextDirection(source);
 
     return _GridTileShell(
@@ -71,6 +74,7 @@ class BookLibraryGridTile extends StatelessWidget {
       ),
       isFinished: source.isFinished,
       progress: source.readingProgress,
+      showProgress: showsProgressOverlay,
       formatLabel: isArticle ? 'WEB' : source.typeLabel,
       isSelected: isSelected,
       onTap: onTap,
@@ -94,6 +98,7 @@ class _GridTileShell extends StatelessWidget {
     required this.cover,
     required this.isFinished,
     required this.progress,
+    required this.showProgress,
     required this.isSelected,
     required this.onTap,
     this.onLongPress,
@@ -104,6 +109,7 @@ class _GridTileShell extends StatelessWidget {
   final Widget cover;
   final bool isFinished;
   final double progress;
+  final bool showProgress;
   final bool isSelected;
   final String? formatLabel;
   final VoidCallback onTap;
@@ -160,7 +166,7 @@ class _GridTileShell extends StatelessWidget {
                   right: AppSpacing.xs,
                   child: _SelectionCheck(color: selectionColor),
                 ),
-              if (progress > 0 && !isFinished) ...[
+              if (showProgress && !isFinished) ...[
                 const Positioned.fill(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
@@ -196,10 +202,13 @@ class _GridTileShell extends StatelessWidget {
                                 color: Colors.white.withValues(alpha: 0.50),
                               ),
                             ),
-                            Container(
+                            AnimatedContainer(
+                              key: const Key('libraryGridProgressFill'),
+                              duration: _kProgressFillAnimationDuration,
+                              curve: _kProgressFillAnimationCurve,
                               width:
                                   constraints.maxWidth *
-                                  progress.clamp(0.0, 1.0),
+                                  progress.clamp(0.0, 1.0).toDouble(),
                               color: Colors.white.withValues(alpha: 0.9),
                             ),
                           ],

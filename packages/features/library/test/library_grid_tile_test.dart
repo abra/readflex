@@ -207,6 +207,64 @@ void main() {
     expect(progressRect.bottom, coverRect.bottom - AppSpacing.xxs);
   });
 
+  testWidgets('grid progress bar is hidden until source is opened', (
+    tester,
+  ) async {
+    await _pumpGridTile(tester, LibrarySource.fromBook(_book));
+
+    expect(find.byKey(const Key('libraryGridProgressBar')), findsNothing);
+    expect(find.byKey(const Key('libraryGridProgressFill')), findsNothing);
+  });
+
+  testWidgets('grid progress bar appears for opened source at zero progress', (
+    tester,
+  ) async {
+    final openedBook = _book.copyWith(lastOpenedAt: DateTime(2026, 1, 2));
+
+    await _pumpGridTile(tester, LibrarySource.fromBook(openedBook));
+
+    expect(find.byKey(const Key('libraryGridProgressBar')), findsOneWidget);
+    expect(find.byKey(const Key('libraryGridProgressFill')), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const Key('libraryGridProgressFill'))).width,
+      0,
+    );
+  });
+
+  testWidgets('grid progress fill animates progress changes', (tester) async {
+    final firstState = _book.copyWith(
+      readingProgress: 0.2,
+      lastOpenedAt: DateTime(2026, 1, 2),
+    );
+    final secondState = firstState.copyWith(readingProgress: 0.8);
+
+    await _pumpGridTile(tester, LibrarySource.fromBook(firstState));
+
+    final progressBarWidth = tester
+        .getSize(find.byKey(const Key('libraryGridProgressBar')))
+        .width;
+    final initialFillWidth = tester
+        .getSize(find.byKey(const Key('libraryGridProgressFill')))
+        .width;
+    expect(initialFillWidth, closeTo(progressBarWidth * 0.2, 1));
+
+    await _pumpGridTile(tester, LibrarySource.fromBook(secondState));
+    await tester.pump(const Duration(milliseconds: 120));
+
+    final midFillWidth = tester
+        .getSize(find.byKey(const Key('libraryGridProgressFill')))
+        .width;
+    expect(midFillWidth, greaterThan(initialFillWidth));
+    expect(midFillWidth, lessThan(progressBarWidth * 0.8));
+
+    await tester.pumpAndSettle();
+
+    final finalFillWidth = tester
+        .getSize(find.byKey(const Key('libraryGridProgressFill')))
+        .width;
+    expect(finalFillWidth, closeTo(progressBarWidth * 0.8, 1));
+  });
+
   testWidgets('grid fallback cover reserves space for progress overlay', (
     tester,
   ) async {
@@ -248,4 +306,27 @@ void main() {
     expect(titleRect.top, lessThan(coverRect.top + 56));
     expect(authorRect.top, greaterThan(titleRect.bottom));
   });
+}
+
+Future<void> _pumpGridTile(
+  WidgetTester tester,
+  LibrarySource source,
+) {
+  return tester.pumpWidget(
+    MaterialApp(
+      theme: AppTheme.light(),
+      home: Scaffold(
+        body: Center(
+          child: SizedBox(
+            width: 120,
+            height: 180,
+            child: BookLibraryGridTile(
+              source: source,
+              onTap: () {},
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }

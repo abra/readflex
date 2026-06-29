@@ -45,6 +45,7 @@ class LibraryGridView extends StatelessWidget {
       itemBuilder: (context, index) {
         final source = sources[index];
         return BookLibraryGridTile(
+          key: ValueKey('library-grid-${source.id}'),
           source: source,
           isSelected: selection.contains(source.id),
           onTap: () => onSourcePressed(source),
