@@ -84,10 +84,14 @@ through the bloc's error pipeline without emitting state themselves.
   annotations and sends pull-down bookmark events back to `ReaderBloc`.
   Text highlights use CFI annotations; comic/image-page highlights use
   normalized area annotations keyed by page index.
+- **`_ReaderArticleHtmlBody`** hosts `ArticleHtmlReaderWebView` for article
+  sources. Articles scroll vertically, report progress through stable sentence
+  anchors in `content.html`, and expose contents/search/bookmark chrome actions.
+  Text/image annotation editing remains on the foliate book/comic path.
 - Reader theme (`ReaderThemeData`, font preset, layout preset) is resolved
   from `ReaderAppearanceCubit` and passed as CSS / URL params to the WebView; the
-  `_ReaderWebViewBody` itself is rebuilt only on preference changes, never
-  on selection or reminder state.
+  WebView body itself is rebuilt only on preference changes, never on selection
+  or reminder state.
 
 ## Dependencies
 
@@ -97,8 +101,8 @@ through the bloc's error pipeline without emitting state themselves.
   search history, and global reader brightness preference persistence
 - `screen_control_service` — content-only keep-awake plus temporary
   application brightness control
-- `reader_webview` — `BookReaderWebView`, `FoliateStyle`, `ReaderHighlight`,
-  `ReaderImageAreaSelection`
+- `reader_webview` — `BookReaderWebView`, `ArticleHtmlReaderWebView`,
+  `FoliateStyle`, `ReaderHighlight`, `ReaderImageAreaSelection`
 - `shared` — `TextAction`, `TextSelectionContext`
 - `domain_models` — `Book`, `SourceType`
 - `component_library` — `ReaderThemePreset`, `AppIcons`, `AppSpacing`,

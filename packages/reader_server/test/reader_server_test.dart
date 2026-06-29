@@ -488,4 +488,44 @@ void main() {
       expect(response.bodyBytes, isEmpty);
     });
   });
+
+  group('GET /article/<dir>/<path>', () {
+    test('serves article html and adjacent images', () async {
+      final articleDir = Directory('${tempDir.path}/articles/article-1');
+      final imageDir = Directory('${articleDir.path}/images');
+      await imageDir.create(recursive: true);
+      await File(
+        '${articleDir.path}/content.html',
+      ).writeAsString('<p>Hello</p>');
+      await File('${imageDir.path}/photo.png').writeAsBytes([1, 2, 3]);
+
+      final encodedDir = Uri.encodeComponent(articleDir.path);
+      final htmlResponse = await client.get(
+        Uri.parse(url('/article/$encodedDir/content.html')),
+      );
+      final imageResponse = await client.get(
+        Uri.parse(url('/article/$encodedDir/images/photo.png')),
+      );
+
+      expect(htmlResponse.statusCode, 200);
+      expect(htmlResponse.body, '<p>Hello</p>');
+      expect(htmlResponse.headers['content-type'], contains('text/html'));
+      expect(imageResponse.statusCode, 200);
+      expect(imageResponse.bodyBytes, [1, 2, 3]);
+      expect(imageResponse.headers['content-type'], contains('image/png'));
+    });
+
+    test('rejects paths outside the article directory', () async {
+      final articleDir = Directory('${tempDir.path}/articles/article-1');
+      await articleDir.create(recursive: true);
+      await File('${tempDir.path}/secret.txt').writeAsString('secret');
+
+      final encodedDir = Uri.encodeComponent(articleDir.path);
+      final response = await client.get(
+        Uri.parse(url('/article/$encodedDir/../secret.txt')),
+      );
+
+      expect(response.statusCode, 400);
+    });
+  });
 }

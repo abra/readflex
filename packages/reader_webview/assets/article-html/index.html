@@ -1,0 +1,1034 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <style>
+    :root {
+      --rf-font-family: serif;
+      --readflex-font-size: 1em;
+      --readflex-text-scale: 1;
+      --readflex-prose-font-size: 16px;
+      --readflex-inline-code-font-size: 14.4px;
+      --readflex-kbd-font-size: 13.6px;
+      --readflex-code-block-font-size: 14px;
+      --readflex-letter-spacing: 0px;
+      --readflex-line-height: 1.6;
+      --readflex-text-indent: 0em;
+      --readflex-paragraph-spacing: 0.5em;
+      --readflex-font-color: #000000;
+      --readflex-background-color: #ffffff;
+      --readflex-font-weight: 400;
+      --readflex-text-align: start;
+      --readflex-hyphens: manual;
+      --rf-font-weight: 400;
+      --rf-side-margin: 3.2vw;
+      --rf-top-margin: 56px;
+      --rf-bottom-margin: 72px;
+      --rf-safe-area-top: 0px;
+      --rf-safe-area-bottom: 0px;
+      --rf-background-color: #ffffff;
+      --rf-font-color: #000000;
+      --rf-accent-color: #000000;
+      --rf-search-highlight-radius: 3px;
+    }
+
+    html {
+      background: var(--rf-background-color);
+      color-scheme: light dark;
+      font-size: var(--readflex-font-size);
+      min-height: 100%;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--rf-background-color);
+      color: var(--rf-font-color);
+      font-family: var(--rf-font-family);
+      font-size: 1em;
+      font-weight: var(--rf-font-weight);
+      letter-spacing: var(--readflex-letter-spacing);
+      line-height: var(--readflex-line-height);
+      text-align: var(--readflex-text-align);
+      user-select: text;
+      overflow-wrap: break-word;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    main {
+      box-sizing: border-box;
+      width: 100%;
+      min-height: 100vh;
+      padding-block-start: calc(var(--rf-top-margin) + var(--rf-safe-area-top) + env(safe-area-inset-top));
+      padding-block-end: calc(var(--rf-bottom-margin) + var(--rf-safe-area-bottom) + env(safe-area-inset-bottom));
+      padding-inline: var(--rf-side-margin);
+    }
+
+    p,
+    li,
+    blockquote {
+      color: var(--readflex-font-color);
+      font-size: var(--readflex-prose-font-size);
+      font-weight: var(--readflex-font-weight);
+      line-height: var(--readflex-line-height);
+      margin-block: var(--readflex-paragraph-spacing);
+      text-align: var(--readflex-text-align);
+      text-indent: var(--readflex-text-indent);
+      -webkit-hyphens: var(--readflex-hyphens);
+      hyphens: var(--readflex-hyphens);
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      line-height: 1.18;
+      margin-block: 1.4em 0.55em;
+      text-indent: 0;
+      text-wrap: balance;
+    }
+
+    h1:first-child,
+    h2:first-child,
+    h3:first-child {
+      margin-block-start: 0;
+    }
+
+    img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      margin-inline: auto;
+    }
+
+    figure {
+      margin: 1.1em 0;
+    }
+
+    figcaption {
+      margin-block-start: 0.55em;
+      color: color-mix(in srgb, var(--rf-font-color) 72%, transparent);
+      font-size: 0.9em;
+      line-height: 1.35;
+      text-align: center;
+    }
+
+    blockquote {
+      border-inline-start: 3px solid var(--rf-accent-color);
+      padding-inline-start: 1em;
+      text-indent: 0;
+      color: color-mix(in srgb, var(--rf-font-color) 86%, transparent);
+    }
+
+    pre,
+    code,
+    kbd,
+    samp {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    pre {
+      box-sizing: border-box;
+      max-width: 100%;
+      margin: 1em 0;
+      padding: 0.85em 1em;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      background: color-mix(in srgb, var(--rf-font-color) 7%, transparent);
+      border-radius: 8px;
+      text-align: start;
+      text-indent: 0;
+    }
+
+    .rf-table-scroll {
+      display: block;
+      max-width: 100%;
+      overflow-x: auto;
+      margin: 1em 0;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86em;
+      line-height: 1.35;
+      text-align: start;
+    }
+
+    th,
+    td {
+      border: 1px solid color-mix(in srgb, var(--rf-font-color) 22%, transparent);
+      padding: 0.35em 0.5em;
+      vertical-align: top;
+    }
+
+    a {
+      color: var(--rf-accent-color);
+      text-decoration: none;
+    }
+
+    [data-rf-sentence] {
+      scroll-margin-block: 45vh;
+    }
+
+    .readflex-search-active {
+      background: rgb(0 212 216 / 28%);
+      border-radius: var(--rf-search-highlight-radius);
+    }
+
+    mark.readflex-search-match {
+      background: rgb(0 212 216 / 68%);
+      border-radius: var(--rf-search-highlight-radius);
+      color: inherit;
+      padding-inline: 0.05em;
+    }
+  </style>
+</head>
+<body>
+  <main id="article-content" aria-busy="true"></main>
+  <script>
+    (() => {
+      const positionPrefix = 'readflex-html-position:'
+      const centerHysteresisPx = 24
+      const progressEmitStep = 0.004
+      const minEmitIntervalMs = 140
+      const scrollRestoreSuppressMs = 700
+
+      const params = new URLSearchParams(location.search)
+      const content = document.getElementById('article-content')
+      const fontStyle = document.createElement('style')
+      const customStyle = document.createElement('style')
+      document.head.append(fontStyle)
+      document.head.append(customStyle)
+
+      let style = readJsonParam('style', {})
+      let visibleSentences = null
+      let intersectionObserver = null
+      let activeSentenceKey = null
+      let lastEmittedSentenceKey = null
+      let lastEmittedProgress = -1
+      let lastEmitAt = 0
+      let scheduled = false
+      let restoringUntil = 0
+      let userInteracted = false
+      let restored = false
+      let articleBookmarks = []
+      let bookmarksByCfi = new Map()
+      let bookmarksByExact = new Map()
+      let activeSearch = null
+      let activeSearchElement = null
+      let activeSearchMarker = null
+
+      function readJsonParam(name, fallback) {
+        const raw = params.get(name)
+        if (raw == null) return fallback
+        try {
+          return JSON.parse(raw)
+        } catch (_) {
+          return fallback
+        }
+      }
+
+      function callHandler(name, data) {
+        window.flutter_inappwebview?.callHandler(name, data)
+      }
+
+      function clamp01(value) {
+        const number = Number(value)
+        if (!Number.isFinite(number)) return 0
+        return Math.min(1, Math.max(0, number))
+      }
+
+      function cssLengthPx(value, fallback) {
+        const number = Number(value)
+        return Number.isFinite(number) ? `${number}px` : fallback
+      }
+
+      function cssPercent(value, fallback) {
+        const number = Number(value)
+        return Number.isFinite(number) ? `${number}vw` : fallback
+      }
+
+      function articleSidePadding(value, fallback) {
+        const number = Number(value)
+        if (!Number.isFinite(number) || number < 0 || number >= 100) {
+          return fallback
+        }
+        return `${(number / (100 - number) / 2) * 100}vw`
+      }
+
+      function applyStyle(nextStyle) {
+        style = nextStyle || {}
+        const root = document.documentElement.style
+        const safeFontSize = Number(style.fontSize) || 1
+        const safeTextScale = Number(style.textScale) || 1
+        const rootFontSizePx = 16 * safeFontSize
+        const proseFontSizePx = rootFontSizePx * safeTextScale
+        const inlineCodeFontSizePx = rootFontSizePx * 0.9
+        const kbdFontSizePx = rootFontSizePx * 0.85
+        const codeBlockFontSizePx = rootFontSizePx * 0.875
+        const fontFamily = String(style.fontName || '').trim() || 'serif'
+        root.setProperty('--rf-font-family', JSON.stringify(fontFamily))
+        root.setProperty('--readflex-font-size', `${safeFontSize}em`)
+        root.setProperty('--readflex-text-scale', safeTextScale)
+        root.setProperty('--readflex-prose-font-size', `${proseFontSizePx}px`)
+        root.setProperty('--readflex-inline-code-font-size', `${inlineCodeFontSizePx}px`)
+        root.setProperty('--readflex-kbd-font-size', `${kbdFontSizePx}px`)
+        root.setProperty('--readflex-code-block-font-size', `${codeBlockFontSizePx}px`)
+        root.setProperty('--readflex-letter-spacing', cssLengthPx(style.letterSpacing, '0px'))
+        root.setProperty('--readflex-line-height', Number(style.spacing) || 1.6)
+        root.setProperty('--readflex-paragraph-spacing', `${(Number(style.paragraphSpacing) || 1) / 2}em`)
+        root.setProperty('--readflex-text-indent', `${Number(style.textIndent) || 0}em`)
+        root.setProperty('--readflex-font-color', style.fontColor || '#000000')
+        root.setProperty('--readflex-background-color', style.backgroundColor || '#ffffff')
+        root.setProperty('--readflex-font-weight', Number(style.fontWeight) || 400)
+        root.setProperty('--readflex-hyphens', style.hyphenate ? 'auto' : 'manual')
+        root.setProperty('--rf-font-weight', Number(style.fontWeight) || 400)
+        root.setProperty('--rf-side-margin', articleSidePadding(style.sideMargin, '3.2vw'))
+        root.setProperty('--rf-top-margin', cssLengthPx(style.topMargin, '56px'))
+        root.setProperty('--rf-bottom-margin', cssLengthPx(style.bottomMargin, '72px'))
+        root.setProperty('--rf-safe-area-top', cssLengthPx(style.safeAreaTop, '0px'))
+        root.setProperty('--rf-safe-area-bottom', cssLengthPx(style.safeAreaBottom, '0px'))
+        root.setProperty('--rf-background-color', style.backgroundColor || '#ffffff')
+        root.setProperty('--rf-font-color', style.fontColor || '#000000')
+        root.setProperty('--rf-accent-color', style.accentColor || '#000000')
+
+        const align = style.textAlign || (style.justify ? 'justify' : 'start')
+        root.setProperty('--readflex-text-align', align === 'end' ? 'end' : align)
+
+        const fontPath = String(style.fontPath || '').trim()
+        fontStyle.textContent = fontPath && fontFamily
+          ? `@font-face { font-family: ${JSON.stringify(fontFamily)}; src: url(${JSON.stringify(fontPath)}) format("truetype"); font-weight: 100 900; font-display: swap; }`
+          : ''
+        customStyle.textContent = style.customCSSEnabled && typeof style.customCSS === 'string'
+          ? style.customCSS
+          : ''
+      }
+
+      function normalizeText(value) {
+        return String(value || '').replace(/\s+/g, ' ').trim()
+      }
+
+      function decodePosition(value) {
+        if (typeof value !== 'string' || !value.startsWith(positionPrefix)) {
+          return null
+        }
+        try {
+          return JSON.parse(decodeURIComponent(value.slice(positionPrefix.length)))
+        } catch (_) {
+          return null
+        }
+      }
+
+      function encodePosition(anchor) {
+        if (!anchor) return ''
+        return `${positionPrefix}${encodeURIComponent(JSON.stringify(anchor))}`
+      }
+
+      function sentenceKey(anchor) {
+        if (!anchor) return ''
+        return `${anchor.blockId}:${anchor.sentenceIndex}`
+      }
+
+      function sentenceElement(blockId, sentenceIndex) {
+        if (!blockId || sentenceIndex == null) return null
+        return document.getElementById(`${blockId}-s${sentenceIndex}`)
+      }
+
+      function sentenceElementForAnchor(anchor) {
+        if (!anchor) return null
+        return sentenceElement(anchor.blockId, anchor.sentenceIndex) ||
+          findSentenceByText(anchor.sentenceText)
+      }
+
+      function sentenceAnchorFor(element) {
+        if (!element) return null
+        const block = element.closest('[data-rf-block-id], [id]')
+        const blockId = block?.dataset?.rfBlockId || block?.id || ''
+        const sentenceIndex = Number(element.dataset.rfSentence)
+        if (!blockId || !Number.isInteger(sentenceIndex)) return null
+
+        const blockText = normalizeText(block?.textContent)
+        const sentenceText = normalizeText(element.textContent)
+        const index = sentenceText ? blockText.indexOf(sentenceText) : -1
+        return {
+          blockId,
+          sentenceIndex,
+          sentenceText,
+          prefix: index > 0 ? blockText.slice(Math.max(0, index - 96), index) : '',
+          suffix: index >= 0 ? blockText.slice(index + sentenceText.length, index + sentenceText.length + 96) : '',
+        }
+      }
+
+      function findSentenceByText(text) {
+        const normalized = normalizeText(text)
+        if (!normalized) return null
+        for (const element of document.querySelectorAll('[data-rf-sentence]')) {
+          if (normalizeText(element.textContent) === normalized) return element
+        }
+        return null
+      }
+
+      function bookmarkCfi(bookmark) {
+        return typeof bookmark?.cfi === 'string' ? bookmark.cfi : ''
+      }
+
+      function bookmarkForAnchor(anchor) {
+        const cfi = encodePosition(anchor)
+        if (!cfi) return null
+        const exact = normalizeText(anchor?.sentenceText)
+        return bookmarksByCfi.get(cfi) || bookmarksByExact.get(exact) || null
+      }
+
+      function bookmarkPayloadFor(anchor) {
+        const bookmark = bookmarkForAnchor(anchor)
+        return bookmark
+          ? { exists: true, cfi: bookmarkCfi(bookmark), id: bookmark.id || null }
+          : { exists: false }
+      }
+
+      function bookmarkDetailFor(anchor, bookmark = null) {
+        const cfi = encodePosition(anchor)
+        return {
+          id: bookmark?.id || null,
+          cfi,
+          content: anchor?.sentenceText || bookmark?.content || '',
+          percentage: progress(),
+          anchorExact: anchor?.sentenceText || bookmark?.anchorExact || '',
+          anchorPrefix: anchor?.prefix || bookmark?.anchorPrefix || '',
+          anchorSuffix: anchor?.suffix || bookmark?.anchorSuffix || '',
+        }
+      }
+
+      function progress() {
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight
+        if (!Number.isFinite(maxScroll) || maxScroll <= 0) return 1
+        return clamp01(window.scrollY / maxScroll)
+      }
+
+      function scrollToProgress(value) {
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight
+        window.scrollTo({ top: Math.max(0, maxScroll) * clamp01(value), behavior: 'auto' })
+      }
+
+      function scrollElementToCenter(element) {
+        const rect = element.getBoundingClientRect()
+        const target = window.scrollY + rect.top - (window.innerHeight - rect.height) / 2
+        window.scrollTo({ top: Math.max(0, target), behavior: 'auto' })
+      }
+
+      function sentenceDistanceToCenter(element) {
+        const centerY = window.innerHeight / 2
+        let best = Number.POSITIVE_INFINITY
+        for (const rect of element.getClientRects()) {
+          if (rect.bottom < 0 || rect.top > window.innerHeight) continue
+          if (centerY >= rect.top && centerY <= rect.bottom) return 0
+          best = Math.min(best, Math.abs(centerY - rect.top), Math.abs(centerY - rect.bottom))
+        }
+        return best
+      }
+
+      function currentSentenceElement() {
+        const candidates = visibleSentences && visibleSentences.size > 0
+          ? Array.from(visibleSentences)
+          : Array.from(document.querySelectorAll('[data-rf-sentence]'))
+        if (candidates.length === 0) return null
+
+        let bestElement = null
+        let bestDistance = Number.POSITIVE_INFINITY
+        for (const element of candidates) {
+          const distance = sentenceDistanceToCenter(element)
+          if (distance < bestDistance) {
+            bestDistance = distance
+            bestElement = element
+          }
+        }
+
+        const activeElement = activeSentenceKey
+          ? document.getElementById(activeSentenceKey)
+          : null
+        if (activeElement && activeElement.isConnected) {
+          const activeDistance = sentenceDistanceToCenter(activeElement)
+          if (activeDistance <= bestDistance + centerHysteresisPx) {
+            return activeElement
+          }
+        }
+        return bestElement
+      }
+
+      function activeChapterTitle() {
+        const headings = Array.from(content.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+        let current = ''
+        for (const heading of headings) {
+          if (heading.getBoundingClientRect().top > window.innerHeight / 2) break
+          current = normalizeText(heading.textContent)
+        }
+        return current || null
+      }
+
+      function chapterTitleForElement(element) {
+        const headings = Array.from(content.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+        let current = ''
+        for (const heading of headings) {
+          if (heading === element || heading.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING) {
+            current = normalizeText(heading.textContent)
+          } else {
+            break
+          }
+        }
+        return current || null
+      }
+
+      function emitPosition(reason = 'scroll', force = false) {
+        const element = currentSentenceElement()
+        const anchor = sentenceAnchorFor(element)
+        const nextSentenceKey = sentenceKey(anchor)
+        if (element?.id) activeSentenceKey = element.id
+
+        const nextProgress = progress()
+        const now = performance.now()
+        const progressMoved = Math.abs(nextProgress - lastEmittedProgress) >= progressEmitStep
+        const sentenceChanged = nextSentenceKey !== lastEmittedSentenceKey
+        if (
+          !force &&
+          !sentenceChanged &&
+          !progressMoved &&
+          now - lastEmitAt < minEmitIntervalMs
+        ) {
+          return
+        }
+
+        lastEmittedSentenceKey = nextSentenceKey
+        lastEmittedProgress = nextProgress
+        lastEmitAt = now
+        callHandler('onArticlePositionChanged', {
+          cfi: encodePosition(anchor),
+          percentage: nextProgress,
+          chapterTitle: activeChapterTitle(),
+          reason,
+          atStart: nextProgress <= 0.001,
+          atEnd: nextProgress >= 0.999,
+          bookmark: bookmarkPayloadFor(anchor),
+        })
+      }
+
+      function schedulePosition(reason = 'scroll', force = false) {
+        if (scheduled) return
+        scheduled = true
+        requestAnimationFrame(() => {
+          scheduled = false
+          emitPosition(reason, force)
+        })
+      }
+
+      function observeSentences() {
+        intersectionObserver?.disconnect()
+        visibleSentences = new Set()
+        if (!('IntersectionObserver' in window)) return
+        intersectionObserver = new IntersectionObserver(entries => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              visibleSentences.add(entry.target)
+            } else {
+              visibleSentences.delete(entry.target)
+            }
+          }
+          schedulePosition('scroll')
+        }, { rootMargin: '100% 0px' })
+
+        for (const element of document.querySelectorAll('[data-rf-sentence]')) {
+          intersectionObserver.observe(element)
+        }
+      }
+
+      function restoreInitialPosition() {
+        if (userInteracted && restored) return
+        const decoded = decodePosition(readJsonParam('initialPosition', null))
+        const initialProgress = readJsonParam('initialProgress', null)
+        let target = null
+        if (decoded) {
+          target = sentenceElementForAnchor(decoded)
+        }
+
+        restoringUntil = performance.now() + scrollRestoreSuppressMs
+        if (target) {
+          scrollElementToCenter(target)
+          activeSentenceKey = target.id
+        } else if (Number.isFinite(Number(initialProgress))) {
+          scrollToProgress(Number(initialProgress))
+        }
+        restored = true
+        schedulePosition('load', true)
+      }
+
+      function emitToc() {
+        const items = articleHeadingTocItems()
+        if (items.length === 0) items.push(...fallbackArticleTocItems())
+        callHandler('onSetToc', items)
+        callHandler('onDocumentFeatures', {
+          format: 'html',
+          hasToc: items.length > 0,
+          hasSearchableText: true,
+        })
+      }
+
+      function startPercentageForElement(element) {
+        return clamp01(
+          (window.scrollY + element.getBoundingClientRect().top) /
+          Math.max(1, document.documentElement.scrollHeight - window.innerHeight),
+        )
+      }
+
+      function articleHeadingTocItems() {
+        return Array.from(content.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+          .filter(heading => heading.id && normalizeText(heading.textContent))
+          .map(heading => ({
+            label: normalizeText(heading.textContent),
+            href: `#${heading.id}`,
+            id: heading.id,
+            level: Number(heading.tagName.slice(1)) || 1,
+            startPercentage: startPercentageForElement(heading),
+          }))
+      }
+
+      function tocLabelForBlock(block, index) {
+        const text = normalizeText(block.textContent)
+        if (!text) return `Section ${index + 1}`
+        if (text.length <= 72) return text
+        const clipped = text.slice(0, 72).replace(/\s+\S*$/, '')
+        return `${clipped || text.slice(0, 72)}...`
+      }
+
+      function fallbackArticleTocItems() {
+        const blocks = Array.from(content.querySelectorAll('[data-rf-block-id]'))
+          .filter(block => block.id && normalizeText(block.textContent).length >= 48)
+        if (blocks.length === 0) return []
+
+        const maxItems = 12
+        const step = Math.max(1, Math.ceil(blocks.length / maxItems))
+        return blocks
+          .filter((_, index) => index % step === 0)
+          .map((block, index) => ({
+            label: tocLabelForBlock(block, index),
+            href: `#${block.id}`,
+            id: block.id,
+            level: 1,
+            startPercentage: startPercentageForElement(block),
+          }))
+      }
+
+      function searchExcerpt(text, matchIndex, queryLength) {
+        const preStart = Math.max(0, matchIndex - 56)
+        const postEnd = Math.min(text.length, matchIndex + queryLength + 64)
+        return {
+          pre: text.slice(preStart, matchIndex),
+          match: text.slice(matchIndex, matchIndex + queryLength),
+          post: text.slice(matchIndex + queryLength, postEnd),
+        }
+      }
+
+      function searchMatchAnchor(text, matchIndex, queryLength) {
+        const prefixStart = Math.max(0, matchIndex - 48)
+        const suffixEnd = Math.min(text.length, matchIndex + queryLength + 48)
+        return {
+          matchIndex,
+          matchLength: queryLength,
+          matchText: text.slice(matchIndex, matchIndex + queryLength),
+          matchPrefix: text.slice(prefixStart, matchIndex),
+          matchSuffix: text.slice(matchIndex + queryLength, suffixEnd),
+        }
+      }
+
+      function emitSearchProgress(requestId, index, total) {
+        callHandler('onSearch', {
+          requestId,
+          type: 'progress',
+          progress: total <= 0 ? 1 : clamp01(index / total),
+        })
+      }
+
+      function emitSearchBatch(requestId, items) {
+        if (items.length === 0) return
+        callHandler('onSearch', {
+          requestId,
+          type: 'results',
+          items,
+        })
+      }
+
+      function clearActiveSearchElement() {
+        activeSearchElement?.classList?.remove('readflex-search-active')
+        activeSearchElement = null
+        if (!activeSearchMarker) return
+        const parent = activeSearchMarker.parentNode
+        if (!parent) {
+          activeSearchMarker = null
+          return
+        }
+        while (activeSearchMarker.firstChild) {
+          parent.insertBefore(activeSearchMarker.firstChild, activeSearchMarker)
+        }
+        activeSearchMarker.remove()
+        parent.normalize()
+        activeSearchMarker = null
+      }
+
+      function textRangeForNormalizedOffset(root, start, length) {
+        const normalizedStart = Number(start)
+        const normalizedLength = Number(length)
+        if (
+          !Number.isInteger(normalizedStart) ||
+          !Number.isInteger(normalizedLength) ||
+          normalizedStart < 0 ||
+          normalizedLength <= 0
+        ) {
+          return null
+        }
+
+        const mapping = []
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+        let textNode = walker.nextNode()
+        let seenText = false
+        let pendingSpace = null
+
+        while (textNode) {
+          const text = textNode.nodeValue || ''
+          for (let i = 0; i < text.length; i += 1) {
+            if (/\s/.test(text[i])) {
+              if (seenText && !pendingSpace) {
+                pendingSpace = { node: textNode, start: i, end: i + 1 }
+              }
+              continue
+            }
+            if (pendingSpace && mapping.length > 0) {
+              mapping.push(pendingSpace)
+            }
+            pendingSpace = null
+            seenText = true
+            mapping.push({ node: textNode, start: i, end: i + 1 })
+          }
+          textNode = walker.nextNode()
+        }
+
+        const first = mapping[normalizedStart]
+        const last = mapping[normalizedStart + normalizedLength - 1]
+        if (!first || !last) return null
+
+        const range = document.createRange()
+        range.setStart(first.node, first.start)
+        range.setEnd(last.node, last.end)
+        return range
+      }
+
+      function exactMatchOffset(text, anchor) {
+        const matchIndex = Number(anchor?.matchIndex)
+        const matchLength = Number(anchor?.matchLength)
+        if (
+          !Number.isInteger(matchIndex) ||
+          !Number.isInteger(matchLength) ||
+          matchIndex < 0 ||
+          matchLength <= 0
+        ) {
+          return null
+        }
+
+        const matchText = normalizeText(anchor?.matchText)
+        const exactText = text.slice(matchIndex, matchIndex + matchLength)
+        if (!matchText || exactText.toLocaleLowerCase() === matchText.toLocaleLowerCase()) {
+          return matchIndex
+        }
+        return null
+      }
+
+      function contextMatchOffset(text, anchor) {
+        const matchText = normalizeText(anchor?.matchText)
+        if (!matchText) return null
+
+        const lowerText = text.toLocaleLowerCase()
+        const lowerMatch = matchText.toLocaleLowerCase()
+        const prefix = normalizeText(anchor?.matchPrefix).toLocaleLowerCase()
+        const suffix = normalizeText(anchor?.matchSuffix).toLocaleLowerCase()
+        const expected = Number(anchor?.matchIndex)
+        let best = null
+        let from = 0
+
+        while (from <= lowerText.length) {
+          const index = lowerText.indexOf(lowerMatch, from)
+          if (index < 0) break
+          let score = 0
+          if (Number.isFinite(expected)) {
+            score -= Math.abs(index - expected) / 1000
+          }
+          if (prefix && lowerText.slice(Math.max(0, index - prefix.length), index) === prefix) {
+            score += 3
+          }
+          if (
+            suffix &&
+            lowerText.slice(index + lowerMatch.length, index + lowerMatch.length + suffix.length) === suffix
+          ) {
+            score += 3
+          }
+          if (!best || score > best.score) best = { index, score }
+          from = index + Math.max(1, lowerMatch.length)
+        }
+
+        return best?.index ?? null
+      }
+
+      function matchRangeForAnchor(element, anchor) {
+        const text = normalizeText(element?.textContent)
+        const matchText = normalizeText(anchor?.matchText)
+        const length = matchText.length || Number(anchor?.matchLength)
+        if (!text || !Number.isFinite(length) || length <= 0) return null
+
+        const offset = exactMatchOffset(text, anchor) ?? contextMatchOffset(text, anchor)
+        return offset == null ? null : textRangeForNormalizedOffset(element, offset, length)
+      }
+
+      function markSearchMatch(element, anchor) {
+        const range = matchRangeForAnchor(element, anchor)
+        if (!range) return false
+        const marker = document.createElement('mark')
+        marker.className = 'readflex-search-match'
+        try {
+          marker.append(range.extractContents())
+          range.insertNode(marker)
+          activeSearchMarker = marker
+          return true
+        } catch (_) {
+          marker.remove()
+          return false
+        }
+      }
+
+      function setActiveSearchElement(element, anchor = null) {
+        clearActiveSearchElement()
+        if (!element) return
+        activeSearchElement = element
+        if (markSearchMatch(element, anchor)) return
+        element.classList.add('readflex-search-active')
+      }
+
+      function cancelSearch(requestId = null) {
+        if (!activeSearch) return
+        if (requestId != null && activeSearch.requestId !== requestId) return
+        activeSearch.cancelled = true
+        activeSearch = null
+      }
+
+      function clearSearch() {
+        cancelSearch()
+        clearActiveSearchElement()
+      }
+
+      function startSearch(requestId, query) {
+        const needle = normalizeText(query).toLocaleLowerCase()
+        clearSearch()
+        if (!needle) {
+          callHandler('onSearch', { requestId, type: 'done' })
+          return
+        }
+
+        const sentences = Array.from(document.querySelectorAll('[data-rf-sentence]'))
+        const state = { requestId, cancelled: false }
+        activeSearch = state
+        let index = 0
+        let batch = []
+
+        const step = () => {
+          if (state.cancelled) return
+          const deadline = performance.now() + 8
+          while (index < sentences.length && performance.now() <= deadline) {
+            const element = sentences[index]
+            const text = normalizeText(element.textContent)
+            const lower = text.toLocaleLowerCase()
+            const anchor = sentenceAnchorFor(element)
+            let from = 0
+            while (anchor) {
+              const matchIndex = lower.indexOf(needle, from)
+              if (matchIndex < 0) break
+              batch.push({
+                cfi: encodePosition({
+                  ...anchor,
+                  ...searchMatchAnchor(text, matchIndex, needle.length),
+                }),
+                chapterTitle: chapterTitleForElement(element),
+                excerpt: searchExcerpt(text, matchIndex, needle.length),
+              })
+              from = matchIndex + Math.max(needle.length, 1)
+              if (batch.length >= 25) {
+                emitSearchBatch(requestId, batch)
+                batch = []
+              }
+            }
+            index += 1
+          }
+
+          emitSearchProgress(requestId, index, sentences.length)
+          if (index >= sentences.length) {
+            emitSearchBatch(requestId, batch)
+            if (activeSearch === state) activeSearch = null
+            callHandler('onSearch', { requestId, type: 'done' })
+            return
+          }
+          setTimeout(step, 0)
+        }
+
+        step()
+      }
+
+      function installBase(href) {
+        if (!href) return
+        const base = document.createElement('base')
+        base.href = href
+        document.head.prepend(base)
+      }
+
+      async function nextPaint() {
+        await new Promise(resolve => requestAnimationFrame(() => {
+          requestAnimationFrame(resolve)
+        }))
+      }
+
+      async function boot() {
+        try {
+          applyStyle(style)
+          const contentUrl = readJsonParam('contentUrl', '')
+          const contentBaseUrl = readJsonParam('contentBaseUrl', '')
+          installBase(contentBaseUrl)
+          const response = await fetch(contentUrl)
+          if (!response.ok) throw new Error(`Article HTML request failed: ${response.status}`)
+          content.innerHTML = await response.text()
+          content.removeAttribute('aria-busy')
+          observeSentences()
+          emitToc()
+          await nextPaint()
+          restoreInitialPosition()
+          callHandler('onLoadEnd', null)
+
+          document.fonts?.ready?.then(() => {
+            if (!userInteracted) {
+              restoreInitialPosition()
+              schedulePosition('load', true)
+            }
+          })
+          for (const image of content.querySelectorAll('img')) {
+            if (image.complete) continue
+            image.addEventListener('load', () => {
+              if (!userInteracted) restoreInitialPosition()
+              schedulePosition('scroll', true)
+            }, { once: true })
+            image.addEventListener('error', () => schedulePosition('scroll', true), { once: true })
+          }
+        } catch (error) {
+          callHandler('onJsError', {
+            kind: 'error',
+            msg: String(error?.message || error),
+            stack: error?.stack || null,
+          })
+        }
+      }
+
+      window.changeStyle = nextStyle => {
+        applyStyle(nextStyle)
+        schedulePosition('style', true)
+      }
+
+      window.goToPercent = value => {
+        restoringUntil = performance.now() + scrollRestoreSuppressMs
+        scrollToProgress(value)
+        schedulePosition('anchor', true)
+      }
+
+      window.goToHref = href => {
+        const raw = String(href || '')
+        const id = raw.startsWith('#') ? raw.slice(1) : raw.split('#')[1]
+        const target = id ? document.getElementById(decodeURIComponent(id)) : null
+        if (!target) return
+        restoringUntil = performance.now() + scrollRestoreSuppressMs
+        target.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'auto' })
+        schedulePosition('anchor', true)
+      }
+
+      window.goToCfi = value => {
+        const decoded = decodePosition(value)
+        const target = sentenceElementForAnchor(decoded)
+        if (!target) return
+        restoringUntil = performance.now() + scrollRestoreSuppressMs
+        scrollElementToCenter(target)
+        activeSentenceKey = target.id
+        if (Number.isFinite(Number(decoded?.matchIndex))) {
+          setActiveSearchElement(target, decoded)
+        } else {
+          clearActiveSearchElement()
+        }
+        schedulePosition('anchor', true)
+      }
+
+      window.goToBookmark = bookmark => {
+        if (bookmark?.cfi) {
+          window.goToCfi(bookmark.cfi)
+          return
+        }
+        if (Number.isFinite(Number(bookmark?.progress))) {
+          window.goToPercent(Number(bookmark.progress))
+        }
+      }
+
+      window.setArticleBookmarks = bookmarks => {
+        articleBookmarks = Array.isArray(bookmarks)
+          ? bookmarks.filter(bookmark => bookmark && bookmarkCfi(bookmark))
+          : []
+        bookmarksByCfi = new Map()
+        bookmarksByExact = new Map()
+        for (const bookmark of articleBookmarks) {
+          bookmarksByCfi.set(bookmarkCfi(bookmark), bookmark)
+          const exact = normalizeText(bookmark.anchorExact || bookmark.content)
+          if (exact) bookmarksByExact.set(exact, bookmark)
+        }
+        schedulePosition('bookmark-sync', true)
+      }
+
+      window.toggleBookmarkHere = () => {
+        const anchor = sentenceAnchorFor(currentSentenceElement())
+        if (!anchor) return
+        const existing = bookmarkForAnchor(anchor)
+        callHandler('handleBookmark', {
+          source: 'chrome',
+          remove: Boolean(existing),
+          detail: bookmarkDetailFor(anchor, existing),
+        })
+      }
+
+      window.startSearch = startSearch
+      window.cancelSearch = cancelSearch
+      window.clearSearch = clearSearch
+
+      window.addEventListener('scroll', () => {
+        if (performance.now() > restoringUntil) userInteracted = true
+        schedulePosition('scroll')
+      }, { passive: true })
+
+      window.addEventListener('resize', () => schedulePosition('resize', true))
+
+      document.addEventListener('click', event => {
+        if (window.getSelection?.().toString().trim()) return
+        callHandler('onClick', {
+          x: clamp01(event.clientX / Math.max(1, window.innerWidth)),
+          y: clamp01(event.clientY / Math.max(1, window.innerHeight)),
+        })
+      })
+
+      boot()
+    })()
+  </script>
+</body>
+</html>

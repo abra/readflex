@@ -878,7 +878,10 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
           'chapterPage=${snapshot.chapterCurrentPage}/'
           '${snapshot.chapterTotalPages}',
         );
-        final actions = readerChromeActionsForFormat(snapshot.format);
+        final actions = readerChromeActionsFor(
+          sourceType: snapshot.sourceType,
+          format: snapshot.format,
+        );
         return _ReaderBottomChrome(
           visible: snapshot.visible,
           progress: snapshot.progress,

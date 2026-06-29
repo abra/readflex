@@ -81,3 +81,12 @@ InAppWebViewSettings baseReaderSettings() => InAppWebViewSettings(
 ContextMenu readerContextMenu() => ContextMenu(
   settings: ContextMenuSettings(hideDefaultSystemContextMenuItems: true),
 );
+
+bool shouldLogReaderWebViewConsoleMessage({
+  required bool debugMode,
+  required String level,
+}) {
+  if (!debugMode) return false;
+  return level.toLowerCase().contains('error') ||
+      level.toLowerCase().contains('warning');
+}

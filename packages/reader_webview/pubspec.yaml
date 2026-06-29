@@ -24,6 +24,7 @@ dev_dependencies:
 
 flutter:
   assets:
+    - assets/article-html/index.html
     - assets/foliate-js/index.html
     - assets/foliate-js/src/book.js
     - assets/foliate-js/src/view.js

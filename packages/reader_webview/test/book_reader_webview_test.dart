@@ -444,6 +444,26 @@ void main() {
       expect(searchJs, contains('return simpleSearch(strs, query, options)'));
     });
 
+    test(
+      'book search result navigation retries highlight annotation rendering',
+      () {
+        final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
+        final viewJs = _readPackageSource('assets/foliate-js/src/view.js');
+        final webViewDart = readBookReaderWebViewLibrarySource();
+
+        expect(viewJs, contains('const SEARCH_HIGHLIGHT_RADIUS = 3'));
+        expect(viewJs, contains('radius: SEARCH_HIGHLIGHT_RADIUS'));
+        expect(viewJs, contains('async goToSearchResult(cfi)'));
+        expect(viewJs, contains('await this.#nextFrame()'));
+        expect(
+          viewJs,
+          contains('this.#searchResults.set(resolved.index, list)'),
+        );
+        expect(bookJs, contains('window.goToSearchResult'));
+        expect(webViewDart, contains('void goToSearchResult(String cfi)'));
+      },
+    );
+
     test('resolves XHTML cover pages to their nested image', () {
       final epubJs = _readPackageSource('assets/foliate-js/src/epub.js');
 
@@ -538,7 +558,8 @@ void main() {
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_92"));
+      expect(assetExtractor, contains("reader_webview_assets_102"));
+      expect(assetExtractor, contains('assets/article-html/index.html'));
     });
 
     test('wires image-area highlight selection and rendering bridge', () {
@@ -687,6 +708,47 @@ void main() {
       expect(html, contains('--readflex-viewport-height'));
       expect(html, contains('const updateReadflexViewportHeight = () => {'));
       expect(html, contains('window.visualViewport?.addEventListener('));
+    });
+
+    test('vertical article reader tracks sentence anchors with hysteresis', () {
+      final html = _readPackageSource('assets/article-html/index.html');
+
+      expect(html, contains('const centerHysteresisPx = 24'));
+      expect(html, contains('--readflex-font-size'));
+      expect(html, contains('rootFontSizePx = 16 * safeFontSize'));
+      expect(html, contains('articleSidePadding(style.sideMargin'));
+      expect(html, contains('--rf-safe-area-top'));
+      expect(html, contains('style.safeAreaTop'));
+      expect(html, contains('style.customCSSEnabled'));
+      expect(html, contains('IntersectionObserver'));
+      expect(html, contains('data-rf-sentence'));
+      expect(html, contains('readflex-html-position:'));
+      expect(html, contains("callHandler('onArticlePositionChanged'"));
+      expect(html, contains('function articleHeadingTocItems()'));
+      expect(html, contains('function fallbackArticleTocItems()'));
+      expect(html, contains("content.querySelectorAll('[data-rf-block-id]')"));
+      expect(html, contains('const maxItems = 12'));
+      expect(html, contains('window.goToPercent = value =>'));
+      expect(html, contains('window.goToHref = href =>'));
+      expect(html, contains('window.goToCfi = value =>'));
+      expect(html, contains('window.startSearch = startSearch'));
+      expect(html, contains('window.toggleBookmarkHere = () =>'));
+      expect(html, contains('window.setArticleBookmarks = bookmarks =>'));
+      expect(html, contains('mark.readflex-search-match'));
+      expect(html, contains('rgb(0 212 216 / 68%)'));
+      expect(html, contains('--rf-search-highlight-radius: 3px'));
+      expect(html, contains('function searchMatchAnchor('));
+      expect(
+        html,
+        contains('matchPrefix: text.slice(prefixStart, matchIndex)'),
+      );
+      expect(html, contains('function contextMatchOffset('));
+      expect(html, contains('setActiveSearchElement(target, decoded)'));
+      expect(html, contains('textRangeForNormalizedOffset'));
+      expect(
+        html,
+        contains('...searchMatchAnchor(text, matchIndex, needle.length)'),
+      );
     });
 
     test('limits WebContent crash recovery to one eligible reload', () {

@@ -9,6 +9,8 @@ import 'package:path/path.dart' as p;
 /// Route families:
 ///   - `GET /book/<url-encoded-absolute-path>` — streams a book file
 ///     (epub, pdf, fb2, mobi, azw3, cbz) from disk.
+///   - `GET /article/<url-encoded-absolute-dir>/<relative-path>` — serves a
+///     generated article HTML fragment and its adjacent local assets.
 ///   - `GET /assets/<path>` — serves static files (foliate-js, CSS, JS)
 ///     from [_assetsDir].
 ///
@@ -96,6 +98,8 @@ class ReaderServer {
       switch (segments.first) {
         case 'book':
           await _handleBook(request, segments, stopwatch);
+        case 'article':
+          await _handleArticle(request, segments, stopwatch);
         case 'assets':
           await _handleAsset(request, segments, stopwatch);
         default:
@@ -163,6 +167,45 @@ class ReaderServer {
     );
   }
 
+  // ── /article/<url-encoded-absolute-dir>/<relative-path> ──
+
+  Future<void> _handleArticle(
+    HttpRequest request,
+    List<String> segments,
+    Stopwatch stopwatch,
+  ) async {
+    final path = request.uri.path;
+
+    if (segments.length < 3) {
+      _respond(request, HttpStatus.badRequest, 'Missing article path.');
+      _logRequest('GET', path, HttpStatus.badRequest, stopwatch);
+      return;
+    }
+
+    final root = Directory(segments[1]);
+    final relativePath = segments.sublist(2).join('/');
+    if (relativePath.isEmpty || !_isWithin(root, relativePath)) {
+      _respond(request, HttpStatus.badRequest, 'Invalid article path.');
+      _logRequest('GET', path, HttpStatus.badRequest, stopwatch);
+      return;
+    }
+
+    final file = File(p.join(root.path, relativePath));
+    if (!await file.exists()) {
+      _respond(request, HttpStatus.notFound, 'Article file not found.');
+      _logRequest('GET', path, HttpStatus.notFound, stopwatch);
+      return;
+    }
+
+    await _serveFile(
+      request: request,
+      file: file,
+      contentType: _mimeForExtension(p.extension(relativePath)),
+      stopwatch: stopwatch,
+      cacheStaticFile: true,
+    );
+  }
+
   // ── /assets/<path> ──
 
   Future<void> _handleAsset(
@@ -225,6 +268,7 @@ class ReaderServer {
     required File file,
     required ContentType contentType,
     required Stopwatch stopwatch,
+    bool cacheStaticFile = false,
   }) async {
     final path = request.uri.path;
     final method = request.method;
@@ -249,7 +293,7 @@ class ReaderServer {
         HttpHeaders.cacheControlHeader,
         'public, max-age=31536000, immutable',
       );
-    } else if (path.startsWith('/assets/')) {
+    } else if (path.startsWith('/assets/') || cacheStaticFile) {
       response.headers.set(
         HttpHeaders.cacheControlHeader,
         'public, max-age=86400',

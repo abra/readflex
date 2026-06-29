@@ -25,7 +25,7 @@ class AssetExtractor {
   // Bump when bundled reader HTML/JS assets must be re-extracted even if the
   // app version/build number did not change, e.g. release-mode device testing.
   @visibleForTesting
-  static const assetRevision = 'reader_webview_assets_92';
+  static const assetRevision = 'reader_webview_assets_102';
 
   @visibleForTesting
   static String extractionVersionFor(String version) =>
@@ -34,6 +34,8 @@ class AssetExtractor {
   /// All asset paths relative to the package's `assets/` directory.
   /// The rootBundle key includes the `packages/reader_webview/` prefix.
   static const _assetPaths = [
+    // vertical HTML article reader entry
+    'assets/article-html/index.html',
     // foliate-js entry
     'assets/foliate-js/index.html',
     // foliate-js core

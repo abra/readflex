@@ -126,7 +126,7 @@ and UI. Storage rows and DAO types should remain behind repositories.
 | Package | Responsibility | Local dependencies |
 |---------|----------------|--------------------|
 | `book_repository` | Imported books, cover metadata, source bookmark/progress, filesystem ownership for books. | `domain_models`, `local_storage`, `monitoring` |
-| `article_repository` | Extracted articles, article assets, generated reader EPUB adapter. | `domain_models`, `local_storage`, `monitoring` |
+| `article_repository` | Extracted articles, article assets, vertical HTML reader content, generated EPUB compatibility adapter. | `domain_models`, `local_storage`, `monitoring` |
 | `collection_repository` | Manual library collections and built-in favorite membership. | `domain_models`, `local_storage` |
 | `highlight_repository` | Highlight persistence and domain mapping. | `domain_models`, `local_storage` |
 
@@ -147,8 +147,8 @@ containing those packages is `189e2cc1`.
 | `device_screen_brightness` | Native/plugin brightness access. | Low-level platform package used by `screen_control_service`. |
 | `monitoring` | Logger, log observers, analytics/error reporter contracts and no-op implementations. | Production reporters are not implemented yet. |
 | `preferences_service` | Preferences model, storage, repository, service, and scope. | Used by Library, Reader, and app composition. |
-| `reader_server` | Localhost HTTP server for reader assets and book/article files. | Supports range requests for WebView readers. |
-| `reader_webview` | Foliate WebView wrapper, JS bridge, asset extraction, metadata extraction. | Used by Reader and Import Flow. |
+| `reader_server` | Localhost HTTP server for reader assets and book/article files. | Supports range requests for books and local article HTML/assets for WebView readers. |
+| `reader_webview` | Foliate book WebView wrapper, vertical article HTML wrapper, JS bridges, asset extraction, metadata extraction. | Used by Reader and Import Flow. |
 | `screen_control_service` | Keep-awake and brightness coordination for active reading sessions. | Wraps low-level brightness plugin. |
 | `toast_service` | Thin toastification wrapper. | Feature packages do not import toastification directly. |
 
@@ -198,8 +198,8 @@ The reader is intentionally split across several packages:
 
 | Package | Responsibility |
 |---------|----------------|
-| `reader_server` | Serves reader assets and book/article bytes from localhost. |
-| `reader_webview` | Hosts foliate-js, JS bridge DTOs, asset extraction, metadata extraction. |
+| `reader_server` | Serves reader assets, book bytes, article HTML, and article-local assets from localhost. |
+| `reader_webview` | Hosts foliate-js for books/comics, the vertical HTML shell for articles, JS bridge DTOs, asset extraction, metadata extraction. |
 | `features/reader` | Reader screen, reader bloc/cubits, chrome, drawers, appearance, search, selection, brightness, keep-awake. |
 | `shared` | `TextAction` plugin contract used by reader context-panel actions. |
 | `features/highlight` | Implements `HighlightAction`. |
@@ -219,7 +219,9 @@ Reader-specific UI state is split by responsibility:
   platform override behavior.
 
 The WebView subtree is kept behind ready-state reader composition so routine
-UI changes do not recreate the reader runtime unnecessarily.
+UI changes do not recreate the reader runtime unnecessarily. Books and comics
+use the foliate WebView; articles use a separate vertical HTML WebView that
+loads `content.html` and restores position through stable sentence anchors.
 
 ## Import and Article Flow
 
@@ -238,8 +240,9 @@ Article import:
 ```text
 ImportFlowSheet
   -> ArticleExtractionService downloads/cleans article
-  -> ArticleRepository stores article, assets, and reader EPUB adapter
-  -> Library/Reader consume the saved source through repositories
+  -> ArticleRepository stores article, assets, content.html, and EPUB adapter
+  -> Reader opens content.html through ArticleHtmlReaderWebView
+  -> ReaderBloc persists the same source progress model through repositories
 ```
 
 The import UI does not own storage details. It receives callbacks and reports

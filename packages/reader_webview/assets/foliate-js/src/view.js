@@ -9,6 +9,7 @@ const SEARCH_PREFIX = 'foliate-search:'
 const SEARCH_HIGHLIGHT_COLOR = '#00d4d8'
 const SEARCH_HIGHLIGHT_OPACITY = '.68'
 const SEARCH_HIGHLIGHT_PADDING = 1
+const SEARCH_HIGHLIGHT_RADIUS = 3
 const BOOK_DIRECTION_SAMPLE_SECTION_LIMIT = 12
 const SECTION_DIRECTION_SAMPLE_CHAR_LIMIT = 5000
 const SECTION_DIRECTION_SAMPLE_SLICE_LIMIT = 3
@@ -430,16 +431,18 @@ export class View extends HTMLElement {
         const { overlayer, doc } = obj
         if (remove) {
           overlayer.remove(value)
-          return
+          return true
         }
         const range = doc ? anchor(doc) : anchor
         overlayer.add(value, range, Overlayer.highlight, {
           color: SEARCH_HIGHLIGHT_COLOR,
           opacity: SEARCH_HIGHLIGHT_OPACITY,
           padding: SEARCH_HIGHLIGHT_PADDING,
+          radius: SEARCH_HIGHLIGHT_RADIUS,
         });
+        return true
       }
-      return
+      return false
     }
     const { index, anchor } = await this.resolveNavigation(navigationValue)
     const obj = this.#getOverlayer(index)
@@ -534,6 +537,27 @@ export class View extends HTMLElement {
       console.error(e)
       console.error(`Could not go to ${target}`)
     }
+  }
+  #nextFrame() {
+    return new Promise(resolve => requestAnimationFrame(() => {
+      requestAnimationFrame(resolve)
+    }))
+  }
+  async goToSearchResult(cfi) {
+    const resolved = await this.goTo(cfi)
+    if (!resolved) return false
+
+    const item = { value: SEARCH_PREFIX + cfi }
+    const list = this.#searchResults.get(resolved.index) ?? []
+    if (!list.some(x => x?.value === item.value)) {
+      list.push(item)
+      this.#searchResults.set(resolved.index, list)
+    }
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (await this.addAnnotation(item)) return true
+      await this.#nextFrame()
+    }
+    return false
   }
   async goToFraction(frac) {
     const [index, anchor] = this.#sectionProgress.getSection(frac)

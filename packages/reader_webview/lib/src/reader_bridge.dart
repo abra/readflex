@@ -735,6 +735,8 @@ class FoliateStyle {
     this.accentColor = '#000000',
     this.topMargin = 90,
     this.bottomMargin = 50,
+    this.safeAreaTop = 0,
+    this.safeAreaBottom = 0,
     this.sideMargin = 8,
     this.justify = true,
     this.hyphenate = false,
@@ -775,6 +777,8 @@ class FoliateStyle {
 
   final double topMargin;
   final double bottomMargin;
+  final double safeAreaTop;
+  final double safeAreaBottom;
 
   /// Side margin in percent.
   final double sideMargin;
@@ -819,6 +823,8 @@ class FoliateStyle {
     'accentColor': accentColor,
     'topMargin': topMargin,
     'bottomMargin': bottomMargin,
+    'safeAreaTop': safeAreaTop,
+    'safeAreaBottom': safeAreaBottom,
     'sideMargin': sideMargin,
     'justify': justify,
     'hyphenate': hyphenate,
@@ -860,6 +866,8 @@ class FoliateStyle {
           accentColor == other.accentColor &&
           topMargin == other.topMargin &&
           bottomMargin == other.bottomMargin &&
+          safeAreaTop == other.safeAreaTop &&
+          safeAreaBottom == other.safeAreaBottom &&
           sideMargin == other.sideMargin &&
           justify == other.justify &&
           hyphenate == other.hyphenate &&
@@ -892,6 +900,8 @@ class FoliateStyle {
     accentColor,
     topMargin,
     bottomMargin,
+    safeAreaTop,
+    safeAreaBottom,
     sideMargin,
     justify,
     hyphenate,

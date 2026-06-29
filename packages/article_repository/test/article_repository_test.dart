@@ -59,8 +59,98 @@ void main() {
     );
     final chapter = _archiveText(archive, 'OEBPS/chapter1.xhtml');
     expect(RegExp('<h1>Saved article</h1>').allMatches(chapter), hasLength(1));
-    expect(chapter, contains('<p>Hello world</p>'));
+    expect(
+      chapter,
+      contains(
+        '<p id="block-0" data-rf-block-id="block-0">'
+        '<span id="block-0-s0" data-rf-sentence="0">Hello world</span></p>',
+      ),
+    );
   });
+
+  test('addExtractedArticle marks text blocks with sentence anchors', () async {
+    final article = await repository.addExtractedArticle(
+      _extractedArticle(
+        plainText: 'First sentence. Second sentence.',
+        blocks: const [
+          ArticleParagraphBlock(text: 'First sentence. Second sentence.'),
+          ArticleQuoteBlock(text: 'Quoted one. Quoted two?'),
+          ArticleListBlock(items: ['Item one. Item two!']),
+        ],
+      ),
+    );
+
+    final contentHtml = File(
+      p.join(p.dirname(article.contentPath), 'content.html'),
+    ).readAsStringSync();
+
+    expect(
+      contentHtml,
+      contains('<p id="block-0" data-rf-block-id="block-0">'),
+    );
+    expect(
+      contentHtml,
+      contains(
+        '<span id="block-0-s0" data-rf-sentence="0">First sentence. </span>',
+      ),
+    );
+    expect(
+      contentHtml,
+      contains(
+        '<span id="block-0-s1" data-rf-sentence="1">Second sentence.</span>',
+      ),
+    );
+    expect(
+      contentHtml,
+      contains('<blockquote id="block-1" data-rf-block-id="block-1">'),
+    );
+    expect(
+      contentHtml,
+      contains('<li id="block-3" data-rf-block-id="block-3">'),
+    );
+  });
+
+  test(
+    'addExtractedArticle writes article HTML images next to content',
+    () async {
+      final imageBytes = base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADElEQVR4nGNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=',
+      );
+      repository.dispose();
+      repository = ArticleRepository(
+        database: db,
+        articlesDirectory: Directory(p.join(tempDir.path, 'articles')),
+        httpClient: MockClient((request) async {
+          expect(request.url.toString(), 'https://example.com/image.png');
+          return http.Response.bytes(
+            imageBytes,
+            200,
+            headers: {'content-type': 'image/png'},
+          );
+        }),
+      );
+
+      final article = await repository.addExtractedArticle(
+        _extractedArticle(
+          blocks: const [
+            ArticleImageBlock(src: 'https://example.com/image.png', alt: 'One'),
+          ],
+        ),
+      );
+
+      final articleDir = Directory(p.dirname(article.contentPath));
+      final contentHtml = File(
+        p.join(articleDir.path, 'content.html'),
+      ).readAsStringSync();
+      final match = RegExp(r'images/([^"]+\.png)').firstMatch(contentHtml);
+
+      expect(match, isNotNull);
+      expect(
+        File(p.join(articleDir.path, match!.group(0)!)).existsSync(),
+        true,
+      );
+    },
+  );
 
   test(
     'addExtractedArticle maps headings into epub table of contents',

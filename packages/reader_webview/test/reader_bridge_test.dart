@@ -577,6 +577,8 @@ void main() {
       expect(map['accentColor'], '#000000');
       expect(map['topMargin'], 90);
       expect(map['bottomMargin'], 50);
+      expect(map['safeAreaTop'], 0);
+      expect(map['safeAreaBottom'], 0);
       expect(map['sideMargin'], 8);
       expect(map['justify'], true);
       expect(map['hyphenate'], false);
@@ -617,6 +619,8 @@ void main() {
         pageTurnStyle: 'vertical',
         topMargin: 40,
         bottomMargin: 30,
+        safeAreaTop: 47,
+        safeAreaBottom: 34,
         sideMargin: 8,
       );
       final map = style.toMap();
@@ -630,6 +634,8 @@ void main() {
       expect(map['pageTurnStyle'], 'vertical');
       expect(map['topMargin'], 40);
       expect(map['bottomMargin'], 30);
+      expect(map['safeAreaTop'], 47);
+      expect(map['safeAreaBottom'], 34);
       expect(map['sideMargin'], 8);
       // Defaults are still present.
       expect(map['allowScript'], false);
@@ -638,7 +644,7 @@ void main() {
 
     test('toMap has expected key count', () {
       const style = FoliateStyle();
-      expect(style.toMap().length, 29);
+      expect(style.toMap().length, 31);
     });
   });
 

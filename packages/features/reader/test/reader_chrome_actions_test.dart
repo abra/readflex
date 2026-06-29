@@ -35,4 +35,19 @@ void main() {
       expect(actions, contains(ReaderChromeAction.textSearch));
     });
   });
+
+  group('readerChromeActionsFor', () {
+    test('keeps article controls backed by the html reader bridge', () {
+      final actions = readerChromeActionsFor(
+        sourceType: SourceType.article,
+        format: BookFormat.epub,
+      );
+
+      expect(actions, contains(ReaderChromeAction.contents));
+      expect(actions, contains(ReaderChromeAction.textAppearance));
+      expect(actions, isNot(contains(ReaderChromeAction.pageTurn)));
+      expect(actions, contains(ReaderChromeAction.bookmark));
+      expect(actions, contains(ReaderChromeAction.textSearch));
+    });
+  });
 }

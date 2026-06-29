@@ -541,6 +541,17 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     );
   }
 
+  /// Navigate to a search result and force its foliate annotation to render
+  /// after the target section is active.
+  void goToSearchResult(String cfi) {
+    final escaped = jsonEncode(cfi);
+    _evaluateReaderCommand(
+      label: 'goToSearchResult',
+      expression:
+          "typeof goToSearchResult === 'function' ? goToSearchResult($escaped) : goToCfi($escaped)",
+    );
+  }
+
   /// Navigate to a zero-based book section index. Used by image-page
   /// highlights where there is no text CFI.
   void goToSectionIndex(int index) {

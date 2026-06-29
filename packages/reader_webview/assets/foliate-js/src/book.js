@@ -3332,6 +3332,8 @@ window.goToHref = href => reader.view.goTo(href)
 
 window.goToCfi = cfi => reader.view.goTo(cfi)
 
+window.goToSearchResult = cfi => reader.view.goToSearchResult(cfi)
+
 window.goToSectionIndex = index => reader.view.goTo(Number(index))
 
 window.goToPercent = percent => {

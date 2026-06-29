@@ -236,6 +236,14 @@ class ArticleRepository {
       return _DownloadedArticleImages(html: html, images: const []);
     }
 
+    final imagesDir = Directory(p.join(articleDir.path, 'images'));
+    await imagesDir.create(recursive: true);
+    for (final image in images) {
+      await File(
+        p.join(imagesDir.path, image.filename),
+      ).writeAsBytes(image.bytes, flush: true);
+    }
+
     final rewritten = html.replaceAllMapped(
       RegExp(replacements.keys.map(RegExp.escape).join('|')),
       (match) => replacements[match.group(0)] ?? match.group(0)!,
@@ -315,10 +323,17 @@ final _imgSrcRegex = RegExp(
 _ArticleHtml _htmlForBlocks(List<ArticleBlock> blocks) {
   final buffer = StringBuffer();
   final tocEntries = <EpubTocEntry>[];
+  var blockIndex = 0;
   for (final block in blocks) {
+    final blockId = 'block-${blockIndex++}';
     switch (block) {
       case ArticleParagraphBlock(:final text):
-        if (text.trim().isNotEmpty) buffer.writeln('<p>${_text(text)}</p>');
+        if (text.trim().isNotEmpty) {
+          buffer.writeln(
+            '<p id="${_attr(blockId)}" data-rf-block-id="${_attr(blockId)}">'
+            '${_sentenceSpans(text, blockId)}</p>',
+          );
+        }
       case ArticleHeadingBlock(:final level, :final text):
         final title = text.trim();
         if (title.isNotEmpty) {
@@ -334,7 +349,8 @@ _ArticleHtml _htmlForBlocks(List<ArticleBlock> blocks) {
       case ArticleImageBlock(:final src, :final alt, :final title):
         if (src.trim().isNotEmpty) {
           buffer.writeln(
-            '<figure><img src="${_attr(src)}" alt="${_attr(alt ?? '')}"/>'
+            '<figure id="${_attr(blockId)}" data-rf-block-id="${_attr(blockId)}">'
+            '<img src="${_attr(src)}" alt="${_attr(alt ?? '')}"/>'
             '${title == null ? '' : '<figcaption>${_text(title)}</figcaption>'}'
             '</figure>',
           );
@@ -343,21 +359,36 @@ _ArticleHtml _htmlForBlocks(List<ArticleBlock> blocks) {
         if (items.isNotEmpty) {
           buffer.writeln('<ul>');
           for (final item in items) {
-            buffer.writeln('<li>${_text(item)}</li>');
+            final itemBlockId = 'block-${blockIndex++}';
+            buffer.writeln(
+              '<li id="${_attr(itemBlockId)}" '
+              'data-rf-block-id="${_attr(itemBlockId)}">'
+              '${_sentenceSpans(item, itemBlockId)}</li>',
+            );
           }
           buffer.writeln('</ul>');
         }
       case ArticleQuoteBlock(:final text):
         if (text.trim().isNotEmpty) {
-          buffer.writeln('<blockquote>${_text(text)}</blockquote>');
+          buffer.writeln(
+            '<blockquote id="${_attr(blockId)}" '
+            'data-rf-block-id="${_attr(blockId)}">'
+            '${_sentenceSpans(text, blockId)}</blockquote>',
+          );
         }
       case ArticleCodeBlock(:final text):
         if (text.trim().isNotEmpty) {
-          buffer.writeln('<pre><code>${_text(text)}</code></pre>');
+          buffer.writeln(
+            '<pre id="${_attr(blockId)}" data-rf-block-id="${_attr(blockId)}">'
+            '<code>${_text(text)}</code></pre>',
+          );
         }
       case ArticleTableBlock(:final rows):
         if (rows.isNotEmpty) {
-          buffer.writeln('<div class="rf-table-scroll"><table><tbody>');
+          buffer.writeln(
+            '<div id="${_attr(blockId)}" data-rf-block-id="${_attr(blockId)}" '
+            'class="rf-table-scroll"><table><tbody>',
+          );
           for (final row in rows) {
             buffer.writeln('<tr>');
             for (final cell in row) {
@@ -369,7 +400,10 @@ _ArticleHtml _htmlForBlocks(List<ArticleBlock> blocks) {
         }
       case ArticleUnknownBlock(:final fallbackText):
         if (fallbackText.trim().isNotEmpty) {
-          buffer.writeln('<p>${_text(fallbackText)}</p>');
+          buffer.writeln(
+            '<p id="${_attr(blockId)}" data-rf-block-id="${_attr(blockId)}">'
+            '${_sentenceSpans(fallbackText, blockId)}</p>',
+          );
         }
     }
   }
@@ -377,6 +411,35 @@ _ArticleHtml _htmlForBlocks(List<ArticleBlock> blocks) {
     html: buffer.toString(),
     tocEntries: List.unmodifiable(tocEntries),
   );
+}
+
+String _sentenceSpans(String text, String blockId) {
+  final sentences = _sentenceSegments(text);
+  if (sentences.isEmpty) return _text(text);
+
+  final buffer = StringBuffer();
+  for (var i = 0; i < sentences.length; i++) {
+    buffer.write(
+      '<span id="${_attr('$blockId-s$i')}" data-rf-sentence="$i">'
+      '${_text(sentences[i])}</span>',
+    );
+  }
+  return buffer.toString();
+}
+
+List<String> _sentenceSegments(String text) {
+  final trimmed = text.trim();
+  if (trimmed.isEmpty) return const [];
+
+  final matches = RegExp(
+    r'''[^.!?…。！？؟]+(?:[.!?…。！？؟]+["'”’)\]]*\s*|$)''',
+    unicode: true,
+  ).allMatches(text);
+  final sentences = [
+    for (final match in matches)
+      if ((match.group(0) ?? '').trim().isNotEmpty) match.group(0)!,
+  ];
+  return sentences.isEmpty ? [text] : sentences;
 }
 
 int _safeHeadingLevel(int level) => level.clamp(1, 6).toInt();
