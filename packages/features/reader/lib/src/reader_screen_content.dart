@@ -1259,8 +1259,9 @@ class _ReaderArticleHtmlBodyState extends State<_ReaderArticleHtmlBody> {
   }
 }
 
-/// Masks the article content while it scrolls behind the translucent status
-/// bar. The bottom system inset stays unmasked so the page edge remains clean.
+/// Protects system status icons while letting article content fade out under
+/// them. This keeps the article edge softer than a hard panel without using a
+/// blur over the platform WebView.
 class _ArticleSystemBarsScrim extends StatelessWidget {
   const _ArticleSystemBarsScrim({required this.color});
 
@@ -1279,6 +1280,25 @@ class _ArticleSystemBarsScrim extends StatelessWidget {
               right: 0,
               height: padding.top,
               child: ColoredBox(color: color),
+            ),
+          if (padding.top > 0)
+            Positioned(
+              top: padding.top,
+              left: 0,
+              right: 0,
+              height: _kArticleStatusBarFadeHeight,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      color,
+                      color.withValues(alpha: 0),
+                    ],
+                  ),
+                ),
+              ),
             ),
         ],
       ),
