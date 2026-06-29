@@ -18,6 +18,7 @@ const double _textScaleEpsilon = 0.001;
 
 Future<void> showReaderAppearanceSheet(
   BuildContext context, {
+  bool showPageTurnControls = true,
   VoidCallback? onFullyHidden,
 }) {
   final cubit = context.read<ReaderAppearanceCubit>();
@@ -26,14 +27,18 @@ Future<void> showReaderAppearanceSheet(
     onFullyHidden: onFullyHidden,
     builder: (_) => BlocProvider.value(
       value: cubit,
-      child: const _ReaderAppearanceSheet(),
+      child: _ReaderAppearanceSheet(
+        showPageTurnControls: showPageTurnControls,
+      ),
     ),
   );
 }
 
 /// Bottom sheet shell for per-source reader appearance overrides.
 class _ReaderAppearanceSheet extends StatelessWidget {
-  const _ReaderAppearanceSheet();
+  const _ReaderAppearanceSheet({required this.showPageTurnControls});
+
+  final bool showPageTurnControls;
 
   @override
   Widget build(BuildContext context) {
@@ -44,8 +49,10 @@ class _ReaderAppearanceSheet extends StatelessWidget {
       headerSpacing: AppSpacing.md,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxBodyHeight),
-        child: const SingleChildScrollView(
-          child: _LayeredAppearanceControls(),
+        child: SingleChildScrollView(
+          child: _LayeredAppearanceControls(
+            showPageTurnControls: showPageTurnControls,
+          ),
         ),
       ),
     );
@@ -70,23 +77,27 @@ class _ResetAppearanceButton extends StatelessWidget {
 
 /// Vertical stack of compact appearance control rows.
 class _LayeredAppearanceControls extends StatelessWidget {
-  const _LayeredAppearanceControls();
+  const _LayeredAppearanceControls({required this.showPageTurnControls});
+
+  final bool showPageTurnControls;
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _PanelHeader(title: 'Theme'),
-        SizedBox(height: AppSpacing.xs),
-        _ThemeSwatchLevel(),
-        SizedBox(height: AppSpacing.sm),
-        _FontAndSizeLevel(),
-        SizedBox(height: AppSpacing.sm),
-        _LineSpacingAndPageTurnLevel(),
-        SizedBox(height: AppSpacing.md),
-        _AlignmentAndMarginsLevel(),
+        const _PanelHeader(title: 'Theme'),
+        const SizedBox(height: AppSpacing.xs),
+        const _ThemeSwatchLevel(),
+        const SizedBox(height: AppSpacing.sm),
+        const _FontAndSizeLevel(),
+        const SizedBox(height: AppSpacing.sm),
+        _LineSpacingAndPageTurnLevel(
+          showPageTurnControls: showPageTurnControls,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        const _AlignmentAndMarginsLevel(),
       ],
     );
   }
@@ -504,14 +515,16 @@ class _VerticalAppearanceDivider extends StatelessWidget {
 }
 
 class _LineSpacingAndPageTurnLevel extends StatelessWidget {
-  const _LineSpacingAndPageTurnLevel();
+  const _LineSpacingAndPageTurnLevel({required this.showPageTurnControls});
+
+  final bool showPageTurnControls;
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
+        const Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -521,20 +534,22 @@ class _LineSpacingAndPageTurnLevel extends StatelessWidget {
             ],
           ),
         ),
-        SizedBox(width: AppSpacing.md),
-        _VerticalAppearanceDivider(),
-        SizedBox(width: AppSpacing.md),
-        SizedBox(
-          width: _pageTurnControlWidth,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _PanelHeader(title: 'Page turn'),
-              SizedBox(height: AppSpacing.xs),
-              _PageTurnControl(),
-            ],
+        if (showPageTurnControls) ...[
+          const SizedBox(width: AppSpacing.md),
+          const _VerticalAppearanceDivider(),
+          const SizedBox(width: AppSpacing.md),
+          const SizedBox(
+            width: _pageTurnControlWidth,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _PanelHeader(title: 'Page turn'),
+                SizedBox(height: AppSpacing.xs),
+                _PageTurnControl(),
+              ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

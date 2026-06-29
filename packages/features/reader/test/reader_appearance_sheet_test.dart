@@ -60,6 +60,21 @@ void main() {
     expect(find.byType(VerticalDivider), findsNWidgets(3));
   });
 
+  testWidgets('hides page turn controls for vertical article reader', (
+    tester,
+  ) async {
+    await tester.openAppearanceSheet(cubit, showPageTurnControls: false);
+
+    expect(find.text('Appearance'), findsOneWidget);
+    expect(find.text('Line spacing'), findsOneWidget);
+    expect(find.text('Page turn'), findsNothing);
+    expect(find.byIcon(AppIcons.pageTurnHorizontal), findsNothing);
+    expect(find.byIcon(AppIcons.pageTurnVertical), findsNothing);
+    expect(find.text('Page margins'), findsOneWidget);
+    expect(find.text('Text alignment'), findsOneWidget);
+    expect(find.byType(VerticalDivider), findsNWidgets(2));
+  });
+
   testWidgets('theme swatches persist reader theme', (tester) async {
     await tester.openAppearanceSheet(cubit);
 
@@ -388,7 +403,10 @@ Finder _fixedTabBodyHeightFinder() {
 }
 
 extension on WidgetTester {
-  Future<void> openAppearanceSheet(ReaderAppearanceCubit cubit) async {
+  Future<void> openAppearanceSheet(
+    ReaderAppearanceCubit cubit, {
+    bool showPageTurnControls = true,
+  }) async {
     await pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
@@ -401,7 +419,10 @@ extension on WidgetTester {
               return Scaffold(
                 body: Center(
                   child: FilledButton(
-                    onPressed: () => showReaderAppearanceSheet(context),
+                    onPressed: () => showReaderAppearanceSheet(
+                      context,
+                      showPageTurnControls: showPageTurnControls,
+                    ),
                     child: const Text('Open'),
                   ),
                 ),

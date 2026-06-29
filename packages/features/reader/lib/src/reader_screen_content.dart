@@ -189,6 +189,8 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   Future<void> _openAppearanceSheet() async {
     final uiCubit = context.read<ReaderUiCubit>();
     final appearanceCubit = context.read<ReaderAppearanceCubit>();
+    final sourceType = context.read<ReaderBloc>().state.sourceType;
+    final showPageTurnControls = sourceType != SourceType.article;
     final initialPageTurnStyle =
         appearanceCubit.state.effectiveAppearance.pageTurnStyle;
     final wasChromeVisible = uiCubit.state.chromeVisible;
@@ -199,12 +201,13 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     }
     await showReaderAppearanceSheet(
       context,
+      showPageTurnControls: showPageTurnControls,
       onFullyHidden: () {
         if (!mounted) return;
         final nextPageTurnStyle =
             appearanceCubit.state.effectiveAppearance.pageTurnStyle;
         uiCubit.appearanceSheetHidden();
-        if (nextPageTurnStyle != initialPageTurnStyle) {
+        if (showPageTurnControls && nextPageTurnStyle != initialPageTurnStyle) {
           uiCubit.showTapZoneHint(
             _readerTapAxisForPageTurnStyle(nextPageTurnStyle),
           );
