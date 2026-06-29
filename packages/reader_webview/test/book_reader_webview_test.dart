@@ -558,7 +558,7 @@ void main() {
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_102"));
+      expect(assetExtractor, contains("reader_webview_assets_104"));
       expect(assetExtractor, contains('assets/article-html/index.html'));
     });
 
@@ -717,6 +717,20 @@ void main() {
       expect(html, contains('--readflex-font-size'));
       expect(html, contains('rootFontSizePx = 16 * safeFontSize'));
       expect(html, contains('articleSidePadding(style.sideMargin'));
+      expect(
+        html,
+        contains(
+          'padding-block-start: calc(var(--rf-top-margin) + var(--rf-safe-area-top))',
+        ),
+      );
+      expect(
+        html,
+        contains(
+          'padding-block-end: calc(var(--rf-bottom-margin) + var(--rf-safe-area-bottom))',
+        ),
+      );
+      expect(html, isNot(contains('env(safe-area-inset-top)')));
+      expect(html, isNot(contains('env(safe-area-inset-bottom)')));
       expect(html, contains('--rf-safe-area-top'));
       expect(html, contains('style.safeAreaTop'));
       expect(html, contains('style.customCSSEnabled'));
@@ -730,6 +744,20 @@ void main() {
       expect(html, contains('const maxItems = 12'));
       expect(html, contains('window.goToPercent = value =>'));
       expect(html, contains('window.goToHref = href =>'));
+      expect(html, contains('function scrollElementToTopAnchor(element)'));
+      expect(
+        html,
+        contains("cssPx('--rf-top-margin') + cssPx('--rf-safe-area-top') + 8"),
+      );
+      expect(html, contains('scrollElementToTopAnchor(target)'));
+      expect(
+        html,
+        isNot(
+          contains(
+            "target.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'auto' })",
+          ),
+        ),
+      );
       expect(html, contains('window.goToCfi = value =>'));
       expect(html, contains('window.startSearch = startSearch'));
       expect(html, contains('window.toggleBookmarkHere = () =>'));

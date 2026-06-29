@@ -76,6 +76,9 @@ const _kReaderBrightnessChromeHeight = 190.0;
 const _kReaderBrightnessChromeDragHeight =
     _kReaderBrightnessChromeHeight - AppSpacing.sm * 2;
 const _kArticleStatusBarFadeHeight = 28.0;
+const _kArticleNavigationBarFadeHeight = 28.0;
+const _kArticleReaderTopMargin = 32.0;
+const _kArticleReaderBottomMargin = 40.0;
 
 const _kReaderTocTileEstimatedHeight = 60.0;
 
