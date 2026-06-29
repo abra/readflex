@@ -40,6 +40,7 @@ void main() {
     expect(find.text('Reset'), findsOneWidget);
     expect(find.text('Theme'), findsOneWidget);
     expect(find.text('Layout'), findsNothing);
+    expect(find.text('Snow'), findsOneWidget);
     expect(find.text('Paper'), findsOneWidget);
     expect(find.text('Warm'), findsOneWidget);
     expect(find.text('Graphite'), findsOneWidget);

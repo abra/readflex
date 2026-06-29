@@ -30,12 +30,22 @@ void main() {
   });
 
   group('ReaderThemePreset', () {
-    test('theme options keep two light and two dark reader presets', () {
+    test('theme options keep three light and two dark reader presets', () {
       expect(
         ReaderThemePreset.values.map((preset) => preset.label),
-        ['Paper', 'Warm', 'Graphite', 'Night'],
+        ['Snow', 'Paper', 'Warm', 'Graphite', 'Night'],
       );
+      expect(ReaderThemePreset.fromId('white'), ReaderThemePreset.white);
       expect(ReaderThemePreset.fromId('mist').label, 'Graphite');
+    });
+
+    test('white theme uses a pure white page with soft dark text', () {
+      final theme = ReaderThemePreset.white.data;
+
+      expect(theme.backgroundColor, const Color(0xFFFFFFFF));
+      expect(theme.primaryTextColor, const Color(0xFF242424));
+      expect(theme.secondaryTextColor, const Color(0xFF666A70));
+      expect(theme.dividerColor, const Color(0xFFE1E3E6));
     });
 
     test('graphite theme replaces mist with a near-black gray palette', () {

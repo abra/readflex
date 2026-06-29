@@ -5,6 +5,7 @@ import 'tokens/primitive_colors.dart';
 
 /// User-selectable reader surface presets.
 enum ReaderThemePreset {
+  white,
   paper,
   warm,
   mist,
@@ -12,6 +13,7 @@ enum ReaderThemePreset {
   ;
 
   static ReaderThemePreset fromId(String? value) => switch (value) {
+    'white' => white,
     'warm' => warm,
     'mist' => mist,
     'night' => night,
@@ -21,6 +23,7 @@ enum ReaderThemePreset {
   String get id => name;
 
   String get label => switch (this) {
+    white => 'Snow',
     paper => 'Paper',
     warm => 'Warm',
     mist => 'Graphite',
@@ -138,6 +141,20 @@ class ReaderThemeData {
 
 extension ReaderThemePresetX on ReaderThemePreset {
   ReaderThemeData get data => switch (this) {
+    ReaderThemePreset.white => const ReaderThemeData(
+      backgroundColor: PrimitiveColors.white,
+      surfaceColor: Color(0xFFF8F9FA),
+      panelColor: Color(0xFFF1F3F4),
+      primaryTextColor: Color(0xFF242424),
+      secondaryTextColor: Color(0xFF666A70),
+      dividerColor: Color(0xFFE1E3E6),
+      accentColor: Color(0xFF7A1F2B),
+      highlightYellow: PrimitiveColors.highlightYellowLight,
+      highlightGreen: PrimitiveColors.highlightGreenLight,
+      highlightBlue: PrimitiveColors.highlightBlueLight,
+      highlightPink: PrimitiveColors.highlightPinkLight,
+      highlightPurple: PrimitiveColors.highlightPurpleLight,
+    ),
     ReaderThemePreset.paper => const ReaderThemeData(
       backgroundColor: Color(0xFFFAF8F4),
       surfaceColor: Color(0xFFFFFFFF),
