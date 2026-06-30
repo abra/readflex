@@ -101,8 +101,12 @@ void main() {
       expect(css, contains('white-space: pre-wrap !important'));
       expect(css, contains('.readflex-code-block'));
       expect(css, contains('.ProgramCode { white-space: normal !important; }'));
-      expect(css, contains('inline-size: 100%'));
+      expect(css, contains('width: auto !important'));
+      expect(css, contains('max-width: 100% !important'));
+      expect(css, contains('inline-size: auto !important'));
+      expect(css, contains('max-inline-size: 100% !important'));
       expect(css, contains('overflow-x: hidden !important'));
+      expect(css, contains('margin-inline: 0 !important'));
       expect(css, contains('overflow-wrap: break-word !important'));
       expect(css, contains('word-break: normal !important'));
       expect(

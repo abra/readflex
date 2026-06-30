@@ -266,6 +266,7 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       ),
       'style': jsonEncode(widget.foliateStyle.toMap()),
       'readingRules': jsonEncode(_defaultReadingRules),
+      'assetRevision': jsonEncode(AssetExtractor.assetRevision),
     };
     final query = params.entries
         .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')

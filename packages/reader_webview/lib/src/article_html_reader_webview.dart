@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:path/path.dart' as p;
 
+import 'asset_extractor.dart';
 import 'reader_bridge.dart';
 import 'reader_common_handlers.dart';
 
@@ -82,6 +83,7 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView> {
       'initialPosition': jsonEncode(widget.initialPosition),
       'initialProgress': jsonEncode(widget.initialProgress),
       'style': jsonEncode(widget.foliateStyle.toMap()),
+      'assetRevision': jsonEncode(AssetExtractor.assetRevision),
     };
     final query = params.entries
         .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')

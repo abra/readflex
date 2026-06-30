@@ -125,9 +125,14 @@
         updateReadflexViewportHeight,
       );
 
+      const params = new URLSearchParams(location.search);
+      const assetRevision = params.get('assetRevision') || '';
+      const assetUrl = src => assetRevision
+        ? `${src}${src.includes('?') ? '&' : '?'}v=${encodeURIComponent(assetRevision)}`
+        : src;
       const loadScript = (src, options = {}) => new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = src;
+        script.src = assetUrl(src);
         if (options.type) script.type = options.type;
         if (options.async !== undefined) script.async = options.async;
         if (options.defer !== undefined) script.defer = options.defer;

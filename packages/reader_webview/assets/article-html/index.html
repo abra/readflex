@@ -122,6 +122,9 @@
 
     blockquote {
       border-inline-start: 3px solid var(--rf-accent-color);
+      box-sizing: border-box;
+      margin-inline: 0;
+      max-inline-size: 100%;
       padding-inline-start: 1em;
       text-indent: 0;
       color: color-mix(in srgb, var(--rf-font-color) 86%, transparent);
@@ -136,7 +139,13 @@
 
     pre {
       box-sizing: border-box;
+      display: block;
+      width: 100%;
       max-width: 100%;
+      inline-size: 100%;
+      max-inline-size: 100%;
+      min-width: 0;
+      min-inline-size: 0;
       margin: 1em 0;
       padding: 0.85em 1em;
       overflow-x: auto;
@@ -145,6 +154,21 @@
       border-radius: 8px;
       text-align: start;
       text-indent: 0;
+    }
+
+    pre code,
+    pre kbd,
+    pre samp {
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      padding: 0;
+      font-size: inherit;
+      white-space: inherit;
+      overflow-wrap: inherit;
+      word-break: inherit;
+      min-width: 0;
+      max-width: 100%;
     }
 
     .rf-table-scroll {
@@ -208,8 +232,48 @@
       const content = document.getElementById('article-content')
       const fontStyle = document.createElement('style')
       const customStyle = document.createElement('style')
+      const articleLayoutStyle = document.createElement('style')
       document.head.append(fontStyle)
       document.head.append(customStyle)
+      document.head.append(articleLayoutStyle)
+      articleLayoutStyle.textContent = `
+        #article-content blockquote,
+        #article-content pre,
+        #article-content .readflex-code-block,
+        #article-content .ProgramCode,
+        #article-content .ParaTypeProgramcode {
+          box-sizing: border-box !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          inline-size: 100% !important;
+          max-inline-size: 100% !important;
+          min-width: 0 !important;
+          min-inline-size: 0 !important;
+          margin-inline: 0 !important;
+        }
+
+        #article-content pre,
+        #article-content .readflex-code-block,
+        #article-content .ProgramCode,
+        #article-content .ParaTypeProgramcode {
+          overflow-x: auto !important;
+        }
+
+        #article-content pre > code,
+        #article-content pre > kbd,
+        #article-content pre > samp {
+          background: transparent !important;
+          border: 0 !important;
+          box-shadow: none !important;
+          padding: 0 !important;
+          font-size: inherit !important;
+          white-space: inherit !important;
+          overflow-wrap: inherit !important;
+          word-break: inherit !important;
+          min-width: 0 !important;
+          max-width: 100% !important;
+        }
+      `
 
       let style = readJsonParam('style', {})
       let visibleSentences = null

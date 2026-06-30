@@ -220,6 +220,8 @@ void main() {
       expect(indexHtml, isNot(contains('shouldUseModernBundle')));
       expect(indexHtml, isNot(contains('./dist/bundle.js')));
       expect(indexHtml, isNot(contains('./dist/pdf-legacy.js')));
+      expect(indexHtml, contains('const assetRevision'));
+      expect(indexHtml, contains('script.src = assetUrl(src);'));
       expect(indexHtml, contains("await loadScript('./src/book.js'"));
       expect(
         indexHtml,
@@ -481,8 +483,11 @@ void main() {
 
         expect(bookJs, contains('pre {'));
         expect(bookJs, contains('white-space: pre-wrap !important;'));
-        expect(bookJs, contains('inline-size: 100%;'));
-        expect(bookJs, contains('max-inline-size: 100%;'));
+        expect(bookJs, contains('width: auto !important;'));
+        expect(bookJs, contains('max-width: 100% !important;'));
+        expect(bookJs, contains('inline-size: auto !important;'));
+        expect(bookJs, contains('max-inline-size: 100% !important;'));
+        expect(bookJs, contains('margin-inline: 0 !important;'));
         expect(bookJs, contains('overflow-x: hidden !important;'));
         expect(bookJs, contains('overflow-wrap: break-word !important;'));
         expect(bookJs, contains('word-break: normal !important;'));
@@ -558,8 +563,18 @@ void main() {
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_105"));
+      expect(assetExtractor, contains("reader_webview_assets_107"));
       expect(assetExtractor, contains('assets/article-html/index.html'));
+
+      final articleReader = _readPackageSource(
+        'lib/src/article_html_reader_webview.dart',
+      );
+      expect(articleReader, contains('assetRevision'));
+      expect(articleReader, contains('AssetExtractor.assetRevision'));
+
+      final bookReader = readBookReaderWebViewLibrarySource();
+      expect(bookReader, contains('assetRevision'));
+      expect(bookReader, contains('AssetExtractor.assetRevision'));
     });
 
     test(
@@ -800,6 +815,14 @@ void main() {
         html,
         contains('...searchMatchAnchor(text, matchIndex, needle.length)'),
       );
+      expect(html, contains('inline-size: 100%;'));
+      expect(html, contains('max-inline-size: 100%;'));
+      expect(html, contains('width: 100%;'));
+      expect(html, contains('max-width: 100%;'));
+      expect(html, contains('const articleLayoutStyle'));
+      expect(html, contains('pre code,'));
+      expect(html, contains('#article-content pre > code'));
+      expect(html, contains('padding: 0;'));
     });
 
     test('limits WebContent crash recovery to one eligible reload', () {

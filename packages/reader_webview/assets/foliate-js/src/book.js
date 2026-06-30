@@ -1604,9 +1604,13 @@ const getCSS = style => {
 
     pre {
         white-space: pre-wrap !important;
-        inline-size: 100%;
-        max-inline-size: 100%;
-        min-inline-size: 0;
+        width: auto !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        inline-size: auto !important;
+        max-inline-size: 100% !important;
+        min-inline-size: 0 !important;
+        margin-inline: 0 !important;
         overflow-x: hidden !important;
         overflow-y: visible;
         overflow-wrap: break-word !important;
