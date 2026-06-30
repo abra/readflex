@@ -1236,7 +1236,7 @@ class _ReaderArticleHtmlBodyState extends State<_ReaderArticleHtmlBody> {
       children: [
         Positioned.fill(child: readerSurface),
         Positioned.fill(
-          child: _ArticleSystemBarsScrim(
+          child: _ArticleSystemBarBackground(
             color: widget.readerTheme.backgroundColor,
           ),
         ),
@@ -1263,11 +1263,10 @@ class _ReaderArticleHtmlBodyState extends State<_ReaderArticleHtmlBody> {
   }
 }
 
-/// Protects system bars while letting article content fade out underneath them.
-/// The bottom fade is also drawn when Android reports no bottom inset so article
-/// edges stay visually consistent while the navigation bar is hidden.
-class _ArticleSystemBarsScrim extends StatelessWidget {
-  const _ArticleSystemBarsScrim({required this.color});
+/// Paints only the unsafe top inset so article text stays readable without
+/// adding decorative fades or bottom overlays over the content.
+class _ArticleSystemBarBackground extends StatelessWidget {
+  const _ArticleSystemBarBackground({required this.color});
 
   final Color color;
 
@@ -1283,51 +1282,6 @@ class _ArticleSystemBarsScrim extends StatelessWidget {
               left: 0,
               right: 0,
               height: padding.top,
-              child: ColoredBox(color: color),
-            ),
-          if (padding.top > 0)
-            Positioned(
-              top: padding.top,
-              left: 0,
-              right: 0,
-              height: _kArticleStatusBarFadeHeight,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      color,
-                      color.withValues(alpha: 0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: padding.bottom,
-            height: _kArticleNavigationBarFadeHeight,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    color.withValues(alpha: 0),
-                    color,
-                  ],
-                ),
-              ),
-            ),
-          ),
-          if (padding.bottom > 0)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: padding.bottom,
               child: ColoredBox(color: color),
             ),
         ],
