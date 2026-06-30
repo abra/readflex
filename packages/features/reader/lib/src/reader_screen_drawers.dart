@@ -1282,16 +1282,20 @@ class _ReaderDrawerContentFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: context.colors.outlineVariant,
-            width: 1 / MediaQuery.devicePixelRatioOf(context),
+    return Material(
+      color: Colors.transparent,
+      clipBehavior: Clip.hardEdge,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: context.colors.outlineVariant,
+              width: 1 / MediaQuery.devicePixelRatioOf(context),
+            ),
           ),
         ),
+        child: child,
       ),
-      child: child,
     );
   }
 }
