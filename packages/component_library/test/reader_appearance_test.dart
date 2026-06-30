@@ -33,7 +33,7 @@ void main() {
     test('theme options keep three light and two dark reader presets', () {
       expect(
         ReaderThemePreset.values.map((preset) => preset.label),
-        ['Snow', 'Paper', 'Warm', 'Graphite', 'Night'],
+        ['Snow', 'Paper', 'Warm', 'Night', 'Graphite'],
       );
       expect(ReaderThemePreset.snow.id, 'snow');
       expect(ReaderThemePreset.fromId('snow'), ReaderThemePreset.snow);

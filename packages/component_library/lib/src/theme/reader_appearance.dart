@@ -8,8 +8,8 @@ enum ReaderThemePreset {
   snow,
   paper,
   warm,
-  mist,
-  night
+  night,
+  mist
   ;
 
   static ReaderThemePreset fromId(String? value) => switch (value) {

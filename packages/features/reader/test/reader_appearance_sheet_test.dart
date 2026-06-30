@@ -45,20 +45,53 @@ void main() {
     expect(find.text('Warm'), findsOneWidget);
     expect(find.text('Graphite'), findsOneWidget);
     expect(find.text('Night'), findsOneWidget);
-    final fontLabel = tester.widget<Text>(find.text('Literata'));
-    final decreaseLabel = tester.widget<Text>(find.text('A-'));
-    final increaseLabel = tester.widget<Text>(find.text('A+'));
 
-    expect(fontLabel.style?.fontSize, greaterThanOrEqualTo(20));
-    expect(decreaseLabel.style?.fontSize, 20);
-    expect(increaseLabel.style?.fontSize, 24);
+    expect(find.byKey(const ValueKey('reader-font-presets')), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('reader-font-presets'))).dx,
+      tester.getTopLeft(find.byKey(const ValueKey('reader-theme-presets'))).dx,
+    );
+    expect(
+      tester.getTopRight(find.byKey(const ValueKey('reader-font-presets'))).dx,
+      tester.getTopRight(find.byKey(const ValueKey('reader-theme-presets'))).dx,
+    );
+    expect(find.text('Literata'), findsOneWidget);
+    expect(find.text('PT Serif'), findsOneWidget);
+    expect(find.text('Open Sans'), findsOneWidget);
+    expect(find.text('Geist'), findsOneWidget);
+    expect(find.byKey(const ValueKey('reader-font-page-dots')), findsNothing);
+    expect(find.text('A-'), findsNothing);
+    expect(find.text('A+'), findsNothing);
+    expect(find.text('Font size'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('reader-text-scale-control')),
+        matching: find.byIcon(AppIcons.remove),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('reader-text-scale-control')),
+        matching: find.byIcon(AppIcons.add),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Line spacing'), findsOneWidget);
     expect(find.text('Page turn'), findsOneWidget);
     expect(find.text('Page margins'), findsOneWidget);
     expect(find.text('Text alignment'), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('reader-text-scale-control'))),
+      tester.getSize(find.byKey(const ValueKey('reader-line-height-control'))),
+    );
+    expect(
+      tester.getSize(find.byKey(const ValueKey('reader-text-scale-control'))),
+      tester.getSize(find.byKey(const ValueKey('reader-margin-control'))),
+    );
     expect(find.text('PREVIEW'), findsNothing);
     expect(find.byType(Divider), findsNothing);
-    expect(find.byType(VerticalDivider), findsNWidgets(3));
+    expect(find.byType(VerticalDivider), findsNothing);
   });
 
   testWidgets('hides page turn controls for vertical article reader', (
@@ -67,13 +100,14 @@ void main() {
     await tester.openAppearanceSheet(cubit, showPageTurnControls: false);
 
     expect(find.text('Appearance'), findsOneWidget);
+    expect(find.text('Font size'), findsOneWidget);
     expect(find.text('Line spacing'), findsOneWidget);
     expect(find.text('Page turn'), findsNothing);
     expect(find.byIcon(AppIcons.pageTurnHorizontal), findsNothing);
     expect(find.byIcon(AppIcons.pageTurnVertical), findsNothing);
     expect(find.text('Page margins'), findsOneWidget);
     expect(find.text('Text alignment'), findsOneWidget);
-    expect(find.byType(VerticalDivider), findsNWidgets(2));
+    expect(find.byType(VerticalDivider), findsNothing);
   });
 
   testWidgets('theme swatches persist reader theme ids', (tester) async {
@@ -110,10 +144,12 @@ void main() {
     expect(snowLabel.style?.color, primary);
   });
 
-  testWidgets('font tile cycles through font presets', (tester) async {
+  testWidgets('font selector shows all presets and persists selected font', (
+    tester,
+  ) async {
     await tester.openAppearanceSheet(cubit);
 
-    await tester.tap(find.text('Literata'));
+    await tester.tap(find.text('PT Serif'));
     await tester.pumpAndSettle();
 
     expect(cubit.state.effectiveAppearance.fontId, 'ptSerif');
@@ -124,33 +160,27 @@ void main() {
     );
   });
 
-  testWidgets('font label shows Open Sans without ellipsis', (tester) async {
+  testWidgets('font selector keeps Open Sans readable without dots', (
+    tester,
+  ) async {
     await tester.openAppearanceSheet(cubit);
 
-    final initialDotsTop = tester
-        .getTopLeft(find.byKey(const ValueKey('reader-font-page-dots')))
-        .dy;
-
-    await tester.tap(find.text('Literata'));
-    await tester.pumpAndSettle();
-    final ptSerifDotsTop = tester
-        .getTopLeft(find.byKey(const ValueKey('reader-font-page-dots')))
-        .dy;
-
-    await tester.tap(find.text('PT Serif'));
-    await tester.pumpAndSettle();
-    final openSansDotsTop = tester
-        .getTopLeft(find.byKey(const ValueKey('reader-font-page-dots')))
-        .dy;
-
-    final fontLabel = tester.widget<Text>(
-      find.byKey(const ValueKey('reader-font-label')),
+    final openSansLabel = tester.widget<Text>(
+      find.byKey(const ValueKey('reader-font-sans')),
     );
 
-    expect(fontLabel.data, 'Open Sans');
-    expect(fontLabel.overflow, isNull);
-    expect(ptSerifDotsTop, closeTo(initialDotsTop, 0.1));
-    expect(openSansDotsTop, closeTo(initialDotsTop, 0.1));
+    expect(openSansLabel.data, 'Open Sans');
+    expect(openSansLabel.maxLines, 1);
+    expect(openSansLabel.overflow, isNull);
+    expect(
+      openSansLabel.style?.fontSize,
+      tester
+          .element(find.byKey(const ValueKey('reader-font-sans')))
+          .text
+          .labelMedium
+          .fontSize,
+    );
+    expect(find.byKey(const ValueKey('reader-font-page-dots')), findsNothing);
   });
 
   testWidgets('appearance sheet does not reserve fixed tab body height', (
@@ -161,26 +191,62 @@ void main() {
     expect(_fixedTabBodyHeightFinder(), findsNothing);
   });
 
-  testWidgets('selects rounded default line spacing preset', (
+  testWidgets('line spacing stepper previews and persists source override', (
     tester,
   ) async {
     await tester.openAppearanceSheet(cubit);
 
     expect(find.text('1.6'), findsOneWidget);
-    Text lineHeightText(String value) {
-      return tester.widget<Text>(
-        find.descendant(
-          of: find.byKey(ValueKey('reader-line-height-$value')),
-          matching: find.text(value),
-        ),
-      );
-    }
-
+    expect(find.text('1.4'), findsNothing);
     final primary = Theme.of(
-      tester.element(find.byKey(const ValueKey('reader-line-height-1.6'))),
+      tester.element(find.byKey(const ValueKey('reader-line-height-value'))),
     ).colorScheme.primary;
-    expect(lineHeightText('1.6').style?.color, primary);
-    expect(lineHeightText('1.4').style?.color, isNot(primary));
+    expect(
+      _stepperValueText(
+        tester,
+        const ValueKey('reader-line-height-value'),
+      ).style?.color,
+      isNot(primary),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('reader-line-height-increase')));
+    await tester.pump();
+
+    expect(cubit.state.effectiveAppearance.lineHeight, 1.8);
+    expect(find.text('1.8'), findsOneWidget);
+    expect(
+      _stepperValueText(
+        tester,
+        const ValueKey('reader-line-height-value'),
+      ).style?.color,
+      primary,
+    );
+
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(
+      preferencesService.readerAppearanceOverrideFor(_sourceId)?.lineHeight,
+      1.8,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('reader-line-height-value')));
+    await tester.pumpAndSettle();
+
+    expect(
+      cubit.state.effectiveAppearance.lineHeight,
+      ReaderAppearancePreferences.defaults.lineHeight,
+    );
+    expect(
+      preferencesService.readerAppearanceOverrideFor(_sourceId)?.lineHeight,
+      isNull,
+    );
+    expect(
+      _stepperValueText(
+        tester,
+        const ValueKey('reader-line-height-value'),
+      ).style?.color,
+      isNot(primary),
+    );
   });
 
   testWidgets('persists text alignment from layout panel', (tester) async {
@@ -256,13 +322,30 @@ void main() {
     await tester.openAppearanceSheet(cubit);
 
     expect(find.byType(Slider), findsNothing);
-    expect(find.text('8%'), findsWidgets);
+    expect(find.text('8%'), findsOneWidget);
+    final primary = Theme.of(
+      tester.element(find.byKey(const ValueKey('reader-margin-value'))),
+    ).colorScheme.primary;
+    expect(
+      _stepperValueText(
+        tester,
+        const ValueKey('reader-margin-value'),
+      ).style?.color,
+      isNot(primary),
+    );
 
-    await tester.tap(find.byIcon(AppIcons.add));
+    await tester.tap(find.byKey(const ValueKey('reader-margin-increase')));
     await tester.pump();
 
     expect(cubit.state.effectiveAppearance.sideMargin, 9);
-    expect(find.text('9%'), findsWidgets);
+    expect(find.text('9%'), findsOneWidget);
+    expect(
+      _stepperValueText(
+        tester,
+        const ValueKey('reader-margin-value'),
+      ).style?.color,
+      primary,
+    );
 
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -271,13 +354,20 @@ void main() {
       9,
     );
 
-    await tester.tap(find.text('9%'));
+    await tester.tap(find.byKey(const ValueKey('reader-margin-value')));
     await tester.pumpAndSettle();
 
     expect(cubit.state.effectiveAppearance.sideMargin, 8);
     expect(
       preferencesService.readerAppearanceOverrideFor(_sourceId)?.sideMargin,
       isNull,
+    );
+    expect(
+      _stepperValueText(
+        tester,
+        const ValueKey('reader-margin-value'),
+      ).style?.color,
+      isNot(primary),
     );
   });
 
@@ -286,7 +376,7 @@ void main() {
   ) async {
     await tester.openAppearanceSheet(cubit);
 
-    await tester.tap(find.text('Literata'));
+    await tester.tap(find.text('PT Serif'));
     await tester.pumpAndSettle();
 
     expect(
@@ -307,12 +397,29 @@ void main() {
     await tester.openAppearanceSheet(cubit);
 
     expect(find.text('100%'), findsOneWidget);
+    final primary = Theme.of(
+      tester.element(find.byKey(const ValueKey('reader-text-scale-value'))),
+    ).colorScheme.primary;
+    expect(
+      _stepperValueText(
+        tester,
+        const ValueKey('reader-text-scale-value'),
+      ).style?.color,
+      isNot(primary),
+    );
 
-    await tester.tap(find.text('A+'));
+    await tester.tap(find.byKey(const ValueKey('reader-text-scale-increase')));
     await tester.pump();
 
     expect(cubit.state.effectiveAppearance.textScale, closeTo(1.05, 0.001));
     expect(find.text('105%'), findsOneWidget);
+    expect(
+      _stepperValueText(
+        tester,
+        const ValueKey('reader-text-scale-value'),
+      ).style?.color,
+      primary,
+    );
 
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -328,6 +435,13 @@ void main() {
     expect(
       preferencesService.readerAppearanceOverrideFor(_sourceId)?.textScale,
       isNull,
+    );
+    expect(
+      _stepperValueText(
+        tester,
+        const ValueKey('reader-text-scale-value'),
+      ).style?.color,
+      isNot(primary),
     );
   });
 
@@ -348,7 +462,7 @@ void main() {
     expect(preferencesService.readerAppearanceOverrideFor(_sourceId), isNull);
     expect(cubit.state.effectiveAppearance.textScale, 1.15);
 
-    await tester.tap(find.text('A-'));
+    await tester.tap(find.byKey(const ValueKey('reader-text-scale-decrease')));
     await tester.pump();
 
     expect(cubit.state.effectiveAppearance.textScale, closeTo(1.10, 0.001));
@@ -421,6 +535,15 @@ Finder _fixedTabBodyHeightFinder() {
   return find.byWidgetPredicate(
     (widget) => widget is SizedBox && widget.height == 360,
     description: 'fixed 360px appearance tab body',
+  );
+}
+
+Text _stepperValueText(WidgetTester tester, Key key) {
+  return tester.widget<Text>(
+    find.descendant(
+      of: find.byKey(key),
+      matching: find.byType(Text),
+    ),
   );
 }
 

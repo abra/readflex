@@ -104,8 +104,6 @@ void main() {
       expect(text.readerChromeNumber.fontFeatures, isNotEmpty);
       expect(text.kicker.fontSize, 10);
       expect(text.statusGlyph.fontSize, 22);
-      expect(text.readerTextSizeControl(large: true).fontSize, 18);
-      expect(text.readerTextSizeControl(large: false).fontSize, 14);
     });
   });
 }

@@ -93,10 +93,4 @@ class AppTextTheme {
     height: 1,
     fontWeight: FontWeight.w700,
   );
-
-  /// Label for reader appearance A-/A+ controls.
-  TextStyle readerTextSizeControl({required bool large}) =>
-      (large ? titleMedium : labelLarge).copyWith(
-        fontSize: large ? 18 : 14,
-      );
 }

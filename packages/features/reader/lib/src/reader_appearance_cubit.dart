@@ -168,6 +168,19 @@ class ReaderAppearanceCubit extends Cubit<ReaderAppearanceState> {
     _lineHeightCommitTimer = Timer(_commitDebounce, _flushLineHeight);
   }
 
+  Future<void> resetLineHeight() async {
+    _pendingLineHeight = null;
+    _lineHeightCommitTimer?.cancel();
+    _lineHeightCommitTimer = null;
+    final defaultLineHeight = ReaderAppearancePreferences.defaults.lineHeight;
+    final next = state.sourceOverride.copyWith(
+      lineHeight: state.globalAppearance.lineHeight == defaultLineHeight
+          ? null
+          : defaultLineHeight,
+    );
+    await _persistOverride(next);
+  }
+
   void previewSideMargin(double value) {
     final nextValue = value.clamp(minSideMargin, maxSideMargin).toDouble();
     final next = state.sourceOverride.copyWith(
