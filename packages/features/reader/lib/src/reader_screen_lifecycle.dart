@@ -26,8 +26,8 @@ class _ReaderSourceOpenedNotifierState
         if (_notified || current.status != ReaderStatus.ready) {
           return false;
         }
-        final previousOpenedAt = previous.book?.lastOpenedAt;
-        final currentOpenedAt = current.book?.lastOpenedAt;
+        final previousOpenedAt = previous.document?.lastOpenedAt;
+        final currentOpenedAt = current.document?.lastOpenedAt;
         return currentOpenedAt != null && currentOpenedAt != previousOpenedAt;
       },
       listener: (_, _) {

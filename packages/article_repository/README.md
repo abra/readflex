@@ -8,9 +8,6 @@ files.
 | Symbol | Purpose |
 |--------|---------|
 | `ArticleRepository` | Stores, reads, updates, and deletes article sources |
-| `EpubBuilder` | Builds the generated article EPUB compatibility adapter |
-| `EpubImage` | In-memory image payload for EPUB generation |
-| `EpubTocEntry` | EPUB table-of-contents entry |
 
 Key methods:
 
@@ -19,8 +16,6 @@ Key methods:
 - `addExtractedArticle(extracted)`
 - `updateArticle(article)`
 - `deleteArticle(id)`
-- `toReaderBook(article)`
-- `updateFromReaderBook(article, readerBook)`
 
 ## On-Disk Layout
 
@@ -30,18 +25,17 @@ Each imported article gets its own directory under the app `articles` folder:
 articles/<article-id>/
   article.json
   content.html
-  article.epub
+  images/*
   cover.*
 ```
 
 Remote article images referenced by extracted blocks are downloaded when
-available, rewritten to local paths, and embedded in `article.epub`. Missing
+available, rewritten to local paths, and stored next to `content.html`. Missing
 images are skipped so article import can still succeed.
 
 `content.html` is the primary article reading file. Text blocks are marked with
 stable block ids and sentence anchors so the vertical HTML reader can restore
-position without depending on paginated EPUB layout. `article.epub` remains a
-compatibility artifact produced from the same extracted article data.
+position without depending on paginated EPUB layout.
 
 ## Storage Contract
 
@@ -50,10 +44,9 @@ storage failures in `StorageException`. Deleting an article also removes related
 review items, highlights, flashcards, dictionary entries, bookmarks, and the
 article directory on disk.
 
-The reader still opens articles through the existing `Book` reader model so the
-rest of the app can share source progress, title, cover, and path handling. Use
-`toReaderBook` before opening an article in the reader, then persist reader
-position changes back with `updateFromReaderBook`.
+The reader opens saved articles from `Article.contentHtmlPath` and persists
+article progress by updating the original `Article` row. `article_repository`
+does not adapt articles into books.
 
 ## Dependencies
 
@@ -67,6 +60,6 @@ position changes back with `updateFromReaderBook`.
 ## Where It Fits
 
 `article_extraction_service` extracts readable content. `article_repository`
-owns persistence, local asset rewriting, HTML generation, and EPUB compatibility
-generation. Feature packages should depend on this repository contract rather
-than accessing article storage directly.
+owns persistence, local asset rewriting, and HTML generation. Feature packages
+should depend on this repository contract rather than accessing article storage
+directly.

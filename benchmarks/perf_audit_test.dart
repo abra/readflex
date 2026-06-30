@@ -1,13 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math' as math;
-import 'dart:typed_data';
 
-import 'package:article_repository/article_repository.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:local_storage/local_storage.dart';
-import 'package:path/path.dart' as p;
 
 void main() {
   test(
@@ -35,16 +31,13 @@ Future<void> _runPerfAudit(List<String> args) async {
   switch (command) {
     case 'all':
       await _benchDatabaseIndexes(scale: scale);
-      await _benchEpubBuilder();
     case 'db':
       await _benchDatabaseIndexes(scale: scale);
-    case 'epub':
-      await _benchEpubBuilder();
     default:
       stderr.writeln(
         'Usage: flutter test benchmarks/perf_audit_test.dart',
       );
-      stderr.writeln('       --dart-define=PERF_AUDIT_COMMAND=[all|db|epub]');
+      stderr.writeln('       --dart-define=PERF_AUDIT_COMMAND=[all|db]');
       stderr.writeln('       --dart-define=PERF_AUDIT_SCALE=<rows>');
       exitCode = 64;
   }
@@ -221,73 +214,6 @@ Future<_SqlMeasure> _measureSql(
     maxUs: samples.last,
     plan: plan,
   );
-}
-
-Future<void> _benchEpubBuilder() async {
-  final tempDir = await Directory.systemTemp.createTemp('readflex_perf_epub_');
-  try {
-    final images = [
-      for (var i = 0; i < 24; i++)
-        EpubImage(
-          filename: 'image_$i.bin',
-          // Measures archive assembly only; real image decoding is not involved.
-          bytes: _bytes(384 * 1024, seed: i + 1),
-          mimeType: 'application/octet-stream',
-        ),
-    ];
-    final htmlBody = StringBuffer();
-    for (var i = 0; i < 5000; i++) {
-      htmlBody.writeln(
-        '<p>Paragraph $i: ${'readflex performance fixture ' * 8}</p>',
-      );
-      if (i % 250 == 0) {
-        htmlBody.writeln(
-          '<img src="images/image_${(i ~/ 250) % images.length}.bin"/>',
-        );
-      }
-    }
-
-    final output = File(p.join(tempDir.path, 'article.epub'));
-    final rssBefore = ProcessInfo.currentRss;
-    final sw = Stopwatch()..start();
-    await const EpubBuilder().build(
-      id: 'perf-article',
-      title: 'Performance Fixture',
-      htmlBody: htmlBody.toString(),
-      outputFile: output,
-      images: images,
-    );
-    sw.stop();
-    final rssAfter = ProcessInfo.currentRss;
-    final outputBytes = await output.length();
-
-    _printJson({
-      'suite': 'epub-builder-current',
-      'paragraphs': 5000,
-      'images': images.length,
-      'imageBytesTotal': images.fold<int>(
-        0,
-        (sum, image) => sum + image.bytes.length,
-      ),
-      'htmlChars': htmlBody.length,
-      'outputBytes': outputBytes,
-      'elapsedMs': sw.elapsedMilliseconds,
-      'rssBeforeBytes': rssBefore,
-      'rssAfterBytes': rssAfter,
-      'rssDeltaBytes': rssAfter - rssBefore,
-      'note':
-          'This measures retained RSS after build. The synchronous ZipEncoder phase can have a higher transient peak than this number shows.',
-    });
-  } finally {
-    await tempDir.delete(recursive: true);
-  }
-}
-
-Uint8List _bytes(int length, {required int seed}) {
-  final random = math.Random(seed);
-  return Uint8List.fromList([
-    for (var i = 0; i < length; i++) random.nextInt(256),
-  ]);
 }
 
 int _intArg(List<String> args, String name, {required int fallback}) {

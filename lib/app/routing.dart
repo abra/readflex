@@ -79,10 +79,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
             isOffline: isOffline,
             onSourcePressed: (source, {onSourceOpened}) => context.push(
               AppRoutes.reader(source.id),
-              extra: _ReaderRouteExtra(
-                initialSourceType: source.sourceType,
-                onSourceOpened: onSourceOpened,
-              ),
+              extra: _ReaderRouteExtra(onSourceOpened: onSourceOpened),
             ),
             onAddPressed: () async {
               await showImportFlowSheet(
@@ -136,7 +133,6 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
               child: ReaderScreen(
                 sourceId: sourceId,
                 initialSource: initialSource,
-                initialSourceType: _initialReaderSourceTypeFromRoute(state),
                 serverPort: deps.readerServer.port,
                 bookRepository: deps.bookRepository,
                 articleRepository: deps.articleRepository,
@@ -220,15 +216,11 @@ Future<void> _openExternalUrl(String rawUrl) async {
   }
 }
 
-/// GoRouter payload for opening the reader with source type and a post-open
-/// refresh callback from the previous screen.
+/// GoRouter payload for opening the reader with a post-open refresh callback
+/// from the previous screen.
 class _ReaderRouteExtra {
-  const _ReaderRouteExtra({
-    this.initialSourceType = SourceType.book,
-    this.onSourceOpened,
-  });
+  const _ReaderRouteExtra({this.onSourceOpened});
 
-  final SourceType initialSourceType;
   final VoidCallback? onSourceOpened;
 }
 
@@ -245,14 +237,6 @@ Book? _initialReaderSourceFromRoute(GoRouterState state) {
   };
   if (source?.id != sourceId) return null;
   return source;
-}
-
-/// Returns the source type carried by the reader route metadata.
-SourceType _initialReaderSourceTypeFromRoute(GoRouterState state) {
-  return switch (state.extra) {
-    _ReaderRouteExtra(:final initialSourceType) => initialSourceType,
-    _ => SourceType.book,
-  };
 }
 
 /// Returns the callback used by the previous screen to refresh after a real

@@ -2,13 +2,14 @@ part of 'reader_bloc.dart';
 
 enum ReaderStatus { initial, loading, ready, failure }
 
-/// Snapshot of the loaded book and its highlights. Highlights are loaded
-/// alongside the book and refreshed on demand via [ReaderHighlightsRefreshed].
+/// Snapshot of the loaded reader document and its highlights. Highlights are
+/// loaded alongside the source and refreshed on demand via
+/// [ReaderHighlightsRefreshed].
 class ReaderState extends Equatable {
   const ReaderState({
     this.status = ReaderStatus.initial,
     this.title = '',
-    this.book,
+    this.document,
     this.sourceType = SourceType.book,
     this.articleUrl,
     this.pageProgressionRtl = false,
@@ -31,7 +32,7 @@ class ReaderState extends Equatable {
 
   final ReaderStatus status;
   final String title;
-  final Book? book;
+  final ReaderDocument? document;
   final SourceType sourceType;
   final String? articleUrl;
   final bool pageProgressionRtl;
@@ -67,14 +68,14 @@ class ReaderState extends Equatable {
   final String? currentPageBookmarkCfi;
   final String? currentPageBookmarkId;
 
-  String? get sourceId => book?.id;
+  String? get sourceId => document?.id;
 
   static const _absent = Object();
 
   ReaderState copyWith({
     ReaderStatus? status,
     String? title,
-    Object? book = _absent,
+    Object? document = _absent,
     SourceType? sourceType,
     Object? articleUrl = _absent,
     bool? pageProgressionRtl,
@@ -96,7 +97,7 @@ class ReaderState extends Equatable {
   }) => ReaderState(
     status: status ?? this.status,
     title: title ?? this.title,
-    book: book == _absent ? this.book : book as Book?,
+    document: document == _absent ? this.document : document as ReaderDocument?,
     sourceType: sourceType ?? this.sourceType,
     articleUrl: articleUrl == _absent ? this.articleUrl : articleUrl as String?,
     pageProgressionRtl: pageProgressionRtl ?? this.pageProgressionRtl,
@@ -137,7 +138,7 @@ class ReaderState extends Equatable {
   List<Object?> get props => [
     status,
     title,
-    book,
+    document,
     sourceType,
     articleUrl,
     pageProgressionRtl,

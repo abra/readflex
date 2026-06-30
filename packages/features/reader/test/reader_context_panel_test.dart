@@ -59,7 +59,7 @@ void main() {
     expect(contentSource, contains('final currentState = bloc.state;'));
     expect(
       contentSource,
-      contains('progress: currentState.book?.readingProgress'),
+      contains('progress: currentState.document?.readingProgress'),
     );
     expect(contentSource, contains('chapterTitle: currentState.chapterTitle'));
     expect(contextPanelSource, contains('showSelectionHighlightPreview'));

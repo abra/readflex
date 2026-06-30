@@ -29,31 +29,4 @@ class FakeArticleRepository implements ArticleRepository {
     }
     return article;
   }
-
-  @override
-  Book toReaderBook(Article article) {
-    return Book(
-      id: article.id,
-      title: article.title,
-      author: article.author ?? article.siteName ?? article.hostname,
-      coverImagePath: article.coverImagePath,
-      format: BookFormat.epub,
-      filePath: article.epubPath,
-      currentCfi: article.currentCfi,
-      readingProgress: article.readingProgress,
-      addedAt: article.addedAt,
-      lastOpenedAt: article.lastOpenedAt,
-      isFinished: article.isFinished,
-    );
-  }
-
-  @override
-  Article updateFromReaderBook(Article article, Book readerBook) {
-    return article.copyWith(
-      currentCfi: readerBook.currentCfi,
-      readingProgress: readerBook.readingProgress,
-      lastOpenedAt: readerBook.lastOpenedAt,
-      isFinished: readerBook.isFinished,
-    );
-  }
 }

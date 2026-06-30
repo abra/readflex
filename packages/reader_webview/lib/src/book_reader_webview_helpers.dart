@@ -64,7 +64,7 @@ final class ReaderInitialLocation {
 
 @visibleForTesting
 bool isGeneratedArticleReaderPath(String path) =>
-    path.endsWith('/article.epub') && path.contains('/articles/');
+    path.endsWith('/content.html') && path.contains('/articles/');
 
 @visibleForTesting
 String buildReaderSearchStartScript({

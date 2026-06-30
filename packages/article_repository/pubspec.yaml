@@ -7,7 +7,6 @@ environment:
   sdk: ^3.11.1
 
 dependencies:
-  archive: ^3.6.0
   domain_models:
     path: ../domain_models
   drift: ^2.23.1

@@ -126,7 +126,7 @@ and UI. Storage rows and DAO types should remain behind repositories.
 | Package | Responsibility | Local dependencies |
 |---------|----------------|--------------------|
 | `book_repository` | Imported books, cover metadata, source bookmark/progress, filesystem ownership for books. | `domain_models`, `local_storage`, `monitoring` |
-| `article_repository` | Extracted articles, article assets, vertical HTML reader content, generated EPUB compatibility adapter. | `domain_models`, `local_storage`, `monitoring` |
+| `article_repository` | Extracted articles, article assets, and vertical HTML reader content. | `domain_models`, `local_storage`, `monitoring` |
 | `collection_repository` | Manual library collections and built-in favorite membership. | `domain_models`, `local_storage` |
 | `highlight_repository` | Highlight persistence and domain mapping. | `domain_models`, `local_storage` |
 
@@ -240,7 +240,7 @@ Article import:
 ```text
 ImportFlowSheet
   -> ArticleExtractionService downloads/cleans article
-  -> ArticleRepository stores article, assets, content.html, and EPUB adapter
+  -> ArticleRepository stores article, assets, and content.html
   -> Reader opens content.html through ArticleHtmlReaderWebView
   -> ReaderBloc persists the same source progress model through repositories
 ```

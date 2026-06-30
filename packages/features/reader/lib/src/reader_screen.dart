@@ -161,7 +161,6 @@ class ReaderScreen extends StatelessWidget {
     this.initialSearchHistory = const [],
     this.articleRepository,
     this.initialSource,
-    this.initialSourceType = SourceType.book,
     this.onSearchHistoryChanged,
     this.onSourceOpened,
     this.onArticleTitlePressed,
@@ -178,7 +177,6 @@ class ReaderScreen extends StatelessWidget {
   final List<TextAction> textActions;
   final List<String> initialSearchHistory;
   final Book? initialSource;
-  final SourceType initialSourceType;
   final ValueChanged<List<String>>? onSearchHistoryChanged;
   final VoidCallback? onSourceOpened;
   final void Function(String url, String title)? onArticleTitlePressed;
@@ -195,7 +193,6 @@ class ReaderScreen extends StatelessWidget {
             articleRepository: articleRepository,
             highlightRepository: highlightRepository,
             initialSource: initialSource?.id == sourceId ? initialSource : null,
-            initialSourceType: initialSourceType,
           )..add(ReaderSourceLoadRequested(sourceId: sourceId)),
         ),
         BlocProvider(create: (_) => ReaderUiCubit()),

@@ -646,8 +646,9 @@ class _ReaderTopChromeDriver extends StatelessWidget {
       (c) => c.state.hasSelection,
     );
     final title = context.select<ReaderBloc, String>(
-      (b) =>
-          b.state.title.isNotEmpty ? b.state.title : b.state.book?.title ?? '',
+      (b) => b.state.title.isNotEmpty
+          ? b.state.title
+          : b.state.document?.title ?? '',
     );
     final articleUrl = context.select<ReaderBloc, String?>(
       (b) =>
@@ -950,13 +951,13 @@ class _ReaderBottomChromeSnapshot {
   }) {
     return _ReaderBottomChromeSnapshot(
       visible: visible,
-      progress: state.book?.readingProgress ?? 0,
+      progress: state.document?.readingProgress ?? 0,
       chapterTitle: state.chapterTitle,
       chapterCurrentPage: state.chapterCurrentPage,
       chapterTotalPages: state.chapterTotalPages,
       sourceType: state.sourceType,
       pageProgressionRtl: state.pageProgressionRtl,
-      format: state.book?.format,
+      format: state.document?.format,
       currentPageBookmarked: state.currentPageBookmarked,
       documentFeatures: state.documentFeatures,
       pageTurnStyle: pageTurnStyle,
@@ -1486,7 +1487,7 @@ class _ReaderImagePageProgressOverlayDriver extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final format = context.select<ReaderBloc, BookFormat?>(
-      (b) => b.state.book?.format,
+      (b) => b.state.document?.format,
     );
     final chromeVisible = context.select<ReaderUiCubit, bool>(
       (c) => c.state.chromeVisible,

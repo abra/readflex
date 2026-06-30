@@ -130,13 +130,17 @@ void main() {
   });
 
   group('article source detection', () {
-    test('recognizes generated article epub paths', () {
+    test('recognizes generated article HTML paths', () {
       expect(
-        isGeneratedArticleReaderPath('/app/Documents/articles/id/article.epub'),
+        isGeneratedArticleReaderPath('/app/Documents/articles/id/content.html'),
         isTrue,
       );
       expect(
         isGeneratedArticleReaderPath('/app/Documents/books/id/book.epub'),
+        isFalse,
+      );
+      expect(
+        isGeneratedArticleReaderPath('/app/Documents/articles/id/article.epub'),
         isFalse,
       );
     });

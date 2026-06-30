@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:archive/archive.dart';
 import 'package:article_repository/article_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:drift/native.dart';
@@ -33,13 +32,17 @@ void main() {
     }
   });
 
-  test('addExtractedArticle stores content and builds reader epub', () async {
+  test('addExtractedArticle stores JSON and reader HTML', () async {
     final article = await repository.addExtractedArticle(_extractedArticle());
 
     expect(article.id, isNotEmpty);
     expect(article.title, 'Saved article');
     expect(File(article.contentPath).existsSync(), isTrue);
-    expect(File(article.epubPath).existsSync(), isTrue);
+    expect(File(article.contentHtmlPath).existsSync(), isTrue);
+    expect(
+      File(p.join(p.dirname(article.contentPath), 'article.epub')).existsSync(),
+      isFalse,
+    );
 
     final stored = await repository.getArticleById(article.id);
     expect(stored, isNotNull);
@@ -49,18 +52,10 @@ void main() {
   test('addExtractedArticle removes duplicate leading title heading', () async {
     final article = await repository.addExtractedArticle(_extractedArticle());
 
-    final contentHtml = File(
-      p.join(p.dirname(article.contentPath), 'content.html'),
-    ).readAsStringSync();
+    final contentHtml = File(article.contentHtmlPath).readAsStringSync();
     expect(contentHtml, isNot(contains('<h1>Saved article</h1>')));
-
-    final archive = ZipDecoder().decodeBytes(
-      File(article.epubPath).readAsBytesSync(),
-    );
-    final chapter = _archiveText(archive, 'OEBPS/chapter1.xhtml');
-    expect(RegExp('<h1>Saved article</h1>').allMatches(chapter), hasLength(1));
     expect(
-      chapter,
+      contentHtml,
       contains(
         '<p id="block-0" data-rf-block-id="block-0">'
         '<span id="block-0-s0" data-rf-sentence="0">Hello world</span></p>',
@@ -80,9 +75,7 @@ void main() {
       ),
     );
 
-    final contentHtml = File(
-      p.join(p.dirname(article.contentPath), 'content.html'),
-    ).readAsStringSync();
+    final contentHtml = File(article.contentHtmlPath).readAsStringSync();
 
     expect(
       contentHtml,
@@ -139,9 +132,7 @@ void main() {
       );
 
       final articleDir = Directory(p.dirname(article.contentPath));
-      final contentHtml = File(
-        p.join(articleDir.path, 'content.html'),
-      ).readAsStringSync();
+      final contentHtml = File(article.contentHtmlPath).readAsStringSync();
       final match = RegExp(r'images/([^"]+\.png)').firstMatch(contentHtml);
 
       expect(match, isNotNull);
@@ -153,7 +144,7 @@ void main() {
   );
 
   test(
-    'addExtractedArticle maps headings into epub table of contents',
+    'addExtractedArticle maps headings into article HTML anchors',
     () async {
       final article = await repository.addExtractedArticle(
         _extractedArticle(
@@ -167,88 +158,46 @@ void main() {
         ),
       );
 
-      final contentHtml = File(
-        p.join(p.dirname(article.contentPath), 'content.html'),
-      ).readAsStringSync();
+      final contentHtml = File(article.contentHtmlPath).readAsStringSync();
       expect(contentHtml, contains('<h2 id="section-1">First section</h2>'));
       expect(
         contentHtml,
         contains('<h3 id="section-2">Second &amp; final</h3>'),
       );
+    },
+  );
 
-      final archive = ZipDecoder().decodeBytes(
-        File(article.epubPath).readAsBytesSync(),
-      );
-      final chapter = _archiveText(archive, 'OEBPS/chapter1.xhtml');
-      final toc = _archiveText(archive, 'OEBPS/toc.xhtml');
-
-      expect(chapter, contains('<h2 id="section-1">First section</h2>'));
-      expect(chapter, contains('<h3 id="section-2">Second &amp; final</h3>'));
-      expect(
-        toc,
-        contains('<li><a href="chapter1.xhtml">Saved article</a><ol>'),
-      );
-      expect(
-        toc,
-        contains(
-          '<li><a href="chapter1.xhtml#section-1">First section</a></li>',
+  test(
+    'addExtractedArticle stores normalized language for article reader',
+    () async {
+      final article = await repository.addExtractedArticle(
+        _extractedArticle(
+          title: 'خبر عربي',
+          language: 'ar-EG',
+          textDirection: ArticleTextDirection.rtl,
+          plainText: 'مرحبا بالعالم',
+          blocks: const [ArticleParagraphBlock(text: 'مرحبا بالعالم')],
         ),
       );
+
+      final contentHtml = File(article.contentHtmlPath).readAsStringSync();
+
+      expect(article.language, 'ar-eg');
+      expect(contentHtml, contains('مرحبا بالعالم'));
       expect(
-        toc,
-        contains(
-          '<li><a href="chapter1.xhtml#section-2">Second &amp; final</a></li>',
-        ),
+        File(
+          p.join(p.dirname(article.contentPath), 'article.epub'),
+        ).existsSync(),
+        isFalse,
       );
     },
   );
 
-  test('addExtractedArticle writes RTL metadata into reader epub', () async {
-    final article = await repository.addExtractedArticle(
-      _extractedArticle(
-        title: 'خبر عربي',
-        language: 'ar-EG',
-        textDirection: ArticleTextDirection.rtl,
-        plainText: 'مرحبا بالعالم',
-        blocks: const [ArticleParagraphBlock(text: 'مرحبا بالعالم')],
-      ),
-    );
-
-    final archive = ZipDecoder().decodeBytes(
-      File(article.epubPath).readAsBytesSync(),
-    );
-    final opf = _archiveText(archive, 'OEBPS/content.opf');
-    final chapter = _archiveText(archive, 'OEBPS/chapter1.xhtml');
-    final toc = _archiveText(archive, 'OEBPS/toc.xhtml');
-
-    expect(article.language, 'ar-eg');
-    expect(opf, contains('<dc:language>ar-eg</dc:language>'));
-    expect(chapter, contains('lang="ar-eg"'));
-    expect(
-      chapter,
-      isNot(
-        contains(
-          '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ar-eg" lang="ar-eg" dir="rtl"',
-        ),
-      ),
-    );
-    expect(chapter, contains('<body>'));
-    expect(
-      chapter,
-      contains('<main class="readflex-article-content" dir="rtl">'),
-    );
-    expect(toc, contains('<body dir="rtl">'));
-  });
-
-  test('toReaderBook adapts article to existing reader contract', () async {
+  test('addExtractedArticle exposes HTML reader path', () async {
     final article = await repository.addExtractedArticle(_extractedArticle());
 
-    final readerBook = repository.toReaderBook(article);
-
-    expect(readerBook.id, article.id);
-    expect(readerBook.format, BookFormat.epub);
-    expect(readerBook.filePath, article.epubPath);
-    expect(readerBook.author, 'Example');
+    expect(article.contentHtmlPath, endsWith('content.html'));
+    expect(File(article.contentHtmlPath).existsSync(), isTrue);
   });
 
   test('deleteArticle removes row and stored files', () async {
@@ -261,53 +210,49 @@ void main() {
     expect(await articleDir.exists(), isFalse);
   });
 
-  test('addExtractedArticle resolves relative image URLs into epub', () async {
-    repository.dispose();
-    repository = ArticleRepository(
-      database: db,
-      articlesDirectory: Directory(p.join(tempDir.path, 'articles')),
-      httpClient: MockClient((request) async {
-        expect(request.url.toString(), 'https://example.com/images/photo.png');
-        return http.Response.bytes(
-          [1, 2, 3],
-          200,
-          headers: {'content-type': 'image/png'},
-        );
-      }),
-    );
+  test(
+    'addExtractedArticle resolves relative image URLs into article HTML',
+    () async {
+      repository.dispose();
+      repository = ArticleRepository(
+        database: db,
+        articlesDirectory: Directory(p.join(tempDir.path, 'articles')),
+        httpClient: MockClient((request) async {
+          expect(
+            request.url.toString(),
+            'https://example.com/images/photo.png',
+          );
+          return http.Response.bytes(
+            [1, 2, 3],
+            200,
+            headers: {'content-type': 'image/png'},
+          );
+        }),
+      );
 
-    final article = await repository.addExtractedArticle(
-      _extractedArticle(
-        requestedUrl: 'https://example.com/articles/story',
-        blocks: const [
-          ArticleParagraphBlock(text: 'Hello world'),
-          ArticleImageBlock(src: '/images/photo.png', alt: 'Photo'),
-        ],
-      ),
-    );
+      final article = await repository.addExtractedArticle(
+        _extractedArticle(
+          requestedUrl: 'https://example.com/articles/story',
+          blocks: const [
+            ArticleParagraphBlock(text: 'Hello world'),
+            ArticleImageBlock(src: '/images/photo.png', alt: 'Photo'),
+          ],
+        ),
+      );
 
-    final contentHtml = File(
-      p.join(p.dirname(article.contentPath), 'content.html'),
-    ).readAsStringSync();
-    expect(contentHtml, contains('src="images/'));
-    expect(contentHtml, isNot(contains('/images/photo.png')));
+      final articleDir = Directory(p.dirname(article.contentPath));
+      final contentHtml = File(article.contentHtmlPath).readAsStringSync();
+      expect(contentHtml, contains('src="images/'));
+      expect(contentHtml, isNot(contains('/images/photo.png')));
 
-    final archive = ZipDecoder().decodeBytes(
-      File(article.epubPath).readAsBytesSync(),
-    );
-    expect(
-      archive.files.any(
-        (file) =>
-            file.name.startsWith('OEBPS/images/') && file.name.endsWith('.png'),
-      ),
-      isTrue,
-    );
-  });
-}
-
-String _archiveText(Archive archive, String name) {
-  final file = archive.files.firstWhere((file) => file.name == name);
-  return utf8.decode(file.content as List<int>);
+      final match = RegExp(r'images/([^"]+\.png)').firstMatch(contentHtml);
+      expect(match, isNotNull);
+      expect(
+        File(p.join(articleDir.path, match!.group(0)!)).existsSync(),
+        isTrue,
+      );
+    },
+  );
 }
 
 ExtractedArticle _extractedArticle({

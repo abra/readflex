@@ -24,6 +24,20 @@ void main() {
     readingProgress: 0.1,
   );
 
+  ReaderDocument articleDocumentFromBook(Book book) => ReaderDocument(
+    id: book.id,
+    sourceType: SourceType.article,
+    title: book.title,
+    author: book.author,
+    coverImagePath: book.coverImagePath,
+    filePath: '/articles/${book.id}/content.html',
+    currentCfi: book.currentCfi,
+    readingProgress: book.readingProgress,
+    addedAt: book.addedAt,
+    lastOpenedAt: book.lastOpenedAt,
+    isFinished: book.isFinished,
+  );
+
   final testHighlight = Highlight(
     id: 'h-1',
     sourceId: 'book-1',
@@ -69,7 +83,7 @@ void main() {
       verify: (bloc) {
         expect(bloc.state.status, ReaderStatus.initial);
         expect(bloc.state.title, '');
-        expect(bloc.state.book, isNull);
+        expect(bloc.state.document, isNull);
       },
     );
 
@@ -96,7 +110,7 @@ void main() {
       verify: (bloc) {
         expect(bloc.state.status, ReaderStatus.ready);
         expect(bloc.state.title, testBook.title);
-        expect(bloc.state.book, testBook);
+        expect(bloc.state.document, ReaderDocument.fromBook(testBook));
       },
     );
 
@@ -116,7 +130,7 @@ void main() {
           isA<ReaderState>()
               .having((s) => s.status, 'status', ReaderStatus.ready)
               .having((s) => s.title, 'title', 'Test Book')
-              .having((s) => s.book, 'book', isNotNull)
+              .having((s) => s.document, 'book', isNotNull)
               .having((s) => s.articleUrl, 'articleUrl', isNull)
               .having((s) => s.highlights, 'highlights', hasLength(1))
               .having((s) => s.bookmarks, 'bookmarks', hasLength(1)),
@@ -172,8 +186,16 @@ void main() {
         expect: () => [
           isA<ReaderState>()
               .having((s) => s.status, 'status', ReaderStatus.ready)
-              .having((s) => s.book?.readingProgress, 'readingProgress', 0.4)
-              .having((s) => s.book?.lastOpenedAt, 'lastOpenedAt', isNotNull)
+              .having(
+                (s) => s.document?.readingProgress,
+                'readingProgress',
+                0.4,
+              )
+              .having(
+                (s) => s.document?.lastOpenedAt,
+                'lastOpenedAt',
+                isNotNull,
+              )
               .having((s) => s.highlights, 'highlights', hasLength(1)),
         ],
         verify: (_) {
@@ -184,11 +206,11 @@ void main() {
 
       // Library uses `lastOpenedAt` to decide between the "New"
       // label and a progress %. The bumped value must propagate
-      // into [ReaderState.book] — otherwise the next position
-      // event will copyWith on a stale book and overwrite the
+      // into [ReaderState.document] — otherwise the next position
+      // event will copyWith on stale reader state and overwrite the
       // just-persisted timestamp back to null.
       blocTest<ReaderBloc, ReaderState>(
-        'state.book carries the bumped lastOpenedAt',
+        'state.document carries the bumped lastOpenedAt',
         setUp: () {
           bookRepository.seedBook(
             testBook.copyWith(),
@@ -199,8 +221,8 @@ void main() {
         act: (bloc) =>
             bloc.add(const ReaderSourceLoadRequested(sourceId: 'book-1')),
         verify: (bloc) {
-          expect(bloc.state.book, isNotNull);
-          expect(bloc.state.book!.lastOpenedAt, isNotNull);
+          expect(bloc.state.document, isNotNull);
+          expect(bloc.state.document!.lastOpenedAt, isNotNull);
         },
       );
 
@@ -211,9 +233,9 @@ void main() {
         build: buildBloc,
         act: (bloc) async {
           bloc.add(const ReaderSourceLoadRequested(sourceId: 'book-1'));
-          // Wait for state.book to land before dispatching the
+          // Wait for state.document to land before dispatching the
           // position update (otherwise the position event finds
-          // state.book == null and no-ops).
+          // state.document == null and no-ops).
           await bloc.stream.firstWhere(
             (s) => s.status == ReaderStatus.ready,
           );
@@ -229,8 +251,8 @@ void main() {
           // The persisted book after the position update must still
           // carry the lastOpenedAt timestamp set on open.
           expect(bookRepository.updatedBook!.lastOpenedAt, isNotNull);
-          // And state.book reflects the same.
-          expect(bloc.state.book?.lastOpenedAt, isNotNull);
+          // And state.document reflects the same.
+          expect(bloc.state.document?.lastOpenedAt, isNotNull);
         },
       );
 
@@ -273,7 +295,7 @@ void main() {
         seed: () => ReaderState(
           status: ReaderStatus.ready,
           title: testBook.title,
-          book: testBook,
+          document: ReaderDocument.fromBook(testBook),
         ),
         act: (bloc) => bloc.add(
           const ReaderBookPositionUpdated(
@@ -301,7 +323,7 @@ void main() {
         seed: () => ReaderState(
           status: ReaderStatus.ready,
           title: testBook.title,
-          book: testBook,
+          document: ReaderDocument.fromBook(testBook),
         ),
         act: (bloc) => bloc.add(
           const ReaderBookPositionUpdated(
@@ -316,7 +338,7 @@ void main() {
       );
 
       blocTest<ReaderBloc, ReaderState>(
-        'no-op when no book in state',
+        'no-op when no document in state',
         build: buildBloc,
         seed: () => const ReaderState(status: ReaderStatus.ready),
         act: (bloc) => bloc.add(
@@ -342,7 +364,7 @@ void main() {
         seed: () => ReaderState(
           status: ReaderStatus.ready,
           title: testBook.title,
-          book: testBook,
+          document: ReaderDocument.fromBook(testBook),
         ),
         act: (bloc) => bloc.add(
           const ReaderBookPositionUpdated(
@@ -364,7 +386,7 @@ void main() {
         seed: () => ReaderState(
           status: ReaderStatus.ready,
           title: testBook.title,
-          book: testBook,
+          document: ReaderDocument.fromBook(testBook),
         ),
         act: (bloc) => bloc.add(
           const ReaderBookPositionUpdated(
@@ -388,7 +410,7 @@ void main() {
         seed: () => ReaderState(
           status: ReaderStatus.ready,
           title: testBook.title,
-          book: testBook,
+          document: ReaderDocument.fromBook(testBook),
         ),
         act: (bloc) => bloc.add(
           const ReaderBookPositionUpdated(
@@ -412,9 +434,11 @@ void main() {
         seed: () => ReaderState(
           status: ReaderStatus.ready,
           title: testBook.title,
-          book: testBook.copyWith(
-            currentCfi: 'epubcfi(/6/4)',
-            readingProgress: 0.1,
+          document: ReaderDocument.fromBook(
+            testBook.copyWith(
+              currentCfi: 'epubcfi(/6/4)',
+              readingProgress: 0.1,
+            ),
           ),
           pageProgressionRtl: false,
         ),
@@ -441,7 +465,7 @@ void main() {
         seed: () => ReaderState(
           status: ReaderStatus.ready,
           title: testBook.title,
-          book: testBook,
+          document: ReaderDocument.fromBook(testBook),
         ),
         act: (bloc) => bloc.add(
           const ReaderBookPositionUpdated(
@@ -471,7 +495,7 @@ void main() {
         seed: () => ReaderState(
           status: ReaderStatus.ready,
           title: testBook.title,
-          book: testBook,
+          document: ReaderDocument.fromBook(testBook),
           sizeTotal: 480000,
         ),
         act: (bloc) => bloc.add(
@@ -497,7 +521,7 @@ void main() {
         seed: () => ReaderState(
           status: ReaderStatus.ready,
           title: testBook.title,
-          book: testBook,
+          document: ReaderDocument.fromBook(testBook),
           sizeTotal: 480000,
         ),
         act: (bloc) => bloc.add(
@@ -530,7 +554,9 @@ void main() {
         seed: () => ReaderState(
           status: ReaderStatus.ready,
           title: testBook.title,
-          book: testBook.copyWith(readingProgress: 0.99),
+          document: ReaderDocument.fromBook(
+            testBook.copyWith(readingProgress: 0.99),
+          ),
         ),
         act: (bloc) => bloc.add(
           const ReaderBookPositionUpdated(
@@ -543,7 +569,7 @@ void main() {
         ),
         wait: const Duration(seconds: 3),
         verify: (bloc) {
-          expect(bloc.state.book?.readingProgress, 1.0);
+          expect(bloc.state.document?.readingProgress, 1.0);
           expect(bloc.state.bookCurrentPage, 199);
           expect(bloc.state.bookTotalPages, 200);
         },
@@ -561,7 +587,9 @@ void main() {
         seed: () => ReaderState(
           status: ReaderStatus.ready,
           title: testBook.title,
-          book: testBook.copyWith(readingProgress: 1.0),
+          document: ReaderDocument.fromBook(
+            testBook.copyWith(readingProgress: 1.0),
+          ),
         ),
         act: (bloc) => bloc.add(
           const ReaderBookPositionUpdated(
@@ -575,7 +603,7 @@ void main() {
         wait: const Duration(seconds: 3),
         verify: (bloc) {
           // Real seek from end to start: state updates to 0.0 / page 1.
-          expect(bloc.state.book?.readingProgress, 0.0);
+          expect(bloc.state.document?.readingProgress, 0.0);
           expect(bloc.state.bookCurrentPage, 1);
         },
       );
@@ -592,7 +620,9 @@ void main() {
         seed: () => ReaderState(
           status: ReaderStatus.ready,
           title: testBook.title,
-          book: testBook.copyWith(readingProgress: 0.5),
+          document: ReaderDocument.fromBook(
+            testBook.copyWith(readingProgress: 0.5),
+          ),
         ),
         act: (bloc) => bloc.add(
           const ReaderBookPositionUpdated(
@@ -603,7 +633,7 @@ void main() {
         ),
         wait: const Duration(seconds: 3),
         verify: (bloc) {
-          expect(bloc.state.book?.readingProgress, 0.3);
+          expect(bloc.state.document?.readingProgress, 0.3);
           expect(bloc.state.bookCurrentPage, isNull);
         },
       );
@@ -620,7 +650,7 @@ void main() {
         seed: () => ReaderState(
           status: ReaderStatus.ready,
           title: testBook.title,
-          book: testBook,
+          document: ReaderDocument.fromBook(testBook),
         ),
         act: (bloc) => bloc.add(
           const ReaderBookPositionUpdated(
@@ -646,7 +676,9 @@ void main() {
           status: ReaderStatus.ready,
           sourceType: SourceType.article,
           title: testBook.title,
-          book: testBook.copyWith(readingProgress: 1),
+          document: articleDocumentFromBook(
+            testBook.copyWith(readingProgress: 1),
+          ),
         ),
         act: (bloc) => bloc.add(
           const ReaderBookPositionUpdated(
@@ -673,7 +705,9 @@ void main() {
           status: ReaderStatus.ready,
           sourceType: SourceType.article,
           title: testBook.title,
-          book: testBook.copyWith(readingProgress: 1),
+          document: articleDocumentFromBook(
+            testBook.copyWith(readingProgress: 1),
+          ),
         ),
         act: (bloc) => bloc.add(
           const ReaderBookPositionUpdated(
@@ -699,7 +733,9 @@ void main() {
           status: ReaderStatus.ready,
           sourceType: SourceType.article,
           title: testBook.title,
-          book: testBook.copyWith(readingProgress: 0.6),
+          document: articleDocumentFromBook(
+            testBook.copyWith(readingProgress: 0.6),
+          ),
         ),
         act: (bloc) => bloc.add(
           const ReaderBookPositionUpdated(
@@ -714,7 +750,7 @@ void main() {
         ),
         wait: const Duration(milliseconds: 700),
         verify: (bloc) {
-          expect(bloc.state.book?.readingProgress, 1);
+          expect(bloc.state.document?.readingProgress, 1);
           expect(bloc.state.chapterCurrentPage, 5);
           expect(bloc.state.chapterTotalPages, 5);
         },
@@ -728,7 +764,7 @@ void main() {
           status: ReaderStatus.ready,
           sourceType: SourceType.article,
           title: testBook.title,
-          book: testBook,
+          document: articleDocumentFromBook(testBook),
         ),
         act: (bloc) {
           bloc
@@ -743,8 +779,11 @@ void main() {
         },
         wait: const Duration(milliseconds: 50),
         verify: (bloc) {
-          expect(bloc.state.book?.currentCfi, 'epubcfi(android-after-seek)');
-          expect(bloc.state.book?.readingProgress, 0.5);
+          expect(
+            bloc.state.document?.currentCfi,
+            'epubcfi(android-after-seek)',
+          );
+          expect(bloc.state.document?.readingProgress, 0.5);
         },
       );
 
@@ -755,7 +794,7 @@ void main() {
           status: ReaderStatus.ready,
           sourceType: SourceType.article,
           title: testBook.title,
-          book: testBook,
+          document: articleDocumentFromBook(testBook),
         ),
         act: (bloc) {
           bloc
@@ -771,8 +810,11 @@ void main() {
         },
         wait: const Duration(milliseconds: 50),
         verify: (bloc) {
-          expect(bloc.state.book?.currentCfi, 'epubcfi(valid-page-after-seek)');
-          expect(bloc.state.book?.readingProgress, 0.6);
+          expect(
+            bloc.state.document?.currentCfi,
+            'epubcfi(valid-page-after-seek)',
+          );
+          expect(bloc.state.document?.readingProgress, 0.6);
           expect(bloc.state.chapterCurrentPage, 3);
           expect(bloc.state.chapterTotalPages, 5);
         },
@@ -784,13 +826,13 @@ void main() {
       // the latest value.
       blocTest<ReaderBloc, ReaderState>(
         'debounces persist: rapid position events collapse into one '
-        'updateBook with the last value',
+        'repository write with the last value',
         setUp: () => bookRepository.seedBook(testBook),
         build: buildBloc,
         seed: () => ReaderState(
           status: ReaderStatus.ready,
           title: testBook.title,
-          book: testBook,
+          document: ReaderDocument.fromBook(testBook),
         ),
         act: (bloc) {
           for (var i = 1; i <= 5; i++) {
@@ -822,7 +864,7 @@ void main() {
           return ReaderState(
             status: ReaderStatus.ready,
             title: positionedBook.title,
-            book: positionedBook,
+            document: ReaderDocument.fromBook(positionedBook),
             bookCurrentPage: 20,
             bookTotalPages: 200,
           );
@@ -852,7 +894,7 @@ void main() {
           ReaderState(
             status: ReaderStatus.ready,
             title: testBook.title,
-            book: testBook,
+            document: ReaderDocument.fromBook(testBook),
           ),
         );
         bloc.add(
@@ -910,7 +952,7 @@ void main() {
             ),
           );
           await bloc.stream.firstWhere(
-            (s) => s.book?.readingProgress == 0.4,
+            (s) => s.document?.readingProgress == 0.4,
           );
           await Future<void>.delayed(const Duration(milliseconds: 50));
 
@@ -954,11 +996,11 @@ void main() {
             ),
           );
           await bloc.stream.firstWhere(
-            (s) => s.book?.readingProgress == 1,
+            (s) => s.document?.readingProgress == 1,
           );
           await Future<void>.delayed(const Duration(milliseconds: 50));
 
-          expect(bloc.state.book?.readingProgress, 1);
+          expect(bloc.state.document?.readingProgress, 1);
           expect(articleRepository.updatedArticle?.readingProgress, 1);
         },
       );
@@ -998,11 +1040,11 @@ void main() {
             ),
           );
           await bloc.stream.firstWhere(
-            (s) => s.book?.readingProgress == 0.25,
+            (s) => s.document?.readingProgress == 0.25,
           );
           await Future<void>.delayed(const Duration(milliseconds: 50));
 
-          expect(bloc.state.book?.readingProgress, 0.25);
+          expect(bloc.state.document?.readingProgress, 0.25);
           expect(articleRepository.updatedArticle?.readingProgress, 0.25);
         },
       );
@@ -1015,7 +1057,10 @@ void main() {
           highlightRepository.seedHighlights('book-1', [testHighlight]);
         },
         build: buildBloc,
-        seed: () => ReaderState(status: ReaderStatus.ready, book: testBook),
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          document: ReaderDocument.fromBook(testBook),
+        ),
         act: (bloc) => bloc.add(const ReaderHighlightsRefreshed()),
         expect: () => [
           isA<ReaderState>().having(
@@ -1039,7 +1084,10 @@ void main() {
           highlightRepository.shouldThrow = true;
         },
         build: buildBloc,
-        seed: () => ReaderState(status: ReaderStatus.ready, book: testBook),
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          document: ReaderDocument.fromBook(testBook),
+        ),
         act: (bloc) => bloc.add(const ReaderHighlightsRefreshed()),
         expect: () => <ReaderState>[],
         errors: () => [isA<Exception>()],
@@ -1060,7 +1108,7 @@ void main() {
         build: buildBloc,
         seed: () => ReaderState(
           status: ReaderStatus.ready,
-          book: testBook,
+          document: ReaderDocument.fromBook(testBook),
           highlights: const [],
         ),
         act: (bloc) => bloc.add(const ReaderHighlightsRefreshed()),
@@ -1091,7 +1139,10 @@ void main() {
           ]);
         },
         build: buildBloc,
-        seed: () => ReaderState(status: ReaderStatus.ready, book: testBook),
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          document: ReaderDocument.fromBook(testBook),
+        ),
         act: (bloc) => bloc.add(
           const ReaderHighlightDeleteRequested(highlightId: 'h-1'),
         ),
@@ -1123,7 +1174,10 @@ void main() {
           highlightRepository.shouldThrow = true;
         },
         build: buildBloc,
-        seed: () => ReaderState(status: ReaderStatus.ready, book: testBook),
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          document: ReaderDocument.fromBook(testBook),
+        ),
         act: (bloc) => bloc.add(
           const ReaderHighlightDeleteRequested(highlightId: 'h-1'),
         ),
@@ -1141,7 +1195,7 @@ void main() {
         build: buildBloc,
         seed: () => ReaderState(
           status: ReaderStatus.ready,
-          book: testBook,
+          document: ReaderDocument.fromBook(testBook),
           highlights: [testHighlight],
         ),
         act: (bloc) => bloc.add(
@@ -1176,7 +1230,7 @@ void main() {
         build: buildBloc,
         seed: () => ReaderState(
           status: ReaderStatus.ready,
-          book: testBook,
+          document: ReaderDocument.fromBook(testBook),
           highlights: [testHighlight],
         ),
         act: (bloc) => bloc.add(
@@ -1215,7 +1269,7 @@ void main() {
         build: buildBloc,
         seed: () => ReaderState(
           status: ReaderStatus.ready,
-          book: testBook,
+          document: ReaderDocument.fromBook(testBook),
           highlights: [testHighlight],
         ),
         act: (bloc) => bloc.add(
@@ -1236,7 +1290,7 @@ void main() {
         build: buildBloc,
         seed: () => ReaderState(
           status: ReaderStatus.ready,
-          book: testBook,
+          document: ReaderDocument.fromBook(testBook),
           chapterTitle: 'Chapter 7',
         ),
         act: (bloc) => bloc.add(
@@ -1283,7 +1337,7 @@ void main() {
         build: buildBloc,
         seed: () => ReaderState(
           status: ReaderStatus.ready,
-          book: testBook,
+          document: ReaderDocument.fromBook(testBook),
           bookmarks: [testBookmark],
           currentPageBookmarked: true,
           currentPageBookmarkCfi: testBookmark.cfi,
@@ -1330,7 +1384,7 @@ void main() {
         build: buildBloc,
         seed: () => ReaderState(
           status: ReaderStatus.ready,
-          book: testBook,
+          document: ReaderDocument.fromBook(testBook),
           bookmarks: [
             testBookmark,
             SourceBookmark(
@@ -1380,7 +1434,10 @@ void main() {
       blocTest<ReaderBloc, ReaderState>(
         'ignores malformed add bookmark event without cfi',
         build: buildBloc,
-        seed: () => ReaderState(status: ReaderStatus.ready, book: testBook),
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          document: ReaderDocument.fromBook(testBook),
+        ),
         act: (bloc) => bloc.add(
           const ReaderBookmarkChanged(
             remove: false,
@@ -1395,25 +1452,25 @@ void main() {
 
     group('ReaderState computed', () {
       test('sourceId returns book id', () {
-        final state = ReaderState(book: testBook);
+        final state = ReaderState(document: ReaderDocument.fromBook(testBook));
         expect(state.sourceId, 'book-1');
       });
 
       test('copyWith preserves unrelated fields', () {
         final state = ReaderState(
           title: 'T',
-          book: testBook,
+          document: ReaderDocument.fromBook(testBook),
           articleUrl: 'https://example.com/article',
         );
         final copy = state.copyWith(highlights: []);
         expect(copy.title, 'T');
-        expect(copy.book, testBook);
+        expect(copy.document, ReaderDocument.fromBook(testBook));
         expect(copy.articleUrl, 'https://example.com/article');
       });
 
       test('copyWith can clear articleUrl by passing null explicitly', () {
         final state = ReaderState(
-          book: testBook,
+          document: ReaderDocument.fromBook(testBook),
           articleUrl: 'https://example.com/article',
         );
         final copy = state.copyWith(articleUrl: null);
@@ -1424,7 +1481,7 @@ void main() {
         'copyWith preserves nullable chrome fields when not explicitly passed',
         () {
           final state = ReaderState(
-            book: testBook,
+            document: ReaderDocument.fromBook(testBook),
             chapterTitle: 'Book IV',
             bookCurrentPage: 84,
             bookTotalPages: 200,
@@ -1437,7 +1494,10 @@ void main() {
       );
 
       test('copyWith can clear chapterTitle by passing null explicitly', () {
-        final state = ReaderState(book: testBook, chapterTitle: 'Book IV');
+        final state = ReaderState(
+          document: ReaderDocument.fromBook(testBook),
+          chapterTitle: 'Book IV',
+        );
         final copy = state.copyWith(chapterTitle: null);
         expect(copy.chapterTitle, isNull);
       });

@@ -392,11 +392,16 @@ void main() {
     await tester.pump();
 
     final targetFinder = find.text('Target');
-    final newestFinder = find.text('Newest');
+    final targetTileFinder = find.byKey(
+      const ValueKey('library-grid-b-target'),
+    );
+    final newestTileFinder = find.byKey(
+      const ValueKey('library-grid-b-newest'),
+    );
     expect(bookRepository.getBooksCallCount, 1);
     expect(
-      tester.getTopLeft(targetFinder).dx,
-      greaterThan(tester.getTopLeft(newestFinder).dx),
+      tester.getTopLeft(targetTileFinder).dx,
+      greaterThan(tester.getTopLeft(newestTileFinder).dx),
     );
 
     await tester.tap(targetFinder);
@@ -408,8 +413,8 @@ void main() {
       reason: 'refreshing immediately would move the reverse Hero endpoint',
     );
     expect(
-      tester.getTopLeft(targetFinder).dx,
-      greaterThan(tester.getTopLeft(newestFinder).dx),
+      tester.getTopLeft(targetTileFinder).dx,
+      greaterThan(tester.getTopLeft(newestTileFinder).dx),
     );
 
     await tester.pump(const Duration(milliseconds: 300));
@@ -419,10 +424,10 @@ void main() {
     await tester.pump();
 
     expect(bookRepository.getBooksCallCount, 2);
-    expect(tester.getTopLeft(targetFinder).dx, lessThan(100));
+    expect(tester.getTopLeft(targetTileFinder).dx, lessThan(100));
     expect(
-      tester.getTopLeft(targetFinder).dy,
-      tester.getTopLeft(newestFinder).dy,
+      tester.getTopLeft(targetTileFinder).dy,
+      tester.getTopLeft(newestTileFinder).dy,
     );
   });
 
@@ -469,11 +474,16 @@ void main() {
     await tester.pump();
 
     final targetFinder = find.text('Target');
-    final newestFinder = find.text('Newest');
+    final targetTileFinder = find.byKey(
+      const ValueKey('library-grid-b-target'),
+    );
+    final newestTileFinder = find.byKey(
+      const ValueKey('library-grid-b-newest'),
+    );
     expect(bookRepository.getBooksCallCount, 1);
     expect(
-      tester.getTopLeft(targetFinder).dx,
-      greaterThan(tester.getTopLeft(newestFinder).dx),
+      tester.getTopLeft(targetTileFinder).dx,
+      greaterThan(tester.getTopLeft(newestTileFinder).dx),
     );
 
     await tester.tap(targetFinder);
@@ -491,10 +501,10 @@ void main() {
     await tester.pump();
 
     expect(bookRepository.getBooksCallCount, 2);
-    expect(tester.getTopLeft(targetFinder).dx, lessThan(100));
+    expect(tester.getTopLeft(targetTileFinder).dx, lessThan(100));
     expect(
-      tester.getTopLeft(targetFinder).dy,
-      tester.getTopLeft(newestFinder).dy,
+      tester.getTopLeft(targetTileFinder).dy,
+      tester.getTopLeft(newestTileFinder).dy,
     );
 
     bookRepository.seedBooks([

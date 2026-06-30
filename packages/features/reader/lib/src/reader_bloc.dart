@@ -11,6 +11,8 @@ import 'package:reader_webview/reader_webview.dart';
 
 part 'reader_event.dart';
 
+part 'reader_document.dart';
+
 part 'reader_state.dart';
 
 // Shares the reader trace flag with the screen so bloc events align with UI logs.
@@ -30,10 +32,10 @@ Highlight? _highlightById(List<Highlight> highlights, String id) {
   return null;
 }
 
-/// Owns the loaded book and its highlights for the reader screen.
+/// Owns the loaded source document and its highlights for the reader screen.
 ///
 /// Responsibilities:
-///   * resolve a [sourceId] into a [Book] on load and bump its
+///   * resolve a [sourceId] into a reader document on load and bump its
 ///     `lastOpenedAt` timestamp;
 ///   * persist position updates (CFI + progress fraction) coming from the
 ///     WebView back to the repository;
@@ -48,7 +50,6 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     required HighlightRepository highlightRepository,
     ArticleRepository? articleRepository,
     Book? initialSource,
-    SourceType initialSourceType = SourceType.book,
   }) : _bookRepository = bookRepository,
        _articleRepository = articleRepository,
        _highlightRepository = highlightRepository,
@@ -58,8 +59,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
              : ReaderState(
                  status: ReaderStatus.ready,
                  title: initialSource.title,
-                 book: initialSource,
-                 sourceType: initialSourceType,
+                 document: ReaderDocument.fromBook(initialSource),
+                 sourceType: SourceType.book,
                  pageProgressionRtl: _inferredBookPageProgressionRtl(
                    initialSource,
                  ),
@@ -82,11 +83,11 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   final ArticleRepository? _articleRepository;
   final HighlightRepository _highlightRepository;
 
-  /// Pending Book to persist to the repository. foliate-js can emit frequent
+  /// Pending document to persist to the repository. foliate-js can emit frequent
   /// `ReaderBookPositionUpdated` events during navigation, so the actual
-  /// `updateBook` write is debounced and SQLite is not hit on every
+  /// repository write is debounced and SQLite is not hit on every
   /// `onRelocated`. State is still emitted on every event so UI stays in sync.
-  Book? _pendingPersist;
+  ReaderDocument? _pendingPersist;
   Timer? _persistTimer;
   double? _pendingArticleSeekProgress;
   Timer? _pendingArticleSeekTimer;
@@ -106,7 +107,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     _pendingPersist = null;
     if (pending != null) {
       try {
-        await _persistReaderBook(pending);
+        await _persistReaderDocument(pending);
       } catch (e, st) {
         addError(e, st);
       }
@@ -139,7 +140,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     ReaderSourceLoadRequested event,
     Emitter<ReaderState> emit,
   ) async {
-    final hasInitialSource = state.book?.id == event.sourceId;
+    final hasInitialSource = state.document?.id == event.sourceId;
     if (!hasInitialSource) {
       emit(state.copyWith(status: ReaderStatus.loading));
     }
@@ -167,7 +168,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
           state.copyWith(
             status: ReaderStatus.ready,
             title: updatedBook.title,
-            book: updatedBook,
+            document: ReaderDocument.fromBook(updatedBook),
             sourceType: SourceType.book,
             articleUrl: null,
             pageProgressionRtl: _inferredBookPageProgressionRtl(updatedBook),
@@ -187,12 +188,11 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
           return;
         }
         await articleRepository.updateArticle(updatedArticle);
-        final readerBook = articleRepository.toReaderBook(updatedArticle);
         emit(
           state.copyWith(
             status: ReaderStatus.ready,
-            title: readerBook.title,
-            book: readerBook,
+            title: updatedArticle.title,
+            document: ReaderDocument.fromArticle(updatedArticle),
             sourceType: SourceType.article,
             articleUrl: updatedArticle.url,
             pageProgressionRtl: _inferredArticlePageProgressionRtl(
@@ -216,7 +216,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   }
 
   /// Persists a CFI + progress fraction emitted by the WebView for the
-  /// currently-open book.
+  /// currently-open reader document.
   ///
   /// foliate-js can occasionally report a fraction slightly above 1.0
   /// (overshoot at end-of-content / re-entry); we clamp to `[0, 1]` so
@@ -225,7 +225,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     ReaderBookPositionUpdated event,
     Emitter<ReaderState> emit,
   ) async {
-    if (state.book == null) return;
+    final document = state.document;
+    if (document == null) return;
     final pendingArticleSeekProgress = _pendingArticleSeekProgress;
     final seekProgressOverride = _articleSeekProgressOverride(
       event: event,
@@ -284,14 +285,14 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
           );
     final bookCurrentPage = isPhantomEnd ? total - 1 : event.bookCurrentPage;
 
-    final updated = state.book!.copyWith(
+    final updated = document.copyWith(
       currentCfi: event.cfi,
       readingProgress: progress,
     );
-    final previousProgress = state.book?.readingProgress ?? 0;
+    final previousProgress = document.readingProgress;
     final nextSizeTotal = event.sizeTotal ?? state.sizeTotal;
     final hasMeaningfulChange =
-        updated != state.book ||
+        updated != document ||
         state.chapterTitle != event.chapterTitle ||
         state.bookCurrentPage != bookCurrentPage ||
         state.bookTotalPages != event.bookTotalPages ||
@@ -312,7 +313,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     // never overwrite it back to null on subsequent emits.
     emit(
       state.copyWith(
-        book: updated,
+        document: updated,
         chapterTitle: event.chapterTitle,
         bookCurrentPage: bookCurrentPage,
         bookTotalPages: event.bookTotalPages,
@@ -344,7 +345,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       _persistTimer?.cancel();
       _persistTimer = null;
       _pendingPersist = null;
-      await _persistReaderBook(updated);
+      await _persistReaderDocument(updated);
       return;
     }
 
@@ -363,7 +364,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     if (pending == null) return;
     _pendingPersist = null;
     try {
-      await _persistReaderBook(pending);
+      await _persistReaderDocument(pending);
     } catch (e, st) {
       addError(e, st);
     }
@@ -399,18 +400,23 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     return pendingProgress;
   }
 
-  Future<void> _persistReaderBook(Book book) async {
-    if (state.sourceType == SourceType.article) {
+  Future<void> _persistReaderDocument(ReaderDocument document) async {
+    if (document.sourceType == SourceType.article) {
       final articleRepository = _articleRepository;
       if (articleRepository == null) return;
-      final article = await articleRepository.getArticleById(book.id);
+      final article = await articleRepository.getArticleById(document.id);
       if (article == null) return;
       await articleRepository.updateArticle(
-        articleRepository.updateFromReaderBook(article, book),
+        article.copyWith(
+          currentCfi: document.currentCfi,
+          readingProgress: document.readingProgress,
+          lastOpenedAt: document.lastOpenedAt,
+          isFinished: document.isFinished,
+        ),
       );
       return;
     }
-    await _bookRepository.updateBook(book);
+    await _bookRepository.updateBook(document.toBook());
   }
 
   /// Routes an external error through BLoC's error pipeline (e.g. from a
@@ -490,8 +496,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     ReaderBookmarkChanged event,
     Emitter<ReaderState> emit,
   ) async {
-    final book = state.book;
-    if (book == null) return;
+    final document = state.document;
+    if (document == null) return;
 
     try {
       if (event.remove) {
@@ -500,10 +506,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         if (!hasBookmarkId && event.cfi.isEmpty) return;
 
         if (hasBookmarkId) {
-          await _bookRepository.deleteBookmarkById(book.id, bookmarkId);
+          await _bookRepository.deleteBookmarkById(document.id, bookmarkId);
         } else {
           await _bookRepository.deleteBookmarkBySourceAndCfi(
-            book.id,
+            document.id,
             event.cfi,
           );
         }
@@ -537,7 +543,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       if (event.cfi.isEmpty) return;
 
       final bookmark = await _bookRepository.addBookmark(
-        sourceId: book.id,
+        sourceId: document.id,
         sourceType: state.sourceType,
         cfi: event.cfi,
         content: event.content,

@@ -319,7 +319,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   Stream<ReaderSearchEvent> _searchBook(String query) {
     final readerState = context.read<ReaderBloc>().state;
     final searchEnabled = readerSearchActionEnabled(
-      format: readerState.book?.format,
+      format: readerState.document?.format,
       documentFeatures: readerState.documentFeatures,
     );
     if (!searchEnabled) {
@@ -370,7 +370,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
       (b) => b.state.pageProgressionRtl,
     );
     final format = context.select<ReaderBloc, BookFormat?>(
-      (b) => b.state.book?.format,
+      (b) => b.state.document?.format,
     );
     final sourceType = context.select<ReaderBloc, SourceType>(
       (b) => b.state.sourceType,
@@ -888,7 +888,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       '_ReaderWebViewBody build '
       'sourceId=${state.sourceId} '
       'foliateReady=$_foliateReady '
-      'progress=${state.book?.readingProgress.toStringAsFixed(3)} '
+      'progress=${state.document?.readingProgress.toStringAsFixed(3)} '
       'highlights=${highlights.length} '
       'bookmarks=${bookmarks.length} '
       'theme=${appearance.themeId} '
@@ -934,9 +934,9 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       // remount on book change.
       key: widget.webViewKey ?? ValueKey(state.sourceId),
       serverPort: widget.serverPort,
-      bookFilePath: state.book!.filePath,
-      initialCfi: state.book?.currentCfi,
-      initialProgress: state.book?.readingProgress,
+      bookFilePath: state.document!.filePath,
+      initialCfi: state.document?.currentCfi,
+      initialProgress: state.document?.readingProgress,
       foliateStyle: foliateStyle,
       isArticle: state.sourceType == SourceType.article,
       pageProgressionRtl: state.pageProgressionRtl,
@@ -1005,7 +1005,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         highlightFocusCubit.clear();
         imageSelectionCubit.deselect();
         final currentState = bloc.state;
-        if (isImagePageFormat(currentState.book?.format)) {
+        if (isImagePageFormat(currentState.document?.format)) {
           selectionCubit.deselect();
           widget.webViewKey?.currentState?.clearSelection();
           return;
@@ -1021,14 +1021,14 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
           cfiRange: selection.cfiRange,
           normalizedCfiRange: selection.normalizedCfiRange,
           position: selection.position,
-          progress: currentState.book?.readingProgress,
+          progress: currentState.document?.readingProgress,
           chapterTitle: currentState.chapterTitle,
           containedHighlightIds: selection.containedHighlightIds,
         );
       },
       onImageAreaSelected: (selection) {
         final currentState = bloc.state;
-        if (!isImagePageFormat(currentState.book?.format)) return;
+        if (!isImagePageFormat(currentState.document?.format)) return;
         highlightFocusCubit.clear();
         selectionCubit.deselect();
         uiCubit.hideChrome();
@@ -1036,7 +1036,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
           pageIndex: selection.pageIndex,
           rect: selection.rect,
           position: selection.position,
-          progress: currentState.book?.readingProgress,
+          progress: currentState.document?.readingProgress,
           chapterTitle: currentState.chapterTitle,
         );
       },
@@ -1174,9 +1174,9 @@ class _ReaderArticleHtmlBodyState extends State<_ReaderArticleHtmlBody> {
     final readerSurface = ArticleHtmlReaderWebView(
       key: widget.webViewKey,
       serverPort: widget.serverPort,
-      articleFilePath: state.book!.filePath,
-      initialPosition: state.book?.currentCfi,
-      initialProgress: state.book?.readingProgress,
+      articleFilePath: state.document!.filePath,
+      initialPosition: state.document?.currentCfi,
+      initialProgress: state.document?.readingProgress,
       foliateStyle: articleStyle,
       bookmarks: bookmarks,
       onReady: () {

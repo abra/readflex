@@ -36,8 +36,7 @@ class ArticleHtmlReaderWebView extends StatefulWidget {
 
   final int serverPort;
 
-  /// Absolute path to either `article.epub` or `content.html` in the article
-  /// directory. The HTML reader derives `content.html` from the directory.
+  /// Absolute path to `content.html` in the article directory.
   final String articleFilePath;
   final String? initialPosition;
   final double? initialProgress;

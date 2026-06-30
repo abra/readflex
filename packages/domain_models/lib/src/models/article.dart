@@ -2,7 +2,7 @@ import 'package:equatable/equatable.dart' show Equatable;
 
 /// Article saved from the web for offline reading.
 ///
-/// The cleaned backend JSON and generated EPUB live on disk in the article's
+/// The cleaned backend JSON and generated HTML live on disk in the article's
 /// directory; this model stores resolved absolute paths supplied by
 /// `ArticleRepository`.
 class Article extends Equatable {
@@ -46,10 +46,10 @@ class Article extends Equatable {
   /// Absolute path to the stored extraction JSON.
   final String contentPath;
 
-  String get epubPath {
+  String get contentHtmlPath {
     final slash = contentPath.lastIndexOf('/');
-    if (slash == -1) return 'article.epub';
-    return '${contentPath.substring(0, slash + 1)}article.epub';
+    if (slash == -1) return 'content.html';
+    return '${contentPath.substring(0, slash + 1)}content.html';
   }
 
   final String plainText;

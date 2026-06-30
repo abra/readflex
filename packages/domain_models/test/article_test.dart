@@ -2,7 +2,7 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('Article derives generated epub path next to stored content', () {
+  test('Article derives reader HTML path next to stored content', () {
     final article = Article(
       id: 'a1',
       title: 'Article',
@@ -11,7 +11,7 @@ void main() {
       addedAt: DateTime(2026),
     );
 
-    expect(article.epubPath, '/data/articles/a1/article.epub');
+    expect(article.contentHtmlPath, '/data/articles/a1/content.html');
   });
 
   test('LibrarySource maps article metadata for shared library surfaces', () {

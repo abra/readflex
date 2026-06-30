@@ -19,7 +19,6 @@ class ReaderScreen extends StatelessWidget {
     required List<TextAction> textActions,         // plug-in actions
     List<String> initialSearchHistory = const [],
     Book? initialSource,
-    SourceType initialSourceType = SourceType.book,
     ValueChanged<List<String>>? onSearchHistoryChanged,
     VoidCallback? onSourceOpened,
     void Function(String url, String title)? onArticleTitlePressed,
@@ -28,12 +27,14 @@ class ReaderScreen extends StatelessWidget {
 ```
 
 `sourceId` resolves first through `BookRepository.getBookById`; when an
-`ArticleRepository` is provided, article sources are converted into reader
-books through `ArticleRepository.toReaderBook`. `initialSource` and
-`initialSourceType` let the route avoid a loading flash when the source was
-already loaded by the previous route. For articles, `onArticleTitlePressed`
-lets the composition root open the original article URL from the top reader
-chrome without coupling the reader package to `url_launcher`.
+`ArticleRepository` is provided, saved articles are loaded as article sources
+and opened from `Article.contentHtmlPath`. Internally `ReaderBloc` maps both
+books and articles to a source-neutral `ReaderDocument`, so article HTML is not
+modeled as an EPUB. `initialSource` lets the route avoid a loading flash
+when a book source was already loaded by the previous route. For articles,
+`onArticleTitlePressed` lets the composition root open the original article URL
+from the top reader chrome without coupling the reader package to
+`url_launcher`.
 
 ## TextAction plugin system
 
@@ -54,7 +55,7 @@ abstract class TextAction {
 
 | Unit                          | Responsibility                                                             |
 |-------------------------------|----------------------------------------------------------------------------|
-| `ReaderBloc`                  | Content: load book + highlights/bookmarks, debounced position save (500ms) |
+| `ReaderBloc`                  | Content: load source document + highlights/bookmarks, debounced position save (500ms) |
 | `ReaderUiCubit`               | Chrome, drawer, appearance-sheet and search-highlight UI state             |
 | `ReaderSearchCubit`           | Book-search debounce, streamed results, progress and recent queries        |
 | `ReaderSelectionCubit`        | Current text selection (text + `cfiRange`)                                 |

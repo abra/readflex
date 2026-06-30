@@ -9,7 +9,6 @@ import 'package:monitoring/monitoring.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart' show Uuid;
 
-import 'epub_builder.dart';
 import 'mappers/article_to_domain.dart';
 import 'mappers/article_to_storage.dart';
 
@@ -21,14 +20,12 @@ class ArticleRepository {
     required Directory articlesDirectory,
     http.Client? httpClient,
     Logger? logger,
-    EpubBuilder epubBuilder = const EpubBuilder(),
   }) : _db = database,
        _dao = database.articlesDao,
        _articlesDir = articlesDirectory,
        _httpClient = httpClient ?? http.Client(),
        _ownsHttpClient = httpClient == null,
-       _logger = logger,
-       _epubBuilder = epubBuilder;
+       _logger = logger;
 
   final AppDatabase _db;
   final ArticlesDao _dao;
@@ -36,7 +33,6 @@ class ArticleRepository {
   final http.Client _httpClient;
   final bool _ownsHttpClient;
   final Logger? _logger;
-  final EpubBuilder _epubBuilder;
 
   static const _downloadTimeout = Duration(seconds: 30);
 
@@ -79,7 +75,7 @@ class ArticleRepository {
         _withoutDuplicateTitleHeading(extracted.blocks, extracted.title),
       );
       final htmlWithLocalImages = await _downloadArticleImages(
-        html: articleHtml.html,
+        html: articleHtml,
         articleDir: articleDir,
         baseUri: baseUri,
       );
@@ -96,22 +92,6 @@ class ArticleRepository {
       }
 
       final language = normalizeArticleLanguage(extracted.language);
-      final textDirection =
-          extracted.textDirection ??
-          articleTextDirectionForLanguage(language) ??
-          inferArticleTextDirectionFromText(extracted.plainText);
-
-      await _epubBuilder.build(
-        id: id,
-        title: extracted.title,
-        author: extracted.author,
-        lang: language,
-        textDirection: textDirection,
-        htmlBody: htmlWithLocalImages.html,
-        images: htmlWithLocalImages.images,
-        tocEntries: articleHtml.tocEntries,
-        outputFile: File(p.join(articleDir.path, 'article.epub')),
-      );
 
       final article = Article(
         id: id,
@@ -171,31 +151,6 @@ class ArticleRepository {
     await _tryDeleteDirectory(Directory(p.join(_articlesDir.path, id)));
   }
 
-  Book toReaderBook(Article article) {
-    return Book(
-      id: article.id,
-      title: article.title,
-      author: article.author ?? article.siteName ?? article.hostname,
-      coverImagePath: article.coverImagePath,
-      format: BookFormat.epub,
-      filePath: article.epubPath,
-      currentCfi: article.currentCfi,
-      readingProgress: article.readingProgress,
-      addedAt: article.addedAt,
-      lastOpenedAt: article.lastOpenedAt,
-      isFinished: article.isFinished,
-    );
-  }
-
-  Article updateFromReaderBook(Article article, Book readerBook) {
-    return article.copyWith(
-      currentCfi: readerBook.currentCfi,
-      readingProgress: readerBook.readingProgress,
-      lastOpenedAt: readerBook.lastOpenedAt,
-      isFinished: readerBook.isFinished,
-    );
-  }
-
   Future<void> _tryDeleteDirectory(Directory directory) async {
     try {
       if (await directory.exists()) await directory.delete(recursive: true);
@@ -225,7 +180,7 @@ class ArticleRepository {
     }
 
     final replacements = <String, String>{};
-    final images = <EpubImage>[];
+    final images = <_DownloadedArticleImage>[];
     for (final entry in sources.entries) {
       final image = await _tryDownloadImage(entry.value);
       if (image == null) continue;
@@ -251,7 +206,7 @@ class ArticleRepository {
     return _DownloadedArticleImages(html: rewritten, images: images);
   }
 
-  Future<EpubImage?> _tryDownloadImage(Uri uri) async {
+  Future<_DownloadedArticleImage?> _tryDownloadImage(Uri uri) async {
     try {
       final response = await _httpClient.get(uri).timeout(_downloadTimeout);
       if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
@@ -261,10 +216,9 @@ class ArticleRepository {
       final ext = _extensionFor(uri, mime);
       final filename =
           '${uri.toString().hashCode.toUnsigned(32).toRadixString(16)}$ext';
-      return EpubImage(
+      return _DownloadedArticleImage(
         filename: filename,
         bytes: Uint8List.fromList(response.bodyBytes),
-        mimeType: mime ?? EpubBuilder.mimeTypeFor(filename),
       );
     } catch (e, st) {
       _logger?.debug(
@@ -299,20 +253,19 @@ class ArticleRepository {
   }
 }
 
-/// Result of rewriting article HTML image sources to local EPUB image paths.
+/// Result of rewriting article HTML image sources to local files.
 class _DownloadedArticleImages {
   const _DownloadedArticleImages({required this.html, required this.images});
 
   final String html;
-  final List<EpubImage> images;
+  final List<_DownloadedArticleImage> images;
 }
 
-/// Article body HTML plus generated TOC entries for heading blocks.
-class _ArticleHtml {
-  const _ArticleHtml({required this.html, required this.tocEntries});
+class _DownloadedArticleImage {
+  const _DownloadedArticleImage({required this.filename, required this.bytes});
 
-  final String html;
-  final List<EpubTocEntry> tocEntries;
+  final String filename;
+  final Uint8List bytes;
 }
 
 final _imgSrcRegex = RegExp(
@@ -320,9 +273,9 @@ final _imgSrcRegex = RegExp(
   caseSensitive: false,
 );
 
-_ArticleHtml _htmlForBlocks(List<ArticleBlock> blocks) {
+String _htmlForBlocks(List<ArticleBlock> blocks) {
   final buffer = StringBuffer();
-  final tocEntries = <EpubTocEntry>[];
+  var headingIndex = 0;
   var blockIndex = 0;
   for (final block in blocks) {
     final blockId = 'block-${blockIndex++}';
@@ -337,11 +290,8 @@ _ArticleHtml _htmlForBlocks(List<ArticleBlock> blocks) {
       case ArticleHeadingBlock(:final level, :final text):
         final title = text.trim();
         if (title.isNotEmpty) {
-          final id = 'section-${tocEntries.length + 1}';
+          final id = 'section-${++headingIndex}';
           final safeLevel = _safeHeadingLevel(level);
-          tocEntries.add(
-            EpubTocEntry(title: title, href: 'chapter1.xhtml#$id'),
-          );
           buffer.writeln(
             '<h$safeLevel id="${_attr(id)}">${_text(title)}</h$safeLevel>',
           );
@@ -407,10 +357,7 @@ _ArticleHtml _htmlForBlocks(List<ArticleBlock> blocks) {
         }
     }
   }
-  return _ArticleHtml(
-    html: buffer.toString(),
-    tocEntries: List.unmodifiable(tocEntries),
-  );
+  return buffer.toString();
 }
 
 String _sentenceSpans(String text, String blockId) {

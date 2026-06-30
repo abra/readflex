@@ -36,7 +36,7 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
       (b) => b.state.highlights,
     );
     final currentProgress = context.select<ReaderBloc, double?>(
-      (b) => b.state.book?.readingProgress,
+      (b) => b.state.document?.readingProgress,
     );
     final currentChapterTitle = context.select<ReaderBloc, String?>(
       (b) => b.state.chapterTitle,
