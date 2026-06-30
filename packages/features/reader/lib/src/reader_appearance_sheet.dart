@@ -137,13 +137,14 @@ class _ThemeSwatchLevel extends StatelessWidget {
       (c) => c.state.effectiveAppearance.themeId,
     );
     final cubit = context.read<ReaderAppearanceCubit>();
+    final activePreset = ReaderThemePreset.fromId(themeId);
     return Row(
       children: [
         for (var i = 0; i < ReaderThemePreset.values.length; i++) ...[
           Expanded(
             child: _ThemeSwatchButton(
               preset: ReaderThemePreset.values[i],
-              active: ReaderThemePreset.values[i].id == themeId,
+              active: ReaderThemePreset.values[i] == activePreset,
               onTap: () => cubit.setTheme(ReaderThemePreset.values[i].id),
             ),
           ),

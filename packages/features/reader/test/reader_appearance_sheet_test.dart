@@ -76,17 +76,38 @@ void main() {
     expect(find.byType(VerticalDivider), findsNWidgets(2));
   });
 
-  testWidgets('theme swatches persist reader theme', (tester) async {
+  testWidgets('theme swatches persist reader theme ids', (tester) async {
     await tester.openAppearanceSheet(cubit);
 
-    await tester.tap(find.text('Night'));
+    await tester.tap(find.text('Snow'));
     await tester.pumpAndSettle();
 
-    expect(cubit.state.effectiveAppearance.themeId, 'night');
+    expect(cubit.state.effectiveAppearance.themeId, 'snow');
     expect(
       preferencesService.readerAppearanceOverrideFor(_sourceId)?.themeId,
-      'night',
+      'snow',
     );
+  });
+
+  testWidgets('legacy white theme id selects Snow swatch', (tester) async {
+    const legacySourceId = 'legacy-source';
+    await preferencesService.setReaderAppearanceOverride(
+      legacySourceId,
+      const ReaderAppearanceOverride(themeId: 'white'),
+    );
+    final legacyCubit = ReaderAppearanceCubit(
+      preferencesService: preferencesService,
+      sourceId: legacySourceId,
+    );
+    addTearDown(legacyCubit.close);
+
+    await tester.openAppearanceSheet(legacyCubit);
+
+    final snowLabel = tester.widget<Text>(find.text('Snow'));
+    final primary = Theme.of(
+      tester.element(find.text('Snow')),
+    ).colorScheme.primary;
+    expect(snowLabel.style?.color, primary);
   });
 
   testWidgets('font tile cycles through font presets', (tester) async {

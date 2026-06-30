@@ -35,12 +35,14 @@ void main() {
         ReaderThemePreset.values.map((preset) => preset.label),
         ['Snow', 'Paper', 'Warm', 'Graphite', 'Night'],
       );
-      expect(ReaderThemePreset.fromId('white'), ReaderThemePreset.white);
+      expect(ReaderThemePreset.snow.id, 'snow');
+      expect(ReaderThemePreset.fromId('snow'), ReaderThemePreset.snow);
+      expect(ReaderThemePreset.fromId('white'), ReaderThemePreset.snow);
       expect(ReaderThemePreset.fromId('mist').label, 'Graphite');
     });
 
-    test('white theme uses a pure white page with soft dark text', () {
-      final theme = ReaderThemePreset.white.data;
+    test('snow theme uses a pure white page with soft dark text', () {
+      final theme = ReaderThemePreset.snow.data;
 
       expect(theme.backgroundColor, const Color(0xFFFFFFFF));
       expect(theme.primaryTextColor, const Color(0xFF242424));

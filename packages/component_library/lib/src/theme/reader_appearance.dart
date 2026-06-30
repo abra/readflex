@@ -5,7 +5,7 @@ import 'tokens/primitive_colors.dart';
 
 /// User-selectable reader surface presets.
 enum ReaderThemePreset {
-  white,
+  snow,
   paper,
   warm,
   mist,
@@ -13,7 +13,9 @@ enum ReaderThemePreset {
   ;
 
   static ReaderThemePreset fromId(String? value) => switch (value) {
-    'white' => white,
+    // TODO: Remove the legacy `white` alias after pre-Snow reader preferences
+    // are no longer expected in local storage.
+    'snow' || 'white' => snow,
     'warm' => warm,
     'mist' => mist,
     'night' => night,
@@ -23,7 +25,7 @@ enum ReaderThemePreset {
   String get id => name;
 
   String get label => switch (this) {
-    white => 'Snow',
+    snow => 'Snow',
     paper => 'Paper',
     warm => 'Warm',
     mist => 'Graphite',
@@ -141,7 +143,7 @@ class ReaderThemeData {
 
 extension ReaderThemePresetX on ReaderThemePreset {
   ReaderThemeData get data => switch (this) {
-    ReaderThemePreset.white => const ReaderThemeData(
+    ReaderThemePreset.snow => const ReaderThemeData(
       backgroundColor: PrimitiveColors.white,
       surfaceColor: Color(0xFFF8F9FA),
       panelColor: Color(0xFFF1F3F4),
