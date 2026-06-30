@@ -199,6 +199,8 @@
       const positionPrefix = 'readflex-html-position:'
       const centerHysteresisPx = 24
       const progressEmitStep = 0.004
+      const progressStartThreshold = 0.001
+      const progressEndThreshold = 0.999
       const minEmitIntervalMs = 140
       const scrollRestoreSuppressMs = 700
 
@@ -419,6 +421,19 @@
         window.scrollTo({ top: Math.max(0, maxScroll) * clamp01(value), behavior: 'auto' })
       }
 
+      function scrollToDocumentEdge(progressValue) {
+        if (!Number.isFinite(progressValue)) return false
+        if (progressValue <= progressStartThreshold) {
+          window.scrollTo({ top: 0, behavior: 'auto' })
+          return true
+        }
+        if (progressValue >= progressEndThreshold) {
+          scrollToProgress(1)
+          return true
+        }
+        return false
+      }
+
       function scrollElementToCenter(element) {
         const rect = element.getBoundingClientRect()
         const target = window.scrollY + rect.top - (window.innerHeight - rect.height) / 2
@@ -526,8 +541,8 @@
           percentage: nextProgress,
           chapterTitle: activeChapterTitle(),
           reason,
-          atStart: nextProgress <= 0.001,
-          atEnd: nextProgress >= 0.999,
+          atStart: nextProgress <= progressStartThreshold,
+          atEnd: nextProgress >= progressEndThreshold,
           bookmark: bookmarkPayloadFor(anchor),
         })
       }
@@ -565,17 +580,22 @@
         if (userInteracted && restored) return
         const decoded = decodePosition(readJsonParam('initialPosition', null))
         const initialProgress = readJsonParam('initialProgress', null)
+        const progressValue = Number(initialProgress)
         let target = null
-        if (decoded) {
+
+        restoringUntil = performance.now() + scrollRestoreSuppressMs
+        const restoredToEdge = scrollToDocumentEdge(progressValue)
+        if (!restoredToEdge && decoded) {
           target = sentenceElementForAnchor(decoded)
         }
 
-        restoringUntil = performance.now() + scrollRestoreSuppressMs
-        if (target) {
+        if (restoredToEdge) {
+          activeSentenceKey = null
+        } else if (target) {
           scrollElementToCenter(target)
           activeSentenceKey = target.id
-        } else if (Number.isFinite(Number(initialProgress))) {
-          scrollToProgress(Number(initialProgress))
+        } else if (Number.isFinite(progressValue)) {
+          scrollToProgress(progressValue)
         }
         restored = true
         schedulePosition('load', true)

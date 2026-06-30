@@ -558,9 +558,32 @@ void main() {
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_104"));
+      expect(assetExtractor, contains("reader_webview_assets_105"));
       expect(assetExtractor, contains('assets/article-html/index.html'));
     });
+
+    test(
+      'article restore uses exact document edges before sentence anchors',
+      () {
+        final html = _readPackageSource('assets/article-html/index.html');
+
+        expect(html, contains('const progressStartThreshold = 0.001'));
+        expect(html, contains('const progressEndThreshold = 0.999'));
+        expect(html, contains('function scrollToDocumentEdge(progressValue)'));
+        expect(html, contains("window.scrollTo({ top: 0, behavior: 'auto' })"));
+        expect(html, contains('scrollToProgress(1)'));
+        expect(
+          html,
+          contains(
+            'const restoredToEdge = scrollToDocumentEdge(progressValue)',
+          ),
+        );
+        expect(html, contains('if (!restoredToEdge && decoded)'));
+        expect(html, contains('if (restoredToEdge)'));
+        expect(html, contains('activeSentenceKey = null'));
+        expect(html, contains('} else if (target)'));
+      },
+    );
 
     test('wires image-area highlight selection and rendering bridge', () {
       final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
