@@ -156,6 +156,23 @@ void main() {
     });
 
     test(
+      'reader appearance override drops values matching global defaults',
+      () async {
+        final service = await PreferencesService.create(
+          supportedCodes: _supportedCodes,
+        );
+
+        await service.setReaderAppearanceOverride(
+          'source-1',
+          const ReaderAppearanceOverride(lineHeight: 1.6),
+        );
+
+        expect(service.readerAppearanceOverrideFor('source-1'), isNull);
+        expect(service.current.readerAppearanceOverrides, isEmpty);
+      },
+    );
+
+    test(
       'clearReaderAppearanceOverride removes stored source override',
       () async {
         final service = await PreferencesService.create(

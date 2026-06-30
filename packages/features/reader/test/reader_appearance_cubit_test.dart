@@ -231,25 +231,77 @@ void main() {
       },
     );
 
-    test('resetTextScale returns inherited global scale to 100%', () async {
-      await preferencesService.update(
-        (prefs) => prefs.copyWith(readerTextScale: 1.15),
-      );
-      final cubit = ReaderAppearanceCubit(
-        preferencesService: preferencesService,
-        sourceId: _sourceId,
-      );
-      addTearDown(cubit.close);
+    test(
+      'resetTextScale clears local override and inherits global scale',
+      () async {
+        await preferencesService.update(
+          (prefs) => prefs.copyWith(readerTextScale: 1.15),
+        );
+        final cubit = ReaderAppearanceCubit(
+          preferencesService: preferencesService,
+          sourceId: _sourceId,
+        );
+        addTearDown(cubit.close);
 
-      await cubit.resetTextScale();
+        cubit.previewTextScale(1.0);
+        await cubit.resetTextScale();
 
-      expect(cubit.state.hasOverride, isTrue);
-      expect(cubit.state.effectiveAppearance.textScale, 1.0);
-      expect(
-        preferencesService.readerAppearanceOverrideFor(_sourceId)?.textScale,
-        1.0,
-      );
-    });
+        expect(cubit.state.hasOverride, isFalse);
+        expect(cubit.state.effectiveAppearance.textScale, 1.15);
+        expect(
+          preferencesService.readerAppearanceOverrideFor(_sourceId),
+          isNull,
+        );
+      },
+    );
+
+    test(
+      'resetLineHeight clears local override and inherits global spacing',
+      () async {
+        await preferencesService.update(
+          (prefs) => prefs.copyWith(readerLineHeight: 1.8),
+        );
+        final cubit = ReaderAppearanceCubit(
+          preferencesService: preferencesService,
+          sourceId: _sourceId,
+        );
+        addTearDown(cubit.close);
+
+        cubit.previewLineHeight(1.6);
+        await cubit.resetLineHeight();
+
+        expect(cubit.state.hasOverride, isFalse);
+        expect(cubit.state.effectiveAppearance.lineHeight, 1.8);
+        expect(
+          preferencesService.readerAppearanceOverrideFor(_sourceId),
+          isNull,
+        );
+      },
+    );
+
+    test(
+      'resetSideMargin clears local override and inherits global margin',
+      () async {
+        await preferencesService.update(
+          (prefs) => prefs.copyWith(readerSideMargin: 10),
+        );
+        final cubit = ReaderAppearanceCubit(
+          preferencesService: preferencesService,
+          sourceId: _sourceId,
+        );
+        addTearDown(cubit.close);
+
+        cubit.previewSideMargin(8);
+        await cubit.resetSideMargin();
+
+        expect(cubit.state.hasOverride, isFalse);
+        expect(cubit.state.effectiveAppearance.sideMargin, 10);
+        expect(
+          preferencesService.readerAppearanceOverrideFor(_sourceId),
+          isNull,
+        );
+      },
+    );
 
     blocTest<ReaderAppearanceCubit, ReaderAppearanceState>(
       'commitSideMargin persists the source override',

@@ -99,10 +99,13 @@ class PreferencesService {
       final overrides = Map<String, ReaderAppearanceOverride>.of(
         prefs.readerAppearanceOverrides,
       );
-      if (override.isEmpty) {
+      final normalizedOverride = override.withoutValuesMatching(
+        prefs.readerAppearance,
+      );
+      if (normalizedOverride.isEmpty) {
         overrides.remove(sourceId);
       } else {
-        overrides[sourceId] = override;
+        overrides[sourceId] = normalizedOverride;
       }
       return prefs.copyWith(
         readerAppearanceOverrides: Map.unmodifiable(overrides),

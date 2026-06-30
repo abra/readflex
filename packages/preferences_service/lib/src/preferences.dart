@@ -73,12 +73,30 @@ class ReaderAppearancePreferences {
     required this.pageTurnStyle,
   });
 
+  static const defaultLineHeight = 1.6;
+  static const lineHeightPresets = [1.2, 1.4, defaultLineHeight, 1.8, 2.0];
+  static const lineHeightMatchTolerance = 0.051;
+
+  static double normalizeLineHeight(double? value) {
+    final raw = value ?? defaultLineHeight;
+    var nearest = lineHeightPresets.first;
+    var nearestDistance = (raw - nearest).abs();
+    for (final preset in lineHeightPresets.skip(1)) {
+      final distance = (raw - preset).abs();
+      if (distance < nearestDistance) {
+        nearest = preset;
+        nearestDistance = distance;
+      }
+    }
+    return nearestDistance < lineHeightMatchTolerance ? nearest : raw;
+  }
+
   static const defaults = ReaderAppearancePreferences(
     themeId: 'paper',
     fontId: 'serif',
     layoutId: 'standard',
     textScale: 1.0,
-    lineHeight: 1.55,
+    lineHeight: defaultLineHeight,
     sideMargin: 8.0,
     textAlignment: ReaderTextAlignment.start,
     invertImagesInDark: false,
@@ -287,7 +305,8 @@ class ReaderAppearanceOverride {
     if (fontId != null) 'fontId': fontId,
     if (layoutId != null) 'layoutId': layoutId,
     if (textScale != null) 'textScale': textScale,
-    if (lineHeight != null) 'lineHeight': lineHeight,
+    if (lineHeight != null)
+      'lineHeight': ReaderAppearancePreferences.normalizeLineHeight(lineHeight),
     if (sideMargin != null) 'sideMargin': sideMargin,
     if (textAlignment != null) 'textAlignment': textAlignment!.id,
     if (invertImagesInDark != null) 'invertImagesInDark': invertImagesInDark,
@@ -304,7 +323,7 @@ class ReaderAppearanceOverride {
       fontId: _readString(json['fontId']),
       layoutId: _readString(json['layoutId']),
       textScale: _readDouble(json['textScale']),
-      lineHeight: _readDouble(json['lineHeight']),
+      lineHeight: _readLineHeight(json['lineHeight']),
       sideMargin: _readDouble(json['sideMargin']),
       textAlignment: _readTextAlignment(json['textAlignment']),
       invertImagesInDark: _readBool(json['invertImagesInDark']),
@@ -324,6 +343,13 @@ class ReaderAppearanceOverride {
   static double? _readDouble(Object? value) {
     if (value is! num) return null;
     return value.toDouble();
+  }
+
+  static double? _readLineHeight(Object? value) {
+    final lineHeight = _readDouble(value);
+    return lineHeight == null
+        ? null
+        : ReaderAppearancePreferences.normalizeLineHeight(lineHeight);
   }
 
   static bool? _readBool(Object? value) => value is bool ? value : null;
@@ -377,6 +403,26 @@ class ReaderAppearanceOverride {
     pageTurnStyle,
     brightnessOverride,
   );
+
+  ReaderAppearanceOverride withoutValuesMatching(
+    ReaderAppearancePreferences base,
+  ) => ReaderAppearanceOverride(
+    themeId: themeId == base.themeId ? null : themeId,
+    fontId: fontId == base.fontId ? null : fontId,
+    layoutId: layoutId == base.layoutId ? null : layoutId,
+    textScale: textScale == base.textScale ? null : textScale,
+    lineHeight: lineHeight == base.lineHeight ? null : lineHeight,
+    sideMargin: sideMargin == base.sideMargin ? null : sideMargin,
+    textAlignment: textAlignment == base.textAlignment ? null : textAlignment,
+    invertImagesInDark: invertImagesInDark == base.invertImagesInDark
+        ? null
+        : invertImagesInDark,
+    overrideFont: overrideFont == base.overrideFont ? null : overrideFont,
+    overrideColor: overrideColor == base.overrideColor ? null : overrideColor,
+    useBookLayout: useBookLayout == base.useBookLayout ? null : useBookLayout,
+    pageTurnStyle: pageTurnStyle == base.pageTurnStyle ? null : pageTurnStyle,
+    brightnessOverride: brightnessOverride,
+  );
 }
 
 /// Immutable snapshot of every user-configurable preference in the app —
@@ -392,7 +438,7 @@ class Preferences {
     this.readerFontId = 'serif',
     this.readerLayoutId = 'standard',
     this.readerTextScale = 1.0,
-    this.readerLineHeight = 1.55,
+    this.readerLineHeight = ReaderAppearancePreferences.defaultLineHeight,
     this.readerSideMargin = 8.0,
     this.readerTextAlignment = ReaderTextAlignment.start,
     this.readerInvertImagesInDark = false,
@@ -453,7 +499,9 @@ class Preferences {
   ReaderAppearanceOverride? readerAppearanceOverrideFor(String sourceId) {
     final override = readerAppearanceOverrides[sourceId];
     if (override == null || override.isEmpty) return null;
-    return override;
+    final normalized = override.withoutValuesMatching(readerAppearance);
+    if (normalized.isEmpty) return null;
+    return normalized;
   }
 
   ReaderAppearancePreferences effectiveReaderAppearanceFor(String sourceId) {

@@ -65,8 +65,10 @@ class ReaderAppearanceCubit extends Cubit<ReaderAppearanceState> {
   static const double minTextScale = 0.85;
   static const double maxTextScale = 1.45;
   static const double textScaleStep = 0.05;
-  static const List<double> lineHeightPresets = [1.2, 1.4, 1.6, 1.8, 2.0];
-  static const double lineHeightMatchTolerance = 0.051;
+  static const List<double> lineHeightPresets =
+      ReaderAppearancePreferences.lineHeightPresets;
+  static const double lineHeightMatchTolerance =
+      ReaderAppearancePreferences.lineHeightMatchTolerance;
   static const double minSideMargin = 2;
   static const double maxSideMargin = 14;
   static const double sideMarginStep = 1;
@@ -146,11 +148,8 @@ class ReaderAppearanceCubit extends Cubit<ReaderAppearanceState> {
     _pendingTextScale = null;
     _textScaleCommitTimer?.cancel();
     _textScaleCommitTimer = null;
-    final defaultTextScale = ReaderAppearancePreferences.defaults.textScale;
     final next = state.sourceOverride.copyWith(
-      textScale: state.globalAppearance.textScale == defaultTextScale
-          ? null
-          : defaultTextScale,
+      textScale: null,
     );
     await _persistOverride(next);
   }
@@ -172,11 +171,8 @@ class ReaderAppearanceCubit extends Cubit<ReaderAppearanceState> {
     _pendingLineHeight = null;
     _lineHeightCommitTimer?.cancel();
     _lineHeightCommitTimer = null;
-    final defaultLineHeight = ReaderAppearancePreferences.defaults.lineHeight;
     final next = state.sourceOverride.copyWith(
-      lineHeight: state.globalAppearance.lineHeight == defaultLineHeight
-          ? null
-          : defaultLineHeight,
+      lineHeight: null,
     );
     await _persistOverride(next);
   }
@@ -201,11 +197,8 @@ class ReaderAppearanceCubit extends Cubit<ReaderAppearanceState> {
     _pendingSideMargin = null;
     _sideMarginCommitTimer?.cancel();
     _sideMarginCommitTimer = null;
-    final defaultSideMargin = ReaderAppearancePreferences.defaults.sideMargin;
     final next = state.sourceOverride.copyWith(
-      sideMargin: state.globalAppearance.sideMargin == defaultSideMargin
-          ? null
-          : defaultSideMargin,
+      sideMargin: null,
     );
     await _persistOverride(next);
   }

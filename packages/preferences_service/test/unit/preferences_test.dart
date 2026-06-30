@@ -9,7 +9,7 @@ const _baseRA = ReaderAppearancePreferences(
   fontId: 'serif',
   layoutId: 'standard',
   textScale: 1.0,
-  lineHeight: 1.55,
+  lineHeight: 1.6,
   sideMargin: 8.0,
   textAlignment: ReaderTextAlignment.start,
   invertImagesInDark: false,
@@ -30,7 +30,7 @@ void main() {
       expect(prefs.readerFontId, 'serif');
       expect(prefs.readerLayoutId, 'standard');
       expect(prefs.readerTextScale, 1.0);
-      expect(prefs.readerLineHeight, 1.55);
+      expect(prefs.readerLineHeight, 1.6);
       expect(prefs.readerSideMargin, 8.0);
       expect(prefs.readerTextAlignment, ReaderTextAlignment.start);
       expect(prefs.readerInvertImagesInDark, isFalse);
@@ -171,7 +171,7 @@ void main() {
       const prefs = Preferences(
         readerFontId: 'serif',
         readerTextScale: 1.0,
-        readerLineHeight: 1.55,
+        readerLineHeight: 1.6,
         readerAppearanceOverrides: {
           'source-1': ReaderAppearanceOverride(
             fontId: 'sans',
@@ -186,7 +186,7 @@ void main() {
 
       expect(ra.fontId, 'sans');
       expect(ra.textScale, 1.2);
-      expect(ra.lineHeight, 1.55);
+      expect(ra.lineHeight, 1.6);
       expect(ra.sideMargin, 10);
       expect(ra.textAlignment, ReaderTextAlignment.justify);
       expect(
@@ -213,7 +213,7 @@ void main() {
       expect(updated.fontId, 'serif');
       expect(updated.layoutId, 'compact');
       expect(updated.textScale, 1.3);
-      expect(updated.lineHeight, 1.55);
+      expect(updated.lineHeight, 1.6);
       expect(updated.sideMargin, 8);
       expect(updated.textAlignment, ReaderTextAlignment.justify);
       expect(updated.invertImagesInDark, isFalse);
@@ -230,7 +230,7 @@ void main() {
         fontId: 'serif',
         layoutId: 'standard',
         textScale: 1.0,
-        lineHeight: 1.55,
+        lineHeight: 1.6,
         sideMargin: 8.0,
         textAlignment: ReaderTextAlignment.start,
         invertImagesInDark: false,

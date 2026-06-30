@@ -27,7 +27,7 @@ void main() {
       expect(prefs.readerFontId, 'serif');
       expect(prefs.readerLayoutId, 'standard');
       expect(prefs.readerTextScale, 1.0);
-      expect(prefs.readerLineHeight, 1.55);
+      expect(prefs.readerLineHeight, 1.6);
       expect(prefs.readerSideMargin, 8.0);
       expect(prefs.readerTextAlignment, ReaderTextAlignment.start);
       expect(prefs.readerInvertImagesInDark, isFalse);
@@ -96,7 +96,21 @@ void main() {
       await repo.save(source);
       final loaded = await repo.load(_supportedCodes);
 
-      expect(loaded, source);
+      expect(
+        loaded,
+        source.copyWith(
+          readerAppearanceOverrides: const {
+            'source-1': ReaderAppearanceOverride(
+              fontId: 'sans',
+              textScale: 1.2,
+              lineHeight: 1.8,
+              sideMargin: 9,
+              pageTurnStyle: ReaderPageTurnStyle.horizontal,
+              brightnessOverride: 0.42,
+            ),
+          },
+        ),
+      );
     });
 
     test('save() writes JSON with expected keys', () async {
@@ -133,7 +147,7 @@ void main() {
       expect(map['readerThemeId'], 'paper');
       expect(map['readerFontId'], 'serif');
       expect(map['readerTextScale'], 1.0);
-      expect(map['readerLineHeight'], 1.55);
+      expect(map['readerLineHeight'], 1.6);
       expect(map['readerSideMargin'], 8.0);
     });
 
@@ -150,7 +164,7 @@ void main() {
             'readerThemeId': 'paper',
             'readerFontId': 'serif',
             'readerTextScale': 1.0,
-            'readerLineHeight': 1.55,
+            'readerLineHeight': 1.6,
             'onboardingCompleted': true,
             // no readerLayoutId, no readerInvertImagesInDark
           }),
@@ -406,6 +420,52 @@ void main() {
       },
     );
 
+    test(
+      'load() v11→v12 migration resets global reader line height',
+      () async {
+        final storage = PreferencesStorage();
+        await storage.setString(
+          _key,
+          jsonEncode(<String, Object?>{
+            '_schemaVersion': 11,
+            'readerLineHeight': 1.8,
+          }),
+        );
+
+        final repo = PreferencesRepository(storage);
+        final prefs = await repo.load(_supportedCodes);
+
+        expect(prefs.readerLineHeight, 1.6);
+      },
+    );
+
+    test(
+      'load() drops source appearance overrides matching reader defaults',
+      () async {
+        final storage = PreferencesStorage();
+        await storage.setString(
+          _key,
+          jsonEncode(<String, Object?>{
+            '_schemaVersion': 11,
+            'readerAppearanceOverrides': {
+              'source-1': {'lineHeight': 1.6, 'fontId': 'sans'},
+              'source-2': {'lineHeight': 1.6},
+            },
+          }),
+        );
+
+        final repo = PreferencesRepository(storage);
+        final prefs = await repo.load(_supportedCodes);
+
+        expect(prefs.readerAppearanceOverrideFor('source-1')?.fontId, 'sans');
+        expect(
+          prefs.readerAppearanceOverrideFor('source-1')?.lineHeight,
+          isNull,
+        );
+        expect(prefs.readerAppearanceOverrideFor('source-2'), isNull);
+      },
+    );
+
     test('save() writes _schemaVersion key alongside the data', () async {
       final storage = PreferencesStorage();
       final repo = PreferencesRepository(storage);
@@ -414,7 +474,7 @@ void main() {
       final raw = await storage.getString(_key);
       final map = jsonDecode(raw!) as Map<String, Object?>;
 
-      expect(map['_schemaVersion'], 11);
+      expect(map['_schemaVersion'], 12);
     });
 
     test(

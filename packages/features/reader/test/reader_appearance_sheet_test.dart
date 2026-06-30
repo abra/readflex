@@ -234,7 +234,7 @@ void main() {
 
     expect(
       cubit.state.effectiveAppearance.lineHeight,
-      ReaderAppearancePreferences.defaults.lineHeight,
+      cubit.state.globalAppearance.lineHeight,
     );
     expect(
       preferencesService.readerAppearanceOverrideFor(_sourceId)?.lineHeight,
@@ -474,6 +474,59 @@ void main() {
       closeTo(1.10, 0.001),
     );
   });
+
+  testWidgets(
+    'line spacing value tap clears local override to inherited value',
+    (
+      tester,
+    ) async {
+      await preferencesService.update(
+        (prefs) => prefs.copyWith(readerLineHeight: 1.8),
+      );
+      await tester.pump();
+
+      await tester.openAppearanceSheet(cubit);
+
+      final primary = Theme.of(
+        tester.element(find.byKey(const ValueKey('reader-line-height-value'))),
+      ).colorScheme.primary;
+      expect(find.text('1.8'), findsOneWidget);
+      expect(
+        _stepperValueText(
+          tester,
+          const ValueKey('reader-line-height-value'),
+        ).style?.color,
+        isNot(primary),
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey('reader-line-height-decrease')),
+      );
+      await tester.pump();
+
+      expect(find.text('1.6'), findsOneWidget);
+      expect(
+        _stepperValueText(
+          tester,
+          const ValueKey('reader-line-height-value'),
+        ).style?.color,
+        primary,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('reader-line-height-value')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('1.8'), findsOneWidget);
+      expect(preferencesService.readerAppearanceOverrideFor(_sourceId), isNull);
+      expect(
+        _stepperValueText(
+          tester,
+          const ValueKey('reader-line-height-value'),
+        ).style?.color,
+        isNot(primary),
+      );
+    },
+  );
 
   testWidgets('restores reader chrome after appearance sheet is fully hidden', (
     tester,

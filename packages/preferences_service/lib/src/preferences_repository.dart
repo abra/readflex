@@ -36,7 +36,8 @@ class PreferencesRepository {
   ///   9: add global reader brightness with system/default represented by null.
   ///   10: add preferred translation target/source languages.
   ///   11: drop translation preferences from the active app schema.
-  static const _currentSchemaVersion = 11;
+  ///   12: reset global reader line height to the explicit 1.6 default.
+  static const _currentSchemaVersion = 12;
 
   final PreferencesStorage _storage;
 
@@ -62,7 +63,13 @@ class PreferencesRepository {
               (readerSideMarginRaw == null || readerSideMarginRaw == 6.0)
           ? 8.0
           : readerSideMarginRaw ?? 8.0;
-      return Preferences(
+      final readerLineHeightRaw = (map['readerLineHeight'] as num?)?.toDouble();
+      final readerLineHeight = storedVersion < 12
+          ? ReaderAppearancePreferences.defaultLineHeight
+          : ReaderAppearancePreferences.normalizeLineHeight(
+              readerLineHeightRaw,
+            );
+      final preferences = Preferences(
         themeMode: ThemeMode.values.byName(
           map['themeMode'] as String? ?? 'system',
         ),
@@ -75,7 +82,7 @@ class PreferencesRepository {
         readerFontId: fontId,
         readerLayoutId: map['readerLayoutId'] as String? ?? 'standard',
         readerTextScale: readerTextScale,
-        readerLineHeight: (map['readerLineHeight'] as num?)?.toDouble() ?? 1.55,
+        readerLineHeight: readerLineHeight,
         readerSideMargin: readerSideMargin,
         readerTextAlignment: _readReaderTextAlignment(
           map['readerTextAlignment'],
@@ -98,6 +105,11 @@ class PreferencesRepository {
         bookImportTermsAcceptedVersion:
             (map['bookImportTermsAcceptedVersion'] as num?)?.toInt() ?? 0,
         onboardingCompleted: map['onboardingCompleted'] as bool? ?? false,
+      );
+      return preferences.copyWith(
+        readerAppearanceOverrides: _removeNoOpReaderAppearanceOverrides(
+          preferences,
+        ),
       );
     } catch (e, st) {
       // Corrupt JSON on disk: log and fall back to defaults so the app can
@@ -122,7 +134,9 @@ class PreferencesRepository {
       'readerFontId': prefs.readerFontId,
       'readerLayoutId': prefs.readerLayoutId,
       'readerTextScale': prefs.readerTextScale,
-      'readerLineHeight': prefs.readerLineHeight,
+      'readerLineHeight': ReaderAppearancePreferences.normalizeLineHeight(
+        prefs.readerLineHeight,
+      ),
       'readerSideMargin': prefs.readerSideMargin,
       'readerTextAlignment': prefs.readerTextAlignment.id,
       'readerInvertImagesInDark': prefs.readerInvertImagesInDark,
@@ -189,6 +203,21 @@ class PreferencesRepository {
       if (!override.isEmpty) overrides[key] = override;
     }
 
+    if (overrides.isEmpty) return const {};
+    return Map.unmodifiable(overrides);
+  }
+
+  static Map<String, ReaderAppearanceOverride>
+  _removeNoOpReaderAppearanceOverrides(
+    Preferences preferences,
+  ) {
+    if (preferences.readerAppearanceOverrides.isEmpty) return const {};
+    final overrides = <String, ReaderAppearanceOverride>{};
+    final base = preferences.readerAppearance;
+    for (final entry in preferences.readerAppearanceOverrides.entries) {
+      final override = entry.value.withoutValuesMatching(base);
+      if (!override.isEmpty) overrides[entry.key] = override;
+    }
     if (overrides.isEmpty) return const {};
     return Map.unmodifiable(overrides);
   }
