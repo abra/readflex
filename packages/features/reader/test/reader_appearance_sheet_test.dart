@@ -45,6 +45,7 @@ void main() {
     expect(find.text('Warm'), findsOneWidget);
     expect(find.text('Graphite'), findsOneWidget);
     expect(find.text('Night'), findsOneWidget);
+    expect(find.text('Font'), findsOneWidget);
 
     expect(find.byKey(const ValueKey('reader-font-presets')), findsOneWidget);
     expect(

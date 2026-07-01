@@ -89,6 +89,8 @@ class _LayeredAppearanceControls extends StatelessWidget {
         const SizedBox(height: AppSpacing.xs),
         const _ThemeSwatchLevel(),
         const SizedBox(height: AppSpacing.sm),
+        const _PanelHeader(title: 'Font'),
+        const SizedBox(height: AppSpacing.xs),
         const _FontLevel(),
         const SizedBox(height: AppSpacing.sm),
         _ReaderLayoutSettingsPanel(
