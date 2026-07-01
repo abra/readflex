@@ -131,6 +131,7 @@ class _LibraryViewState extends State<_LibraryView> {
   /// to know about query changes (not every keystroke triggers a new load),
   /// and owning a controller lets us clear the field from the clear button.
   final _searchController = TextEditingController();
+  final _searchFocusNode = FocusNode(debugLabel: 'Library search');
 
   /// Guards the FAB against re-entry while an import sheet is being
   /// pushed. Mutated through `setState` so the FAB also visually
@@ -145,6 +146,7 @@ class _LibraryViewState extends State<_LibraryView> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -172,6 +174,7 @@ class _LibraryViewState extends State<_LibraryView> {
       selection.toggle(source.id);
       return;
     }
+    _suspendSearchFocus();
 
     var sourceOpened = false;
     void handleSourceOpened() {
@@ -183,7 +186,14 @@ class _LibraryViewState extends State<_LibraryView> {
       }
     }
 
-    await widget.onSourcePressed(source, onSourceOpened: handleSourceOpened);
+    try {
+      await widget.onSourcePressed(source, onSourceOpened: handleSourceOpened);
+    } finally {
+      if (mounted) {
+        _dismissCurrentFocus();
+        _restoreSearchFocusAfterRouteFrame();
+      }
+    }
     // `Navigator.push` completes as soon as the details route starts popping,
     // before the reverse Hero flight finishes. Refreshing immediately can move
     // the opened item to the top and destroy the Hero endpoint mid-flight.
@@ -193,6 +203,28 @@ class _LibraryViewState extends State<_LibraryView> {
     await Future<void>.delayed(_sourceRouteReturnRefreshDelay);
     if (!context.mounted) return;
     context.read<LibraryBloc>().add(const LibraryRefreshRequested());
+  }
+
+  void _suspendSearchFocus() {
+    _searchFocusNode.canRequestFocus = false;
+    _dismissCurrentFocus();
+  }
+
+  void _restoreSearchFocusAfterRouteFrame() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _searchFocusNode.canRequestFocus = true;
+      _dismissCurrentFocus();
+    });
+  }
+
+  void _dismissCurrentFocus() {
+    FocusManager.instance.primaryFocus?.unfocus(
+      disposition: UnfocusDisposition.scope,
+    );
+    if (_searchFocusNode.hasFocus) {
+      _searchFocusNode.unfocus(disposition: UnfocusDisposition.scope);
+    }
   }
 
   void _handleSourceLongPress(BuildContext context, LibrarySource source) {
@@ -389,6 +421,7 @@ class _LibraryViewState extends State<_LibraryView> {
                             state: state,
                             isOffline: widget.isOffline,
                             searchController: _searchController,
+                            searchFocusNode: _searchFocusNode,
                             onSearchChanged: (query) =>
                                 bloc.add(LibrarySearchQueryChanged(query)),
                             onFilterChanged: (filter) =>

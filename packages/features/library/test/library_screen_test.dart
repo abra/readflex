@@ -215,6 +215,61 @@ void main() {
     expect(find.text('Search library...'), findsOneWidget);
   });
 
+  testWidgets('source tap keeps search unfocused after reader route returns', (
+    tester,
+  ) async {
+    var opened = false;
+    final navigatorKey = GlobalKey<NavigatorState>();
+    bookRepository.seedBooks([_book]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorKey: navigatorKey,
+        theme: AppTheme.light(),
+        home: LibraryScreen(
+          bookRepository: bookRepository,
+          collectionRepository: collectionRepository,
+          preferencesService: preferencesService,
+          onSourcePressed: (_, {onSourceOpened}) async {
+            opened = true;
+            await navigatorKey.currentState!.push<void>(
+              MaterialPageRoute(
+                builder: (_) => const Scaffold(body: Text('Reader route')),
+              ),
+            );
+          },
+          onAddPressed: () async {},
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final searchField = find.widgetWithText(TextField, 'Search library...');
+    await tester.tap(searchField);
+    await tester.pump();
+
+    final searchEditable = tester.widget<EditableText>(
+      find.byType(EditableText),
+    );
+    final searchFocusNode = searchEditable.focusNode;
+    expect(searchFocusNode.hasFocus, isTrue);
+
+    await tester.tap(find.text('Flutter in Action'));
+    await tester.pumpAndSettle();
+
+    expect(opened, isTrue);
+    expect(find.text('Reader route'), findsOneWidget);
+    expect(searchFocusNode.hasFocus, isFalse);
+    expect(searchFocusNode.canRequestFocus, isFalse);
+
+    navigatorKey.currentState!.pop();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Library'), findsOneWidget);
+    expect(searchFocusNode.hasFocus, isFalse);
+    expect(searchFocusNode.canRequestFocus, isTrue);
+  });
+
   testWidgets('shows filter segments', (tester) async {
     bookRepository.seedBooks([_book]);
 

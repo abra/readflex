@@ -23,6 +23,7 @@ class LibraryHeader extends StatelessWidget {
     required this.state,
     required this.isOffline,
     required this.searchController,
+    required this.searchFocusNode,
     required this.onSearchChanged,
     required this.onFilterChanged,
     required this.onCollectionScopePressed,
@@ -33,6 +34,7 @@ class LibraryHeader extends StatelessWidget {
   final LibraryState state;
   final bool isOffline;
   final TextEditingController searchController;
+  final FocusNode searchFocusNode;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<LibraryFilter> onFilterChanged;
   final VoidCallback onCollectionScopePressed;
@@ -93,6 +95,7 @@ class LibraryHeader extends StatelessWidget {
           SearchField(
             hintText: 'Search library...',
             controller: searchController,
+            focusNode: searchFocusNode,
             onChanged: onSearchChanged,
           ),
           const SizedBox(height: AppSpacing.lg),
