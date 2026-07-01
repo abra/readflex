@@ -180,6 +180,62 @@ void main() {
     expect(articleImportCalls, 1);
   });
 
+  testWidgets('article url form validates empty and invalid URL input', (
+    tester,
+  ) async {
+    final importedUrls = <String>[];
+
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => null,
+          onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (url, {onStage}) async {
+            importedUrls.add(url);
+            return _fakeArticle(title: 'Saved article');
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Article'));
+    await tester.pumpAndSettle();
+
+    final saveButtonFinder = find.widgetWithText(FilledButton, 'Save');
+    expect(
+      tester.widget<FilledButton>(saveButtonFinder).onPressed,
+      isNull,
+      reason: 'empty input should not be submittable from the button',
+    );
+
+    await tester.enterText(find.byType(TextField), 'not a url');
+    await tester.pump();
+
+    expect(
+      tester.widget<FilledButton>(saveButtonFinder).onPressed,
+      isNull,
+      reason: 'invalid URL input should not activate the Save button',
+    );
+    expect(importedUrls, isEmpty);
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+    expect(find.text('Enter a valid article URL'), findsOneWidget);
+    expect(find.text('Save Article'), findsOneWidget);
+    expect(find.text('Fetching article...'), findsNothing);
+
+    await tester.enterText(find.byType(TextField), 'example.com/article');
+    await tester.pump();
+    expect(find.text('Enter a valid article URL'), findsNothing);
+
+    await tester.tap(saveButtonFinder);
+    await tester.pump();
+
+    expect(importedUrls, ['https://example.com/article']);
+  });
+
   testWidgets('cancel button dismisses the sheet', (tester) async {
     await tester.pumpWidget(
       _TestHost(
@@ -350,6 +406,7 @@ void main() {
     await tester.tap(find.text('Save Article'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'https://example.com/a');
+    await tester.pump();
     await tester.tap(find.text('Save'));
     await tester.pump();
 
@@ -405,6 +462,7 @@ void main() {
     await tester.tap(find.text('Save Article'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'https://example.com/a');
+    await tester.pump();
     await tester.tap(find.text('Save'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));

@@ -537,11 +537,29 @@ class _ArticleUrlEntryView extends StatefulWidget {
 
 class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
   final _controller = TextEditingController();
+  var _canSubmitUrl = false;
+  String? _urlErrorText;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onUrlChanged);
+  }
 
   @override
   void dispose() {
+    _controller.removeListener(_onUrlChanged);
     _controller.dispose();
     super.dispose();
+  }
+
+  void _onUrlChanged() {
+    final canSubmitUrl = normalizeArticleUrl(_controller.text) != null;
+    if (canSubmitUrl == _canSubmitUrl && _urlErrorText == null) return;
+    setState(() {
+      _canSubmitUrl = canSubmitUrl;
+      _urlErrorText = null;
+    });
   }
 
   Future<String?> _readClipboardArticleUrl() async {
@@ -561,6 +579,21 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
       text: url,
       selection: TextSelection.collapsed(offset: url.length),
     );
+  }
+
+  void _submitArticleUrl(ImportFlowCubit cubit) {
+    if (widget.isOffline) return;
+    final value = _controller.text;
+    if (value.trim().isEmpty) {
+      setState(() => _urlErrorText = 'Enter an article URL');
+      return;
+    }
+    final url = normalizeArticleUrl(value);
+    if (url == null) {
+      setState(() => _urlErrorText = 'Enter a valid article URL');
+      return;
+    }
+    cubit.importArticle(url);
   }
 
   @override
@@ -583,6 +616,7 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
             autocorrect: false,
             decoration: InputDecoration(
               hintText: 'https://example.com/article',
+              errorText: _urlErrorText,
               suffixIcon: _PasteUrlButton(
                 onPressed: _pasteClipboardArticleUrl,
               ),
@@ -591,7 +625,9 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
                 height: 48,
               ),
             ),
-            onSubmitted: widget.isOffline ? null : cubit.importArticle,
+            onSubmitted: widget.isOffline
+                ? null
+                : (_) => _submitArticleUrl(cubit),
           ),
           const SizedBox(height: AppSpacing.md),
           _ArticleUrlHints(color: muted),
@@ -607,9 +643,9 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: FilledButton(
-                  onPressed: widget.isOffline
+                  onPressed: widget.isOffline || !_canSubmitUrl
                       ? null
-                      : () => cubit.importArticle(_controller.text),
+                      : () => _submitArticleUrl(cubit),
                   child: const Text('Save'),
                 ),
               ),
