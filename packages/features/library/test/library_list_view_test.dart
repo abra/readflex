@@ -74,6 +74,54 @@ void main() {
     expect(checkRect.right, coverRect.right - AppSpacing.xs);
   });
 
+  testWidgets('selected list background follows cover height', (
+    tester,
+  ) async {
+    const longTitle =
+        'A selected library book title that wraps across several list lines';
+    final source = LibrarySource.fromBook(
+      Book(
+        id: 'b-selected-long-title',
+        title: longTitle,
+        filePath: '/books/selected.epub',
+        format: BookFormat.epub,
+        addedAt: DateTime(2026),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: SizedBox(
+            width: 360,
+            child: BookLibraryListTile(
+              source: source,
+              showTopDivider: false,
+              isSelected: true,
+              onTap: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final rowRect = tester.getRect(find.byType(GestureDetector));
+    final coverRect = tester.getRect(
+      find.byKey(const ValueKey('libraryListCoverSlot')),
+    );
+    final backgroundRect = tester.getRect(
+      find.byKey(const ValueKey('libraryListSelectionBackground')),
+    );
+
+    expect(rowRect.height, greaterThan(backgroundRect.height));
+    expect(backgroundRect.top, closeTo(coverRect.top - AppSpacing.xs, 0.1));
+    expect(
+      backgroundRect.bottom,
+      closeTo(coverRect.bottom + AppSpacing.xs, 0.1),
+    );
+  });
+
   testWidgets('list separators span the cover column above shadows', (
     tester,
   ) async {

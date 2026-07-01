@@ -9,7 +9,9 @@ const double _kListCoverWidth = 60;
 const double _kListCoverHeight = 90;
 const double _kCoverToTextGap = AppSpacing.md + AppSpacing.xxs;
 const double _kListRowHorizontalPadding = AppSpacing.xs;
+const double _kListRowVerticalPadding = AppSpacing.md;
 const double _kListSelectionCheckInset = AppSpacing.xs;
+const double _kListSelectionBackgroundInset = _kListRowHorizontalPadding;
 
 /// List-mode row for a library source.
 ///
@@ -182,14 +184,24 @@ class _ListRowShell extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Stack(
         children: [
+          if (isSelected)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: _kListRowVerticalPadding - _kListSelectionBackgroundInset,
+              height: _kListCoverHeight + (_kListSelectionBackgroundInset * 2),
+              child: DecoratedBox(
+                key: const ValueKey('libraryListSelectionBackground'),
+                decoration: BoxDecoration(
+                  color: selectionColor.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+              ),
+            ),
           Container(
             padding: const EdgeInsets.symmetric(
-              vertical: AppSpacing.md,
+              vertical: _kListRowVerticalPadding,
               horizontal: _kListRowHorizontalPadding,
-            ),
-            decoration: BoxDecoration(
-              color: isSelected ? selectionColor.withValues(alpha: 0.18) : null,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -198,6 +210,7 @@ class _ListRowShell extends StatelessWidget {
                 // its own corners (Container.clipBehavior), so no outer
                 // ClipRRect needed.
                 SizedBox(
+                  key: const ValueKey('libraryListCoverSlot'),
                   width: _kListCoverWidth,
                   height: _kListCoverHeight,
                   child: Stack(
