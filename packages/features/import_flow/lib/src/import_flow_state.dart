@@ -16,7 +16,26 @@ class ImportFlowMenu extends ImportFlowState {
 }
 
 class ImportFlowArticleUrlEntry extends ImportFlowState {
-  const ImportFlowArticleUrlEntry();
+  const ImportFlowArticleUrlEntry({this.url = '', this.errorMessage});
+
+  final String url;
+  final String? errorMessage;
+
+  String? get normalizedUrl => normalizeArticleUrl(url);
+  bool get canSubmit => normalizedUrl != null;
+
+  ImportFlowArticleUrlEntry copyWith({
+    String? url,
+    String? errorMessage,
+  }) {
+    return ImportFlowArticleUrlEntry(
+      url: url ?? this.url,
+      errorMessage: errorMessage,
+    );
+  }
+
+  @override
+  List<Object?> get props => [url, errorMessage];
 }
 
 class ImportFlowBookTermsRequired extends ImportFlowState {

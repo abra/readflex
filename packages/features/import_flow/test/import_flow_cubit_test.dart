@@ -204,6 +204,52 @@ void main() {
     );
 
     blocTest<ImportFlowCubit, ImportFlowState>(
+      'article URL form validates input before submitting',
+      build: () => _buildCubit(
+        importArticle: (_, {onStage}) async =>
+            throw StateError('should not be called'),
+      ),
+      act: (cubit) async {
+        cubit.showArticleUrlEntry();
+        await cubit.submitArticleUrl();
+        cubit.articleUrlChanged('not a url');
+        await cubit.submitArticleUrl();
+      },
+      expect: () => [
+        const ImportFlowArticleUrlEntry(),
+        const ImportFlowArticleUrlEntry(
+          errorMessage: 'Enter an article URL',
+        ),
+        const ImportFlowArticleUrlEntry(url: 'not a url'),
+        const ImportFlowArticleUrlEntry(
+          url: 'not a url',
+          errorMessage: 'Enter a valid article URL',
+        ),
+      ],
+    );
+
+    blocTest<ImportFlowCubit, ImportFlowState>(
+      'article URL form submits normalized valid URL',
+      build: () => _buildCubit(
+        importArticle: (url, {onStage}) async {
+          expect(url, 'https://example.com/article');
+          return _fakeArticle(title: 'Saved article');
+        },
+      ),
+      act: (cubit) async {
+        cubit.showArticleUrlEntry();
+        cubit.articleUrlChanged('example.com/article');
+        await cubit.submitArticleUrl();
+      },
+      expect: () => [
+        const ImportFlowArticleUrlEntry(),
+        const ImportFlowArticleUrlEntry(url: 'example.com/article'),
+        const ImportFlowArticleUploading(url: 'https://example.com/article'),
+        const ImportFlowArticleDone(title: 'Saved article'),
+      ],
+    );
+
+    blocTest<ImportFlowCubit, ImportFlowState>(
       'article import updates the visible stage from callback',
       build: () => _buildCubit(
         importArticle: (url, {onStage}) async {

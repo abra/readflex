@@ -98,6 +98,7 @@ class _ImportFlowSheet extends StatelessWidget {
                       onOpenPrivacy: onOpenPrivacy,
                     ),
                     ImportFlowArticleUrlEntry() => _ArticleUrlEntryView(
+                      state: state,
                       isOffline: isOffline,
                     ),
                     ImportFlowBookUploading() => _BookUploadingView(
@@ -527,8 +528,12 @@ class _PlainTextButton extends StatelessWidget {
 
 /// URL entry step for article import.
 class _ArticleUrlEntryView extends StatefulWidget {
-  const _ArticleUrlEntryView({required this.isOffline});
+  const _ArticleUrlEntryView({
+    required this.state,
+    required this.isOffline,
+  });
 
+  final ImportFlowArticleUrlEntry state;
   final bool isOffline;
 
   @override
@@ -537,29 +542,11 @@ class _ArticleUrlEntryView extends StatefulWidget {
 
 class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
   final _controller = TextEditingController();
-  var _canSubmitUrl = false;
-  String? _urlErrorText;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller.addListener(_onUrlChanged);
-  }
 
   @override
   void dispose() {
-    _controller.removeListener(_onUrlChanged);
     _controller.dispose();
     super.dispose();
-  }
-
-  void _onUrlChanged() {
-    final canSubmitUrl = normalizeArticleUrl(_controller.text) != null;
-    if (canSubmitUrl == _canSubmitUrl && _urlErrorText == null) return;
-    setState(() {
-      _canSubmitUrl = canSubmitUrl;
-      _urlErrorText = null;
-    });
   }
 
   Future<String?> _readClipboardArticleUrl() async {
@@ -579,21 +566,7 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
       text: url,
       selection: TextSelection.collapsed(offset: url.length),
     );
-  }
-
-  void _submitArticleUrl(ImportFlowCubit cubit) {
-    if (widget.isOffline) return;
-    final value = _controller.text;
-    if (value.trim().isEmpty) {
-      setState(() => _urlErrorText = 'Enter an article URL');
-      return;
-    }
-    final url = normalizeArticleUrl(value);
-    if (url == null) {
-      setState(() => _urlErrorText = 'Enter a valid article URL');
-      return;
-    }
-    cubit.importArticle(url);
+    context.read<ImportFlowCubit>().articleUrlChanged(url);
   }
 
   @override
@@ -616,7 +589,7 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
             autocorrect: false,
             decoration: InputDecoration(
               hintText: 'https://example.com/article',
-              errorText: _urlErrorText,
+              errorText: widget.state.errorMessage,
               suffixIcon: _PasteUrlButton(
                 onPressed: _pasteClipboardArticleUrl,
               ),
@@ -627,7 +600,8 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
             ),
             onSubmitted: widget.isOffline
                 ? null
-                : (_) => _submitArticleUrl(cubit),
+                : (_) => cubit.submitArticleUrl(),
+            onChanged: cubit.articleUrlChanged,
           ),
           const SizedBox(height: AppSpacing.md),
           _ArticleUrlHints(color: muted),
@@ -643,9 +617,9 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: FilledButton(
-                  onPressed: widget.isOffline || !_canSubmitUrl
+                  onPressed: widget.isOffline || !widget.state.canSubmit
                       ? null
-                      : () => _submitArticleUrl(cubit),
+                      : cubit.submitArticleUrl,
                   child: const Text('Save'),
                 ),
               ),

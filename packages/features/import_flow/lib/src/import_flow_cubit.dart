@@ -99,6 +99,39 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
     emit(const ImportFlowArticleUrlEntry());
   }
 
+  void articleUrlChanged(String rawUrl) {
+    final current = state;
+    if (current is! ImportFlowArticleUrlEntry) return;
+    emit(current.copyWith(url: rawUrl));
+  }
+
+  Future<void> submitArticleUrl() async {
+    final current = state;
+    if (current is! ImportFlowArticleUrlEntry || _isImportingArticle) return;
+
+    final rawUrl = current.url;
+    if (rawUrl.trim().isEmpty) {
+      emit(
+        current.copyWith(
+          errorMessage: 'Enter an article URL',
+        ),
+      );
+      return;
+    }
+
+    final url = current.normalizedUrl;
+    if (url == null) {
+      emit(
+        current.copyWith(
+          errorMessage: 'Enter a valid article URL',
+        ),
+      );
+      return;
+    }
+
+    await importArticle(url);
+  }
+
   void requestBookImport() {
     if (_isBookImportTermsAccepted()) {
       unawaited(pickAndImportBook());
