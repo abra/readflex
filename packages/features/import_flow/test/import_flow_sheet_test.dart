@@ -211,7 +211,7 @@ void main() {
       reason: 'empty input should not be submittable from the button',
     );
 
-    await tester.enterText(find.byType(TextField), 'not a url');
+    await tester.enterText(find.byType(TextField), 'oifwoeifwoeiwoie');
     await tester.pump();
 
     expect(

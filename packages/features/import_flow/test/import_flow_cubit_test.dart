@@ -212,7 +212,7 @@ void main() {
       act: (cubit) async {
         cubit.showArticleUrlEntry();
         await cubit.submitArticleUrl();
-        cubit.articleUrlChanged('not a url');
+        cubit.articleUrlChanged('oifwoeifwoeiwoie');
         await cubit.submitArticleUrl();
       },
       expect: () => [
@@ -220,9 +220,9 @@ void main() {
         const ImportFlowArticleUrlEntry(
           errorMessage: 'Enter an article URL',
         ),
-        const ImportFlowArticleUrlEntry(url: 'not a url'),
+        const ImportFlowArticleUrlEntry(url: 'oifwoeifwoeiwoie'),
         const ImportFlowArticleUrlEntry(
-          url: 'not a url',
+          url: 'oifwoeifwoeiwoie',
           errorMessage: 'Enter a valid article URL',
         ),
       ],

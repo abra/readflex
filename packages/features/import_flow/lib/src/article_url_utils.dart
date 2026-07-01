@@ -16,7 +16,7 @@ String? normalizeArticleUrl(String rawUrl) {
       uri.host.isEmpty) {
     return null;
   }
-  if (!hasExplicitScheme && !_looksLikeHost(uri.host)) return null;
+  if (!_looksLikeHost(uri.host)) return null;
 
   return uri.toString();
 }

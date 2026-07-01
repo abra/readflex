@@ -24,15 +24,11 @@ class ImportFlowArticleUrlEntry extends ImportFlowState {
   String? get normalizedUrl => normalizeArticleUrl(url);
   bool get canSubmit => normalizedUrl != null;
 
-  ImportFlowArticleUrlEntry copyWith({
-    String? url,
-    String? errorMessage,
-  }) {
-    return ImportFlowArticleUrlEntry(
-      url: url ?? this.url,
-      errorMessage: errorMessage,
-    );
-  }
+  ImportFlowArticleUrlEntry withUrl(String url) =>
+      ImportFlowArticleUrlEntry(url: url);
+
+  ImportFlowArticleUrlEntry withError(String errorMessage) =>
+      ImportFlowArticleUrlEntry(url: url, errorMessage: errorMessage);
 
   @override
   List<Object?> get props => [url, errorMessage];
