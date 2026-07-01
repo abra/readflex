@@ -161,7 +161,7 @@ class _ReaderBrightnessLifecycleScopeState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    widget.cubit.activate();
+    unawaited(widget.cubit.activate());
   }
 
   @override
@@ -169,14 +169,14 @@ class _ReaderBrightnessLifecycleScopeState
     super.didUpdateWidget(oldWidget);
     if (widget.cubit == oldWidget.cubit) return;
     unawaited(oldWidget.cubit.deactivate());
-    widget.cubit.activate();
+    unawaited(widget.cubit.activate());
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.resumed:
-        widget.cubit.activate();
+        unawaited(widget.cubit.activate());
         break;
       case AppLifecycleState.inactive:
       case AppLifecycleState.hidden:

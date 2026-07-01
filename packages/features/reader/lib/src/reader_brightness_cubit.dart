@@ -26,6 +26,13 @@ class ReaderBrightnessState extends Equatable {
 
   int get percent => (sliderValue * 100).round();
 
+  double get dimmingOpacity {
+    final override = brightnessOverride;
+    final system = systemBrightness;
+    if (override == null || system == null || override >= system) return 0;
+    return (1 - override / system).clamp(0.0, 0.9).toDouble();
+  }
+
   @override
   List<Object?> get props => [
     brightnessOverride,
@@ -56,34 +63,46 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
   static const double minBrightness = 0.05;
   static const double maxBrightness = 1.0;
   static const double defaultCustomBrightness = 0.7;
+  static const double _buttonStep = 0.05;
+  static const double _gridEpsilon = 0.000001;
+  static const double _roundingScale = 100;
 
   final PreferencesService _preferencesService;
   final ScreenControlService _screenControlService;
   final String _sourceId;
   bool _active = false;
+  int _lifecycleGeneration = 0;
+  int _platformSyncRequest = 0;
+  Future<void> _platformSyncQueue = Future<void>.value();
 
-  void activate() {
-    if (_active) return;
+  Future<void> activate() {
+    if (_active) return Future<void>.value();
     _active = true;
-    unawaited(_activate());
+    final generation = ++_lifecycleGeneration;
+    return _activate(generation);
   }
 
-  Future<void> _activate() async {
+  Future<void> _activate(int generation) async {
     await _clearLegacySourceBrightnessOverride();
+    if (!_isCurrentLifecycle(generation)) return;
     _refreshStoredBrightness();
     if (state.usesSystemBrightness) {
-      await _resetPlatform();
-      await _readPlatformBrightness();
+      await _readPlatformBrightness(generation);
       return;
     }
-    await _readPlatformBrightness();
-    await _syncPlatform();
+    await _readPlatformBrightness(generation);
+    if (!_isCurrentLifecycle(generation)) return;
+    await _queueCurrentPlatformSync();
   }
 
   Future<void> deactivate() async {
     if (!_active) return;
     _active = false;
-    await _resetPlatform();
+    _lifecycleGeneration++;
+    await _queuePlatformSync(
+      const _ReaderBrightnessPlatformTarget.system(),
+      force: true,
+    );
   }
 
   void previewBrightness(double value) {
@@ -94,7 +113,7 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
       systemBrightness: state.systemBrightness,
     );
     if (state != next) emit(next);
-    unawaited(_syncPlatform());
+    unawaited(_queueCurrentPlatformSync());
   }
 
   void commitBrightness(double value) {
@@ -103,6 +122,48 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
       previewBrightness(nextValue);
     }
     unawaited(_storeCustomBrightness(nextValue));
+  }
+
+  Future<void> changeBrightnessBy(double delta) async {
+    final usesSystemBrightness = state.usesSystemBrightness;
+    final knownBaseValue = _knownAdjustmentBaseBrightness();
+    if (knownBaseValue != null) {
+      _applyBrightnessDelta(
+        knownBaseValue,
+        delta,
+        fromSystemBrightness: usesSystemBrightness,
+      );
+      return;
+    }
+
+    final baseValue = await _readAdjustmentBaseBrightness();
+    if (!_active || isClosed) return;
+    _applyBrightnessDelta(
+      baseValue,
+      delta,
+      fromSystemBrightness: usesSystemBrightness,
+    );
+  }
+
+  void _applyBrightnessDelta(
+    double baseValue,
+    double delta, {
+    required bool fromSystemBrightness,
+  }) {
+    if (!_active || isClosed) return;
+    final nextValue = _brightnessAfterDelta(
+      baseValue,
+      delta,
+      fromSystemBrightness: fromSystemBrightness,
+    );
+    _logBrightness(
+      'change-by',
+      deltaBrightness: delta,
+      targetBrightness: nextValue,
+    );
+    if (nextValue == state.controlValue) return;
+    previewBrightness(nextValue);
+    commitBrightness(nextValue);
   }
 
   Future<void> useSystemBrightness() async {
@@ -117,8 +178,8 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
       );
     }
     await _preferencesService.setReaderBrightness(null);
-    await _resetPlatform();
-    await _readPlatformBrightness();
+    await _queuePlatformSync(const _ReaderBrightnessPlatformTarget.system());
+    await _readPlatformBrightness(_lifecycleGeneration);
   }
 
   void _refreshStoredBrightness() {
@@ -146,19 +207,60 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
     await _preferencesService.setReaderBrightnessOverride(_sourceId, null);
   }
 
-  Future<void> _syncPlatform() {
-    if (!_active) return Future<void>.value();
-    final value = state.brightnessOverride;
-    if (value == null) return _resetPlatform();
-    return _setPlatformBrightness(value);
+  Future<void> _queueCurrentPlatformSync() {
+    return _queuePlatformSync(_platformTargetForState(state));
   }
 
-  Future<void> _readPlatformBrightness() async {
-    if (!_active || isClosed) return;
+  double? _knownAdjustmentBaseBrightness() {
+    if (!state.usesSystemBrightness || state.systemBrightness != null) {
+      return state.controlValue;
+    }
+    return null;
+  }
+
+  Future<double> _readAdjustmentBaseBrightness() async {
+    if (!state.usesSystemBrightness || state.systemBrightness != null) {
+      return state.controlValue;
+    }
+
+    final generation = _lifecycleGeneration;
+    await _platformSyncQueue;
+    if (!_isCurrentLifecycle(generation)) return state.controlValue;
+    if (!state.usesSystemBrightness || state.systemBrightness != null) {
+      return state.controlValue;
+    }
+
+    await _readPlatformBrightness(generation);
+    if (!_isCurrentLifecycle(generation) || !state.usesSystemBrightness) {
+      return state.controlValue;
+    }
+    return state.systemBrightness ?? state.controlValue;
+  }
+
+  Future<void> _queuePlatformSync(
+    _ReaderBrightnessPlatformTarget target, {
+    bool force = false,
+  }) {
+    if (!force && (!_active || isClosed)) return Future<void>.value();
+    final request = ++_platformSyncRequest;
+    _platformSyncQueue = _platformSyncQueue.then((_) async {
+      if (request != _platformSyncRequest) return;
+      if (!force && (!_active || isClosed)) return;
+      await switch (target) {
+        _ReaderBrightnessPlatformSystemTarget() => _resetPlatform(),
+        _ReaderBrightnessPlatformCustomTarget(:final brightness) =>
+          _setPlatformBrightness(brightness),
+      };
+    });
+    return _platformSyncQueue;
+  }
+
+  Future<void> _readPlatformBrightness(int generation) async {
+    if (!_isCurrentLifecycle(generation)) return;
     try {
       final brightness = await _screenControlService
           .readApplicationBrightness();
-      if (brightness == null || isClosed) return;
+      if (brightness == null || !_isCurrentLifecycle(generation)) return;
       final systemBrightness = _platformToControlBrightness(brightness);
       _logBrightness(
         'read-platform',
@@ -176,6 +278,9 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
       addError(e, st);
     }
   }
+
+  bool _isCurrentLifecycle(int generation) =>
+      _active && !isClosed && _lifecycleGeneration == generation;
 
   Future<void> _setPlatformBrightness(double value) async {
     try {
@@ -202,6 +307,7 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
 
   void _logBrightness(
     String event, {
+    double? deltaBrightness,
     double? systemBrightness,
     double? targetBrightness,
     double? platformBrightness,
@@ -213,6 +319,7 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
       'system=${_debugBrightness(systemBrightness ?? state.systemBrightness)} '
       'override=${_debugBrightness(state.brightnessOverride)} '
       'last=${_debugBrightness(state.lastCustomBrightness)} '
+      'delta=${_debugSignedBrightness(deltaBrightness)} '
       'target=${_debugBrightness(targetBrightness)} '
       'platform=${_debugBrightness(platformBrightness)}',
     );
@@ -232,9 +339,71 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
   static double _controlToPlatformBrightness(double value) =>
       _clampBrightness(value);
 
+  static _ReaderBrightnessPlatformTarget _platformTargetForState(
+    ReaderBrightnessState state,
+  ) {
+    final override = state.brightnessOverride;
+    if (override == null) return const _ReaderBrightnessPlatformTarget.system();
+    final system = state.systemBrightness;
+    if (system != null && override <= system) {
+      return const _ReaderBrightnessPlatformTarget.system();
+    }
+    return _ReaderBrightnessPlatformTarget.custom(override);
+  }
+
+  static double _brightnessAfterDelta(
+    double value,
+    double delta, {
+    required bool fromSystemBrightness,
+  }) {
+    final current = _clampBrightness(value);
+    if (delta > 0) return _nextBrightnessGridValue(current);
+    if (delta < 0) {
+      return _previousBrightnessGridValue(
+        current,
+        forceReadableStep: fromSystemBrightness,
+      );
+    }
+    return _roundBrightness(current);
+  }
+
+  static double _nextBrightnessGridValue(double value) {
+    final gridPosition = value / _buttonStep;
+    final isOnGrid = (gridPosition - gridPosition.round()).abs() < _gridEpsilon;
+    final nextGrid = isOnGrid ? gridPosition.round() + 1 : gridPosition.ceil();
+    return _roundBrightness(_clampBrightness(nextGrid * _buttonStep));
+  }
+
+  static double _previousBrightnessGridValue(
+    double value, {
+    required bool forceReadableStep,
+  }) {
+    final gridPosition = value / _buttonStep;
+    final isOnGrid = (gridPosition - gridPosition.round()).abs() < _gridEpsilon;
+    var previousGrid = isOnGrid
+        ? gridPosition.round() - 1
+        : gridPosition.floor();
+    if (forceReadableStep &&
+        value - previousGrid * _buttonStep < _buttonStep / 2) {
+      previousGrid -= 1;
+    }
+    return _roundBrightness(_clampBrightness(previousGrid * _buttonStep));
+  }
+
+  static double _roundBrightness(double value) {
+    return (value * _roundingScale).roundToDouble() / _roundingScale;
+  }
+
   static String _debugBrightness(double? value) {
     if (value == null) return 'null';
     return '${(value * 100).round()}% (${value.toStringAsFixed(3)})';
+  }
+
+  static String _debugSignedBrightness(double? value) {
+    if (value == null) return 'null';
+    final percent = value * 100;
+    final sign = percent > 0 ? '+' : '';
+    return '$sign${percent.toStringAsFixed(0)}% (${value.toStringAsFixed(3)})';
   }
 
   @override
@@ -244,4 +413,26 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
     }
     return super.close();
   }
+}
+
+sealed class _ReaderBrightnessPlatformTarget {
+  const _ReaderBrightnessPlatformTarget();
+
+  const factory _ReaderBrightnessPlatformTarget.system() =
+      _ReaderBrightnessPlatformSystemTarget;
+
+  const factory _ReaderBrightnessPlatformTarget.custom(double brightness) =
+      _ReaderBrightnessPlatformCustomTarget;
+}
+
+final class _ReaderBrightnessPlatformSystemTarget
+    extends _ReaderBrightnessPlatformTarget {
+  const _ReaderBrightnessPlatformSystemTarget();
+}
+
+final class _ReaderBrightnessPlatformCustomTarget
+    extends _ReaderBrightnessPlatformTarget {
+  const _ReaderBrightnessPlatformCustomTarget(this.brightness);
+
+  final double brightness;
 }

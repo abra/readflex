@@ -72,6 +72,7 @@ const _kReaderPageBookmarkIndicatorLift = 28.0;
 const _kReaderPageBookmarkIndicatorSize = AppIconSize.md;
 const _kReaderBrightnessStep = 0.05;
 const _kReaderBrightnessEpsilon = 0.0001;
+const _kReaderBrightnessDimmingDuration = Duration(milliseconds: 120);
 const _kReaderBrightnessChromeWidth = 56.0;
 const _kReaderBrightnessChromeHeight = 190.0;
 const _kReaderBrightnessChromeDragHeight =
@@ -94,22 +95,6 @@ typedef _ReaderChromeOverlaySnapshot = ({
 void _debugTraceReader(String message) {
   if (!_traceReaderBuilds || kReleaseMode) return;
   debugPrint('[reader-trace] $message');
-}
-
-double _snapReaderBrightnessButtonValue(double value, double delta) {
-  final percent = value * 100;
-  final stepPercent = _kReaderBrightnessStep * 100;
-  final steppedPercent = delta.isNegative
-      ? ((percent - _kReaderBrightnessEpsilon) / stepPercent).floor() *
-            stepPercent
-      : ((percent + _kReaderBrightnessEpsilon) / stepPercent).ceil() *
-            stepPercent;
-  return (steppedPercent / 100)
-      .clamp(
-        ReaderBrightnessCubit.minBrightness,
-        ReaderBrightnessCubit.maxBrightness,
-      )
-      .toDouble();
 }
 
 String _readerBrightnessDebugValue(double? value) {

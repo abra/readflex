@@ -205,40 +205,47 @@ public class DeviceScreenBrightnessHelper {
     }
 
     private BrightnessRange brightnessConversionRange(int value, BrightnessRange range) {
-        if (usesGammaBrightness() && range.max > 255 && value <= 255) {
+        if (usesLegacyScreenBrightnessScale(value, range)) {
             return new BrightnessRange(0, 255);
         }
         return range;
     }
 
     private BrightnessRange systemSettingWriteRange(BrightnessRange range) {
-        if (usesGammaBrightness() && range.max > 255) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && range.max > 255) {
             return new BrightnessRange(0, 255);
         }
         return range;
     }
 
+    private boolean usesLegacyScreenBrightnessScale(int value, BrightnessRange range) {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+            && range.max > 255
+            && value <= 255;
+    }
+
     private float systemSettingToControlBrightness(int value, BrightnessRange range) {
         float linear = normalizeBrightness(value, range);
-        return usesGammaBrightness() ? linearToGammaBrightness(linear) : linear;
+        // Android P+ Settings UI exposes brightness on a perceptual HLG scale.
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+            ? linearToGammaBrightness(linear)
+            : linear;
     }
 
     private int controlToSystemSettingBrightness(float value, BrightnessRange range) {
-        float linear = usesGammaBrightness() ? gammaToLinearBrightness(value) : clamp01(value);
+        float linear = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+            ? gammaToLinearBrightness(value)
+            : clamp01(value);
         return denormalizeBrightness(linear, range);
     }
 
     private float windowToControlBrightness(float value) {
-        float linear = clamp01(value);
-        return usesGammaBrightness() ? linearToGammaBrightness(linear) : linear;
+        // Window brightness is already a direct app override in the 0..1 range.
+        return clamp01(value);
     }
 
     private float controlToWindowBrightness(float value) {
-        return usesGammaBrightness() ? gammaToLinearBrightness(value) : clamp01(value);
-    }
-
-    private boolean usesGammaBrightness() {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.P;
+        return clamp01(value);
     }
 
     private float normalizeBrightness(int value, BrightnessRange range) {

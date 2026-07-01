@@ -81,11 +81,11 @@ class MainActivity : FlutterActivity() {
             )
         }
 
-        val value = displayBrightness ?: floatBrightness ?: intBrightness?.normalized
+        val value = intBrightness?.normalized ?: displayBrightness ?: floatBrightness
         val source = when {
+            intBrightness != null -> "intSetting"
             displayBrightness != null -> "displayInfo"
             floatBrightness != null -> "floatSetting"
-            intBrightness != null -> "intSetting"
             else -> "none"
         }
         return brightnessInfo(
@@ -204,20 +204,18 @@ class MainActivity : FlutterActivity() {
 
     private fun systemSettingToControlBrightness(value: Int, range: BrightnessRange): Double {
         val linear = normalizeSystemBrightness(value, range)
+        // Android P+ Settings UI exposes brightness on a perceptual HLG scale.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return linear
         return linearToGammaBrightness(linear)
     }
 
     private fun windowToControlBrightness(value: Float): Double {
-        val linear = value.coerceIn(0f, 1f).toDouble()
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return linear
-        return linearToGammaBrightness(linear)
+        // Window brightness is already a direct app override in the 0..1 range.
+        return value.coerceIn(0f, 1f).toDouble()
     }
 
     private fun controlToWindowBrightness(value: Double): Double {
-        val gamma = value.coerceIn(0.0, 1.0)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return gamma
-        return gammaToLinearBrightness(gamma)
+        return value.coerceIn(0.0, 1.0)
     }
 
     private fun normalizeSystemBrightness(value: Int, range: BrightnessRange): Double {
@@ -233,17 +231,6 @@ class MainActivity : FlutterActivity() {
             HLG_A * Math.log(normalized - HLG_B) + HLG_C
         }
         return gamma.coerceIn(0.0, 1.0)
-    }
-
-    private fun gammaToLinearBrightness(value: Double): Double {
-        val gamma = value.coerceIn(0.0, 1.0)
-        val linear = if (gamma <= HLG_R) {
-            val ratio = gamma / HLG_R
-            ratio * ratio
-        } else {
-            Math.exp((gamma - HLG_C) / HLG_A) + HLG_B
-        }
-        return (linear.coerceIn(0.0, HLG_SCALE) / HLG_SCALE).coerceIn(0.0, 1.0)
     }
 
     private fun readSystemBrightnessMode(): String {

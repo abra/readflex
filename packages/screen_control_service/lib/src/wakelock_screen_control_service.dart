@@ -39,6 +39,7 @@ class WakelockScreenControlService implements ScreenControlService {
   static const _defaultNativeChannel = MethodChannel(
     'io.github.abra.readflex/screen_control',
   );
+  static const _adaptiveBrightnessDivergenceThreshold = 0.08;
 
   final ReadDeviceBrightness _readDeviceBrightness;
   final WriteDeviceBrightness _writeDeviceBrightness;
@@ -64,9 +65,7 @@ class WakelockScreenControlService implements ScreenControlService {
 
   @override
   Future<double?> readApplicationBrightness() async {
-    final brightness = await _readCurrentBrightnessOrNull();
-    _brightnessBeforeOverride ??= brightness;
-    return brightness;
+    return _readCurrentBrightnessOrNull();
   }
 
   @override
@@ -101,9 +100,10 @@ class WakelockScreenControlService implements ScreenControlService {
     try {
       final info = await _nativeScreenControlChannel
           .invokeMapMethod<String, Object?>('readApplicationBrightnessInfo');
-      final brightness = _brightnessFromNativeInfo(info);
+      final brightnessInfo = _NativeBrightnessInfo.tryParse(info);
+      final brightness = brightnessInfo?.effectiveBrightness;
       if (brightness != null) {
-        _logNativeBrightness(info);
+        _logNativeBrightness(info, brightnessInfo);
         return _NativeBrightnessRead.available(brightness);
       }
     } on MissingPluginException {
@@ -171,18 +171,17 @@ class WakelockScreenControlService implements ScreenControlService {
     return percent.clamp(0, 100).toDouble() / 100.0;
   }
 
-  static double? _brightnessFromNativeInfo(Map<String, Object?>? info) {
-    final brightness = info?['brightness'];
-    if (brightness is num) return _normalizeBrightness(brightness.toDouble());
-    return null;
-  }
-
-  static void _logNativeBrightness(Map<String, Object?>? info) {
+  static void _logNativeBrightness(
+    Map<String, Object?>? info,
+    _NativeBrightnessInfo? brightnessInfo,
+  ) {
     if (info == null) return;
     debugPrint(
       '[reader-brightness-native] '
       'source=${info['source']} '
       'selected=${_debugBrightnessValue(info['brightness'])} '
+      'effectiveSource=${brightnessInfo?.effectiveSource ?? 'none'} '
+      'effective=${_debugBrightnessValue(brightnessInfo?.effectiveBrightness)} '
       'window=${_debugBrightnessValue(info['window'])} '
       'display=${_debugBrightnessValue(info['display'])} '
       'float=${_debugBrightnessValue(info['float'])} '
@@ -198,6 +197,72 @@ class WakelockScreenControlService implements ScreenControlService {
     if (value is! num) return 'null';
     final brightness = _normalizeBrightness(value.toDouble());
     return '${(brightness * 100).round()}% (${brightness.toStringAsFixed(3)})';
+  }
+}
+
+class _NativeBrightnessInfo {
+  const _NativeBrightnessInfo({
+    required this.source,
+    required this.mode,
+    required this.selected,
+    required this.window,
+    required this.display,
+    required this.floatSetting,
+    required this.intSetting,
+  });
+
+  static _NativeBrightnessInfo? tryParse(Map<String, Object?>? info) {
+    if (info == null) return null;
+    return _NativeBrightnessInfo(
+      source: info['source'] as String?,
+      mode: info['mode'] as String?,
+      selected: _readBrightness(info['brightness']),
+      window: _readBrightness(info['window']),
+      display: _readBrightness(info['display']),
+      floatSetting: _readBrightness(info['float']),
+      intSetting: _readBrightness(info['int']),
+    );
+  }
+
+  final String? source;
+  final String? mode;
+  final double? selected;
+  final double? window;
+  final double? display;
+  final double? floatSetting;
+  final double? intSetting;
+
+  double? get effectiveBrightness {
+    if (window != null) return window;
+    if (_shouldUseAdaptiveBrightness) return adaptiveBrightness;
+    return selected ?? intSetting ?? adaptiveBrightness;
+  }
+
+  String get effectiveSource {
+    if (window != null) return 'window';
+    if (_shouldUseAdaptiveBrightness) return _adaptiveSource;
+    if (selected != null) return source ?? 'selected';
+    if (intSetting != null) return 'intSetting';
+    if (adaptiveBrightness != null) return _adaptiveSource;
+    return 'none';
+  }
+
+  double? get adaptiveBrightness => display ?? floatSetting;
+
+  String get _adaptiveSource =>
+      display != null ? 'displayInfo' : 'floatSetting';
+
+  bool get _shouldUseAdaptiveBrightness {
+    final adaptive = adaptiveBrightness;
+    final system = intSetting ?? selected;
+    if (mode != 'automatic' || adaptive == null || system == null) return false;
+    return (adaptive - system).abs() >=
+        WakelockScreenControlService._adaptiveBrightnessDivergenceThreshold;
+  }
+
+  static double? _readBrightness(Object? value) {
+    if (value is! num) return null;
+    return WakelockScreenControlService._normalizeBrightness(value.toDouble());
   }
 }
 

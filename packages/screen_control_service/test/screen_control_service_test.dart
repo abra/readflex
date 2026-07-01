@@ -96,6 +96,24 @@ void main() {
       },
     );
 
+    test('read does not capture a reset baseline', () async {
+      final deviceBrightness = _FakeDeviceBrightness(initialPercent: 40);
+      final service = WakelockScreenControlService(
+        readDeviceBrightness: deviceBrightness.read,
+        writeDeviceBrightness: deviceBrightness.write,
+        brightnessMode: BrightnessMode.app,
+        useAndroidNativeAppBrightness: false,
+        useAndroidNativeReset: false,
+      );
+
+      await service.readApplicationBrightness();
+      deviceBrightness.percent = 70;
+      await service.resetApplicationBrightness();
+
+      expect(deviceBrightness.calls, const ['read:app']);
+      expect(deviceBrightness.percent, 70);
+    });
+
     test(
       'Android app brightness prefers the native Activity channel',
       () async {
@@ -145,6 +163,7 @@ void main() {
         expect(nativeBrightness, 0.654);
         expect(nativeCalls, const [
           'readApplicationBrightnessInfo',
+          'readApplicationBrightnessInfo',
           'setApplicationBrightness',
         ]);
         expect(deviceBrightness.calls, isEmpty);
@@ -188,6 +207,92 @@ void main() {
         final brightness = await service.readApplicationBrightness();
 
         expect(brightness, 0.5);
+        expect(deviceBrightness.calls, isEmpty);
+      },
+    );
+
+    test(
+      'Android app brightness keeps converted system value in manual mode',
+      () async {
+        final deviceBrightness = _FakeDeviceBrightness(initialPercent: 13);
+        const channel = MethodChannel(
+          'test.readflex.screen_control.native_manual_divergence',
+        );
+        final messenger =
+            TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+        messenger.setMockMethodCallHandler(channel, (call) async {
+          if (call.method != 'readApplicationBrightnessInfo') return null;
+          return <String, Object?>{
+            'brightness': 0.713,
+            'source': 'intSetting',
+            'window': null,
+            'display': 0.9,
+            'float': null,
+            'int': 0.713,
+            'intRaw': 56,
+            'intMin': 8,
+            'intMax': 4095,
+            'intScaleMin': 0,
+            'intScaleMax': 255,
+            'mode': 'manual',
+          };
+        });
+        addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+        final service = WakelockScreenControlService(
+          readDeviceBrightness: deviceBrightness.read,
+          writeDeviceBrightness: deviceBrightness.write,
+          nativeScreenControlChannel: channel,
+          brightnessMode: BrightnessMode.app,
+          useAndroidNativeAppBrightness: true,
+          useAndroidNativeReset: false,
+        );
+
+        final brightness = await service.readApplicationBrightness();
+
+        expect(brightness, 0.713);
+        expect(deviceBrightness.calls, isEmpty);
+      },
+    );
+
+    test(
+      'Android app brightness adapts to display value in automatic mode',
+      () async {
+        final deviceBrightness = _FakeDeviceBrightness(initialPercent: 13);
+        const channel = MethodChannel(
+          'test.readflex.screen_control.native_automatic_divergence',
+        );
+        final messenger =
+            TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+        messenger.setMockMethodCallHandler(channel, (call) async {
+          if (call.method != 'readApplicationBrightnessInfo') return null;
+          return <String, Object?>{
+            'brightness': 0.713,
+            'source': 'intSetting',
+            'window': null,
+            'display': 0.9,
+            'float': null,
+            'int': 0.713,
+            'intRaw': 56,
+            'intMin': 8,
+            'intMax': 4095,
+            'intScaleMin': 0,
+            'intScaleMax': 255,
+            'mode': 'automatic',
+          };
+        });
+        addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+        final service = WakelockScreenControlService(
+          readDeviceBrightness: deviceBrightness.read,
+          writeDeviceBrightness: deviceBrightness.write,
+          nativeScreenControlChannel: channel,
+          brightnessMode: BrightnessMode.app,
+          useAndroidNativeAppBrightness: true,
+          useAndroidNativeReset: false,
+        );
+
+        final brightness = await service.readApplicationBrightness();
+
+        expect(brightness, 0.9);
         expect(deviceBrightness.calls, isEmpty);
       },
     );

@@ -222,24 +222,9 @@ class ReaderBrightnessChromeDriver extends StatelessWidget {
         chromeOverlay.overlay == ReaderOverlay.none &&
         !_selectionActionsVisible(hasSelection);
     final controlValue = brightnessState.controlValue;
-    double brightnessAfterDelta(double value, double delta) {
-      return _snapReaderBrightnessButtonValue(value, delta);
-    }
-
-    void changeBrightnessBy(double delta) {
-      final currentValue = cubit.state.controlValue;
-      final nextValue = brightnessAfterDelta(currentValue, delta);
-      debugPrint(
-        '[reader-brightness] widget-button '
-        'delta=${_readerBrightnessDebugValue(delta)} '
-        'from=${_readerBrightnessDebugValue(currentValue)} '
-        'to=${_readerBrightnessDebugValue(nextValue)} '
-        'system=${_readerBrightnessDebugValue(cubit.state.systemBrightness)} '
-        'override=${_readerBrightnessDebugValue(cubit.state.brightnessOverride)}',
-      );
-      cubit.previewBrightness(nextValue);
-      cubit.commitBrightness(nextValue);
-    }
+    final waitingForSystemBrightness =
+        brightnessState.usesSystemBrightness &&
+        brightnessState.systemBrightness == null;
 
     return _ReaderBrightnessChrome(
       visible: visible,
@@ -248,14 +233,21 @@ class ReaderBrightnessChromeDriver extends StatelessWidget {
       overrideValue: brightnessState.brightnessOverride,
       label: _readerBrightnessLabel(brightnessState),
       usesSystemBrightness: brightnessState.usesSystemBrightness,
+      dragEnabled: !waitingForSystemBrightness,
       canIncrease:
+          waitingForSystemBrightness ||
           controlValue <
-          ReaderBrightnessCubit.maxBrightness - _kReaderBrightnessEpsilon,
+              ReaderBrightnessCubit.maxBrightness - _kReaderBrightnessEpsilon,
       canDecrease:
+          waitingForSystemBrightness ||
           controlValue >
-          ReaderBrightnessCubit.minBrightness + _kReaderBrightnessEpsilon,
-      onIncrease: () => changeBrightnessBy(_kReaderBrightnessStep),
-      onDecrease: () => changeBrightnessBy(-_kReaderBrightnessStep),
+              ReaderBrightnessCubit.minBrightness + _kReaderBrightnessEpsilon,
+      onIncrease: () => unawaited(
+        cubit.changeBrightnessBy(_kReaderBrightnessStep),
+      ),
+      onDecrease: () => unawaited(
+        cubit.changeBrightnessBy(-_kReaderBrightnessStep),
+      ),
       onDragPreview: cubit.previewBrightness,
       onDragEnd: cubit.commitBrightness,
       onUseSystem: () => unawaited(cubit.useSystemBrightness()),
@@ -275,6 +267,7 @@ class _ReaderBrightnessChrome extends StatefulWidget {
     required this.overrideValue,
     required this.label,
     required this.usesSystemBrightness,
+    required this.dragEnabled,
     required this.canIncrease,
     required this.canDecrease,
     required this.onIncrease,
@@ -290,6 +283,7 @@ class _ReaderBrightnessChrome extends StatefulWidget {
   final double? overrideValue;
   final String label;
   final bool usesSystemBrightness;
+  final bool dragEnabled;
   final bool canIncrease;
   final bool canDecrease;
   final VoidCallback onIncrease;
@@ -341,6 +335,7 @@ class _ReaderBrightnessChromeState extends State<_ReaderBrightnessChrome> {
   }
 
   void _handleVerticalDragUpdate(DragUpdateDetails details) {
+    if (!widget.dragEnabled) return;
     final dy = details.primaryDelta;
     if (dy == null || dy == 0) return;
     final brightnessRange =

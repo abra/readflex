@@ -479,6 +479,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                       },
                     ),
             ),
+            const _ReaderBrightnessDimmingOverlayDriver(),
             ReaderTapZoneHintDriver(readerTheme: readerTheme),
             const _ReaderChromeDismissBarrierDriver(),
             _ReaderTapEdgeIndicatorDriver(
@@ -523,6 +524,34 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
               onResultSelected: _goToSearchResult,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Applies reader-local dimming when Android cannot lower per-window
+/// brightness predictably from the current system level.
+class _ReaderBrightnessDimmingOverlayDriver extends StatelessWidget {
+  const _ReaderBrightnessDimmingOverlayDriver();
+
+  @override
+  Widget build(BuildContext context) {
+    final opacity = context.select<ReaderBrightnessCubit, double>(
+      (c) => c.state.dimmingOpacity,
+    );
+
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: TweenAnimationBuilder<double>(
+          tween: Tween<double>(end: opacity),
+          duration: _kReaderBrightnessDimmingDuration,
+          curve: Curves.easeOutCubic,
+          builder: (_, value, _) {
+            return ColoredBox(
+              color: Colors.black.withValues(alpha: value),
+            );
+          },
         ),
       ),
     );
