@@ -126,9 +126,12 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
         pageBuilder: (context, state) {
           final sourceId = state.pathParameters['sourceId']!;
           final initialSource = _initialReaderSourceFromRoute(state);
-          return MaterialPage(
+          return CustomTransitionPage(
             key: state.pageKey,
             fullscreenDialog: true,
+            transitionDuration: Duration.zero,
+            reverseTransitionDuration: Duration.zero,
+            transitionsBuilder: (_, _, _, child) => child,
             child: _AndroidReaderSystemNavigationBarMode(
               child: ReaderScreen(
                 sourceId: sourceId,

@@ -45,7 +45,7 @@ class _ReaderView extends StatelessWidget {
 }
 
 /// Switches between loading, failure, and ready reader content.
-class _ReaderBody extends StatelessWidget {
+class _ReaderBody extends StatefulWidget {
   const _ReaderBody({
     required this.status,
     required this.canMountWebView,
@@ -61,6 +61,18 @@ class _ReaderBody extends StatelessWidget {
   final void Function(String url, String title)? onArticleTitlePressed;
 
   @override
+  State<_ReaderBody> createState() => _ReaderBodyState();
+}
+
+class _ReaderBodyState extends State<_ReaderBody> {
+  String? _readyWebViewSourceId;
+
+  void _handleWebViewReady(String? sourceId) {
+    if (_readyWebViewSourceId == sourceId) return;
+    setState(() => _readyWebViewSourceId = sourceId);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final readerTheme = ReaderThemePreset.fromId(
       context.select(
@@ -68,41 +80,58 @@ class _ReaderBody extends StatelessWidget {
             cubit.state.effectiveAppearance.themeId,
       ),
     ).data;
+    final sourceId = context.select<ReaderBloc, String?>(
+      (bloc) => bloc.state.sourceId,
+    );
+    final contentReady =
+        widget.status == ReaderStatus.ready && widget.canMountWebView;
+    final webViewReady = sourceId != null && _readyWebViewSourceId == sourceId;
+    final loadingVisible =
+        widget.status == ReaderStatus.initial ||
+        widget.status == ReaderStatus.loading ||
+        (widget.status == ReaderStatus.ready && !webViewReady);
 
-    return switch (status) {
-      ReaderStatus.initial || ReaderStatus.loading => ColoredBox(
-        color: readerTheme.backgroundColor,
-        child: Center(child: _ReaderLoadingIndicator(theme: readerTheme)),
-      ),
-      ReaderStatus.failure => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(AppIcons.error, size: 48),
-            const SizedBox(height: AppSpacing.md),
-            const Text('Failed to load content'),
-            const SizedBox(height: AppSpacing.md),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Go Back'),
-            ),
-          ],
-        ),
-      ),
-      ReaderStatus.ready =>
-        canMountWebView
-            ? _ReadyContent(
-                serverPort: serverPort,
-                textActions: textActions,
-                onArticleTitlePressed: onArticleTitlePressed,
-              )
-            : ColoredBox(
-                color: readerTheme.backgroundColor,
-                child: Center(
-                  child: _ReaderLoadingIndicator(theme: readerTheme),
-                ),
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: switch (widget.status) {
+            ReaderStatus.failure => Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(AppIcons.error, size: 48),
+                  const SizedBox(height: AppSpacing.md),
+                  const Text('Failed to load content'),
+                  const SizedBox(height: AppSpacing.md),
+                  FilledButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Go Back'),
+                  ),
+                ],
               ),
-    };
+            ),
+            ReaderStatus.ready when contentReady => _ReadyContent(
+              serverPort: widget.serverPort,
+              textActions: widget.textActions,
+              onArticleTitlePressed: widget.onArticleTitlePressed,
+              onWebViewReady: _handleWebViewReady,
+            ),
+            ReaderStatus.initial ||
+            ReaderStatus.loading ||
+            ReaderStatus.ready => const SizedBox.expand(),
+          },
+        ),
+        IgnorePointer(
+          ignoring: !loadingVisible,
+          child: AnimatedOpacity(
+            opacity: loadingVisible ? 1 : 0,
+            duration: _kReaderLoadingScrimFadeDuration,
+            curve: Curves.easeOutCubic,
+            child: _ReaderLoadingScrim(theme: readerTheme),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -111,11 +140,13 @@ class _ReadyContent extends StatelessWidget {
   const _ReadyContent({
     required this.serverPort,
     required this.textActions,
+    required this.onWebViewReady,
     this.onArticleTitlePressed,
   });
 
   final int serverPort;
   final List<TextAction> textActions;
+  final ValueChanged<String?> onWebViewReady;
   final void Function(String url, String title)? onArticleTitlePressed;
 
   @override
@@ -124,6 +155,7 @@ class _ReadyContent extends StatelessWidget {
       serverPort: serverPort,
       textActions: textActions,
       onArticleTitlePressed: onArticleTitlePressed,
+      onWebViewReady: onWebViewReady,
     );
   }
 }
@@ -133,11 +165,13 @@ class _ReadyContentBody extends StatefulWidget {
   const _ReadyContentBody({
     required this.serverPort,
     required this.textActions,
+    required this.onWebViewReady,
     this.onArticleTitlePressed,
   });
 
   final int serverPort;
   final List<TextAction> textActions;
+  final ValueChanged<String?> onWebViewReady;
   final void Function(String url, String title)? onArticleTitlePressed;
 
   @override
@@ -424,6 +458,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                             .sourceId;
                         if (_webViewReadySourceId == sourceId) return;
                         setState(() => _webViewReadySourceId = sourceId);
+                        widget.onWebViewReady(sourceId);
                       },
                     )
                   : _ReaderWebViewBody(
@@ -440,6 +475,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                             .sourceId;
                         if (_webViewReadySourceId == sourceId) return;
                         setState(() => _webViewReadySourceId = sourceId);
+                        widget.onWebViewReady(sourceId);
                       },
                     ),
             ),
@@ -1055,39 +1091,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       onTapped: onTapped,
     );
 
-    return Stack(
-      children: [
-        Positioned.fill(child: readerSurface),
-        // Loading scrim — covers the WebView while it's still mounting and
-        // foliate-js is parsing the book. Background uses the reader
-        // theme so it blends seamlessly into the rendered book once the
-        // scrim fades. Fades out after `onReady` so the transition feels
-        // intentional, not a flash.
-        //
-        // Centered spinner instead of a top-edge bar: the reader route
-        // is opened with a full-screen vertical slide transition, and a
-        // top-edge bar reads as «sliding up» during that animation. A
-        // centered circular indicator doesn't fight the route transition.
-        IgnorePointer(
-          ignoring: _foliateReady,
-          child: AnimatedOpacity(
-            opacity: _foliateReady ? 0 : 1,
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOut,
-            child: ColoredBox(
-              color: widget.readerTheme.backgroundColor,
-              child: Center(
-                child: SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: _ReaderLoadingIndicator(theme: widget.readerTheme),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
+    return readerSurface;
   }
 }
 
@@ -1240,24 +1244,6 @@ class _ReaderArticleHtmlBodyState extends State<_ReaderArticleHtmlBody> {
             color: widget.readerTheme.backgroundColor,
           ),
         ),
-        IgnorePointer(
-          ignoring: _htmlReady,
-          child: AnimatedOpacity(
-            opacity: _htmlReady ? 0 : 1,
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOut,
-            child: ColoredBox(
-              color: widget.readerTheme.backgroundColor,
-              child: Center(
-                child: SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: _ReaderLoadingIndicator(theme: widget.readerTheme),
-                ),
-              ),
-            ),
-          ),
-        ),
       ],
     );
   }
@@ -1290,18 +1276,35 @@ class _ArticleSystemBarBackground extends StatelessWidget {
   }
 }
 
-class _ReaderLoadingIndicator extends StatelessWidget {
-  const _ReaderLoadingIndicator({required this.theme});
+class _ReaderLoadingMark extends StatelessWidget {
+  const _ReaderLoadingMark({required this.theme});
 
   final ReaderThemeData theme;
 
   @override
   Widget build(BuildContext context) {
-    return CircularProgressIndicator(
-      strokeWidth: 2.4,
-      backgroundColor: readerLoadingIndicatorTrackColor(theme),
-      valueColor: AlwaysStoppedAnimation<Color>(
-        readerLoadingIndicatorColor(theme),
+    return Icon(
+      AppIcons.book,
+      size: _kReaderLoadingIconSize,
+      color: theme.primaryTextColor.withValues(alpha: 0.82),
+    );
+  }
+}
+
+class _ReaderLoadingScrim extends StatelessWidget {
+  const _ReaderLoadingScrim({required this.theme});
+
+  final ReaderThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: theme.backgroundColor,
+      child: Center(
+        child: SizedBox.square(
+          dimension: _kReaderLoadingIconSize,
+          child: _ReaderLoadingMark(theme: theme),
+        ),
       ),
     );
   }
