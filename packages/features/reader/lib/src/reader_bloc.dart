@@ -32,6 +32,12 @@ Highlight? _highlightById(List<Highlight> highlights, String id) {
   return null;
 }
 
+String? _normalizedHighlightNote(String? note) {
+  final normalized = note?.trim();
+  if (normalized == null || normalized.isEmpty) return null;
+  return normalized;
+}
+
 /// Owns the loaded source document and its highlights for the reader screen.
 ///
 /// Responsibilities:
@@ -74,6 +80,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     on<ReaderHighlightColorChangeRequested>(
       _onHighlightColorChangeRequested,
     );
+    on<ReaderHighlightNoteChangeRequested>(_onHighlightNoteChangeRequested);
     on<ReaderTocUpdated>(_onTocUpdated);
     on<ReaderDocumentFeaturesUpdated>(_onDocumentFeaturesUpdated);
     on<ReaderBookmarkChanged>(_onBookmarkChanged);
@@ -471,6 +478,34 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     try {
       await _highlightRepository.updateHighlight(
         highlight.copyWith(color: event.color),
+      );
+      final highlights = await _highlightRepository.getHighlightsBySource(
+        sourceId,
+      );
+      emit(state.copyWith(highlights: highlights));
+    } catch (e, st) {
+      addError(e, st);
+    }
+  }
+
+  Future<void> _onHighlightNoteChangeRequested(
+    ReaderHighlightNoteChangeRequested event,
+    Emitter<ReaderState> emit,
+  ) async {
+    final sourceId = state.sourceId;
+    if (sourceId == null) return;
+
+    final note = _normalizedHighlightNote(event.note);
+    if (note == null) return;
+
+    final highlight = _highlightById(state.highlights, event.highlightId);
+    if (highlight == null || _normalizedHighlightNote(highlight.note) == note) {
+      return;
+    }
+
+    try {
+      await _highlightRepository.updateHighlight(
+        highlight.copyWith(note: note),
       );
       final highlights = await _highlightRepository.getHighlightsBySource(
         sourceId,

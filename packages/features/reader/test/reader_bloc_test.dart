@@ -1283,6 +1283,113 @@ void main() {
       );
     });
 
+    group('ReaderHighlightNoteChangeRequested', () {
+      final notedHighlight = testHighlight.copyWith(note: 'Old note');
+
+      blocTest<ReaderBloc, ReaderState>(
+        'updates highlight note and refreshes highlights for current source',
+        setUp: () {
+          highlightRepository.seedHighlights('book-1', [notedHighlight]);
+        },
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          document: ReaderDocument.fromBook(testBook),
+          highlights: [notedHighlight],
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderHighlightNoteChangeRequested(
+            highlightId: 'h-1',
+            note: '  Updated note  ',
+          ),
+        ),
+        expect: () => [
+          isA<ReaderState>()
+              .having(
+                (s) => s.highlights.single.note,
+                'highlight note',
+                'Updated note',
+              )
+              .having((s) => s.highlights.single.id, 'highlight id', 'h-1'),
+        ],
+        verify: (_) {
+          expect(highlightRepository.updatedHighlights, hasLength(1));
+          expect(
+            highlightRepository.updatedHighlights.single.note,
+            'Updated note',
+          );
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'emits nothing when note is unchanged after normalization',
+        setUp: () {
+          highlightRepository.seedHighlights('book-1', [notedHighlight]);
+        },
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          document: ReaderDocument.fromBook(testBook),
+          highlights: [notedHighlight],
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderHighlightNoteChangeRequested(
+            highlightId: 'h-1',
+            note: '  Old note  ',
+          ),
+        ),
+        expect: () => <ReaderState>[],
+        verify: (_) {
+          expect(highlightRepository.updatedHighlights, isEmpty);
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'emits nothing when note is blank',
+        setUp: () {
+          highlightRepository.seedHighlights('book-1', [notedHighlight]);
+        },
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          document: ReaderDocument.fromBook(testBook),
+          highlights: [notedHighlight],
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderHighlightNoteChangeRequested(
+            highlightId: 'h-1',
+            note: '   ',
+          ),
+        ),
+        expect: () => <ReaderState>[],
+        verify: (_) {
+          expect(highlightRepository.updatedHighlights, isEmpty);
+        },
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
+        'reports error when repository throws',
+        setUp: () {
+          highlightRepository.seedHighlights('book-1', [notedHighlight]);
+          highlightRepository.shouldThrow = true;
+        },
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          document: ReaderDocument.fromBook(testBook),
+          highlights: [notedHighlight],
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderHighlightNoteChangeRequested(
+            highlightId: 'h-1',
+            note: 'Updated note',
+          ),
+        ),
+        expect: () => <ReaderState>[],
+        errors: () => [isA<Exception>()],
+      );
+    });
+
     group('ReaderBookmarkChanged', () {
       blocTest<ReaderBloc, ReaderState>(
         'adds bookmark for current source',

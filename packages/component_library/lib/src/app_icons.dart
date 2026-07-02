@@ -17,6 +17,7 @@ abstract final class AppIcons {
   static const IconData refresh = LucideIcons.rotateCcw;
   static const IconData remove = LucideIcons.minus;
   static const IconData delete = LucideIcons.trash2;
+  static const IconData edit = LucideIcons.pencil;
   static const IconData play = LucideIcons.play;
   static const IconData paste = LucideIcons.clipboardPaste;
   static const IconData moreHorizontal = LucideIcons.moreHorizontal;

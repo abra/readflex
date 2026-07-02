@@ -5,15 +5,16 @@ const _kHighlightSwatchSize = 24.0;
 const _kHighlightSwatchTapSize = 40.0;
 const _kHighlightPopupHorizontalPadding = AppSpacing.xs;
 const _kHighlightPopupDividerWidth = AppSpacing.sm;
-const _kHighlightPopupWidth =
-    _kHighlightPopupColorCount * _kHighlightSwatchTapSize +
-    _kHighlightPopupDividerWidth +
-    _kHighlightSwatchTapSize +
-    _kHighlightPopupHorizontalPadding * 2;
 const _kHighlightPopupHeight = 52.0;
 const _kHighlightPopupGap = AppSpacing.sm;
 const _kImageHighlightPopupGap = AppSpacing.xl;
 const _kHighlightPopupHorizontalInset = AppSpacing.lg;
+
+String? _normalizedNoteText(String? note) {
+  final normalized = note?.trim();
+  if (normalized == null || normalized.isEmpty) return null;
+  return normalized;
+}
 
 /// Reads selection from [ReaderSelectionCubit] and source info from
 /// [ReaderBloc] to show/hide the text-action context panel.
@@ -151,12 +152,16 @@ class _ContextPanelDriver extends StatelessWidget {
       if (!highlightFocus.hasHighlight || focusedHighlight == null) {
         return const SizedBox.shrink();
       }
+      final focusedHighlightNote = _normalizedNoteText(focusedHighlight.note);
+      final canEditFocusedHighlightNote =
+          focusedHighlight.isImageArea && focusedHighlightNote != null;
       return Positioned.fill(
         child: _SavedHighlightPopup(
           position: highlightFocus.position,
           selectedColor: focusedHighlight.color,
           readerTheme: readerTheme,
           panelColor: colors.surface,
+          foregroundColor: colors.onSurface,
           destructiveColor: Theme.of(context).colorScheme.error,
           dividerColor: colors.outlineVariant,
           onDismiss: highlightFocusCubit.clear,
@@ -182,6 +187,32 @@ class _ContextPanelDriver extends StatelessWidget {
               message: 'Highlight removed',
             );
           },
+          onEditNote: canEditFocusedHighlightNote
+              ? () async {
+                  final result =
+                      await showAppBottomSheet<_ImageHighlightNoteResult>(
+                        context,
+                        builder: (_) => _ImageHighlightNoteSheet(
+                          initialNote: focusedHighlightNote,
+                        ),
+                      );
+                  if (!context.mounted) return;
+                  final note = _normalizedNoteText(result?.note);
+                  if (note == null) return;
+                  bloc.add(
+                    ReaderHighlightNoteChangeRequested(
+                      highlightId: focusedHighlight.id,
+                      note: note,
+                    ),
+                  );
+                  highlightFocusCubit.clear();
+                  showToast(
+                    context,
+                    type: NotificationType.success,
+                    message: 'Comment updated',
+                  );
+                }
+              : null,
         ),
       );
     }
@@ -357,12 +388,23 @@ double _highlightPopupHorizontalInset(double maxWidth) {
   return _kHighlightPopupHorizontalInset;
 }
 
-double _highlightPopupWidth(double maxWidth, double horizontalInset) {
+double _highlightPopupPreferredWidth({required int actionCount}) =>
+    _kHighlightPopupColorCount * _kHighlightSwatchTapSize +
+    _kHighlightPopupDividerWidth +
+    actionCount * _kHighlightSwatchTapSize +
+    _kHighlightPopupHorizontalPadding * 2;
+
+double _highlightPopupWidth(
+  double maxWidth,
+  double horizontalInset, {
+  int actionCount = 1,
+}) {
   final availableWidth = maxWidth - horizontalInset * 2;
+  final preferredWidth = _highlightPopupPreferredWidth(
+    actionCount: actionCount,
+  );
   if (availableWidth <= 0) return 0;
-  return availableWidth < _kHighlightPopupWidth
-      ? availableWidth
-      : _kHighlightPopupWidth;
+  return availableWidth < preferredWidth ? availableWidth : preferredWidth;
 }
 
 /// Compact floating highlight menu anchored to an image-page area selection.
@@ -590,9 +632,6 @@ class _ImageHighlightSelectionPopupState
                 saving: _saving,
                 readerTheme: widget.readerTheme,
                 panelColor: widget.panelColor,
-                actionColor: widget.foregroundColor,
-                actionIcon: AppIcons.highlight,
-                actionTooltip: 'Highlight',
                 dividerColor: widget.dividerColor,
                 onInteractionStarted: widget.onPopupInteractionStarted,
                 onColorChanged: (color) {
@@ -600,7 +639,14 @@ class _ImageHighlightSelectionPopupState
                   setState(() => _selectedColor = color);
                   widget.onPreviewColorChanged(color);
                 },
-                onAction: _save,
+                actions: [
+                  _HighlightPopupAction(
+                    color: widget.foregroundColor,
+                    icon: AppIcons.highlight,
+                    tooltip: 'Highlight',
+                    onPressed: _save,
+                  ),
+                ],
               ),
             ),
           ],
@@ -617,7 +663,9 @@ class _ImageHighlightNoteResult {
 }
 
 class _ImageHighlightNoteSheet extends StatefulWidget {
-  const _ImageHighlightNoteSheet();
+  const _ImageHighlightNoteSheet({this.initialNote});
+
+  final String? initialNote;
 
   @override
   State<_ImageHighlightNoteSheet> createState() =>
@@ -626,17 +674,19 @@ class _ImageHighlightNoteSheet extends StatefulWidget {
 
 class _ImageHighlightNoteSheetState extends State<_ImageHighlightNoteSheet> {
   late final TextEditingController _controller;
+  late final String? _initialNote;
 
   String? get _normalizedNote {
-    final note = _controller.text.trim();
-    if (note.isEmpty) return null;
-    return note;
+    return _normalizedNoteText(_controller.text);
   }
+
+  bool get _isEditing => _initialNote != null;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController();
+    _initialNote = _normalizedNoteText(widget.initialNote);
+    _controller = TextEditingController(text: _initialNote ?? '');
     _controller.addListener(_onTextChanged);
   }
 
@@ -656,10 +706,11 @@ class _ImageHighlightNoteSheetState extends State<_ImageHighlightNoteSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final hasNote = _normalizedNote != null;
+    final note = _normalizedNote;
+    final canSave = note != null && (!_isEditing || note != _initialNote);
 
     return ActionBottomSheetLayout(
-      title: 'Highlight note',
+      title: _isEditing ? 'Edit note' : 'Highlight note',
       headerSpacing: AppSpacing.sm,
       bodyPadding: const EdgeInsets.fromLTRB(
         AppSpacing.xl,
@@ -686,14 +737,16 @@ class _ImageHighlightNoteSheetState extends State<_ImageHighlightNoteSheet> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => _complete(null),
-                  child: const Text('Skip'),
+                  onPressed: _isEditing
+                      ? () => Navigator.of(context).pop()
+                      : () => _complete(null),
+                  child: Text(_isEditing ? 'Cancel' : 'Skip'),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: FilledButton(
-                  onPressed: hasNote ? () => _complete(_normalizedNote) : null,
+                  onPressed: canSave ? () => _complete(note) : null,
                   child: const Text('Save'),
                 ),
               ),
@@ -711,11 +764,13 @@ class _SavedHighlightPopup extends StatelessWidget {
     required this.selectedColor,
     required this.readerTheme,
     required this.panelColor,
+    required this.foregroundColor,
     required this.destructiveColor,
     required this.dividerColor,
     required this.onDismiss,
     required this.onColorChanged,
     required this.onDelete,
+    this.onEditNote,
     this.position,
   });
 
@@ -723,11 +778,13 @@ class _SavedHighlightPopup extends StatelessWidget {
   final HighlightColor selectedColor;
   final ReaderThemeData readerTheme;
   final Color panelColor;
+  final Color foregroundColor;
   final Color destructiveColor;
   final Color dividerColor;
   final VoidCallback onDismiss;
   final ValueChanged<HighlightColor> onColorChanged;
   final VoidCallback onDelete;
+  final VoidCallback? onEditNote;
 
   @override
   Widget build(BuildContext context) {
@@ -740,6 +797,7 @@ class _SavedHighlightPopup extends StatelessWidget {
         final width = _highlightPopupWidth(
           constraints.maxWidth,
           horizontalInset,
+          actionCount: onEditNote == null ? 1 : 2,
         );
         final left = _highlightPopupLeft(
           constraints: constraints,
@@ -772,12 +830,23 @@ class _SavedHighlightPopup extends StatelessWidget {
                 saving: false,
                 readerTheme: readerTheme,
                 panelColor: panelColor,
-                actionColor: destructiveColor,
-                actionIcon: AppIcons.delete,
-                actionTooltip: 'Remove highlight',
                 dividerColor: dividerColor,
                 onColorChanged: onColorChanged,
-                onAction: onDelete,
+                actions: [
+                  if (onEditNote != null)
+                    _HighlightPopupAction(
+                      color: foregroundColor,
+                      icon: AppIcons.edit,
+                      tooltip: 'Edit comment',
+                      onPressed: onEditNote!,
+                    ),
+                  _HighlightPopupAction(
+                    color: destructiveColor,
+                    icon: AppIcons.delete,
+                    tooltip: 'Remove highlight',
+                    onPressed: onDelete,
+                  ),
+                ],
               ),
             ),
           ],
@@ -912,16 +981,20 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
                 saving: _saving,
                 readerTheme: widget.readerTheme,
                 panelColor: widget.panelColor,
-                actionColor: widget.foregroundColor,
-                actionIcon: AppIcons.highlight,
-                actionTooltip: 'Highlight',
                 dividerColor: widget.dividerColor,
                 onColorChanged: (color) {
                   if (_saving || _selectedColor == color) return;
                   setState(() => _selectedColor = color);
                   widget.onPreviewColorChanged(color);
                 },
-                onAction: _save,
+                actions: [
+                  _HighlightPopupAction(
+                    color: widget.foregroundColor,
+                    icon: AppIcons.highlight,
+                    tooltip: 'Highlight',
+                    onPressed: _save,
+                  ),
+                ],
               ),
             ),
           ],
@@ -931,18 +1004,29 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
   }
 }
 
+class _HighlightPopupAction {
+  const _HighlightPopupAction({
+    required this.color,
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final Color color;
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+}
+
 class _HighlightPopupSurface extends StatelessWidget {
   const _HighlightPopupSurface({
     required this.selectedColor,
     required this.saving,
     required this.readerTheme,
     required this.panelColor,
-    required this.actionColor,
-    required this.actionIcon,
-    required this.actionTooltip,
     required this.dividerColor,
     required this.onColorChanged,
-    required this.onAction,
+    required this.actions,
     this.onInteractionStarted,
   });
 
@@ -950,12 +1034,9 @@ class _HighlightPopupSurface extends StatelessWidget {
   final bool saving;
   final ReaderThemeData readerTheme;
   final Color panelColor;
-  final Color actionColor;
-  final IconData actionIcon;
-  final String actionTooltip;
   final Color dividerColor;
   final ValueChanged<HighlightColor> onColorChanged;
-  final VoidCallback onAction;
+  final List<_HighlightPopupAction> actions;
   final VoidCallback? onInteractionStarted;
 
   @override
@@ -1000,26 +1081,29 @@ class _HighlightPopupSurface extends StatelessWidget {
                     width: _kHighlightPopupDividerWidth,
                   ),
                 ),
-                SizedBox(
-                  width: _kHighlightSwatchTapSize,
-                  height: _kHighlightSwatchTapSize,
-                  child: Tooltip(
-                    message: actionTooltip,
-                    child: InkResponse(
-                      radius: _kHighlightSwatchTapSize / 2,
-                      onTap: saving ? null : onAction,
-                      child: Center(
-                        child: saving
-                            ? const ButtonLoadingIndicator(size: AppIconSize.sm)
-                            : Icon(
-                                actionIcon,
-                                size: AppIconSize.sm,
-                                color: actionColor,
-                              ),
+                for (final action in actions)
+                  SizedBox(
+                    width: _kHighlightSwatchTapSize,
+                    height: _kHighlightSwatchTapSize,
+                    child: Tooltip(
+                      message: action.tooltip,
+                      child: InkResponse(
+                        radius: _kHighlightSwatchTapSize / 2,
+                        onTap: saving ? null : action.onPressed,
+                        child: Center(
+                          child: saving
+                              ? const ButtonLoadingIndicator(
+                                  size: AppIconSize.sm,
+                                )
+                              : Icon(
+                                  action.icon,
+                                  size: AppIconSize.sm,
+                                  color: action.color,
+                                ),
+                        ),
                       ),
                     ),
                   ),
-                ),
               ],
             ),
           ),

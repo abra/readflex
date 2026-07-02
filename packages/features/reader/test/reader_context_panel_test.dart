@@ -26,9 +26,11 @@ void main() {
       contextPanelSource,
       contains('ReaderHighlightColorChangeRequested'),
     );
+    expect(contextPanelSource, contains('ReaderHighlightNoteChangeRequested'));
     expect(contextPanelSource, contains('_SavedHighlightPopup'));
     expect(contextPanelSource, isNot(contains('_HighlightDeletePopup')));
     expect(contextPanelSource, contains('Highlight removed'));
+    expect(contextPanelSource, contains('Comment updated'));
     expect(contextPanelSource, contains('ColorHighlightTextAction'));
     expect(contextPanelSource, contains('Highlight saved'));
     expect(contextPanelSource, contains('_kHighlightPopupColorCount'));
@@ -82,6 +84,7 @@ void main() {
     expect(contextPanelSource, contains('_ImageHighlightNoteSheet'));
     expect(contextPanelSource, contains('showAppBottomSheet'));
     expect(contextPanelSource, contains('Highlight note'));
+    expect(contextPanelSource, contains('Edit note'));
     expect(contextPanelSource, contains('Add a comment (optional)'));
     expect(contextPanelSource, contains('child: OutlinedButton('));
     expect(contextPanelSource, isNot(contains('FilledButton.icon(')));
@@ -103,6 +106,7 @@ void main() {
     );
     expect(contextPanelSource, contains('widget.onPreviewColorChanged(color)'));
     expect(contextPanelSource, contains('AppIcons.check'));
+    expect(contextPanelSource, contains('AppIcons.edit'));
     expect(contextPanelSource, contains('computeLuminance()'));
     expect(
       contextPanelSource,
@@ -132,8 +136,9 @@ void main() {
     );
     expect(contextPanelSource, contains('allowNextTap: true'));
     expect(contentSource, contains('consumeProtectedClear()'));
-    expect(contextPanelSource, contains('actionIcon: AppIcons.delete'));
-    expect(contextPanelSource, contains('actionIcon: AppIcons.highlight'));
+    expect(contextPanelSource, contains('icon: AppIcons.delete'));
+    expect(contextPanelSource, contains('icon: AppIcons.highlight'));
+    expect(contextPanelSource, contains('tooltip: \'Edit comment\''));
     expect(contentSource, contains('onHighlightTapped: (tap)'));
     expect(contentSource, contains('highlightFocusCubit.focus(tap)'));
   });

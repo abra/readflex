@@ -135,6 +135,20 @@ final class ReaderHighlightColorChangeRequested extends ReaderEvent {
   List<Object?> get props => [highlightId, color];
 }
 
+/// Changes the note of a saved highlight.
+final class ReaderHighlightNoteChangeRequested extends ReaderEvent {
+  const ReaderHighlightNoteChangeRequested({
+    required this.highlightId,
+    required this.note,
+  });
+
+  final String highlightId;
+  final String note;
+
+  @override
+  List<Object?> get props => [highlightId, note];
+}
+
 /// foliate-js parsed the book table of contents.
 final class ReaderTocUpdated extends ReaderEvent {
   const ReaderTocUpdated({required this.items});
