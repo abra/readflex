@@ -67,5 +67,19 @@ void main() {
         expect(cubit.state, const ReaderImageSelectionState());
       },
     );
+
+    test('held clear protection ignores repeated clears until released', () {
+      final cubit = ReaderImageSelectionCubit();
+      addTearDown(cubit.close);
+
+      cubit.holdClearProtection();
+
+      expect(cubit.consumeProtectedClear(), isTrue);
+      expect(cubit.consumeProtectedClear(), isTrue);
+
+      cubit.releaseClearProtection();
+
+      expect(cubit.consumeProtectedClear(), isFalse);
+    });
   });
 }

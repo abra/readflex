@@ -67,7 +67,17 @@ class _ContextPanelDriver extends StatelessWidget {
     );
     final readerTheme = ReaderThemePreset.fromId(appearance).data;
 
+    void setImageHighlightDraftRetained(bool retained) {
+      if (retained) {
+        imageSelectionCubit.holdClearProtection();
+      } else {
+        imageSelectionCubit.releaseClearProtection();
+      }
+      webViewKey.currentState?.setImageAreaSelectionPreviewRetained(retained);
+    }
+
     void dismissImageSelection() {
+      setImageHighlightDraftRetained(false);
       imageSelectionCubit.deselect();
       webViewKey.currentState?.clearImageAreaSelectionPreview(
         allowNextTap: true,
@@ -111,6 +121,7 @@ class _ContextPanelDriver extends StatelessWidget {
             foregroundColor: colors.onSurface,
             dividerColor: colors.outlineVariant,
             onPopupInteractionStarted: imageSelectionCubit.protectNextClear,
+            onDraftRetentionChanged: setImageHighlightDraftRetained,
             onControlsBoundsChanged:
                 webViewKey.currentState?.setImageAreaSelectionControlsBounds,
             onPreviewColorChanged: showImageHighlightPreview,
@@ -367,6 +378,7 @@ class _ImageHighlightSelectionPopup extends StatefulWidget {
     required this.foregroundColor,
     required this.dividerColor,
     required this.onPopupInteractionStarted,
+    required this.onDraftRetentionChanged,
     required this.onControlsBoundsChanged,
     required this.onPreviewColorChanged,
     required this.onPreviewCleared,
@@ -390,6 +402,7 @@ class _ImageHighlightSelectionPopup extends StatefulWidget {
   final Color foregroundColor;
   final Color dividerColor;
   final VoidCallback onPopupInteractionStarted;
+  final ValueChanged<bool> onDraftRetentionChanged;
   final ValueChanged<ReaderSelectionPosition>? onControlsBoundsChanged;
   final ValueChanged<HighlightColor> onPreviewColorChanged;
   final VoidCallback onPreviewCleared;
@@ -405,6 +418,7 @@ class _ImageHighlightSelectionPopupState
     extends State<_ImageHighlightSelectionPopup> {
   HighlightColor _selectedColor = HighlightColor.yellow;
   bool _saving = false;
+  bool _keepPreviewOnDispose = false;
 
   void _sendControlsBounds(ReaderSelectionPosition bounds) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -431,7 +445,7 @@ class _ImageHighlightSelectionPopupState
 
   @override
   void dispose() {
-    widget.onPreviewCleared();
+    if (!_keepPreviewOnDispose) widget.onPreviewCleared();
     super.dispose();
   }
 
@@ -449,19 +463,58 @@ class _ImageHighlightSelectionPopupState
     final imageHighlightCubit = widget.imageHighlightCubit;
     final onActionCompleted = widget.onActionCompleted;
     final onActionError = widget.onActionError;
+    final onPreviewCleared = widget.onPreviewCleared;
+    final onDraftRetentionChanged = widget.onDraftRetentionChanged;
+    var draftRetained = false;
+
+    void setDraftRetained(bool retained) {
+      if (draftRetained == retained) return;
+      draftRetained = retained;
+      onDraftRetentionChanged(retained);
+    }
 
     widget.onPopupInteractionStarted();
     setState(() => _saving = true);
-    final result = await showAppBottomSheet<_ImageHighlightNoteResult>(
-      context,
-      builder: (_) => const _ImageHighlightNoteSheet(),
-    );
+    _keepPreviewOnDispose = true;
+    setDraftRetained(true);
+    late final _ImageHighlightNoteResult? result;
+    try {
+      result = await showAppBottomSheet<_ImageHighlightNoteResult>(
+        context,
+        builder: (_) => const _ImageHighlightNoteSheet(),
+      );
+    } catch (error, stack) {
+      setDraftRetained(false);
+      _keepPreviewOnDispose = false;
+      onActionError(error, stack);
+      if (mounted) {
+        setState(() => _saving = false);
+      } else {
+        onPreviewCleared();
+      }
+      return;
+    }
     if (result == null) {
-      if (mounted) setState(() => _saving = false);
+      setDraftRetained(false);
+      _keepPreviewOnDispose = false;
+      if (!mounted) {
+        onPreviewCleared();
+        return;
+      }
+      setState(() => _saving = false);
       return;
     }
     try {
-      if (imageHighlightCubit.isClosed) return;
+      if (imageHighlightCubit.isClosed) {
+        setDraftRetained(false);
+        _keepPreviewOnDispose = false;
+        if (mounted) {
+          setState(() => _saving = false);
+        } else {
+          onPreviewCleared();
+        }
+        return;
+      }
       await imageHighlightCubit.save(
         sourceId: sourceId,
         sourceType: sourceType,
@@ -472,10 +525,17 @@ class _ImageHighlightSelectionPopupState
         progress: progress,
         chapterTitle: chapterTitle,
       );
+      setDraftRetained(false);
       onActionCompleted();
     } catch (error, stack) {
+      setDraftRetained(false);
+      _keepPreviewOnDispose = false;
       onActionError(error, stack);
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() => _saving = false);
+      } else {
+        onPreviewCleared();
+      }
     }
   }
 

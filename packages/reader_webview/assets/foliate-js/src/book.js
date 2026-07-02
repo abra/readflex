@@ -34,6 +34,7 @@ const READFLEX_IMAGE_AREA_FILL_ALPHA = 0.3;
 
 let imageAreaSelectionControlsBounds = null;
 let imageAreaDraftActive = false;
+let imageAreaDraftRetained = false;
 let imageAreaConsumeNextViewAction = false;
 let imageAreaConsumeNextGestureEnd = false;
 
@@ -45,8 +46,17 @@ const setImageAreaDraftActive = active => {
   globalThis.__readflexImageAreaDraftActive = active;
 };
 
+const setImageAreaDraftRetained = retained => {
+  imageAreaDraftRetained = retained === true;
+  globalThis.__readflexImageAreaDraftRetained = imageAreaDraftRetained;
+};
+
 const isImageAreaDraftActive = () =>
   imageAreaDraftActive || globalThis.__readflexImageAreaDraftActive === true;
+
+const isImageAreaDraftRetained = () =>
+  imageAreaDraftRetained
+  || globalThis.__readflexImageAreaDraftRetained === true;
 
 const suppressNextImageAreaCancelActions = () => {
   imageAreaConsumeNextViewAction = true;
@@ -527,6 +537,10 @@ const installImageAreaSelectionHandler = (reader, doc, index) => {
       return;
     }
     if (currentRect) {
+      if (isImageAreaDraftRetained()) {
+        stop(event);
+        return;
+      }
       cancelDraft(event);
       return;
     }
@@ -642,6 +656,10 @@ const installImageAreaSelectionHandler = (reader, doc, index) => {
       return;
     }
     if (currentRect && !preview) {
+      if (isImageAreaDraftRetained()) {
+        stop(event);
+        return;
+      }
       cancelDraft(event);
       return;
     }
@@ -2783,6 +2801,9 @@ class Reader {
     }
 
     if (isImageAreaDraftActive()) {
+      if (isImageAreaDraftRetained()) {
+        return
+      }
       this.#doc?.__readflexClearImageAreaSelectionDraft?.()
       if (this.#doc) {
         this.#doc.__anxSelectionClearedAt = 0
@@ -3474,6 +3495,9 @@ window.showImageAreaSelectionPreview = options =>
 
 window.clearImageAreaSelectionPreview = options =>
   reader.clearImageAreaSelectionPreview(options ?? {})
+
+window.setImageAreaSelectionPreviewRetained = options =>
+  setImageAreaDraftRetained(options?.retained === true)
 
 window.setImageAreaSelectionControlsBounds = bounds =>
   setImageAreaSelectionControlsBounds(bounds ?? null)

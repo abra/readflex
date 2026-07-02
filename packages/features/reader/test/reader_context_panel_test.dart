@@ -88,6 +88,11 @@ void main() {
       contextPanelSource,
       contains('can clear the draft selection while the modal sheet is open'),
     );
+    expect(contextPanelSource, contains('_keepPreviewOnDispose'));
+    expect(
+      contextPanelSource,
+      contains('if (!_keepPreviewOnDispose) widget.onPreviewCleared();'),
+    );
     expect(contextPanelSource, contains('final sourceId = widget.sourceId;'));
     expect(contextPanelSource, contains('if (imageHighlightCubit.isClosed)'));
     expect(
@@ -102,6 +107,16 @@ void main() {
       contains(
         'onPopupInteractionStarted: imageSelectionCubit.protectNextClear',
       ),
+    );
+    expect(
+      contextPanelSource,
+      contains('onDraftRetentionChanged: setImageHighlightDraftRetained'),
+    );
+    expect(contextPanelSource, contains('holdClearProtection()'));
+    expect(contextPanelSource, contains('releaseClearProtection()'));
+    expect(
+      contextPanelSource,
+      contains('setImageAreaSelectionPreviewRetained(retained)'),
     );
     expect(contextPanelSource, contains('onControlsBoundsChanged'));
     expect(contextPanelSource, contains('_kImageHighlightPopupGap'));

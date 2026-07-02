@@ -40,6 +40,7 @@ class ReaderImageSelectionCubit extends Cubit<ReaderImageSelectionState> {
 
   Timer? _clearProtectionTimer;
   bool _protectNextClear = false;
+  bool _holdClearProtection = false;
 
   void select({
     required int pageIndex,
@@ -61,6 +62,7 @@ class ReaderImageSelectionCubit extends Cubit<ReaderImageSelectionState> {
   }
 
   void protectNextClear() {
+    if (_holdClearProtection) return;
     _protectNextClear = true;
     _clearProtectionTimer?.cancel();
     _clearProtectionTimer = Timer(_kClearProtectionDuration, () {
@@ -69,7 +71,22 @@ class ReaderImageSelectionCubit extends Cubit<ReaderImageSelectionState> {
     });
   }
 
+  void holdClearProtection() {
+    _holdClearProtection = true;
+    _protectNextClear = false;
+    _clearProtectionTimer?.cancel();
+    _clearProtectionTimer = null;
+  }
+
+  void releaseClearProtection() {
+    _holdClearProtection = false;
+    _protectNextClear = false;
+    _clearProtectionTimer?.cancel();
+    _clearProtectionTimer = null;
+  }
+
   bool consumeProtectedClear() {
+    if (_holdClearProtection) return true;
     if (!_protectNextClear) return false;
     _protectNextClear = false;
     _clearProtectionTimer?.cancel();
@@ -78,15 +95,14 @@ class ReaderImageSelectionCubit extends Cubit<ReaderImageSelectionState> {
   }
 
   void deselect() {
-    _protectNextClear = false;
-    _clearProtectionTimer?.cancel();
-    _clearProtectionTimer = null;
+    releaseClearProtection();
     emit(const ReaderImageSelectionState());
   }
 
   @override
   Future<void> close() {
     _clearProtectionTimer?.cancel();
+    _holdClearProtection = false;
     return super.close();
   }
 }

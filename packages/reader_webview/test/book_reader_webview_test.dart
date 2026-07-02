@@ -238,6 +238,9 @@ void main() {
       expect(bookJs, contains('window.clearSelectionAfterTextAction'));
       expect(bookJs, contains('window.showSelectionHighlightPreview'));
       expect(bookJs, contains('window.clearSelectionHighlightPreview'));
+      expect(bookJs, contains('window.setImageAreaSelectionPreviewRetained'));
+      expect(bookJs, contains('isImageAreaDraftRetained()'));
+      expect(bookJs, contains('setImageAreaDraftRetained'));
       expect(bookJs, contains('annotationHitForRange'));
       expect(bookJs, contains('containedHighlightIdsForRange'));
       expect(bookJs, contains('rangeStrictlyContainsRange'));
@@ -664,7 +667,10 @@ void main() {
       );
       expect(bookJs, contains('this.#doc.__anxSelectionClearedAt = 0'));
       expect(bookJs, contains('const shouldSuppressTap'));
-      expect(bookJs, contains('if (shouldSuppressTap()) {\n      stop(event);'));
+      expect(
+        bookJs,
+        contains('if (shouldSuppressTap()) {\n      stop(event);'),
+      );
       expect(
         bookJs,
         contains('touchMs: READFLEX_IMAGE_AREA_CANCEL_SUPPRESS_MS'),

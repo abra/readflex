@@ -876,6 +876,18 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     );
   }
 
+  /// Keep the temporary image-area preview from being dismissed by stray WebView
+  /// tap events while a Flutter modal is collecting extra highlight data.
+  void setImageAreaSelectionPreviewRetained(bool retained) {
+    final payload = jsonEncode({'retained': retained});
+    _evaluateReaderCommand(
+      label: 'setImageAreaSelectionPreviewRetained',
+      expression:
+          "typeof window.setImageAreaSelectionPreviewRetained === 'function' ? "
+          "window.setImageAreaSelectionPreviewRetained($payload) : null",
+    );
+  }
+
   /// Tell WebView which viewport area is occupied by Flutter image controls.
   void setImageAreaSelectionControlsBounds(ReaderSelectionPosition bounds) {
     final payload = jsonEncode({
