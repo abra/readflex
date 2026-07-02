@@ -1141,6 +1141,26 @@ void main() {
         isNot(contains("const pageStepColumnWidth = Math.max(0, size - gap)")),
       );
     });
+
+    test('keeps page-turn animation responsive', () {
+      final paginatorJs = _readPackageSource(
+        'assets/foliate-js/src/paginator.js',
+      );
+
+      expect(
+        paginatorJs,
+        contains("const baseDuration = reason === 'page' ? 220 : 300"),
+      );
+      expect(
+        paginatorJs,
+        contains("const minDuration = reason === 'page' ? 160 : 200"),
+      );
+      expect(
+        paginatorJs,
+        contains("const maxDuration = reason === 'page' ? 300 : 400"),
+      );
+    });
+
     test('guards pagination while iframe document body is unavailable', () {
       final paginatorJs = _readPackageSource(
         'assets/foliate-js/src/paginator.js',

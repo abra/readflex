@@ -1444,9 +1444,9 @@ export class Paginator extends HTMLElement {
 
     if (useAnimation) {
       const distance = Math.abs(element[scrollProp] - offset)
-      const baseDuration = reason === 'page' ? 360 : 300
-      const minDuration = reason === 'page' ? 260 : 200
-      const maxDuration = reason === 'page' ? 460 : 400
+      const baseDuration = reason === 'page' ? 220 : 300
+      const minDuration = reason === 'page' ? 160 : 200
+      const maxDuration = reason === 'page' ? 300 : 400
       const adaptiveDuration = opts.duration ?? Math.min(
         maxDuration,
         Math.max(minDuration, baseDuration * (distance / (size || 1)))
