@@ -15,7 +15,7 @@ wrapped into `StorageException` (from `domain_models`) before surfacing.
 | `getHighlightById(id)`                                        | Lookup by id                           |
 | `getHighlightsByIds(ids)`                                     | Batch lookup                           |
 | `addHighlight({sourceId, sourceType, text, note, cfiRange, color})` | Create text highlight            |
-| `addImageAreaHighlight({sourceId, sourceType, pageIndex, x, y, width, height, color})` | Create image-page area highlight |
+| `addImageAreaHighlight({sourceId, sourceType, pageIndex, x, y, width, height, note, color})` | Create image-page area highlight |
 | `updateHighlight(highlight)`                                  | Update fields                          |
 | `deleteHighlight(id)`                                         | Delete by id                           |
 | `deleteHighlightsBySource(sourceId)`                          | Cascade delete when a source is removed|

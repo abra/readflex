@@ -812,10 +812,15 @@ class _ReaderHighlightListTile extends StatelessWidget {
     final colors = context.colors;
     final text = highlight.text.trim();
     final note = highlight.note?.trim();
+    final hasNote = note != null && note.isNotEmpty;
+    final notePromotedToTitle =
+        highlight.kind == HighlightKind.imageArea && hasNote;
+    final fallbackTitle = text.isEmpty ? 'Highlighted text' : text;
+    final title = notePromotedToTitle ? note : fallbackTitle;
     final hasLocation = readerHighlightHasNavigableLocation(highlight);
     final locationLabel = readerHighlightLocationLabel(highlight);
     final subtitle = [
-      if (note != null && note.isNotEmpty) note,
+      if (!notePromotedToTitle && hasNote) note,
       ?locationLabel,
       if (!hasLocation) 'Location unavailable',
     ].join(' · ');
@@ -831,7 +836,7 @@ class _ReaderHighlightListTile extends StatelessWidget {
         color: readerHighlightColor(highlight.color, readerTheme),
       ),
       title: Text(
-        text.isEmpty ? 'Highlighted text' : text,
+        title,
         textAlign: readerDirectionalTextAlign(
           pageProgressionRtl: pageProgressionRtl,
         ),

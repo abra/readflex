@@ -18,6 +18,25 @@ void main() {
     expect(frameSource, contains('clipBehavior: Clip.hardEdge'));
     expect(frameSource, contains('DecoratedBox('));
   });
+
+  test('image-area highlights can use note as drawer title', () {
+    final source = _readSource(
+      packagePath: 'lib/src/reader_screen_drawers.dart',
+    );
+    final tileSource = _classSource(
+      source,
+      className: '_ReaderHighlightListTile',
+      beforeMarker: 'class _ReaderHighlightColorDot',
+    );
+
+    expect(tileSource, contains('highlight.kind == HighlightKind.imageArea'));
+    expect(tileSource, contains('notePromotedToTitle'));
+    expect(
+      tileSource,
+      contains('final title = notePromotedToTitle ? note : fallbackTitle;'),
+    );
+    expect(tileSource, contains('title,'));
+  });
 }
 
 String _classSource(

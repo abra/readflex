@@ -633,8 +633,23 @@ void main() {
       expect(bookJs, contains('dataset.imageAreaHandle'));
       expect(bookJs, contains('READFLEX_IMAGE_AREA_BORDER_WIDTH = 24'));
       expect(bookJs, contains('READFLEX_IMAGE_AREA_HANDLE_SIZE = 96'));
+      expect(bookJs, contains('READFLEX_IMAGE_AREA_CANCEL_SUPPRESS_MS = 80'));
+      expect(
+        bookJs,
+        contains('READFLEX_IMAGE_AREA_CANCEL_ACTION_SUPPRESS_MS = 240'),
+      );
       expect(bookJs, contains('READFLEX_IMAGE_AREA_FILL_ALPHA = 0.3'));
       expect(bookJs, contains('READFLEX_IMAGE_AREA_CONTROLS_HIT_SLOP = 0.006'));
+      expect(bookJs, contains('let imageAreaDraftActive = false'));
+      expect(bookJs, contains('let imageAreaConsumeNextViewAction = false'));
+      expect(bookJs, contains('let imageAreaConsumeNextGestureEnd = false'));
+      expect(bookJs, contains('let suppressClickTimer = null'));
+      expect(bookJs, contains('setImageAreaDraftActive(true)'));
+      expect(bookJs, contains('setImageAreaDraftActive(false)'));
+      expect(bookJs, contains('isImageAreaDraftActive()'));
+      expect(bookJs, contains('suppressNextImageAreaCancelActions()'));
+      expect(bookJs, contains('consumeNextImageAreaViewAction()'));
+      expect(bookJs, contains("'image-area-draft-blocker'"));
       expect(bookJs, contains('imageAreaAnnotationHit'));
       expect(bookJs, contains('imageAreaAnnotationPosition'));
       expect(bookJs, contains('pointerEvents: preview ? \'auto\' : \'none\''));
@@ -642,7 +657,27 @@ void main() {
       expect(bookJs, isNot(contains('installSavedImageAreaHighlightGuard')));
       expect(bookJs, isNot(contains('installSavedImageAreaHighlightHandler')));
       expect(bookJs, contains("callFlutter('onSelectionCleared')"));
+      expect(bookJs, contains('if (consumeNextImageAreaViewAction())'));
+      expect(
+        bookJs,
+        contains('this.#doc?.__readflexClearImageAreaSelectionDraft?.()'),
+      );
+      expect(bookJs, contains('this.#doc.__anxSelectionClearedAt = 0'));
       expect(bookJs, contains('const shouldSuppressTap'));
+      expect(bookJs, contains('if (shouldSuppressTap()) {\n      stop(event);'));
+      expect(
+        bookJs,
+        contains('touchMs: READFLEX_IMAGE_AREA_CANCEL_SUPPRESS_MS'),
+      );
+      expect(bookJs, contains('doc.__anxSuppressClick = false;'));
+      expect(bookJs, contains('clearTimeout(suppressClickTimer)'));
+      expect(bookJs, contains('debounceClick: false'));
+      expect(
+        bookJs,
+        contains(
+          "|| (imageAreaConsumeNextGestureEnd && detail.phase === 'end')",
+        ),
+      );
       expect(bookJs, contains('const clearTapSuppression'));
       expect(bookJs, contains('const updateEditFromPoint'));
       expect(bookJs, contains('event.cancelable !== false'));

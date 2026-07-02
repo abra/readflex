@@ -79,6 +79,17 @@ void main() {
     expect(contextPanelSource, contains('onPreviewColorChanged'));
     expect(contextPanelSource, contains('onPreviewCleared'));
     expect(contextPanelSource, contains('_ImageHighlightSelectionPopup'));
+    expect(contextPanelSource, contains('_ImageHighlightNoteSheet'));
+    expect(contextPanelSource, contains('showAppBottomSheet'));
+    expect(contextPanelSource, contains('Highlight note'));
+    expect(contextPanelSource, contains('Add a comment (optional)'));
+    expect(contextPanelSource, contains('note: result.note'));
+    expect(
+      contextPanelSource,
+      contains('can clear the draft selection while the modal sheet is open'),
+    );
+    expect(contextPanelSource, contains('final sourceId = widget.sourceId;'));
+    expect(contextPanelSource, contains('if (imageHighlightCubit.isClosed)'));
     expect(
       contextPanelSource,
       isNot(contains('onDismiss: dismissImageSelection')),

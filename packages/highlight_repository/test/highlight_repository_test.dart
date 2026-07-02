@@ -46,6 +46,7 @@ void main() {
         y: 0.2,
         width: 0.3,
         height: 0.4,
+        note: 'Important panel',
         progress: 0.25,
         chapterTitle: '0003.jpg',
         color: HighlightColor.green,
@@ -59,6 +60,7 @@ void main() {
       expect(h.imageArea!.y, 0.2);
       expect(h.imageArea!.width, 0.3);
       expect(h.imageArea!.height, 0.4);
+      expect(h.note, 'Important panel');
       expect(h.pageNumber, 3);
       expect(h.progress, 0.25);
       expect(h.chapterTitle, '0003.jpg');
@@ -66,6 +68,7 @@ void main() {
 
       final fetched = await repo.getHighlightById(h.id);
       expect(fetched, h);
+      expect(fetched!.note, 'Important panel');
     });
 
     test('getHighlights returns all highlights', () async {

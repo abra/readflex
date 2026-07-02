@@ -8,6 +8,7 @@ class FakeHighlightRepository implements HighlightRepository {
   bool shouldThrow = false;
 
   final Map<String, List<Highlight>> highlightsBySourceId = {};
+  final List<Highlight> imageAreaHighlights = [];
   final List<String> deletedHighlightIds = [];
   final List<Highlight> updatedHighlights = [];
 
@@ -19,6 +20,46 @@ class FakeHighlightRepository implements HighlightRepository {
   Future<List<Highlight>> getHighlightsBySource(String sourceId) async {
     if (shouldThrow) throw Exception('getHighlightsBySource failed');
     return highlightsBySourceId[sourceId] ?? [];
+  }
+
+  @override
+  Future<Highlight> addImageAreaHighlight({
+    required String sourceId,
+    required SourceType sourceType,
+    required int pageIndex,
+    required double x,
+    required double y,
+    required double width,
+    required double height,
+    String? note,
+    double? progress,
+    String? chapterTitle,
+    HighlightColor color = HighlightColor.yellow,
+  }) async {
+    if (shouldThrow) throw Exception('addImageAreaHighlight failed');
+    final highlight = Highlight(
+      id: 'image-highlight-${imageAreaHighlights.length + 1}',
+      sourceId: sourceId,
+      sourceType: sourceType,
+      text: 'Page highlight',
+      note: note,
+      kind: HighlightKind.imageArea,
+      imageArea: HighlightImageArea(
+        pageIndex: pageIndex,
+        x: x,
+        y: y,
+        width: width,
+        height: height,
+      ),
+      pageNumber: pageIndex + 1,
+      progress: progress,
+      chapterTitle: chapterTitle,
+      color: color,
+      createdAt: DateTime.now(),
+    );
+    imageAreaHighlights.add(highlight);
+    highlightsBySourceId.putIfAbsent(sourceId, () => []).add(highlight);
+    return highlight;
   }
 
   @override

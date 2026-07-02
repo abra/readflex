@@ -60,7 +60,7 @@ abstract class TextAction {
 | `ReaderSearchCubit`           | Book-search debounce, streamed results, progress and recent queries        |
 | `ReaderSelectionCubit`        | Current text selection (text + `cfiRange`)                                 |
 | `ReaderImageSelectionCubit`   | Current image-page area selection for comics/fixed-layout pages            |
-| `ReaderImageHighlightCubit`   | Persists image-page highlights, then `ReaderBloc` refreshes annotations    |
+| `ReaderImageHighlightCubit`   | Persists image-page highlights with optional notes, then `ReaderBloc` refreshes annotations |
 | `ReaderAppearanceCubit`       | Per-source reader appearance overrides over global preferences             |
 | `ReaderBrightnessCubit`       | System/custom reader brightness state and active window override lifecycle |
 

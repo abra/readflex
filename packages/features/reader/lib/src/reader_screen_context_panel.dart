@@ -437,23 +437,45 @@ class _ImageHighlightSelectionPopupState
 
   Future<void> _save() async {
     if (_saving) return;
+    // The WebView can clear the draft selection while the modal sheet is open,
+    // so the save operation must not depend on this popup staying mounted.
+    final sourceId = widget.sourceId;
+    final sourceType = widget.sourceType;
+    final pageIndex = widget.pageIndex;
+    final rect = widget.rect;
+    final color = _selectedColor;
+    final progress = widget.progress;
+    final chapterTitle = widget.chapterTitle;
+    final imageHighlightCubit = widget.imageHighlightCubit;
+    final onActionCompleted = widget.onActionCompleted;
+    final onActionError = widget.onActionError;
+
+    widget.onPopupInteractionStarted();
     setState(() => _saving = true);
+    final result = await showAppBottomSheet<_ImageHighlightNoteResult>(
+      context,
+      builder: (_) => const _ImageHighlightNoteSheet(),
+    );
+    if (result == null) {
+      if (mounted) setState(() => _saving = false);
+      return;
+    }
     try {
-      await widget.imageHighlightCubit.save(
-        sourceId: widget.sourceId,
-        sourceType: widget.sourceType,
-        pageIndex: widget.pageIndex,
-        rect: widget.rect,
-        color: _selectedColor,
-        progress: widget.progress,
-        chapterTitle: widget.chapterTitle,
+      if (imageHighlightCubit.isClosed) return;
+      await imageHighlightCubit.save(
+        sourceId: sourceId,
+        sourceType: sourceType,
+        pageIndex: pageIndex,
+        rect: rect,
+        color: color,
+        note: result.note,
+        progress: progress,
+        chapterTitle: chapterTitle,
       );
-      if (!mounted) return;
-      widget.onActionCompleted();
+      onActionCompleted();
     } catch (error, stack) {
-      if (!mounted) return;
-      widget.onActionError(error, stack);
-      setState(() => _saving = false);
+      onActionError(error, stack);
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -524,6 +546,102 @@ class _ImageHighlightSelectionPopupState
           ],
         );
       },
+    );
+  }
+}
+
+class _ImageHighlightNoteResult {
+  const _ImageHighlightNoteResult(this.note);
+
+  final String? note;
+}
+
+class _ImageHighlightNoteSheet extends StatefulWidget {
+  const _ImageHighlightNoteSheet();
+
+  @override
+  State<_ImageHighlightNoteSheet> createState() =>
+      _ImageHighlightNoteSheetState();
+}
+
+class _ImageHighlightNoteSheetState extends State<_ImageHighlightNoteSheet> {
+  late final TextEditingController _controller;
+
+  String? get _normalizedNote {
+    final note = _controller.text.trim();
+    if (note.isEmpty) return null;
+    return note;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+    _controller.addListener(_onTextChanged);
+  }
+
+  @override
+  void dispose() {
+    _controller
+      ..removeListener(_onTextChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onTextChanged() => setState(() {});
+
+  void _complete(String? note) {
+    Navigator.of(context).pop(_ImageHighlightNoteResult(note));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasNote = _normalizedNote != null;
+
+    return ActionBottomSheetLayout(
+      title: 'Highlight note',
+      headerSpacing: AppSpacing.sm,
+      bodyPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        0,
+        AppSpacing.xl,
+        AppSpacing.lg,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: _controller,
+            minLines: 3,
+            maxLines: 4,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              hintText: 'Add a comment (optional)',
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => _complete(null),
+                  child: const Text('Skip'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: hasNote ? () => _complete(_normalizedNote) : null,
+                  icon: const Icon(AppIcons.check, size: AppIconSize.sm),
+                  label: const Text('Save'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

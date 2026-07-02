@@ -32,6 +32,7 @@ class ReaderImageHighlightCubit extends Cubit<ReaderImageHighlightState> {
     required int pageIndex,
     required ReaderImageAreaRect rect,
     required HighlightColor color,
+    String? note,
     double? progress,
     String? chapterTitle,
   }) async {
@@ -53,6 +54,7 @@ class ReaderImageHighlightCubit extends Cubit<ReaderImageHighlightState> {
         progress: progress,
         chapterTitle: chapterTitle,
         color: color,
+        note: _normalizedNote(note),
       );
       if (isClosed) return;
       emit(const ReaderImageHighlightState());
@@ -61,4 +63,10 @@ class ReaderImageHighlightCubit extends Cubit<ReaderImageHighlightState> {
       Error.throwWithStackTrace(error, stackTrace);
     }
   }
+}
+
+String? _normalizedNote(String? note) {
+  final normalized = note?.trim();
+  if (normalized == null || normalized.isEmpty) return null;
+  return normalized;
 }

@@ -27,13 +27,41 @@ const READFLEX_IMAGE_AREA_DEFAULT_HEIGHT = 0.146667;
 const READFLEX_IMAGE_AREA_BORDER_WIDTH = 24;
 const READFLEX_IMAGE_AREA_HANDLE_SIZE = 96;
 const READFLEX_IMAGE_AREA_TOUCH_SUPPRESS_MS = 900;
+const READFLEX_IMAGE_AREA_CANCEL_SUPPRESS_MS = 80;
+const READFLEX_IMAGE_AREA_CANCEL_ACTION_SUPPRESS_MS = 240;
 const READFLEX_IMAGE_AREA_CONTROLS_HIT_SLOP = 0.006;
 const READFLEX_IMAGE_AREA_FILL_ALPHA = 0.3;
 
 let imageAreaSelectionControlsBounds = null;
+let imageAreaDraftActive = false;
+let imageAreaConsumeNextViewAction = false;
+let imageAreaConsumeNextGestureEnd = false;
 
 const clamp01 = value => Math.min(Math.max(Number(value) || 0, 0), 1);
 const clampRange = (value, min, max) => Math.min(Math.max(value, min), max);
+
+const setImageAreaDraftActive = active => {
+  imageAreaDraftActive = active;
+  globalThis.__readflexImageAreaDraftActive = active;
+};
+
+const isImageAreaDraftActive = () =>
+  imageAreaDraftActive || globalThis.__readflexImageAreaDraftActive === true;
+
+const suppressNextImageAreaCancelActions = () => {
+  imageAreaConsumeNextViewAction = true;
+  imageAreaConsumeNextGestureEnd = true;
+  setTimeout(() => {
+    imageAreaConsumeNextViewAction = false;
+    imageAreaConsumeNextGestureEnd = false;
+  }, READFLEX_IMAGE_AREA_CANCEL_ACTION_SUPPRESS_MS);
+};
+
+const consumeNextImageAreaViewAction = () => {
+  if (!imageAreaConsumeNextViewAction) return false;
+  imageAreaConsumeNextViewAction = false;
+  return true;
+};
 
 const imageAreaPageImage = doc => {
   const body = doc?.body;
@@ -375,6 +403,7 @@ const installImageAreaSelectionHandler = (reader, doc, index) => {
   let press = null;
   let timer = null;
   let suppressTouchUntil = 0;
+  let suppressClickTimer = null;
 
   const clearTimer = () => {
     if (timer) clearTimeout(timer);
@@ -384,20 +413,31 @@ const installImageAreaSelectionHandler = (reader, doc, index) => {
     clearTimer();
     press = null;
   };
-  const suppressTap = () => {
-    suppressTouchUntil = Date.now() + READFLEX_IMAGE_AREA_TOUCH_SUPPRESS_MS;
+  const suppressTap = ({
+    touchMs = READFLEX_IMAGE_AREA_TOUCH_SUPPRESS_MS,
+    debounceClick = true,
+  } = {}) => {
+    suppressTouchUntil = Date.now() + touchMs;
     doc.__anxSuppressClick = true;
-    doc.__anxSelectionClearedAt = Date.now();
+    doc.__anxSelectionClearedAt = debounceClick ? Date.now() : 0;
+    if (suppressClickTimer) clearTimeout(suppressClickTimer);
+    suppressClickTimer = setTimeout(() => {
+      doc.__anxSuppressClick = false;
+      suppressClickTimer = null;
+    }, touchMs);
   };
   const clearTapSuppression = () => {
     suppressTouchUntil = 0;
     doc.__anxSuppressClick = false;
     doc.__anxSelectionClearedAt = 0;
+    if (suppressClickTimer) clearTimeout(suppressClickTimer);
+    suppressClickTimer = null;
   };
   const shouldSuppressTap = () => Date.now() < suppressTouchUntil;
   const clearDraft = ({ allowNextTap = false } = {}) => {
     currentRect = null;
     edit = null;
+    setImageAreaDraftActive(false);
     resetPress();
     clearImageAreaPreview(doc);
     if (allowNextTap) clearTapSuppression();
@@ -406,7 +446,11 @@ const installImageAreaSelectionHandler = (reader, doc, index) => {
   const cancelDraft = event => {
     clearDraft();
     callFlutter('onSelectionCleared');
-    suppressTap();
+    suppressNextImageAreaCancelActions();
+    suppressTap({
+      touchMs: READFLEX_IMAGE_AREA_CANCEL_SUPPRESS_MS,
+      debounceClick: false,
+    });
     stop(event);
   };
   const stop = event => {
@@ -416,11 +460,14 @@ const installImageAreaSelectionHandler = (reader, doc, index) => {
   const stopIfSuppressed = event => {
     if (shouldSuppressTap()) stop(event);
   };
-  const emitSelection = rect => callFlutter('onImageAreaSelected', {
-    pageIndex: index,
-    rect,
-    pos: imageAreaViewportPosition(doc, rect),
-  });
+  const emitSelection = rect => {
+    setImageAreaDraftActive(true);
+    callFlutter('onImageAreaSelected', {
+      pageIndex: index,
+      rect,
+      pos: imageAreaViewportPosition(doc, rect),
+    });
+  };
   const drawPreview = rect => {
     const { color, opacity } = imageAreaPreviewStyle(doc);
     renderImageAreaPreview(doc, {
@@ -481,6 +528,10 @@ const installImageAreaSelectionHandler = (reader, doc, index) => {
     }
     if (currentRect) {
       cancelDraft(event);
+      return;
+    }
+    if (shouldSuppressTap()) {
+      stop(event);
       return;
     }
     if (!imageAreaPageImage(doc)) return;
@@ -571,6 +622,10 @@ const installImageAreaSelectionHandler = (reader, doc, index) => {
   }, true);
 
   doc.addEventListener('click', event => {
+    if (consumeNextImageAreaViewAction()) {
+      stop(event);
+      return;
+    }
     stopIfSuppressed(event);
   }, true);
 
@@ -2723,6 +2778,20 @@ class Reader {
       return
     }
 
+    if (consumeNextImageAreaViewAction()) {
+      return
+    }
+
+    if (isImageAreaDraftActive()) {
+      this.#doc?.__readflexClearImageAreaSelectionDraft?.()
+      if (this.#doc) {
+        this.#doc.__anxSelectionClearedAt = 0
+        this.#doc.__anxSuppressClick = false
+      }
+      callFlutter('onSelectionCleared')
+      return
+    }
+
     if (this.#doc?.__anxSuppressClick) {
       this.#doc.__anxSuppressClick = false;
       return
@@ -3666,6 +3735,20 @@ window.pullUp = () => {
 // readest's: ≥30px primary-axis drag, dominance over the cross axis,
 // ≥0.2 px/ms release velocity
 // (`apps/readest-app/src/app/reader/hooks/usePagination.ts`).
+readflexRegisterGesture(
+  'image-area-draft-blocker',
+  detail =>
+    isImageAreaDraftActive()
+    || (imageAreaConsumeNextGestureEnd && detail.phase === 'end'),
+  detail => {
+    if (imageAreaConsumeNextGestureEnd && detail.phase === 'end') {
+      imageAreaConsumeNextGestureEnd = false
+    }
+    return true
+  },
+  1000,
+)
+
 readflexRegisterGesture(
   'swipe-flip-fixed-layout',
   detail =>
