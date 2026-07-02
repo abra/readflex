@@ -83,6 +83,8 @@ void main() {
     expect(contextPanelSource, contains('showAppBottomSheet'));
     expect(contextPanelSource, contains('Highlight note'));
     expect(contextPanelSource, contains('Add a comment (optional)'));
+    expect(contextPanelSource, contains('child: OutlinedButton('));
+    expect(contextPanelSource, isNot(contains('FilledButton.icon(')));
     expect(contextPanelSource, contains('note: result.note'));
     expect(
       contextPanelSource,

@@ -685,17 +685,16 @@ class _ImageHighlightNoteSheetState extends State<_ImageHighlightNoteSheet> {
           Row(
             children: [
               Expanded(
-                child: TextButton(
+                child: OutlinedButton(
                   onPressed: () => _complete(null),
                   child: const Text('Skip'),
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
-                child: FilledButton.icon(
+                child: FilledButton(
                   onPressed: hasNote ? () => _complete(_normalizedNote) : null,
-                  icon: const Icon(AppIcons.check, size: AppIconSize.sm),
-                  label: const Text('Save'),
+                  child: const Text('Save'),
                 ),
               ),
             ],
