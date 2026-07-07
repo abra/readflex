@@ -6,7 +6,7 @@ so the pub package is `library_feature` while the UI surface remains
 
 Content library browser: shows books and articles in a single feed with
 filter segments, search, and a list/grid toggle. Surfaced as the `Library`
-bottom-nav tab (route `/library`).
+main screen (route `/library`).
 
 ## Public API
 

@@ -25,7 +25,7 @@ import 'confirm_book_deletion_sheet.dart';
 const _sourceRouteReturnRefreshDelay = Duration(milliseconds: 320);
 const _libraryFabBottomLift = AppSpacing.sm;
 
-/// Entry point for the Library tab.
+/// Entry point for the Library screen.
 ///
 /// Pure composition: creates [LibraryBloc] + [LibraryLayoutCubit] +
 /// [LibrarySelectionCubit], kicks off the initial load, and hands the

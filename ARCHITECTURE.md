@@ -41,8 +41,7 @@ technical concern that should not leak into UI code.
 
 Preferred package shapes:
 
-- `packages/features/<feature>` for a screen, tab, bottom sheet, or user-facing
-  flow.
+- `packages/features/<feature>` for a screen, bottom sheet, or user-facing flow.
 - `packages/<name>_repository` for domain persistence and data-source
   orchestration.
 - `packages/<name>_service` for platform, backend, or infrastructure contracts.
@@ -160,7 +159,7 @@ must remain replaceable.
 
 | Package | UI surface | Direct local dependencies |
 |---------|------------|---------------------------|
-| `library_feature` (`packages/features/library`) | Library tab, source search/filter/list/grid, collection management. | `article_repository`, `book_repository`, `collection_repository`, `component_library`, `domain_models`, `preferences_service`, `toast_service` |
+| `library_feature` (`packages/features/library`) | Main Library screen, source search/filter/list/grid, collection management. | `article_repository`, `book_repository`, `collection_repository`, `component_library`, `domain_models`, `preferences_service`, `toast_service` |
 | `import_flow` | Import bottom sheet for books/articles. | `book_repository`, `component_library`, `domain_models`, `monitoring`, `reader_webview` |
 | `reader` | Full-screen reader route and reader UI state. | `article_repository`, `book_repository`, `component_library`, `domain_models`, `highlight_repository`, `preferences_service`, `reader_webview`, `screen_control_service`, `shared` |
 | `highlight` | Reader text action and highlight bottom sheet. | `component_library`, `domain_models`, `highlight_repository`, `shared` |

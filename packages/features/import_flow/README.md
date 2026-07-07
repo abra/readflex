@@ -1,7 +1,7 @@
 # import_flow
 
 Bottom sheet for adding content to the library: import a book file
-(EPUB / PDF / FB2 / MOBI / AZW3 / CBZ). Opened from the Library tab's FAB
+(EPUB / PDF / FB2 / MOBI / AZW3 / CBZ). Opened from the Library screen's FAB
 and used as the single import entry point for adding library content.
 
 ## Public API
