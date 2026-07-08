@@ -296,21 +296,32 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
       ),
     };
 
-    final sheetBody = SizedBox(
-      height: stepHeight,
-      child: _ManageCollectionStepSwitcher(
-        step: _step,
-        height: stepHeight,
-        child: child,
-      ),
-    );
-    if (sizeDuration == Duration.zero) return sheetBody;
-
-    return AnimatedSize(
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: stepHeight),
       duration: sizeDuration,
       curve: Curves.easeInOutCubic,
-      alignment: Alignment.bottomCenter,
-      child: sheetBody,
+      builder: (context, animatedHeight, child) {
+        return SizedBox(
+          key: const ValueKey('manageCollectionStepFrame'),
+          height: animatedHeight,
+          child: ClipRect(
+            child: OverflowBox(
+              alignment: Alignment.bottomCenter,
+              minHeight: stepHeight,
+              maxHeight: stepHeight,
+              child: SizedBox(height: stepHeight, child: child),
+            ),
+          ),
+        );
+      },
+      child: SizedBox(
+        height: stepHeight,
+        child: _ManageCollectionStepSwitcher(
+          step: _step,
+          height: stepHeight,
+          child: child,
+        ),
+      ),
     );
   }
 

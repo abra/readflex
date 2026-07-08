@@ -1289,11 +1289,15 @@ void main() {
           find.byKey(const ValueKey('manageCollectionContent')),
         )
         .height;
+    final stepFrame = find.byKey(const ValueKey('manageCollectionStepFrame'));
+    expect(stepFrame, findsOneWidget);
+    expect(tester.getSize(stepFrame).height, manageStepHeight);
 
     await tester.tap(find.text('Delete collection'));
     await tester.pump();
 
     expect(find.byType(FractionalTranslation), findsWidgets);
+    expect(tester.getSize(stepFrame).height, manageStepHeight);
 
     await tester.pumpAndSettle();
 
