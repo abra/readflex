@@ -35,6 +35,83 @@ final _article = Article(
 );
 
 void main() {
+  testWidgets('list tile exposes source semantics and reader action', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final openedArticle = _article.copyWith(
+      readingProgress: 0.2,
+      lastOpenedAt: DateTime(2026, 1, 2),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: BookLibraryListTile(
+            source: LibrarySource.fromArticle(openedArticle),
+            showTopDivider: false,
+            onTap: () {},
+            onLongPress: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Saved Article')),
+      matchesSemantics(
+        label: 'Saved Article',
+        value: 'Article, Example, 20 percent read',
+        isButton: true,
+        hasTapAction: true,
+        hasLongPressAction: true,
+        onTapHint: 'Open reader',
+        onLongPressHint: 'Select source',
+      ),
+    );
+
+    semantics.dispose();
+  });
+
+  testWidgets('selected list tile exposes selection tap semantics', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: BookLibraryListTile(
+            source: LibrarySource.fromBook(_books.first),
+            showTopDivider: false,
+            isSelected: true,
+            isSelectionMode: true,
+            onTap: () {},
+            onLongPress: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('First Book')),
+      matchesSemantics(
+        label: 'First Book',
+        value: 'Book, Author, EPUB, New',
+        isButton: true,
+        hasSelectedState: true,
+        isSelected: true,
+        hasTapAction: true,
+        hasLongPressAction: true,
+        onTapHint: 'Deselect source',
+      ),
+    );
+
+    semantics.dispose();
+  });
+
   testWidgets('selected list cover border uses delete color', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

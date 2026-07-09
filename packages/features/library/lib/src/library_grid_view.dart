@@ -48,6 +48,7 @@ class LibraryGridView extends StatelessWidget {
           key: ValueKey('library-grid-${source.id}'),
           source: source,
           isSelected: selection.contains(source.id),
+          isSelectionMode: selection.isActive,
           onTap: () => onSourcePressed(source),
           onLongPress: () => onSourceLongPressed(source),
         );

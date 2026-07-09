@@ -864,6 +864,7 @@ class _CollectionSourceRow extends StatelessWidget {
           const SizedBox(width: AppSpacing.md),
           IconButton(
             key: ValueKey('collectionSourceRemove-${source.id}'),
+            tooltip: 'Remove ${source.title} from collection',
             style: IconButton.styleFrom(
               backgroundColor: Colors.transparent,
               foregroundColor: colors.onSurfaceVariant,

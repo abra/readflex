@@ -23,6 +23,93 @@ final _article = Article(
 );
 
 void main() {
+  testWidgets('grid tile exposes source semantics and reader action', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final openedBook = _book.copyWith(
+      readingProgress: 0.42,
+      lastOpenedAt: DateTime(2026, 1, 2),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 120,
+              height: 180,
+              child: BookLibraryGridTile(
+                source: LibrarySource.fromBook(openedBook),
+                onTap: () {},
+                onLongPress: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Flutter in Action')),
+      matchesSemantics(
+        label: 'Flutter in Action',
+        value: 'Book, Eric Windmill, EPUB, 42 percent read',
+        isButton: true,
+        hasTapAction: true,
+        hasLongPressAction: true,
+        onTapHint: 'Open reader',
+        onLongPressHint: 'Select source',
+      ),
+    );
+
+    semantics.dispose();
+  });
+
+  testWidgets('selected grid tile exposes selection tap semantics', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 120,
+              height: 180,
+              child: BookLibraryGridTile(
+                source: LibrarySource.fromBook(_book),
+                isSelected: true,
+                isSelectionMode: true,
+                onTap: () {},
+                onLongPress: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Flutter in Action')),
+      matchesSemantics(
+        label: 'Flutter in Action',
+        value: 'Book, Eric Windmill, EPUB, New',
+        isButton: true,
+        hasSelectedState: true,
+        isSelected: true,
+        hasTapAction: true,
+        hasLongPressAction: true,
+        onTapHint: 'Deselect source',
+      ),
+    );
+
+    semantics.dispose();
+  });
+
   testWidgets(
     'selected grid cover border uses delete color and source radius',
     (

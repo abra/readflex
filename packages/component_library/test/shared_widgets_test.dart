@@ -678,6 +678,74 @@ void main() {
     expect(retried, isTrue);
   });
 
+  testWidgets('AppActionCard exposes title, subtitle, and enabled action', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    var tapped = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: AppActionCard(
+            icon: AppIcons.global,
+            title: 'Save Article',
+            subtitle: 'Paste a web URL for offline reading',
+            onTap: () => tapped = true,
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Save Article')),
+      matchesSemantics(
+        label: 'Save Article',
+        value: 'Paste a web URL for offline reading',
+        isButton: true,
+        hasEnabledState: true,
+        isEnabled: true,
+        hasTapAction: true,
+      ),
+    );
+
+    await tester.tap(find.bySemanticsLabel('Save Article'));
+    expect(tapped, isTrue);
+
+    semantics.dispose();
+  });
+
+  testWidgets('AppActionCard exposes disabled state', (tester) async {
+    final semantics = tester.ensureSemantics();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: const Scaffold(
+          body: AppActionCard(
+            icon: AppIcons.offline,
+            title: 'Save Article',
+            subtitle: 'Paste a web URL for offline reading',
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Save Article')),
+      matchesSemantics(
+        label: 'Save Article',
+        value: 'Paste a web URL for offline reading',
+        isButton: true,
+        hasEnabledState: true,
+        isEnabled: false,
+      ),
+    );
+
+    semantics.dispose();
+  });
+
   testWidgets('ScrollEdgeFade renders with top edge', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(

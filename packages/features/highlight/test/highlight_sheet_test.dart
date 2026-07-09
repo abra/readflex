@@ -57,6 +57,56 @@ void main() {
     expect(containers, findsNWidgets(HighlightColor.values.length));
   });
 
+  testWidgets('color picker exposes labels and selected state to semantics', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+
+    await tester.pumpWidget(buildSubject());
+
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Yellow highlight color')),
+      matchesSemantics(
+        label: 'Yellow highlight color',
+        isButton: true,
+        hasSelectedState: true,
+        isSelected: true,
+        hasTapAction: true,
+        onTapHint: 'Select highlight color',
+      ),
+    );
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Blue highlight color')),
+      matchesSemantics(
+        label: 'Blue highlight color',
+        isButton: true,
+        hasSelectedState: true,
+        isSelected: false,
+        hasTapAction: true,
+        onTapHint: 'Select highlight color',
+      ),
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('highlightColorSemantics-blue')),
+    );
+    await tester.pump();
+
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Blue highlight color')),
+      matchesSemantics(
+        label: 'Blue highlight color',
+        isButton: true,
+        hasSelectedState: true,
+        isSelected: true,
+        hasTapAction: true,
+        onTapHint: 'Select highlight color',
+      ),
+    );
+
+    semantics.dispose();
+  });
+
   testWidgets('renders note field', (tester) async {
     await tester.pumpWidget(buildSubject());
 

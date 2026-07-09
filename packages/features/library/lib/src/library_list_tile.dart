@@ -2,6 +2,8 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 
+import 'library_source_semantics.dart';
+
 /// Alpha applied to muted metadata (secondary text, icons) in list rows.
 const double _kMutedAlpha = 0.55;
 const double _kArticleIconAlpha = 0.4;
@@ -24,6 +26,7 @@ class BookLibraryListTile extends StatelessWidget {
     required this.onTap,
     this.onLongPress,
     this.isSelected = false,
+    this.isSelectionMode = false,
     super.key,
   });
 
@@ -32,6 +35,7 @@ class BookLibraryListTile extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
   final bool isSelected;
+  final bool isSelectionMode;
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +81,16 @@ class BookLibraryListTile extends StatelessWidget {
       textDirection: coverTextDirection,
       showTopDivider: showTopDivider,
       isSelected: isSelected,
+      semanticsLabel: librarySourceSemanticsLabel(source),
+      semanticsValue: librarySourceSemanticsValue(source),
+      reportsSelectedState: isSelectionMode,
+      tapHint: librarySourceTapHint(
+        isSelectionMode: isSelectionMode,
+        isSelected: isSelected,
+      ),
+      longPressHint: librarySourceLongPressHint(
+        isSelectionMode: isSelectionMode,
+      ),
       onTap: onTap,
       onLongPress: onLongPress,
       metaBuilder: (context, mutedColor) {
@@ -152,6 +166,11 @@ class _ListRowShell extends StatelessWidget {
     required this.textDirection,
     required this.metaBuilder,
     required this.showTopDivider,
+    required this.semanticsLabel,
+    required this.semanticsValue,
+    required this.reportsSelectedState,
+    required this.tapHint,
+    required this.longPressHint,
     required this.onTap,
     this.onLongPress,
     this.isSelected = false,
@@ -165,6 +184,11 @@ class _ListRowShell extends StatelessWidget {
   metaBuilder;
   final bool showTopDivider;
   final bool isSelected;
+  final String semanticsLabel;
+  final String semanticsValue;
+  final bool reportsSelectedState;
+  final String tapHint;
+  final String? longPressHint;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
 
@@ -178,135 +202,151 @@ class _ListRowShell extends StatelessWidget {
     final hasSubtitle = subtitle != null && subtitle!.isNotEmpty;
     final isRtl = textDirection == TextDirection.rtl;
 
-    return GestureDetector(
+    return Semantics(
+      container: true,
+      excludeSemantics: true,
+      button: true,
+      selected: reportsSelectedState ? isSelected : null,
+      label: semanticsLabel,
+      value: semanticsValue,
+      onTapHint: tapHint,
+      onLongPressHint: longPressHint,
       onTap: onTap,
       onLongPress: onLongPress,
-      behavior: HitTestBehavior.opaque,
-      child: Stack(
-        children: [
-          if (isSelected)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: _kListRowVerticalPadding - _kListSelectionBackgroundInset,
-              height: _kListCoverHeight + (_kListSelectionBackgroundInset * 2),
-              child: DecoratedBox(
-                key: const ValueKey('libraryListSelectionBackground'),
-                decoration: BoxDecoration(
-                  color: selectionColor.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: GestureDetector(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        behavior: HitTestBehavior.opaque,
+        child: Stack(
+          children: [
+            if (isSelected)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom:
+                    _kListRowVerticalPadding - _kListSelectionBackgroundInset,
+                height:
+                    _kListCoverHeight + (_kListSelectionBackgroundInset * 2),
+                child: DecoratedBox(
+                  key: const ValueKey('libraryListSelectionBackground'),
+                  decoration: BoxDecoration(
+                    color: selectionColor.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
                 ),
               ),
-            ),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              vertical: _kListRowVerticalPadding,
-              horizontal: _kListRowHorizontalPadding,
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // Fixed 60x90 cover slot (2:3 book aspect). AppCoverArt clips
-                // its own corners (Container.clipBehavior), so no outer
-                // ClipRRect needed.
-                SizedBox(
-                  key: const ValueKey('libraryListCoverSlot'),
-                  width: _kListCoverWidth,
-                  height: _kListCoverHeight,
-                  child: Stack(
-                    children: [
-                      Positioned.fill(child: cover),
-                      if (isSelected) ...[
-                        Positioned.fill(
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(AppRadius.xs),
-                              border: Border.all(
-                                color: selectionColor,
-                                width: 2,
+            Container(
+              padding: const EdgeInsets.symmetric(
+                vertical: _kListRowVerticalPadding,
+                horizontal: _kListRowHorizontalPadding,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // Fixed 60x90 cover slot (2:3 book aspect). AppCoverArt clips
+                  // its own corners (Container.clipBehavior), so no outer
+                  // ClipRRect needed.
+                  SizedBox(
+                    key: const ValueKey('libraryListCoverSlot'),
+                    width: _kListCoverWidth,
+                    height: _kListCoverHeight,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(child: cover),
+                        if (isSelected) ...[
+                          Positioned.fill(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.xs,
+                                ),
+                                border: Border.all(
+                                  color: selectionColor,
+                                  width: 2,
+                                ),
+                                color: selectionColor.withValues(alpha: 0.15),
                               ),
-                              color: selectionColor.withValues(alpha: 0.15),
                             ),
                           ),
+                          Positioned(
+                            top: _kListSelectionCheckInset,
+                            right: _kListSelectionCheckInset,
+                            child: _SelectionCheck(color: selectionColor),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  // Demo uses 14dp cover-to-text gap — sits between our
+                  // md(12) and lg(16) tokens. `md + xxs` = 14 exactly and
+                  // composes from real tokens, so we don't add a new one.
+                  const SizedBox(width: _kCoverToTextGap),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: isRtl
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          title,
+                          textAlign: TextAlign.start,
+                          textDirection: textDirection,
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.text.sourceListTitle.copyWith(
+                            color: colors.onSurface,
+                          ),
                         ),
-                        Positioned(
-                          top: _kListSelectionCheckInset,
-                          right: _kListSelectionCheckInset,
-                          child: _SelectionCheck(color: selectionColor),
+                        // Demo uses 6dp title-to-meta gap (between xs=4 and
+                        // sm=8). Composed from xs + xxs to stay token-based.
+                        const SizedBox(height: AppSpacing.xs + AppSpacing.xxs),
+                        Directionality(
+                          textDirection: textDirection,
+                          child: Row(
+                            key: const ValueKey('libraryListRowMeta'),
+                            textDirection: textDirection,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (hasSubtitle) ...[
+                                Flexible(
+                                  child: Text(
+                                    subtitle!,
+                                    textAlign: TextAlign.start,
+                                    textDirection: textDirection,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: _metaStyle(context, mutedColor),
+                                  ),
+                                ),
+                                _MetaDot(mutedColor: mutedColor),
+                              ],
+                              ...metaSegments,
+                            ],
+                          ),
                         ),
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                // Demo uses 14dp cover-to-text gap — sits between our
-                // md(12) and lg(16) tokens. `md + xxs` = 14 exactly and
-                // composes from real tokens, so we don't add a new one.
-                const SizedBox(width: _kCoverToTextGap),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: isRtl
-                        ? CrossAxisAlignment.end
-                        : CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title,
-                        textAlign: TextAlign.start,
-                        textDirection: textDirection,
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.text.sourceListTitle.copyWith(
-                          color: colors.onSurface,
-                        ),
-                      ),
-                      // Demo uses 6dp title-to-meta gap (between xs=4 and
-                      // sm=8). Composed from xs + xxs to stay token-based.
-                      const SizedBox(height: AppSpacing.xs + AppSpacing.xxs),
-                      Directionality(
-                        textDirection: textDirection,
-                        child: Row(
-                          key: const ValueKey('libraryListRowMeta'),
-                          textDirection: textDirection,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (hasSubtitle) ...[
-                              Flexible(
-                                child: Text(
-                                  subtitle!,
-                                  textAlign: TextAlign.start,
-                                  textDirection: textDirection,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: _metaStyle(context, mutedColor),
-                                ),
-                              ),
-                              _MetaDot(mutedColor: mutedColor),
-                            ],
-                            ...metaSegments,
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (showTopDivider)
-            // Paint the separator above this row's cover shadow. A bottom
-            // divider on the previous row can be covered by the next row's
-            // shadow because list children paint in order.
-            Positioned(
-              left: 0,
-              right: 0,
-              top: 0,
-              child: Container(
-                key: const ValueKey('libraryListRowTopDivider'),
-                height: 1,
-                color: _listDividerColor(context),
+                ],
               ),
             ),
-        ],
+            if (showTopDivider)
+              // Paint the separator above this row's cover shadow. A bottom
+              // divider on the previous row can be covered by the next row's
+              // shadow because list children paint in order.
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 0,
+                child: Container(
+                  key: const ValueKey('libraryListRowTopDivider'),
+                  height: 1,
+                  color: _listDividerColor(context),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

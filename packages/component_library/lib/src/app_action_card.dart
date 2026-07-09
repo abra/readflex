@@ -41,57 +41,68 @@ class AppActionCard extends StatelessWidget {
         : cs.onSurface.withValues(alpha: 0.28);
     final effectiveIconColor = iconColor ?? defaultIconColor;
 
-    return Material(
-      color: cs.surfaceContainerHighest.withValues(alpha: enabled ? 0.6 : 0.36),
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: InkWell(
-        onTap: onTap,
+    return Semantics(
+      container: true,
+      excludeSemantics: true,
+      button: true,
+      enabled: enabled,
+      label: title,
+      value: subtitle,
+      onTap: onTap,
+      child: Material(
+        color: cs.surfaceContainerHighest.withValues(
+          alpha: enabled ? 0.6 : 0.36,
+        ),
         borderRadius: BorderRadius.circular(AppRadius.md),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.lg,
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: effectiveIconColor.withValues(
-                    alpha: enabled ? 0.10 : 0.08,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.lg,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: effectiveIconColor.withValues(
+                      alpha: enabled ? 0.10 : 0.08,
+                    ),
+                    shape: BoxShape.circle,
                   ),
-                  shape: BoxShape.circle,
+                  alignment: Alignment.center,
+                  child: Icon(icon, size: 18, color: effectiveIconColor),
                 ),
-                alignment: Alignment.center,
-                child: Icon(icon, size: 18, color: effectiveIconColor),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      style: text.bodyMedium.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: foreground,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: text.labelSmall.copyWith(color: muted),
-                    ),
-                  ],
-                ),
-              ),
-              if (trailing != null) ...[
                 const SizedBox(width: AppSpacing.md),
-                trailing!,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        style: text.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: foreground,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: text.labelSmall.copyWith(color: muted),
+                      ),
+                    ],
+                  ),
+                ),
+                if (trailing != null) ...[
+                  const SizedBox(width: AppSpacing.md),
+                  trailing!,
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -122,42 +133,52 @@ class AppActionTile extends StatelessWidget {
         : cs.onSurface.withValues(alpha: 0.42);
     final primary = enabled ? cs.primary : cs.onSurface.withValues(alpha: 0.28);
 
-    return Material(
-      color: cs.surfaceContainerHighest.withValues(alpha: enabled ? 0.6 : 0.36),
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: InkWell(
-        onTap: onTap,
+    return Semantics(
+      container: true,
+      excludeSemantics: true,
+      button: true,
+      enabled: enabled,
+      label: title,
+      onTap: onTap,
+      child: Material(
+        color: cs.surfaceContainerHighest.withValues(
+          alpha: enabled ? 0.6 : 0.36,
+        ),
         borderRadius: BorderRadius.circular(AppRadius.md),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.md,
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: AppSizes.iconButtonSize,
-                height: AppSizes.iconButtonSize,
-                decoration: BoxDecoration(
-                  color: primary.withValues(alpha: enabled ? 0.10 : 0.08),
-                  shape: BoxShape.circle,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.md,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: AppSizes.iconButtonSize,
+                  height: AppSizes.iconButtonSize,
+                  decoration: BoxDecoration(
+                    color: primary.withValues(alpha: enabled ? 0.10 : 0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(icon, size: AppIconSize.xs, color: primary),
                 ),
-                alignment: Alignment.center,
-                child: Icon(icon, size: AppIconSize.xs, color: primary),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: text.labelMedium.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: foreground,
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.labelMedium.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: foreground,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

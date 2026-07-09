@@ -103,20 +103,30 @@ class _HighlightSheetView extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: HighlightColor.values.map((color) {
                   final isSelected = state.selectedColor == color;
-                  return GestureDetector(
+                  return Semantics(
+                    key: ValueKey('highlightColorSemantics-${color.name}'),
+                    container: true,
+                    excludeSemantics: true,
+                    button: true,
+                    selected: isSelected,
+                    label: '${_labelForHighlightColor(color)} highlight color',
+                    onTapHint: 'Select highlight color',
                     onTap: () => cubit.setColor(color),
-                    behavior: HitTestBehavior.opaque,
-                    child: SizedBox(
-                      width: AppSizes.buttonHeight,
-                      height: AppSizes.buttonHeight,
-                      child: Center(
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: _colorForHighlight(context, color),
-                            shape: BoxShape.circle,
-                            border: isSelected ? Border.all(width: 3) : null,
+                    child: GestureDetector(
+                      onTap: () => cubit.setColor(color),
+                      behavior: HitTestBehavior.opaque,
+                      child: SizedBox(
+                        width: AppSizes.buttonHeight,
+                        height: AppSizes.buttonHeight,
+                        child: Center(
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: _colorForHighlight(context, color),
+                              shape: BoxShape.circle,
+                              border: isSelected ? Border.all(width: 3) : null,
+                            ),
                           ),
                         ),
                       ),
@@ -178,6 +188,16 @@ class _HighlightSheetView extends StatelessWidget {
       HighlightColor.blue => ext.highlightBlue,
       HighlightColor.pink => ext.highlightPink,
       HighlightColor.purple => ext.highlightPurple,
+    };
+  }
+
+  String _labelForHighlightColor(HighlightColor color) {
+    return switch (color) {
+      HighlightColor.yellow => 'Yellow',
+      HighlightColor.green => 'Green',
+      HighlightColor.blue => 'Blue',
+      HighlightColor.pink => 'Pink',
+      HighlightColor.purple => 'Purple',
     };
   }
 }

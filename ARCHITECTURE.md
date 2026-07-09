@@ -106,6 +106,20 @@ Rules:
 This keeps feature UI testable and prevents accidental coupling between
 features.
 
+## Accessibility
+
+Accessibility is a UI contract in this codebase. Prefer built-in Flutter and
+Material semantics first, then add explicit `Semantics` to custom controls whose
+role, state, value, or gesture would otherwise be unclear.
+
+Reusable component semantics belong in `component_library`; feature-specific
+labels and values belong inside the feature package that owns the UI. Do not
+pass repositories, services, parsers, or storage objects into Views for
+accessibility. Derive labels and values from the existing bloc/cubit state and
+UI callbacks.
+
+Keep the detailed rules in `ACCESSIBILITY.md` aligned with real code and tests.
+
 ## Package Map
 
 ### Core Contracts and Storage

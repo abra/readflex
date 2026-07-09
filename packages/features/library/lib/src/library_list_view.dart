@@ -58,6 +58,7 @@ class LibraryListView extends StatelessWidget {
         final tile = BookLibraryListTile(
           source: source,
           isSelected: selection.contains(source.id),
+          isSelectionMode: selection.isActive,
           showTopDivider: index > 0,
           onTap: () => onSourcePressed(source),
           onLongPress: () => onSourceLongPressed(source),

@@ -331,7 +331,9 @@ class _CollectionScopeRow extends StatelessWidget {
                 if (scope.canManage) ...[
                   const SizedBox(width: AppSpacing.md),
                   Semantics(
+                    label: 'Manage ${scope.label}',
                     button: true,
+                    onTapHint: 'Open collection actions',
                     child: GestureDetector(
                       key: ValueKey(
                         'collectionScopeManage-${scope.type.name}-${scope.id}',
