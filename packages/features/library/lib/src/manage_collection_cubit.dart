@@ -53,7 +53,7 @@ class ManageCollectionCubit extends Cubit<ManageCollectionState> {
       emit(
         state.copyWith(
           status: ManageCollectionStatus.failure,
-          errorMessage: 'Collection name is required',
+          errorCode: ManageCollectionErrorCode.collectionNameRequired,
         ),
       );
       return false;
@@ -62,7 +62,7 @@ class ManageCollectionCubit extends Cubit<ManageCollectionState> {
       emit(
         state.copyWith(
           status: ManageCollectionStatus.failure,
-          errorMessage: 'Failed to save collection',
+          errorCode: ManageCollectionErrorCode.saveCollectionFailed,
         ),
       );
       return false;
@@ -90,7 +90,7 @@ class ManageCollectionCubit extends Cubit<ManageCollectionState> {
       emit(
         state.copyWith(
           status: ManageCollectionStatus.failure,
-          errorMessage: 'Failed to delete collection',
+          errorCode: ManageCollectionErrorCode.deleteCollectionFailed,
         ),
       );
       return false;

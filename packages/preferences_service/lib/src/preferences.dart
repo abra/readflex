@@ -8,8 +8,7 @@ const _unset = Object();
 enum ReaderTextAlignment {
   start('start'),
   end('end'),
-  justify('justify')
-  ;
+  justify('justify');
 
   const ReaderTextAlignment(this.id);
 
@@ -31,8 +30,7 @@ enum ReaderTextAlignment {
 
 enum ReaderPageTurnStyle {
   horizontal('slide'),
-  vertical('vertical')
-  ;
+  vertical('vertical');
 
   const ReaderPageTurnStyle(this.id);
 

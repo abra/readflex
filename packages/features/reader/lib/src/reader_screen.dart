@@ -10,6 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/services.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:preferences_service/preferences_service.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader_webview/reader_webview.dart';
 import 'package:screen_control_service/screen_control_service.dart';
 import 'package:shared/shared.dart';

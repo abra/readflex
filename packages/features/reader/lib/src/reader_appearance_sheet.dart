@@ -2,6 +2,7 @@ import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:preferences_service/preferences_service.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'reader_appearance_cubit.dart';
 
@@ -42,7 +43,7 @@ class _ReaderAppearanceSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final maxBodyHeight = MediaQuery.sizeOf(context).height * 0.76;
     return ActionBottomSheetLayout(
-      title: 'Appearance',
+      title: context.l10n.readerAppearanceTitle,
       headerTrailing: const _ResetAppearanceButton(),
       headerSpacing: AppSpacing.md,
       child: ConstrainedBox(
@@ -68,7 +69,7 @@ class _ResetAppearanceButton extends StatelessWidget {
     return TextButton.icon(
       onPressed: canReset ? context.read<ReaderAppearanceCubit>().reset : null,
       icon: const Icon(AppIcons.refresh, size: AppIconSize.sm),
-      label: const Text('Reset'),
+      label: Text(context.l10n.readerReset),
     );
   }
 }
@@ -85,11 +86,11 @@ class _LayeredAppearanceControls extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _PanelHeader(title: 'Theme'),
+        _PanelHeader(title: context.l10n.readerTheme),
         const SizedBox(height: AppSpacing.xs),
         const _ThemeSwatchLevel(),
         const SizedBox(height: AppSpacing.sm),
-        const _PanelHeader(title: 'Font'),
+        _PanelHeader(title: context.l10n.readerFont),
         const SizedBox(height: AppSpacing.xs),
         const _FontLevel(),
         const SizedBox(height: AppSpacing.sm),
@@ -171,10 +172,11 @@ class _ThemeSwatchButton extends StatelessWidget {
     final cs = context.colors;
     final text = context.text;
     final theme = preset.data;
+    final label = _themePresetLabel(context, preset);
     return Semantics(
       button: true,
       selected: active,
-      label: preset.label,
+      label: label,
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
@@ -203,7 +205,7 @@ class _ThemeSwatchButton extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              preset.label,
+              label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: text.labelSmall.copyWith(
@@ -218,6 +220,17 @@ class _ThemeSwatchButton extends StatelessWidget {
       ),
     );
   }
+}
+
+String _themePresetLabel(BuildContext context, ReaderThemePreset preset) {
+  final l10n = context.l10n;
+  return switch (preset) {
+    ReaderThemePreset.snow => l10n.readerThemeSnow,
+    ReaderThemePreset.paper => l10n.readerThemePaper,
+    ReaderThemePreset.warm => l10n.readerThemeWarm,
+    ReaderThemePreset.mist => l10n.readerThemeMist,
+    ReaderThemePreset.night => l10n.readerThemeNight,
+  };
 }
 
 class _FontLevel extends StatelessWidget {
@@ -333,13 +346,13 @@ class _FontSizeControl extends StatelessWidget {
       width: _textSizeControlWidth,
       stepperKey: const ValueKey('reader-text-scale-control'),
       valueLabel: '${(stepperState.textScale * 100).round()}%',
-      valueTooltip: 'Reset text size',
-      valueSemanticLabel: 'Text size',
+      valueTooltip: context.l10n.readerResetTextSize,
+      valueSemanticLabel: context.l10n.readerTextSize,
       highlightValue: stepperState.highlighted,
       decreaseIcon: AppIcons.remove,
       increaseIcon: AppIcons.add,
-      decreaseTooltip: 'Decrease text size',
-      increaseTooltip: 'Increase text size',
+      decreaseTooltip: context.l10n.readerDecreaseTextSize,
+      increaseTooltip: context.l10n.readerIncreaseTextSize,
       decreaseKey: const ValueKey('reader-text-scale-decrease'),
       increaseKey: const ValueKey('reader-text-scale-increase'),
       valueKey: const ValueKey('reader-text-scale-value'),
@@ -400,30 +413,30 @@ class _ReaderLayoutSettingsPanel extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const _AppearanceSettingRow(
-            label: 'Font size',
-            control: _FontSizeControl(),
+          _AppearanceSettingRow(
+            label: context.l10n.readerFontSize,
+            control: const _FontSizeControl(),
           ),
           const SizedBox(height: AppSpacing.xs),
-          const _AppearanceSettingRow(
-            label: 'Line spacing',
-            control: _LineSpacingControl(),
+          _AppearanceSettingRow(
+            label: context.l10n.readerLineSpacing,
+            control: const _LineSpacingControl(),
           ),
           const SizedBox(height: AppSpacing.xs),
-          const _AppearanceSettingRow(
-            label: 'Text alignment',
-            control: _AlignmentControl(),
+          _AppearanceSettingRow(
+            label: context.l10n.readerTextAlignment,
+            control: const _AlignmentControl(),
           ),
           const SizedBox(height: AppSpacing.xs),
-          const _AppearanceSettingRow(
-            label: 'Page margins',
-            control: _MarginControl(),
+          _AppearanceSettingRow(
+            label: context.l10n.readerPageMargins,
+            control: const _MarginControl(),
           ),
           if (showPageTurnControls) ...[
             const SizedBox(height: AppSpacing.xs),
-            const _AppearanceSettingRow(
-              label: 'Page turn',
-              control: _PageTurnControl(),
+            _AppearanceSettingRow(
+              label: context.l10n.readerPageTurn,
+              control: const _PageTurnControl(),
             ),
           ],
         ],
@@ -482,21 +495,21 @@ class _AlignmentControl extends StatelessWidget {
       width: _marginsControlWidth,
       selectedValue: alignment,
       onSelected: (value) => cubit.setTextAlignment(value),
-      segments: const [
+      segments: [
         _AppearanceIconSegment(
           value: ReaderTextAlignment.start,
           icon: AppIcons.alignStart,
-          tooltip: 'Align start',
+          tooltip: context.l10n.readerAlignStart,
         ),
         _AppearanceIconSegment(
           value: ReaderTextAlignment.justify,
           icon: AppIcons.alignJustify,
-          tooltip: 'Justify text',
+          tooltip: context.l10n.readerJustifyText,
         ),
         _AppearanceIconSegment(
           value: ReaderTextAlignment.end,
           icon: AppIcons.alignEnd,
-          tooltip: 'Align end',
+          tooltip: context.l10n.readerAlignEnd,
         ),
       ],
     );
@@ -516,16 +529,16 @@ class _PageTurnControl extends StatelessWidget {
       width: _pageTurnControlWidth,
       selectedValue: style,
       onSelected: (value) => cubit.setPageTurnStyle(value),
-      segments: const [
+      segments: [
         _AppearanceIconSegment(
           value: ReaderPageTurnStyle.horizontal,
           icon: AppIcons.pageTurnHorizontal,
-          tooltip: 'Horizontal page turn',
+          tooltip: context.l10n.readerHorizontalPageTurn,
         ),
         _AppearanceIconSegment(
           value: ReaderPageTurnStyle.vertical,
           icon: AppIcons.pageTurnVertical,
-          tooltip: 'Vertical page turn',
+          tooltip: context.l10n.readerVerticalPageTurn,
         ),
       ],
     );
@@ -557,13 +570,13 @@ class _LineSpacingControl extends StatelessWidget {
       width: _marginsControlWidth,
       stepperKey: const ValueKey('reader-line-height-control'),
       valueLabel: _lineHeightLabel(lineHeight),
-      valueTooltip: 'Reset line spacing',
-      valueSemanticLabel: 'Line spacing',
+      valueTooltip: context.l10n.readerResetLineSpacing,
+      valueSemanticLabel: context.l10n.readerLineSpacing,
       highlightValue: stepperState.highlighted,
       decreaseIcon: AppIcons.remove,
       increaseIcon: AppIcons.add,
-      decreaseTooltip: 'Decrease line spacing',
-      increaseTooltip: 'Increase line spacing',
+      decreaseTooltip: context.l10n.readerDecreaseLineSpacing,
+      increaseTooltip: context.l10n.readerIncreaseLineSpacing,
       decreaseKey: const ValueKey('reader-line-height-decrease'),
       increaseKey: const ValueKey('reader-line-height-increase'),
       valueKey: const ValueKey('reader-line-height-value'),
@@ -605,13 +618,13 @@ class _MarginControl extends StatelessWidget {
       width: _marginsControlWidth,
       stepperKey: const ValueKey('reader-margin-control'),
       valueLabel: '${sideMargin.round()}%',
-      valueTooltip: 'Reset page margins',
-      valueSemanticLabel: 'Page margins',
+      valueTooltip: context.l10n.readerResetPageMargins,
+      valueSemanticLabel: context.l10n.readerPageMargins,
       highlightValue: stepperState.highlighted,
       decreaseIcon: AppIcons.remove,
       increaseIcon: AppIcons.add,
-      decreaseTooltip: 'Decrease page margins',
-      increaseTooltip: 'Increase page margins',
+      decreaseTooltip: context.l10n.readerDecreasePageMargins,
+      increaseTooltip: context.l10n.readerIncreasePageMargins,
       decreaseKey: const ValueKey('reader-margin-decrease'),
       increaseKey: const ValueKey('reader-margin-increase'),
       valueKey: const ValueKey('reader-margin-value'),

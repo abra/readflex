@@ -2,6 +2,7 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'add_to_collection_cubit.dart';
 
@@ -70,7 +71,7 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet> {
   @override
   Widget build(BuildContext context) {
     return ActionBottomSheetLayout(
-      title: 'Add to collection',
+      title: context.l10n.libraryAddToCollectionTitle,
       child: BlocBuilder<AddToCollectionCubit, AddToCollectionState>(
         builder: (context, state) {
           final content = switch (state.status) {
@@ -126,21 +127,22 @@ class _CollectionContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.text;
+    final l10n = context.l10n;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (state.errorMessage != null) ...[
+        if (state.errorCode != null) ...[
           Text(
-            state.errorMessage!,
+            _addToCollectionErrorMessage(l10n, state.errorCode!),
             style: text.bodyMedium.copyWith(color: colors.error),
           ),
           const SizedBox(height: AppSpacing.md),
         ],
         _CollectionRow(
           icon: AppIcons.collectionFavourites,
-          label: 'Favourites',
+          label: l10n.libraryFavourites,
           sourceCount: state.favouritesSourceCount,
           enabled: !state.isBusy,
           onPressed: onFavouritesPressed,
@@ -153,7 +155,7 @@ class _CollectionContent extends StatelessWidget {
               bottom: AppSpacing.lg,
             ),
             child: Text(
-              'Create a collection for $sourceCount selected item${sourceCount == 1 ? '' : 's'}.',
+              l10n.libraryCreateCollectionPrompt(sourceCount),
               style: text.bodyMedium.copyWith(
                 color: colors.onSurfaceVariant,
               ),
@@ -187,8 +189,8 @@ class _CollectionContent extends StatelessWidget {
           controller: nameController,
           enabled: !state.isBusy,
           textInputAction: TextInputAction.done,
-          decoration: const InputDecoration(
-            hintText: 'New collection name',
+          decoration: InputDecoration(
+            hintText: l10n.libraryNewCollectionName,
           ),
           onSubmitted: (_) => onCreatePressed?.call(),
         ),
@@ -198,7 +200,7 @@ class _CollectionContent extends StatelessWidget {
             Expanded(
               child: OutlinedButton(
                 onPressed: onCancelPressed,
-                child: const Text('Cancel'),
+                child: Text(l10n.commonCancel),
               ),
             ),
             const SizedBox(width: AppSpacing.md),
@@ -206,7 +208,7 @@ class _CollectionContent extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: onCreatePressed,
                 icon: const Icon(AppIcons.add, size: AppIconSize.sm),
-                label: const Text('Create'),
+                label: Text(l10n.commonCreate),
               ),
             ),
           ],
@@ -214,6 +216,24 @@ class _CollectionContent extends StatelessWidget {
       ],
     );
   }
+}
+
+String _addToCollectionErrorMessage(
+  ReadflexLocalizations l10n,
+  AddToCollectionErrorCode errorCode,
+) {
+  return switch (errorCode) {
+    AddToCollectionErrorCode.loadCollectionsFailed =>
+      l10n.libraryLoadCollectionsFailed,
+    AddToCollectionErrorCode.updateCollectionFailed =>
+      l10n.libraryUpdateCollectionFailed,
+    AddToCollectionErrorCode.updateFavouritesFailed =>
+      l10n.libraryUpdateFavouritesFailed,
+    AddToCollectionErrorCode.collectionNameRequired =>
+      l10n.libraryCollectionNameRequired,
+    AddToCollectionErrorCode.createCollectionFailed =>
+      l10n.libraryCreateCollectionFailed,
+  };
 }
 
 class _CollectionRow extends StatelessWidget {

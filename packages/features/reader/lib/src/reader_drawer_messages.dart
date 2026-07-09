@@ -1,16 +1,21 @@
 import 'package:domain_models/domain_models.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader_webview/reader_webview.dart';
 
 String readerTocEmptyMessage({
+  required ReadflexLocalizations l10n,
   required BookFormat? format,
   required bool hasSourceItems,
 }) {
-  if (hasSourceItems) return 'No matching chapters';
-  return 'No chapters found';
+  if (hasSourceItems) return l10n.readerNoMatchingChapters;
+  return l10n.readerNoChaptersFound;
 }
 
-String readerSearchPromptMessage(BookFormat? format) {
-  return 'Type at least 2 characters to search';
+String readerSearchPromptMessage(
+  ReadflexLocalizations l10n,
+  BookFormat? format,
+) {
+  return l10n.readerSearchPrompt;
 }
 
 bool readerSearchActionEnabled({
@@ -21,8 +26,9 @@ bool readerSearchActionEnabled({
 }
 
 String readerSearchActionTooltip({
+  required ReadflexLocalizations l10n,
   required BookFormat? format,
   required ReaderDocumentFeatures? documentFeatures,
 }) {
-  return 'Search';
+  return l10n.readerSearchAction;
 }

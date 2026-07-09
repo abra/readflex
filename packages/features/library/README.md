@@ -10,14 +10,14 @@ main screen (route `/library`).
 
 ## Public API
 
-`LibraryScreen` — stateless widget wired up in `routing.dart`. Provides both
-BLoC and layout cubit internally.
+`LibraryScreen` — stateless widget wired up in `routing.dart`. Provides BLoC
+and UI preference cubits internally.
 
 | Prop                  | Type                                | Purpose                                      |
 |-----------------------|-------------------------------------|----------------------------------------------|
 | `bookRepository`      | `BookRepository`                    | Book list + delete                           |
 | `articleRepository`   | `ArticleRepository?`                | Optional article list + delete               |
-| `preferencesService`  | `PreferencesService`                | Persist list/grid layout choice              |
+| `preferencesService`  | `PreferencesService`                | Persist list/grid, theme, and locale choices |
 | `onSourcePressed`     | `Future<void> Function(...)`        | Open reader, then refresh                    |
 | `onAddPressed`        | `AsyncCallback`                     | Open the import-flow bottom sheet            |
 
@@ -34,6 +34,10 @@ Two independent units of state:
   the projection on every rebuild.
 - `LibraryLayoutCubit` — UI-only list-vs-grid toggle, persisted through
   `PreferencesService.libraryLayoutMode`.
+- `LibraryThemeCubit` — app theme mode selector, persisted through
+  `PreferencesService.themeMode`.
+- `LibraryLocaleCubit` — app language selector, persisted through
+  `PreferencesService.locale`.
 
 The screen uses separate widgets (`LibraryListView`, `LibraryGridView`) for
 each layout and a local `TextEditingController` for the search field so
@@ -47,7 +51,7 @@ Non-fatal repository errors from delete/load go through `addError` + a
 
 - `book_repository` — book data source
 - `article_repository` — article data source
-- `preferences_service` — layout persistence
+- `preferences_service` — layout, theme, and locale persistence
 - `domain_models` — `Book`, `Article`, `LibrarySource`
 - `component_library` — theme, `SearchField`, `ScrollEdgeFade`, `EmptyState`,
   `ErrorState`, `AppIcons`, `AppSpacing`, `AppRadius`

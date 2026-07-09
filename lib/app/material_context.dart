@@ -15,6 +15,7 @@ import 'package:readflex/app/app_system_ui_mode.dart';
 import 'package:reader_server/reader_server.dart';
 import 'package:readflex/app/dependency_scope.dart';
 import 'package:readflex/app/routing.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:toast_service/toast_service.dart';
 
 /// Entry point for the application that creates [MaterialApp.router].
@@ -80,11 +81,15 @@ class _MaterialContextState extends State<MaterialContext>
   @override
   Widget build(BuildContext context) {
     final themeMode = PreferencesScope.themeModeOf(context);
+    final locale = PreferencesScope.localeOf(context);
 
     return AppSystemUiMode(
       child: ToastWrapper(
         child: MaterialApp.router(
           debugShowCheckedModeBanner: false,
+          locale: locale,
+          supportedLocales: ReadflexSupportedLocales.locales,
+          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
           themeMode: themeMode,
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),

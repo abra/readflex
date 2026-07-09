@@ -8,6 +8,8 @@ import 'package:reader_webview/reader_webview.dart';
 
 typedef ReaderBookSearch = Stream<ReaderSearchEvent> Function(String query);
 
+enum ReaderSearchErrorCode { searchFailed }
+
 class ReaderSearchState extends Equatable {
   const ReaderSearchState({
     this.query = '',
@@ -16,6 +18,7 @@ class ReaderSearchState extends Equatable {
     this.progress = 0,
     this.isLoading = false,
     this.errorMessage,
+    this.errorCode,
     this.clearSearchToken = 0,
   });
 
@@ -25,12 +28,16 @@ class ReaderSearchState extends Equatable {
   final double progress;
   final bool isLoading;
   final String? errorMessage;
+  final ReaderSearchErrorCode? errorCode;
 
   /// Incremented when an already-rendered foliate-js search needs clearing.
   final int clearSearchToken;
 
   bool get hasSearchContent =>
-      isLoading || results.isNotEmpty || errorMessage != null;
+      isLoading ||
+      results.isNotEmpty ||
+      errorMessage != null ||
+      errorCode != null;
 
   ReaderSearchState copyWith({
     String? query,
@@ -39,6 +46,7 @@ class ReaderSearchState extends Equatable {
     double? progress,
     bool? isLoading,
     String? errorMessage,
+    ReaderSearchErrorCode? errorCode,
     bool clearError = false,
     int? clearSearchToken,
   }) {
@@ -49,6 +57,7 @@ class ReaderSearchState extends Equatable {
       progress: progress ?? this.progress,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
+      errorCode: clearError ? null : errorCode ?? this.errorCode,
       clearSearchToken: clearSearchToken ?? this.clearSearchToken,
     );
   }
@@ -61,6 +70,7 @@ class ReaderSearchState extends Equatable {
     progress,
     isLoading,
     errorMessage,
+    errorCode,
     clearSearchToken,
   ];
 }
@@ -225,7 +235,7 @@ class ReaderSearchCubit extends Cubit<ReaderSearchState> {
           state.copyWith(
             results: const [],
             isLoading: false,
-            errorMessage: 'Search failed',
+            errorCode: ReaderSearchErrorCode.searchFailed,
           ),
         );
       },

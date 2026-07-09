@@ -1,5 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'library_bloc.dart';
 
@@ -95,9 +96,10 @@ class _CollectionScopeSheetState extends State<_CollectionScopeSheet> {
   @override
   Widget build(BuildContext context) {
     final hasScopes = widget.state.collectionScopes.isNotEmpty;
+    final l10n = context.l10n;
 
     return ActionBottomSheetLayout(
-      title: 'Collections',
+      title: l10n.libraryCollectionsTitle,
       bodyPadding: EdgeInsets.zero,
       child: hasScopes
           ? Column(
@@ -109,7 +111,8 @@ class _CollectionScopeSheetState extends State<_CollectionScopeSheet> {
                     horizontal: AppSpacing.xl,
                   ),
                   child: SearchField(
-                    hintText: 'Search collections...',
+                    hintText: l10n.librarySearchCollectionsHint,
+                    clearButtonSemanticsLabel: l10n.commonClearSearch,
                     controller: _searchController,
                     onChanged: _onSearchChanged,
                   ),
@@ -127,7 +130,7 @@ class _CollectionScopeSheetState extends State<_CollectionScopeSheet> {
           : Padding(
               padding: const EdgeInsets.all(AppSpacing.xl),
               child: Text(
-                'No collections yet',
+                l10n.libraryNoCollectionsYet,
                 textAlign: TextAlign.center,
                 style: context.text.bodyMedium.copyWith(
                   color: context.colors.onSurfaceVariant,
@@ -148,6 +151,7 @@ class _CollectionScopeSections extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final normalizedQuery = query.trim().toLowerCase();
+    final l10n = context.l10n;
     final favouriteScopes = _filterScopes(
       state.favouriteCollectionScopes,
       normalizedQuery,
@@ -173,7 +177,7 @@ class _CollectionScopeSections extends StatelessWidget {
     if (!hasMatches) {
       return Center(
         child: Text(
-          'No matching collections',
+          l10n.libraryNoMatchingCollections,
           textAlign: TextAlign.center,
           style: context.text.bodyMedium.copyWith(
             color: context.colors.onSurfaceVariant,
@@ -192,17 +196,17 @@ class _CollectionScopeSections extends StatelessWidget {
             selected: state.selectedCollectionScope,
           ),
           _ScopeSection(
-            title: 'Manual collections',
+            title: l10n.libraryManualCollections,
             scopes: manualScopes,
             selected: state.selectedCollectionScope,
           ),
           _ScopeSection(
-            title: 'Sites',
+            title: l10n.librarySites,
             scopes: siteScopes,
             selected: state.selectedCollectionScope,
           ),
           _ScopeSection(
-            title: 'Authors',
+            title: l10n.libraryAuthors,
             scopes: authorScopes,
             selected: state.selectedCollectionScope,
           ),
@@ -280,6 +284,7 @@ class _CollectionScopeRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final l10n = context.l10n;
     final foreground = selected ? colors.primary : colors.onSurfaceVariant;
 
     return Material(
@@ -331,9 +336,9 @@ class _CollectionScopeRow extends StatelessWidget {
                 if (scope.canManage) ...[
                   const SizedBox(width: AppSpacing.md),
                   Semantics(
-                    label: 'Manage ${scope.label}',
+                    label: l10n.libraryManageCollection(scope.label),
                     button: true,
-                    onTapHint: 'Open collection actions',
+                    onTapHint: l10n.libraryOpenCollectionActions,
                     child: GestureDetector(
                       key: ValueKey(
                         'collectionScopeManage-${scope.type.name}-${scope.id}',

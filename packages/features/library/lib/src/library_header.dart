@@ -1,10 +1,12 @@
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'library_bloc.dart';
 import 'library_layout_cubit.dart';
 import 'library_display_sheet.dart';
+import 'library_locale_cubit.dart';
 import 'library_theme_cubit.dart';
 
 /// Alpha applied to muted meta text on the header ("N items" counter,
@@ -43,6 +45,7 @@ class LibraryHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final l10n = context.l10n;
 
     // Demo uses literals 20/16/12/4/…; project convention is to stick to
     // AppSpacing tokens, so we take the nearest token in each slot.
@@ -59,7 +62,7 @@ class LibraryHeader extends StatelessWidget {
           Row(
             children: [
               Text(
-                'Library',
+                l10n.libraryTitle,
                 style: context.text.headlineMedium.copyWith(
                   color: colors.onSurface,
                 ),
@@ -73,7 +76,7 @@ class LibraryHeader extends StatelessWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        '${state.totalCount} items',
+                        l10n.libraryItemCount(state.totalCount),
                         textAlign: TextAlign.end,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -93,7 +96,8 @@ class LibraryHeader extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           SearchField(
-            hintText: 'Search library...',
+            hintText: l10n.librarySearchHint,
+            clearButtonSemanticsLabel: l10n.commonClearSearch,
             controller: searchController,
             focusNode: searchFocusNode,
             onChanged: onSearchChanged,
@@ -131,7 +135,7 @@ class _LibraryOfflineStatus extends StatelessWidget {
             Icon(AppIcons.offline, size: AppIconSize.xs, color: warning),
             const SizedBox(width: AppSpacing.xxs),
             Text(
-              'offline',
+              context.l10n.libraryOffline,
               maxLines: 1,
               style: context.text.labelSmall.copyWith(
                 color: warning,
@@ -308,7 +312,7 @@ class _FilterSegments extends StatelessWidget {
         itemBuilder: (_, i) {
           final filter = LibraryFilter.values[i];
           return AppFilterChip(
-            label: _labelFor(filter),
+            label: _labelFor(context, filter),
             selected: filter == active,
             onTap: () => onChanged(filter),
           );
@@ -317,13 +321,16 @@ class _FilterSegments extends StatelessWidget {
     );
   }
 
-  static String _labelFor(LibraryFilter filter) => switch (filter) {
-    LibraryFilter.all => 'All',
-    LibraryFilter.books => 'Books',
-    LibraryFilter.articles => 'Articles',
-    LibraryFilter.comics => 'Comics',
-    LibraryFilter.unread => 'New',
-  };
+  static String _labelFor(BuildContext context, LibraryFilter filter) {
+    final l10n = context.l10n;
+    return switch (filter) {
+      LibraryFilter.all => l10n.libraryFilterAll,
+      LibraryFilter.books => l10n.libraryFilterBooks,
+      LibraryFilter.articles => l10n.libraryFilterArticles,
+      LibraryFilter.comics => l10n.libraryFilterComics,
+      LibraryFilter.unread => l10n.libraryFilterNew,
+    };
+  }
 }
 
 class _DisplayMenuButton extends StatelessWidget {
@@ -332,7 +339,7 @@ class _DisplayMenuButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: 'Display options',
+      message: context.l10n.libraryDisplayOptions,
       child: _HeaderIconButton(
         key: const ValueKey('libraryHeaderDisplayButton'),
         icon: AppIcons.moreVertical,
@@ -340,6 +347,7 @@ class _DisplayMenuButton extends StatelessWidget {
         onTap: () => showLibraryDisplaySheet(
           context: context,
           layoutCubit: context.read<LibraryLayoutCubit>(),
+          localeCubit: context.read<LibraryLocaleCubit>(),
           themeCubit: context.read<LibraryThemeCubit>(),
         ),
       ),

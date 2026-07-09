@@ -2,18 +2,26 @@ part of 'add_to_collection_cubit.dart';
 
 enum AddToCollectionStatus { initial, loading, success, submitting, failure }
 
+enum AddToCollectionErrorCode {
+  loadCollectionsFailed,
+  updateCollectionFailed,
+  updateFavouritesFailed,
+  collectionNameRequired,
+  createCollectionFailed,
+}
+
 class AddToCollectionState extends Equatable {
   const AddToCollectionState({
     this.status = AddToCollectionStatus.initial,
     this.collections = const [],
     this.favouritesSourceCount = 0,
-    this.errorMessage,
+    this.errorCode,
   });
 
   final AddToCollectionStatus status;
   final List<LibraryCollection> collections;
   final int favouritesSourceCount;
-  final String? errorMessage;
+  final AddToCollectionErrorCode? errorCode;
 
   bool get isBusy =>
       status == AddToCollectionStatus.loading ||
@@ -23,7 +31,7 @@ class AddToCollectionState extends Equatable {
     AddToCollectionStatus? status,
     List<LibraryCollection>? collections,
     int? favouritesSourceCount,
-    String? errorMessage,
+    AddToCollectionErrorCode? errorCode,
     bool clearError = false,
   }) {
     return AddToCollectionState(
@@ -31,7 +39,7 @@ class AddToCollectionState extends Equatable {
       collections: collections ?? this.collections,
       favouritesSourceCount:
           favouritesSourceCount ?? this.favouritesSourceCount,
-      errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
+      errorCode: clearError ? null : errorCode ?? this.errorCode,
     );
   }
 
@@ -40,6 +48,6 @@ class AddToCollectionState extends Equatable {
     status,
     collections,
     favouritesSourceCount,
-    errorMessage,
+    errorCode,
   ];
 }

@@ -1,6 +1,7 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'library_source_semantics.dart';
 
@@ -42,6 +43,7 @@ class BookLibraryGridTile extends StatelessWidget {
         source.lastOpenedAt != null || source.readingProgress > 0;
     final showsProgressOverlay = hasReadingActivity && !source.isFinished;
     final coverTextDirection = _sourceTextDirection(source);
+    final l10n = context.l10n;
 
     return _GridTileShell(
       sourceId: source.id,
@@ -80,15 +82,17 @@ class BookLibraryGridTile extends StatelessWidget {
       progress: source.readingProgress,
       showProgress: showsProgressOverlay,
       formatLabel: isArticle ? 'WEB' : source.typeLabel,
-      semanticsLabel: librarySourceSemanticsLabel(source),
-      semanticsValue: librarySourceSemanticsValue(source),
+      semanticsLabel: librarySourceSemanticsLabel(source, l10n),
+      semanticsValue: librarySourceSemanticsValue(source, l10n),
       reportsSelectedState: isSelectionMode,
       tapHint: librarySourceTapHint(
         isSelectionMode: isSelectionMode,
         isSelected: isSelected,
+        l10n: l10n,
       ),
       longPressHint: librarySourceLongPressHint(
         isSelectionMode: isSelectionMode,
+        l10n: l10n,
       ),
       isSelected: isSelected,
       onTap: onTap,

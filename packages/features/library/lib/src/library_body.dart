@@ -2,6 +2,7 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'library_bloc.dart';
 import 'library_grid_view.dart';
@@ -44,6 +45,7 @@ class LibraryBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final visibleItems = state.visibleItems;
+    final l10n = context.l10n;
 
     if (visibleItems.isEmpty) {
       return RefreshIndicator(
@@ -55,15 +57,15 @@ class LibraryBody extends StatelessWidget {
           child: SizedBox(
             height: MediaQuery.of(context).size.height * 0.6,
             child: state.isEmpty
-                ? const EmptyState(
+                ? EmptyState(
                     icon: AppIcons.book,
-                    message: 'Your library is empty',
-                    subtitle: 'Add your first book or article to get started',
+                    message: l10n.libraryEmptyTitle,
+                    subtitle: l10n.libraryEmptySubtitle,
                   )
-                : const EmptyState(
+                : EmptyState(
                     icon: AppIcons.searchOff,
-                    message: 'No results found',
-                    subtitle: 'Try a different search or filter',
+                    message: l10n.libraryNoResultsTitle,
+                    subtitle: l10n.libraryNoResultsSubtitle,
                   ),
           ),
         ),

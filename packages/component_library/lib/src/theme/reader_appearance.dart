@@ -9,8 +9,7 @@ enum ReaderThemePreset {
   paper,
   warm,
   night,
-  mist
-  ;
+  mist;
 
   static ReaderThemePreset fromId(String? value) => switch (value) {
     // TODO: Remove the legacy `white` alias after pre-Snow reader preferences
@@ -38,8 +37,7 @@ enum ReaderFontPreset {
   serif,
   ptSerif,
   sans,
-  geist
-  ;
+  geist;
 
   static ReaderFontPreset fromId(String? value) => switch (value) {
     'ptSerif' || 'merriweather' => ptSerif,

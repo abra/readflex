@@ -6,6 +6,7 @@ import 'preferences_service.dart';
 
 enum _PreferencesAspect {
   all,
+  locale,
   themeMode,
   readerAppearance,
 }
@@ -14,7 +15,7 @@ enum _PreferencesAspect {
 /// subtree.
 ///
 /// Backed by an [InheritedModel] so widgets can subscribe to one *aspect*
-/// (`themeMode`, `readerAppearance`, or all of [Preferences]) and skip
+/// (`locale`, `themeMode`, `readerAppearance`, or all of [Preferences]) and skip
 /// rebuilds when unrelated fields change. Access via [of] /
 /// [themeModeOf] / [readerAppearanceOf].
 ///
@@ -60,6 +61,22 @@ class PreferencesScope extends StatelessWidget {
       );
     }
     return scope.preferences.themeMode;
+  }
+
+  /// Returns [Locale] and rebuilds only when the app locale changes.
+  static Locale localeOf(BuildContext context) {
+    final scope = InheritedModel.inheritFrom<_PreferencesInherited>(
+      context,
+      aspect: _PreferencesAspect.locale,
+    );
+    if (scope == null) {
+      throw FlutterError(
+        'PreferencesScope.localeOf() called with a context that does not '
+        'contain a PreferencesScope.\n'
+        'Ensure the widget tree includes a PreferencesScope ancestor.',
+      );
+    }
+    return scope.preferences.locale;
   }
 
   /// Returns reader appearance settings and rebuilds only when they change.
@@ -115,6 +132,11 @@ class _PreferencesInherited extends InheritedModel<_PreferencesAspect> {
 
     if (dependencies.contains(_PreferencesAspect.themeMode) &&
         preferences.themeMode != old.preferences.themeMode) {
+      return true;
+    }
+
+    if (dependencies.contains(_PreferencesAspect.locale) &&
+        preferences.locale != old.preferences.locale) {
       return true;
     }
 

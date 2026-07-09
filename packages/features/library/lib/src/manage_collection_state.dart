@@ -2,28 +2,34 @@ part of 'manage_collection_cubit.dart';
 
 enum ManageCollectionStatus { idle, submitting, success, failure }
 
+enum ManageCollectionErrorCode {
+  collectionNameRequired,
+  saveCollectionFailed,
+  deleteCollectionFailed,
+}
+
 class ManageCollectionState extends Equatable {
   const ManageCollectionState({
     this.status = ManageCollectionStatus.idle,
-    this.errorMessage,
+    this.errorCode,
   });
 
   final ManageCollectionStatus status;
-  final String? errorMessage;
+  final ManageCollectionErrorCode? errorCode;
 
   bool get isBusy => status == ManageCollectionStatus.submitting;
 
   ManageCollectionState copyWith({
     ManageCollectionStatus? status,
-    String? errorMessage,
+    ManageCollectionErrorCode? errorCode,
     bool clearError = false,
   }) {
     return ManageCollectionState(
       status: status ?? this.status,
-      errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
+      errorCode: clearError ? null : errorCode ?? this.errorCode,
     );
   }
 
   @override
-  List<Object?> get props => [status, errorMessage];
+  List<Object?> get props => [status, errorCode];
 }

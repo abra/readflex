@@ -3,6 +3,7 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/services.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'article_url_utils.dart';
 import 'import_flow_cubit.dart';
@@ -295,6 +296,7 @@ class _MenuView extends StatelessWidget {
   Widget build(BuildContext context) {
     final cubit = context.read<ImportFlowCubit>();
     final warning = context.appColors.warning;
+    final l10n = context.l10n;
 
     return Padding(
       padding: _kStatusViewPadding,
@@ -302,25 +304,25 @@ class _MenuView extends StatelessWidget {
         mainAxisSize: MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const BottomSheetHeader(title: 'Add to Library'),
+          BottomSheetHeader(title: l10n.importAddToLibraryTitle),
           const SizedBox(height: AppSpacing.lg),
           AppActionCard(
             icon: AppIcons.uploadFile,
-            title: 'Upload Book',
-            subtitle: 'EPUB, FB2, MOBI, PDF, AZW3, CBZ',
+            title: l10n.importUploadBook,
+            subtitle: l10n.importUploadBookFormats,
             onTap: cubit.requestBookImport,
           ),
           const SizedBox(height: AppSpacing.sm),
           AppActionCard(
             icon: isOffline ? AppIcons.offline : AppIcons.global,
-            title: 'Save Article',
-            subtitle: 'Paste a web URL for offline reading',
+            title: l10n.importSaveArticle,
+            subtitle: l10n.importSaveArticleDescription,
             iconColor: isOffline ? warning : null,
             onTap: isOffline ? null : cubit.showArticleUrlEntry,
           ),
           const Spacer(),
           _PlainTextButton(
-            label: 'Cancel',
+            label: l10n.commonCancel,
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -351,13 +353,14 @@ class _BookTermsViewState extends State<_BookTermsView> {
     final cubit = context.read<ImportFlowCubit>();
     final colors = context.colors;
     final text = context.text;
+    final l10n = context.l10n;
 
     return Padding(
       padding: _kStatusViewPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const BottomSheetHeader(title: 'Before uploading'),
+          BottomSheetHeader(title: l10n.importBeforeUploadingTitle),
           const SizedBox(height: AppSpacing.md),
           Expanded(
             child: SingleChildScrollView(
@@ -365,7 +368,7 @@ class _BookTermsViewState extends State<_BookTermsView> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Only upload books, comics, and documents you have the right to use in ReadFlex.',
+                    l10n.importBookTermsBody,
                     style: text.bodyMedium.copyWith(
                       color: colors.onSurfaceVariant,
                     ),
@@ -389,7 +392,7 @@ class _BookTermsViewState extends State<_BookTermsView> {
             children: [
               Expanded(
                 child: _PlainTextButton(
-                  label: 'Cancel',
+                  label: l10n.commonCancel,
                   onPressed: cubit.cancelBookImportTerms,
                 ),
               ),
@@ -397,7 +400,7 @@ class _BookTermsViewState extends State<_BookTermsView> {
               Expanded(
                 child: FilledButton(
                   onPressed: _accepted ? cubit.acceptTermsAndPickBook : null,
-                  child: const Text('Continue'),
+                  child: Text(l10n.commonContinue),
                 ),
               ),
             ],
@@ -437,7 +440,7 @@ class _BookTermsCheckbox extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  'I confirm I have the right to upload this file.',
+                  context.l10n.importBookTermsConfirm,
                   style: context.text.bodyMedium,
                 ),
               ),
@@ -466,11 +469,17 @@ class _BookTermsLinks extends StatelessWidget {
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Text('By continuing, you accept the ', style: textStyle),
-        _InlineLinkButton(label: 'Terms', onPressed: onOpenTerms),
-        Text(' and ', style: textStyle),
-        _InlineLinkButton(label: 'Privacy Policy', onPressed: onOpenPrivacy),
-        Text('.', style: textStyle),
+        Text(context.l10n.importLegalPrefix, style: textStyle),
+        _InlineLinkButton(
+          label: context.l10n.importTerms,
+          onPressed: onOpenTerms,
+        ),
+        Text(context.l10n.importLegalAnd, style: textStyle),
+        _InlineLinkButton(
+          label: context.l10n.importPrivacyPolicy,
+          onPressed: onOpenPrivacy,
+        ),
+        Text(context.l10n.importLegalSuffix, style: textStyle),
       ],
     );
   }
@@ -510,6 +519,33 @@ class _InlineLinkButton extends StatelessWidget {
 }
 
 Future<void> _noopFuture() async {}
+
+String? _errorMessageFor(
+  BuildContext context,
+  ImportFlowErrorCode? errorCode,
+) {
+  if (errorCode == null) return null;
+  return _localizedErrorMessage(context, errorCode);
+}
+
+String _failureMessageFor(BuildContext context, ImportFlowFailure state) {
+  final code = state.errorCode;
+  if (code != null) return _localizedErrorMessage(context, code);
+  return state.customMessage ?? context.l10n.importBookImportFailed;
+}
+
+String _localizedErrorMessage(
+  BuildContext context,
+  ImportFlowErrorCode errorCode,
+) {
+  final l10n = context.l10n;
+  return switch (errorCode) {
+    ImportFlowErrorCode.articleUrlRequired => l10n.importArticleUrlRequired,
+    ImportFlowErrorCode.invalidArticleUrl => l10n.importInvalidArticleUrl,
+    ImportFlowErrorCode.bookImportFailed => l10n.importBookImportFailed,
+    ImportFlowErrorCode.articleSaveFailed => l10n.importArticleSaveFailed,
+  };
+}
 
 /// Full-width outlined button for Cancel and other secondary actions
 /// inside the sheet. Matches the Cancel in the delete-confirmation
@@ -574,13 +610,14 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
     final cubit = context.read<ImportFlowCubit>();
     final colors = context.colors;
     final muted = colors.onSurface.withValues(alpha: 0.55);
+    final l10n = context.l10n;
 
     return Padding(
       padding: _kStatusViewPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const BottomSheetHeader(title: 'Save Article'),
+          BottomSheetHeader(title: l10n.importSaveArticle),
           const SizedBox(height: AppSpacing.lg),
           TextField(
             controller: _controller,
@@ -588,8 +625,8 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
             textInputAction: TextInputAction.done,
             autocorrect: false,
             decoration: InputDecoration(
-              hintText: 'https://example.com/article',
-              errorText: widget.state.errorMessage,
+              hintText: l10n.importArticleUrlHint,
+              errorText: _errorMessageFor(context, widget.state.errorCode),
               suffixIcon: _PasteUrlButton(
                 onPressed: _pasteClipboardArticleUrl,
               ),
@@ -610,7 +647,7 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
             children: [
               Expanded(
                 child: _PlainTextButton(
-                  label: 'Back',
+                  label: l10n.commonBack,
                   onPressed: cubit.backToMenu,
                 ),
               ),
@@ -620,7 +657,7 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
                   onPressed: widget.isOffline || !widget.state.canSubmit
                       ? null
                       : cubit.submitArticleUrl,
-                  child: const Text('Save'),
+                  child: Text(l10n.commonSave),
                 ),
               ),
             ],
@@ -648,7 +685,7 @@ class _PasteUrlButton extends StatelessWidget {
         child: Align(
           alignment: AlignmentDirectional.centerEnd,
           child: Semantics(
-            label: 'Paste URL',
+            label: context.l10n.importPasteUrl,
             button: true,
             child: GestureDetector(
               key: const ValueKey('articleUrlPasteButton'),
@@ -683,17 +720,17 @@ class _ArticleUrlHints extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _ArticleUrlHint(
-          text: 'Creates a clean article for offline reading.',
+          text: context.l10n.importArticleHintClean,
           color: color,
         ),
         const SizedBox(height: AppSpacing.xs),
         _ArticleUrlHint(
-          text: 'Keeps the original source link.',
+          text: context.l10n.importArticleHintSource,
           color: color,
         ),
         const SizedBox(height: AppSpacing.xs),
         _ArticleUrlHint(
-          text: 'Adds it to your Library.',
+          text: context.l10n.importArticleHintLibrary,
           color: color,
         ),
       ],
@@ -796,7 +833,7 @@ class _BookUploadStatusContent extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
-          'Uploading book...',
+          context.l10n.importUploadingBook,
           textAlign: TextAlign.center,
           style: titleStyle,
         ),
@@ -854,7 +891,7 @@ class _ArticleUploadingView extends StatelessWidget {
           key: ValueKey('importFlowStatusIcon'),
           child: CenteredCircularProgressIndicator(),
         ),
-        title: _articleUploadingTitle(state.stage),
+        title: _articleUploadingTitle(context, state.stage),
         detail: state.url,
         titleStyle: text.bodyMedium.copyWith(
           color: colors.onSurface,
@@ -868,9 +905,12 @@ class _ArticleUploadingView extends StatelessWidget {
   }
 }
 
-String _articleUploadingTitle(ImportFlowArticleStage stage) => switch (stage) {
-  ImportFlowArticleStage.fetching => 'Fetching article...',
-  ImportFlowArticleStage.saving => 'Saving offline copy...',
+String _articleUploadingTitle(
+  BuildContext context,
+  ImportFlowArticleStage stage,
+) => switch (stage) {
+  ImportFlowArticleStage.fetching => context.l10n.importFetchingArticle,
+  ImportFlowArticleStage.saving => context.l10n.importSavingArticle,
 };
 
 /// Shared vertical layout for upload/progress states.
@@ -983,7 +1023,9 @@ class _BookDoneView extends StatelessWidget {
     // (epub/mobi/pdf/fb2/azw3) reads as a regular book.
     final isComic = state.format == BookFormat.cbz;
     return _SuccessLayout(
-      title: isComic ? 'Comic added!' : 'Book added!',
+      title: isComic
+          ? context.l10n.importComicAdded
+          : context.l10n.importBookAdded,
       detail: state.filename,
       subtitle: state.estimate,
       onDone: () => Navigator.of(context).pop(ImportFlowResult.bookImported),
@@ -1000,7 +1042,7 @@ class _ArticleDoneView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _SuccessLayout(
-      title: 'Article saved!',
+      title: context.l10n.importArticleSaved,
       detail: state.title,
       onDone: () => Navigator.of(context).pop(ImportFlowResult.articleImported),
     );
@@ -1032,7 +1074,7 @@ class _FailureView extends StatelessWidget {
             ),
           ),
         ),
-        title: state.message,
+        title: _failureMessageFor(context, state),
         detail: state.filename,
         titleStyle: text.bodyMedium.copyWith(color: cs.onSurface),
         detailStyle: text.labelSmall.copyWith(
@@ -1044,7 +1086,7 @@ class _FailureView extends StatelessWidget {
         children: [
           Expanded(
             child: _PlainTextButton(
-              label: 'Cancel',
+              label: context.l10n.commonCancel,
               onPressed: () => Navigator.of(context).pop(),
             ),
           ),
@@ -1052,7 +1094,7 @@ class _FailureView extends StatelessWidget {
           Expanded(
             child: FilledButton(
               onPressed: cubit.retryAfterFailure,
-              child: const Text('Try again'),
+              child: Text(context.l10n.importTryAgain),
             ),
           ),
         ],
@@ -1099,7 +1141,10 @@ class _SuccessLayout extends StatelessWidget {
         ),
         detailStyle: text.labelSmall.copyWith(color: muted),
       ),
-      action: FilledButton(onPressed: onDone, child: const Text('Done')),
+      action: FilledButton(
+        onPressed: onDone,
+        child: Text(context.l10n.commonDone),
+      ),
     );
   }
 }

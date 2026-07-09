@@ -107,5 +107,21 @@ void main() {
         ['two'],
       ]);
     });
+
+    test('stream errors emit a typed fallback failure', () async {
+      final cubit = ReaderSearchCubit();
+
+      cubit.recentQuerySelected(
+        'term',
+        searchBook: (_) => Stream<ReaderSearchEvent>.error(
+          StateError('boom'),
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(cubit.state.isLoading, isFalse);
+      expect(cubit.state.errorCode, ReaderSearchErrorCode.searchFailed);
+      expect(cubit.state.errorMessage, isNull);
+    });
   });
 }

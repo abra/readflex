@@ -1,0 +1,336 @@
+{
+  "@@locale": "en",
+  "appSkip": "Skip",
+  "appNext": "Next",
+  "appGetStarted": "Get Started",
+  "appInitializationFailed": "Initialization failed",
+  "appRetry": "Retry",
+  "appRetrying": "Retrying...",
+  "onboardingReadAnythingTitle": "Read anything",
+  "onboardingReadAnythingDescription": "Import books and read comfortably with a customizable reader.",
+  "onboardingHighlightSaveTitle": "Highlight & save",
+  "onboardingHighlightSaveDescription": "Select text to create highlights. Add notes for deeper understanding.",
+  "onboardingOrganizeLibraryTitle": "Organize your library",
+  "onboardingOrganizeLibraryDescription": "Keep books and articles in one place and return to your reading progress.",
+  "commonCancel": "Cancel",
+  "commonSave": "Save",
+  "commonDelete": "Delete",
+  "commonRetry": "Retry",
+  "commonClose": "Close",
+  "commonBack": "Back",
+  "commonDone": "Done",
+  "commonCreate": "Create",
+  "commonContinue": "Continue",
+  "commonSearch": "Search",
+  "commonClearSearch": "Clear search",
+  "libraryTitle": "Library",
+  "libraryItemCount": "{count, plural, one{1 item} other{{count} items}}",
+  "@libraryItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryOffline": "offline",
+  "librarySearchHint": "Search library...",
+  "libraryFilterAll": "All",
+  "libraryFilterBooks": "Books",
+  "libraryFilterArticles": "Articles",
+  "libraryFilterComics": "Comics",
+  "libraryFilterNew": "New",
+  "libraryDisplayOptions": "Display options",
+  "libraryDisplayTitle": "Display",
+  "libraryDisplayView": "View",
+  "libraryDisplayAppearance": "Appearance",
+  "libraryDisplayLanguage": "Language",
+  "libraryDisplayList": "List",
+  "libraryDisplayGrid": "Grid",
+  "libraryThemeSystem": "System",
+  "libraryThemeSystemDescription": "Follow device setting",
+  "libraryThemeLight": "Light",
+  "libraryThemeLightDescription": "Use light appearance",
+  "libraryThemeDark": "Dark",
+  "libraryThemeDarkDescription": "Use dark appearance",
+  "libraryFailedToLoad": "Failed to load library",
+  "libraryLoadCollectionsFailed": "Failed to load collections",
+  "libraryUpdateCollectionFailed": "Failed to update collection",
+  "libraryUpdateFavouritesFailed": "Failed to update favourites",
+  "libraryCollectionNameRequired": "Collection name is required",
+  "libraryCreateCollectionFailed": "Failed to create collection",
+  "librarySaveCollectionFailed": "Failed to save collection",
+  "libraryDeleteCollectionFailed": "Failed to delete collection",
+  "libraryAddedToCollection": "Added to collection",
+  "libraryItemsAddedToCollection": "{count, plural, one{1 item added to collection} other{{count} items added to collection}}",
+  "@libraryItemsAddedToCollection": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryCollectionDeleted": "Collection deleted",
+  "libraryDeletedSuffix": " deleted",
+  "libraryItemsDeleted": "{count, plural, one{Item deleted} other{{count} items deleted}}",
+  "@libraryItemsDeleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryDeleteFailed": "{count, plural, one{Failed to delete the item} other{Failed to delete the items}}",
+  "@libraryDeleteFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryAddToCollection": "Add to collection",
+  "libraryEmptyTitle": "Your library is empty",
+  "libraryEmptySubtitle": "Add your first book or article to get started",
+  "libraryNoResultsTitle": "No results found",
+  "libraryNoResultsSubtitle": "Try a different search or filter",
+  "libraryAddToCollectionTitle": "Add to collection",
+  "libraryFavourites": "Favourites",
+  "libraryCreateCollectionPrompt": "{count, plural, one{Create a collection for 1 selected item.} other{Create a collection for {count} selected items.}}",
+  "@libraryCreateCollectionPrompt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryNewCollectionName": "New collection name",
+  "libraryDeleteItemsTitle": "{count, plural, one{Delete this item?} other{Delete {count} items?}}",
+  "@libraryDeleteItemsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryDeleteItemsBody": "{count, plural, one{This removes the library item and your highlights. Archived learning data is kept.} other{This removes the library items and your highlights. Archived learning data is kept.}}",
+  "@libraryDeleteItemsBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryCollectionsTitle": "Collections",
+  "librarySearchCollectionsHint": "Search collections...",
+  "libraryNoCollectionsYet": "No collections yet",
+  "libraryNoMatchingCollections": "No matching collections",
+  "libraryManualCollections": "Manual collections",
+  "librarySites": "Sites",
+  "libraryAuthors": "Authors",
+  "libraryManageCollection": "Manage {name}",
+  "@libraryManageCollection": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryOpenCollectionActions": "Open collection actions",
+  "libraryManageCollectionTitle": "Manage collection",
+  "libraryDeleteCollectionTitle": "Delete collection?",
+  "libraryDeleteCollectionButton": "Delete collection",
+  "libraryBookCount": "{count, plural, one{1 book} other{{count} books}}",
+  "@libraryBookCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryArticleCount": "{count, plural, one{1 article} other{{count} articles}}",
+  "@libraryArticleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryEmptySourceCount": "0 books/articles",
+  "libraryNoItemsInCollection": "No items in this collection",
+  "libraryDeleteCollectionBody": "This removes \"{name}\" only. Books and articles stay in your library.",
+  "@libraryDeleteCollectionBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryRemoveFromCollection": "Remove {title} from collection",
+  "@libraryRemoveFromCollection": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "librarySourceArticle": "Article",
+  "librarySourceBook": "Book",
+  "librarySourceComic": "Comic",
+  "librarySourceNew": "New",
+  "librarySourceDone": "Done",
+  "librarySourceFinished": "Finished",
+  "librarySourceUntitled": "Untitled source",
+  "librarySourceOpenReader": "Open reader",
+  "librarySourceSelect": "Select source",
+  "librarySourceDeselect": "Deselect source",
+  "librarySourcePercentRead": "{percent} percent read",
+  "@librarySourcePercentRead": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "importAddToLibraryTitle": "Add to Library",
+  "importUploadBook": "Upload Book",
+  "importUploadBookFormats": "EPUB, FB2, MOBI, PDF, AZW3, CBZ",
+  "importSaveArticle": "Save Article",
+  "importSaveArticleDescription": "Paste a web URL for offline reading",
+  "importBeforeUploadingTitle": "Before uploading",
+  "importBookTermsBody": "Only upload books, comics, and documents you have the right to use in ReadFlex.",
+  "importBookTermsConfirm": "I confirm I have the right to upload this file.",
+  "importLegalPrefix": "By continuing, you accept the ",
+  "importLegalAnd": " and ",
+  "importLegalSuffix": ".",
+  "importTerms": "Terms",
+  "importPrivacyPolicy": "Privacy Policy",
+  "importArticleUrlHint": "https://example.com/article",
+  "importPasteUrl": "Paste URL",
+  "importArticleHintClean": "Creates a clean article for offline reading.",
+  "importArticleHintSource": "Keeps the original source link.",
+  "importArticleHintLibrary": "Adds it to your Library.",
+  "importUploadingBook": "Uploading book...",
+  "importFetchingArticle": "Fetching article...",
+  "importSavingArticle": "Saving offline copy...",
+  "importComicAdded": "Comic added!",
+  "importBookAdded": "Book added!",
+  "importArticleSaved": "Article saved!",
+  "importTryAgain": "Try again",
+  "importArticleUrlRequired": "Enter an article URL",
+  "importInvalidArticleUrl": "Enter a valid article URL",
+  "importBookImportFailed": "Failed to import the book",
+  "importArticleSaveFailed": "Failed to save the article",
+  "highlightAction": "Highlight",
+  "highlightTitle": "Highlight",
+  "highlightNoteHint": "Add a note (optional)",
+  "highlightFailedToSave": "Failed to save highlight",
+  "highlightColorYellow": "Yellow",
+  "highlightColorGreen": "Green",
+  "highlightColorBlue": "Blue",
+  "highlightColorPink": "Pink",
+  "highlightColorPurple": "Purple",
+  "highlightColorSemantics": "{color} highlight color",
+  "@highlightColorSemantics": {
+    "placeholders": {
+      "color": {
+        "type": "String"
+      }
+    }
+  },
+  "highlightSelectColor": "Select highlight color",
+  "readerFailedToLoadContent": "Failed to load content",
+  "readerGoBack": "Go Back",
+  "readerBookSearchUnavailable": "Book search is unavailable",
+  "readerNotReady": "Reader is not ready",
+  "readerHighlightSaved": "Highlight saved",
+  "readerHighlightRemoved": "Highlight removed",
+  "readerHighlightSaveFailed": "Failed to save highlight",
+  "readerCommentUpdated": "Comment updated",
+  "readerContents": "Contents",
+  "readerChapters": "Chapters",
+  "readerBookmarks": "Bookmarks",
+  "readerHighlights": "Highlights",
+  "readerSearchChapters": "Search chapters",
+  "readerSearchBookmarks": "Search bookmarks",
+  "readerSearchHighlights": "Search highlights",
+  "readerNoBookmarksYet": "No bookmarks yet",
+  "readerNoMatchingBookmarks": "No matching bookmarks",
+  "readerBookmarkedPage": "Bookmarked page",
+  "readerDeleteBookmark": "Delete bookmark",
+  "readerNoHighlightsYet": "No highlights yet",
+  "readerNoMatchingHighlights": "No matching highlights",
+  "readerHighlightedText": "Highlighted text",
+  "readerLocationUnavailable": "Location unavailable",
+  "readerSearchInBook": "Search in book",
+  "readerNoResultsFound": "No results found",
+  "readerRecentSearches": "Recent searches",
+  "readerRemoveFromHistory": "Remove from history",
+  "readerSearchResult": "Search result",
+  "readerNoMatchingChapters": "No matching chapters",
+  "readerNoChaptersFound": "No chapters found",
+  "readerSearchPrompt": "Type at least 2 characters to search",
+  "readerSearchAction": "Search",
+  "readerSearchFailed": "Search failed",
+  "readerUntitledChapter": "Untitled chapter",
+  "readerPageNumber": "Page {page}",
+  "@readerPageNumber": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "readerAppearanceTitle": "Appearance",
+  "readerReset": "Reset",
+  "readerTheme": "Theme",
+  "readerFont": "Font",
+  "readerFontSize": "Font size",
+  "readerLineSpacing": "Line spacing",
+  "readerTextAlignment": "Text alignment",
+  "readerPageMargins": "Page margins",
+  "readerPageTurn": "Page turn",
+  "readerAlignStart": "Align start",
+  "readerJustifyText": "Justify text",
+  "readerAlignEnd": "Align end",
+  "readerHorizontalPageTurn": "Horizontal page turn",
+  "readerVerticalPageTurn": "Vertical page turn",
+  "readerResetTextSize": "Reset text size",
+  "readerTextSize": "Text size",
+  "readerDecreaseTextSize": "Decrease text size",
+  "readerIncreaseTextSize": "Increase text size",
+  "readerResetLineSpacing": "Reset line spacing",
+  "readerDecreaseLineSpacing": "Decrease line spacing",
+  "readerIncreaseLineSpacing": "Increase line spacing",
+  "readerResetPageMargins": "Reset page margins",
+  "readerDecreasePageMargins": "Decrease page margins",
+  "readerIncreasePageMargins": "Increase page margins",
+  "readerThemeSnow": "Snow",
+  "readerThemePaper": "Paper",
+  "readerThemeWarm": "Warm",
+  "readerThemeMist": "Graphite",
+  "readerThemeNight": "Night",
+  "readerIncreaseBrightness": "Increase brightness",
+  "readerDecreaseBrightness": "Decrease brightness",
+  "readerUsingSystemBrightness": "Using system brightness: {label}",
+  "@readerUsingSystemBrightness": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "readerUseSystemBrightness": "Use system brightness",
+  "readerPageBookmarked": "Page bookmarked",
+  "readerOpenOriginalArticle": "Open original article",
+  "readerBack": "Back",
+  "readerFontAction": "Font",
+  "readerPageTurnVertical": "Page turn: Vertical",
+  "readerPageTurnHorizontal": "Page turn: Horizontal",
+  "readerRemoveBookmark": "Remove bookmark",
+  "readerBookmark": "Bookmark",
+  "readerEditComment": "Edit comment",
+  "readerRemoveHighlight": "Remove highlight",
+  "readerHighlightNoteTitle": "Highlight note",
+  "readerEditNoteTitle": "Edit note",
+  "readerCommentHint": "Add a comment (optional)",
+  "readerSkip": "Skip"
+}

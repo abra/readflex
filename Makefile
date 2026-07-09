@@ -3,6 +3,7 @@
 PACKAGES = \
 	packages/domain_models \
 	packages/shared \
+	packages/readflex_localizations \
 	packages/monitoring \
 	packages/component_library \
 	packages/local_storage \

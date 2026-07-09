@@ -6,6 +6,7 @@
 // a config value it did not provide.
 
 import 'package:readflex/app/config/environment.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 /// Application configuration
 class ApplicationConfig {
@@ -35,7 +36,7 @@ class ApplicationConfig {
   bool get isDev => environment == Environment.dev;
 
   /// Supported locale codes for the app.
-  List<String> get supportedLocaleCodes => const ['en', 'ru'];
+  List<String> get supportedLocaleCodes => ReadflexSupportedLocales.codes;
 
   /// Base URL of the article extraction backend.
   ///

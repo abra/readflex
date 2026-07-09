@@ -135,7 +135,7 @@ class _ContextPanelDriver extends StatelessWidget {
               showToast(
                 context,
                 type: NotificationType.success,
-                message: 'Highlight saved',
+                message: context.l10n.readerHighlightSaved,
               );
             },
             onActionError: (error, stack) {
@@ -143,7 +143,7 @@ class _ContextPanelDriver extends StatelessWidget {
               showToast(
                 context,
                 type: NotificationType.error,
-                message: 'Failed to save highlight',
+                message: context.l10n.readerHighlightSaveFailed,
               );
             },
           ),
@@ -184,7 +184,7 @@ class _ContextPanelDriver extends StatelessWidget {
             showToast(
               context,
               type: NotificationType.success,
-              message: 'Highlight removed',
+              message: context.l10n.readerHighlightRemoved,
             );
           },
           onEditNote: canEditFocusedHighlightNote
@@ -209,7 +209,7 @@ class _ContextPanelDriver extends StatelessWidget {
                   showToast(
                     context,
                     type: NotificationType.success,
-                    message: 'Comment updated',
+                    message: context.l10n.readerCommentUpdated,
                   );
                 }
               : null,
@@ -266,7 +266,7 @@ class _ContextPanelDriver extends StatelessWidget {
       showToast(
         context,
         type: NotificationType.success,
-        message: 'Highlight saved',
+        message: context.l10n.readerHighlightSaved,
       );
     }
 
@@ -275,7 +275,7 @@ class _ContextPanelDriver extends StatelessWidget {
       showToast(
         context,
         type: NotificationType.error,
-        message: 'Failed to save highlight',
+        message: context.l10n.readerHighlightSaveFailed,
       );
     }
 
@@ -643,7 +643,7 @@ class _ImageHighlightSelectionPopupState
                   _HighlightPopupAction(
                     color: widget.foregroundColor,
                     icon: AppIcons.highlight,
-                    tooltip: 'Highlight',
+                    tooltip: context.l10n.highlightAction,
                     onPressed: _save,
                   ),
                 ],
@@ -710,7 +710,9 @@ class _ImageHighlightNoteSheetState extends State<_ImageHighlightNoteSheet> {
     final canSave = note != null && (!_isEditing || note != _initialNote);
 
     return ActionBottomSheetLayout(
-      title: _isEditing ? 'Edit note' : 'Highlight note',
+      title: _isEditing
+          ? context.l10n.readerEditNoteTitle
+          : context.l10n.readerHighlightNoteTitle,
       headerSpacing: AppSpacing.sm,
       bodyPadding: const EdgeInsets.fromLTRB(
         AppSpacing.xl,
@@ -727,8 +729,8 @@ class _ImageHighlightNoteSheetState extends State<_ImageHighlightNoteSheet> {
             minLines: 3,
             maxLines: 4,
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              hintText: 'Add a comment (optional)',
+            decoration: InputDecoration(
+              hintText: context.l10n.readerCommentHint,
               isDense: true,
             ),
           ),
@@ -740,14 +742,18 @@ class _ImageHighlightNoteSheetState extends State<_ImageHighlightNoteSheet> {
                   onPressed: _isEditing
                       ? () => Navigator.of(context).pop()
                       : () => _complete(null),
-                  child: Text(_isEditing ? 'Cancel' : 'Skip'),
+                  child: Text(
+                    _isEditing
+                        ? context.l10n.commonCancel
+                        : context.l10n.readerSkip,
+                  ),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: FilledButton(
                   onPressed: canSave ? () => _complete(note) : null,
-                  child: const Text('Save'),
+                  child: Text(context.l10n.commonSave),
                 ),
               ),
             ],
@@ -837,13 +843,13 @@ class _SavedHighlightPopup extends StatelessWidget {
                     _HighlightPopupAction(
                       color: foregroundColor,
                       icon: AppIcons.edit,
-                      tooltip: 'Edit comment',
+                      tooltip: context.l10n.readerEditComment,
                       onPressed: onEditNote!,
                     ),
                   _HighlightPopupAction(
                     color: destructiveColor,
                     icon: AppIcons.delete,
-                    tooltip: 'Remove highlight',
+                    tooltip: context.l10n.readerRemoveHighlight,
                     onPressed: onDelete,
                   ),
                 ],
@@ -991,7 +997,7 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
                   _HighlightPopupAction(
                     color: widget.foregroundColor,
                     icon: AppIcons.highlight,
-                    tooltip: 'Highlight',
+                    tooltip: context.l10n.highlightAction,
                     onPressed: _save,
                   ),
                 ],
@@ -1141,7 +1147,7 @@ class _HighlightColorButton extends StatelessWidget {
       width: _kHighlightSwatchTapSize,
       height: _kHighlightSwatchTapSize,
       child: Tooltip(
-        message: color.name,
+        message: _localizedHighlightColorName(context, color),
         child: InkResponse(
           radius: _kHighlightSwatchTapSize / 2,
           onTap: enabled ? onPressed : null,
@@ -1173,6 +1179,20 @@ class _HighlightColorButton extends StatelessWidget {
       ),
     );
   }
+}
+
+String _localizedHighlightColorName(
+  BuildContext context,
+  HighlightColor color,
+) {
+  final l10n = context.l10n;
+  return switch (color) {
+    HighlightColor.yellow => l10n.highlightColorYellow,
+    HighlightColor.green => l10n.highlightColorGreen,
+    HighlightColor.blue => l10n.highlightColorBlue,
+    HighlightColor.pink => l10n.highlightColorPink,
+    HighlightColor.purple => l10n.highlightColorPurple,
+  };
 }
 
 /// Bottom action strip shown for an active text selection.
@@ -1218,7 +1238,7 @@ class _ContextPanel extends StatelessWidget {
               children: textActions.map((action) {
                 return IconButton(
                   icon: Icon(action.icon, color: iconColor),
-                  tooltip: action.label,
+                  tooltip: action.labelFor(context),
                   onPressed: () async {
                     try {
                       await action.onExecute(context, selection);

@@ -1,5 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 /// Data for a single onboarding page.
 class OnboardingPageData {
@@ -14,23 +15,22 @@ class OnboardingPageData {
   final String description;
 }
 
-const onboardingPages = [
+const onboardingPageCount = 3;
+
+List<OnboardingPageData> onboardingPages(ReadflexLocalizations l10n) => [
   OnboardingPageData(
     icon: AppIcons.readAnything,
-    title: 'Read anything',
-    description:
-        'Import books and read comfortably with a customizable reader.',
+    title: l10n.onboardingReadAnythingTitle,
+    description: l10n.onboardingReadAnythingDescription,
   ),
   OnboardingPageData(
     icon: AppIcons.highlightSave,
-    title: 'Highlight & save',
-    description:
-        'Select text to create highlights. Add notes for deeper understanding.',
+    title: l10n.onboardingHighlightSaveTitle,
+    description: l10n.onboardingHighlightSaveDescription,
   ),
   OnboardingPageData(
     icon: AppIcons.library,
-    title: 'Organize your library',
-    description:
-        'Keep books and articles in one place and return to your reading progress.',
+    title: l10n.onboardingOrganizeLibraryTitle,
+    description: l10n.onboardingOrganizeLibraryDescription,
   ),
 ];

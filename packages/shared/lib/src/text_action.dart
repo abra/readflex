@@ -99,6 +99,8 @@ class TextSelectionContext {
 abstract class TextAction {
   String get label;
 
+  String labelFor(BuildContext context) => label;
+
   IconData get icon;
 
   /// Executes the action for the given text selection. Callers should

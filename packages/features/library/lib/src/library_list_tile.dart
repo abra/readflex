@@ -1,6 +1,7 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'library_source_semantics.dart';
 
@@ -45,6 +46,7 @@ class BookLibraryListTile extends StatelessWidget {
     final subtitle = _subtitleFor(source);
     final coverTextDirection = _sourceTextDirection(source);
     final articleIconColor = Colors.white.withValues(alpha: _kArticleIconAlpha);
+    final l10n = context.l10n;
     final sourceCover = AppSourceCover(
       title: source.title,
       author: source.author,
@@ -81,15 +83,17 @@ class BookLibraryListTile extends StatelessWidget {
       textDirection: coverTextDirection,
       showTopDivider: showTopDivider,
       isSelected: isSelected,
-      semanticsLabel: librarySourceSemanticsLabel(source),
-      semanticsValue: librarySourceSemanticsValue(source),
+      semanticsLabel: librarySourceSemanticsLabel(source, l10n),
+      semanticsValue: librarySourceSemanticsValue(source, l10n),
       reportsSelectedState: isSelectionMode,
       tapHint: librarySourceTapHint(
         isSelectionMode: isSelectionMode,
         isSelected: isSelected,
+        l10n: l10n,
       ),
       longPressHint: librarySourceLongPressHint(
         isSelectionMode: isSelectionMode,
+        l10n: l10n,
       ),
       onTap: onTap,
       onLongPress: onLongPress,
@@ -102,7 +106,7 @@ class BookLibraryListTile extends StatelessWidget {
           Icon(_sourceIcon(source), size: 10, color: mutedColor),
           const SizedBox(width: AppSpacing.xs),
           Text(
-            _sourceKindLabel(source),
+            librarySourceKindLabel(source, l10n),
             style: _metaStyle(context, mutedColor),
           ),
           if (sourceName != null) ...[
@@ -127,7 +131,7 @@ class BookLibraryListTile extends StatelessWidget {
           if (source.isFinished)
             ..._doneBadge(context)
           else if (source.lastOpenedAt == null)
-            Text('New', style: _metaStyle(context, mutedColor))
+            Text(l10n.librarySourceNew, style: _metaStyle(context, mutedColor))
           else
             // Once the user has opened the source, show the progress %
             // even if it's 0 — they may have navigated back to the
@@ -416,11 +420,6 @@ String? _secondarySourceName(LibrarySource source, String? subtitle) {
 IconData _sourceIcon(LibrarySource source) =>
     source.sourceType == SourceType.article ? AppIcons.article : AppIcons.book;
 
-String _sourceKindLabel(LibrarySource source) {
-  if (source.sourceType == SourceType.article) return 'Article';
-  return source.isComic ? 'Comic' : 'Book';
-}
-
 /// Builds the green ` ✓ Done` kicker that replaces the progress segment
 /// when an item is fully read. Colour comes from the semantic
 /// `successForeground` token so it stays legible in both themes.
@@ -430,7 +429,7 @@ List<Widget> _doneBadge(BuildContext context) {
     Icon(AppIcons.check, size: 10, color: success),
     const SizedBox(width: 2),
     Text(
-      'Done',
+      context.l10n.librarySourceDone,
       style: context.text.sourceMetadata.copyWith(
         fontWeight: FontWeight.w500,
         color: success,

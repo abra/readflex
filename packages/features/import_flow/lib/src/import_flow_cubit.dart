@@ -111,13 +111,13 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
 
     final rawUrl = current.url;
     if (rawUrl.trim().isEmpty) {
-      emit(current.withError('Enter an article URL'));
+      emit(current.withError(ImportFlowErrorCode.articleUrlRequired));
       return;
     }
 
     final url = current.normalizedUrl;
     if (url == null) {
-      emit(current.withError('Enter a valid article URL'));
+      emit(current.withError(ImportFlowErrorCode.invalidArticleUrl));
       return;
     }
 
@@ -209,14 +209,14 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
       // Surface the JS-side reason ("File type not supported", etc.)
       // rather than the generic fallback below — the whole reason
       // BookImportException exists is to carry that detail to the UI.
-      emit(ImportFlowFailure(message: e.message, filename: filename));
+      emit(ImportFlowFailure(customMessage: e.message, filename: filename));
       return;
     } catch (e, st) {
       if (isClosed) return;
       addError(e, st);
       emit(
         ImportFlowFailure(
-          message: 'Failed to import the book',
+          errorCode: ImportFlowErrorCode.bookImportFailed,
           filename: filename,
         ),
       );
@@ -227,7 +227,7 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
     if (book == null) {
       emit(
         ImportFlowFailure(
-          message: 'Failed to import the book',
+          errorCode: ImportFlowErrorCode.bookImportFailed,
           filename: filename,
         ),
       );
@@ -242,7 +242,7 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
     if (url == null) {
       emit(
         const ImportFlowFailure(
-          message: 'Enter a valid article URL',
+          errorCode: ImportFlowErrorCode.invalidArticleUrl,
           retryTarget: ImportFlowRetryTarget.article,
         ),
       );
@@ -265,7 +265,7 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
       if (article == null) {
         emit(
           ImportFlowFailure(
-            message: 'Failed to save the article',
+            errorCode: ImportFlowErrorCode.articleSaveFailed,
             filename: url,
             retryTarget: ImportFlowRetryTarget.article,
           ),
@@ -277,7 +277,7 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
       if (!isClosed) {
         emit(
           ImportFlowFailure(
-            message: e.message,
+            customMessage: e.message,
             filename: url,
             retryTarget: ImportFlowRetryTarget.article,
           ),
@@ -288,7 +288,7 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
         addError(e, st);
         emit(
           ImportFlowFailure(
-            message: 'Failed to save the article',
+            errorCode: ImportFlowErrorCode.articleSaveFailed,
             filename: url,
             retryTarget: ImportFlowRetryTarget.article,
           ),

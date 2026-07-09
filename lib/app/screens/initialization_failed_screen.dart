@@ -6,6 +6,7 @@
 
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 /// Screen shown when app initialization fails, with an optional retry button.
 class InitializationFailedScreen extends StatefulWidget {
@@ -46,11 +47,14 @@ class _InitializationFailedScreenState
     debugLogScreenBuild('InitializationFailedScreen');
 
     return MaterialApp(
+      supportedLocales: ReadflexSupportedLocales.locales,
+      localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
       home: Scaffold(
         body: Builder(
           builder: (context) {
             final text = context.text;
             final colors = context.colors;
+            final l10n = context.l10n;
 
             return SingleChildScrollView(
               padding: const EdgeInsets.all(AppSpacing.xl),
@@ -58,7 +62,7 @@ class _InitializationFailedScreenState
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    'Initialization failed',
+                    l10n.appInitializationFailed,
                     style: text.headlineMedium,
                   ),
                   const SizedBox(height: AppSpacing.lg),
@@ -77,7 +81,9 @@ class _InitializationFailedScreenState
                         icon: inProgress
                             ? const ButtonLoadingIndicator(size: AppIconSize.sm)
                             : const Icon(AppIcons.refresh),
-                        label: Text(inProgress ? 'Retrying...' : 'Retry'),
+                        label: Text(
+                          inProgress ? l10n.appRetrying : l10n.appRetry,
+                        ),
                       ),
                     ),
                   const SizedBox(height: AppSpacing.lg),

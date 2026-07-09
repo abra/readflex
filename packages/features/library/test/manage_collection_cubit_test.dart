@@ -104,4 +104,39 @@ void main() {
       expect(await repository.getCollectionSourceIds(), isEmpty);
     },
   );
+
+  blocTest<ManageCollectionCubit, ManageCollectionState>(
+    'saveChanges emits a typed failure when repository update fails',
+    build: () {
+      repository.shouldThrow = true;
+      return ManageCollectionCubit(collectionRepository: repository);
+    },
+    act: (cubit) => cubit.saveChanges(
+      collectionId: 'collection-1',
+      name: 'Dune Saga',
+    ),
+    expect: () => [
+      const ManageCollectionState(status: ManageCollectionStatus.submitting),
+      const ManageCollectionState(
+        status: ManageCollectionStatus.failure,
+        errorCode: ManageCollectionErrorCode.saveCollectionFailed,
+      ),
+    ],
+  );
+
+  blocTest<ManageCollectionCubit, ManageCollectionState>(
+    'deleteCollection emits a typed failure when repository delete fails',
+    build: () {
+      repository.shouldThrow = true;
+      return ManageCollectionCubit(collectionRepository: repository);
+    },
+    act: (cubit) => cubit.deleteCollection('collection-1'),
+    expect: () => [
+      const ManageCollectionState(status: ManageCollectionStatus.submitting),
+      const ManageCollectionState(
+        status: ManageCollectionStatus.failure,
+        errorCode: ManageCollectionErrorCode.deleteCollectionFailed,
+      ),
+    ],
+  );
 }

@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:preferences_service/preferences_service.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:toast_service/toast_service.dart';
 
 import 'add_to_collection_cubit.dart';
@@ -15,6 +16,7 @@ import 'library_bloc.dart';
 import 'library_body.dart';
 import 'library_header.dart';
 import 'library_layout_cubit.dart';
+import 'library_locale_cubit.dart';
 import 'library_theme_cubit.dart';
 import 'manage_collection_cubit.dart';
 import 'manage_collection_sheet.dart';
@@ -76,6 +78,11 @@ class LibraryScreen extends StatelessWidget {
         ),
         BlocProvider(
           create: (_) => LibraryThemeCubit(
+            preferencesService: preferencesService,
+          ),
+        ),
+        BlocProvider(
+          create: (_) => LibraryLocaleCubit(
             preferencesService: preferencesService,
           ),
         ),
@@ -248,8 +255,8 @@ class _LibraryViewState extends State<_LibraryView> {
       context,
       type: NotificationType.success,
       message: ids.length == 1
-          ? 'Added to collection'
-          : '${ids.length} items added to collection',
+          ? context.l10n.libraryAddedToCollection
+          : context.l10n.libraryItemsAddedToCollection(ids.length),
     );
   }
 
@@ -298,7 +305,7 @@ class _LibraryViewState extends State<_LibraryView> {
     showToast(
       context,
       type: NotificationType.success,
-      message: 'Collection deleted',
+      message: context.l10n.libraryCollectionDeleted,
     );
   }
 
@@ -348,24 +355,20 @@ class _LibraryViewState extends State<_LibraryView> {
           // Title may be very long. Pinning " deleted" as a suffix keeps
           // the verb visible regardless of available width.
           message: '"${effect.singleTitle}"',
-          messageSuffix: ' deleted',
+          messageSuffix: context.l10n.libraryDeletedSuffix,
         );
       } else {
         showToast(
           context,
           type: NotificationType.success,
-          message: effect.count == 1
-              ? 'Item deleted'
-              : '${effect.count} items deleted',
+          message: context.l10n.libraryItemsDeleted(effect.count),
         );
       }
     } else {
       showToast(
         context,
         type: NotificationType.error,
-        message: effect.count == 1
-            ? 'Failed to delete the item'
-            : 'Failed to delete the items',
+        message: context.l10n.libraryDeleteFailed(effect.count),
       );
     }
   }
@@ -411,8 +414,8 @@ class _LibraryViewState extends State<_LibraryView> {
                       LibraryStatus.initial || LibraryStatus.loading =>
                         const CenteredCircularProgressIndicator(),
                       LibraryStatus.failure => ErrorState(
-                        message: 'Failed to load library',
-                        retryLabel: 'Retry',
+                        message: context.l10n.libraryFailedToLoad,
+                        retryLabel: context.l10n.commonRetry,
                         onRetry: () => bloc.add(const LibraryLoadRequested()),
                       ),
                       LibraryStatus.success => Column(
@@ -586,7 +589,7 @@ class _LibraryAddCollectionFab extends StatelessWidget {
       elevation: 3,
       heroTag: null,
       icon: const Icon(AppIcons.collectionAdd, size: 20),
-      label: const Text('Add collection'),
+      label: Text(context.l10n.libraryAddToCollection),
     );
   }
 }

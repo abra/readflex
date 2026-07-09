@@ -1,5 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'onboarding_page_data.dart';
 
@@ -20,7 +21,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _controller = PageController();
   int _currentPage = 0;
 
-  bool get _isLastPage => _currentPage == onboardingPages.length - 1;
+  bool get _isLastPage => _currentPage == onboardingPageCount - 1;
 
   @override
   void dispose() {
@@ -44,6 +45,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     debugLogScreenBuild('OnboardingScreen');
 
     final colorScheme = context.colors;
+    final l10n = context.l10n;
+    final pages = onboardingPages(l10n);
 
     return Scaffold(
       body: SafeArea(
@@ -53,18 +56,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               alignment: Alignment.topRight,
               child: TextButton(
                 onPressed: _complete,
-                child: const Text('Skip'),
+                child: Text(l10n.appSkip),
               ),
             ),
             Expanded(
               child: PageView.builder(
                 controller: _controller,
-                itemCount: onboardingPages.length,
+                itemCount: pages.length,
                 onPageChanged: (index) {
                   setState(() => _currentPage = index);
                 },
                 itemBuilder: (context, index) {
-                  final page = onboardingPages[index];
+                  final page = pages[index];
                   return _OnboardingPage(data: page);
                 },
               ),
@@ -74,7 +77,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(
-                  onboardingPages.length,
+                  pages.length,
                   (index) => AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     margin: const EdgeInsets.symmetric(
@@ -105,7 +108,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 width: double.infinity,
                 child: FilledButton(
                   onPressed: _isLastPage ? _complete : _next,
-                  child: Text(_isLastPage ? 'Get Started' : 'Next'),
+                  child: Text(_isLastPage ? l10n.appGetStarted : l10n.appNext),
                 ),
               ),
             ),

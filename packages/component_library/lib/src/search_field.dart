@@ -14,6 +14,7 @@ import 'theme/tokens/app_spacing.dart';
 class SearchField extends StatelessWidget {
   const SearchField({
     required this.hintText,
+    this.clearButtonSemanticsLabel = 'Clear search',
     this.controller,
     this.focusNode,
     this.onChanged,
@@ -21,6 +22,7 @@ class SearchField extends StatelessWidget {
   });
 
   final String hintText;
+  final String clearButtonSemanticsLabel;
   final TextEditingController? controller;
   final FocusNode? focusNode;
   final ValueChanged<String>? onChanged;
@@ -51,7 +53,7 @@ class SearchField extends StatelessWidget {
                   // secondary background that visually overlaps
                   // the input fill here.
                   return Semantics(
-                    label: 'Clear search',
+                    label: clearButtonSemanticsLabel,
                     button: true,
                     child: GestureDetector(
                       onTap: () {

@@ -1,0 +1,22 @@
+name: readflex_localizations
+description: Localized UI copy and supported locale metadata for Readflex.
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  generate: true

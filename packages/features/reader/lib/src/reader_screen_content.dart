@@ -101,11 +101,11 @@ class _ReaderBodyState extends State<_ReaderBody> {
                 children: [
                   const Icon(AppIcons.error, size: 48),
                   const SizedBox(height: AppSpacing.md),
-                  const Text('Failed to load content'),
+                  Text(context.l10n.readerFailedToLoadContent),
                   const SizedBox(height: AppSpacing.md),
                   FilledButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Go Back'),
+                    child: Text(context.l10n.readerGoBack),
                   ),
                 ],
               ),
@@ -358,9 +358,9 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     );
     if (!searchEnabled) {
       return Stream.value(
-        const ReaderSearchError(
+        ReaderSearchError(
           requestId: -1,
-          message: 'Book search is unavailable',
+          message: context.l10n.readerBookSearchUnavailable,
         ),
       );
     }
@@ -369,9 +369,9 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
       final webView = _articleWebViewKey.currentState;
       if (webView == null) {
         return Stream.value(
-          const ReaderSearchError(
+          ReaderSearchError(
             requestId: -1,
-            message: 'Reader is not ready',
+            message: context.l10n.readerNotReady,
           ),
         );
       }
@@ -381,9 +381,9 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     final webView = _webViewKey.currentState;
     if (webView == null) {
       return Stream.value(
-        const ReaderSearchError(
+        ReaderSearchError(
           requestId: -1,
-          message: 'Reader is not ready',
+          message: context.l10n.readerNotReady,
         ),
       );
     }

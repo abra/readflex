@@ -31,7 +31,7 @@ class AddToCollectionCubit extends Cubit<AddToCollectionState> {
       emit(
         state.copyWith(
           status: AddToCollectionStatus.failure,
-          errorMessage: 'Failed to load collections',
+          errorCode: AddToCollectionErrorCode.loadCollectionsFailed,
         ),
       );
     }
@@ -66,7 +66,7 @@ class AddToCollectionCubit extends Cubit<AddToCollectionState> {
       emit(
         state.copyWith(
           status: AddToCollectionStatus.failure,
-          errorMessage: 'Failed to update collection',
+          errorCode: AddToCollectionErrorCode.updateCollectionFailed,
         ),
       );
     }
@@ -95,7 +95,7 @@ class AddToCollectionCubit extends Cubit<AddToCollectionState> {
       emit(
         state.copyWith(
           status: AddToCollectionStatus.failure,
-          errorMessage: 'Failed to update favourites',
+          errorCode: AddToCollectionErrorCode.updateFavouritesFailed,
         ),
       );
     }
@@ -130,7 +130,7 @@ class AddToCollectionCubit extends Cubit<AddToCollectionState> {
       emit(
         state.copyWith(
           status: AddToCollectionStatus.failure,
-          errorMessage: 'Collection name is required',
+          errorCode: AddToCollectionErrorCode.collectionNameRequired,
         ),
       );
     } catch (e, st) {
@@ -138,7 +138,7 @@ class AddToCollectionCubit extends Cubit<AddToCollectionState> {
       emit(
         state.copyWith(
           status: AddToCollectionStatus.failure,
-          errorMessage: 'Failed to create collection',
+          errorCode: AddToCollectionErrorCode.createCollectionFailed,
         ),
       );
     }

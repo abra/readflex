@@ -199,6 +199,7 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final l10n = context.l10n;
 
     return DefaultTabController(
       length: 3,
@@ -215,7 +216,7 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
               children: [
                 Expanded(
                   child: Text(
-                    'Contents',
+                    l10n.readerContents,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.text.titleLarge.copyWith(
@@ -225,7 +226,7 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
                 ),
                 IconButton(
                   icon: const Icon(AppIcons.close, size: AppIconSize.md),
-                  tooltip: 'Close',
+                  tooltip: l10n.commonClose,
                   style: _readerDrawerCloseButtonStyle,
                   onPressed: widget.onClose,
                 ),
@@ -234,23 +235,23 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
           ),
           TabBar(
             labelPadding: EdgeInsets.zero,
-            tabs: const [
+            tabs: [
               Tab(
                 child: _ReaderDrawerTabLabel(
                   icon: AppIcons.toc,
-                  label: 'Chapters',
+                  label: l10n.readerChapters,
                 ),
               ),
               Tab(
                 child: _ReaderDrawerTabLabel(
                   icon: AppIcons.bookmark,
-                  label: 'Bookmarks',
+                  label: l10n.readerBookmarks,
                 ),
               ),
               Tab(
                 child: _ReaderDrawerTabLabel(
                   icon: AppIcons.highlight,
-                  label: 'Highlights',
+                  label: l10n.readerHighlights,
                 ),
               ),
             ],
@@ -269,7 +270,7 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
                   currentProgress: widget.currentProgress,
                   currentChapterTitle: widget.currentChapterTitle,
                   query: _chaptersQuery,
-                  hintText: 'Search chapters',
+                  hintText: l10n.readerSearchChapters,
                   items: widget.tocItems,
                   onQueryChanged: (value) {
                     setState(() => _chaptersQuery = value);
@@ -490,6 +491,7 @@ class _ReaderTocTabState extends State<_ReaderTocTab> {
           child: SearchField(
             controller: widget.controller,
             hintText: widget.hintText,
+            clearButtonSemanticsLabel: context.l10n.commonClearSearch,
             onChanged: widget.onQueryChanged,
           ),
         ),
@@ -501,6 +503,7 @@ class _ReaderTocTabState extends State<_ReaderTocTab> {
                         ? AppIcons.toc
                         : AppIcons.searchOff,
                     message: readerTocEmptyMessage(
+                      l10n: context.l10n,
                       format: widget.format,
                       hasSourceItems: widget.items.isNotEmpty,
                     ),
@@ -565,7 +568,7 @@ class _ReaderTocListTile extends StatelessWidget {
       ),
       minVerticalPadding: AppSpacing.xs,
       title: Text(
-        item.label.isEmpty ? 'Untitled chapter' : item.label,
+        item.label.isEmpty ? context.l10n.readerUntitledChapter : item.label,
         textAlign: readerDirectionalTextAlign(
           pageProgressionRtl: pageProgressionRtl,
         ),
@@ -611,7 +614,8 @@ class _ReaderBookmarksTab extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.md),
           child: SearchField(
             controller: controller,
-            hintText: 'Search bookmarks',
+            hintText: context.l10n.readerSearchBookmarks,
+            clearButtonSemanticsLabel: context.l10n.commonClearSearch,
             onChanged: onQueryChanged,
           ),
         ),
@@ -623,8 +627,8 @@ class _ReaderBookmarksTab extends StatelessWidget {
                         ? AppIcons.bookmark
                         : AppIcons.searchOff,
                     message: bookmarks.isEmpty
-                        ? 'No bookmarks yet'
-                        : 'No matching bookmarks',
+                        ? context.l10n.readerNoBookmarksYet
+                        : context.l10n.readerNoMatchingBookmarks,
                   )
                 : ScrollEdgeFadeStack(
                     child: ListView.builder(
@@ -680,7 +684,7 @@ class _ReaderBookmarkListTile extends StatelessWidget {
         color: colors.primary,
       ),
       title: Text(
-        content.isEmpty ? 'Bookmarked page' : content,
+        content.isEmpty ? context.l10n.readerBookmarkedPage : content,
         textAlign: readerDirectionalTextAlign(
           pageProgressionRtl: pageProgressionRtl,
         ),
@@ -712,7 +716,7 @@ class _ReaderBookmarkListTile extends StatelessWidget {
         ),
       ),
       trailing: IconButton(
-        tooltip: 'Delete bookmark',
+        tooltip: context.l10n.readerDeleteBookmark,
         visualDensity: VisualDensity.compact,
         style: _readerDrawerCloseButtonStyle,
         icon: Icon(
@@ -757,7 +761,8 @@ class _ReaderHighlightsTab extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.md),
           child: SearchField(
             controller: controller,
-            hintText: 'Search highlights',
+            hintText: context.l10n.readerSearchHighlights,
+            clearButtonSemanticsLabel: context.l10n.commonClearSearch,
             onChanged: onQueryChanged,
           ),
         ),
@@ -769,8 +774,8 @@ class _ReaderHighlightsTab extends StatelessWidget {
                         ? AppIcons.highlight
                         : AppIcons.searchOff,
                     message: highlights.isEmpty
-                        ? 'No highlights yet'
-                        : 'No matching highlights',
+                        ? context.l10n.readerNoHighlightsYet
+                        : context.l10n.readerNoMatchingHighlights,
                   )
                 : ScrollEdgeFadeStack(
                     child: ListView.builder(
@@ -815,14 +820,16 @@ class _ReaderHighlightListTile extends StatelessWidget {
     final hasNote = note != null && note.isNotEmpty;
     final notePromotedToTitle =
         highlight.kind == HighlightKind.imageArea && hasNote;
-    final fallbackTitle = text.isEmpty ? 'Highlighted text' : text;
+    final fallbackTitle = text.isEmpty
+        ? context.l10n.readerHighlightedText
+        : text;
     final title = notePromotedToTitle ? note : fallbackTitle;
     final hasLocation = readerHighlightHasNavigableLocation(highlight);
     final locationLabel = readerHighlightLocationLabel(highlight);
     final subtitle = [
       if (!notePromotedToTitle && hasNote) note,
       ?locationLabel,
-      if (!hasLocation) 'Location unavailable',
+      if (!hasLocation) context.l10n.readerLocationUnavailable,
     ].join(' · ');
 
     return ListTile(
@@ -1047,7 +1054,7 @@ class _ReaderSearchDrawerContentState
                   children: [
                     Expanded(
                       child: Text(
-                        'Search',
+                        context.l10n.readerSearchAction,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: context.text.titleLarge.copyWith(
@@ -1057,7 +1064,7 @@ class _ReaderSearchDrawerContentState
                     ),
                     IconButton(
                       icon: const Icon(AppIcons.close, size: AppIconSize.md),
-                      tooltip: 'Close',
+                      tooltip: context.l10n.commonClose,
                       style: _readerDrawerCloseButtonStyle,
                       onPressed: widget.onClose,
                     ),
@@ -1069,7 +1076,8 @@ class _ReaderSearchDrawerContentState
                 child: SearchField(
                   controller: _controller,
                   focusNode: _focusNode,
-                  hintText: 'Search in book',
+                  hintText: context.l10n.readerSearchInBook,
+                  clearButtonSemanticsLabel: context.l10n.commonClearSearch,
                   onChanged: _onQueryChanged,
                 ),
               ),
@@ -1082,8 +1090,13 @@ class _ReaderSearchDrawerContentState
                 ),
               Expanded(
                 child: _ReaderDrawerContentFrame(
-                  child: state.errorMessage != null
-                      ? _ReaderDrawerEmptyState(message: state.errorMessage!)
+                  child: state.errorMessage != null || state.errorCode != null
+                      ? _ReaderDrawerEmptyState(
+                          message: _readerSearchErrorMessage(
+                            context.l10n,
+                            state,
+                          ),
+                        )
                       : !canSearch
                       ? query.isEmpty && state.recentQueries.isNotEmpty
                             ? _ReaderRecentSearchesList(
@@ -1095,12 +1108,13 @@ class _ReaderSearchDrawerContentState
                               )
                             : _ReaderDrawerEmptyState(
                                 message: readerSearchPromptMessage(
+                                  context.l10n,
                                   widget.format,
                                 ),
                               )
                       : state.results.isEmpty && !state.isLoading
-                      ? const _ReaderDrawerEmptyState(
-                          message: 'No results found',
+                      ? _ReaderDrawerEmptyState(
+                          message: context.l10n.readerNoResultsFound,
                         )
                       : ScrollEdgeFadeStack(
                           child: ListView.builder(
@@ -1126,6 +1140,19 @@ class _ReaderSearchDrawerContentState
       ),
     );
   }
+}
+
+String _readerSearchErrorMessage(
+  ReadflexLocalizations l10n,
+  ReaderSearchState state,
+) {
+  final message = state.errorMessage;
+  if (message != null) return message;
+
+  return switch (state.errorCode) {
+    ReaderSearchErrorCode.searchFailed => l10n.readerSearchFailed,
+    null => l10n.readerSearchFailed,
+  };
 }
 
 class _ReaderRecentSearchesList extends StatelessWidget {
@@ -1161,7 +1188,7 @@ class _ReaderRecentSearchesList extends StatelessWidget {
                 AppSpacing.xs,
               ),
               child: Text(
-                'Recent searches',
+                context.l10n.readerRecentSearches,
                 style: context.text.labelMedium.copyWith(
                   color: colors.onSurfaceVariant,
                 ),
@@ -1197,7 +1224,7 @@ class _ReaderRecentSearchesList extends StatelessWidget {
             ),
             trailing: IconButton(
               icon: const Icon(AppIcons.close, size: AppIconSize.xs),
-              tooltip: 'Remove from history',
+              tooltip: context.l10n.readerRemoveFromHistory,
               style: _readerDrawerCloseButtonStyle,
               onPressed: () => onQueryRemoved(query),
             ),
@@ -1233,7 +1260,7 @@ class _ReaderSearchResultTile extends StatelessWidget {
       minVerticalPadding: AppSpacing.xs,
       title: Text(
         chapterTitle == null || chapterTitle.isEmpty
-            ? 'Search result'
+            ? context.l10n.readerSearchResult
             : chapterTitle,
         textAlign: readerDirectionalTextAlign(
           pageProgressionRtl: pageProgressionRtl,

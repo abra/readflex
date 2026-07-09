@@ -1,18 +1,25 @@
 import 'package:domain_models/domain_models.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
-String librarySourceSemanticsLabel(LibrarySource source) {
+String librarySourceSemanticsLabel(
+  LibrarySource source,
+  ReadflexLocalizations l10n,
+) {
   final title = source.title.trim();
-  return title.isEmpty ? 'Untitled source' : title;
+  return title.isEmpty ? l10n.librarySourceUntitled : title;
 }
 
-String librarySourceSemanticsValue(LibrarySource source) {
+String librarySourceSemanticsValue(
+  LibrarySource source,
+  ReadflexLocalizations l10n,
+) {
   final attribution = _sourceAttribution(source);
   final format = _sourceFormatLabel(source);
   final parts = <String>[
-    _sourceKindLabel(source),
+    librarySourceKindLabel(source, l10n),
     ?attribution,
     ?format,
-    _readingStateLabel(source),
+    _readingStateLabel(source, l10n),
   ];
 
   return parts.join(', ');
@@ -21,18 +28,25 @@ String librarySourceSemanticsValue(LibrarySource source) {
 String librarySourceTapHint({
   required bool isSelectionMode,
   required bool isSelected,
+  required ReadflexLocalizations l10n,
 }) {
-  if (!isSelectionMode) return 'Open reader';
-  return isSelected ? 'Deselect source' : 'Select source';
+  if (!isSelectionMode) return l10n.librarySourceOpenReader;
+  return isSelected ? l10n.librarySourceDeselect : l10n.librarySourceSelect;
 }
 
-String? librarySourceLongPressHint({required bool isSelectionMode}) {
-  return isSelectionMode ? null : 'Select source';
+String? librarySourceLongPressHint({
+  required bool isSelectionMode,
+  required ReadflexLocalizations l10n,
+}) {
+  return isSelectionMode ? null : l10n.librarySourceSelect;
 }
 
-String _sourceKindLabel(LibrarySource source) {
-  if (source.sourceType == SourceType.article) return 'Article';
-  return source.isComic ? 'Comic' : 'Book';
+String librarySourceKindLabel(
+  LibrarySource source,
+  ReadflexLocalizations l10n,
+) {
+  if (source.sourceType == SourceType.article) return l10n.librarySourceArticle;
+  return source.isComic ? l10n.librarySourceComic : l10n.librarySourceBook;
 }
 
 String? _sourceAttribution(LibrarySource source) {
@@ -48,12 +62,12 @@ String? _sourceFormatLabel(LibrarySource source) {
   return _trimmedOrNull(source.typeLabel);
 }
 
-String _readingStateLabel(LibrarySource source) {
-  if (source.isFinished) return 'Finished';
-  if (source.isNew) return 'New';
+String _readingStateLabel(LibrarySource source, ReadflexLocalizations l10n) {
+  if (source.isFinished) return l10n.librarySourceFinished;
+  if (source.isNew) return l10n.librarySourceNew;
 
   final progress = (source.readingProgress.clamp(0.0, 1.0) * 100).round();
-  return '$progress percent read';
+  return l10n.librarySourcePercentRead(progress);
 }
 
 String? _trimmedOrNull(String? value) {

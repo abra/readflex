@@ -16,10 +16,10 @@ class ImportFlowMenu extends ImportFlowState {
 }
 
 class ImportFlowArticleUrlEntry extends ImportFlowState {
-  const ImportFlowArticleUrlEntry({this.url = '', this.errorMessage});
+  const ImportFlowArticleUrlEntry({this.url = '', this.errorCode});
 
   final String url;
-  final String? errorMessage;
+  final ImportFlowErrorCode? errorCode;
 
   String? get normalizedUrl => normalizeArticleUrl(url);
   bool get canSubmit => normalizedUrl != null;
@@ -27,11 +27,11 @@ class ImportFlowArticleUrlEntry extends ImportFlowState {
   ImportFlowArticleUrlEntry withUrl(String url) =>
       ImportFlowArticleUrlEntry(url: url);
 
-  ImportFlowArticleUrlEntry withError(String errorMessage) =>
-      ImportFlowArticleUrlEntry(url: url, errorMessage: errorMessage);
+  ImportFlowArticleUrlEntry withError(ImportFlowErrorCode errorCode) =>
+      ImportFlowArticleUrlEntry(url: url, errorCode: errorCode);
 
   @override
-  List<Object?> get props => [url, errorMessage];
+  List<Object?> get props => [url, errorCode];
 }
 
 class ImportFlowBookTermsRequired extends ImportFlowState {
@@ -100,16 +100,25 @@ class ImportFlowArticleDone extends ImportFlowState {
 
 enum ImportFlowRetryTarget { book, article }
 
+enum ImportFlowErrorCode {
+  articleUrlRequired,
+  invalidArticleUrl,
+  bookImportFailed,
+  articleSaveFailed,
+}
+
 /// Terminal failure screen for the book path. Tap "Try again" re-opens
 /// the file picker.
 class ImportFlowFailure extends ImportFlowState {
   const ImportFlowFailure({
-    required this.message,
+    this.errorCode,
+    this.customMessage,
     this.filename,
     this.retryTarget = ImportFlowRetryTarget.book,
   });
 
-  final String message;
+  final ImportFlowErrorCode? errorCode;
+  final String? customMessage;
 
   /// Basename of the file the user picked, when known. Surfacing it on
   /// the failure screen mirrors the success view's filename line so the
@@ -118,5 +127,5 @@ class ImportFlowFailure extends ImportFlowState {
   final ImportFlowRetryTarget retryTarget;
 
   @override
-  List<Object?> get props => [message, filename, retryTarget];
+  List<Object?> get props => [errorCode, customMessage, filename, retryTarget];
 }

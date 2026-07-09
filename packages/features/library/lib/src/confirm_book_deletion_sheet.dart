@@ -1,6 +1,7 @@
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 /// Confirmation bottom sheet shown before deleting a library item.
 ///
@@ -28,15 +29,10 @@ class _ConfirmBookDeletionSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final isSingle = count == 1;
-    final title = isSingle ? 'Delete this item?' : 'Delete $count items?';
-    final itemLabel = isSingle ? 'item' : 'items';
-    final body =
-        'This removes the library $itemLabel and your highlights. '
-        'Archived learning data is kept.';
+    final l10n = context.l10n;
 
     return ActionBottomSheetLayout(
-      title: title,
+      title: l10n.libraryDeleteItemsTitle(count),
       bodyPadding: const EdgeInsets.fromLTRB(
         AppSpacing.xl,
         AppSpacing.md,
@@ -47,14 +43,17 @@ class _ConfirmBookDeletionSheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(body, style: context.text.bodyMedium),
+          Text(
+            l10n.libraryDeleteItemsBody(count),
+            style: context.text.bodyMedium,
+          ),
           const SizedBox(height: AppSpacing.lg),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
+                  child: Text(l10n.commonCancel),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
@@ -67,7 +66,7 @@ class _ConfirmBookDeletionSheet extends StatelessWidget {
                   onPressed: () => Navigator.of(
                     context,
                   ).pop(BookDeletionScope.keepLearningData),
-                  child: const Text('Delete'),
+                  child: Text(l10n.commonDelete),
                 ),
               ),
             ],

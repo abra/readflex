@@ -15,8 +15,7 @@ enum Environment {
   staging._('STAGING'),
 
   /// Production environment.
-  prod._('PROD')
-  ;
+  prod._('PROD');
 
   /// The environment value.
   final String value;

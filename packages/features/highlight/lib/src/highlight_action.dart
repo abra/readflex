@@ -2,6 +2,7 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:highlight_repository/highlight_repository.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:shared/shared.dart';
 
 /// Reader plug-in that lets the user save the currently selected text as a
@@ -19,6 +20,9 @@ class HighlightAction extends ColorHighlightTextAction {
 
   @override
   String get label => 'Highlight';
+
+  @override
+  String labelFor(BuildContext context) => context.l10n.highlightAction;
 
   @override
   IconData get icon => AppIcons.highlight;

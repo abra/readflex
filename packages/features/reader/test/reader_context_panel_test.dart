@@ -29,10 +29,10 @@ void main() {
     expect(contextPanelSource, contains('ReaderHighlightNoteChangeRequested'));
     expect(contextPanelSource, contains('_SavedHighlightPopup'));
     expect(contextPanelSource, isNot(contains('_HighlightDeletePopup')));
-    expect(contextPanelSource, contains('Highlight removed'));
-    expect(contextPanelSource, contains('Comment updated'));
+    expect(contextPanelSource, contains('readerHighlightRemoved'));
+    expect(contextPanelSource, contains('readerCommentUpdated'));
     expect(contextPanelSource, contains('ColorHighlightTextAction'));
-    expect(contextPanelSource, contains('Highlight saved'));
+    expect(contextPanelSource, contains('readerHighlightSaved'));
     expect(contextPanelSource, contains('_kHighlightPopupColorCount'));
     expect(
       contextPanelSource,
@@ -83,9 +83,9 @@ void main() {
     expect(contextPanelSource, contains('_ImageHighlightSelectionPopup'));
     expect(contextPanelSource, contains('_ImageHighlightNoteSheet'));
     expect(contextPanelSource, contains('showAppBottomSheet'));
-    expect(contextPanelSource, contains('Highlight note'));
-    expect(contextPanelSource, contains('Edit note'));
-    expect(contextPanelSource, contains('Add a comment (optional)'));
+    expect(contextPanelSource, contains('readerHighlightNoteTitle'));
+    expect(contextPanelSource, contains('readerEditNoteTitle'));
+    expect(contextPanelSource, contains('readerCommentHint'));
     expect(contextPanelSource, contains('child: OutlinedButton('));
     expect(contextPanelSource, isNot(contains('FilledButton.icon(')));
     expect(contextPanelSource, contains('note: result.note'));
@@ -138,7 +138,10 @@ void main() {
     expect(contentSource, contains('consumeProtectedClear()'));
     expect(contextPanelSource, contains('icon: AppIcons.delete'));
     expect(contextPanelSource, contains('icon: AppIcons.highlight'));
-    expect(contextPanelSource, contains('tooltip: \'Edit comment\''));
+    expect(
+      contextPanelSource,
+      contains('tooltip: context.l10n.readerEditComment'),
+    );
     expect(contentSource, contains('onHighlightTapped: (tap)'));
     expect(contentSource, contains('highlightFocusCubit.focus(tap)'));
   });

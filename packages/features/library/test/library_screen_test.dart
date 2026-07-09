@@ -9,6 +9,7 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
@@ -37,23 +38,31 @@ void main() {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();
     preferencesService = await PreferencesService.create(
-      supportedCodes: ['en'],
+      supportedCodes: ReadflexSupportedLocales.codes,
     );
   });
 
   Widget buildSubject({
     ArticleRepository? articleRepository,
     bool isOffline = false,
-  }) => MaterialApp(
-    theme: AppTheme.light(),
-    home: LibraryScreen(
-      bookRepository: bookRepository,
-      articleRepository: articleRepository,
-      collectionRepository: collectionRepository,
-      preferencesService: preferencesService,
-      isOffline: isOffline,
-      onSourcePressed: (_, {onSourceOpened}) async {},
-      onAddPressed: () async {},
+  }) => PreferencesScope(
+    service: preferencesService,
+    child: Builder(
+      builder: (context) => MaterialApp(
+        locale: PreferencesScope.localeOf(context),
+        supportedLocales: ReadflexSupportedLocales.locales,
+        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        theme: AppTheme.light(),
+        home: LibraryScreen(
+          bookRepository: bookRepository,
+          articleRepository: articleRepository,
+          collectionRepository: collectionRepository,
+          preferencesService: preferencesService,
+          isOffline: isOffline,
+          onSourcePressed: (_, {onSourceOpened}) async {},
+          onAddPressed: () async {},
+        ),
+      ),
     ),
   );
 
@@ -92,7 +101,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('Library'), findsOneWidget);
-    expect(find.text('1 items'), findsOneWidget);
+    expect(find.text('1 item'), findsOneWidget);
   });
 
   testWidgets('display button opens view and appearance sheet', (
@@ -117,6 +126,7 @@ void main() {
     expect(find.text('Display'), findsOneWidget);
     expect(find.text('View'), findsOneWidget);
     expect(find.text('Appearance'), findsOneWidget);
+    expect(find.text('Language'), findsOneWidget);
     expect(find.text('List'), findsOneWidget);
     expect(find.text('Grid'), findsOneWidget);
     expect(find.text('System'), findsOneWidget);
@@ -133,6 +143,52 @@ void main() {
 
     expect(preferencesService.current.themeMode, ThemeMode.dark);
     expect(find.text('Display'), findsOneWidget);
+  });
+
+  testWidgets('display sheet changes app language', (tester) async {
+    bookRepository.seedBooks([_book]);
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.tap(find.byKey(const ValueKey('libraryHeaderDisplayButton')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Русский'));
+    await tester.tap(find.text('Русский'));
+    await tester.pumpAndSettle();
+
+    expect(preferencesService.current.locale, const Locale('ru'));
+    expect(find.text('Библиотека'), findsOneWidget);
+    expect(find.text('Язык'), findsOneWidget);
+  });
+
+  testWidgets('display sheet lays language options out in two columns', (
+    tester,
+  ) async {
+    bookRepository.seedBooks([_book]);
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.tap(find.byKey(const ValueKey('libraryHeaderDisplayButton')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('libraryLanguageOption-en')),
+    );
+
+    final englishRect = tester.getRect(
+      find.byKey(const ValueKey('libraryLanguageOption-en')),
+    );
+    final chineseRect = tester.getRect(
+      find.byKey(const ValueKey('libraryLanguageOption-zh')),
+    );
+    final hindiRect = tester.getRect(
+      find.byKey(const ValueKey('libraryLanguageOption-hi')),
+    );
+
+    expect(chineseRect.top, closeTo(englishRect.top, 1));
+    expect(chineseRect.left, greaterThan(englishRect.right));
+    expect(hindiRect.top, greaterThan(englishRect.top));
   });
 
   testWidgets('switches layout without mounting both scroll views', (
@@ -600,7 +656,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(FloatingActionButton), findsNWidgets(2));
-    expect(find.text('Add collection'), findsOneWidget);
+    expect(find.text('Add to collection'), findsOneWidget);
     expect(find.byIcon(AppIcons.collectionAdd), findsOneWidget);
     expect(find.byIcon(AppIcons.delete), findsOneWidget);
     expect(find.byIcon(AppIcons.add), findsNothing);
@@ -615,7 +671,7 @@ void main() {
 
     final screenWidth = tester.getSize(find.byType(Scaffold)).width;
     expect(
-      tester.getCenter(find.text('Add collection')).dx,
+      tester.getCenter(find.text('Add to collection')).dx,
       lessThan(screenWidth * 0.35),
     );
     expect(

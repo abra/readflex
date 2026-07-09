@@ -120,6 +120,35 @@ UI callbacks.
 
 Keep the detailed rules in `ACCESSIBILITY.md` aligned with real code and tests.
 
+## Localization
+
+`readflex_localizations` is the single source of truth for supported locales,
+generated Flutter localization delegates, and user-facing UI copy. The root app
+wires `ReadflexLocalizations.localizationsDelegates`,
+`ReadflexSupportedLocales.locales`, and the current locale from
+`PreferencesScope.localeOf(context)` into `MaterialApp`.
+The user-selected locale is persisted in `preferences_service`; the Library
+display sheet owns the current language picker through a feature cubit.
+
+Feature packages may depend on `readflex_localizations` for UI labels,
+validation text, toast text, empty states, tooltips, and semantics labels. Bloc
+and Cubit state should not store localized UI strings. Prefer typed enum error
+codes in state, then map those codes to `context.l10n` in the View/Sheet that
+renders the message. Custom backend or parser reasons may still be carried as a
+separate custom message when the source already produced a meaningful
+user-facing reason.
+
+User content such as book titles, article titles, author names, URLs, and
+collection names is data, not UI copy, and should not be translated by the app.
+
+When adding or renaming a localized key:
+
+- Update the English template ARB and every supported locale ARB.
+- Regenerate typed classes with `fvm flutter gen-l10n` from
+  `packages/readflex_localizations`.
+- Keep tests on stable contracts: supported locale metadata, delegates, and
+  typed state/error codes rather than hardcoded business-layer UI strings.
+
 ## Package Map
 
 ### Core Contracts and Storage
@@ -129,6 +158,7 @@ Keep the detailed rules in `ACCESSIBILITY.md` aligned with real code and tests.
 | `domain_models` | Pure domain models, enums, value objects, and app/domain exceptions. No Flutter, storage, or service dependencies. | none |
 | `local_storage` | Single Drift database (`readflex.db`), tables, DAOs, migrations, storage rows. | none |
 | `component_library` | Design tokens, theme extensions, reusable UI components, bottom-sheet shell, shared visual primitives. | none |
+| `readflex_localizations` | Generated Flutter localizations, ARB files, supported locale metadata, and `BuildContext` localization helpers. | none |
 | `shared` | Narrow cross-feature contracts. Currently `TextAction` and `TextSelectionContext`. | `domain_models` |
 
 Domain models are the neutral contract between repositories, services, blocs,
@@ -173,10 +203,10 @@ must remain replaceable.
 
 | Package | UI surface | Direct local dependencies |
 |---------|------------|---------------------------|
-| `library_feature` (`packages/features/library`) | Main Library screen, source search/filter/list/grid, collection management. | `article_repository`, `book_repository`, `collection_repository`, `component_library`, `domain_models`, `preferences_service`, `toast_service` |
-| `import_flow` | Import bottom sheet for books/articles. | `book_repository`, `component_library`, `domain_models`, `monitoring`, `reader_webview` |
-| `reader` | Full-screen reader route and reader UI state. | `article_repository`, `book_repository`, `component_library`, `domain_models`, `highlight_repository`, `preferences_service`, `reader_webview`, `screen_control_service`, `shared` |
-| `highlight` | Reader text action and highlight bottom sheet. | `component_library`, `domain_models`, `highlight_repository`, `shared` |
+| `library_feature` (`packages/features/library`) | Main Library screen, source search/filter/list/grid, collection management. | `article_repository`, `book_repository`, `collection_repository`, `component_library`, `domain_models`, `preferences_service`, `readflex_localizations`, `toast_service` |
+| `import_flow` | Import bottom sheet for books/articles. | `book_repository`, `component_library`, `domain_models`, `monitoring`, `reader_webview`, `readflex_localizations` |
+| `reader` | Full-screen reader route and reader UI state. | `article_repository`, `book_repository`, `component_library`, `domain_models`, `highlight_repository`, `preferences_service`, `reader_webview`, `readflex_localizations`, `screen_control_service`, `shared` |
+| `highlight` | Reader text action and highlight bottom sheet. | `component_library`, `domain_models`, `highlight_repository`, `readflex_localizations`, `shared` |
 
 `library_feature` is the Dart package name because `library` is a Dart language
 keyword in source syntax. The user-facing label remains "Library".

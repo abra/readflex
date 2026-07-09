@@ -1,0 +1,18 @@
+arb-dir: lib/l10n
+template-arb-file: intl_en.arb
+output-localization-file: readflex_localizations.dart
+output-class: ReadflexLocalizations
+output-dir: lib/generated/l10n
+nullable-getter: true
+format: true
+preferred-supported-locales:
+  - en
+  - zh
+  - hi
+  - es
+  - ar
+  - fr
+  - ru
+  - pt
+  - de
+  - ja

@@ -2,6 +2,7 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'library_bloc.dart';
 import 'manage_collection_cubit.dart';
@@ -269,7 +270,7 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
     final child = switch (_step) {
       _ManageCollectionStep.manage => _ManageCollectionStepView(
         key: const ValueKey('manageCollectionContent'),
-        title: 'Manage collection',
+        title: context.l10n.libraryManageCollectionTitle,
         child: _ManageCollectionContent(
           state: state,
           nameController: _nameController,
@@ -286,7 +287,7 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
       ),
       _ManageCollectionStep.confirmDelete => _ManageCollectionStepView(
         key: const ValueKey('deleteCollectionContent'),
-        title: 'Delete collection?',
+        title: context.l10n.libraryDeleteCollectionTitle,
         child: _DeleteCollectionConfirmationContent(
           state: state,
           collectionName: _currentName,
@@ -543,11 +544,11 @@ class _ManageCollectionContent extends StatelessWidget {
       mainAxisSize: MainAxisSize.max,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (state.errorMessage != null) ...[
+        if (state.errorCode != null) ...[
           Padding(
             padding: _sheetHorizontalPadding,
             child: Text(
-              state.errorMessage!,
+              _manageCollectionErrorMessage(context.l10n, state.errorCode!),
               style: context.text.bodyMedium.copyWith(
                 color: context.colors.error,
               ),
@@ -571,7 +572,7 @@ class _ManageCollectionContent extends StatelessWidget {
         Padding(
           padding: _sheetHorizontalPadding,
           child: Text(
-            _sourceCountLabel(visibleSources),
+            _sourceCountLabel(context, visibleSources),
             style: context.text.labelSmall.copyWith(
               color: context.colors.onSurfaceVariant,
             ),
@@ -600,28 +601,28 @@ class _ManageCollectionContent extends StatelessWidget {
                           foregroundColor: context.colors.onError,
                         ),
                         onPressed: state.isBusy ? null : onDeletePressed,
-                        child: const Text('Delete collection'),
+                        child: Text(context.l10n.libraryDeleteCollectionButton),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: FilledButton(
                         onPressed: canSave ? onSave : null,
-                        child: const Text('Save'),
+                        child: Text(context.l10n.commonSave),
                       ),
                     ),
                   ],
                 )
               : FilledButton(
                   onPressed: canSave ? onSave : null,
-                  child: const Text('Save'),
+                  child: Text(context.l10n.commonSave),
                 ),
         ),
       ],
     );
   }
 
-  String _sourceCountLabel(List<LibrarySource> sources) {
+  String _sourceCountLabel(BuildContext context, List<LibrarySource> sources) {
     var books = 0;
     var articles = 0;
     for (final source in sources) {
@@ -636,14 +637,12 @@ class _ManageCollectionContent extends StatelessWidget {
     }
 
     final parts = [
-      if (books > 0) _pluralize(books, 'book'),
-      if (articles > 0) _pluralize(articles, 'article'),
+      if (books > 0) context.l10n.libraryBookCount(books),
+      if (articles > 0) context.l10n.libraryArticleCount(articles),
     ];
-    return parts.isEmpty ? '0 books/articles' : parts.join(', ');
-  }
-
-  String _pluralize(int count, String singular) {
-    return count == 1 ? '$count $singular' : '$count ${singular}s';
+    return parts.isEmpty
+        ? context.l10n.libraryEmptySourceCount
+        : parts.join(', ');
   }
 }
 
@@ -670,7 +669,7 @@ class _CollectionSourcesList extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
           child: Text(
-            'No items in this collection',
+            context.l10n.libraryNoItemsInCollection,
             textAlign: TextAlign.center,
             style: context.text.bodyMedium.copyWith(
               color: context.colors.onSurfaceVariant,
@@ -731,9 +730,9 @@ class _DeleteCollectionConfirmationContent extends StatelessWidget {
         mainAxisSize: MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (state.errorMessage != null) ...[
+          if (state.errorCode != null) ...[
             Text(
-              state.errorMessage!,
+              _manageCollectionErrorMessage(context.l10n, state.errorCode!),
               style: context.text.bodyMedium.copyWith(
                 color: context.colors.error,
               ),
@@ -743,7 +742,7 @@ class _DeleteCollectionConfirmationContent extends StatelessWidget {
           Expanded(
             child: Center(
               child: Text(
-                'This removes "$collectionName" only. Books and articles stay in your library.',
+                context.l10n.libraryDeleteCollectionBody(collectionName),
                 textAlign: TextAlign.center,
                 style: context.text.bodyMedium,
               ),
@@ -755,7 +754,7 @@ class _DeleteCollectionConfirmationContent extends StatelessWidget {
               Expanded(
                 child: OutlinedButton(
                   onPressed: state.isBusy ? null : onCancel,
-                  child: const Text('Cancel'),
+                  child: Text(context.l10n.commonCancel),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
@@ -766,7 +765,7 @@ class _DeleteCollectionConfirmationContent extends StatelessWidget {
                     foregroundColor: context.colors.onError,
                   ),
                   onPressed: state.isBusy ? null : onDelete,
-                  child: const Text('Delete'),
+                  child: Text(context.l10n.commonDelete),
                 ),
               ),
             ],
@@ -864,7 +863,7 @@ class _CollectionSourceRow extends StatelessWidget {
           const SizedBox(width: AppSpacing.md),
           IconButton(
             key: ValueKey('collectionSourceRemove-${source.id}'),
-            tooltip: 'Remove ${source.title} from collection',
+            tooltip: context.l10n.libraryRemoveFromCollection(source.title),
             style: IconButton.styleFrom(
               backgroundColor: Colors.transparent,
               foregroundColor: colors.onSurfaceVariant,
@@ -889,4 +888,18 @@ class _CollectionSourceRow extends StatelessWidget {
       SourceType.book => AppIcons.book,
     };
   }
+}
+
+String _manageCollectionErrorMessage(
+  ReadflexLocalizations l10n,
+  ManageCollectionErrorCode errorCode,
+) {
+  return switch (errorCode) {
+    ManageCollectionErrorCode.collectionNameRequired =>
+      l10n.libraryCollectionNameRequired,
+    ManageCollectionErrorCode.saveCollectionFailed =>
+      l10n.librarySaveCollectionFailed,
+    ManageCollectionErrorCode.deleteCollectionFailed =>
+      l10n.libraryDeleteCollectionFailed,
+  };
 }

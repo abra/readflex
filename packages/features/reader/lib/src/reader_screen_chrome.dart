@@ -415,7 +415,7 @@ class _ReaderBrightnessChromeState extends State<_ReaderBrightnessChrome> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           _ReaderBrightnessStepButton(
-                            tooltip: 'Increase brightness',
+                            tooltip: context.l10n.readerIncreaseBrightness,
                             icon: AppIcons.lightMode,
                             enabled: widget.canIncrease,
                             foreground: foreground,
@@ -438,7 +438,7 @@ class _ReaderBrightnessChromeState extends State<_ReaderBrightnessChrome> {
                             ),
                           ),
                           _ReaderBrightnessStepButton(
-                            tooltip: 'Decrease brightness',
+                            tooltip: context.l10n.readerDecreaseBrightness,
                             icon: AppIcons.brightnessLow,
                             enabled: widget.canDecrease,
                             foreground: foreground,
@@ -516,8 +516,8 @@ class _ReaderBrightnessValueButton extends StatelessWidget {
       button: true,
       enabled: onPressed != null,
       label: usesSystemBrightness
-          ? 'Using system brightness: $label'
-          : 'Use system brightness',
+          ? context.l10n.readerUsingSystemBrightness(label)
+          : context.l10n.readerUseSystemBrightness,
       child: Material(
         color: active
             ? cs.primary.withValues(alpha: 0.12)
@@ -613,7 +613,7 @@ class _ReaderPageBookmarkIndicator extends StatelessWidget {
           duration: _kChromeAnimDuration,
           curve: curve,
           child: Semantics(
-            label: 'Page bookmarked',
+            label: context.l10n.readerPageBookmarked,
             child: _ReaderBookmarkGlyph(
               filled: true,
               color: color,
@@ -746,10 +746,10 @@ class _ReaderTopChrome extends StatelessWidget {
                         final titleChild = onTitlePressed == null
                             ? titleText
                             : Tooltip(
-                                message: 'Open original article',
+                                message: context.l10n.readerOpenOriginalArticle,
                                 child: Semantics(
                                   button: true,
-                                  label: 'Open original article',
+                                  label: context.l10n.readerOpenOriginalArticle,
                                   value: title,
                                   child: GestureDetector(
                                     behavior: HitTestBehavior.opaque,
@@ -904,6 +904,7 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
             documentFeatures: snapshot.documentFeatures,
           ),
           searchActionTooltip: readerSearchActionTooltip(
+            l10n: context.l10n,
             format: snapshot.format,
             documentFeatures: snapshot.documentFeatures,
           ),
@@ -1383,7 +1384,7 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                             _ReaderChromeIconButton(
                               icon: AppIcons.back,
                               iconSize: AppIconSize.lg,
-                              tooltip: 'Back',
+                              tooltip: context.l10n.readerBack,
                               foregroundColor: widget.foregroundColor,
                               onPressed: widget.onBack,
                             ),
@@ -1391,7 +1392,7 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                               const SizedBox(width: AppSpacing.sm),
                               _ReaderChromeIconButton(
                                 icon: AppIcons.toc,
-                                tooltip: 'Contents',
+                                tooltip: context.l10n.readerContents,
                                 foregroundColor: widget.foregroundColor,
                                 onPressed: widget.onTocPressed,
                               ),
@@ -1426,7 +1427,7 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
       addButton(
         _ReaderChromeIconButton(
           icon: AppIcons.font,
-          tooltip: 'Font',
+          tooltip: context.l10n.readerFontAction,
           foregroundColor: widget.foregroundColor,
           onPressed: widget.onFontPressed,
         ),
@@ -1440,8 +1441,8 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
               ? AppIcons.pageTurnVertical
               : AppIcons.pageTurnHorizontal,
           tooltip: widget.pageTurnStyle == ReaderPageTurnStyle.vertical
-              ? 'Page turn: Vertical'
-              : 'Page turn: Horizontal',
+              ? context.l10n.readerPageTurnVertical
+              : context.l10n.readerPageTurnHorizontal,
           foregroundColor: widget.accentColor,
           onPressed: widget.onPageTurnPressed,
         ),
@@ -1452,7 +1453,9 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
       addButton(
         _ReaderBookmarkIconButton(
           active: widget.bookmarkActive,
-          tooltip: widget.bookmarkActive ? 'Remove bookmark' : 'Bookmark',
+          tooltip: widget.bookmarkActive
+              ? context.l10n.readerRemoveBookmark
+              : context.l10n.readerBookmark,
           foregroundColor: widget.foregroundColor,
           activeColor: widget.accentColor,
           onPressed: widget.onBookmarkPressed,

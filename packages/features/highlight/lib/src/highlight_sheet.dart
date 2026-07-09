@@ -3,6 +3,7 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:highlight_repository/highlight_repository.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:shared/shared.dart';
 
 import 'highlight_cubit.dart';
@@ -77,9 +78,10 @@ class _HighlightSheetView extends StatelessWidget {
       builder: (context, state) {
         final cubit = context.read<HighlightCubit>();
         final isSaving = state.status == HighlightSheetStatus.saving;
+        final l10n = context.l10n;
 
         return ActionBottomSheetLayout(
-          title: 'Highlight',
+          title: l10n.highlightTitle,
           headerSpacing: AppSpacing.sm,
           bodyPadding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.xl,
@@ -109,8 +111,10 @@ class _HighlightSheetView extends StatelessWidget {
                     excludeSemantics: true,
                     button: true,
                     selected: isSelected,
-                    label: '${_labelForHighlightColor(color)} highlight color',
-                    onTapHint: 'Select highlight color',
+                    label: l10n.highlightColorSemantics(
+                      _labelForHighlightColor(l10n, color),
+                    ),
+                    onTapHint: l10n.highlightSelectColor,
                     onTap: () => cubit.setColor(color),
                     child: GestureDetector(
                       onTap: () => cubit.setColor(color),
@@ -137,8 +141,8 @@ class _HighlightSheetView extends StatelessWidget {
               const SizedBox(height: AppSpacing.md),
               // Note field
               TextField(
-                decoration: const InputDecoration(
-                  hintText: 'Add a note (optional)',
+                decoration: InputDecoration(
+                  hintText: l10n.highlightNoteHint,
                   isDense: true,
                 ),
                 maxLines: 2,
@@ -150,7 +154,7 @@ class _HighlightSheetView extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: Text(
-                    'Failed to save highlight',
+                    l10n.highlightFailedToSave,
                     style: context.text.bodyMedium.copyWith(
                       color: context.colors.error,
                     ),
@@ -171,7 +175,7 @@ class _HighlightSheetView extends StatelessWidget {
                       ),
                 child: isSaving
                     ? const ButtonLoadingIndicator()
-                    : const Text('Save'),
+                    : Text(l10n.commonSave),
               ),
             ],
           ),
@@ -191,13 +195,16 @@ class _HighlightSheetView extends StatelessWidget {
     };
   }
 
-  String _labelForHighlightColor(HighlightColor color) {
+  String _labelForHighlightColor(
+    ReadflexLocalizations l10n,
+    HighlightColor color,
+  ) {
     return switch (color) {
-      HighlightColor.yellow => 'Yellow',
-      HighlightColor.green => 'Green',
-      HighlightColor.blue => 'Blue',
-      HighlightColor.pink => 'Pink',
-      HighlightColor.purple => 'Purple',
+      HighlightColor.yellow => l10n.highlightColorYellow,
+      HighlightColor.green => l10n.highlightColorGreen,
+      HighlightColor.blue => l10n.highlightColorBlue,
+      HighlightColor.pink => l10n.highlightColorPink,
+      HighlightColor.purple => l10n.highlightColorPurple,
     };
   }
 }

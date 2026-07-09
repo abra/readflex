@@ -135,7 +135,7 @@ void main() {
       expect: () => [
         const ImportFlowBookUploading(filename: 'x.epub'),
         const ImportFlowFailure(
-          message: 'Failed to import the book',
+          errorCode: ImportFlowErrorCode.bookImportFailed,
           filename: 'x.epub',
         ),
       ],
@@ -151,7 +151,7 @@ void main() {
       expect: () => [
         const ImportFlowBookUploading(filename: 'x.epub'),
         const ImportFlowFailure(
-          message: 'Failed to import the book',
+          errorCode: ImportFlowErrorCode.bookImportFailed,
           filename: 'x.epub',
         ),
       ],
@@ -159,7 +159,7 @@ void main() {
 
     // BookImportException carries the JS-side reason ("File type not
     // supported", etc.) — the failure UI should surface that instead of
-    // the generic "Failed to import the book" string.
+    // the localized generic fallback.
     blocTest<ImportFlowCubit, ImportFlowState>(
       'book import surfaces BookImportException.message in failure state',
       build: () => _buildCubit(
@@ -172,7 +172,7 @@ void main() {
       expect: () => [
         const ImportFlowBookUploading(filename: 'junk.epub'),
         const ImportFlowFailure(
-          message: 'File type not supported',
+          customMessage: 'File type not supported',
           filename: 'junk.epub',
         ),
       ],
@@ -181,7 +181,9 @@ void main() {
     blocTest<ImportFlowCubit, ImportFlowState>(
       'backToMenu resets from any state',
       build: _buildCubit,
-      seed: () => const ImportFlowFailure(message: 'Failed to import the book'),
+      seed: () => const ImportFlowFailure(
+        errorCode: ImportFlowErrorCode.bookImportFailed,
+      ),
       act: (cubit) => cubit.backToMenu(),
       expect: () => [const ImportFlowMenu()],
     );
@@ -218,12 +220,12 @@ void main() {
       expect: () => [
         const ImportFlowArticleUrlEntry(),
         const ImportFlowArticleUrlEntry(
-          errorMessage: 'Enter an article URL',
+          errorCode: ImportFlowErrorCode.articleUrlRequired,
         ),
         const ImportFlowArticleUrlEntry(url: 'oifwoeifwoeiwoie'),
         const ImportFlowArticleUrlEntry(
           url: 'oifwoeifwoeiwoie',
-          errorMessage: 'Enter a valid article URL',
+          errorCode: ImportFlowErrorCode.invalidArticleUrl,
         ),
       ],
     );
@@ -294,7 +296,7 @@ void main() {
       act: (cubit) => cubit.importArticle('not a url'),
       expect: () => [
         const ImportFlowFailure(
-          message: 'Enter a valid article URL',
+          errorCode: ImportFlowErrorCode.invalidArticleUrl,
           retryTarget: ImportFlowRetryTarget.article,
         ),
       ],
@@ -313,7 +315,7 @@ void main() {
       expect: () => [
         const ImportFlowArticleUploading(url: 'https://example.com/article'),
         const ImportFlowFailure(
-          message: 'Could not extract article content',
+          customMessage: 'Could not extract article content',
           filename: 'https://example.com/article',
           retryTarget: ImportFlowRetryTarget.article,
         ),
@@ -330,7 +332,9 @@ void main() {
         pickBookFile: () async => File('/tmp/retry.epub'),
         importBook: (file, {onProgress}) async => _fakeBook(),
       ),
-      seed: () => const ImportFlowFailure(message: 'Failed to import the book'),
+      seed: () => const ImportFlowFailure(
+        errorCode: ImportFlowErrorCode.bookImportFailed,
+      ),
       act: (cubit) => cubit.pickAndImportBook(),
       expect: () => [
         const ImportFlowBookUploading(filename: 'retry.epub'),
@@ -347,7 +351,9 @@ void main() {
     blocTest<ImportFlowCubit, ImportFlowState>(
       'pickAndImportBook from failure stays on failure when picker cancels',
       build: () => _buildCubit(pickBookFile: () async => null),
-      seed: () => const ImportFlowFailure(message: 'Failed to import the book'),
+      seed: () => const ImportFlowFailure(
+        errorCode: ImportFlowErrorCode.bookImportFailed,
+      ),
       act: (cubit) => cubit.pickAndImportBook(),
       expect: () => <ImportFlowState>[],
     );
