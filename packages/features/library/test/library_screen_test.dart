@@ -828,6 +828,46 @@ void main() {
     },
   );
 
+  testWidgets('favourites collection scope uses localized UI labels', (
+    tester,
+  ) async {
+    await preferencesService.update(
+      (prefs) => prefs.copyWith(locale: const Locale('ru')),
+    );
+    bookRepository.seedBooks([_book]);
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+
+    await tester.tap(find.byIcon(AppIcons.collection));
+    await tester.pumpAndSettle();
+
+    final sheet = find.byType(ActionBottomSheetLayout);
+    final searchField = find.descendant(
+      of: sheet,
+      matching: find.byType(TextField),
+    );
+    final favouritesRow = find.byKey(
+      const ValueKey('collectionScopeRow-favourites-readflex:favourites'),
+    );
+
+    expect(favouritesRow, findsOneWidget);
+    expect(find.text('Избранное'), findsOneWidget);
+    expect(find.text('Favourites'), findsNothing);
+
+    await tester.enterText(searchField, 'избр');
+    await tester.pumpAndSettle();
+
+    expect(favouritesRow, findsOneWidget);
+    expect(find.text('Избранное'), findsOneWidget);
+
+    await tester.tap(favouritesRow);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Избранное'), findsOneWidget);
+    expect(find.text('Favourites'), findsNothing);
+  });
+
   testWidgets('collection scope sheet filters scopes by search query', (
     tester,
   ) async {

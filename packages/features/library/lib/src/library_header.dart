@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'library_bloc.dart';
+import 'library_collection_scope_label.dart';
 import 'library_layout_cubit.dart';
 import 'library_display_sheet.dart';
 import 'library_locale_cubit.dart';
@@ -233,6 +234,9 @@ class _CollectionScopeButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final selected = scope != null;
+    final label = selected
+        ? libraryCollectionScopeLabel(context.l10n, scope!)
+        : null;
     final foreground = selected
         ? colors.onPrimary
         : colors.onSurface.withValues(alpha: _kMutedAlpha);
@@ -271,7 +275,7 @@ class _CollectionScopeButton extends StatelessWidget {
                           const SizedBox(width: AppSpacing.xs),
                           Flexible(
                             child: Text(
-                              scope!.label,
+                              label!,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: context.text.labelSmall.copyWith(

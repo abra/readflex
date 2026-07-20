@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'library_bloc.dart';
+import 'library_collection_scope_label.dart';
 
 const double _collectionScopeRowHeight = 48;
 const double _collectionScopeResultsMaxHeight = 420;
@@ -155,18 +156,22 @@ class _CollectionScopeSections extends StatelessWidget {
     final favouriteScopes = _filterScopes(
       state.favouriteCollectionScopes,
       normalizedQuery,
+      l10n,
     );
     final manualScopes = _filterScopes(
       state.manualCollectionScopes,
       normalizedQuery,
+      l10n,
     );
     final siteScopes = _filterScopes(
       state.siteCollectionScopes,
       normalizedQuery,
+      l10n,
     );
     final authorScopes = _filterScopes(
       state.authorCollectionScopes,
       normalizedQuery,
+      l10n,
     );
     final hasMatches =
         favouriteScopes.isNotEmpty ||
@@ -218,10 +223,16 @@ class _CollectionScopeSections extends StatelessWidget {
   List<LibraryCollectionScope> _filterScopes(
     List<LibraryCollectionScope> scopes,
     String normalizedQuery,
+    ReadflexLocalizations l10n,
   ) {
     if (normalizedQuery.isEmpty) return scopes;
     return scopes
-        .where((scope) => scope.label.toLowerCase().contains(normalizedQuery))
+        .where(
+          (scope) => libraryCollectionScopeLabel(
+            l10n,
+            scope,
+          ).toLowerCase().contains(normalizedQuery),
+        )
         .toList(growable: false);
   }
 }
@@ -285,6 +296,7 @@ class _CollectionScopeRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final l10n = context.l10n;
+    final label = libraryCollectionScopeLabel(l10n, scope);
     final foreground = selected ? colors.primary : colors.onSurfaceVariant;
 
     return Material(
@@ -320,7 +332,7 @@ class _CollectionScopeRow extends StatelessWidget {
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Text(
-                    scope.label,
+                    label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.text.bodyLarge.copyWith(
@@ -336,7 +348,7 @@ class _CollectionScopeRow extends StatelessWidget {
                 if (scope.canManage) ...[
                   const SizedBox(width: AppSpacing.md),
                   Semantics(
-                    label: l10n.libraryManageCollection(scope.label),
+                    label: l10n.libraryManageCollection(label),
                     button: true,
                     onTapHint: l10n.libraryOpenCollectionActions,
                     child: GestureDetector(
