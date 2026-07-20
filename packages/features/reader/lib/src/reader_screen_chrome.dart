@@ -530,18 +530,24 @@ class _ReaderBrightnessValueButton extends StatelessWidget {
             width: 44,
             height: 34,
             child: Center(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  style: text.labelSmall.copyWith(
-                    color: active ? cs.primary : cs.onSurface,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.1,
-                  ),
-                ),
-              ),
+              child: usesSystemBrightness
+                  ? Icon(
+                      AppIcons.deviceMode,
+                      size: AppIconSize.sm,
+                      color: cs.onSurface,
+                    )
+                  : FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        style: text.labelSmall.copyWith(
+                          color: cs.primary,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                    ),
             ),
           ),
         ),

@@ -59,8 +59,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.brightnessIgnorePointer.ignoring, isFalse);
-      expect(find.text('System'), findsOneWidget);
-      expect(find.byIcon(AppIcons.deviceMode), findsNothing);
+      expect(find.text('System'), findsNothing);
+      expect(find.byIcon(AppIcons.deviceMode), findsOneWidget);
       expect(find.byIcon(AppIcons.lightMode), findsOneWidget);
       expect(find.byIcon(AppIcons.brightnessLow), findsOneWidget);
       expect(find.byIcon(AppIcons.darkMode), findsNothing);
@@ -89,7 +89,8 @@ void main() {
     await tester.tap(find.text('50%'));
     await tester.pumpAndSettle();
 
-    expect(find.text('System'), findsOneWidget);
+    expect(find.text('System'), findsNothing);
+    expect(find.byIcon(AppIcons.deviceMode), findsOneWidget);
     expect(brightnessCubit.state.usesSystemBrightness, isTrue);
     expect(preferencesService.readerBrightness, isNull);
   });
