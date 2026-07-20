@@ -601,21 +601,23 @@ class _ManageCollectionContent extends StatelessWidget {
                           foregroundColor: context.colors.onError,
                         ),
                         onPressed: state.isBusy ? null : onDeletePressed,
-                        child: Text(context.l10n.libraryDeleteCollectionButton),
+                        child: AppButtonLabel(
+                          context.l10n.libraryDeleteCollectionButton,
+                        ),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: FilledButton(
                         onPressed: canSave ? onSave : null,
-                        child: Text(context.l10n.commonSave),
+                        child: AppButtonLabel(context.l10n.commonSave),
                       ),
                     ),
                   ],
                 )
               : FilledButton(
                   onPressed: canSave ? onSave : null,
-                  child: Text(context.l10n.commonSave),
+                  child: AppButtonLabel(context.l10n.commonSave),
                 ),
         ),
       ],
@@ -754,7 +756,7 @@ class _DeleteCollectionConfirmationContent extends StatelessWidget {
               Expanded(
                 child: OutlinedButton(
                   onPressed: state.isBusy ? null : onCancel,
-                  child: Text(context.l10n.commonCancel),
+                  child: AppButtonLabel(context.l10n.commonCancel),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
@@ -765,7 +767,7 @@ class _DeleteCollectionConfirmationContent extends StatelessWidget {
                     foregroundColor: context.colors.onError,
                   ),
                   onPressed: state.isBusy ? null : onDelete,
-                  child: Text(context.l10n.commonDelete),
+                  child: AppButtonLabel(context.l10n.commonDelete),
                 ),
               ),
             ],

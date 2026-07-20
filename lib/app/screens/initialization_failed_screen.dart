@@ -81,7 +81,7 @@ class _InitializationFailedScreenState
                         icon: inProgress
                             ? const ButtonLoadingIndicator(size: AppIconSize.sm)
                             : const Icon(AppIcons.refresh),
-                        label: Text(
+                        label: AppButtonLabel(
                           inProgress ? l10n.appRetrying : l10n.appRetry,
                         ),
                       ),

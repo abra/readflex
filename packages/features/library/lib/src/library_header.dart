@@ -61,37 +61,28 @@ class LibraryHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(
-                l10n.libraryTitle,
-                style: context.text.headlineMedium.copyWith(
-                  color: colors.onSurface,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              _LibraryOfflineStatus(visible: isOffline),
-              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Flexible(
                       child: Text(
-                        l10n.libraryItemCount(state.totalCount),
-                        textAlign: TextAlign.end,
+                        l10n.libraryTitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: context.text.screenCounter.copyWith(
-                          color: colors.onSurface.withValues(
-                            alpha: _kMutedAlpha,
-                          ),
+                        style: context.text.headlineMedium.copyWith(
+                          color: colors.onSurface,
                         ),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
-                    const _DisplayMenuButton(),
+                    _LibraryOfflineStatus(visible: isOffline),
                   ],
                 ),
               ),
+              const SizedBox(width: AppSpacing.md),
+              _LibraryItemCountBadge(count: state.totalCount),
+              const SizedBox(width: AppSpacing.sm),
+              const _DisplayMenuButton(),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -111,6 +102,47 @@ class LibraryHeader extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
         ],
+      ),
+    );
+  }
+}
+
+class _LibraryItemCountBadge extends StatelessWidget {
+  const _LibraryItemCountBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final label = context.l10n.libraryItemCount(count);
+    final compactCount = MaterialLocalizations.of(context).formatDecimal(count);
+
+    return Semantics(
+      label: label,
+      child: ExcludeSemantics(
+        child: Container(
+          constraints: const BoxConstraints(
+            minWidth: AppSizes.chipHeight,
+            minHeight: 24,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: colors.surfaceContainerHighest.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(AppRadius.full),
+          ),
+          child: Text(
+            compactCount,
+            maxLines: 1,
+            overflow: TextOverflow.fade,
+            softWrap: false,
+            style: context.text.screenCounter.copyWith(
+              color: colors.onSurface.withValues(alpha: _kMutedAlpha),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
       ),
     );
   }

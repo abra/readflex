@@ -400,7 +400,7 @@ class _BookTermsViewState extends State<_BookTermsView> {
               Expanded(
                 child: FilledButton(
                   onPressed: _accepted ? cubit.acceptTermsAndPickBook : null,
-                  child: Text(l10n.commonContinue),
+                  child: AppButtonLabel(l10n.commonContinue),
                 ),
               ),
             ],
@@ -558,7 +558,7 @@ class _PlainTextButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton(onPressed: onPressed, child: Text(label));
+    return OutlinedButton(onPressed: onPressed, child: AppButtonLabel(label));
   }
 }
 
@@ -657,7 +657,7 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
                   onPressed: widget.isOffline || !widget.state.canSubmit
                       ? null
                       : cubit.submitArticleUrl,
-                  child: Text(l10n.commonSave),
+                  child: AppButtonLabel(l10n.commonSave),
                 ),
               ),
             ],
@@ -1094,7 +1094,7 @@ class _FailureView extends StatelessWidget {
           Expanded(
             child: FilledButton(
               onPressed: cubit.retryAfterFailure,
-              child: Text(context.l10n.importTryAgain),
+              child: AppButtonLabel(context.l10n.importTryAgain),
             ),
           ),
         ],
@@ -1143,7 +1143,7 @@ class _SuccessLayout extends StatelessWidget {
       ),
       action: FilledButton(
         onPressed: onDone,
-        child: Text(context.l10n.commonDone),
+        child: AppButtonLabel(context.l10n.commonDone),
       ),
     );
   }

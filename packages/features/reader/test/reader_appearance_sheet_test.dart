@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/src/reader_appearance_cubit.dart';
 import 'package:reader/src/reader_appearance_sheet.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
@@ -109,6 +110,26 @@ void main() {
     expect(find.text('Page margins'), findsOneWidget);
     expect(find.text('Text alignment'), findsOneWidget);
     expect(find.byType(VerticalDivider), findsNothing);
+  });
+
+  testWidgets('localized layout labels wrap in narrow appearance sheets', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.openAppearanceSheet(cubit, locale: const Locale('ru'));
+
+    expect(find.text('Межстрочный интервал'), findsOneWidget);
+    expect(find.text('Поля страницы'), findsOneWidget);
+    final lineSpacingLabel = tester.widget<Text>(
+      find.text('Межстрочный интервал'),
+    );
+
+    expect(lineSpacingLabel.maxLines, 2);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('theme swatches persist reader theme ids', (tester) async {
@@ -605,9 +626,13 @@ extension on WidgetTester {
   Future<void> openAppearanceSheet(
     ReaderAppearanceCubit cubit, {
     bool showPageTurnControls = true,
+    Locale locale = const Locale('en'),
   }) async {
     await pumpWidget(
       MaterialApp(
+        locale: locale,
+        supportedLocales: ReadflexSupportedLocales.locales,
+        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
         theme: AppTheme.light(),
         home: MultiBlocProvider(
           providers: [

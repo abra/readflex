@@ -581,15 +581,26 @@ class _LibraryAddCollectionFab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final maxWidth = MediaQuery.sizeOf(context).width * 0.54;
+    final maxLabelWidth = (maxWidth - 76).clamp(48.0, maxWidth).toDouble();
 
-    return FloatingActionButton.extended(
-      onPressed: onAddToCollectionPressed,
-      backgroundColor: colors.primary.withValues(alpha: 0.9),
-      foregroundColor: colors.onPrimary,
-      elevation: 3,
-      heroTag: null,
-      icon: const Icon(AppIcons.collectionAdd, size: 20),
-      label: Text(context.l10n.libraryAddToCollection),
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: FloatingActionButton.extended(
+        onPressed: onAddToCollectionPressed,
+        backgroundColor: colors.primary.withValues(alpha: 0.9),
+        foregroundColor: colors.onPrimary,
+        elevation: 3,
+        heroTag: null,
+        icon: const Icon(AppIcons.collectionAdd, size: 20),
+        label: SizedBox(
+          width: maxLabelWidth,
+          child: AppButtonLabel(
+            context.l10n.libraryAddToCollection,
+            maxLines: 1,
+          ),
+        ),
+      ),
     );
   }
 }

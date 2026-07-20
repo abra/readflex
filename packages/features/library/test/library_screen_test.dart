@@ -27,6 +27,15 @@ final _book = Book(
   addedAt: DateTime(2026),
 );
 
+final _secondBook = Book(
+  id: 'b-2',
+  title: 'Clean Architecture',
+  author: 'Robert C. Martin',
+  filePath: '/books/clean-architecture.epub',
+  format: BookFormat.epub,
+  addedAt: DateTime(2026, 1, 2),
+);
+
 void main() {
   late FakeBookRepository bookRepository;
   late FakeCollectionRepository collectionRepository;
@@ -95,13 +104,41 @@ void main() {
   testWidgets('shows Library header and item count with content', (
     tester,
   ) async {
-    bookRepository.seedBooks([_book]);
+    final semantics = tester.ensureSemantics();
+    try {
+      bookRepository.seedBooks([_book]);
 
-    await tester.pumpWidget(buildSubject());
-    await tester.pump();
+      await tester.pumpWidget(buildSubject());
+      await tester.pump();
 
-    expect(find.text('Library'), findsOneWidget);
-    expect(find.text('1 item'), findsOneWidget);
+      expect(find.text('Library'), findsOneWidget);
+      expect(find.text('1'), findsOneWidget);
+      expect(find.bySemanticsLabel('1 item'), findsOneWidget);
+    } finally {
+      semantics.dispose();
+    }
+  });
+
+  testWidgets('library item count stays compact with localized semantics', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      await preferencesService.update(
+        (prefs) => prefs.copyWith(locale: const Locale('ru')),
+      );
+      bookRepository.seedBooks([_book, _secondBook]);
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pump();
+
+      expect(find.text('Библиотека'), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
+      expect(find.text('2 элемента'), findsNothing);
+      expect(find.bySemanticsLabel('2 элемента'), findsOneWidget);
+    } finally {
+      semantics.dispose();
+    }
   });
 
   testWidgets('display button opens view and appearance sheet', (
@@ -678,6 +715,35 @@ void main() {
       tester.getCenter(find.byIcon(AppIcons.delete)).dx,
       greaterThan(screenWidth * 0.65),
     );
+  });
+
+  testWidgets('localized selection action stays bounded on narrow screens', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await preferencesService.update(
+      (prefs) => prefs.copyWith(locale: const Locale('fr')),
+    );
+    bookRepository.seedBooks([_book]);
+
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+    await tester.longPress(find.text('Flutter in Action'));
+    await tester.pumpAndSettle();
+
+    final actionRect = tester.getRect(
+      find.ancestor(
+        of: find.text('Ajouter à une collection'),
+        matching: find.byType(FloatingActionButton),
+      ),
+    );
+    final scaffoldWidth = tester.getSize(find.byType(Scaffold)).width;
+
+    expect(actionRect.width, lessThanOrEqualTo(scaffoldWidth * 0.54));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('manual collection scope filters visible sources', (

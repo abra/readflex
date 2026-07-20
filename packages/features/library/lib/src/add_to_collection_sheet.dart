@@ -200,7 +200,7 @@ class _CollectionContent extends StatelessWidget {
             Expanded(
               child: OutlinedButton(
                 onPressed: onCancelPressed,
-                child: Text(l10n.commonCancel),
+                child: AppButtonLabel(l10n.commonCancel),
               ),
             ),
             const SizedBox(width: AppSpacing.md),
@@ -208,7 +208,7 @@ class _CollectionContent extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: onCreatePressed,
                 icon: const Icon(AppIcons.add, size: AppIconSize.sm),
-                label: Text(l10n.commonCreate),
+                label: AppButtonLabel(l10n.commonCreate),
               ),
             ),
           ],

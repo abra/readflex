@@ -69,7 +69,7 @@ class _ResetAppearanceButton extends StatelessWidget {
     return TextButton.icon(
       onPressed: canReset ? context.read<ReaderAppearanceCubit>().reset : null,
       icon: const Icon(AppIcons.refresh, size: AppIconSize.sm),
-      label: Text(context.l10n.readerReset),
+      label: AppButtonLabel(context.l10n.readerReset, maxLines: 1),
     );
   }
 }
@@ -465,7 +465,7 @@ class _AppearanceSettingRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: context.text.labelLarge.copyWith(
                 color: context.colors.onSurface.withValues(alpha: 0.74),

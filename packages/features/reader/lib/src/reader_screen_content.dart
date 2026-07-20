@@ -105,7 +105,7 @@ class _ReaderBodyState extends State<_ReaderBody> {
                   const SizedBox(height: AppSpacing.md),
                   FilledButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    child: Text(context.l10n.readerGoBack),
+                    child: AppButtonLabel(context.l10n.readerGoBack),
                   ),
                 ],
               ),

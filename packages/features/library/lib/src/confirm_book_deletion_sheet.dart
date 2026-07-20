@@ -53,7 +53,7 @@ class _ConfirmBookDeletionSheet extends StatelessWidget {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: Text(l10n.commonCancel),
+                  child: AppButtonLabel(l10n.commonCancel),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
@@ -66,7 +66,7 @@ class _ConfirmBookDeletionSheet extends StatelessWidget {
                   onPressed: () => Navigator.of(
                     context,
                   ).pop(BookDeletionScope.keepLearningData),
-                  child: Text(l10n.commonDelete),
+                  child: AppButtonLabel(l10n.commonDelete),
                 ),
               ),
             ],

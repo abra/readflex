@@ -753,7 +753,7 @@ class _ImageHighlightNoteSheetState extends State<_ImageHighlightNoteSheet> {
               Expanded(
                 child: FilledButton(
                   onPressed: canSave ? () => _complete(note) : null,
-                  child: Text(context.l10n.commonSave),
+                  child: AppButtonLabel(context.l10n.commonSave),
                 ),
               ),
             ],

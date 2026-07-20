@@ -3,6 +3,7 @@
 export 'src/action_bottom_sheet_layout.dart';
 export 'src/app_action_card.dart';
 export 'src/app_bottom_safe_area.dart';
+export 'src/app_button_label.dart';
 export 'src/app_cover_art.dart';
 export 'src/app_filter_chip.dart';
 export 'src/app_icons.dart';

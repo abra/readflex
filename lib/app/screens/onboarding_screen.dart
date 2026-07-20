@@ -56,7 +56,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               alignment: Alignment.topRight,
               child: TextButton(
                 onPressed: _complete,
-                child: Text(l10n.appSkip),
+                child: AppButtonLabel(l10n.appSkip, maxLines: 1),
               ),
             ),
             Expanded(
@@ -108,7 +108,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 width: double.infinity,
                 child: FilledButton(
                   onPressed: _isLastPage ? _complete : _next,
-                  child: Text(_isLastPage ? l10n.appGetStarted : l10n.appNext),
+                  child: AppButtonLabel(
+                    _isLastPage ? l10n.appGetStarted : l10n.appNext,
+                  ),
                 ),
               ),
             ),

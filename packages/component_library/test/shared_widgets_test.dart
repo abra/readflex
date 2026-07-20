@@ -562,6 +562,36 @@ void main() {
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
+
+  testWidgets('AppButtonLabel keeps localized button text bounded', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 96,
+            child: FilledButton(
+              onPressed: null,
+              child: AppButtonLabel('Supprimer la collection'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final label = tester.widget<Text>(
+      find.descendant(
+        of: find.byType(AppButtonLabel),
+        matching: find.byType(Text),
+      ),
+    );
+
+    expect(label.maxLines, 2);
+    expect(label.overflow, TextOverflow.ellipsis);
+    expect(label.textAlign, TextAlign.center);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('EmptyState renders icon, message, and subtitle', (
     tester,
   ) async {

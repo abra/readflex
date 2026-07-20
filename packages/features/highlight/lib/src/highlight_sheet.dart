@@ -175,7 +175,7 @@ class _HighlightSheetView extends StatelessWidget {
                       ),
                 child: isSaving
                     ? const ButtonLoadingIndicator()
-                    : Text(l10n.commonSave),
+                    : AppButtonLabel(l10n.commonSave),
               ),
             ],
           ),
