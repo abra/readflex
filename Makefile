@@ -1,5 +1,8 @@
 .PHONY: get format analyze test clean build run help
 
+FLUTTER ?= fvm flutter
+DART ?= fvm dart
+
 PACKAGES = \
 	packages/domain_models \
 	packages/shared \
@@ -28,22 +31,22 @@ ROOT_ANALYZE_PATHS = lib test benchmarks
 
 ## Install dependencies for root and all packages
 get:
-	flutter pub get
+	$(FLUTTER) pub get
 	@for pkg in $(PACKAGES); do \
 		echo "▶ pub get $$pkg"; \
-		(cd $$pkg && flutter pub get); \
+		(cd $$pkg && $(FLUTTER) pub get); \
 	done
 
 ## Format all Dart code
 format:
-	dart format ./
+	$(DART) format ./
 
 ## Analyze all Dart code
 analyze:
-	flutter analyze $(ROOT_ANALYZE_PATHS)
+	$(FLUTTER) analyze $(ROOT_ANALYZE_PATHS)
 	@for pkg in $(PACKAGES); do \
 		echo "▶ analyze $$pkg"; \
-		(cd $$pkg && flutter analyze); \
+		(cd $$pkg && $(FLUTTER) analyze); \
 	done
 
 ## Run all tests across packages
@@ -52,15 +55,15 @@ test:
 
 ## Run the app in debug mode
 run:
-	flutter run
+	$(FLUTTER) run
 
 ## Build release APK
 build:
-	flutter build apk --release
+	$(FLUTTER) build apk --release
 
 ## Remove build artifacts
 clean:
-	flutter clean
+	$(FLUTTER) clean
 
 ## Show available targets
 help:
