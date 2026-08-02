@@ -51,7 +51,7 @@ analyze:
 
 ## Run all tests across packages
 test:
-	@bash test_all.sh
+	@FLUTTER="$(FLUTTER)" DART="$(DART)" bash test_all.sh
 
 ## Run the app in debug mode
 run:
