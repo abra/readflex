@@ -331,20 +331,24 @@ Configuration is read through `ApplicationConfig` and compile-time environment
 values. Important development flags are documented in `README.md`.
 
 Security boundary: article cleaner API keys should be treated as backend
-credentials, not UI state.
+credentials, not UI state. GlitchTip error reporting is enabled by
+`GLITCHTIP_DSN` or the Sentry-compatible `SENTRY_DSN` fallback; performance
+tracing is opt-in through `GLITCHTIP_TRACES_SAMPLE_RATE`.
 
 ## Known Non-Production Contracts
 
 The project is not fully production-complete. These are intentional gaps unless
 a task explicitly asks to implement them:
 
-- `NoopErrorReporter` and `NoopAnalyticsReporter` do not send telemetry.
+- Error reporting uses `GlitchTipErrorReporter` when a DSN is configured and
+  falls back to `NoopErrorReporter` otherwise.
+- `NoopAnalyticsReporter` does not send analytics telemetry.
 - Translation, dictionary, flashcard, practice, profile, subscription, auth,
   AI, and notification packages are frozen outside the active package graph.
   Restore them from `189e2cc1` if the product scope returns.
 
-When replacing a no-op with a production implementation, update this document,
-the relevant package README, and tests around the public contract.
+When replacing a remaining no-op with a production implementation, update this
+document, the relevant package README, and tests around the public contract.
 
 ## Testing and Verification
 

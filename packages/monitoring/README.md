@@ -1,9 +1,10 @@
 # monitoring
 
-Package for logging, error reporting, and analytics.
+Package for logging, GlitchTip error reporting, and analytics contracts.
 
-Provides ready-to-use infrastructure (Logger, interfaces) and no-op stubs (Noop*)
-that should be replaced with real implementations before shipping to production.
+Provides ready-to-use logging infrastructure, a Sentry-compatible Dart GlitchTip
+error reporter, and analytics contracts. Analytics remains a no-op until a
+production provider is added.
 
 ---
 
@@ -17,8 +18,9 @@ that should be replaced with real implementations before shipping to production.
 | `LogMessage`               | data class          | Ready                                                    |
 | `PrintingLogObserver`      | concrete            | Ready — prints to console via `debugPrint`               |
 | `ErrorReporterLogObserver` | concrete            | Ready — bridges Logger errors into ErrorReportingService |
-| `ErrorReportingService`    | interface           | Implement for production                                 |
-| `NoopErrorReporter`        | concrete            | Stub — does nothing, safe for development                |
+| `ErrorReportingService`    | interface           | Ready                                                    |
+| `GlitchTipErrorReporter`   | concrete            | Ready — sends errors through the Sentry-compatible Dart SDK |
+| `NoopErrorReporter`        | concrete            | Fallback — does nothing when no DSN is configured        |
 | `AnalyticsEvent`           | abstract base class | Ready — extend to define typed events                    |
 | `AnalyticsReporter`        | interface           | Implement for production                                 |
 | `NoopAnalyticsReporter`    | concrete            | Stub — does nothing, safe for development                |
@@ -72,60 +74,55 @@ observers: [
 
 ---
 
-## ErrorReportingService — how to replace the stub
+## ErrorReportingService
 
-`NoopErrorReporter` is a stub: it accepts errors but does nothing with them.
-For production, implement `ErrorReportingService`.
+`GlitchTipErrorReporter` uses `sentry` with a GlitchTip DSN. The app
+creates it when `GLITCHTIP_DSN` is configured and falls back to
+`NoopErrorReporter` otherwise.
 
-### Current (stub)
+The package intentionally uses the Dart SDK instead of `sentry_flutter`: the app
+already routes Flutter, platform dispatcher, zone, bloc, and logged errors
+through `Logger -> ErrorReporterLogObserver -> ErrorReportingService`, while the
+native Flutter SDK currently conflicts with the app's Android/iOS dependency
+graph.
+
+`SENTRY_DSN` is accepted as a fallback because GlitchTip's Flutter SDK docs use
+the standard Sentry environment name.
+
+### Current app wiring
 
 ```dart
 // composition.dart
 Future<ErrorReportingService> createErrorReporter(ApplicationConfig config) async {
-  const errorReporter = NoopErrorReporter(); // <- does nothing
-  if (config.enableSentry) await errorReporter.initialize();
-  return errorReporter;
+  if (config.enableGlitchTip) {
+    final errorReporter = GlitchTipErrorReporter(
+      dsn: config.glitchTipDsn,
+      environment: config.environment.name,
+      tracesSampleRate: config.glitchTipTracesSampleRate,
+    );
+    await errorReporter.initialize();
+    return errorReporter;
+  }
+
+  return const NoopErrorReporter();
 }
 ```
 
-### How to write a real implementation (example: Sentry)
+### Runtime flags
 
-```dart
-// packages/monitoring/lib/src/sentry_error_reporter.dart
-import 'package:sentry_flutter/sentry_flutter.dart';
-
-final class SentryErrorReporter implements ErrorReportingService {
-  @override
-  bool get isInitialized => Sentry.isEnabled;
-
-  @override
-  Future<void> initialize() =>
-      SentryFlutter.init((options) {
-        options.dsn = 'your DSN from sentry.io';
-      });
-
-  @override
-  Future<void> close() => Sentry.close();
-
-  @override
-  Future<void> captureException({
-    required Object throwable,
-    StackTrace? stackTrace,
-  }) => Sentry.captureException(throwable, stackTrace: stackTrace);
-}
+```sh
+flutter run \
+  --dart-define=GLITCHTIP_DSN='https://public-key@glitchtip.example.com/1'
 ```
 
-### How to plug it in — change one line
+Performance events are disabled by default. Enable a small sample explicitly:
 
-```dart
-// before:
-const errorReporter = NoopErrorReporter();
-// after:
-final errorReporter = SentryErrorReporter();
+```sh
+--dart-define=GLITCHTIP_TRACES_SAMPLE_RATE=0.01
 ```
 
-Everything else (`DependenciesContainer`, BLoC, `starter.dart`) stays untouched —
-they all depend on the `ErrorReportingService` interface, not a concrete class.
+The Dart SDK does not enable Flutter native session tracking, so no Sentry
+session events are sent to GlitchTip.
 
 ---
 
@@ -261,11 +258,10 @@ Logger
   └── PrintingLogObserver       — already attached (console, debug/profile only)
   └── ErrorReporterLogObserver  — already attached (forwards errors to ErrorReporter)
   └── FileLogObserver           — write when needed
-  └── SentryLogObserver         — write when needed
 
 ErrorReportingService
-  └── NoopErrorReporter         — current (stub)
-  └── SentryErrorReporter       — replace when ready
+  └── GlitchTipErrorReporter    — current when GLITCHTIP_DSN/SENTRY_DSN is configured
+  └── NoopErrorReporter         — current fallback when no DSN is configured
 
 AnalyticsReporter
   └── NoopAnalyticsReporter     — current (stub)

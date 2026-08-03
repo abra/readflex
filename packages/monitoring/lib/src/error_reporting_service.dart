@@ -1,7 +1,7 @@
 // Abstract interface for error reporting.
 //
 // Implement this class to integrate a real error reporting service
-// (e.g. Firebase Crashlytics, Sentry).
+// (e.g. GlitchTip, Firebase Crashlytics, Sentry).
 // Use NoopErrorReporter during development or when reporting is disabled.
 
 /// Contract for error reporting services.
@@ -29,7 +29,7 @@ abstract interface class ErrorReportingService {
 /// Does nothing — safe to use in development or when error reporting
 /// is not configured.
 ///
-/// TODO: replace with real error reporting (e.g. Sentry).
+/// Kept as the disabled/error-reporting-not-configured implementation.
 class NoopErrorReporter implements ErrorReportingService {
   const NoopErrorReporter();
 

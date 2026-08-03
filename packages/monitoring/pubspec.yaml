@@ -1,5 +1,5 @@
 name: monitoring
-description: "Stub monitoring package — Logger base class and ErrorReportingService interface. Not production-ready: extend Logger and implement ErrorReportingService for real use."
+description: "Monitoring contracts, logging infrastructure, and GlitchTip error reporting for Readflex."
 publish_to: 'none'
 version: 0.1.0
 
@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   clock: ^1.1.2
+  sentry: ^9.26.0
 
 dev_dependencies:
   flutter_lints: ^6.0.0

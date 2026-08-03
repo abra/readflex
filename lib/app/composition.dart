@@ -33,16 +33,20 @@ Logger createAppLogger({List<LogObserver> observers = const []}) {
 }
 
 /// Creates the [ErrorReportingService] instance.
-///
-// TODO: replace NoopErrorReporter with real implementation (e.g. Sentry).
 Future<ErrorReportingService> createErrorReporter(
   ApplicationConfig config,
 ) async {
-  const errorReporter = NoopErrorReporter();
-  if (config.enableSentry) {
+  if (config.enableGlitchTip) {
+    final errorReporter = GlitchTipErrorReporter(
+      dsn: config.glitchTipDsn,
+      environment: config.environment.name,
+      tracesSampleRate: config.glitchTipTracesSampleRate,
+    );
     await errorReporter.initialize();
+    return errorReporter;
   }
-  return errorReporter;
+
+  return const NoopErrorReporter();
 }
 
 /// A place where Application-Wide dependencies are initialized.

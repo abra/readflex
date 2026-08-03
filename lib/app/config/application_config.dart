@@ -26,11 +26,30 @@ class ApplicationConfig {
     return Environment.from(env);
   }
 
-  /// The Sentry DSN.
-  String get sentryDsn => const String.fromEnvironment('SENTRY_DSN').trim();
+  /// GlitchTip DSN for Sentry-compatible error reporting.
+  ///
+  /// `SENTRY_DSN` is accepted as a fallback because GlitchTip's Flutter docs
+  /// use the standard Sentry SDK environment name.
+  String get glitchTipDsn {
+    const configured = String.fromEnvironment('GLITCHTIP_DSN');
+    final value = configured.trim();
+    if (value.isNotEmpty) return value;
+    return const String.fromEnvironment('SENTRY_DSN').trim();
+  }
 
-  /// Whether Sentry is enabled.
-  bool get enableSentry => sentryDsn.isNotEmpty;
+  /// Traces sample rate for GlitchTip performance events.
+  ///
+  /// Defaults to `0` so production builds send crash/error events only unless
+  /// performance monitoring is explicitly enabled.
+  double get glitchTipTracesSampleRate {
+    const configured = String.fromEnvironment('GLITCHTIP_TRACES_SAMPLE_RATE');
+    final value = configured.trim();
+    if (value.isEmpty) return 0;
+    return double.tryParse(value) ?? 0;
+  }
+
+  /// Whether GlitchTip error reporting is enabled.
+  bool get enableGlitchTip => glitchTipDsn.isNotEmpty;
 
   /// Whether the app is running in development environment.
   bool get isDev => environment == Environment.dev;

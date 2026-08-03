@@ -66,9 +66,15 @@ Common dart-defines:
 |------|---------|
 | `ARTICLE_CLEANER_BASE_URL` | Article extraction backend base URL |
 | `ARTICLE_CLEANER_API_KEY` | Optional article cleaner API key |
+| `GLITCHTIP_DSN` | Optional GlitchTip DSN for Sentry-compatible error reporting |
+| `GLITCHTIP_TRACES_SAMPLE_RATE` | Optional GlitchTip performance trace sampling rate; defaults to `0` |
 
 Do not ship public builds with client-side API keys. Backend-backed production
 integrations should keep provider credentials server-side.
+
+GlitchTip uses the Sentry-compatible Dart SDK. Prefer `GLITCHTIP_DSN` for
+Readflex builds; `SENTRY_DSN` is accepted as a fallback for compatibility with
+GlitchTip's SDK docs.
 
 Feature wiring follows `routing.dart -> Screen/Sheet -> Bloc/Cubit -> View`.
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the full convention.
@@ -77,8 +83,8 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full convention.
 
 Some contracts are intentionally incomplete while the app is still being built:
 
-- Error reporting is represented by a no-op reporter until a production
-  provider is wired.
+- Error reporting sends to GlitchTip when `GLITCHTIP_DSN` or `SENTRY_DSN` is
+  provided. Without a DSN it intentionally falls back to `NoopErrorReporter`.
 - The translation, dictionary, flashcard, practice, profile, subscription, auth,
   AI, and notification surfaces are frozen and removed from the active package
   graph. The last revision containing them is `189e2cc1`.
