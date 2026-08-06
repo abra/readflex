@@ -14,6 +14,7 @@ import 'package:reader/reader.dart';
 import 'package:readflex/app/app_system_ui_mode.dart';
 import 'package:readflex/app/dependency_container.dart';
 import 'package:readflex/app/screens/onboarding_screen.dart';
+import 'package:translate/translate.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // Bump when the book import terms text changes so users are asked to accept
@@ -158,6 +159,10 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                 textActions: [
                   HighlightAction(
                     highlightRepository: deps.highlightRepository,
+                  ),
+                  TranslateAction(
+                    translationService: deps.contextualTranslationService,
+                    preferencesService: deps.preferencesService,
                   ),
                 ],
               ),

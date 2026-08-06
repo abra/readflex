@@ -131,7 +131,7 @@ void main() {
       final map = jsonDecode(raw!) as Map<String, Object?>;
 
       expect(map['readerLayoutId'], 'compact');
-      expect(map.containsKey('translationTargetLanguageCode'), isFalse);
+      expect(map['translationTargetLanguageCode'], 'en');
       expect(map.containsKey('translationSourceLanguageCode'), isFalse);
       expect(map['readerTextAlignment'], 'justify');
       expect(map['readerInvertImagesInDark'], isFalse);
@@ -474,7 +474,7 @@ void main() {
       final raw = await storage.getString(_key);
       final map = jsonDecode(raw!) as Map<String, Object?>;
 
-      expect(map['_schemaVersion'], 12);
+      expect(map['_schemaVersion'], 13);
     });
 
     test(

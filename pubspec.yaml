@@ -35,6 +35,8 @@ dependencies:
     path: packages/highlight_repository
   connectivity_service:
     path: packages/connectivity_service
+  contextual_translation_service:
+    path: packages/contextual_translation_service
   screen_control_service:
     path: packages/screen_control_service
   preferences_service:
@@ -53,6 +55,8 @@ dependencies:
     path: packages/features/import_flow
   highlight:
     path: packages/features/highlight
+  translate:
+    path: packages/features/translate
   reader:
     path: packages/features/reader
 

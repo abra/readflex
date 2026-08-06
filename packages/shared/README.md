@@ -39,6 +39,7 @@ abstract class TextAction {
 | `normalizedMarkedContextText`     | `String?`    | Context with the normalized selection marked    |
 | `effectiveSelectedText`           | `String`     | Normalized text when present, otherwise exact   |
 | `effectiveMarkedContextText`      | `String?`    | Normalized marked context when present          |
+| `sourceLanguageHint`              | `String?`    | Best-known document language hint for actions   |
 | `sourceId`                        | `String`     | Source ID                                       |
 | `sourceType`                      | `SourceType` | Book, article, comic, etc.                      |
 | `cfiRange`                        | `String?`    | EPUB CFI range                                  |

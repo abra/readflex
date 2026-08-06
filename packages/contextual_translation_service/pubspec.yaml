@@ -1,0 +1,22 @@
+name: contextual_translation_service
+description: Contextual translation contracts, remote client, and offline fallback coordination.
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  equatable: ^2.0.8
+  google_mlkit_translation: ^0.14.0
+  http: ^1.6.0
+  uuid: ^4.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+

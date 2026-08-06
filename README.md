@@ -66,6 +66,8 @@ Common dart-defines:
 |------|---------|
 | `ARTICLE_CLEANER_BASE_URL` | Article extraction backend base URL |
 | `ARTICLE_CLEANER_API_KEY` | Optional article cleaner API key |
+| `CONTEXTUAL_TRANSLATION_BASE_URL` | Contextual translation backend base URL; defaults to `ARTICLE_CLEANER_BASE_URL` |
+| `CONTEXTUAL_TRANSLATION_API_KEY` | Optional contextual translation API key; defaults to `ARTICLE_CLEANER_API_KEY` |
 | `GLITCHTIP_DSN` | Optional GlitchTip DSN for Sentry-compatible error reporting |
 | `GLITCHTIP_TRACES_SAMPLE_RATE` | Optional GlitchTip performance trace sampling rate; defaults to `0` |
 
@@ -85,6 +87,6 @@ Some contracts are intentionally incomplete while the app is still being built:
 
 - Error reporting sends to GlitchTip when `GLITCHTIP_DSN` or `SENTRY_DSN` is
   provided. Without a DSN it intentionally falls back to `NoopErrorReporter`.
-- The translation, dictionary, flashcard, practice, profile, subscription, auth,
-  AI, and notification surfaces are frozen and removed from the active package
-  graph. The last revision containing them is `189e2cc1`.
+- The dictionary, flashcard, practice, profile, subscription, auth, AI, and
+  notification surfaces are frozen and removed from the active package graph.
+  The last revision containing them is `189e2cc1`.

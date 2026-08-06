@@ -187,6 +187,7 @@ containing those packages is `189e2cc1`.
 |---------|----------------|-------|
 | `article_extraction_service` | Remote article cleaner client and fallback extraction contract. | Returns `ExtractedArticle` domain data. |
 | `connectivity_service` | Reactive connectivity status and UI scope. | UI signal only; services still handle their own failures. |
+| `contextual_translation_service` | Contextual translation request/result contracts, remote client, cache, and ML Kit offline fallback coordinator. | Used by the `translate` feature. |
 | `device_screen_brightness` | Native/plugin brightness access. | Low-level platform package used by `screen_control_service`. |
 | `monitoring` | Logger, log observers, analytics/error reporter contracts and no-op implementations. | Production reporters are not implemented yet. |
 | `preferences_service` | Preferences model, storage, repository, service, and scope. | Used by Library, Reader, and app composition. |
@@ -207,6 +208,7 @@ must remain replaceable.
 | `import_flow` | Import bottom sheet for books/articles. | `book_repository`, `component_library`, `domain_models`, `monitoring`, `reader_webview`, `readflex_localizations` |
 | `reader` | Full-screen reader route and reader UI state. | `article_repository`, `book_repository`, `component_library`, `domain_models`, `highlight_repository`, `preferences_service`, `reader_webview`, `readflex_localizations`, `screen_control_service`, `shared` |
 | `highlight` | Reader text action and highlight bottom sheet. | `component_library`, `domain_models`, `highlight_repository`, `readflex_localizations`, `shared` |
+| `translate` | Reader text action and contextual translation bottom sheet. | `component_library`, `contextual_translation_service`, `preferences_service`, `readflex_localizations`, `shared` |
 
 `library_feature` is the Dart package name because `library` is a Dart language
 keyword in source syntax. The user-facing label remains "Library".
@@ -246,10 +248,12 @@ The reader is intentionally split across several packages:
 | `features/reader` | Reader screen, reader bloc/cubits, chrome, drawers, appearance, search, selection, brightness, keep-awake. |
 | `shared` | `TextAction` plugin contract used by reader context-panel actions. |
 | `features/highlight` | Implements `HighlightAction`. |
+| `features/translate` | Implements `TranslateAction` and owns the translation sheet UI/cubit. |
 
-The reader does not import the Highlight package. `routing.dart` creates the
-`HighlightAction` implementation and passes a list into `ReaderScreen`. The
-reader renders and executes actions only through the `TextAction` contract.
+The reader does not import the Highlight or Translate packages. `routing.dart`
+creates the `HighlightAction` and `TranslateAction` implementations and passes
+a list into `ReaderScreen`. The reader renders and executes actions only
+through the `TextAction` contract.
 
 Reader-specific UI state is split by responsibility:
 
@@ -334,6 +338,9 @@ Security boundary: article cleaner API keys should be treated as backend
 credentials, not UI state. GlitchTip error reporting is enabled by
 `GLITCHTIP_DSN` or the Sentry-compatible `SENTRY_DSN` fallback; performance
 tracing is opt-in through `GLITCHTIP_TRACES_SAMPLE_RATE`.
+Contextual translation uses `CONTEXTUAL_TRANSLATION_BASE_URL` and
+`CONTEXTUAL_TRANSLATION_API_KEY`; when they are omitted, it reuses the article
+cleaner host and API key.
 
 ## Known Non-Production Contracts
 
@@ -343,9 +350,9 @@ a task explicitly asks to implement them:
 - Error reporting uses `GlitchTipErrorReporter` when a DSN is configured and
   falls back to `NoopErrorReporter` otherwise.
 - `NoopAnalyticsReporter` does not send analytics telemetry.
-- Translation, dictionary, flashcard, practice, profile, subscription, auth,
-  AI, and notification packages are frozen outside the active package graph.
-  Restore them from `189e2cc1` if the product scope returns.
+- Dictionary, flashcard, practice, profile, subscription, auth, AI, and
+  notification packages are frozen outside the active package graph. Restore
+  them from `189e2cc1` if the product scope returns.
 
 When replacing a remaining no-op with a production implementation, update this
 document, the relevant package README, and tests around the public contract.

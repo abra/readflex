@@ -38,6 +38,7 @@ run "article_extraction_service"   "$DART test test/" "$SCRIPT_DIR/packages/arti
 run "article_repository"           "$FLUTTER test test/" "$SCRIPT_DIR/packages/article_repository"
 run "highlight_repository"         "$FLUTTER test test/" "$SCRIPT_DIR/packages/highlight_repository"
 run "connectivity_service"         "$FLUTTER test test/" "$SCRIPT_DIR/packages/connectivity_service"
+run "contextual_translation_service" "$FLUTTER test test/" "$SCRIPT_DIR/packages/contextual_translation_service"
 run "device_screen_brightness"    "$FLUTTER test test/" "$SCRIPT_DIR/packages/device_screen_brightness"
 run "screen_control_service"       "$FLUTTER test test/" "$SCRIPT_DIR/packages/screen_control_service"
 run "preferences_service"         "$FLUTTER test test/" "$SCRIPT_DIR/packages/preferences_service"
@@ -48,6 +49,7 @@ run "toast_service"               "$FLUTTER test test/" "$SCRIPT_DIR/packages/to
 run "library"                     "$FLUTTER test test/" "$SCRIPT_DIR/packages/features/library"
 run "import_flow"                 "$FLUTTER test test/" "$SCRIPT_DIR/packages/features/import_flow"
 run "highlight"                   "$FLUTTER test test/" "$SCRIPT_DIR/packages/features/highlight"
+run "translate"                   "$FLUTTER test test/" "$SCRIPT_DIR/packages/features/translate"
 run "reader"                      "$FLUTTER test test/" "$SCRIPT_DIR/packages/features/reader"
 
 echo ""

@@ -37,14 +37,19 @@ class PreferencesRepository {
   ///   10: add preferred translation target/source languages.
   ///   11: drop translation preferences from the active app schema.
   ///   12: reset global reader line height to the explicit 1.6 default.
-  static const _currentSchemaVersion = 12;
+  ///   13: add active preferred translation target language.
+  static const _currentSchemaVersion = 13;
 
   final PreferencesStorage _storage;
 
   Future<Preferences> load(List<String> supportedCodes) async {
     final json = await _storage.getString(_key);
     if (json == null) {
-      return Preferences(locale: _resolveInitialLocale(supportedCodes));
+      final locale = _resolveInitialLocale(supportedCodes);
+      return Preferences(
+        locale: locale,
+        translationTargetLanguageCode: locale.languageCode,
+      );
     }
     try {
       final map = jsonDecode(json) as Map<String, Object?>;
@@ -69,11 +74,12 @@ class PreferencesRepository {
           : ReaderAppearancePreferences.normalizeLineHeight(
               readerLineHeightRaw,
             );
+      final locale = _resolveLocale(map['locale'] as String?, supportedCodes);
       final preferences = Preferences(
         themeMode: ThemeMode.values.byName(
           map['themeMode'] as String? ?? 'system',
         ),
-        locale: _resolveLocale(map['locale'] as String?, supportedCodes),
+        locale: locale,
         libraryLayoutMode:
             map['libraryLayoutMode'] as String? ??
             map['catalogLayoutMode'] as String? ??
@@ -102,6 +108,12 @@ class PreferencesRepository {
         readerAppearanceOverrides: _readReaderAppearanceOverrides(
           map['readerAppearanceOverrides'],
         ),
+        translationTargetLanguageCode:
+            _resolveLanguageCode(
+              map['translationTargetLanguageCode'] as String?,
+              supportedCodes,
+            ) ??
+            locale.languageCode,
         bookImportTermsAcceptedVersion:
             (map['bookImportTermsAcceptedVersion'] as num?)?.toInt() ?? 0,
         onboardingCompleted: map['onboardingCompleted'] as bool? ?? false,
@@ -150,6 +162,7 @@ class PreferencesRepository {
       'readerAppearanceOverrides': _writeReaderAppearanceOverrides(
         prefs.readerAppearanceOverrides,
       ),
+      'translationTargetLanguageCode': prefs.translationTargetLanguageCode,
       'bookImportTermsAcceptedVersion': prefs.bookImportTermsAcceptedVersion,
       'onboardingCompleted': prefs.onboardingCompleted,
     };
@@ -159,6 +172,16 @@ class PreferencesRepository {
   static Locale _resolveLocale(String? code, List<String> supportedCodes) {
     if (code != null && supportedCodes.contains(code)) return Locale(code);
     return _resolveInitialLocale(supportedCodes);
+  }
+
+  static String? _resolveLanguageCode(
+    String? code,
+    List<String> supportedCodes,
+  ) {
+    final normalized = code?.trim().toLowerCase();
+    if (normalized == null || normalized.isEmpty) return null;
+    final languageCode = normalized.split(RegExp(r'[-_]')).first;
+    return supportedCodes.contains(languageCode) ? languageCode : null;
   }
 
   static Locale _resolveInitialLocale(List<String> supportedCodes) {

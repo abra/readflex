@@ -11,6 +11,7 @@ import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:collection_repository/collection_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
+import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:local_storage/local_storage.dart';
 import 'package:monitoring/monitoring.dart';
@@ -146,6 +147,15 @@ Future<DependenciesContainer> createDependenciesContainer(
         ? null
         : config.articleCleanerApiKey,
   );
+  final contextualTranslationService = ContextualTranslationCoordinator(
+    remoteService: RemoteContextualTranslationService(
+      baseUri: Uri.parse(config.contextualTranslationBaseUrl),
+      apiKey: config.contextualTranslationApiKey.isEmpty
+          ? null
+          : config.contextualTranslationApiKey,
+    ),
+    offlineService: MlKitOfflineTranslationService(),
+  );
 
   return DependenciesContainer(
     logger: logger,
@@ -159,6 +169,7 @@ Future<DependenciesContainer> createDependenciesContainer(
     collectionRepository: collectionRepository,
     highlightRepository: highlightRepository,
     connectivityService: connectivityService,
+    contextualTranslationService: contextualTranslationService,
     screenControlService: screenControlService,
     readerServer: readerServer,
   );

@@ -15,6 +15,7 @@ class ReaderDocument extends Equatable {
     this.author,
     this.coverImagePath,
     this.format,
+    this.language,
     this.totalLocations = 0,
     this.currentLocation = 0,
     this.currentCfi,
@@ -31,6 +32,7 @@ class ReaderDocument extends Equatable {
       author: book.author,
       coverImagePath: book.coverImagePath,
       format: book.format,
+      language: null,
       filePath: book.filePath,
       totalLocations: book.totalLocations,
       currentLocation: book.currentLocation,
@@ -49,6 +51,7 @@ class ReaderDocument extends Equatable {
       title: article.title,
       author: article.author ?? article.siteName ?? article.hostname,
       coverImagePath: article.coverImagePath,
+      language: article.language,
       filePath: article.contentHtmlPath,
       currentCfi: article.currentCfi,
       readingProgress: article.readingProgress,
@@ -64,6 +67,7 @@ class ReaderDocument extends Equatable {
   final String? author;
   final String? coverImagePath;
   final BookFormat? format;
+  final String? language;
   final String filePath;
   final int totalLocations;
   final int currentLocation;
@@ -88,6 +92,7 @@ class ReaderDocument extends Equatable {
       author: author,
       coverImagePath: coverImagePath,
       format: format,
+      language: language,
       filePath: filePath,
       totalLocations: totalLocations,
       currentLocation: currentLocation,
@@ -133,6 +138,7 @@ class ReaderDocument extends Equatable {
     author,
     coverImagePath,
     format,
+    language,
     filePath,
     totalLocations,
     currentLocation,

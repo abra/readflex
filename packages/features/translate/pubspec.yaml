@@ -1,0 +1,38 @@
+name: translate
+description: Reader text action and sheet for contextual translation.
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  equatable: ^2.0.8
+  flutter_bloc: ^9.1.1
+
+  component_library:
+    path: ../../component_library
+  contextual_translation_service:
+    path: ../../contextual_translation_service
+  preferences_service:
+    path: ../../preferences_service
+  readflex_localizations:
+    path: ../../readflex_localizations
+  shared:
+    path: ../../shared
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  bloc_test: ^10.0.0
+  domain_models:
+    path: ../../domain_models
+  flutter_lints: ^6.0.0
+  shared_preferences_platform_interface: ^2.4.1
+
+flutter:
+  uses-material-design: true

@@ -27,6 +27,7 @@ class TextSelectionContext {
     this.scrollOffset,
     this.progress,
     this.chapterTitle,
+    this.sourceLanguageHint,
     this.containedHighlightIds = const [],
   });
 
@@ -86,6 +87,12 @@ class TextSelectionContext {
 
   /// Visible chapter title at selection time.
   final String? chapterTitle;
+
+  /// Best-known source language for the document, if the reader has one.
+  ///
+  /// Text actions can pass it as a hint while still allowing their own service
+  /// to auto-detect the final language per selection.
+  final String? sourceLanguageHint;
 
   /// Existing highlights strictly contained inside the current selection.
   final List<String> containedHighlightIds;

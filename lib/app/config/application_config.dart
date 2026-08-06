@@ -72,6 +72,27 @@ class ApplicationConfig {
   /// Optional API key for the article extraction backend.
   String get articleCleanerApiKey =>
       const String.fromEnvironment('ARTICLE_CLEANER_API_KEY').trim();
+
+  /// Base URL of the contextual translation backend.
+  ///
+  /// Defaults to [articleCleanerBaseUrl] because the current backend entrypoint
+  /// is the same API host.
+  String get contextualTranslationBaseUrl {
+    const configured = String.fromEnvironment(
+      'CONTEXTUAL_TRANSLATION_BASE_URL',
+    );
+    final value = configured.trim();
+    if (value.isNotEmpty) return value;
+    return articleCleanerBaseUrl;
+  }
+
+  /// Optional API key for the contextual translation backend.
+  String get contextualTranslationApiKey {
+    const configured = String.fromEnvironment('CONTEXTUAL_TRANSLATION_API_KEY');
+    final value = configured.trim();
+    if (value.isNotEmpty) return value;
+    return articleCleanerApiKey;
+  }
 }
 
 /// A special version of [ApplicationConfig] that is used in tests.

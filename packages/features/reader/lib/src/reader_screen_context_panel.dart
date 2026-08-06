@@ -42,6 +42,9 @@ class _ContextPanelDriver extends StatelessWidget {
     final sourceType = context.select<ReaderBloc, SourceType>(
       (b) => b.state.sourceType,
     );
+    final sourceLanguageHint = context.select<ReaderBloc, String?>(
+      (b) => b.state.document?.language,
+    );
     final highlightFocus = context
         .select<ReaderHighlightFocusCubit, ReaderHighlightFocusState>(
           (c) => c.state,
@@ -232,9 +235,13 @@ class _ContextPanelDriver extends StatelessWidget {
       scrollOffset: sel.scrollOffset,
       progress: sel.progress,
       chapterTitle: sel.chapterTitle,
+      sourceLanguageHint: sourceLanguageHint,
       containedHighlightIds: sel.containedHighlightIds,
     );
     final highlightAction = _highlightActionFor(textActions);
+    final fallbackActions = textActions
+        .where((action) => action is! ColorHighlightTextAction)
+        .toList(growable: false);
 
     void showHighlightPreview(HighlightColor color) {
       final cfiRange = sel.cfiRange;
@@ -270,6 +277,10 @@ class _ContextPanelDriver extends StatelessWidget {
       );
     }
 
+    void completeTextAction() {
+      dismissSelection();
+    }
+
     void handleActionError(Object error, StackTrace stack) {
       if (!bloc.isClosed) bloc.reportError(error, stack);
       showToast(
@@ -283,6 +294,7 @@ class _ContextPanelDriver extends StatelessWidget {
       return Positioned.fill(
         child: _HighlightSelectionPopup(
           action: highlightAction,
+          extraActions: fallbackActions,
           selection: selection,
           selectionPosition: sel.position,
           readerTheme: readerTheme,
@@ -293,14 +305,12 @@ class _ContextPanelDriver extends StatelessWidget {
           onPreviewCleared: clearHighlightPreview,
           onDismiss: dismissSelection,
           onActionCompleted: completeHighlightAction,
+          onExtraActionCompleted: completeTextAction,
           onActionError: handleActionError,
         ),
       );
     }
 
-    final fallbackActions = textActions
-        .where((action) => action is! ColorHighlightTextAction)
-        .toList(growable: false);
     if (fallbackActions.isEmpty) return const SizedBox.shrink();
 
     return Positioned(
@@ -314,11 +324,7 @@ class _ContextPanelDriver extends StatelessWidget {
         iconColor: colors.onSurface,
         dividerColor: colors.outlineVariant,
         onActionCompleted: () {
-          selectionCubit.deselect();
-          webViewKey.currentState?.clearSelectionAfterTextAction();
-          if (!bloc.isClosed) {
-            bloc.add(const ReaderHighlightsRefreshed());
-          }
+          completeTextAction();
         },
         onActionError: (e, st) {
           if (!bloc.isClosed) bloc.reportError(e, st);
@@ -866,6 +872,7 @@ class _SavedHighlightPopup extends StatelessWidget {
 class _HighlightSelectionPopup extends StatefulWidget {
   const _HighlightSelectionPopup({
     required this.action,
+    required this.extraActions,
     required this.selection,
     required this.readerTheme,
     required this.panelColor,
@@ -875,11 +882,13 @@ class _HighlightSelectionPopup extends StatefulWidget {
     required this.onPreviewCleared,
     required this.onDismiss,
     required this.onActionCompleted,
+    required this.onExtraActionCompleted,
     required this.onActionError,
     this.selectionPosition,
   });
 
   final ColorHighlightTextAction action;
+  final List<TextAction> extraActions;
   final TextSelectionContext selection;
   final ReaderSelectionPosition? selectionPosition;
   final ReaderThemeData readerTheme;
@@ -890,6 +899,7 @@ class _HighlightSelectionPopup extends StatefulWidget {
   final VoidCallback onPreviewCleared;
   final VoidCallback onDismiss;
   final VoidCallback onActionCompleted;
+  final VoidCallback onExtraActionCompleted;
   final void Function(Object error, StackTrace stack) onActionError;
 
   @override
@@ -955,6 +965,7 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
         final width = _highlightPopupWidth(
           constraints.maxWidth,
           horizontalInset,
+          actionCount: 1 + widget.extraActions.length,
         );
         final left = _highlightPopupLeft(
           constraints: constraints,
@@ -1000,6 +1011,13 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
                     tooltip: context.l10n.highlightAction,
                     onPressed: _save,
                   ),
+                  for (final action in widget.extraActions)
+                    _HighlightPopupAction(
+                      color: widget.foregroundColor,
+                      icon: action.icon,
+                      tooltip: action.labelFor(context),
+                      onPressed: () => _executeExtraAction(action),
+                    ),
                 ],
               ),
             ),
@@ -1007,6 +1025,20 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
         );
       },
     );
+  }
+
+  Future<void> _executeExtraAction(TextAction action) async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      await action.onExecute(context, widget.selection);
+      if (!mounted) return;
+      widget.onExtraActionCompleted();
+    } catch (error, stack) {
+      if (!mounted) return;
+      widget.onActionError(error, stack);
+      setState(() => _saving = false);
+    }
   }
 }
 

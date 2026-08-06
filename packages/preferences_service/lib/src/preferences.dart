@@ -448,6 +448,7 @@ class Preferences {
     this.readerBrightness,
     this.readerLastCustomBrightness = 0.7,
     this.readerAppearanceOverrides = const {},
+    this.translationTargetLanguageCode = 'en',
     this.bookImportTermsAcceptedVersion = 0,
     this.onboardingCompleted = false,
   });
@@ -471,6 +472,7 @@ class Preferences {
   final double? readerBrightness;
   final double readerLastCustomBrightness;
   final Map<String, ReaderAppearanceOverride> readerAppearanceOverrides;
+  final String translationTargetLanguageCode;
 
   /// Accepted Terms/Privacy version for book and document imports.
   final int bookImportTermsAcceptedVersion;
@@ -531,6 +533,7 @@ class Preferences {
     Object? readerBrightness = _unset,
     double? readerLastCustomBrightness,
     Map<String, ReaderAppearanceOverride>? readerAppearanceOverrides,
+    String? translationTargetLanguageCode,
     int? bookImportTermsAcceptedVersion,
     bool? onboardingCompleted,
   }) => Preferences(
@@ -559,6 +562,8 @@ class Preferences {
     ),
     readerAppearanceOverrides:
         readerAppearanceOverrides ?? this.readerAppearanceOverrides,
+    translationTargetLanguageCode:
+        translationTargetLanguageCode ?? this.translationTargetLanguageCode,
     bookImportTermsAcceptedVersion:
         bookImportTermsAcceptedVersion ?? this.bookImportTermsAcceptedVersion,
     onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
@@ -590,6 +595,8 @@ class Preferences {
             readerAppearanceOverrides,
             other.readerAppearanceOverrides,
           ) &&
+          translationTargetLanguageCode ==
+              other.translationTargetLanguageCode &&
           bookImportTermsAcceptedVersion ==
               other.bookImportTermsAcceptedVersion &&
           onboardingCompleted == other.onboardingCompleted;
@@ -615,6 +622,7 @@ class Preferences {
     readerBrightness,
     readerLastCustomBrightness,
     _hashReaderAppearanceOverrides(readerAppearanceOverrides),
+    translationTargetLanguageCode,
     bookImportTermsAcceptedVersion,
     onboardingCompleted,
   ]);

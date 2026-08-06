@@ -9,6 +9,7 @@ import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:collection_repository/collection_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
+import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -31,6 +32,7 @@ class DependenciesContainer {
     required this.collectionRepository,
     required this.highlightRepository,
     required this.connectivityService,
+    required this.contextualTranslationService,
     required this.screenControlService,
     required this.readerServer,
   });
@@ -46,6 +48,7 @@ class DependenciesContainer {
   final CollectionRepository collectionRepository;
   final HighlightRepository highlightRepository;
   final ConnectivityService connectivityService;
+  final ContextualTranslationService contextualTranslationService;
   final ScreenControlService screenControlService;
   final ReaderServer readerServer;
 
@@ -63,6 +66,15 @@ class DependenciesContainer {
       await readerServer.stop();
     } catch (e, st) {
       logger.warn('readerServer.stop failed', error: e, stackTrace: st);
+    }
+    try {
+      contextualTranslationService.dispose();
+    } catch (e, st) {
+      logger.warn(
+        'contextualTranslationService.dispose failed',
+        error: e,
+        stackTrace: st,
+      );
     }
     try {
       articleExtractionService.dispose();

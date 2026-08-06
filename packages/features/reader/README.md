@@ -38,10 +38,11 @@ from the top reader chrome without coupling the reader package to
 
 ## TextAction plugin system
 
-The reader knows nothing about highlight persistence. Callers assemble a
-`List<TextAction>` (from `shared/`) in the composition root (`routing.dart`) and
-pass it in. On text selection the context panel renders one `IconButton` per
-action. The active implementation is supplied by the `highlight` feature.
+The reader knows nothing about highlight persistence or translation services.
+Callers assemble a `List<TextAction>` (from `shared/`) in the composition root
+(`routing.dart`) and pass it in. On text selection the context panel renders
+one button per action. Active implementations are supplied by sibling features
+such as `highlight` and `translate`.
 
 ```dart
 abstract class TextAction {

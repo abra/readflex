@@ -42,6 +42,7 @@ void main() {
       expect(prefs.readerBrightness, isNull);
       expect(prefs.readerLastCustomBrightness, 0.7);
       expect(prefs.readerAppearanceOverrides, isEmpty);
+      expect(prefs.translationTargetLanguageCode, 'en');
       expect(prefs.onboardingCompleted, isFalse);
     });
 
@@ -61,6 +62,7 @@ void main() {
             brightnessOverride: 0.42,
           ),
         },
+        translationTargetLanguageCode: 'ru',
         onboardingCompleted: true,
       );
 
@@ -73,6 +75,7 @@ void main() {
       expect(updated.readerLastCustomBrightness, 0.8);
       expect(updated.readerAppearanceOverrides['source-1']?.fontId, 'sans');
       expect(updated.readerBrightnessOverrideFor('source-1'), 0.42);
+      expect(updated.translationTargetLanguageCode, 'ru');
       expect(updated.onboardingCompleted, isTrue);
       // Unchanged fields preserved
       expect(updated.readerThemeId, 'paper');
@@ -124,6 +127,10 @@ void main() {
       expect(
         a,
         isNot(equals(a.copyWith(readerLastCustomBrightness: 0.55))),
+      );
+      expect(
+        a,
+        isNot(equals(a.copyWith(translationTargetLanguageCode: 'ru'))),
       );
     });
 
