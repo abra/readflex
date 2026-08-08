@@ -1,0 +1,35 @@
+name: dictionary
+description: Reader action and sheet for monolingual dictionary definitions.
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  equatable: ^2.0.8
+  flutter_bloc: ^9.1.1
+
+  component_library:
+    path: ../../component_library
+  dictionary_service:
+    path: ../../dictionary_service
+  readflex_localizations:
+    path: ../../readflex_localizations
+  shared:
+    path: ../../shared
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  bloc_test: ^10.0.0
+  domain_models:
+    path: ../../domain_models
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

@@ -12,6 +12,7 @@ import 'package:book_repository/book_repository.dart';
 import 'package:collection_repository/collection_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
+import 'package:dictionary_service/dictionary_service.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:local_storage/local_storage.dart';
 import 'package:monitoring/monitoring.dart';
@@ -156,6 +157,11 @@ Future<DependenciesContainer> createDependenciesContainer(
     ),
     offlineService: MlKitOfflineTranslationService(),
   );
+  final systemDictionaryService = PlatformSystemDictionaryService();
+  final dictionaryLookupService = RemoteDictionaryLookupService(
+    baseUri: Uri.parse(config.dictionaryBaseUrl),
+    apiKey: config.dictionaryApiKey.isEmpty ? null : config.dictionaryApiKey,
+  );
 
   return DependenciesContainer(
     logger: logger,
@@ -170,6 +176,8 @@ Future<DependenciesContainer> createDependenciesContainer(
     highlightRepository: highlightRepository,
     connectivityService: connectivityService,
     contextualTranslationService: contextualTranslationService,
+    systemDictionaryService: systemDictionaryService,
+    dictionaryLookupService: dictionaryLookupService,
     screenControlService: screenControlService,
     readerServer: readerServer,
   );

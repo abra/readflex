@@ -12,8 +12,8 @@ boundaries, runtime containers, storage ownership, or integration points change.
 
 Readflex is a mobile reading app for imported books, saved web articles, and
 highlights. It runs on iOS and Android, stores user data locally, renders books
-through a local WebView reader runtime, and optionally calls a remote article
-cleaner backend to extract readable article content.
+through a local WebView reader runtime, and optionally calls remote article
+cleaning, contextual translation, and dictionary backends.
 
 ```mermaid
 flowchart LR
@@ -21,10 +21,16 @@ flowchart LR
   app["Readflex mobile app"]
   websites["Publisher websites"]
   cleaner["Article Cleaner API"]
+  translation["Contextual Translation API"]
+  dictionary["Readflex Dictionary API"]
+  deepseek["DeepSeek API"]
   platform["iOS / Android platform services"]
 
   user -->|"Imports books, saves articles, reads, highlights"| app
   app -->|"Fetches article URLs or downloaded HTML for extraction"| cleaner
+  app -->|"Translates selected text in context"| translation
+  app -->|"Looks up definitions when system lookup is unavailable"| dictionary
+  dictionary -->|"Requests monolingual structured definitions"| deepseek
   cleaner -->|"May fetch original article URL"| websites
   app -->|"Can fallback-download article HTML"| websites
   app -->|"Files, WebView, brightness, wakelock, connectivity"| platform
@@ -36,7 +42,10 @@ flowchart LR
 |--------|----------------|---------------------|
 | Article Cleaner API | Extracts readable article content from URLs or downloaded HTML. | `article_extraction_service` via HTTP. |
 | Publisher websites | Original article pages and assets. | Article cleaner server fetches first; app can fallback-download HTML. |
-| iOS / Android platform services | Files, WebView, brightness, wakelock, connectivity, package info. | Flutter plugins and local packages. |
+| Contextual Translation API | Resolves selected text using surrounding reading context. | `contextual_translation_service` via HTTP. |
+| Readflex Dictionary API | Returns validated, cached monolingual lexical definitions. | `dictionary_service` via HTTP after native lookup fallback. |
+| DeepSeek API | Produces structured monolingual definition candidates from the selected term and sentence context. | Called only by the Readflex Dictionary API; its credentials are never shipped in the app. |
+| iOS / Android platform services | Files, WebView, brightness, wakelock, connectivity, package info, native dictionary UI. | Flutter plugins, app runner channels, and local packages. |
 
 ## Level 2: Containers
 
@@ -50,8 +59,8 @@ flowchart TB
 
   subgraph mobile["Readflex mobile app"]
     appShell["Flutter app shell\nlib/app"]
-    features["Feature packages\nlibrary, import_flow, reader, highlight"]
-    repos["Repositories and services\nbook, article, collection, highlight, preferences, connectivity, screen control"]
+    features["Feature packages\nlibrary, import_flow, reader, highlight, translate, dictionary"]
+    repos["Repositories and services\ncontent, preferences, connectivity, translation, dictionary, screen control"]
     db["Drift SQLite database\nreadflex.db"]
     files["App documents files\nbooks, articles, reader assets"]
     server["Local ReaderServer\nlocalhost HTTP"]
@@ -59,6 +68,7 @@ flowchart TB
   end
 
   cleaner["Article Cleaner API"]
+  remoteApis["Translation / Dictionary APIs"]
   platform["iOS / Android platform APIs"]
 
   user --> appShell
@@ -71,6 +81,7 @@ flowchart TB
   features --> webview
   webview --> server
   repos --> cleaner
+  repos --> remoteApis
   repos --> platform
   webview --> platform
 ```
@@ -138,6 +149,8 @@ flowchart LR
 | Import Flow | `showImportFlowSheet` | `ImportFlowCubit` | File picker/import callbacks, article import callback, reader metadata extraction. |
 | Reader | `ReaderScreen` | `ReaderBloc` plus reader UI cubits | Book/article/highlight repositories, preferences, reader WebView, screen control, text actions. |
 | Highlight | `HighlightAction`, `HighlightSheet` | `HighlightCubit` | Highlight repository, shared text action contract. |
+| Translate | `TranslateAction`, `TranslateSheet` | `TranslateCubit` | Contextual translation service, preferences, shared text action contract. |
+| Dictionary | `DictionaryAction`, `DictionarySheet` | `DictionaryCubit` | Native system dictionary bridge, remote dictionary service, shared text action contract. |
 
 ### Reader Components
 
@@ -250,13 +263,13 @@ sequenceDiagram
 - Domain models remain storage-agnostic and Flutter-agnostic.
 - Storage rows and DAOs remain behind repositories.
 - Reader text actions use `shared.TextAction`; the reader does not import the
-  Highlight feature directly.
+  Highlight, Translate, or Dictionary features directly.
 - Connectivity is a UI signal; services still attempt work and map failures.
 
 ## Known Production Gaps
 
 - Error reporting and analytics are represented by no-op implementations.
-- Translation, dictionary, flashcard, practice, profile, subscription, auth,
-  AI, and notification surfaces are currently outside the active package graph.
-- Dormant dictionary/flashcard/review storage models remain for migration
-  compatibility and future restoration.
+- Flashcard, practice, profile, subscription, auth, AI, and notification
+  surfaces are currently outside the active package graph.
+- Dormant vocabulary/flashcard/review storage models remain for migration
+  compatibility; the active monolingual Dictionary flow does not use them.

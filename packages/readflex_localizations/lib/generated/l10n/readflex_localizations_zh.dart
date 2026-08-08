@@ -747,4 +747,34 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
 
   @override
   String get readerSkip => '跳过';
+
+  @override
+  String get commonCopy => '复制';
+
+  @override
+  String get readerSelectionCopied => '已复制';
+
+  @override
+  String get dictionaryAction => '定义';
+
+  @override
+  String get dictionaryTitle => '定义';
+
+  @override
+  String get dictionaryNotFoundTitle => '未找到定义';
+
+  @override
+  String get dictionaryNotFoundBody => '未找到此选中文本的词典条目。';
+
+  @override
+  String get dictionaryUnsupportedLanguageTitle => '语言不可用';
+
+  @override
+  String get dictionaryUnsupportedLanguageBody => 'Readflex 词典暂不支持此语言。';
+
+  @override
+  String get dictionaryFailureTitle => '定义不可用';
+
+  @override
+  String get dictionaryFailureBody => '请检查网络连接或稍后重试。';
 }

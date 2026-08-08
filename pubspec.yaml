@@ -37,6 +37,8 @@ dependencies:
     path: packages/connectivity_service
   contextual_translation_service:
     path: packages/contextual_translation_service
+  dictionary_service:
+    path: packages/dictionary_service
   screen_control_service:
     path: packages/screen_control_service
   preferences_service:
@@ -57,6 +59,8 @@ dependencies:
     path: packages/features/highlight
   translate:
     path: packages/features/translate
+  dictionary:
+    path: packages/features/dictionary
   reader:
     path: packages/features/reader
 

@@ -771,4 +771,37 @@ class ReadflexLocalizationsPt extends ReadflexLocalizations {
 
   @override
   String get readerSkip => 'Pular';
+
+  @override
+  String get commonCopy => 'Copiar';
+
+  @override
+  String get readerSelectionCopied => 'Copiado';
+
+  @override
+  String get dictionaryAction => 'Definir';
+
+  @override
+  String get dictionaryTitle => 'Definição';
+
+  @override
+  String get dictionaryNotFoundTitle => 'Nenhuma definição encontrada';
+
+  @override
+  String get dictionaryNotFoundBody =>
+      'Nenhuma entrada de dicionário foi encontrada para esta seleção.';
+
+  @override
+  String get dictionaryUnsupportedLanguageTitle => 'Idioma indisponível';
+
+  @override
+  String get dictionaryUnsupportedLanguageBody =>
+      'O dicionário Readflex ainda não oferece suporte a este idioma.';
+
+  @override
+  String get dictionaryFailureTitle => 'Definição indisponível';
+
+  @override
+  String get dictionaryFailureBody =>
+      'Verifique sua conexão ou tente novamente mais tarde.';
 }

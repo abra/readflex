@@ -10,6 +10,7 @@ import 'package:book_repository/book_repository.dart';
 import 'package:collection_repository/collection_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
+import 'package:dictionary_service/dictionary_service.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -33,6 +34,8 @@ class DependenciesContainer {
     required this.highlightRepository,
     required this.connectivityService,
     required this.contextualTranslationService,
+    required this.systemDictionaryService,
+    required this.dictionaryLookupService,
     required this.screenControlService,
     required this.readerServer,
   });
@@ -49,6 +52,8 @@ class DependenciesContainer {
   final HighlightRepository highlightRepository;
   final ConnectivityService connectivityService;
   final ContextualTranslationService contextualTranslationService;
+  final SystemDictionaryService systemDictionaryService;
+  final DictionaryLookupService dictionaryLookupService;
   final ScreenControlService screenControlService;
   final ReaderServer readerServer;
 
@@ -72,6 +77,15 @@ class DependenciesContainer {
     } catch (e, st) {
       logger.warn(
         'contextualTranslationService.dispose failed',
+        error: e,
+        stackTrace: st,
+      );
+    }
+    try {
+      dictionaryLookupService.dispose();
+    } catch (e, st) {
+      logger.warn(
+        'dictionaryLookupService.dispose failed',
         error: e,
         stackTrace: st,
       );

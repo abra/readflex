@@ -220,5 +220,15 @@
   "readerHighlightNoteTitle": "Заметка к хайлайту",
   "readerEditNoteTitle": "Редактировать заметку",
   "readerCommentHint": "Добавить комментарий (необязательно)",
-  "readerSkip": "Пропустить"
+  "readerSkip": "Пропустить",
+  "commonCopy": "Копировать",
+  "readerSelectionCopied": "Скопировано",
+  "dictionaryAction": "Определить",
+  "dictionaryTitle": "Определение",
+  "dictionaryNotFoundTitle": "Определение не найдено",
+  "dictionaryNotFoundBody": "Для выделенного текста нет словарной статьи.",
+  "dictionaryUnsupportedLanguageTitle": "Язык недоступен",
+  "dictionaryUnsupportedLanguageBody": "Словарь Readflex пока не поддерживает этот язык.",
+  "dictionaryFailureTitle": "Определение недоступно",
+  "dictionaryFailureBody": "Проверьте подключение или повторите попытку позже."
 }

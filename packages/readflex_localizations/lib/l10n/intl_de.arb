@@ -220,5 +220,15 @@
   "readerHighlightNoteTitle": "Markierungsnotiz",
   "readerEditNoteTitle": "Notiz bearbeiten",
   "readerCommentHint": "Kommentar hinzufügen (optional)",
-  "readerSkip": "Überspringen"
+  "readerSkip": "Überspringen",
+  "commonCopy": "Kopieren",
+  "readerSelectionCopied": "Kopiert",
+  "dictionaryAction": "Definieren",
+  "dictionaryTitle": "Definition",
+  "dictionaryNotFoundTitle": "Keine Definition gefunden",
+  "dictionaryNotFoundBody": "Für diese Auswahl wurde kein Wörterbucheintrag gefunden.",
+  "dictionaryUnsupportedLanguageTitle": "Sprache nicht verfügbar",
+  "dictionaryUnsupportedLanguageBody": "Das Readflex-Wörterbuch unterstützt diese Sprache noch nicht.",
+  "dictionaryFailureTitle": "Definition nicht verfügbar",
+  "dictionaryFailureBody": "Prüfe die Verbindung oder versuche es später erneut."
 }

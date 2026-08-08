@@ -766,4 +766,37 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
 
   @override
   String get readerSkip => 'Skip';
+
+  @override
+  String get commonCopy => 'Copy';
+
+  @override
+  String get readerSelectionCopied => 'Copied';
+
+  @override
+  String get dictionaryAction => 'Define';
+
+  @override
+  String get dictionaryTitle => 'Definition';
+
+  @override
+  String get dictionaryNotFoundTitle => 'No definition found';
+
+  @override
+  String get dictionaryNotFoundBody =>
+      'No dictionary entry was found for this selection.';
+
+  @override
+  String get dictionaryUnsupportedLanguageTitle => 'Language unavailable';
+
+  @override
+  String get dictionaryUnsupportedLanguageBody =>
+      'The Readflex dictionary does not support this language yet.';
+
+  @override
+  String get dictionaryFailureTitle => 'Definition unavailable';
+
+  @override
+  String get dictionaryFailureBody =>
+      'Check your connection or try again later.';
 }

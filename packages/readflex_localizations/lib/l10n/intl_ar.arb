@@ -220,5 +220,15 @@
   "readerHighlightNoteTitle": "ملاحظة التظليل",
   "readerEditNoteTitle": "تعديل الملاحظة",
   "readerCommentHint": "إضافة تعليق (اختياري)",
-  "readerSkip": "تخطي"
+  "readerSkip": "تخطي",
+  "commonCopy": "نسخ",
+  "readerSelectionCopied": "تم النسخ",
+  "dictionaryAction": "تعريف",
+  "dictionaryTitle": "التعريف",
+  "dictionaryNotFoundTitle": "لم يتم العثور على تعريف",
+  "dictionaryNotFoundBody": "لم يتم العثور على مدخل في القاموس لهذا التحديد.",
+  "dictionaryUnsupportedLanguageTitle": "اللغة غير متاحة",
+  "dictionaryUnsupportedLanguageBody": "قاموس Readflex لا يدعم هذه اللغة حتى الآن.",
+  "dictionaryFailureTitle": "التعريف غير متاح",
+  "dictionaryFailureBody": "تحقق من الاتصال أو حاول مرة أخرى لاحقًا."
 }

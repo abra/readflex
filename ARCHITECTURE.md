@@ -176,10 +176,11 @@ and UI. Storage rows and DAO types should remain behind repositories.
 Repositories orchestrate data sources and return domain models/exceptions.
 Feature blocs/cubits talk to repositories; feature UI should not import DAOs.
 
-Dictionary, flashcard, and FSRS storage tables/domain models are still present
-for migration compatibility and future restoration, but their active
-repositories/features were removed from the package graph. The last revision
-containing those packages is `189e2cc1`.
+Legacy vocabulary, flashcard, and FSRS storage tables/domain models are still
+present for migration compatibility and future restoration. The active
+Dictionary feature is a monolingual lookup surface and intentionally does not
+reuse those saved-translation tables. The last revision containing the legacy
+vocabulary features is `189e2cc1`.
 
 ### Services and Infrastructure
 
@@ -188,6 +189,7 @@ containing those packages is `189e2cc1`.
 | `article_extraction_service` | Remote article cleaner client and fallback extraction contract. | Returns `ExtractedArticle` domain data. |
 | `connectivity_service` | Reactive connectivity status and UI scope. | UI signal only; services still handle their own failures. |
 | `contextual_translation_service` | Contextual translation request/result contracts, remote client, cache, and ML Kit offline fallback coordinator. | Used by the `translate` feature. |
+| `dictionary_service` | System definition UI bridge contract and typed HTTP client/models for monolingual dictionary lookup. | Used by the `dictionary` feature; native implementations live in the app runners. |
 | `device_screen_brightness` | Native/plugin brightness access. | Low-level platform package used by `screen_control_service`. |
 | `monitoring` | Logger, log observers, analytics/error reporter contracts and no-op implementations. | Production reporters are not implemented yet. |
 | `preferences_service` | Preferences model, storage, repository, service, and scope. | Used by Library, Reader, and app composition. |
@@ -209,6 +211,7 @@ must remain replaceable.
 | `reader` | Full-screen reader route and reader UI state. | `article_repository`, `book_repository`, `component_library`, `domain_models`, `highlight_repository`, `preferences_service`, `reader_webview`, `readflex_localizations`, `screen_control_service`, `shared` |
 | `highlight` | Reader text action and highlight bottom sheet. | `component_library`, `domain_models`, `highlight_repository`, `readflex_localizations`, `shared` |
 | `translate` | Reader text action and contextual translation bottom sheet. | `component_library`, `contextual_translation_service`, `preferences_service`, `readflex_localizations`, `shared` |
+| `dictionary` | Reader Define action and monolingual definition bottom sheet with system-first fallback. | `component_library`, `dictionary_service`, `readflex_localizations`, `shared` |
 
 `library_feature` is the Dart package name because `library` is a Dart language
 keyword in source syntax. The user-facing label remains "Library".
@@ -249,11 +252,32 @@ The reader is intentionally split across several packages:
 | `shared` | `TextAction` plugin contract used by reader context-panel actions. |
 | `features/highlight` | Implements `HighlightAction`. |
 | `features/translate` | Implements `TranslateAction` and owns the translation sheet UI/cubit. |
+| `features/dictionary` | Implements `DictionaryAction` and owns the remote definition sheet/cubit. |
 
-The reader does not import the Highlight or Translate packages. `routing.dart`
-creates the `HighlightAction` and `TranslateAction` implementations and passes
-a list into `ReaderScreen`. The reader renders and executes actions only
-through the `TextAction` contract.
+The reader does not import the Highlight, Translate, or Dictionary feature
+packages. `routing.dart` creates their `TextAction` implementations and passes
+a list into `ReaderScreen`; the reader adds its UI-only `CopyTextAction`. The
+selection popup renders colors and Highlight on the first row, then Copy,
+Translate, and Define on the second row. Reader executes all feature actions
+only through the `TextAction` contract.
+
+Dictionary lookup is deliberately distinct from translation:
+
+```text
+DictionaryAction
+  -> SystemDictionaryService.showDefinition(term)
+       -> iOS UIReferenceLibraryViewController / Android ACTION_DEFINE
+  -> when the platform returns false only:
+       DictionarySheet -> DictionaryCubit -> DictionaryLookupService
+       -> POST /v1/dictionary/lookup
+            -> Readflex Dictionary API -> DeepSeek
+            -> validated response cache (memory + PostgreSQL)
+```
+
+Definitions remain in the language of the selected term. The backend receives
+an optional source-language hint and sentence context, but no target language.
+DeepSeek credentials and provider-specific prompting remain server-side; the
+Flutter package depends only on the stable Readflex dictionary HTTP contract.
 
 Reader-specific UI state is split by responsibility:
 
@@ -341,6 +365,9 @@ tracing is opt-in through `GLITCHTIP_TRACES_SAMPLE_RATE`.
 Contextual translation uses `CONTEXTUAL_TRANSLATION_BASE_URL` and
 `CONTEXTUAL_TRANSLATION_API_KEY`; when they are omitted, it reuses the article
 cleaner host and API key.
+Dictionary lookup follows the same convention through `DICTIONARY_BASE_URL`
+and `DICTIONARY_API_KEY`, and therefore requires no additional dart-defines
+when all Readflex APIs share one nginx entrypoint.
 
 ## Known Non-Production Contracts
 
@@ -350,9 +377,9 @@ a task explicitly asks to implement them:
 - Error reporting uses `GlitchTipErrorReporter` when a DSN is configured and
   falls back to `NoopErrorReporter` otherwise.
 - `NoopAnalyticsReporter` does not send analytics telemetry.
-- Dictionary, flashcard, practice, profile, subscription, auth, AI, and
-  notification packages are frozen outside the active package graph. Restore
-  them from `189e2cc1` if the product scope returns.
+- Flashcard, practice, profile, subscription, auth, AI, and notification
+  packages are frozen outside the active package graph. Restore their legacy
+  implementation from `189e2cc1` only if that product scope returns.
 
 When replacing a remaining no-op with a production implementation, update this
 document, the relevant package README, and tests around the public contract.

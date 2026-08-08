@@ -220,5 +220,15 @@
   "readerHighlightNoteTitle": "Note du surlignage",
   "readerEditNoteTitle": "Modifier la note",
   "readerCommentHint": "Ajouter un commentaire (facultatif)",
-  "readerSkip": "Ignorer"
+  "readerSkip": "Ignorer",
+  "commonCopy": "Copier",
+  "readerSelectionCopied": "Copié",
+  "dictionaryAction": "Définir",
+  "dictionaryTitle": "Définition",
+  "dictionaryNotFoundTitle": "Aucune définition trouvée",
+  "dictionaryNotFoundBody": "Aucune entrée de dictionnaire n'a été trouvée pour cette sélection.",
+  "dictionaryUnsupportedLanguageTitle": "Langue indisponible",
+  "dictionaryUnsupportedLanguageBody": "Le dictionnaire Readflex ne prend pas encore en charge cette langue.",
+  "dictionaryFailureTitle": "Définition indisponible",
+  "dictionaryFailureBody": "Vérifiez votre connexion ou réessayez plus tard."
 }

@@ -173,10 +173,11 @@ void main() {
     expect(contextPanelSource, contains('bool get _busy =>'));
     expect(contextPanelSource, contains('loading: _saving'));
     expect(contextPanelSource, contains('child: action.loading'));
-    expect(
-      contextPanelSource,
-      contains('setState(() => _executingExtraAction = true);'),
-    );
+    expect(contextPanelSource, contains('_executingExtraAction = true'));
+    expect(contextPanelSource, contains('_TextSelectionPopupSurface'));
+    expect(contextPanelSource, contains('_kTextSelectionPopupHeight'));
+    expect(contextPanelSource, contains('_TextSelectionActionButton'));
+    expect(contextPanelSource, isNot(contains('if (action.loading)')));
     expect(
       contextPanelSource,
       isNot(

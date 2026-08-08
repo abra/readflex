@@ -764,4 +764,37 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
 
   @override
   String get readerSkip => 'छोड़ें';
+
+  @override
+  String get commonCopy => 'कॉपी करें';
+
+  @override
+  String get readerSelectionCopied => 'कॉपी किया गया';
+
+  @override
+  String get dictionaryAction => 'परिभाषा';
+
+  @override
+  String get dictionaryTitle => 'परिभाषा';
+
+  @override
+  String get dictionaryNotFoundTitle => 'कोई परिभाषा नहीं मिली';
+
+  @override
+  String get dictionaryNotFoundBody =>
+      'इस चयन के लिए कोई शब्दकोश प्रविष्टि नहीं मिली।';
+
+  @override
+  String get dictionaryUnsupportedLanguageTitle => 'भाषा उपलब्ध नहीं है';
+
+  @override
+  String get dictionaryUnsupportedLanguageBody =>
+      'Readflex शब्दकोश अभी इस भाषा का समर्थन नहीं करता।';
+
+  @override
+  String get dictionaryFailureTitle => 'परिभाषा उपलब्ध नहीं है';
+
+  @override
+  String get dictionaryFailureBody =>
+      'अपना कनेक्शन जांचें या बाद में पुनः प्रयास करें।';
 }

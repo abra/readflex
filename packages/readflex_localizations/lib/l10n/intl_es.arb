@@ -220,5 +220,15 @@
   "readerHighlightNoteTitle": "Nota del resaltado",
   "readerEditNoteTitle": "Editar nota",
   "readerCommentHint": "Añadir comentario (opcional)",
-  "readerSkip": "Omitir"
+  "readerSkip": "Omitir",
+  "commonCopy": "Copiar",
+  "readerSelectionCopied": "Copiado",
+  "dictionaryAction": "Definir",
+  "dictionaryTitle": "Definición",
+  "dictionaryNotFoundTitle": "No se encontró una definición",
+  "dictionaryNotFoundBody": "No se encontró una entrada de diccionario para esta selección.",
+  "dictionaryUnsupportedLanguageTitle": "Idioma no disponible",
+  "dictionaryUnsupportedLanguageBody": "El diccionario de Readflex aún no admite este idioma.",
+  "dictionaryFailureTitle": "Definición no disponible",
+  "dictionaryFailureBody": "Comprueba la conexión o inténtalo de nuevo más tarde."
 }

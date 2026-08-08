@@ -332,5 +332,15 @@
   "readerHighlightNoteTitle": "Highlight note",
   "readerEditNoteTitle": "Edit note",
   "readerCommentHint": "Add a comment (optional)",
-  "readerSkip": "Skip"
+  "readerSkip": "Skip",
+  "commonCopy": "Copy",
+  "readerSelectionCopied": "Copied",
+  "dictionaryAction": "Define",
+  "dictionaryTitle": "Definition",
+  "dictionaryNotFoundTitle": "No definition found",
+  "dictionaryNotFoundBody": "No dictionary entry was found for this selection.",
+  "dictionaryUnsupportedLanguageTitle": "Language unavailable",
+  "dictionaryUnsupportedLanguageBody": "The Readflex dictionary does not support this language yet.",
+  "dictionaryFailureTitle": "Definition unavailable",
+  "dictionaryFailureBody": "Check your connection or try again later."
 }

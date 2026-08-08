@@ -38,11 +38,14 @@ from the top reader chrome without coupling the reader package to
 
 ## TextAction plugin system
 
-The reader knows nothing about highlight persistence or translation services.
+The reader knows nothing about highlight persistence, translation, or
+dictionary services.
 Callers assemble a `List<TextAction>` (from `shared/`) in the composition root
 (`routing.dart`) and pass it in. On text selection the context panel renders
-one button per action. Active implementations are supplied by sibling features
-such as `highlight` and `translate`.
+actions in a two-row popup: highlight colors and Highlight are above the
+general Copy, Translate, and Define commands. Active feature implementations
+are supplied by sibling packages such as `highlight`, `translate`, and
+`dictionary`; the UI-only `CopyTextAction` remains in Reader.
 
 ```dart
 abstract class TextAction {

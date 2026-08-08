@@ -778,4 +778,37 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
 
   @override
   String get readerSkip => 'Пропустить';
+
+  @override
+  String get commonCopy => 'Копировать';
+
+  @override
+  String get readerSelectionCopied => 'Скопировано';
+
+  @override
+  String get dictionaryAction => 'Определить';
+
+  @override
+  String get dictionaryTitle => 'Определение';
+
+  @override
+  String get dictionaryNotFoundTitle => 'Определение не найдено';
+
+  @override
+  String get dictionaryNotFoundBody =>
+      'Для выделенного текста нет словарной статьи.';
+
+  @override
+  String get dictionaryUnsupportedLanguageTitle => 'Язык недоступен';
+
+  @override
+  String get dictionaryUnsupportedLanguageBody =>
+      'Словарь Readflex пока не поддерживает этот язык.';
+
+  @override
+  String get dictionaryFailureTitle => 'Определение недоступно';
+
+  @override
+  String get dictionaryFailureBody =>
+      'Проверьте подключение или повторите попытку позже.';
 }

@@ -781,4 +781,37 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
 
   @override
   String get readerSkip => 'تخطي';
+
+  @override
+  String get commonCopy => 'نسخ';
+
+  @override
+  String get readerSelectionCopied => 'تم النسخ';
+
+  @override
+  String get dictionaryAction => 'تعريف';
+
+  @override
+  String get dictionaryTitle => 'التعريف';
+
+  @override
+  String get dictionaryNotFoundTitle => 'لم يتم العثور على تعريف';
+
+  @override
+  String get dictionaryNotFoundBody =>
+      'لم يتم العثور على مدخل في القاموس لهذا التحديد.';
+
+  @override
+  String get dictionaryUnsupportedLanguageTitle => 'اللغة غير متاحة';
+
+  @override
+  String get dictionaryUnsupportedLanguageBody =>
+      'قاموس Readflex لا يدعم هذه اللغة حتى الآن.';
+
+  @override
+  String get dictionaryFailureTitle => 'التعريف غير متاح';
+
+  @override
+  String get dictionaryFailureBody =>
+      'تحقق من الاتصال أو حاول مرة أخرى لاحقًا.';
 }

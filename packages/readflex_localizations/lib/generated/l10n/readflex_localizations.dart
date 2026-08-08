@@ -1442,6 +1442,66 @@ abstract class ReadflexLocalizations {
   /// In en, this message translates to:
   /// **'Skip'**
   String get readerSkip;
+
+  /// No description provided for @commonCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get commonCopy;
+
+  /// No description provided for @readerSelectionCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get readerSelectionCopied;
+
+  /// No description provided for @dictionaryAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Define'**
+  String get dictionaryAction;
+
+  /// No description provided for @dictionaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Definition'**
+  String get dictionaryTitle;
+
+  /// No description provided for @dictionaryNotFoundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No definition found'**
+  String get dictionaryNotFoundTitle;
+
+  /// No description provided for @dictionaryNotFoundBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No dictionary entry was found for this selection.'**
+  String get dictionaryNotFoundBody;
+
+  /// No description provided for @dictionaryUnsupportedLanguageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Language unavailable'**
+  String get dictionaryUnsupportedLanguageTitle;
+
+  /// No description provided for @dictionaryUnsupportedLanguageBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The Readflex dictionary does not support this language yet.'**
+  String get dictionaryUnsupportedLanguageBody;
+
+  /// No description provided for @dictionaryFailureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Definition unavailable'**
+  String get dictionaryFailureTitle;
+
+  /// No description provided for @dictionaryFailureBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your connection or try again later.'**
+  String get dictionaryFailureBody;
 }
 
 class _ReadflexLocalizationsDelegate

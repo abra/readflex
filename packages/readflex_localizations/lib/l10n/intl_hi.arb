@@ -220,5 +220,15 @@
   "readerHighlightNoteTitle": "हाइलाइट नोट",
   "readerEditNoteTitle": "नोट संपादित करें",
   "readerCommentHint": "टिप्पणी जोड़ें (वैकल्पिक)",
-  "readerSkip": "छोड़ें"
+  "readerSkip": "छोड़ें",
+  "commonCopy": "कॉपी करें",
+  "readerSelectionCopied": "कॉपी किया गया",
+  "dictionaryAction": "परिभाषा",
+  "dictionaryTitle": "परिभाषा",
+  "dictionaryNotFoundTitle": "कोई परिभाषा नहीं मिली",
+  "dictionaryNotFoundBody": "इस चयन के लिए कोई शब्दकोश प्रविष्टि नहीं मिली।",
+  "dictionaryUnsupportedLanguageTitle": "भाषा उपलब्ध नहीं है",
+  "dictionaryUnsupportedLanguageBody": "Readflex शब्दकोश अभी इस भाषा का समर्थन नहीं करता।",
+  "dictionaryFailureTitle": "परिभाषा उपलब्ध नहीं है",
+  "dictionaryFailureBody": "अपना कनेक्शन जांचें या बाद में पुनः प्रयास करें।"
 }

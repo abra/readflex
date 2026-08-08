@@ -20,10 +20,12 @@ abstract final class AppIcons {
   static const IconData edit = LucideIcons.pencil;
   static const IconData play = LucideIcons.play;
   static const IconData paste = LucideIcons.clipboardPaste;
+  static const IconData copy = LucideIcons.copy;
   static const IconData moreHorizontal = LucideIcons.moreHorizontal;
   static const IconData moreVertical = LucideIcons.moreVertical;
   static const IconData chevronLeft = LucideIcons.chevronLeft;
   static const IconData chevronRight = LucideIcons.chevronRight;
+  static const IconData chevronDown = LucideIcons.chevronDown;
 
   // ── Content ───────────────────────────────────────────────
   static const IconData book = LucideIcons.bookOpen;
@@ -40,6 +42,7 @@ abstract final class AppIcons {
   static const IconData check = LucideIcons.check;
   static const IconData clock = LucideIcons.clock;
   static const IconData global = LucideIcons.globe;
+  static const IconData dictionary = LucideIcons.bookOpen;
 
   // ── Reader ────────────────────────────────────────────────
   static const IconData volumeUp = LucideIcons.volume2;

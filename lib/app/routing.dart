@@ -5,6 +5,7 @@ import 'package:connectivity_service/connectivity_service.dart'
     show ConnectivityScope, ConnectivityStatus;
 import 'package:library_feature/library_feature.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:dictionary/dictionary.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -160,9 +161,14 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                   HighlightAction(
                     highlightRepository: deps.highlightRepository,
                   ),
+                  CopyTextAction(),
                   TranslateAction(
                     translationService: deps.contextualTranslationService,
                     preferencesService: deps.preferencesService,
+                  ),
+                  DictionaryAction(
+                    systemDictionaryService: deps.systemDictionaryService,
+                    dictionaryLookupService: deps.dictionaryLookupService,
                   ),
                 ],
               ),

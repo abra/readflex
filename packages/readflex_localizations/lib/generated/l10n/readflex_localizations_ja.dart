@@ -751,4 +751,34 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
 
   @override
   String get readerSkip => 'スキップ';
+
+  @override
+  String get commonCopy => 'コピー';
+
+  @override
+  String get readerSelectionCopied => 'コピーしました';
+
+  @override
+  String get dictionaryAction => '定義';
+
+  @override
+  String get dictionaryTitle => '定義';
+
+  @override
+  String get dictionaryNotFoundTitle => '定義が見つかりません';
+
+  @override
+  String get dictionaryNotFoundBody => '選択した語句の辞書項目が見つかりませんでした。';
+
+  @override
+  String get dictionaryUnsupportedLanguageTitle => '利用できない言語';
+
+  @override
+  String get dictionaryUnsupportedLanguageBody => 'Readflex辞書はこの言語にまだ対応していません。';
+
+  @override
+  String get dictionaryFailureTitle => '定義を利用できません';
+
+  @override
+  String get dictionaryFailureBody => '接続を確認するか、後でもう一度お試しください。';
 }

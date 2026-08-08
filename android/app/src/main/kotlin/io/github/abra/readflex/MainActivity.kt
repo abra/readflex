@@ -1,6 +1,8 @@
 package io.github.abra.readflex
 
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
@@ -47,6 +49,35 @@ class MainActivity : FlutterActivity() {
                 }
                 else -> result.notImplemented()
             }
+        }
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            DICTIONARY_CHANNEL,
+        ).setMethodCallHandler { call, result ->
+            if (call.method != "showDefinition") {
+                result.notImplemented()
+                return@setMethodCallHandler
+            }
+            val term = call.argument<String>("term")?.trim()
+            if (term.isNullOrEmpty()) {
+                result.error("invalid_arguments", "Missing dictionary term", null)
+                return@setMethodCallHandler
+            }
+            result.success(showSystemDefinition(term))
+        }
+    }
+
+    private fun showSystemDefinition(term: String): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+        val intent = Intent(Intent.ACTION_DEFINE).apply {
+            putExtra(Intent.EXTRA_TEXT, term)
+        }
+        if (intent.resolveActivity(packageManager) == null) return false
+        return try {
+            startActivity(intent)
+            true
+        } catch (_: ActivityNotFoundException) {
+            false
         }
     }
 
@@ -304,6 +335,7 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         private const val SCREEN_CONTROL_CHANNEL = "io.github.abra.readflex/screen_control"
+        private const val DICTIONARY_CHANNEL = "io.github.abra.readflex/dictionary"
         private const val BRIGHTNESS_TAG = "ReadflexBrightness"
         private const val SCREEN_BRIGHTNESS_FLOAT = "screen_brightness_float"
         private const val HLG_R = 0.5

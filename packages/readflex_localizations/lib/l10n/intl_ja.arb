@@ -220,5 +220,15 @@
   "readerHighlightNoteTitle": "ハイライトのメモ",
   "readerEditNoteTitle": "メモを編集",
   "readerCommentHint": "コメントを追加（任意）",
-  "readerSkip": "スキップ"
+  "readerSkip": "スキップ",
+  "commonCopy": "コピー",
+  "readerSelectionCopied": "コピーしました",
+  "dictionaryAction": "定義",
+  "dictionaryTitle": "定義",
+  "dictionaryNotFoundTitle": "定義が見つかりません",
+  "dictionaryNotFoundBody": "選択した語句の辞書項目が見つかりませんでした。",
+  "dictionaryUnsupportedLanguageTitle": "利用できない言語",
+  "dictionaryUnsupportedLanguageBody": "Readflex辞書はこの言語にまだ対応していません。",
+  "dictionaryFailureTitle": "定義を利用できません",
+  "dictionaryFailureBody": "接続を確認するか、後でもう一度お試しください。"
 }

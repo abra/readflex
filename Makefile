@@ -18,6 +18,7 @@ PACKAGES = \
 	packages/preferences_service \
 	packages/connectivity_service \
 	packages/contextual_translation_service \
+	packages/dictionary_service \
 	packages/device_screen_brightness \
 	packages/screen_control_service \
 	packages/reader_server \
@@ -27,6 +28,7 @@ PACKAGES = \
 	packages/features/import_flow \
 	packages/features/highlight \
 	packages/features/translate \
+	packages/features/dictionary \
 	packages/features/reader
 
 ROOT_ANALYZE_PATHS = lib test benchmarks

@@ -777,4 +777,37 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
 
   @override
   String get readerSkip => 'Ignorer';
+
+  @override
+  String get commonCopy => 'Copier';
+
+  @override
+  String get readerSelectionCopied => 'Copié';
+
+  @override
+  String get dictionaryAction => 'Définir';
+
+  @override
+  String get dictionaryTitle => 'Définition';
+
+  @override
+  String get dictionaryNotFoundTitle => 'Aucune définition trouvée';
+
+  @override
+  String get dictionaryNotFoundBody =>
+      'Aucune entrée de dictionnaire n\'a été trouvée pour cette sélection.';
+
+  @override
+  String get dictionaryUnsupportedLanguageTitle => 'Langue indisponible';
+
+  @override
+  String get dictionaryUnsupportedLanguageBody =>
+      'Le dictionnaire Readflex ne prend pas encore en charge cette langue.';
+
+  @override
+  String get dictionaryFailureTitle => 'Définition indisponible';
+
+  @override
+  String get dictionaryFailureBody =>
+      'Vérifiez votre connexion ou réessayez plus tard.';
 }

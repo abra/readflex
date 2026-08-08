@@ -76,7 +76,7 @@ class _TranslateSheetView extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _LanguageDropdown(
-                      label: strings.sourceLabel,
+                      semanticsLabel: strings.sourceLabel,
                       value: state.sourceLanguageCode,
                       items: [
                         _LanguageOption(
@@ -95,7 +95,7 @@ class _TranslateSheetView extends StatelessWidget {
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: _LanguageDropdown(
-                      label: strings.targetLabel,
+                      semanticsLabel: strings.targetLabel,
                       value: state.targetLanguageCode,
                       items: _supportedLanguageOptions,
                       enabled: !state.isBusy,
@@ -307,14 +307,14 @@ class _MessageWithAction extends StatelessWidget {
 
 class _LanguageDropdown extends StatelessWidget {
   const _LanguageDropdown({
-    required this.label,
+    required this.semanticsLabel,
     required this.value,
     required this.items,
     required this.enabled,
     required this.onChanged,
   });
 
-  final String label;
+  final String semanticsLabel;
   final String value;
   final List<_LanguageOption> items;
   final bool enabled;
@@ -322,17 +322,42 @@ class _LanguageDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      decoration: InputDecoration(labelText: label, isDense: true),
-      items: [
-        for (final item in items)
-          DropdownMenuItem<String>(
-            value: item.code,
-            child: Text(item.name, overflow: TextOverflow.ellipsis),
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      borderSide: BorderSide.none,
+    );
+    return Semantics(
+      label: semanticsLabel,
+      button: true,
+      child: SizedBox(
+        height: AppSizes.buttonHeight,
+        child: DropdownButtonFormField<String>(
+          initialValue: value,
+          isExpanded: true,
+          icon: const Icon(AppIcons.chevronDown, size: AppIconSize.xs),
+          decoration: InputDecoration(
+            isDense: true,
+            filled: true,
+            fillColor: context.colors.surfaceContainerHighest,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            border: border,
+            enabledBorder: border,
+            focusedBorder: border,
+            disabledBorder: border,
           ),
-      ],
-      onChanged: enabled ? onChanged : null,
+          items: [
+            for (final item in items)
+              DropdownMenuItem<String>(
+                value: item.code,
+                child: Text(item.name, overflow: TextOverflow.ellipsis),
+              ),
+          ],
+          onChanged: enabled ? onChanged : null,
+        ),
+      ),
     );
   }
 }

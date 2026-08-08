@@ -6,6 +6,12 @@ const _kHighlightSwatchTapSize = 40.0;
 const _kHighlightPopupHorizontalPadding = AppSpacing.xs;
 const _kHighlightPopupDividerWidth = AppSpacing.sm;
 const _kHighlightPopupHeight = 52.0;
+const _kTextSelectionActionRowHeight = 52.0;
+const _kTextSelectionPopupDividerHeight = 1.0;
+const _kTextSelectionPopupHeight =
+    _kHighlightPopupHeight +
+    _kTextSelectionPopupDividerHeight +
+    _kTextSelectionActionRowHeight;
 const _kHighlightPopupGap = AppSpacing.sm;
 const _kImageHighlightPopupGap = AppSpacing.xl;
 const _kHighlightPopupHorizontalInset = AppSpacing.lg;
@@ -403,19 +409,17 @@ double _highlightPopupTop({
   required EdgeInsets mediaPadding,
   required ReaderSelectionPosition? position,
   double gap = _kHighlightPopupGap,
+  double popupHeight = _kHighlightPopupHeight,
 }) {
   final minTop = mediaPadding.top + AppSpacing.sm;
   final availableMaxTop =
-      constraints.maxHeight -
-      mediaPadding.bottom -
-      _kHighlightPopupHeight -
-      AppSpacing.sm;
+      constraints.maxHeight - mediaPadding.bottom - popupHeight - AppSpacing.sm;
   final maxTop = availableMaxTop <= minTop ? minTop : availableMaxTop;
   if (position == null) return maxTop;
 
   final selectionTop = position.top * constraints.maxHeight;
   final selectionBottom = position.bottom * constraints.maxHeight;
-  final aboveTop = selectionTop - _kHighlightPopupHeight - gap;
+  final aboveTop = selectionTop - popupHeight - gap;
   final belowTop = selectionBottom + gap;
   final preferredTop = aboveTop >= minTop ? aboveTop : belowTop;
   return preferredTop.clamp(minTop, maxTop).toDouble();
@@ -1024,7 +1028,6 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
         final width = _highlightPopupWidth(
           constraints.maxWidth,
           horizontalInset,
-          actionCount: 1 + widget.extraActions.length,
         );
         final left = _highlightPopupLeft(
           constraints: constraints,
@@ -1036,6 +1039,7 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
           constraints: constraints,
           mediaPadding: mediaPadding,
           position: widget.selectionPosition,
+          popupHeight: _kTextSelectionPopupHeight,
         );
 
         return Stack(
@@ -1061,8 +1065,8 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
               left: left,
               top: top,
               width: width,
-              height: _kHighlightPopupHeight,
-              child: _HighlightPopupSurface(
+              height: _kTextSelectionPopupHeight,
+              child: _TextSelectionPopupSurface(
                 selectedColor: _selectedColor,
                 busy: _busy,
                 readerTheme: widget.readerTheme,
@@ -1080,19 +1084,19 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
                   setState(() => _selectedColor = color);
                   widget.onPreviewColorChanged(color);
                 },
-                actions: [
-                  _HighlightPopupAction(
-                    color: widget.foregroundColor,
-                    icon: AppIcons.highlight,
-                    tooltip: context.l10n.highlightAction,
-                    onPressed: _save,
-                    loading: _saving,
-                  ),
+                highlightAction: _HighlightPopupAction(
+                  color: widget.foregroundColor,
+                  icon: AppIcons.highlight,
+                  tooltip: context.l10n.highlightAction,
+                  onPressed: _save,
+                  loading: _saving,
+                ),
+                textActions: [
                   for (final action in widget.extraActions)
-                    _HighlightPopupAction(
+                    _TextSelectionPopupAction(
                       color: widget.foregroundColor,
                       icon: action.icon,
-                      tooltip: action.labelFor(context),
+                      label: action.labelFor(context),
                       onPressed: () => _executeExtraAction(action),
                     ),
                 ],
@@ -1135,6 +1139,132 @@ class _HighlightPopupAction {
   final bool loading;
 }
 
+class _TextSelectionPopupAction {
+  const _TextSelectionPopupAction({
+    required this.color,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final Color color;
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+}
+
+class _TextSelectionPopupSurface extends StatelessWidget {
+  const _TextSelectionPopupSurface({
+    required this.selectedColor,
+    required this.busy,
+    required this.readerTheme,
+    required this.panelColor,
+    required this.dividerColor,
+    required this.onColorChanged,
+    required this.highlightAction,
+    required this.textActions,
+  });
+
+  final HighlightColor selectedColor;
+  final bool busy;
+  final ReaderThemeData readerTheme;
+  final Color panelColor;
+  final Color dividerColor;
+  final ValueChanged<HighlightColor> onColorChanged;
+  final _HighlightPopupAction highlightAction;
+  final List<_TextSelectionPopupAction> textActions;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(AppRadius.lg);
+    return DecoratedBox(
+      decoration: _highlightPopupDecoration(context, panelColor, dividerColor),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: radius,
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            SizedBox(
+              height: _kHighlightPopupHeight,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: _kHighlightPopupHorizontalPadding,
+                ),
+                child: _HighlightControlsRow(
+                  selectedColor: selectedColor,
+                  busy: busy,
+                  readerTheme: readerTheme,
+                  dividerColor: dividerColor,
+                  onColorChanged: onColorChanged,
+                  actions: [highlightAction],
+                ),
+              ),
+            ),
+            Divider(
+              height: _kTextSelectionPopupDividerHeight,
+              thickness: _kTextSelectionPopupDividerHeight,
+              color: dividerColor,
+            ),
+            SizedBox(
+              height: _kTextSelectionActionRowHeight,
+              child: Row(
+                children: [
+                  for (final action in textActions)
+                    Expanded(
+                      child: _TextSelectionActionButton(
+                        action: action,
+                        enabled: !busy,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TextSelectionActionButton extends StatelessWidget {
+  const _TextSelectionActionButton({
+    required this.action,
+    required this.enabled,
+  });
+
+  final _TextSelectionPopupAction action;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: action.label,
+      child: InkWell(
+        onTap: enabled ? action.onPressed : null,
+        child: SizedBox.expand(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(action.icon, size: AppIconSize.sm, color: action.color),
+              const SizedBox(height: AppSpacing.xxs),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                child: Text(
+                  action.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.text.labelSmall.copyWith(color: action.color),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _HighlightPopupSurface extends StatelessWidget {
   const _HighlightPopupSurface({
     required this.selectedColor,
@@ -1163,14 +1293,11 @@ class _HighlightPopupSurface extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onPointerDown: (_) => onInteractionStarted?.call(),
       child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: panelColor,
+        decoration: _highlightPopupDecoration(
+          context,
+          panelColor,
+          dividerColor,
           borderRadius: radius,
-          border: Border.all(
-            color: dividerColor.withValues(alpha: 0.72),
-            width: 1 / MediaQuery.devicePixelRatioOf(context),
-          ),
-          boxShadow: AppShadows.popover,
         ),
         child: Material(
           color: Colors.transparent,
@@ -1180,54 +1307,99 @@ class _HighlightPopupSurface extends StatelessWidget {
             padding: const EdgeInsets.symmetric(
               horizontal: _kHighlightPopupHorizontalPadding,
             ),
-            child: Row(
-              children: [
-                for (final color in HighlightColor.values)
-                  _HighlightColorButton(
-                    color: color,
-                    readerTheme: readerTheme,
-                    selected: selectedColor == color,
-                    enabled: !busy,
-                    onPressed: () => onColorChanged(color),
-                  ),
-                SizedBox(
-                  height: AppSizes.chipHeight,
-                  child: VerticalDivider(
-                    color: dividerColor,
-                    thickness: 1,
-                    width: _kHighlightPopupDividerWidth,
-                  ),
-                ),
-                for (final action in actions)
-                  SizedBox(
-                    width: _kHighlightSwatchTapSize,
-                    height: _kHighlightSwatchTapSize,
-                    child: Tooltip(
-                      message: action.tooltip,
-                      child: InkResponse(
-                        radius: _kHighlightSwatchTapSize / 2,
-                        onTap: busy ? null : action.onPressed,
-                        child: Center(
-                          child: action.loading
-                              ? const ButtonLoadingIndicator(
-                                  size: AppIconSize.sm,
-                                )
-                              : Icon(
-                                  action.icon,
-                                  size: AppIconSize.sm,
-                                  color: action.color,
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
+            child: _HighlightControlsRow(
+              selectedColor: selectedColor,
+              busy: busy,
+              readerTheme: readerTheme,
+              dividerColor: dividerColor,
+              onColorChanged: onColorChanged,
+              actions: actions,
             ),
           ),
         ),
       ),
     );
   }
+}
+
+class _HighlightControlsRow extends StatelessWidget {
+  const _HighlightControlsRow({
+    required this.selectedColor,
+    required this.busy,
+    required this.readerTheme,
+    required this.dividerColor,
+    required this.onColorChanged,
+    required this.actions,
+  });
+
+  final HighlightColor selectedColor;
+  final bool busy;
+  final ReaderThemeData readerTheme;
+  final Color dividerColor;
+  final ValueChanged<HighlightColor> onColorChanged;
+  final List<_HighlightPopupAction> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (final color in HighlightColor.values)
+          _HighlightColorButton(
+            color: color,
+            readerTheme: readerTheme,
+            selected: selectedColor == color,
+            enabled: !busy,
+            onPressed: () => onColorChanged(color),
+          ),
+        SizedBox(
+          height: AppSizes.chipHeight,
+          child: VerticalDivider(
+            color: dividerColor,
+            thickness: 1,
+            width: _kHighlightPopupDividerWidth,
+          ),
+        ),
+        for (final action in actions)
+          SizedBox(
+            width: _kHighlightSwatchTapSize,
+            height: _kHighlightSwatchTapSize,
+            child: Tooltip(
+              message: action.tooltip,
+              child: InkResponse(
+                radius: _kHighlightSwatchTapSize / 2,
+                onTap: busy ? null : action.onPressed,
+                child: Center(
+                  child: action.loading
+                      ? const ButtonLoadingIndicator(size: AppIconSize.sm)
+                      : Icon(
+                          action.icon,
+                          size: AppIconSize.sm,
+                          color: action.color,
+                        ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+BoxDecoration _highlightPopupDecoration(
+  BuildContext context,
+  Color panelColor,
+  Color dividerColor, {
+  BorderRadius? borderRadius,
+}) {
+  return BoxDecoration(
+    color: panelColor,
+    borderRadius: borderRadius ?? BorderRadius.circular(AppRadius.lg),
+    border: Border.all(
+      color: dividerColor.withValues(alpha: 0.72),
+      width: 1 / MediaQuery.devicePixelRatioOf(context),
+    ),
+    boxShadow: AppShadows.popover,
+  );
 }
 
 class _HighlightColorButton extends StatelessWidget {

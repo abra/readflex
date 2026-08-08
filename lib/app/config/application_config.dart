@@ -93,6 +93,25 @@ class ApplicationConfig {
     if (value.isNotEmpty) return value;
     return articleCleanerApiKey;
   }
+
+  /// Base URL of the monolingual dictionary backend.
+  ///
+  /// The default uses the shared Readflex API entrypoint. A separate URL is
+  /// only needed when dictionary traffic is deployed to another host.
+  String get dictionaryBaseUrl {
+    const configured = String.fromEnvironment('DICTIONARY_BASE_URL');
+    final value = configured.trim();
+    if (value.isNotEmpty) return value;
+    return articleCleanerBaseUrl;
+  }
+
+  /// Optional API key for the dictionary backend.
+  String get dictionaryApiKey {
+    const configured = String.fromEnvironment('DICTIONARY_API_KEY');
+    final value = configured.trim();
+    if (value.isNotEmpty) return value;
+    return articleCleanerApiKey;
+  }
 }
 
 /// A special version of [ApplicationConfig] that is used in tests.

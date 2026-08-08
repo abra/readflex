@@ -68,6 +68,8 @@ Common dart-defines:
 | `ARTICLE_CLEANER_API_KEY` | Optional article cleaner API key |
 | `CONTEXTUAL_TRANSLATION_BASE_URL` | Contextual translation backend base URL; defaults to `ARTICLE_CLEANER_BASE_URL` |
 | `CONTEXTUAL_TRANSLATION_API_KEY` | Optional contextual translation API key; defaults to `ARTICLE_CLEANER_API_KEY` |
+| `DICTIONARY_BASE_URL` | Readflex Dictionary backend base URL; defaults to `ARTICLE_CLEANER_BASE_URL` |
+| `DICTIONARY_API_KEY` | Optional Dictionary API key; defaults to `ARTICLE_CLEANER_API_KEY` |
 | `GLITCHTIP_DSN` | Optional GlitchTip DSN for Sentry-compatible error reporting |
 | `GLITCHTIP_TRACES_SAMPLE_RATE` | Optional GlitchTip performance trace sampling rate; defaults to `0` |
 
@@ -87,6 +89,7 @@ Some contracts are intentionally incomplete while the app is still being built:
 
 - Error reporting sends to GlitchTip when `GLITCHTIP_DSN` or `SENTRY_DSN` is
   provided. Without a DSN it intentionally falls back to `NoopErrorReporter`.
-- The dictionary, flashcard, practice, profile, subscription, auth, AI, and
-  notification surfaces are frozen and removed from the active package graph.
-  The last revision containing them is `189e2cc1`.
+- The reader dictionary action is active and uses the platform dictionary
+  first, with the Readflex Dictionary API as fallback. Flashcard, practice,
+  profile, subscription, auth, AI, and notification surfaces remain frozen
+  outside the active package graph; their last legacy revision is `189e2cc1`.
