@@ -47,9 +47,22 @@ List<dynamic>? readerBridgeList(Object? value) {
 
 String? _string(Object? value) => value is String ? value : null;
 
+const _maxChapterTitleLength = 512;
+final _whitespacePattern = RegExp(r'\s+');
+
 String? _nonEmptyString(Object? value) {
   final text = _string(value)?.trim();
   return text == null || text.isEmpty ? null : text;
+}
+
+String? _chapterTitle(Object? value) {
+  final title = _string(
+    value,
+  )?.replaceAll(_whitespacePattern, ' ').trim();
+  if (title == null || title.isEmpty || title.length > _maxChapterTitleLength) {
+    return null;
+  }
+  return title;
 }
 
 int? _int(Object? value) => value is num ? value.toInt() : null;
@@ -223,7 +236,7 @@ class BookPosition {
     return BookPosition(
       cfi: _string(map['cfi']) ?? '',
       fraction: _double(map['percentage']) ?? 0,
-      chapterTitle: _string(map['chapterTitle']),
+      chapterTitle: _chapterTitle(map['chapterTitle']),
       chapterCurrentPage: _int(map['chapterCurrentPage']),
       chapterTotalPages: _int(map['chapterTotalPages']),
       bookCurrentPage: _int(map['bookCurrentPage']),
@@ -322,7 +335,7 @@ class ReaderSearchResult {
       excerpt: ReaderSearchExcerpt.fromMap(
         readerBridgeMap(map['excerpt']) ?? const {},
       ),
-      chapterTitle: _string(map['chapterTitle']),
+      chapterTitle: _chapterTitle(map['chapterTitle']),
     );
   }
 }

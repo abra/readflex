@@ -1,7 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import 'reader_bridge.dart';
+
+const readerTextSelectionTracingEnabled =
+    kDebugMode && bool.fromEnvironment('READFLEX_TRACE_TEXT_SELECTION');
 
 @visibleForTesting
 final class ReaderTapPayload {
@@ -37,19 +42,63 @@ void registerSharedReaderHandlers(
   VoidCallback? onTextDeselected,
   void Function(double x, double y)? onTapped,
 }) {
+  if (readerTextSelectionTracingEnabled) {
+    controller.addJavaScriptHandler(
+      handlerName: 'onTextSelectionDebug',
+      callback: (args) {
+        final payload = args.isEmpty ? const <String, Object?>{} : args.first;
+        debugPrint('[reader-selection-js] ${jsonEncode(payload)}');
+      },
+    );
+  }
+
   controller.addJavaScriptHandler(
     handlerName: 'onSelectionEnd',
     callback: (args) {
-      if (args.isEmpty) return;
+      if (readerTextSelectionTracingEnabled) {
+        debugPrint(
+          '[reader-selection-dart] onSelectionEnd '
+          'args=${args.length} callback=${onTextSelected != null}',
+        );
+      }
+      if (args.isEmpty) {
+        if (readerTextSelectionTracingEnabled) {
+          debugPrint('[reader-selection-dart] dropped: empty payload');
+        }
+        return;
+      }
       final selection = parseReaderSelectionPayload(args.first);
-      if (selection == null) return;
+      if (selection == null) {
+        if (readerTextSelectionTracingEnabled) {
+          debugPrint(
+            '[reader-selection-dart] dropped: invalid payload '
+            '${jsonEncode(args.first)}',
+          );
+        }
+        return;
+      }
+      if (readerTextSelectionTracingEnabled) {
+        debugPrint(
+          '[reader-selection-dart] parsed '
+          'text=${selection.text.length} '
+          'cfi=${selection.normalizedCfiRange ?? selection.cfiRange}',
+        );
+      }
       onTextSelected?.call(selection);
     },
   );
 
   controller.addJavaScriptHandler(
     handlerName: 'onSelectionCleared',
-    callback: (_) => onTextDeselected?.call(),
+    callback: (_) {
+      if (readerTextSelectionTracingEnabled) {
+        debugPrint(
+          '[reader-selection-dart] onSelectionCleared '
+          'callback=${onTextDeselected != null}',
+        );
+      }
+      onTextDeselected?.call();
+    },
   );
 
   controller.addJavaScriptHandler(

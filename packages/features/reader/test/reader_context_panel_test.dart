@@ -12,11 +12,26 @@ void main() {
     );
 
     expect(contentSource, contains('webViewKey: _webViewKey'));
+    expect(contentSource, contains('articleWebViewKey: _articleWebViewKey'));
+    expect(contentSource, contains('highlights: highlights'));
+    expect(contentSource, contains('cfiRange: selection.cfiRange'));
+    expect(contentSource, contains('onHighlightTapped: (tap)'));
     expect(contextPanelSource, contains('selectionCubit.deselect();'));
     expect(
       contextPanelSource,
       contains('webViewKey.currentState?.clearSelectionAfterTextAction();'),
     );
+    expect(
+      contextPanelSource,
+      contains(
+        'articleWebViewKey.currentState?.clearSelectionAfterTextAction();',
+      ),
+    );
+    expect(
+      contextPanelSource,
+      contains('final highlightAction = _highlightActionFor(textActions);'),
+    );
+    expect(contextPanelSource, isNot(contains('canCreateTextHighlight')));
     expect(
       contextPanelSource,
       contains('ReaderHighlightsRefreshed'),
@@ -67,19 +82,36 @@ void main() {
     expect(contextPanelSource, contains('showSelectionHighlightPreview'));
     expect(
       contextPanelSource,
-      contains('opacity: readerHighlightOpacity(readerTheme)'),
+      contains(
+        'articleWebViewKey.currentState?.showSelectionHighlightPreview(',
+      ),
     );
     expect(
       contextPanelSource,
-      contains('mixBlendMode: readerHighlightBlendMode(readerTheme)'),
+      contains('final opacity = readerHighlightOpacity(readerTheme);'),
     );
     expect(
       contextPanelSource,
-      contains('verticalOffset: readerHighlightVerticalOffset(readerTheme)'),
+      contains(
+        'final mixBlendMode = readerHighlightBlendMode(readerTheme);',
+      ),
     );
+    expect(
+      contextPanelSource,
+      contains(
+        'final verticalOffset = readerHighlightVerticalOffset(readerTheme);',
+      ),
+    );
+    expect(contextPanelSource, contains('opacity: opacity'));
+    expect(contextPanelSource, contains('mixBlendMode: mixBlendMode'));
+    expect(contextPanelSource, contains('verticalOffset: verticalOffset'));
     expect(contextPanelSource, contains('clearSelectionHighlightPreview'));
     expect(contextPanelSource, contains('onPreviewColorChanged'));
     expect(contextPanelSource, contains('onPreviewCleared'));
+    expect(contextPanelSource, contains("'save-start '"));
+    expect(contextPanelSource, contains("'save-action-success op="));
+    expect(contextPanelSource, contains("'save-failed '"));
+    expect(contextPanelSource, contains("'popup-dismiss-outside '"));
     expect(contextPanelSource, contains('_ImageHighlightSelectionPopup'));
     expect(contextPanelSource, contains('_ImageHighlightNoteSheet'));
     expect(contextPanelSource, contains('showAppBottomSheet'));
@@ -138,6 +170,21 @@ void main() {
     expect(contentSource, contains('consumeProtectedClear()'));
     expect(contextPanelSource, contains('icon: AppIcons.delete'));
     expect(contextPanelSource, contains('icon: AppIcons.highlight'));
+    expect(contextPanelSource, contains('bool get _busy =>'));
+    expect(contextPanelSource, contains('loading: _saving'));
+    expect(contextPanelSource, contains('child: action.loading'));
+    expect(
+      contextPanelSource,
+      contains('setState(() => _executingExtraAction = true);'),
+    );
+    expect(
+      contextPanelSource,
+      isNot(
+        contains(
+          'setState(() => _saving = true);\n    try {\n      await action.onExecute',
+        ),
+      ),
+    );
     expect(
       contextPanelSource,
       contains('tooltip: context.l10n.readerEditComment'),

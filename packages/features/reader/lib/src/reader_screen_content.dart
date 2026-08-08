@@ -321,6 +321,11 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     }
     final cfiRange = highlight.cfiRange;
     if (cfiRange == null || cfiRange.isEmpty) return;
+    if (context.read<ReaderBloc>().state.sourceType == SourceType.article) {
+      _articleWebViewKey.currentState?.goToCfi(cfiRange);
+      _closeTocDrawer(restoreChrome: false);
+      return;
+    }
     _webViewKey.currentState?.goToCfi(cfiRange);
     _closeTocDrawer(restoreChrome: false);
   }
@@ -504,6 +509,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
             _ContextPanelDriver(
               textActions: widget.textActions,
               webViewKey: _webViewKey,
+              articleWebViewKey: _articleWebViewKey,
             ),
             _ReaderTocDrawerVisibilityDriver(
               format: format,
@@ -1067,10 +1073,20 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         );
       },
       onTextSelected: (selection) {
+        if (kDebugMode) {
+          debugPrint(
+            '[reader-selection-ui] received '
+            'text=${selection.text.length} '
+            'format=${bloc.state.document?.format}',
+          );
+        }
         highlightFocusCubit.clear();
         imageSelectionCubit.deselect();
         final currentState = bloc.state;
         if (isImagePageFormat(currentState.document?.format)) {
+          if (kDebugMode) {
+            debugPrint('[reader-selection-ui] rejected: image-page format');
+          }
           selectionCubit.deselect();
           widget.webViewKey?.currentState?.clearSelection();
           return;
@@ -1090,6 +1106,9 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
           chapterTitle: currentState.chapterTitle,
           containedHighlightIds: selection.containedHighlightIds,
         );
+        if (kDebugMode) {
+          debugPrint('[reader-selection-ui] context panel state selected');
+        }
       },
       onImageAreaSelected: (selection) {
         final currentState = bloc.state;
@@ -1149,6 +1168,9 @@ class _ReaderArticleHtmlBody extends StatefulWidget {
 
 class _ReaderArticleHtmlBodyState extends State<_ReaderArticleHtmlBody> {
   bool _htmlReady = false;
+  List<Highlight>? _lastHighlightsRef;
+  ReaderThemeData? _lastHighlightsTheme;
+  List<ReaderHighlight>? _cachedReaderHighlights;
   List<SourceBookmark>? _lastBookmarksRef;
   List<ReaderBookmark>? _cachedReaderBookmarks;
 
@@ -1180,15 +1202,52 @@ class _ReaderArticleHtmlBodyState extends State<_ReaderArticleHtmlBody> {
     ];
   }
 
+  List<ReaderHighlight> _readerHighlightsFor(
+    List<Highlight> source,
+    ReaderThemeData theme,
+  ) {
+    final cached = _cachedReaderHighlights;
+    if (cached != null &&
+        identical(source, _lastHighlightsRef) &&
+        theme == _lastHighlightsTheme) {
+      return cached;
+    }
+    _lastHighlightsRef = source;
+    _lastHighlightsTheme = theme;
+    return _cachedReaderHighlights = [
+      for (final highlight in source)
+        if (highlight.cfiRange?.startsWith('readflex-html-position:') ?? false)
+          ReaderHighlight(
+            id: highlight.id,
+            text: highlight.text,
+            cfiRange: highlight.cfiRange,
+            color: readerHighlightCssColor(highlight.color, theme),
+            opacity: readerHighlightOpacity(theme),
+            mixBlendMode: readerHighlightBlendMode(theme),
+            verticalOffset: readerHighlightVerticalOffset(theme),
+          ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<ReaderBloc>();
     final uiCubit = context.read<ReaderUiCubit>();
+    final selectionCubit = context.read<ReaderSelectionCubit>();
+    final imageSelectionCubit = context.read<ReaderImageSelectionCubit>();
+    final highlightFocusCubit = context.read<ReaderHighlightFocusCubit>();
     final state = bloc.state;
+    final highlightsState = context.select<ReaderBloc, List<Highlight>>(
+      (b) => b.state.highlights,
+    );
     final bookmarksState = context.select<ReaderBloc, List<SourceBookmark>>(
       (b) => b.state.bookmarks,
     );
     final bookmarks = _readerBookmarksFor(bookmarksState);
+    final highlights = _readerHighlightsFor(
+      highlightsState,
+      widget.readerTheme,
+    );
     final appearance = context
         .select<ReaderAppearanceCubit, ReaderAppearancePreferences>(
           (c) => c.state.effectiveAppearance,
@@ -1212,6 +1271,7 @@ class _ReaderArticleHtmlBodyState extends State<_ReaderArticleHtmlBody> {
       initialProgress: state.document?.readingProgress,
       foliateStyle: articleStyle,
       bookmarks: bookmarks,
+      highlights: highlights,
       onReady: () {
         if (mounted && !_htmlReady) {
           setState(() => _htmlReady = true);
@@ -1260,7 +1320,43 @@ class _ReaderArticleHtmlBodyState extends State<_ReaderArticleHtmlBody> {
           ),
         );
       },
+      onTextSelected: (selection) {
+        if (kDebugMode) {
+          debugPrint(
+            '[reader-selection-ui] article received '
+            'text=${selection.text.length}',
+          );
+        }
+        highlightFocusCubit.clear();
+        imageSelectionCubit.deselect();
+        uiCubit.hideChrome();
+        selectionCubit.select(
+          text: selection.text,
+          normalizedText: selection.normalizedText,
+          selectionKind: selection.selectionKind,
+          contextText: selection.contextText,
+          markedContextText: selection.markedContextText,
+          normalizedMarkedContextText: selection.normalizedMarkedContextText,
+          cfiRange: selection.cfiRange,
+          normalizedCfiRange: selection.normalizedCfiRange,
+          position: selection.position,
+          scrollOffset: selection.scrollOffset,
+          progress: bloc.state.document?.readingProgress,
+          chapterTitle: bloc.state.chapterTitle,
+        );
+      },
+      onTextDeselected: () {
+        selectionCubit.deselect();
+      },
+      onHighlightTapped: (tap) {
+        uiCubit.hideChrome();
+        selectionCubit.deselect();
+        imageSelectionCubit.deselect();
+        widget.webViewKey.currentState?.clearSelection();
+        highlightFocusCubit.focus(tap);
+      },
       onTapped: (_, _) {
+        selectionCubit.deselect();
         uiCubit.toggleChrome();
       },
     );

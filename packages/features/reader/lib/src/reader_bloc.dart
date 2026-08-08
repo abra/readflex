@@ -25,6 +25,11 @@ void _debugTraceReaderBloc(String message) {
   debugPrint('[reader-trace] $message');
 }
 
+void _debugTraceReaderHighlightBloc(String message) {
+  if (!kDebugMode) return;
+  debugPrint('[reader-highlight] $message');
+}
+
 Highlight? _highlightById(List<Highlight> highlights, String id) {
   for (final highlight in highlights) {
     if (highlight.id == id) return highlight;
@@ -436,13 +441,31 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     Emitter<ReaderState> emit,
   ) async {
     final sourceId = state.sourceId;
-    if (sourceId == null) return;
+    if (sourceId == null) {
+      _debugTraceReaderHighlightBloc('refresh-skipped reason=no-source');
+      return;
+    }
+    _debugTraceReaderHighlightBloc(
+      'refresh-start source=$sourceId previous=${state.highlights.length}',
+    );
     try {
       final highlights = await _highlightRepository.getHighlightsBySource(
         sourceId,
       );
+      _debugTraceReaderHighlightBloc(
+        'refresh-success '
+        'source=$sourceId '
+        'count=${highlights.length} '
+        'ids=${highlights.map((highlight) => highlight.id).join(',')}',
+      );
       emit(state.copyWith(highlights: highlights));
     } catch (e, st) {
+      _debugTraceReaderHighlightBloc(
+        'refresh-failed '
+        'source=$sourceId '
+        'error=${e.runtimeType} '
+        'message="$e"',
+      );
       addError(e, st);
     }
   }

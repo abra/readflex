@@ -25,11 +25,15 @@ class ArticleHtmlReaderWebView extends StatefulWidget {
     this.initialProgress,
     this.foliateStyle = const FoliateStyle(),
     this.bookmarks = const [],
+    this.highlights = const [],
     this.onReady,
     this.onPositionChanged,
     this.onTocChanged,
     this.onDocumentFeaturesChanged,
     this.onBookmarkChanged,
+    this.onHighlightTapped,
+    this.onTextSelected,
+    this.onTextDeselected,
     this.onTapped,
     super.key,
   });
@@ -42,12 +46,16 @@ class ArticleHtmlReaderWebView extends StatefulWidget {
   final double? initialProgress;
   final FoliateStyle foliateStyle;
   final List<ReaderBookmark> bookmarks;
+  final List<ReaderHighlight> highlights;
   final VoidCallback? onReady;
   final void Function(BookPosition position)? onPositionChanged;
   final void Function(List<ReaderTocItem> items)? onTocChanged;
   final void Function(ReaderDocumentFeatures features)?
   onDocumentFeaturesChanged;
   final void Function(ReaderBookmarkChange change)? onBookmarkChanged;
+  final void Function(ReaderHighlightTap tap)? onHighlightTapped;
+  final void Function(ReaderSelection selection)? onTextSelected;
+  final VoidCallback? onTextDeselected;
   final void Function(double x, double y)? onTapped;
 
   @override
@@ -83,6 +91,7 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView> {
       'initialProgress': jsonEncode(widget.initialProgress),
       'style': jsonEncode(widget.foliateStyle.toMap()),
       'assetRevision': jsonEncode(AssetExtractor.assetRevision),
+      'traceTextSelection': jsonEncode(readerTextSelectionTracingEnabled),
     };
     final query = params.entries
         .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
@@ -111,6 +120,9 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView> {
     if (oldWidget.bookmarks != widget.bookmarks) {
       _syncBookmarks();
     }
+    if (oldWidget.highlights != widget.highlights) {
+      _syncHighlights();
+    }
   }
 
   @override
@@ -126,6 +138,11 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView> {
 
   void _onWebViewCreated(InAppWebViewController controller) {
     _controller = controller;
+    if (readerTextSelectionTracingEnabled) {
+      debugPrint(
+        '[reader-selection-dart] article HTML WebView created url=$_indexUrl',
+      );
+    }
     _registerHandlers(controller);
   }
 
@@ -180,6 +197,16 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView> {
       },
     );
     controller.addJavaScriptHandler(
+      handlerName: 'onAnnotationClick',
+      callback: (args) {
+        if (args.isEmpty) return;
+        final raw = readerBridgeMap(args.first);
+        if (raw == null) return;
+        final tap = ReaderHighlightTap.fromMap(raw);
+        if (tap != null) widget.onHighlightTapped?.call(tap);
+      },
+    );
+    controller.addJavaScriptHandler(
       handlerName: 'onJsError',
       callback: (args) {
         if (args.isEmpty) return;
@@ -198,6 +225,8 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView> {
     );
     registerSharedReaderHandlers(
       controller,
+      onTextSelected: (selection) => widget.onTextSelected?.call(selection),
+      onTextDeselected: () => widget.onTextDeselected?.call(),
       onTapped: (x, y) => widget.onTapped?.call(x, y),
     );
   }
@@ -206,6 +235,7 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView> {
     if (_isReady) return;
     _isReady = true;
     _syncBookmarks();
+    _syncHighlights();
     widget.onReady?.call();
   }
 
@@ -398,6 +428,54 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView> {
     );
   }
 
+  void clearSelection() {
+    _evaluateArticleCommand(
+      label: 'clearSelection',
+      expression:
+          "typeof window.clearSelection === 'function' ? window.clearSelection() : null",
+    );
+  }
+
+  void clearSelectionAfterTextAction() {
+    _evaluateArticleCommand(
+      label: 'clearSelectionAfterTextAction',
+      expression:
+          "typeof window.clearSelectionAfterTextAction === 'function' ? window.clearSelectionAfterTextAction() : "
+          "typeof window.clearSelection === 'function' ? window.clearSelection() : null",
+    );
+  }
+
+  void showSelectionHighlightPreview({
+    required String cfiRange,
+    required String color,
+    double? opacity,
+    String? mixBlendMode,
+    double? verticalOffset,
+  }) {
+    final preview = jsonEncode({
+      'cfiRange': cfiRange,
+      'color': color,
+      'opacity': ?opacity,
+      'mixBlendMode': ?mixBlendMode,
+      'verticalOffset': ?verticalOffset,
+    });
+    _evaluateArticleCommand(
+      label: 'showSelectionHighlightPreview',
+      expression:
+          "typeof window.showSelectionHighlightPreview === 'function' ? "
+          'window.showSelectionHighlightPreview($preview) : null',
+    );
+  }
+
+  void clearSelectionHighlightPreview() {
+    _evaluateArticleCommand(
+      label: 'clearSelectionHighlightPreview',
+      expression:
+          "typeof window.clearSelectionHighlightPreview === 'function' ? "
+          'window.clearSelectionHighlightPreview() : null',
+    );
+  }
+
   void _syncBookmarks() {
     if (!_isReady) return;
     final payload = jsonEncode([
@@ -416,6 +494,26 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView> {
       label: 'setArticleBookmarks',
       expression:
           "typeof window.setArticleBookmarks === 'function' ? window.setArticleBookmarks($payload) : null",
+    );
+  }
+
+  void _syncHighlights() {
+    if (!_isReady) return;
+    if (kDebugMode) {
+      debugPrint(
+        '[reader-highlight] article-sync '
+        'count=${widget.highlights.length} '
+        'ids=${widget.highlights.map((highlight) => highlight.id).join(',')}',
+      );
+    }
+    final payload = jsonEncode([
+      for (final highlight in widget.highlights) highlight.toMap(),
+    ]);
+    _evaluateArticleCommand(
+      label: 'setArticleHighlights',
+      expression:
+          "typeof window.setArticleHighlights === 'function' ? "
+          'window.setArticleHighlights($payload) : null',
     );
   }
 

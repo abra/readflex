@@ -1,5 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -40,8 +41,19 @@ class HighlightAction extends ColorHighlightTextAction {
     BuildContext context,
     TextSelectionContext selection,
     HighlightColor color,
-  ) {
-    return highlightRepository.addHighlight(
+  ) async {
+    final anchor = _highlightTraceAnchor(selection.cfiRange);
+    if (kDebugMode) {
+      debugPrint(
+        '[reader-highlight] repository-add-start '
+        'source=${selection.sourceId} '
+        'text="${_highlightTraceText(selection.selectedText)}" '
+        'anchor=$anchor '
+        'color=${color.name} '
+        'replace=${selection.containedHighlightIds.length}',
+      );
+    }
+    final highlight = await highlightRepository.addHighlight(
       sourceId: selection.sourceId,
       sourceType: selection.sourceType,
       text: selection.selectedText,
@@ -53,5 +65,26 @@ class HighlightAction extends ColorHighlightTextAction {
       chapterTitle: selection.chapterTitle,
       replaceHighlightIds: selection.containedHighlightIds,
     );
+    if (kDebugMode) {
+      debugPrint(
+        '[reader-highlight] repository-add-success '
+        'id=${highlight.id} '
+        'source=${selection.sourceId} '
+        'anchor=$anchor',
+      );
+    }
   }
+}
+
+String _highlightTraceText(String text) {
+  final normalized = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+  return normalized.length <= 48
+      ? normalized
+      : '${normalized.substring(0, 48)}...';
+}
+
+String _highlightTraceAnchor(String? cfiRange) {
+  if (cfiRange == null || cfiRange.isEmpty) return 'none';
+  return '${cfiRange.length}:'
+      '${cfiRange.hashCode.toUnsigned(32).toRadixString(16)}';
 }

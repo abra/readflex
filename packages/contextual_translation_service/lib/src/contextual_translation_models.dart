@@ -9,6 +9,7 @@ const contextualTranslationResultSchemaVersion =
     'readflex.contextual_translation.result.v1';
 const contextualTranslationMode = 'contextual_lookup';
 const autoSourceLanguageCode = 'auto';
+const contextualTranslationAnchorChapterTitleMaxLength = 512;
 
 enum ContextualTranslationStatus {
   resolved,
@@ -177,7 +178,10 @@ class TranslationAnchor extends Equatable {
     'cfi_range': cfiRange,
     'normalized_cfi_range': normalizedCfiRange,
     'progress': progress,
-    'chapter_title': chapterTitle,
+    'chapter_title': _boundedOptionalString(
+      chapterTitle,
+      maxLength: contextualTranslationAnchorChapterTitleMaxLength,
+    ),
   };
 
   factory TranslationAnchor.fromJson(Map<String, Object?> json) {
@@ -575,6 +579,16 @@ String? _nullableString(Object? value) {
   if (value is! String) return null;
   final trimmed = value.trim();
   return trimmed.isEmpty ? null : trimmed;
+}
+
+String? _boundedOptionalString(String? value, {required int maxLength}) {
+  final normalized = value?.replaceAll(RegExp(r'\s+'), ' ').trim();
+  if (normalized == null ||
+      normalized.isEmpty ||
+      normalized.length > maxLength) {
+    return null;
+  }
+  return normalized;
 }
 
 double? _nullableDouble(Object? value) {

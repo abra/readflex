@@ -217,6 +217,9 @@ void main() {
     test('always uses the modern app bridge', () {
       final indexHtml = _readPackageSource('assets/foliate-js/index.html');
       final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
+      final commonHandlers = _readPackageSource(
+        'lib/src/reader_common_handlers.dart',
+      );
       final overlayerJs = _readPackageSource(
         'assets/foliate-js/src/overlayer.js',
       );
@@ -286,6 +289,63 @@ void main() {
       expect(bookJs, contains('body {\n        -webkit-user-select: text;'));
       expect(bookJs, contains("doc.addEventListener('contextmenu'"));
       expect(bookJs, contains('event.preventDefault();'));
+      expect(
+        bookJs,
+        contains('const dispatchAppleSelection = event =>'),
+      );
+      expect(bookJs, contains('const selectionRangeForAppleGesture ='));
+      expect(bookJs, contains('const wordRangeFromPoint ='));
+      expect(bookJs, contains('const wordRangeNearestPoint ='));
+      expect(bookJs, contains('target: touch.target ?? event.target,'));
+      expect(
+        bookJs,
+        isNot(contains('READFLEX_SELECTION_POINT_TOLERANCE')),
+      );
+      expect(
+        bookJs,
+        contains('handleSelection(view, doc, index, selectionRange);'),
+      );
+      expect(
+        bookJs,
+        contains("callHandler('onTextSelectionDebug', payload)"),
+      );
+      expect(
+        commonHandlers,
+        contains("handlerName: 'onTextSelectionDebug'"),
+      );
+      expect(
+        commonHandlers,
+        contains(
+          "kDebugMode && bool.fromEnvironment('READFLEX_TRACE_TEXT_SELECTION')",
+        ),
+      );
+      expect(
+        commonHandlers,
+        contains('if (readerTextSelectionTracingEnabled)'),
+      );
+      expect(
+        bookJs,
+        contains('if (READFLEX_TRACE_TEXT_SELECTION) {'),
+      );
+      expect(
+        bookJs,
+        isNot(startsWith("console.log('book.js')")),
+      );
+      expect(bookJs, contains("traceTextSelection('handler-installed'"));
+      expect(bookJs, contains("traceTextSelection('apple-selection-event'"));
+      expect(bookJs, contains("traceTextSelection('emit-selection-end'"));
+      expect(
+        bookJs,
+        contains(
+          "doc.addEventListener('selectionchange', "
+          'dispatchAppleSelection);',
+        ),
+      );
+      expect(
+        bookJs,
+        contains("doc.addEventListener('touchend', dispatchAppleSelection"),
+      );
+      expect(bookJs, contains('if (isAppleTouchRuntime())'));
       expect(
         bookJs,
         contains('__anxAllowNextClickAfterProgrammaticDeselect'),
@@ -554,11 +614,22 @@ void main() {
       expect(
         bookJs,
         contains(
-          "import { normalizeSelectionRange } from './readflex_selection_normalizer.js'",
+          "normalizeSelectionRange,\n  normalizeTextRange,",
         ),
       );
       expect(bookJs, contains('normalizeLoadedDocument(doc)'));
       expect(bookJs, contains('normalizeSelectionRange(range)'));
+      expect(
+        bookJs,
+        contains('const READFLEX_CHAPTER_TITLE_MAX_LENGTH = 512'),
+      );
+      expect(
+        bookJs,
+        contains(
+          'const chapterTitle = readflexChapterTitle('
+          'currentInfo.tocItem?.label)',
+        ),
+      );
       expect(
         normalizerJs,
         contains('export const normalizeLoadedDocument = doc =>'),
@@ -570,7 +641,7 @@ void main() {
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_107"));
+      expect(assetExtractor, contains("reader_webview_assets_118"));
       expect(assetExtractor, contains('assets/article-html/index.html'));
 
       final articleReader = _readPackageSource(
@@ -578,10 +649,130 @@ void main() {
       );
       expect(articleReader, contains('assetRevision'));
       expect(articleReader, contains('AssetExtractor.assetRevision'));
+      expect(articleReader, contains('this.onTextSelected'));
+      expect(articleReader, contains('this.onTextDeselected'));
+      expect(articleReader, contains('this.highlights = const []'));
+      expect(articleReader, contains('this.onHighlightTapped'));
+      expect(articleReader, contains('void _syncHighlights()'));
+      expect(articleReader, contains("label: 'setArticleHighlights'"));
+      expect(
+        articleReader,
+        contains('onTextSelected: (selection) =>'),
+      );
+
+      final articleHtml = _readPackageSource(
+        'assets/article-html/index.html',
+      );
+      expect(articleHtml, contains('function installTextSelectionHandler()'));
+      expect(
+        articleHtml,
+        contains('function intendedTextSelectionRange(range)'),
+      );
+      expect(
+        articleHtml,
+        contains('function wordSelectionRangeFromPoint(x, y, target)'),
+      );
+      expect(
+        articleHtml,
+        contains('function wordSelectionRangeNearestPoint(x, y, target)'),
+      );
+      expect(articleHtml, contains('target: touch.target || event.target,'));
+      expect(articleHtml, isNot(contains('selectionPointTolerance')));
+      expect(
+        articleHtml,
+        contains('function selectionAnchor(range, selectedText)'),
+      );
+      expect(articleHtml, contains('const cfi = encodePosition(anchor)'));
+      expect(
+        articleHtml,
+        contains("callHandler('onSelectionEnd', payload)"),
+      );
+      expect(
+        articleHtml,
+        contains("callHandler('onSelectionCleared', null)"),
+      );
+      expect(articleHtml, contains('window.clearSelection ='));
+      expect(
+        articleHtml,
+        contains('window.clearSelectionAfterTextAction ='),
+      );
+      expect(articleHtml, contains('-webkit-touch-callout: none !important'));
+      expect(articleHtml, contains('function renderArticleHighlights()'));
+      expect(
+        articleHtml,
+        contains("traceSelection('article-highlights-rendered', result)"),
+      );
+      expect(articleHtml, contains("'anchor-not-found'"));
+      expect(articleHtml, contains('window.setArticleHighlights ='));
+      expect(articleHtml, contains('window.showSelectionHighlightPreview ='));
+      expect(
+        articleHtml,
+        contains("callHandler('onAnnotationClick', {"),
+      );
 
       final bookReader = readBookReaderWebViewLibrarySource();
       expect(bookReader, contains('assetRevision'));
       expect(bookReader, contains('AssetExtractor.assetRevision'));
+      expect(
+        bookReader,
+        contains(
+          "'traceTextSelection': jsonEncode("
+          'readerTextSelectionTracingEnabled)',
+        ),
+      );
+      expect(
+        articleReader,
+        contains(
+          "'traceTextSelection': jsonEncode("
+          'readerTextSelectionTracingEnabled)',
+        ),
+      );
+    });
+
+    test('anchors repeated article words to the exact DOM root', () {
+      final articleHtml = _readPackageSource(
+        'assets/article-html/index.html',
+      );
+
+      expect(
+        articleHtml,
+        contains(
+          'const rangeRoot = startSentence && startSentence === endSentence',
+        ),
+      );
+      expect(articleHtml, contains('function textRootAnchorFor(element)'));
+      expect(
+        articleHtml,
+        contains('document.getElementById(anchor.rangeRootId)'),
+      );
+      expect(
+        articleHtml,
+        isNot(contains('if (!sentenceAnchor || !endSentence) return null')),
+      );
+      expect(
+        articleHtml,
+        contains('function normalizedSelectionStartOffset('),
+      );
+      expect(
+        articleHtml,
+        contains('const directMatchIndex = normalizedSelectionStartOffset('),
+      );
+      expect(articleHtml, contains('matchIndex: directMatchIndex,'));
+      expect(articleHtml, contains('textBefore.endsWith(prefix)'));
+      expect(articleHtml, contains('textAfter.startsWith(suffix)'));
+      expect(
+        articleHtml,
+        contains(
+          'const offset = contextMatchOffset(text, anchor) ?? '
+          'exactMatchOffset(text, anchor)',
+        ),
+      );
+      expect(articleHtml, contains('if (!rangeRoot.id) return null'));
+      expect(articleHtml, contains('rangeRootId: rangeRoot.id,'));
+      expect(
+        articleHtml,
+        isNot(contains("rangeRoot.id || 'article-content'")),
+      );
     });
 
     test(
@@ -1616,6 +1807,7 @@ void main() {
 
   group('asset extraction', () {
     test('versions bundled reader assets independently of app version', () {
+      expect(AssetExtractor.assetRevision, 'reader_webview_assets_118');
       expect(
         AssetExtractor.extractionVersionFor('1.0.0+1'),
         '1.0.0+1|${AssetExtractor.assetRevision}',

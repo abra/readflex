@@ -38,6 +38,30 @@ void main() {
     expect((json['anchor'] as Map)['source_type'], 'book');
   });
 
+  test('TranslationAnchor drops oversized chapter title from wire payload', () {
+    final oversizedTitle = List.filled(
+      contextualTranslationAnchorChapterTitleMaxLength + 1,
+      'x',
+    ).join();
+    final anchor = TranslationAnchor(
+      sourceId: 'book-1',
+      sourceType: 'book',
+      chapterTitle: oversizedTitle,
+    );
+
+    expect(anchor.toJson()['chapter_title'], isNull);
+  });
+
+  test('TranslationAnchor normalizes a valid chapter title', () {
+    const anchor = TranslationAnchor(
+      sourceId: 'book-1',
+      sourceType: 'book',
+      chapterTitle: '  Chapter\n  One  ',
+    );
+
+    expect(anchor.toJson()['chapter_title'], 'Chapter One');
+  });
+
   test('ContextualTranslationResult parses backend response', () {
     final result = ContextualTranslationResult.fromJson({
       'request_id': 'request-1',

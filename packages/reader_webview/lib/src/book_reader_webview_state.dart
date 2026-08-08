@@ -267,6 +267,7 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
       'style': jsonEncode(widget.foliateStyle.toMap()),
       'readingRules': jsonEncode(_defaultReadingRules),
       'assetRevision': jsonEncode(AssetExtractor.assetRevision),
+      'traceTextSelection': jsonEncode(readerTextSelectionTracingEnabled),
     };
     final query = params.entries
         .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
@@ -356,6 +357,9 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
 
   void _onWebViewCreated(InAppWebViewController controller) {
     _controller = controller;
+    if (readerTextSelectionTracingEnabled) {
+      debugPrint('[reader-selection-dart] book WebView created url=$_indexUrl');
+    }
     _registerHandlers(controller);
   }
 
@@ -469,7 +473,16 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
 
     registerSharedReaderHandlers(
       controller,
-      onTextSelected: (selection) => widget.onTextSelected?.call(selection),
+      onTextSelected: (selection) {
+        if (readerTextSelectionTracingEnabled) {
+          debugPrint(
+            '[reader-selection-dart] book callback '
+            'text=${selection.text.length} '
+            'hasListener=${widget.onTextSelected != null}',
+          );
+        }
+        widget.onTextSelected?.call(selection);
+      },
       onTextDeselected: () => widget.onTextDeselected?.call(),
       onTapped: (x, y) => widget.onTapped?.call(x, y),
     );

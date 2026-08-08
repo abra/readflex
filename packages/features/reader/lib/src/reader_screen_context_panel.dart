@@ -22,10 +22,12 @@ class _ContextPanelDriver extends StatelessWidget {
   const _ContextPanelDriver({
     required this.textActions,
     required this.webViewKey,
+    required this.articleWebViewKey,
   });
 
   final List<TextAction> textActions;
   final GlobalKey<BookReaderWebViewState> webViewKey;
+  final GlobalKey<ArticleHtmlReaderWebViewState> articleWebViewKey;
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +57,14 @@ class _ContextPanelDriver extends StatelessWidget {
         highlightFocus.highlightId,
       ),
     );
+
+    if (kDebugMode && sel.hasSelection) {
+      debugPrint(
+        '[reader-selection-ui] panel build '
+        'sourceId=$sourceId actions=${textActions.length} '
+        'text=${sel.selectedText.length}',
+      );
+    }
 
     if (sourceId == null) {
       return const SizedBox.shrink();
@@ -246,23 +256,45 @@ class _ContextPanelDriver extends StatelessWidget {
     void showHighlightPreview(HighlightColor color) {
       final cfiRange = sel.cfiRange;
       if (cfiRange == null || cfiRange.isEmpty) return;
-      webViewKey.currentState?.showSelectionHighlightPreview(
-        cfiRange: cfiRange,
-        color: readerHighlightCssColor(color, readerTheme),
-        opacity: readerHighlightOpacity(readerTheme),
-        mixBlendMode: readerHighlightBlendMode(readerTheme),
-        verticalOffset: readerHighlightVerticalOffset(readerTheme),
-      );
+      final cssColor = readerHighlightCssColor(color, readerTheme);
+      final opacity = readerHighlightOpacity(readerTheme);
+      final mixBlendMode = readerHighlightBlendMode(readerTheme);
+      final verticalOffset = readerHighlightVerticalOffset(readerTheme);
+      if (sourceType == SourceType.article) {
+        articleWebViewKey.currentState?.showSelectionHighlightPreview(
+          cfiRange: cfiRange,
+          color: cssColor,
+          opacity: opacity,
+          mixBlendMode: mixBlendMode,
+          verticalOffset: verticalOffset,
+        );
+      } else {
+        webViewKey.currentState?.showSelectionHighlightPreview(
+          cfiRange: cfiRange,
+          color: cssColor,
+          opacity: opacity,
+          mixBlendMode: mixBlendMode,
+          verticalOffset: verticalOffset,
+        );
+      }
     }
 
     void clearHighlightPreview() {
-      webViewKey.currentState?.clearSelectionHighlightPreview();
+      if (sourceType == SourceType.article) {
+        articleWebViewKey.currentState?.clearSelectionHighlightPreview();
+      } else {
+        webViewKey.currentState?.clearSelectionHighlightPreview();
+      }
     }
 
     void dismissSelection() {
       selectionCubit.deselect();
       highlightFocusCubit.clear();
-      webViewKey.currentState?.clearSelectionAfterTextAction();
+      if (sourceType == SourceType.article) {
+        articleWebViewKey.currentState?.clearSelectionAfterTextAction();
+      } else {
+        webViewKey.currentState?.clearSelectionAfterTextAction();
+      }
     }
 
     void completeHighlightAction() {
@@ -635,7 +667,7 @@ class _ImageHighlightSelectionPopupState
               height: _kHighlightPopupHeight,
               child: _HighlightPopupSurface(
                 selectedColor: _selectedColor,
-                saving: _saving,
+                busy: _saving,
                 readerTheme: widget.readerTheme,
                 panelColor: widget.panelColor,
                 dividerColor: widget.dividerColor,
@@ -651,6 +683,7 @@ class _ImageHighlightSelectionPopupState
                     icon: AppIcons.highlight,
                     tooltip: context.l10n.highlightAction,
                     onPressed: _save,
+                    loading: _saving,
                   ),
                 ],
               ),
@@ -839,7 +872,7 @@ class _SavedHighlightPopup extends StatelessWidget {
               height: _kHighlightPopupHeight,
               child: _HighlightPopupSurface(
                 selectedColor: selectedColor,
-                saving: false,
+                busy: false,
                 readerTheme: readerTheme,
                 panelColor: panelColor,
                 dividerColor: dividerColor,
@@ -910,6 +943,9 @@ class _HighlightSelectionPopup extends StatefulWidget {
 class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
   HighlightColor _selectedColor = HighlightColor.yellow;
   bool _saving = false;
+  bool _executingExtraAction = false;
+
+  bool get _busy => _saving || _executingExtraAction;
 
   @override
   void initState() {
@@ -932,12 +968,28 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
 
   @override
   void dispose() {
+    _debugTraceReaderHighlight(
+      'popup-dispose '
+      'source=${widget.selection.sourceId} '
+      'text="${_readerHighlightTraceText(widget.selection.selectedText)}" '
+      'anchor=${_readerHighlightTraceAnchor(widget.selection.cfiRange)}',
+    );
     widget.onPreviewCleared();
     super.dispose();
   }
 
   Future<void> _save() async {
-    if (_saving) return;
+    if (_busy) return;
+    final operationId = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+    _debugTraceReaderHighlight(
+      'save-start '
+      'op=$operationId '
+      'source=${widget.selection.sourceId} '
+      'text="${_readerHighlightTraceText(widget.selection.selectedText)}" '
+      'anchor=${_readerHighlightTraceAnchor(widget.selection.cfiRange)} '
+      'color=${_selectedColor.name} '
+      'replace=${widget.selection.containedHighlightIds.length}',
+    );
     setState(() => _saving = true);
     try {
       await widget.action.onExecuteWithColor(
@@ -945,9 +997,16 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
         widget.selection,
         _selectedColor,
       );
+      _debugTraceReaderHighlight('save-action-success op=$operationId');
       if (!mounted) return;
       widget.onActionCompleted();
     } catch (error, stack) {
+      _debugTraceReaderHighlight(
+        'save-failed '
+        'op=$operationId '
+        'error=${error.runtimeType} '
+        'message="$error"',
+      );
       if (!mounted) return;
       widget.onActionError(error, stack);
       setState(() => _saving = false);
@@ -984,7 +1043,17 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
             Positioned.fill(
               child: GestureDetector(
                 behavior: HitTestBehavior.translucent,
-                onTap: _saving ? () {} : widget.onDismiss,
+                onTap: _busy
+                    ? () {}
+                    : () {
+                        _debugTraceReaderHighlight(
+                          'popup-dismiss-outside '
+                          'source=${widget.selection.sourceId} '
+                          'text="${_readerHighlightTraceText(widget.selection.selectedText)}" '
+                          'anchor=${_readerHighlightTraceAnchor(widget.selection.cfiRange)}',
+                        );
+                        widget.onDismiss();
+                      },
                 child: const SizedBox.expand(),
               ),
             ),
@@ -995,12 +1064,19 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
               height: _kHighlightPopupHeight,
               child: _HighlightPopupSurface(
                 selectedColor: _selectedColor,
-                saving: _saving,
+                busy: _busy,
                 readerTheme: widget.readerTheme,
                 panelColor: widget.panelColor,
                 dividerColor: widget.dividerColor,
                 onColorChanged: (color) {
-                  if (_saving || _selectedColor == color) return;
+                  if (_busy || _selectedColor == color) return;
+                  _debugTraceReaderHighlight(
+                    'preview-color '
+                    'source=${widget.selection.sourceId} '
+                    'text="${_readerHighlightTraceText(widget.selection.selectedText)}" '
+                    'anchor=${_readerHighlightTraceAnchor(widget.selection.cfiRange)} '
+                    'color=${color.name}',
+                  );
                   setState(() => _selectedColor = color);
                   widget.onPreviewColorChanged(color);
                 },
@@ -1010,6 +1086,7 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
                     icon: AppIcons.highlight,
                     tooltip: context.l10n.highlightAction,
                     onPressed: _save,
+                    loading: _saving,
                   ),
                   for (final action in widget.extraActions)
                     _HighlightPopupAction(
@@ -1028,8 +1105,8 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
   }
 
   Future<void> _executeExtraAction(TextAction action) async {
-    if (_saving) return;
-    setState(() => _saving = true);
+    if (_busy) return;
+    setState(() => _executingExtraAction = true);
     try {
       await action.onExecute(context, widget.selection);
       if (!mounted) return;
@@ -1037,7 +1114,7 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
     } catch (error, stack) {
       if (!mounted) return;
       widget.onActionError(error, stack);
-      setState(() => _saving = false);
+      setState(() => _executingExtraAction = false);
     }
   }
 }
@@ -1048,18 +1125,20 @@ class _HighlightPopupAction {
     required this.icon,
     required this.tooltip,
     required this.onPressed,
+    this.loading = false,
   });
 
   final Color color;
   final IconData icon;
   final String tooltip;
   final VoidCallback onPressed;
+  final bool loading;
 }
 
 class _HighlightPopupSurface extends StatelessWidget {
   const _HighlightPopupSurface({
     required this.selectedColor,
-    required this.saving,
+    required this.busy,
     required this.readerTheme,
     required this.panelColor,
     required this.dividerColor,
@@ -1069,7 +1148,7 @@ class _HighlightPopupSurface extends StatelessWidget {
   });
 
   final HighlightColor selectedColor;
-  final bool saving;
+  final bool busy;
   final ReaderThemeData readerTheme;
   final Color panelColor;
   final Color dividerColor;
@@ -1108,7 +1187,7 @@ class _HighlightPopupSurface extends StatelessWidget {
                     color: color,
                     readerTheme: readerTheme,
                     selected: selectedColor == color,
-                    enabled: !saving,
+                    enabled: !busy,
                     onPressed: () => onColorChanged(color),
                   ),
                 SizedBox(
@@ -1127,9 +1206,9 @@ class _HighlightPopupSurface extends StatelessWidget {
                       message: action.tooltip,
                       child: InkResponse(
                         radius: _kHighlightSwatchTapSize / 2,
-                        onTap: saving ? null : action.onPressed,
+                        onTap: busy ? null : action.onPressed,
                         child: Center(
-                          child: saving
+                          child: action.loading
                               ? const ButtonLoadingIndicator(
                                   size: AppIconSize.sm,
                                 )

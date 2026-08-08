@@ -56,8 +56,16 @@
       line-height: var(--readflex-line-height);
       text-align: var(--readflex-text-align);
       user-select: text;
+      -webkit-user-select: text;
+      -webkit-touch-callout: none;
       overflow-wrap: break-word;
       -webkit-font-smoothing: antialiased;
+    }
+
+    html,
+    body,
+    body * {
+      -webkit-touch-callout: none !important;
     }
 
     main {
@@ -227,15 +235,19 @@
       const progressEndThreshold = 0.999
       const minEmitIntervalMs = 140
       const scrollRestoreSuppressMs = 700
+      const selectionClickSuppressMs = 800
+      const contextWindowChars = 200
 
       const params = new URLSearchParams(location.search)
       const content = document.getElementById('article-content')
       const fontStyle = document.createElement('style')
       const customStyle = document.createElement('style')
       const articleLayoutStyle = document.createElement('style')
+      const articleHighlightStyle = document.createElement('style')
       document.head.append(fontStyle)
       document.head.append(customStyle)
       document.head.append(articleLayoutStyle)
+      document.head.append(articleHighlightStyle)
       articleLayoutStyle.textContent = `
         #article-content blockquote,
         #article-content pre,
@@ -292,6 +304,15 @@
       let activeSearch = null
       let activeSearchElement = null
       let activeSearchMarker = null
+      let selectionActive = false
+      let suppressNextSelectionClear = false
+      let selectionClickSuppressedUntil = 0
+      let lastSelectionFingerprint = ''
+      let lastTextSelectionTouch = null
+      let articleHighlights = []
+      let renderedArticleHighlights = new Map()
+      let selectionHighlightPreview = null
+      const traceTextSelection = readJsonParam('traceTextSelection', false)
 
       function readJsonParam(name, fallback) {
         const raw = params.get(name)
@@ -305,6 +326,13 @@
 
       function callHandler(name, data) {
         window.flutter_inappwebview?.callHandler(name, data)
+      }
+
+      function traceSelection(stage, details = {}) {
+        if (!traceTextSelection) return
+        const payload = { stage, timestamp: Date.now(), ...details }
+        console.warn(`[reader-selection-js] ${stage}`, payload)
+        callHandler('onTextSelectionDebug', payload)
       }
 
       function clamp01(value) {
@@ -383,6 +411,365 @@
         return String(value || '').replace(/\s+/g, ' ').trim()
       }
 
+      function selectionRange() {
+        const selection = window.getSelection?.()
+        if (!selection?.rangeCount) return null
+        const range = selection.getRangeAt(0)
+        return range.collapsed ? null : range
+      }
+
+      const selectionTouchMaxAgeMs = 2000
+      const selectionWordCharRegex = /[\p{L}\p{N}\p{M}]/u
+      const selectionJoinerRegex = /['’-]/u
+
+      function isSelectionTokenChar(text, index) {
+        const char = index >= 0 && index < text.length ? text[index] : ''
+        if (selectionWordCharRegex.test(char)) return true
+        if (!selectionJoinerRegex.test(char)) return false
+        return selectionWordCharRegex.test(text[index - 1] || '') &&
+          selectionWordCharRegex.test(text[index + 1] || '')
+      }
+
+      function distanceSquaredToSelectionRect(x, y, rect) {
+        const dx = x < rect.left
+          ? rect.left - x
+          : x > rect.right
+            ? x - rect.right
+            : 0
+        const dy = y < rect.top
+          ? rect.top - y
+          : y > rect.bottom
+            ? y - rect.bottom
+            : 0
+        return dx * dx + dy * dy
+      }
+
+      function textSelectionSearchRoot(target) {
+        const element = target?.nodeType === Node.ELEMENT_NODE
+          ? target
+          : target?.parentElement
+        return element?.closest?.(
+          '[data-rf-sentence], p, li, blockquote, h1, h2, h3, h4, h5, h6, pre',
+        ) || element || content
+      }
+
+      function wordSelectionRangeNearestPoint(x, y, target) {
+        const root = textSelectionSearchRoot(target)
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+        let bestRange = null
+        let bestDistance = Number.POSITIVE_INFINITY
+        let node = walker.nextNode()
+        while (node) {
+          const text = node.nodeValue || ''
+          let tokenStart = -1
+          for (let index = 0; index <= text.length; index += 1) {
+            const isTokenChar = index < text.length &&
+              isSelectionTokenChar(text, index)
+            if (isTokenChar && tokenStart < 0) tokenStart = index
+            if (isTokenChar || tokenStart < 0) continue
+
+            const range = document.createRange()
+            range.setStart(node, tokenStart)
+            range.setEnd(node, index)
+            for (const rect of range.getClientRects()) {
+              if (rect.width <= 0 || rect.height <= 0) continue
+              const distance = distanceSquaredToSelectionRect(x, y, rect)
+              if (distance < bestDistance) {
+                bestDistance = distance
+                bestRange = range.cloneRange()
+              }
+            }
+            tokenStart = -1
+          }
+          node = walker.nextNode()
+        }
+        return bestRange
+      }
+
+      function textSelectionPositionFromPoint(x, y) {
+        let caret = null
+        if (typeof document.caretRangeFromPoint === 'function') {
+          caret = document.caretRangeFromPoint(x, y)
+        } else if (typeof document.caretPositionFromPoint === 'function') {
+          const position = document.caretPositionFromPoint(x, y)
+          if (position?.offsetNode) {
+            caret = document.createRange()
+            caret.setStart(position.offsetNode, position.offset)
+            caret.collapse(true)
+          }
+        }
+        if (!caret?.startContainer) return null
+        if (caret.startContainer.nodeType === Node.TEXT_NODE) {
+          return { node: caret.startContainer, offset: caret.startOffset }
+        }
+
+        const container = caret.startContainer
+        if (!container?.childNodes?.length) return null
+        const childIndex = Math.min(
+          Math.max(caret.startOffset, 0),
+          container.childNodes.length - 1,
+        )
+        const child = container.childNodes[childIndex] ||
+          container.childNodes[childIndex - 1]
+        if (!child) return null
+        if (child.nodeType === Node.TEXT_NODE) return { node: child, offset: 0 }
+        const walker = document.createTreeWalker(child, NodeFilter.SHOW_TEXT)
+        const node = walker.nextNode()
+        return node ? { node, offset: 0 } : null
+      }
+
+      function wordSelectionRangeFromPoint(x, y, target) {
+        const geometricRange = wordSelectionRangeNearestPoint(x, y, target)
+        if (geometricRange) return geometricRange
+
+        const position = textSelectionPositionFromPoint(x, y)
+        const text = position?.node?.nodeValue || ''
+        if (!text) return null
+
+        let charOffset = Math.min(Math.max(position.offset, 0), text.length - 1)
+        if (!selectionWordCharRegex.test(text[charOffset] || '')) {
+          const previousOffset = charOffset - 1
+          if (
+            previousOffset < 0 ||
+            !selectionWordCharRegex.test(text[previousOffset] || '')
+          ) {
+            return null
+          }
+          charOffset = previousOffset
+        }
+
+        let start = charOffset
+        let end = charOffset + 1
+        while (start > 0 && isSelectionTokenChar(text, start - 1)) start -= 1
+        while (end < text.length && isSelectionTokenChar(text, end)) end += 1
+        const range = document.createRange()
+        range.setStart(position.node, start)
+        range.setEnd(position.node, end)
+        return range
+      }
+
+      function intendedTextSelectionRange(range) {
+        const touch = lastTextSelectionTouch
+        if (!range || !touch) return range
+        const age = Date.now() - touch.timestamp
+        if (age < 0 || age > selectionTouchMaxAgeMs) return range
+        return wordSelectionRangeFromPoint(
+          touch.x,
+          touch.y,
+          touch.target,
+        ) || range
+      }
+
+      function selectionTextContext(range, selectedText) {
+        const startElement = range.startContainer.nodeType === Node.ELEMENT_NODE
+          ? range.startContainer
+          : range.startContainer.parentElement
+        const contextElement = startElement?.closest?.(
+          '[data-rf-sentence], p, li, blockquote, h1, h2, h3, h4, h5, h6, pre',
+        ) || content
+        const prefixRange = range.cloneRange()
+        const suffixRange = range.cloneRange()
+        try {
+          prefixRange.selectNodeContents(contextElement)
+          prefixRange.setEnd(range.startContainer, range.startOffset)
+          suffixRange.selectNodeContents(contextElement)
+          suffixRange.setStart(range.endContainer, range.endOffset)
+        } catch (_) {
+          return {
+            contextText: selectedText,
+            markedContextText: `[[${selectedText}]]`,
+          }
+        }
+        const prefix = normalizeText(prefixRange.toString())
+          .slice(-contextWindowChars)
+        const suffix = normalizeText(suffixRange.toString())
+          .slice(0, contextWindowChars)
+        return {
+          contextText: normalizeText(`${prefix} ${selectedText} ${suffix}`),
+          markedContextText: normalizeText(
+            `${prefix} [[${selectedText}]] ${suffix}`,
+          ),
+        }
+      }
+
+      function selectionAnchor(range, selectedText) {
+        const startElement = range.startContainer.nodeType === Node.ELEMENT_NODE
+          ? range.startContainer
+          : range.startContainer.parentElement
+        const endElement = range.endContainer.nodeType === Node.ELEMENT_NODE
+          ? range.endContainer
+          : range.endContainer.parentElement
+        const startSentence = startElement?.closest?.('[data-rf-sentence]')
+        const endSentence = endElement?.closest?.('[data-rf-sentence]')
+        const startBlock = startElement?.closest?.('[data-rf-block-id]')
+        const endBlock = endElement?.closest?.('[data-rf-block-id]')
+        const startStableRoot = startElement?.closest?.('[id]')
+        const endStableRoot = endElement?.closest?.('[id]')
+        const rangeRoot = startSentence && startSentence === endSentence
+          ? startSentence
+          : startBlock && startBlock === endBlock
+            ? startBlock
+            : startStableRoot && startStableRoot === endStableRoot
+              ? startStableRoot
+              : content
+        if (!rangeRoot.id) return null
+        const positionAnchor = sentenceAnchorFor(startSentence) ||
+          textRootAnchorFor(rangeRoot)
+        if (!positionAnchor) return null
+        const prefixRange = range.cloneRange()
+        const suffixRange = range.cloneRange()
+        try {
+          prefixRange.selectNodeContents(rangeRoot)
+          prefixRange.setEnd(range.startContainer, range.startOffset)
+          suffixRange.selectNodeContents(rangeRoot)
+          suffixRange.setStart(range.endContainer, range.endOffset)
+        } catch (_) {
+          return null
+        }
+
+        const rootText = normalizeText(rangeRoot.textContent)
+        const matchText = normalizeText(selectedText)
+        const directMatchIndex = normalizedSelectionStartOffset(
+          prefixRange.toString(),
+          range.toString(),
+        )
+        const draft = {
+          matchText,
+          matchLength: matchText.length,
+          matchPrefix: normalizeText(prefixRange.toString()).slice(-48),
+          matchSuffix: normalizeText(suffixRange.toString()).slice(0, 48),
+          matchIndex: directMatchIndex,
+        }
+        const matchIndex = exactMatchOffset(rootText, draft) ??
+          contextMatchOffset(rootText, draft)
+        if (matchIndex == null) return null
+        return {
+          ...positionAnchor,
+          rangeRootId: rangeRoot.id,
+          ...draft,
+          matchIndex,
+        }
+      }
+
+      function selectionPosition(range) {
+        const rects = Array.from(range.getClientRects())
+          .filter(rect => rect.width > 0 && rect.height > 0)
+        if (rects.length === 0) return null
+        const left = Math.min(...rects.map(rect => rect.left))
+        const top = Math.min(...rects.map(rect => rect.top))
+        const right = Math.max(...rects.map(rect => rect.right))
+        const bottom = Math.max(...rects.map(rect => rect.bottom))
+        return {
+          left: clamp01(left / Math.max(1, window.innerWidth)),
+          top: clamp01(top / Math.max(1, window.innerHeight)),
+          right: clamp01(right / Math.max(1, window.innerWidth)),
+          bottom: clamp01(bottom / Math.max(1, window.innerHeight)),
+        }
+      }
+
+      function clearTextSelection() {
+        const selection = window.getSelection?.()
+        if (!selection?.rangeCount) return
+        suppressNextSelectionClear = true
+        selection.removeAllRanges()
+      }
+
+      function installTextSelectionHandler() {
+        document.addEventListener('touchstart', event => {
+          const touch = event.touches?.[0]
+          if (!touch) return
+          lastTextSelectionTouch = {
+            x: touch.clientX,
+            y: touch.clientY,
+            target: touch.target || event.target,
+            timestamp: Date.now(),
+          }
+        }, { capture: true, passive: true })
+
+        const emitSelection = event => {
+          const nativeRange = selectionRange()
+          const range = intendedTextSelectionRange(nativeRange)
+          const selectedText = normalizeText(range?.toString())
+          traceSelection('article-selection-event', {
+            eventType: event?.type || 'unknown',
+            hasRange: Boolean(range),
+            correctedFromTouch: Boolean(
+              nativeRange && range && nativeRange !== range,
+            ),
+            touchX: lastTextSelectionTouch?.x ?? null,
+            touchY: lastTextSelectionTouch?.y ?? null,
+            touchTarget: lastTextSelectionTouch?.target?.nodeName ?? null,
+            nativeTextPreview: normalizeText(nativeRange?.toString()).slice(0, 80),
+            textLength: selectedText.length,
+            textPreview: selectedText.slice(0, 80),
+          })
+
+          if (!range || !selectedText) {
+            if (!selectionActive) return
+            selectionActive = false
+            lastSelectionFingerprint = ''
+            if (suppressNextSelectionClear) {
+              suppressNextSelectionClear = false
+              return
+            }
+            callHandler('onSelectionCleared', null)
+            return
+          }
+
+          selectionActive = true
+          const fingerprint = [
+            selectedText,
+            range.startOffset,
+            range.endOffset,
+          ].join(':')
+          if (fingerprint === lastSelectionFingerprint) return
+          lastSelectionFingerprint = fingerprint
+
+          const textContext = selectionTextContext(range, selectedText)
+          const anchor = selectionAnchor(range, selectedText)
+          const cfi = encodePosition(anchor)
+          const payload = {
+            text: selectedText,
+            normalizedText: selectedText,
+            selectionKind: 'exact',
+            contextText: textContext.contextText,
+            markedContextText: textContext.markedContextText,
+            normalizedMarkedContextText: textContext.markedContextText,
+            cfi,
+            normalizedCfi: cfi,
+            pos: selectionPosition(range),
+            scrollOffset: window.scrollY,
+            containedHighlightIds: [],
+            footnote: false,
+          }
+          traceSelection('article-emit-selection-end', {
+            textLength: selectedText.length,
+            textPreview: selectedText.slice(0, 80),
+            hasPosition: payload.pos != null,
+            hasAnchor: cfi != null,
+          })
+          callHandler('onSelectionEnd', payload)
+          selectionClickSuppressedUntil = performance.now() +
+            selectionClickSuppressMs
+          clearTextSelection()
+        }
+
+        document.addEventListener('selectionchange', emitSelection)
+        document.addEventListener('touchend', emitSelection, { capture: true })
+        document.addEventListener('pointerup', emitSelection)
+        document.addEventListener('contextmenu', event => {
+          const shouldSuppress = selectionRange() != null ||
+            performance.now() < selectionClickSuppressedUntil
+          traceSelection('article-contextmenu', { shouldSuppress })
+          if (!shouldSuppress) return
+          event.preventDefault()
+          event.stopPropagation()
+        }, { capture: true })
+        traceSelection('article-handler-installed', {
+          documentUrl: location.href,
+        })
+      }
+
       function decodePosition(value) {
         if (typeof value !== 'string' || !value.startsWith(positionPrefix)) {
           return null
@@ -411,8 +798,21 @@
 
       function sentenceElementForAnchor(anchor) {
         if (!anchor) return null
-        return sentenceElement(anchor.blockId, anchor.sentenceIndex) ||
+        return document.getElementById(anchor.rangeRootId) ||
+          sentenceElement(anchor.blockId, anchor.sentenceIndex) ||
+          document.getElementById(anchor.blockId) ||
           findSentenceByText(anchor.sentenceText)
+      }
+
+      function textRootAnchorFor(element) {
+        if (!element?.id) return null
+        return {
+          blockId: element.dataset?.rfBlockId || element.id,
+          sentenceIndex: null,
+          sentenceText: normalizeText(element.textContent),
+          prefix: '',
+          suffix: '',
+        }
       }
 
       function sentenceAnchorFor(element) {
@@ -844,6 +1244,18 @@
         return null
       }
 
+      function normalizedSelectionStartOffset(prefixText, selectedText) {
+        const matchText = normalizeText(selectedText)
+        if (!matchText) return null
+        const throughSelection = normalizeText(prefixText + selectedText)
+        if (!throughSelection.toLocaleLowerCase().endsWith(
+          matchText.toLocaleLowerCase(),
+        )) {
+          return null
+        }
+        return throughSelection.length - matchText.length
+      }
+
       function contextMatchOffset(text, anchor) {
         const matchText = normalizeText(anchor?.matchText)
         if (!matchText) return null
@@ -852,7 +1264,8 @@
         const lowerMatch = matchText.toLocaleLowerCase()
         const prefix = normalizeText(anchor?.matchPrefix).toLocaleLowerCase()
         const suffix = normalizeText(anchor?.matchSuffix).toLocaleLowerCase()
-        const expected = Number(anchor?.matchIndex)
+        const expectedValue = anchor?.matchIndex
+        const expected = expectedValue == null ? null : Number(expectedValue)
         let best = null
         let from = 0
 
@@ -860,15 +1273,19 @@
           const index = lowerText.indexOf(lowerMatch, from)
           if (index < 0) break
           let score = 0
-          if (Number.isFinite(expected)) {
+          if (Number.isInteger(expected) && expected >= 0) {
             score -= Math.abs(index - expected) / 1000
           }
-          if (prefix && lowerText.slice(Math.max(0, index - prefix.length), index) === prefix) {
+          const textBefore = normalizeText(lowerText.slice(0, index))
+          if (prefix && textBefore.endsWith(prefix)) {
             score += 3
           }
+          const textAfter = normalizeText(
+            lowerText.slice(index + lowerMatch.length),
+          )
           if (
             suffix &&
-            lowerText.slice(index + lowerMatch.length, index + lowerMatch.length + suffix.length) === suffix
+            textAfter.startsWith(suffix)
           ) {
             score += 3
           }
@@ -885,8 +1302,124 @@
         const length = matchText.length || Number(anchor?.matchLength)
         if (!text || !Number.isFinite(length) || length <= 0) return null
 
-        const offset = exactMatchOffset(text, anchor) ?? contextMatchOffset(text, anchor)
+        const offset = contextMatchOffset(text, anchor) ?? exactMatchOffset(text, anchor)
         return offset == null ? null : textRangeForNormalizedOffset(element, offset, length)
+      }
+
+      function rangeForArticleAnchor(anchor) {
+        if (!anchor) return null
+        const root = document.getElementById(anchor.rangeRootId) ||
+          sentenceElementForAnchor(anchor)
+        return matchRangeForAnchor(root, anchor)
+      }
+
+      function articleHighlightName(id) {
+        let hash = 2166136261
+        for (const char of String(id || '')) {
+          hash ^= char.codePointAt(0)
+          hash = Math.imul(hash, 16777619)
+        }
+        return `readflex-article-highlight-${(hash >>> 0).toString(36)}`
+      }
+
+      function articleHighlightBackground(annotation) {
+        const color = /^#[0-9a-f]{6}$/i.test(String(annotation?.color || ''))
+          ? annotation.color
+          : '#FFE600'
+        const opacity = Math.min(1, Math.max(0, Number(annotation?.opacity) || 0.38))
+        return `color-mix(in srgb, ${color} ${Math.round(opacity * 100)}%, transparent)`
+      }
+
+      function renderArticleHighlights() {
+        if (!globalThis.Highlight || !CSS?.highlights) {
+          const result = {
+            received: articleHighlights.length,
+            rendered: 0,
+            skipped: [{ reason: 'css-highlights-unsupported' }],
+          }
+          traceSelection('article-highlights-rendered', result)
+          return result
+        }
+        for (const rendered of renderedArticleHighlights.values()) {
+          CSS.highlights.delete(rendered.name)
+        }
+        if (selectionHighlightPreview) {
+          CSS.highlights.delete(selectionHighlightPreview.name)
+        }
+        renderedArticleHighlights = new Map()
+        selectionHighlightPreview = null
+
+        const rules = []
+        const skipped = []
+        for (const annotation of articleHighlights) {
+          const anchor = decodePosition(annotation?.cfiRange)
+          const range = rangeForArticleAnchor(anchor)
+          if (!annotation?.id || !range) {
+            skipped.push({
+              id: annotation?.id ?? null,
+              text: normalizeText(annotation?.text).slice(0, 48),
+              reason: !annotation?.id
+                ? 'missing-id'
+                : !anchor
+                  ? 'invalid-anchor'
+                  : 'anchor-not-found',
+              rangeRootId: anchor?.rangeRootId ?? null,
+              matchText: anchor?.matchText ?? null,
+              matchIndex: anchor?.matchIndex ?? null,
+            })
+            continue
+          }
+          const name = articleHighlightName(annotation.id)
+          CSS.highlights.set(name, new Highlight(range))
+          renderedArticleHighlights.set(annotation.id, { name, range, annotation })
+          rules.push(
+            `::highlight(${name}) { background-color: ${articleHighlightBackground(annotation)}; }`,
+          )
+        }
+        articleHighlightStyle.textContent = rules.join('\n')
+        const result = {
+          received: articleHighlights.length,
+          rendered: renderedArticleHighlights.size,
+          skipped,
+        }
+        traceSelection('article-highlights-rendered', result)
+        return result
+      }
+
+      function setArticleHighlights(nextHighlights) {
+        articleHighlights = Array.isArray(nextHighlights) ? nextHighlights : []
+        return renderArticleHighlights()
+      }
+
+      function showSelectionHighlightPreview(options) {
+        clearSelectionHighlightPreview()
+        if (!globalThis.Highlight || !CSS?.highlights) return
+        const anchor = decodePosition(options?.cfiRange)
+        const range = rangeForArticleAnchor(anchor)
+        if (!range) return
+        const name = 'readflex-article-selection-preview'
+        CSS.highlights.set(name, new Highlight(range))
+        selectionHighlightPreview = { name, range }
+        articleHighlightStyle.textContent +=
+          `\n::highlight(${name}) { background-color: ${articleHighlightBackground(options)}; }`
+      }
+
+      function clearSelectionHighlightPreview() {
+        if (!selectionHighlightPreview || !CSS?.highlights) return
+        CSS.highlights.delete(selectionHighlightPreview.name)
+        selectionHighlightPreview = null
+        renderArticleHighlights()
+      }
+
+      function highlightAtPoint(x, y) {
+        for (const rendered of Array.from(renderedArticleHighlights.values()).reverse()) {
+          for (const rect of rendered.range.getClientRects()) {
+            if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+              return rendered
+            }
+          }
+        }
+        return null
       }
 
       function markSearchMatch(element, anchor) {
@@ -1004,6 +1537,8 @@
           if (!response.ok) throw new Error(`Article HTML request failed: ${response.status}`)
           content.innerHTML = await response.text()
           content.removeAttribute('aria-busy')
+          installTextSelectionHandler()
+          renderArticleHighlights()
           observeSentences()
           emitToc()
           await nextPaint()
@@ -1093,6 +1628,10 @@
         schedulePosition('bookmark-sync', true)
       }
 
+      window.setArticleHighlights = setArticleHighlights
+      window.showSelectionHighlightPreview = showSelectionHighlightPreview
+      window.clearSelectionHighlightPreview = clearSelectionHighlightPreview
+
       window.toggleBookmarkHere = () => {
         const anchor = sentenceAnchorFor(currentSentenceElement())
         if (!anchor) return
@@ -1107,6 +1646,8 @@
       window.startSearch = startSearch
       window.cancelSearch = cancelSearch
       window.clearSearch = clearSearch
+      window.clearSelection = clearTextSelection
+      window.clearSelectionAfterTextAction = clearTextSelection
 
       window.addEventListener('scroll', () => {
         if (performance.now() > restoringUntil) userInteracted = true
@@ -1116,7 +1657,21 @@
       window.addEventListener('resize', () => schedulePosition('resize', true))
 
       document.addEventListener('click', event => {
+        if (performance.now() < selectionClickSuppressedUntil) {
+          event.preventDefault()
+          event.stopPropagation()
+          return
+        }
         if (window.getSelection?.().toString().trim()) return
+        const highlight = highlightAtPoint(event.clientX, event.clientY)
+        if (highlight) {
+          callHandler('onAnnotationClick', {
+            annotation: { id: highlight.annotation.id },
+            pos: selectionPosition(highlight.range),
+            contextText: normalizeText(highlight.range.toString()),
+          })
+          return
+        }
         callHandler('onClick', {
           x: clamp01(event.clientX / Math.max(1, window.innerWidth)),
           y: clamp01(event.clientY / Math.max(1, window.innerHeight)),

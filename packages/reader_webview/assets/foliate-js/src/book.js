@@ -1,5 +1,43 @@
-console.log('book.js')
-console.log('ReadflexUA', navigator.userAgent)
+const READFLEX_TRACE_TEXT_SELECTION =
+  new URLSearchParams(window.location.search)
+    .get('traceTextSelection') === 'true'
+
+if (READFLEX_TRACE_TEXT_SELECTION) {
+  console.log('book.js')
+  console.log('ReadflexUA', navigator.userAgent)
+}
+
+const readflexSelectionTraceSnapshot = doc => {
+  const selection = doc?.getSelection?.()
+  const range = selection?.rangeCount ? selection.getRangeAt(0) : null
+  const text = selection?.toString?.() ?? ''
+  return {
+    rangeCount: selection?.rangeCount ?? 0,
+    collapsed: range?.collapsed ?? null,
+    textLength: text.length,
+    textPreview: text.slice(0, 80),
+  }
+}
+
+const traceTextSelection = (stage, details = {}) => {
+  if (!READFLEX_TRACE_TEXT_SELECTION) return
+  const payload = {
+    stage,
+    timestamp: Date.now(),
+    ...details,
+  }
+  console.warn(`[reader-selection-js] ${stage}`, payload)
+  try {
+    window.flutter_inappwebview
+      ?.callHandler('onTextSelectionDebug', payload)
+      ?.catch?.(error => console.error(
+        '[reader-selection-js] debug bridge rejected',
+        error,
+      ))
+  } catch (error) {
+    console.error('[reader-selection-js] debug bridge failed', error)
+  }
+}
 
 import './view.js'
 import { FootnoteHandler } from './footnotes.js'
@@ -10,7 +48,10 @@ import {
 } from './readflex_gestures.js'
 import { applyTextContrastGuard } from './readflex_contrast_guard.js'
 import { normalizeLoadedDocument } from './readflex_document_normalizer.js'
-import { normalizeSelectionRange } from './readflex_selection_normalizer.js'
+import {
+  normalizeSelectionRange,
+  normalizeTextRange,
+} from './readflex_selection_normalizer.js'
 const { configure, ZipReader, BlobReader, TextWriter, BlobWriter } =
   await import('./vendor/zip.js')
 const { EPUB } = await import('./epub.js')
@@ -764,6 +805,160 @@ const getSelectionRange = (selection) => {
   return range.collapsed ? null : range;
 };
 
+const READFLEX_SELECTION_TOUCH_MAX_AGE_MS = 2000;
+const readflexWordCharRegex = /[\p{L}\p{N}\p{M}]/u;
+const readflexJoinerRegex = /['’-]/u;
+
+const isReadflexTokenChar = (text, index) => {
+  const char = index >= 0 && index < text.length ? text[index] : '';
+  if (readflexWordCharRegex.test(char)) return true;
+  if (!readflexJoinerRegex.test(char)) return false;
+  return readflexWordCharRegex.test(text[index - 1] ?? '')
+    && readflexWordCharRegex.test(text[index + 1] ?? '');
+};
+
+const distanceSquaredToRect = (x, y, rect) => {
+  const dx = x < rect.left
+    ? rect.left - x
+    : x > rect.right
+      ? x - rect.right
+      : 0;
+  const dy = y < rect.top
+    ? rect.top - y
+    : y > rect.bottom
+      ? y - rect.bottom
+      : 0;
+  return dx * dx + dy * dy;
+};
+
+const textSearchRootForTouch = (doc, target) => {
+  const element = target?.nodeType === 1 ? target : target?.parentElement;
+  return element?.closest?.(
+    '[data-rf-sentence], p, li, blockquote, h1, h2, h3, h4, h5, h6, pre',
+  ) ?? element ?? doc?.body ?? doc?.documentElement ?? null;
+};
+
+const wordRangeNearestPoint = (doc, x, y, target) => {
+  const root = textSearchRootForTouch(doc, target);
+  const nodeFilter = doc?.defaultView?.NodeFilter;
+  if (!root || !nodeFilter || typeof doc?.createTreeWalker !== 'function') {
+    return null;
+  }
+
+  const walker = doc.createTreeWalker(root, nodeFilter.SHOW_TEXT);
+  let bestRange = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  let node = walker.nextNode();
+  while (node) {
+    const text = node.nodeValue ?? '';
+    let tokenStart = -1;
+    for (let index = 0; index <= text.length; index += 1) {
+      const isTokenChar = index < text.length
+        && isReadflexTokenChar(text, index);
+      if (isTokenChar && tokenStart < 0) tokenStart = index;
+      if (isTokenChar || tokenStart < 0) continue;
+
+      const range = doc.createRange();
+      range.setStart(node, tokenStart);
+      range.setEnd(node, index);
+      for (const rect of range.getClientRects()) {
+        if (rect.width <= 0 || rect.height <= 0) continue;
+        const distance = distanceSquaredToRect(x, y, rect);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestRange = range.cloneRange();
+        }
+      }
+      tokenStart = -1;
+    }
+    node = walker.nextNode();
+  }
+  return bestRange;
+};
+
+const textPositionFromPoint = (doc, x, y) => {
+  let caret = null;
+  if (typeof doc?.caretRangeFromPoint === 'function') {
+    caret = doc.caretRangeFromPoint(x, y);
+  } else if (typeof doc?.caretPositionFromPoint === 'function') {
+    const position = doc.caretPositionFromPoint(x, y);
+    if (position?.offsetNode) {
+      caret = doc.createRange();
+      caret.setStart(position.offsetNode, position.offset);
+      caret.collapse(true);
+    }
+  }
+  if (!caret?.startContainer) return null;
+
+  const textNodeType = doc.defaultView?.Node?.TEXT_NODE ?? 3;
+  if (caret.startContainer.nodeType === textNodeType) {
+    return {
+      node: caret.startContainer,
+      offset: caret.startOffset,
+    };
+  }
+
+  const container = caret.startContainer;
+  const nodeFilter = doc.defaultView?.NodeFilter;
+  if (!nodeFilter || !doc.createTreeWalker || !container?.childNodes?.length) {
+    return null;
+  }
+  const childIndex = Math.min(
+    Math.max(caret.startOffset, 0),
+    container.childNodes.length - 1,
+  );
+  const child = container.childNodes[childIndex]
+    ?? container.childNodes[childIndex - 1];
+  if (!child) return null;
+  if (child.nodeType === textNodeType) return { node: child, offset: 0 };
+
+  const walker = doc.createTreeWalker(child, nodeFilter.SHOW_TEXT);
+  const node = walker.nextNode();
+  return node ? { node, offset: 0 } : null;
+};
+
+const wordRangeFromPoint = (doc, x, y, target) => {
+  const geometricRange = wordRangeNearestPoint(doc, x, y, target);
+  if (geometricRange) return geometricRange;
+
+  const position = textPositionFromPoint(doc, x, y);
+  const text = position?.node?.nodeValue ?? '';
+  if (!text) return null;
+
+  let charOffset = Math.min(Math.max(position.offset, 0), text.length - 1);
+  if (!readflexWordCharRegex.test(text[charOffset] ?? '')) {
+    const previousOffset = charOffset - 1;
+    if (
+      previousOffset < 0
+      || !readflexWordCharRegex.test(text[previousOffset] ?? '')
+    ) {
+      return null;
+    }
+    charOffset = previousOffset;
+  }
+
+  const normalized = normalizeTextRange(text, charOffset, charOffset + 1);
+  if (!normalized.normalizedText || normalized.normalizedStart >= normalized.normalizedEnd) {
+    return null;
+  }
+  const range = doc.createRange();
+  range.setStart(position.node, normalized.normalizedStart);
+  range.setEnd(position.node, normalized.normalizedEnd);
+  return range;
+};
+
+const selectionRangeForAppleGesture = (doc, range, touchPoint) => {
+  if (!range || !touchPoint) return range;
+  const age = Date.now() - touchPoint.timestamp;
+  if (age < 0 || age > READFLEX_SELECTION_TOUCH_MAX_AGE_MS) return range;
+  return wordRangeFromPoint(
+    doc,
+    touchPoint.x,
+    touchPoint.y,
+    touchPoint.target,
+  ) ?? range;
+};
+
 const isAppleTouchRuntime = () => (
   /iP(?:hone|ad|od)/.test(navigator.userAgent)
   || (navigator.platform.includes('Mac') && navigator.maxTouchPoints > 1)
@@ -796,7 +991,12 @@ const installNativeTextActionMenuGuard = doc => {
   if (!isAppleTouchRuntime()) return;
 
   doc.addEventListener('contextmenu', event => {
-    if (!getSelectionRange(doc.getSelection?.())) return;
+    const hasRange = Boolean(getSelectionRange(doc.getSelection?.()));
+    traceTextSelection('contextmenu', {
+      hasRange,
+      ...readflexSelectionTraceSnapshot(doc),
+    });
+    if (!hasRange) return;
     event.preventDefault();
     event.stopPropagation();
   }, { capture: true });
@@ -807,6 +1007,10 @@ const clearSelectionForNativeTextActionMenu = doc => {
 
   const selection = doc?.getSelection?.();
   if (!getSelectionRange(selection)) return;
+
+  traceTextSelection('clear-native-selection', {
+    ...readflexSelectionTraceSnapshot(doc),
+  });
 
   doc.__readflexSuppressNextSelectionCleared = true;
   doc.__anxSelectionClearedAt = Date.now();
@@ -1036,9 +1240,15 @@ const containedHighlightIdsForRange = (view, index, doc, range) => {
   return ids;
 };
 
-const handleSelection = (view, doc, index) => {
+const handleSelection = (view, doc, index, explicitRange = null) => {
   const selection = doc.getSelection();
-  const range = getSelectionRange(selection);
+  const range = explicitRange ?? getSelectionRange(selection);
+
+  traceTextSelection('handle-selection', {
+    index,
+    hasRange: Boolean(range),
+    ...readflexSelectionTraceSnapshot(doc),
+  });
 
   if (!range) return;
 
@@ -1058,7 +1268,7 @@ const handleSelection = (view, doc, index) => {
   const cfi = view.getCFI(index, range);
   const lang = 'en-US'
 
-  let text = selection.toString();
+  let text = range.toString();
   if (!text) {
     const newSelection = range.startContainer.ownerDocument.getSelection();
     newSelection.removeAllRanges();
@@ -1075,6 +1285,14 @@ const handleSelection = (view, doc, index) => {
     buildMarkedRangeContextText(normalizedRange);
   const containedHighlightIds =
     containedHighlightIdsForRange(view, index, doc, range);
+
+  traceTextSelection('emit-selection-end', {
+    index,
+    cfi: normalizedCfi ?? cfi,
+    selectionKind: normalizedSelection?.selectionKind ?? 'exact',
+    textLength: text.length,
+    textPreview: text.slice(0, 80),
+  });
 
   onSelectionEnd({
     index,
@@ -1097,8 +1315,17 @@ const handleSelection = (view, doc, index) => {
 const setSelectionHandler = (view, doc, index) => {
   installNativeTextActionMenuGuard(doc);
 
+  traceTextSelection('handler-installed', {
+    index,
+    appleTouchRuntime: isAppleTouchRuntime(),
+    documentUrl: doc?.location?.href ?? null,
+    rootTouchCallout: doc?.documentElement?.style?.webkitTouchCallout ?? null,
+    bodyTouchCallout: doc?.body?.style?.webkitTouchCallout ?? null,
+  });
+
   let hasActiveSelection = false;
   let lastPointerUpRange = null;
+  let lastAppleTouchPoint = null;
   doc.__anxSelectionClearedAt = 0;
   doc.__anxSuppressClick = false;
   doc.__anxAllowNextClickAfterProgrammaticDeselect = false;
@@ -1107,6 +1334,12 @@ const setSelectionHandler = (view, doc, index) => {
   // Notify Flutter when the selection collapses so it can hide the context menu.
   const handleSelectionStateChange = () => {
     const selectionRange = getSelectionRange(doc.getSelection());
+    traceTextSelection('selection-state-change', {
+      hasRange: Boolean(selectionRange),
+      hasActiveSelection,
+      suppressNextClear: doc.__readflexSuppressNextSelectionCleared === true,
+      ...readflexSelectionTraceSnapshot(doc),
+    });
     if (selectionRange) {
       hasActiveSelection = true;
       doc.__anxSelectionClearedAt = 0;
@@ -1142,8 +1375,8 @@ const setSelectionHandler = (view, doc, index) => {
     && a.endOffset === b.endOffset
   );
 
-  const shouldSkipPointerUp = () => {
-    const selectionRange = getSelectionRange(doc.getSelection());
+  const shouldSkipPointerUp = (range = null) => {
+    const selectionRange = range ?? getSelectionRange(doc.getSelection());
     if (!selectionRange) return false;
 
     if (lastPointerUpRange && rangesEqual(lastPointerUpRange, selectionRange)) {
@@ -1154,12 +1387,58 @@ const setSelectionHandler = (view, doc, index) => {
     return false;
   };
 
-  //    doc.addEventListener('pointerdown', () => isSelecting = true);
-  // if macos or iOS
-  if (navigator.platform.includes('Mac')
-    || navigator.platform.includes('iPhone')
-    || navigator.platform.includes('iPad')
-  ) {
+  if (isAppleTouchRuntime()) {
+    doc.addEventListener('touchstart', event => {
+      const touch = event.touches?.[0];
+      if (!touch) return;
+      lastAppleTouchPoint = {
+        x: touch.clientX,
+        y: touch.clientY,
+        target: touch.target ?? event.target,
+        timestamp: Date.now(),
+      };
+    }, { capture: true, passive: true });
+
+    const dispatchAppleSelection = event => {
+      const nativeSelectionRange = getSelectionRange(doc.getSelection());
+      const selectionRange = selectionRangeForAppleGesture(
+        doc,
+        nativeSelectionRange,
+        lastAppleTouchPoint,
+      );
+      const correctedFromTouch = Boolean(
+        nativeSelectionRange
+        && selectionRange
+        && nativeSelectionRange !== selectionRange,
+      );
+      const duplicate = selectionRange
+        ? shouldSkipPointerUp(selectionRange)
+        : false;
+      traceTextSelection('apple-selection-event', {
+        eventType: event?.type ?? 'unknown',
+        hasRange: Boolean(selectionRange),
+        correctedFromTouch,
+        touchX: lastAppleTouchPoint?.x ?? null,
+        touchY: lastAppleTouchPoint?.y ?? null,
+        touchTarget: lastAppleTouchPoint?.target?.nodeName ?? null,
+        resolvedTextPreview: selectionRange?.toString?.().slice(0, 80) ?? '',
+        duplicate,
+        ...readflexSelectionTraceSnapshot(doc),
+      });
+      if (!selectionRange || duplicate) return;
+      handleSelection(view, doc, index, selectionRange);
+    };
+
+    // Safari 18.2+ builds Copy Link with Highlight outside the legacy action
+    // filtering path. Commit and clear the range in the selectionchange turn,
+    // before WebKit presents its native edit menu.
+    doc.addEventListener('selectionchange', dispatchAppleSelection);
+    doc.addEventListener('touchend', dispatchAppleSelection, {
+      capture: true,
+    });
+    doc.addEventListener('pointerup', dispatchAppleSelection);
+  }
+  else if (navigator.platform.includes('Mac')) {
     doc.addEventListener('pointerup', () => {
       if (shouldSkipPointerUp()) return;
       handleSelection(view, doc, index);
@@ -3338,9 +3617,17 @@ const refreshLayout = () => {
   })
 }
 
+const READFLEX_CHAPTER_TITLE_MAX_LENGTH = 512
+
+const readflexChapterTitle = value => {
+  if (typeof value !== 'string') return null
+  const title = value.replace(/\s+/g, ' ').trim()
+  if (!title || title.length > READFLEX_CHAPTER_TITLE_MAX_LENGTH) return null
+  return title
+}
 
 const onRelocated = (currentInfo) => {
-  const chapterTitle = currentInfo.tocItem?.label
+  const chapterTitle = readflexChapterTitle(currentInfo.tocItem?.label)
   const chapterHref = currentInfo.tocItem?.href
   const chapterTotalPages = currentInfo.chapterLocation.total
   const chapterCurrentPage = currentInfo.chapterLocation.current
@@ -3464,6 +3751,12 @@ window.setNoAnimation = () => {
 }
 
 const onSelectionEnd = (selection) => {
+  traceTextSelection('on-selection-end-bridge', {
+    footnote: window.isFootNoteOpen() || isPdf,
+    textLength: selection?.text?.length ?? 0,
+    textPreview: selection?.text?.slice?.(0, 80) ?? '',
+    cfi: selection?.normalizedCfi ?? selection?.cfi ?? null,
+  })
   if (window.isFootNoteOpen() || isPdf) {
     callFlutter('onSelectionEnd', { ...selection, footnote: true })
   } else {
@@ -3581,7 +3874,7 @@ window.cancelSearch = (requestId = null) => {
 }
 
 const emitSearchResults = (requestId, result) => {
-  const chapterTitle = result.label ?? ''
+  const chapterTitle = readflexChapterTitle(result.label) ?? ''
   if ('subitems' in result) {
     callFlutter('onSearch', {
       requestId,
@@ -3682,7 +3975,7 @@ window.searchBook = async (text, opts = {}) => {
         items.push({
           cfi: item.cfi,
           excerpt: item.excerpt,
-          chapterTitle: result.label ?? '',
+          chapterTitle: readflexChapterTitle(result.label) ?? '',
         })
     }
     else if (result.cfi) {

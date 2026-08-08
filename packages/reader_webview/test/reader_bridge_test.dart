@@ -155,6 +155,26 @@ void main() {
       expect(position.bookmarkCfi, isNull);
     });
 
+    test('fromMap drops oversized chapter titles', () {
+      final position = BookPosition.fromMap({
+        'cfi': 'epubcfi(/6/4)',
+        'percentage': 0.25,
+        'chapterTitle': List.filled(513, 'x').join(),
+      });
+
+      expect(position.chapterTitle, isNull);
+    });
+
+    test('fromMap normalizes valid chapter title whitespace', () {
+      final position = BookPosition.fromMap({
+        'cfi': 'epubcfi(/6/4)',
+        'percentage': 0.25,
+        'chapterTitle': '  Chapter\n  One  ',
+      });
+
+      expect(position.chapterTitle, 'Chapter One');
+    });
+
     test('fromMap coerces sizeTotal from num to int', () {
       // foliate-js's sizeTotal is typed as number — large books may
       // surface it as a JSON double (e.g. 1.5e6) rather than int. The
