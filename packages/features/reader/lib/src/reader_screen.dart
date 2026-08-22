@@ -157,7 +157,7 @@ ReaderTapAxis _readerTapAxisForPageTurnStyle(ReaderPageTurnStyle style) {
 class ReaderScreen extends StatelessWidget {
   const ReaderScreen({
     required this.sourceId,
-    required this.serverPort,
+    required this.serverBaseUri,
     required this.bookRepository,
     required this.highlightRepository,
     required this.preferencesService,
@@ -173,7 +173,7 @@ class ReaderScreen extends StatelessWidget {
   });
 
   final String sourceId;
-  final int serverPort;
+  final Uri serverBaseUri;
   final BookRepository bookRepository;
   final ArticleRepository? articleRepository;
   final HighlightRepository highlightRepository;
@@ -241,7 +241,7 @@ class ReaderScreen extends StatelessWidget {
             cubit: context.read<ReaderBrightnessCubit>(),
             child: ReaderKeepAwakeDriver(
               child: _ReaderView(
-                serverPort: serverPort,
+                serverBaseUri: serverBaseUri,
                 textActions: textActions,
                 onArticleTitlePressed: onArticleTitlePressed,
               ),

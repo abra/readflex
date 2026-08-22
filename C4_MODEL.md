@@ -95,7 +95,7 @@ flowchart TB
 | Repositories/services | `packages/*_repository`, `packages/*_service`, specialized packages | Data source orchestration, platform/backend contracts, persistence boundaries. |
 | Local database | `packages/local_storage` | Drift schema, DAOs, migrations, storage rows. |
 | App files | App documents directory | Imported books, extracted article content, generated EPUBs, reader assets. |
-| Local ReaderServer | `packages/reader_server` | Serves Foliate assets and source bytes to the WebView, including range requests. |
+| Local ReaderServer | `packages/reader_server` | Serves root-confined Foliate assets and source bytes through a token-scoped localhost URI, including range requests. |
 | Reader WebView | `packages/reader_webview` + `foliate-js` assets | Hosts Foliate, JS bridge, reader metadata/search/highlight callbacks. |
 
 ## Level 3: Components
@@ -268,7 +268,10 @@ sequenceDiagram
 
 ## Known Production Gaps
 
-- Error reporting and analytics are represented by no-op implementations.
+- Error reporting uses GlitchTip when configured; analytics remains a no-op.
+- Production backend authentication/attestation and short-lived access tokens
+  are not implemented. Static build-time API credentials are blocked outside
+  development.
 - Flashcard, practice, profile, subscription, auth, AI, and notification
   surfaces are currently outside the active package graph.
 - Dormant vocabulary/flashcard/review storage models remain for migration

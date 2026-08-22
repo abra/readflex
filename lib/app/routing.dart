@@ -89,13 +89,21 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                 isOffline: isOffline,
                 isOfflineStream: _isOfflineStream(deps),
                 onPickBookFile: pickBookFile,
-                onImportBook: (file, {onProgress}) => importBookFile(
-                  sourceFile: file,
-                  bookRepository: deps.bookRepository,
-                  readerServerPort: deps.readerServer.port,
-                  logger: deps.logger,
-                  onProgress: onProgress,
-                ),
+                onImportBook: (file, {onProgress}) async {
+                  final grant = await deps.readerServer
+                      .grantTemporaryBookAccess(file);
+                  try {
+                    return await importBookFile(
+                      sourceFile: file,
+                      bookRepository: deps.bookRepository,
+                      readerServerBaseUri: deps.readerServer.baseUri,
+                      logger: deps.logger,
+                      onProgress: onProgress,
+                    );
+                  } finally {
+                    grant.revoke();
+                  }
+                },
                 onImportArticle: (url, {onStage}) => _importArticleUrl(
                   deps,
                   url,
@@ -138,7 +146,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
               child: ReaderScreen(
                 sourceId: sourceId,
                 initialSource: initialSource,
-                serverPort: deps.readerServer.port,
+                serverBaseUri: deps.readerServer.baseUri,
                 bookRepository: deps.bookRepository,
                 articleRepository: deps.articleRepository,
                 highlightRepository: deps.highlightRepository,

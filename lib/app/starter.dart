@@ -64,6 +64,7 @@ Future<void> starter() async {
     // restarting the process.
     Future<void> composeAndRun() async {
       try {
+        config.validate();
         final compositionResult = await composeDependencies(
           config: config,
           logger: logger,

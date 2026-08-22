@@ -9,16 +9,26 @@ import 'package:reader_server/reader_server.dart';
 void main() {
   late Directory tempDir;
   late Directory assetsDir;
+  late Directory booksDir;
+  late Directory articlesDir;
   late ReaderServer server;
   late http.Client client;
 
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('reader_server_test_');
     assetsDir = Directory('${tempDir.path}/assets');
-    await assetsDir.create();
+    booksDir = Directory('${tempDir.path}/books');
+    articlesDir = Directory('${tempDir.path}/articles');
+    await Future.wait([
+      assetsDir.create(),
+      booksDir.create(),
+      articlesDir.create(),
+    ]);
 
     server = ReaderServer(
       assetsDirectory: assetsDir,
+      booksDirectory: booksDir,
+      articlesDirectory: articlesDir,
       logger: Logger(),
     );
     await server.start();
@@ -31,7 +41,12 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
-  String url(String path) => 'http://127.0.0.1:${server.port}$path';
+  String url(String path) {
+    final relativePath = path.startsWith('/') ? path.substring(1) : path;
+    return server.baseUri.resolve(relativePath).toString();
+  }
+
+  File bookFile(String name) => File('${booksDir.path}/$name');
 
   group('lifecycle', () {
     test('port is available after start', () {
@@ -50,9 +65,12 @@ void main() {
     test('port throws before start', () {
       final unstarted = ReaderServer(
         assetsDirectory: assetsDir,
+        booksDirectory: booksDir,
+        articlesDirectory: articlesDir,
         logger: Logger(),
       );
       expect(() => unstarted.port, throwsStateError);
+      expect(() => unstarted.baseUri, throwsStateError);
     });
 
     test('start is idempotent', () async {
@@ -68,9 +86,107 @@ void main() {
     });
   });
 
+  group('access boundary', () {
+    test('rejects requests without the session token', () async {
+      final unscopedUri = server.baseUri.replace(path: '/assets/index.html');
+
+      final response = await client.get(unscopedUri);
+
+      expect(response.statusCode, 404);
+    });
+
+    test('rejects requests with an invalid session token', () async {
+      final invalidUri = server.baseUri.replace(
+        path: '/r/invalid-token/assets/index.html',
+      );
+
+      final response = await client.get(invalidUri);
+
+      expect(response.statusCode, 404);
+    });
+
+    test('rejects a book outside the managed books directory', () async {
+      final externalBook = File('${tempDir.path}/external.epub');
+      await externalBook.writeAsBytes([1, 2, 3]);
+
+      final response = await client.get(
+        Uri.parse(url('/book/${Uri.encodeComponent(externalBook.path)}')),
+      );
+
+      expect(response.statusCode, 404);
+    });
+
+    test('temporary book grant is scoped and revocable', () async {
+      final externalBook = File('${tempDir.path}/external.epub');
+      await externalBook.writeAsBytes([1, 2, 3]);
+      final bookUri = Uri.parse(
+        url('/book/${Uri.encodeComponent(externalBook.path)}'),
+      );
+
+      final grant = await server.grantTemporaryBookAccess(externalBook);
+      final grantedResponse = await client.get(bookUri);
+      grant.revoke();
+      final revokedResponse = await client.get(bookUri);
+
+      expect(grantedResponse.statusCode, 200);
+      expect(grantedResponse.bodyBytes, [1, 2, 3]);
+      expect(revokedResponse.statusCode, 404);
+    });
+
+    test('rejects a symlink from books to a file outside the root', () async {
+      final externalBook = File('${tempDir.path}/external.epub');
+      await externalBook.writeAsBytes([1, 2, 3]);
+      final link = Link('${booksDir.path}/linked.epub');
+      await link.create(externalBook.path);
+
+      final response = await client.get(
+        Uri.parse(url('/book/${Uri.encodeComponent(link.path)}')),
+      );
+
+      expect(response.statusCode, 404);
+    });
+
+    test('rejects an article directory outside the managed root', () async {
+      final externalArticle = Directory('${tempDir.path}/external-article');
+      await externalArticle.create();
+      await File(
+        '${externalArticle.path}/content.html',
+      ).writeAsString('<p>private</p>');
+
+      final response = await client.get(
+        Uri.parse(
+          url(
+            '/article/${Uri.encodeComponent(externalArticle.path)}/content.html',
+          ),
+        ),
+      );
+
+      expect(response.statusCode, 404);
+    });
+
+    test('rejects a symlink escaping an article directory', () async {
+      final articleDir = Directory('${articlesDir.path}/article-link-test');
+      await articleDir.create();
+      final secret = File('${tempDir.path}/secret.txt');
+      await secret.writeAsString('secret');
+      await Link('${articleDir.path}/secret.txt').create(secret.path);
+
+      final response = await client.get(
+        Uri.parse(
+          url(
+            '/article/${Uri.encodeComponent(articleDir.path)}/secret.txt',
+          ),
+        ),
+      );
+
+      expect(response.statusCode, 404);
+      expect(response.body, isNot('secret'));
+    });
+  });
+
   group('GET /book/<path>', () {
     test('streams book file', () async {
-      final bookFile = File('${tempDir.path}/test.epub');
+      final bookFile = File('${booksDir.path}/test.epub');
       await bookFile.writeAsBytes([0x50, 0x4B, 0x03, 0x04]); // PK zip header
 
       final encodedPath = Uri.encodeComponent(bookFile.path);
@@ -90,7 +206,7 @@ void main() {
       'streams book file with percent and unicode characters in path',
       () async {
         final bookFile = File(
-          '${tempDir.path}/A 100% Guide To… Robots (Joosr [Joosr]).epub',
+          '${booksDir.path}/A 100% Guide To… Robots (Joosr [Joosr]).epub',
         );
         await bookFile.writeAsBytes([0x50, 0x4B, 0x03, 0x04]);
 
@@ -109,7 +225,7 @@ void main() {
     );
 
     test('returns correct content-type for pdf', () async {
-      final pdfFile = File('${tempDir.path}/test.pdf');
+      final pdfFile = File('${booksDir.path}/test.pdf');
       await pdfFile.writeAsBytes([0x25, 0x50, 0x44, 0x46]); // %PDF header
 
       final encodedPath = Uri.encodeComponent(pdfFile.path);
@@ -217,7 +333,7 @@ void main() {
     );
 
     test('book responses do NOT carry Cache-Control', () async {
-      final bookFile = File('${tempDir.path}/test.epub');
+      final bookFile = File('${booksDir.path}/test.epub');
       await bookFile.writeAsBytes([1, 2, 3]);
       final response = await client.get(
         Uri.parse(
@@ -344,7 +460,7 @@ void main() {
     }
 
     test('full GET advertises Accept-Ranges and Content-Length', () async {
-      final file = File('${tempDir.path}/full.epub');
+      final file = bookFile('full.epub');
       await file.writeAsBytes(payload());
 
       final response = await client.get(
@@ -358,7 +474,7 @@ void main() {
     });
 
     test('returns 206 + slice for `bytes=0-9`', () async {
-      final file = File('${tempDir.path}/range.epub');
+      final file = bookFile('range.epub');
       await file.writeAsBytes(payload());
 
       final response = await client.get(
@@ -373,7 +489,7 @@ void main() {
     });
 
     test('clamps `bytes=200-9999` to file length', () async {
-      final file = File('${tempDir.path}/clamp.epub');
+      final file = bookFile('clamp.epub');
       await file.writeAsBytes(payload());
 
       final response = await client.get(
@@ -389,7 +505,7 @@ void main() {
     });
 
     test('open-ended `bytes=250-` returns the tail of the file', () async {
-      final file = File('${tempDir.path}/openend.epub');
+      final file = bookFile('openend.epub');
       await file.writeAsBytes(payload());
 
       final response = await client.get(
@@ -403,7 +519,7 @@ void main() {
     });
 
     test('suffix `bytes=-5` returns the last 5 bytes', () async {
-      final file = File('${tempDir.path}/suffix.epub');
+      final file = bookFile('suffix.epub');
       await file.writeAsBytes(payload());
 
       final response = await client.get(
@@ -417,7 +533,7 @@ void main() {
     });
 
     test('rejects start past EOF with 416', () async {
-      final file = File('${tempDir.path}/past.epub');
+      final file = bookFile('past.epub');
       await file.writeAsBytes(payload());
 
       final response = await client.get(
@@ -430,7 +546,7 @@ void main() {
     });
 
     test('rejects unparseable range with 416', () async {
-      final file = File('${tempDir.path}/garbage.epub');
+      final file = bookFile('garbage.epub');
       await file.writeAsBytes(payload());
 
       final response = await client.get(
@@ -442,7 +558,7 @@ void main() {
     });
 
     test('inverted `bytes=10-5` is rejected with 416', () async {
-      final file = File('${tempDir.path}/inverted.epub');
+      final file = bookFile('inverted.epub');
       await file.writeAsBytes(payload());
 
       final response = await client.get(
@@ -471,7 +587,7 @@ void main() {
     });
 
     test('HEAD returns size and content-type without body', () async {
-      final file = File('${tempDir.path}/head.epub');
+      final file = bookFile('head.epub');
       await file.writeAsBytes(payload());
 
       final response = await client.head(
@@ -491,7 +607,7 @@ void main() {
 
   group('GET /article/<dir>/<path>', () {
     test('serves article html and adjacent images', () async {
-      final articleDir = Directory('${tempDir.path}/articles/article-1');
+      final articleDir = Directory('${articlesDir.path}/article-1');
       final imageDir = Directory('${articleDir.path}/images');
       await imageDir.create(recursive: true);
       await File(
@@ -516,13 +632,17 @@ void main() {
     });
 
     test('rejects paths outside the article directory', () async {
-      final articleDir = Directory('${tempDir.path}/articles/article-1');
+      final articleDir = Directory('${articlesDir.path}/article-1');
       await articleDir.create(recursive: true);
       await File('${tempDir.path}/secret.txt').writeAsString('secret');
 
       final encodedDir = Uri.encodeComponent(articleDir.path);
       final response = await client.get(
-        Uri.parse(url('/article/$encodedDir/../secret.txt')),
+        Uri.parse(
+          url(
+            '/article/$encodedDir/${Uri.encodeComponent('../secret.txt')}',
+          ),
+        ),
       );
 
       expect(response.statusCode, 400);

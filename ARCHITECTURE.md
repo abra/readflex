@@ -246,7 +246,7 @@ The reader is intentionally split across several packages:
 
 | Package | Responsibility |
 |---------|----------------|
-| `reader_server` | Serves reader assets, book bytes, article HTML, and article-local assets from localhost. |
+| `reader_server` | Serves root-confined reader assets, book bytes, article HTML, and article-local assets through a token-scoped localhost URI. |
 | `reader_webview` | Hosts foliate-js for books/comics, the vertical HTML shell for articles, JS bridge DTOs, asset extraction, metadata extraction. |
 | `features/reader` | Reader screen, reader bloc/cubits, chrome, drawers, appearance, search, selection, brightness, keep-awake. |
 | `shared` | `TextAction` plugin contract used by reader context-panel actions. |
@@ -358,16 +358,20 @@ call GoRouter to navigate to sibling features directly.
 Configuration is read through `ApplicationConfig` and compile-time environment
 values. Important development flags are documented in `README.md`.
 
-Security boundary: article cleaner API keys should be treated as backend
-credentials, not UI state. GlitchTip error reporting is enabled by
+Security boundary: static Readflex API credentials are development-only and
+configuration validation rejects them in staging/production. Production must
+use short-lived credentials issued by a backend authentication/attestation
+flow. GlitchTip error reporting is enabled by
 `GLITCHTIP_DSN` or the Sentry-compatible `SENTRY_DSN` fallback; performance
 tracing is opt-in through `GLITCHTIP_TRACES_SAMPLE_RATE`.
-Contextual translation uses `CONTEXTUAL_TRANSLATION_BASE_URL` and
-`CONTEXTUAL_TRANSLATION_API_KEY`; when they are omitted, it reuses the article
-cleaner host and API key.
-Dictionary lookup follows the same convention through `DICTIONARY_BASE_URL`
-and `DICTIONARY_API_KEY`, and therefore requires no additional dart-defines
-when all Readflex APIs share one nginx entrypoint.
+Contextual translation and dictionary lookup default to the article cleaner
+host. Development requests share the explicit `READFLEX_API_KEY`; the legacy
+`ARTICLE_CLEANER_API_KEY` name remains accepted for local commands only.
+
+`ReaderServer` exposes a process-local token-scoped base URI. Its book,
+article, and asset routes resolve symlinks and enforce configured filesystem
+roots. Files selected outside app storage receive a reference-counted grant
+only for the metadata extraction operation.
 
 ## Known Non-Production Contracts
 
@@ -377,6 +381,8 @@ a task explicitly asks to implement them:
 - Error reporting uses `GlitchTipErrorReporter` when a DSN is configured and
   falls back to `NoopErrorReporter` otherwise.
 - `NoopAnalyticsReporter` does not send analytics telemetry.
+- Production backend authentication/attestation and short-lived access tokens
+  are not implemented; static build-time credentials are intentionally blocked.
 - Flashcard, practice, profile, subscription, auth, AI, and notification
   packages are frozen outside the active package graph. Restore their legacy
   implementation from `189e2cc1` only if that product scope returns.

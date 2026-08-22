@@ -4,12 +4,12 @@ part of 'reader_screen.dart';
 /// [ReaderBloc] reaches [ReaderStatus.ready].
 class _ReaderView extends StatelessWidget {
   const _ReaderView({
-    required this.serverPort,
+    required this.serverBaseUri,
     required this.textActions,
     this.onArticleTitlePressed,
   });
 
-  final int serverPort;
+  final Uri serverBaseUri;
   final List<TextAction> textActions;
   final void Function(String url, String title)? onArticleTitlePressed;
 
@@ -30,7 +30,7 @@ class _ReaderView extends StatelessWidget {
                   builder: (context, status) => _ReaderBody(
                     status: status,
                     canMountWebView: canMountWebView,
-                    serverPort: serverPort,
+                    serverBaseUri: serverBaseUri,
                     textActions: textActions,
                     onArticleTitlePressed: onArticleTitlePressed,
                   ),
@@ -49,14 +49,14 @@ class _ReaderBody extends StatefulWidget {
   const _ReaderBody({
     required this.status,
     required this.canMountWebView,
-    required this.serverPort,
+    required this.serverBaseUri,
     required this.textActions,
     this.onArticleTitlePressed,
   });
 
   final ReaderStatus status;
   final bool canMountWebView;
-  final int serverPort;
+  final Uri serverBaseUri;
   final List<TextAction> textActions;
   final void Function(String url, String title)? onArticleTitlePressed;
 
@@ -111,7 +111,7 @@ class _ReaderBodyState extends State<_ReaderBody> {
               ),
             ),
             ReaderStatus.ready when contentReady => _ReadyContent(
-              serverPort: widget.serverPort,
+              serverBaseUri: widget.serverBaseUri,
               textActions: widget.textActions,
               onArticleTitlePressed: widget.onArticleTitlePressed,
               onWebViewReady: _handleWebViewReady,
@@ -138,13 +138,13 @@ class _ReaderBodyState extends State<_ReaderBody> {
 /// Ready-state wrapper that keeps the WebView and reader chrome together.
 class _ReadyContent extends StatelessWidget {
   const _ReadyContent({
-    required this.serverPort,
+    required this.serverBaseUri,
     required this.textActions,
     required this.onWebViewReady,
     this.onArticleTitlePressed,
   });
 
-  final int serverPort;
+  final Uri serverBaseUri;
   final List<TextAction> textActions;
   final ValueChanged<String?> onWebViewReady;
   final void Function(String url, String title)? onArticleTitlePressed;
@@ -152,7 +152,7 @@ class _ReadyContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _ReadyContentBody(
-      serverPort: serverPort,
+      serverBaseUri: serverBaseUri,
       textActions: textActions,
       onArticleTitlePressed: onArticleTitlePressed,
       onWebViewReady: onWebViewReady,
@@ -163,13 +163,13 @@ class _ReadyContent extends StatelessWidget {
 /// Owns the WebView key and all imperative reader callbacks for ready content.
 class _ReadyContentBody extends StatefulWidget {
   const _ReadyContentBody({
-    required this.serverPort,
+    required this.serverBaseUri,
     required this.textActions,
     required this.onWebViewReady,
     this.onArticleTitlePressed,
   });
 
-  final int serverPort;
+  final Uri serverBaseUri;
   final List<TextAction> textActions;
   final ValueChanged<String?> onWebViewReady;
   final void Function(String url, String title)? onArticleTitlePressed;
@@ -451,7 +451,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
               child: sourceType == SourceType.article
                   ? _ReaderArticleHtmlBody(
                       sourceId: sourceId,
-                      serverPort: widget.serverPort,
+                      serverBaseUri: widget.serverBaseUri,
                       readerTheme: readerTheme,
                       webViewKey: _articleWebViewKey,
                       onPositionChanged: _handleReaderPositionChanged,
@@ -468,7 +468,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                     )
                   : _ReaderWebViewBody(
                       sourceId: sourceId,
-                      serverPort: widget.serverPort,
+                      serverBaseUri: widget.serverBaseUri,
                       readerTheme: readerTheme,
                       webViewKey: _webViewKey,
                       onPositionChanged: _handleReaderPositionChanged,
@@ -727,7 +727,7 @@ class _ReaderTapEdgeIndicatorDriver extends StatelessWidget {
 
 FoliateStyle _readerWebViewStyle({
   required BuildContext context,
-  required int serverPort,
+  required Uri serverBaseUri,
   required ReaderAppearancePreferences appearance,
   required ReaderThemeData readerTheme,
   double? topMargin,
@@ -744,8 +744,9 @@ FoliateStyle _readerWebViewStyle({
 
   return FoliateStyle(
     fontName: fontPreset.fontFamily,
-    fontPath:
-        'http://127.0.0.1:$serverPort/assets/fonts/${fontPreset.fontFile}',
+    fontPath: serverBaseUri
+        .resolve('assets/fonts/${fontPreset.fontFile}')
+        .toString(),
     fontSize: layout.fontSize * deviceFontScale,
     textScale: appearance.textScale,
     deviceFontScale: deviceFontScale,
@@ -780,7 +781,7 @@ FoliateStyle _readerWebViewStyle({
 class _ReaderWebViewBody extends StatefulWidget {
   const _ReaderWebViewBody({
     required this.sourceId,
-    required this.serverPort,
+    required this.serverBaseUri,
     required this.readerTheme,
     this.webViewKey,
     this.onPositionChanged,
@@ -788,7 +789,7 @@ class _ReaderWebViewBody extends StatefulWidget {
   });
 
   final String? sourceId;
-  final int serverPort;
+  final Uri serverBaseUri;
   final ReaderThemeData readerTheme;
 
   /// Optional GlobalKey — the parent state holds it so progress chrome can
@@ -993,7 +994,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     final customCSS = _customCSSFor(widget.readerTheme);
     final foliateStyle = _readerWebViewStyle(
       context: context,
-      serverPort: widget.serverPort,
+      serverBaseUri: widget.serverBaseUri,
       appearance: appearance,
       readerTheme: widget.readerTheme,
       customCSS: customCSS,
@@ -1004,7 +1005,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       // imperatively). Falls back to source-id ValueKey for forced
       // remount on book change.
       key: widget.webViewKey ?? ValueKey(state.sourceId),
-      serverPort: widget.serverPort,
+      serverBaseUri: widget.serverBaseUri,
       bookFilePath: state.document!.filePath,
       initialCfi: state.document?.currentCfi,
       initialProgress: state.document?.readingProgress,
@@ -1148,7 +1149,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
 class _ReaderArticleHtmlBody extends StatefulWidget {
   const _ReaderArticleHtmlBody({
     required this.sourceId,
-    required this.serverPort,
+    required this.serverBaseUri,
     required this.readerTheme,
     required this.webViewKey,
     this.onPositionChanged,
@@ -1156,7 +1157,7 @@ class _ReaderArticleHtmlBody extends StatefulWidget {
   });
 
   final String? sourceId;
-  final int serverPort;
+  final Uri serverBaseUri;
   final ReaderThemeData readerTheme;
   final GlobalKey<ArticleHtmlReaderWebViewState> webViewKey;
   final ValueChanged<BookPosition>? onPositionChanged;
@@ -1255,7 +1256,7 @@ class _ReaderArticleHtmlBodyState extends State<_ReaderArticleHtmlBody> {
     final customCSS = buildBookCustomCSS(theme: widget.readerTheme);
     final articleStyle = _readerWebViewStyle(
       context: context,
-      serverPort: widget.serverPort,
+      serverBaseUri: widget.serverBaseUri,
       appearance: appearance,
       readerTheme: widget.readerTheme,
       topMargin: _kArticleReaderTopMargin,
@@ -1265,7 +1266,7 @@ class _ReaderArticleHtmlBodyState extends State<_ReaderArticleHtmlBody> {
 
     final readerSurface = ArticleHtmlReaderWebView(
       key: widget.webViewKey,
-      serverPort: widget.serverPort,
+      serverBaseUri: widget.serverBaseUri,
       articleFilePath: state.document!.filePath,
       initialPosition: state.document?.currentCfi,
       initialProgress: state.document?.readingProgress,

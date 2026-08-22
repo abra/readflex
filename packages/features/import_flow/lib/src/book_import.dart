@@ -42,7 +42,7 @@ Future<File?> pickBookFile() async {
 Future<Book?> importBookFile({
   required File sourceFile,
   required BookRepository bookRepository,
-  required int readerServerPort,
+  required Uri readerServerBaseUri,
   required Logger logger,
   void Function(double progress)? onProgress,
 }) async {
@@ -51,7 +51,7 @@ Future<Book?> importBookFile({
   final format = BookFormat.fromExtension(ext) ?? BookFormat.epub;
 
   try {
-    final extractor = BookMetadataExtractor(serverPort: readerServerPort);
+    final extractor = BookMetadataExtractor(serverBaseUri: readerServerBaseUri);
     final metadata = await extractor.extract(filePath);
 
     return await bookRepository.addBook(

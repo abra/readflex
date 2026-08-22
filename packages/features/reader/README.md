@@ -10,7 +10,7 @@ context panel populated by pluggable `TextAction`s.
 class ReaderScreen extends StatelessWidget {
   ReaderScreen({
     required String sourceId,
-    required int serverPort,                       // local reader_server port
+    required Uri serverBaseUri,                    // token-scoped localhost URI
     required BookRepository bookRepository,
     ArticleRepository? articleRepository,
     required HighlightRepository highlightRepository,

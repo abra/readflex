@@ -118,6 +118,8 @@ Future<DependenciesContainer> createDependenciesContainer(
 
   final readerServer = ReaderServer(
     assetsDirectory: readerAssetsDir,
+    booksDirectory: booksDir,
+    articlesDirectory: articlesDir,
     logger: logger,
   );
 
@@ -142,25 +144,22 @@ Future<DependenciesContainer> createDependenciesContainer(
 
   final connectivityService = await ConnectivityPlusService.create();
   final screenControlService = WakelockScreenControlService();
+  final developmentApiKey = config.developmentApiKey;
   final articleExtractionService = TrafilaturaArticleExtractionService(
     baseUri: Uri.parse(config.articleCleanerBaseUrl),
-    apiKey: config.articleCleanerApiKey.isEmpty
-        ? null
-        : config.articleCleanerApiKey,
+    apiKey: developmentApiKey.isEmpty ? null : developmentApiKey,
   );
   final contextualTranslationService = ContextualTranslationCoordinator(
     remoteService: RemoteContextualTranslationService(
       baseUri: Uri.parse(config.contextualTranslationBaseUrl),
-      apiKey: config.contextualTranslationApiKey.isEmpty
-          ? null
-          : config.contextualTranslationApiKey,
+      apiKey: developmentApiKey.isEmpty ? null : developmentApiKey,
     ),
     offlineService: MlKitOfflineTranslationService(),
   );
   final systemDictionaryService = PlatformSystemDictionaryService();
   final dictionaryLookupService = RemoteDictionaryLookupService(
     baseUri: Uri.parse(config.dictionaryBaseUrl),
-    apiKey: config.dictionaryApiKey.isEmpty ? null : config.dictionaryApiKey,
+    apiKey: developmentApiKey.isEmpty ? null : developmentApiKey,
   );
 
   return DependenciesContainer(

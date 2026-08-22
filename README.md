@@ -56,25 +56,33 @@ make test
 Run the app:
 
 ```sh
-flutter run \
-  --dart-define=ARTICLE_CLEANER_BASE_URL=https://your-cleaner.example
+fvm flutter run \
+  --dart-define=ARTICLE_CLEANER_BASE_URL=https://your-cleaner.example \
+  --dart-define=READFLEX_API_KEY="$READFLEX_API_KEY"
 ```
 
 Common dart-defines:
 
 | Flag | Purpose |
 |------|---------|
-| `ARTICLE_CLEANER_BASE_URL` | Article extraction backend base URL |
-| `ARTICLE_CLEANER_API_KEY` | Optional article cleaner API key |
+| `ENVIRONMENT` | `DEV`, `STAGING`, or `PROD`; defaults to DEV in debug and PROD in release |
+| `ARTICLE_CLEANER_BASE_URL` | Article extraction backend base URL; defaults to localhost in DEV and `https://api.readflex.app` in PROD |
+| `READFLEX_API_KEY` | Development-only shared backend credential; rejected in STAGING/PROD builds |
+| `ARTICLE_CLEANER_API_KEY` | Legacy development alias for `READFLEX_API_KEY` |
 | `CONTEXTUAL_TRANSLATION_BASE_URL` | Contextual translation backend base URL; defaults to `ARTICLE_CLEANER_BASE_URL` |
-| `CONTEXTUAL_TRANSLATION_API_KEY` | Optional contextual translation API key; defaults to `ARTICLE_CLEANER_API_KEY` |
 | `DICTIONARY_BASE_URL` | Readflex Dictionary backend base URL; defaults to `ARTICLE_CLEANER_BASE_URL` |
-| `DICTIONARY_API_KEY` | Optional Dictionary API key; defaults to `ARTICLE_CLEANER_API_KEY` |
 | `GLITCHTIP_DSN` | Optional GlitchTip DSN for Sentry-compatible error reporting |
 | `GLITCHTIP_TRACES_SAMPLE_RATE` | Optional GlitchTip performance trace sampling rate; defaults to `0` |
 
-Do not ship public builds with client-side API keys. Backend-backed production
-integrations should keep provider credentials server-side.
+Static API credentials are allowed only in DEV. Production requests must use a
+short-lived server-issued credential; implementing that backend authentication
+contract remains a release blocker.
+
+Android release builds require an upload keystore. Copy
+`android/key.properties.example` to the ignored `android/key.properties`, or
+provide the documented `READFLEX_ANDROID_*` variables in CI. `make build`
+produces the signed AAB used by Google Play; `make build-apk` is available for
+direct release-device testing.
 
 GlitchTip uses the Sentry-compatible Dart SDK. Prefer `GLITCHTIP_DSN` for
 Readflex builds; `SENTRY_DSN` is accepted as a fallback for compatibility with

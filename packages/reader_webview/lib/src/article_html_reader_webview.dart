@@ -19,7 +19,7 @@ import 'reader_common_handlers.dart';
 /// bloc.
 class ArticleHtmlReaderWebView extends StatefulWidget {
   const ArticleHtmlReaderWebView({
-    required this.serverPort,
+    required this.serverBaseUri,
     required this.articleFilePath,
     this.initialPosition,
     this.initialProgress,
@@ -38,7 +38,8 @@ class ArticleHtmlReaderWebView extends StatefulWidget {
     super.key,
   });
 
-  final int serverPort;
+  /// Token-scoped base URI of the local reader server.
+  final Uri serverBaseUri;
 
   /// Absolute path to `content.html` in the article directory.
   final String articleFilePath;
@@ -76,14 +77,15 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView> {
 
   String get _articleDirectoryUrl {
     final encodedDir = Uri.encodeComponent(_articleDirectoryPath);
-    return 'http://127.0.0.1:${widget.serverPort}/article/$encodedDir/';
+    return widget.serverBaseUri.resolve('article/$encodedDir/').toString();
   }
 
   String get _contentUrl => '${_articleDirectoryUrl}content.html';
 
   String get _indexUrl {
-    final base =
-        'http://127.0.0.1:${widget.serverPort}/assets/article-html/index.html';
+    final base = widget.serverBaseUri.resolve(
+      'assets/article-html/index.html',
+    );
     final params = {
       'contentUrl': jsonEncode(_contentUrl),
       'contentBaseUrl': jsonEncode(_articleDirectoryUrl),

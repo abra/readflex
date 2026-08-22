@@ -22,11 +22,17 @@ enum Environment {
 
   const Environment._(this.value);
 
-  /// Returns the environment from the given [value].
-  static Environment from(String? value) => switch (value) {
-    'DEV' => Environment.dev,
-    'STAGING' => Environment.staging,
-    'PROD' => Environment.prod,
-    _ => kReleaseMode ? Environment.prod : Environment.dev,
-  };
+  /// Returns the environment from [value]. Missing values use the build-mode
+  /// default; invalid explicit values fail instead of silently selecting a
+  /// different backend.
+  static Environment from(String? value) {
+    final normalized = value?.trim().toUpperCase();
+    return switch (normalized) {
+      'DEV' || 'DEVELOPMENT' => Environment.dev,
+      'STAGING' => Environment.staging,
+      'PROD' || 'PRODUCTION' => Environment.prod,
+      null || '' => kReleaseMode ? Environment.prod : Environment.dev,
+      _ => throw ArgumentError.value(value, 'value', 'Unknown environment'),
+    };
+  }
 }

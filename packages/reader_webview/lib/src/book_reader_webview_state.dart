@@ -237,7 +237,7 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
 
   String get _bookUrl {
     final encoded = Uri.encodeComponent(widget.bookFilePath);
-    return 'http://127.0.0.1:${widget.serverPort}/book/$encoded';
+    return widget.serverBaseUri.resolve('book/$encoded').toString();
   }
 
   /// Default reading rules for foliate-js. No Chinese conversion, no
@@ -248,8 +248,9 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
   };
 
   String get _indexUrl {
-    final base =
-        'http://127.0.0.1:${widget.serverPort}/assets/foliate-js/index.html';
+    final base = widget.serverBaseUri.resolve(
+      'assets/foliate-js/index.html',
+    );
     final initialLocation = resolveInitialReaderLocation(
       initialCfi: widget.initialCfi,
       initialProgress: widget.initialProgress,

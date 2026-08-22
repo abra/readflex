@@ -47,14 +47,14 @@ class BookMetadata {
 ///
 /// Usage:
 /// ```dart
-/// final extractor = BookMetadataExtractor(serverPort: server.port);
+/// final extractor = BookMetadataExtractor(serverBaseUri: server.baseUri);
 /// final metadata = await extractor.extract('/path/to/book.epub');
 /// ```
 class BookMetadataExtractor {
-  BookMetadataExtractor({required this.serverPort});
+  BookMetadataExtractor({required this.serverBaseUri});
 
-  /// Port of the local [ReaderServer].
-  final int serverPort;
+  /// Token-scoped base URI of the local reader server.
+  final Uri serverBaseUri;
 
   /// Extracts metadata from the book at [filePath].
   ///
@@ -129,6 +129,7 @@ class BookMetadataExtractor {
 
   String _buildUrl(String filePath) {
     final bookUrl = Uri.encodeComponent(filePath);
+    final resolvedBookUrl = serverBaseUri.resolve('book/$bookUrl');
     // Original filename WITH extension. foliate-js uses `RemoteFile.name`
     // both for format detection (`isCBZ`/`isFBZ` match by the file's name
     // suffix) and as a metadata fallback for formats without embedded
@@ -141,7 +142,7 @@ class BookMetadataExtractor {
       'importing': 'true',
       'url': Uri.encodeComponent(
         jsonEncode(
-          'http://127.0.0.1:$serverPort/book/$bookUrl',
+          resolvedBookUrl.toString(),
         ),
       ),
       'name': Uri.encodeComponent(jsonEncode(fileName)),
@@ -158,7 +159,8 @@ class BookMetadataExtractor {
       ),
     };
     final query = params.entries.map((e) => '${e.key}=${e.value}').join('&');
-    return 'http://127.0.0.1:$serverPort/assets/foliate-js/index.html?$query';
+    final indexUrl = serverBaseUri.resolve('assets/foliate-js/index.html');
+    return '$indexUrl?$query';
   }
 
   /// Parses raw JS metadata map into a [BookMetadata].

@@ -67,6 +67,6 @@ user's original EPUB files or saved article files on disk.
 - `flutter_inappwebview` — underlying WebView
 - `path`
 
-The widget is stateless with respect to the reader server: it receives
-`serverPort` as a constructor argument. The server itself lives in the
-`reader_server` package.
+The widgets are stateless with respect to the reader server: they receive its
+token-scoped `serverBaseUri` as an immutable constructor argument. The server
+itself and its filesystem access policy remain in the `reader_server` package.

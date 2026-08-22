@@ -3,8 +3,8 @@ part of 'book_reader_webview.dart';
 /// WebView-based book reader backed by foliate-js.
 ///
 /// Loads foliate-js `index.html` from the local server's `/assets/foliate-js/`
-/// route. foliate-js fetches the book file from `/book/<encoded-path>` and
-/// renders it.
+/// route. foliate-js fetches the book file from the token-scoped `/book/`
+/// route and renders it.
 ///
 /// Communication:
 ///   JS → Flutter: `onReady`, `onRelocated`, `onSelectionEnd`,
@@ -16,7 +16,7 @@ part of 'book_reader_webview.dart';
 ///                  `toggleBookmarkHere`
 class BookReaderWebView extends StatefulWidget {
   const BookReaderWebView({
-    required this.serverPort,
+    required this.serverBaseUri,
     required this.bookFilePath,
     this.initialCfi,
     this.initialProgress,
@@ -38,8 +38,8 @@ class BookReaderWebView extends StatefulWidget {
     super.key,
   });
 
-  /// Port of the local reader server.
-  final int serverPort;
+  /// Token-scoped base URI of the local reader server.
+  final Uri serverBaseUri;
 
   /// Absolute path to the book file on disk.
   final String bookFilePath;

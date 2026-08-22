@@ -1,4 +1,4 @@
-.PHONY: get format analyze test clean build run help
+.PHONY: get format analyze test clean build build-android build-apk run help
 
 FLUTTER ?= fvm flutter
 DART ?= fvm dart
@@ -61,8 +61,14 @@ test:
 run:
 	$(FLUTTER) run
 
-## Build release APK
-build:
+## Build the signed Android App Bundle used by Google Play
+build: build-android
+
+build-android:
+	$(FLUTTER) build appbundle --release
+
+## Build a signed release APK for direct device testing
+build-apk:
 	$(FLUTTER) build apk --release
 
 ## Remove build artifacts
