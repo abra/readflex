@@ -60,7 +60,7 @@ states.
 ## Dependencies
 
 - `book_repository` — persistence
-- `reader_webview` — `BookMetadataExtractor` for EPUB metadata
+- `reader_webview` — `BookMetadataExtractor` for supported document metadata
 - `domain_models` — `BookFormat`
 - `component_library` — `showAppBottomSheet`, `BottomSheetHeader`,
   `AppActionCard`, `AppIcons`, `AppSpacing`

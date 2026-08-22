@@ -50,7 +50,7 @@ does not adapt articles into books.
 
 ## Dependencies
 
-- `domain_models` - article, book, and storage exception models
+- `domain_models` - article and storage exception models
 - `local_storage` - Drift database and DAOs
 - `monitoring` - optional cleanup/download logging
 - `http` - best-effort image and cover downloads

@@ -30,6 +30,7 @@ flowchart LR
   app -->|"Fetches article URLs or downloaded HTML for extraction"| cleaner
   app -->|"Translates selected text in context"| translation
   app -->|"Looks up definitions when system lookup is unavailable"| dictionary
+  translation -->|"Requests contextual translation analysis"| deepseek
   dictionary -->|"Requests monolingual structured definitions"| deepseek
   cleaner -->|"May fetch original article URL"| websites
   app -->|"Can fallback-download article HTML"| websites
@@ -44,7 +45,7 @@ flowchart LR
 | Publisher websites | Original article pages and assets. | Article cleaner server fetches first; app can fallback-download HTML. |
 | Contextual Translation API | Resolves selected text using surrounding reading context. | `contextual_translation_service` via HTTP. |
 | Readflex Dictionary API | Returns validated, cached monolingual lexical definitions. | `dictionary_service` via HTTP after native lookup fallback. |
-| DeepSeek API | Produces structured monolingual definition candidates from the selected term and sentence context. | Called only by the Readflex Dictionary API; its credentials are never shipped in the app. |
+| DeepSeek API | Produces contextual translations and structured monolingual definition candidates. | Called by the Readflex translation and dictionary backends; its credentials are never shipped in the app. |
 | iOS / Android platform services | Files, WebView, brightness, wakelock, connectivity, package info, native dictionary UI. | Flutter plugins, app runner channels, and local packages. |
 
 ## Level 2: Containers
@@ -94,7 +95,7 @@ flowchart TB
 | Feature packages | `packages/features/*` | User-facing flows and feature state management. |
 | Repositories/services | `packages/*_repository`, `packages/*_service`, specialized packages | Data source orchestration, platform/backend contracts, persistence boundaries. |
 | Local database | `packages/local_storage` | Drift schema, DAOs, migrations, storage rows. |
-| App files | App documents directory | Imported books, extracted article content, generated EPUBs, reader assets. |
+| App files | App documents directory | Imported books, extracted article HTML and assets, reader assets. |
 | Local ReaderServer | `packages/reader_server` | Serves root-confined Foliate assets and source bytes through a token-scoped localhost URI, including range requests. |
 | Reader WebView | `packages/reader_webview` + `foliate-js` assets | Hosts Foliate, JS bridge, reader metadata/search/highlight callbacks. |
 
@@ -148,7 +149,7 @@ flowchart LR
 | Library | `LibraryScreen` | `LibraryBloc`, layout/theme/selection cubits | Book, article, collection repositories, preferences, toast wrapper. |
 | Import Flow | `showImportFlowSheet` | `ImportFlowCubit` | File picker/import callbacks, article import callback, reader metadata extraction. |
 | Reader | `ReaderScreen` | `ReaderBloc` plus reader UI cubits | Book/article/highlight repositories, preferences, reader WebView, screen control, text actions. |
-| Highlight | `HighlightAction`, `HighlightSheet` | `HighlightCubit` | Highlight repository, shared text action contract. |
+| Highlight | `HighlightAction`, `HighlightSheet` | Immediate action plus `HighlightCubit` for the standalone sheet | Highlight repository, shared text action contract. |
 | Translate | `TranslateAction`, `TranslateSheet` | `TranslateCubit` | Contextual translation service, preferences, shared text action contract. |
 | Dictionary | `DictionaryAction`, `DictionarySheet` | `DictionaryCubit` | Native system dictionary bridge, remote dictionary service, shared text action contract. |
 
@@ -232,7 +233,7 @@ sequenceDiagram
   ExtractionService->>ExtractionService: server extraction, optional client HTML fallback
   ExtractionService-->>Routing: ExtractedArticle
   Routing->>ArticleRepository: addExtractedArticle(article)
-  ArticleRepository->>Storage: write DB row, content, assets, generated EPUB
+  ArticleRepository->>Storage: write DB row, content.html, metadata, assets
   ArticleRepository-->>ImportFlowSheet: Article
 ```
 

@@ -26,8 +26,8 @@ root before it is opened. Traversal, absolute-path substitution, and symlink
 escapes are rejected.
 
 Content-Type is inferred from file extension (`.html`, `.epub`, `.pdf`,
-`.css`, `.js`, `.woff2`, etc.). Range requests (`bytes=...`) are honoured
-on both route families so foliate-js's `RemoteFile` shim can read EPUB
+`.css`, `.js`, `.woff2`, etc.). Single range requests (`bytes=...`) are
+honoured on served files so foliate-js's `RemoteFile` shim can read EPUB
 chapters without loading the whole file into memory.
 
 ## Public API

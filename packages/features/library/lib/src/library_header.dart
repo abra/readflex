@@ -20,7 +20,7 @@ const double _kMutedAlpha = 0.55;
 /// Pure presentation — all state changes are surfaced via the three
 /// callbacks and are expected to hit the library BLoC / UI cubits in the
 /// parent. The FAB is deliberately not part of the header; it lives on
-/// [Scaffold.floatingActionButton] (see readwell_demo).
+/// [Scaffold.floatingActionButton].
 class LibraryHeader extends StatelessWidget {
   const LibraryHeader({
     required this.state,
@@ -48,8 +48,6 @@ class LibraryHeader extends StatelessWidget {
     final colors = context.colors;
     final l10n = context.l10n;
 
-    // Demo uses literals 20/16/12/4/…; project convention is to stick to
-    // AppSpacing tokens, so we take the nearest token in each slot.
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,

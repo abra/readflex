@@ -158,7 +158,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
   }
 
   /// Pulls the latest source list and emits a `success` (or `failure`)
-  /// state. Pass [fromDeletion] when this load is the post-delete
+  /// state. Pass [deletion] when this load is the post-delete
   /// refresh — that emits a [LibraryDeletionEffect] so the screen can show
   /// the correct toast without tracking a local queue.
   Future<void> _loadItems(

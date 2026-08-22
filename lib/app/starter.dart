@@ -73,8 +73,8 @@ Future<void> starter() async {
 
         final deps = compositionResult.dependencies;
 
-        // Extract WebView assets (foliate-js) to cache so the HTTP server
-        // can serve them as plain files.
+        // Extract the Foliate and article-reader assets to cache so the local
+        // HTTP server can serve them as plain files.
         // Re-extracts when the app version changes. In dev builds we always
         // force re-extract so local edits to foliate-js / reader assets are
         // picked up without bumping pubspec version.
@@ -89,8 +89,7 @@ Future<void> starter() async {
           force: config.isDev,
         );
 
-        // Start the local HTTP server that serves book files to the
-        // reader WebView.
+        // Start the local HTTP server for reader assets and source files.
         await deps.readerServer.start();
 
         runApp(RootContext(compositionResult: compositionResult));

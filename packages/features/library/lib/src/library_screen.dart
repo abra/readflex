@@ -140,13 +140,8 @@ class _LibraryViewState extends State<_LibraryView> {
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode(debugLabel: 'Library search');
 
-  /// Guards the FAB against re-entry while an import sheet is being
-  /// pushed. Mutated through `setState` so the FAB also visually
-  /// disables for the duration of the call — that's both correct UX
-  /// (one tap = one sheet, the user shouldn't be able to queue
-  /// another) and removes the silent-flag fragility flagged in audit:
-  /// any future build-time read of this field will now see fresh
-  /// values via the rebuild cycle.
+  /// Prevents duplicate import sheets and disables the FAB while the current
+  /// import flow is open.
   bool _addInFlight = false;
   final _scrollController = ScrollController();
 

@@ -36,7 +36,11 @@ cannot hang indefinitely.
 The app wires this package in `lib/app/composition.dart` using:
 
 - `ARTICLE_CLEANER_BASE_URL`
-- `ARTICLE_CLEANER_API_KEY` (optional)
+- `READFLEX_API_KEY` (optional and development-only)
+
+`ARTICLE_CLEANER_API_KEY` remains accepted as a legacy development alias.
+Static API credentials are rejected in staging and production builds; those
+environments require the future short-lived backend credential flow.
 
 The ngrok skip-warning header is intentionally sent for development tunnels.
 

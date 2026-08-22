@@ -54,7 +54,8 @@ abstract interface class AnalyticsReporter {
 /// Does nothing — safe to use in development or when analytics
 /// is not configured.
 ///
-/// TODO: replace with real analytics (e.g. Firebase Analytics, Amplitude).
+/// Intentionally remains inactive until a production analytics provider is
+/// selected and wired in app composition.
 class NoopAnalyticsReporter implements AnalyticsReporter {
   const NoopAnalyticsReporter();
 

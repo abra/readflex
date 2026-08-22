@@ -146,11 +146,11 @@ ReaderTapAxis _readerTapAxisForPageTurnStyle(ReaderPageTurnStyle style) {
       : ReaderTapAxis.horizontal;
 }
 
-/// Full-screen reader for a book (route `/reader/:sourceId`).
+/// Full-screen reader for a library source (route `/reader/:sourceId`).
 ///
 /// Composition only: wires [ReaderBloc] (source + highlights + position
 /// persistence), [ReaderUiCubit] (chrome/drawer/search-highlight state),
-/// [ReaderSearchCubit] (book-search state), and [ReaderSelectionCubit]
+/// [ReaderSearchCubit] (document-search state), and [ReaderSelectionCubit]
 /// (text selection) around an internal [_ReaderView]. [textActions] follow
 /// the plugin contract from `package:shared` and are wired in the
 /// composition root.

@@ -2,9 +2,7 @@ part of 'library_bloc.dart';
 
 enum LibraryStatus { initial, loading, success, failure }
 
-/// Filter segments mirrored from the readwell_demo Library screen. Kept
-/// as an enum (not a string) so switches are exhaustive and renames are
-/// refactor-safe.
+/// Kept as an enum so switches are exhaustive and renames are refactor-safe.
 enum LibraryFilter { all, books, articles, comics, unread }
 
 enum LibraryCollectionScopeType { favourites, manual, site, author }

@@ -17,6 +17,7 @@ Barrel exports `AppDatabase` and every DAO:
 | `AppDatabase`     | class      | The single Drift database (`@DriftDatabase`)           |
 | `BooksDao`        | DAO        | CRUD for books                                         |
 | `ArticlesDao`     | DAO        | CRUD for saved web articles                            |
+| `CollectionsDao`  | DAO        | CRUD for collections and source memberships            |
 | `HighlightsDao`   | DAO        | CRUD for highlights                                    |
 | `FlashcardsDao`   | DAO        | CRUD for flashcards                                    |
 | `DictionaryDao`   | DAO        | CRUD for dictionary entries                            |
@@ -37,7 +38,8 @@ destructive schema reset.
 ```
 books_table              articles_table          highlights_table
 flashcards_table         dictionary_table        review_items_table
-review_logs_table        bookmarks_table
+review_logs_table        bookmarks_table         dictionary_anchors_table
+collections_table        collection_sources_table
 ```
 
 All FSRS state (stability, difficulty, due date, reps, lapses) is
@@ -62,6 +64,12 @@ article payloads stay on disk under `articles/<id>/`; the row stores local
 filenames/paths plus extracted metadata such as language, author, site, CFI,
 and reading progress. Older migrations still contain the historical
 article-table removal step from v13; v18 creates the current article schema.
+
+`collections_table` stores manual collection metadata;
+`collection_sources_table` stores manual and protected favourites membership.
+Smart author/site collections are derived by the Library feature and are not
+persisted. `dictionary_anchors_table` belongs to the dormant saved-vocabulary
+schema retained for migration compatibility.
 
 ## Migrations
 
@@ -134,7 +142,8 @@ in-memory executor.
 local_storage → drift, sqlite3_flutter_libs, path_provider, path
         ▲
         │
-        └── article_repository, book_repository, highlight_repository
+        └── article_repository, book_repository, collection_repository,
+            highlight_repository
 ```
 
 No feature package ever imports `local_storage` directly — features go

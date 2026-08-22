@@ -37,7 +37,7 @@ src/theme/
   app_text_theme.dart           # TextTheme construction helpers
   app_typography.dart           # AppTypography: textTheme, fontFamilySans/Serif, serif()/sans()
   book_layout.dart              # Reader book layout presets
-  reader_appearance.dart        # Reader-specific theme presets (Paper, Warm, Graphite, Night)
+  reader_appearance.dart        # Reader theme presets (Snow, Paper, Warm, Graphite, Night)
 ```
 
 ### Usage in UI
@@ -118,23 +118,29 @@ as static semantic token classes:
 - **No ternary operators in theme assembly** -- separate `_buildLight()` / `_buildDark()`
   functions.
 
-## Widgets
+## Reusable UI API
 
 Reusable presentation-only widgets used across features:
 
 | Widget                              | Purpose                                        |
 |-------------------------------------|------------------------------------------------|
 | `ActionBottomSheetLayout`           | Bottom sheet shell with header and content     |
+| `AppActionCard`                     | Reusable command card for action pickers       |
+| `AppBottomSafeArea`                 | Bottom inset handling for app-owned surfaces   |
+| `AppButtonLabel`                    | Bounded label for localized button text        |
+| `AppFilterChip`                     | App-styled filter chip with stable tap target  |
 | `BottomSheetHeader`                 | Bottom sheet title row                         |
 | `ButtonLoadingIndicator`            | Compact circular progress for buttons          |
 | `CenteredCircularProgressIndicator` | Centered loading spinner                       |
 | `EmptyState`                        | Centered empty state message                   |
 | `ErrorState`                        | Error message with retry button                |
 | `AppSourceCover` / `AppSourceCoverFrame` | Shared source cover rendering and frame |
-| `SourceCoverHero`                   | Stable Hero wrapper for covers                 |
+| `appSourceCoverImageFromPath`       | Resolves an optional local cover image path    |
 | `SearchField`                       | App search field                               |
 | `ScrollEdgeFadeStack`               | Scroll-edge fade/scrim wrapper                 |
+| `ScrollEdgeFade`                    | Individual top/bottom scroll-edge fade         |
 | `SelectionPreviewCard`              | Compact preview of selected text               |
+| `showAppBottomSheet`                | Shared modal bottom-sheet presentation helper  |
 
 ## What Belongs Here
 

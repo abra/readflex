@@ -10,8 +10,8 @@ import 'package:shared/shared.dart';
 /// [Highlight].
 ///
 /// Registered in the composition root as one of the [TextAction]s passed
-/// to the reader. The regular reader flow saves immediately; the highlight
-/// sheet remains available for a future edit / note experience.
+/// to the reader. The reader flow saves immediately; the standalone highlight
+/// sheet remains available to surfaces that need color and note editing.
 class HighlightAction extends ColorHighlightTextAction {
   HighlightAction({
     required this.highlightRepository,

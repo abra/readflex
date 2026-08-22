@@ -17,18 +17,21 @@ and UI preference cubits internally.
 |-----------------------|-------------------------------------|----------------------------------------------|
 | `bookRepository`      | `BookRepository`                    | Book list + delete                           |
 | `articleRepository`   | `ArticleRepository?`                | Optional article list + delete               |
+| `collectionRepository`| `CollectionRepository`              | Collections and favourites persistence      |
 | `preferencesService`  | `PreferencesService`                | Persist list/grid, theme, and locale choices |
+| `isOffline`           | `bool`                               | Connectivity indicator for the Library UI   |
 | `onSourcePressed`     | `Future<void> Function(...)`        | Open reader, then refresh                    |
 | `onAddPressed`        | `AsyncCallback`                     | Open the import-flow bottom sheet            |
 
 ## Architecture
 
-Two independent units of state:
+Independent state units keep domain loading, persisted display preferences,
+selection, and collection commands separate:
 
 - `LibraryBloc` — domain data. Loads books and articles and exposes
   `visibleItems` sorted by `lastOpenedAt ?? addedAt` DESC, then
   `addedAt` DESC and title. Supports `filter`
-  (`all / books / articles / comics / unread / finished`) and
+  (`all / books / articles / comics / unread`) and
   `searchQuery` (debounced 300ms). `visibleItems` is cached per state
   instance so the bloc keeps one source-of-truth list without recomputing
   the projection on every rebuild.
@@ -38,6 +41,12 @@ Two independent units of state:
   `PreferencesService.themeMode`.
 - `LibraryLocaleCubit` — app language selector, persisted through
   `PreferencesService.locale`.
+- `LibrarySelectionCubit` — multi-select state for bulk source actions.
+- `AddToCollectionCubit` / `ManageCollectionCubit` — collection mutations and
+  their transient command state.
+
+The Library exposes protected Favourites, persisted manual collections, and
+derived author/site smart collections.
 
 The screen uses separate widgets (`LibraryListView`, `LibraryGridView`) for
 each layout and a local `TextEditingController` for the search field so
@@ -51,8 +60,9 @@ Non-fatal repository errors from delete/load go through `addError` + a
 
 - `book_repository` — book data source
 - `article_repository` — article data source
+- `collection_repository` — manual collection and favourites persistence
 - `preferences_service` — layout, theme, and locale persistence
 - `domain_models` — `Book`, `Article`, `LibrarySource`
-- `component_library` — theme, `SearchField`, `ScrollEdgeFade`, `EmptyState`,
+- `component_library` — theme, `SearchField`, `ScrollEdgeFadeStack`, `EmptyState`,
   `ErrorState`, `AppIcons`, `AppSpacing`, `AppRadius`
 - `flutter_bloc`, `equatable`, `stream_transform` (for debounce)

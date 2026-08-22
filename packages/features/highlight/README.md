@@ -1,16 +1,17 @@
 # highlight
 
-Bottom sheet for creating a highlight from a text selection: five-color
-picker, optional note, save. Surfaced from the reader's context panel as a
-`TextAction` plug-in — the reader feature itself knows nothing about
-highlights.
+Reader plug-in for saving text highlights, plus a reusable bottom sheet with a
+five-color picker, optional note, and save action. The reader feature itself
+knows nothing about highlight persistence.
 
 ## Public API
 
-Two exported symbols:
+Primary exported symbols:
 
 ```dart
-class HighlightAction extends TextAction { ... }   // reader plug-in
+class HighlightAction extends ColorHighlightTextAction { ... } // reader plug-in
+
+class HighlightSheet extends StatelessWidget { ... } // standalone form
 
 Future<void> showHighlightSheet(
   BuildContext context, {
@@ -20,16 +21,20 @@ Future<void> showHighlightSheet(
 ```
 
 `HighlightAction` is wired into the reader's `List<TextAction>` in the
-composition root (`routing.dart`). It carries its own repository
-dependencies so the reader stays source-agnostic. `label` is `Highlight`,
-`icon` is `AppIcons.highlight`.
+composition root (`routing.dart`). It implements `ColorHighlightTextAction` so
+the reader can show its compact color row without importing this feature.
+Choosing a color saves immediately; invoking the generic action uses yellow.
+The localized label comes from `labelFor(context)` and the icon is
+`AppIcons.highlight`.
 
 `showHighlightSheet` can also be used directly by non-reader flows that need
 the same highlight creation UI.
 
 ## Architecture
 
-Single `HighlightCubit` (state in `highlight_state.dart`, `part of`).
+The immediate reader action persists through `HighlightRepository` directly.
+The standalone sheet owns a `HighlightCubit` (state in `highlight_state.dart`,
+`part of`) for its editable draft:
 
 - Status machine: `idle → saving → success | failure`
 - Fields tracked: `selectedColor` (defaults to `HighlightColor.yellow`),

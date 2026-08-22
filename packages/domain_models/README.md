@@ -3,10 +3,11 @@
 Immutable domain models, enums, and exceptions shared across repositories,
 services, and features. Pure Dart — no Flutter, no storage, no services.
 
-Every model is a plain `class` extending `Equatable`, with a `copyWith`
-method and a `const` constructor. Every enum has a `from(String)`
-parser that falls back to a default, and (where storage keys differ
-from Dart names) a `toStorageString()` helper.
+Models are immutable `Equatable` values with `const` constructors where their
+fields allow it. Models that callers update expose `copyWith`; read-only
+payloads and derived projections may intentionally omit it. Persisted enums
+provide a tolerant parser (`from`, `fromString`, or a format-specific helper)
+where a storage or wire boundary needs one.
 
 ---
 
@@ -19,10 +20,13 @@ from Dart names) a `toStorageString()` helper.
 | `ArticleBlock`    | Structured article content returned by the cleaner        |
 | `ExtractedArticle` | Cleaner response before local persistence assigns paths  |
 | `LibrarySource`   | Unified library/details projection for books and articles |
+| `LibraryCollection` | Persisted manual collection metadata                    |
 | `SourceBookmark`  | Bookmark anchored to a source with CFI/page metadata      |
 | `Highlight`       | Text or image-area highlight attached to a reading source |
+| `HighlightImageArea` | Normalized image-page highlight rectangle              |
 | `Flashcard`       | Flashcard with front/back and creation source             |
 | `DictionaryEntry` | Saved word or phrase with translation and usage examples  |
+| `DictionaryAnchor` | Source-scoped anchor attached to a dictionary entry       |
 | `ReviewItem`      | FSRS state for a reviewable item (flashcard/highlight/…)  |
 | `ReviewLog`       | Single review event, persisted for history and statistics |
 | `FsrsCardData`    | Embedded FSRS v6 state (stability, difficulty, due date)  |
@@ -43,6 +47,7 @@ They stay in `domain_models` for storage compatibility and future restoration.
 | `FsrsState`            | `newCard`, `learning`, `review`, `relearning` |
 | `Rating`               | `again`, `hard`, `good`, `easy`               |
 | `CreationSource`       | `manual`, `aiHighlight`, `aiSelection`        |
+| `DictionaryAnchorKind` | `exactSelection`, `normalizedSelection`, `expression` |
 
 ## Exceptions
 
@@ -102,7 +107,8 @@ Nothing in this package imports from anywhere else in the repo.
 
 - Plain `class` extending `Equatable`. `final class` only where Dart
   enforces it (e.g. `sealed` children).
-- Immutable fields, `const` constructors, `copyWith`.
+- Immutable fields and `const` constructors where possible. Add `copyWith`
+  when callers need value updates rather than requiring it on every payload.
 - No Flutter imports. No storage types. No services.
-- Enums declare `from(String)` parsers with a default fallback so
-  corrupted storage values never crash the app.
+- Enums crossing storage or wire boundaries expose tolerant parsers so corrupt
+  external values do not crash the app.

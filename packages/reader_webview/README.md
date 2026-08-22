@@ -56,7 +56,7 @@ updates article text highlights through stable article anchors.
 `onSelectionEnd` carries both the exact selected text and, when the user
 selects only part of a word/span, a lexical `normalizedText` expanded to
 complete word boundaries. Text actions can preserve the exact selection for
-highlights while using the normalized fields for future lexical actions.
+highlights while Translate and Define use the normalized lexical fields.
 
 `onImageAreaSelected` is the image-page counterpart used by comics/fixed-layout
 pages. It carries a zero-based page index, a normalized rectangle relative to

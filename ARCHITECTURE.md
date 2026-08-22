@@ -159,7 +159,7 @@ When adding or renaming a localized key:
 | `local_storage` | Single Drift database (`readflex.db`), tables, DAOs, migrations, storage rows. | none |
 | `component_library` | Design tokens, theme extensions, reusable UI components, bottom-sheet shell, shared visual primitives. | none |
 | `readflex_localizations` | Generated Flutter localizations, ARB files, supported locale metadata, and `BuildContext` localization helpers. | none |
-| `shared` | Narrow cross-feature contracts. Currently `TextAction` and `TextSelectionContext`. | `domain_models` |
+| `shared` | Narrow cross-feature contracts. Currently reader text-action and selection contracts. | `domain_models` |
 
 Domain models are the neutral contract between repositories, services, blocs,
 and UI. Storage rows and DAO types should remain behind repositories.
@@ -191,7 +191,7 @@ vocabulary features is `189e2cc1`.
 | `contextual_translation_service` | Contextual translation request/result contracts, remote client, cache, and ML Kit offline fallback coordinator. | Used by the `translate` feature. |
 | `dictionary_service` | System definition UI bridge contract and typed HTTP client/models for monolingual dictionary lookup. | Used by the `dictionary` feature; native implementations live in the app runners. |
 | `device_screen_brightness` | Native/plugin brightness access. | Low-level platform package used by `screen_control_service`. |
-| `monitoring` | Logger, log observers, analytics/error reporter contracts and no-op implementations. | Production reporters are not implemented yet. |
+| `monitoring` | Logger, log observers, analytics/error reporter contracts, GlitchTip reporting, and no-op fallbacks. | GlitchTip is active when configured; analytics remains a no-op. |
 | `preferences_service` | Preferences model, storage, repository, service, and scope. | Used by Library, Reader, and app composition. |
 | `reader_server` | Localhost HTTP server for reader assets and book/article files. | Supports range requests for books and local article HTML/assets for WebView readers. |
 | `reader_webview` | Foliate book WebView wrapper, vertical article HTML wrapper, JS bridges, asset extraction, metadata extraction. | Used by Reader and Import Flow. |

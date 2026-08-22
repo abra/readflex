@@ -1,8 +1,9 @@
 # reader
 
-Book reader. Single full-screen route (`/reader/:sourceId`) that hosts the
-WebView-based reading surface, bottom action chrome, and a text-selection
-context panel populated by pluggable `TextAction`s.
+Full-screen reader for books, comics, and saved articles. The single route
+(`/reader/:sourceId`) hosts the WebView-based reading surface, bottom action
+chrome, and a text-selection context panel populated by pluggable
+`TextAction`s.
 
 ## Public API
 
@@ -72,7 +73,7 @@ abstract class TextAction {
 |-------------------------------|----------------------------------------------------------------------------|
 | `ReaderBloc`                  | Content: load source document + highlights/bookmarks, debounced position save (500ms) |
 | `ReaderUiCubit`               | Chrome, drawer, appearance-sheet and search-highlight UI state             |
-| `ReaderSearchCubit`           | Book-search debounce, streamed results, progress and recent queries        |
+| `ReaderSearchCubit`           | Document-search debounce, streamed results, progress and recent queries    |
 | `ReaderSelectionCubit`        | Current text selection (text + `cfiRange`)                                 |
 | `ReaderImageSelectionCubit`   | Current image-page area selection for comics/fixed-layout pages            |
 | `ReaderImageHighlightCubit`   | Persists image-page highlights with optional notes, then `ReaderBloc` refreshes annotations |
@@ -102,8 +103,9 @@ through the bloc's error pipeline without emitting state themselves.
   normalized area annotations keyed by page index.
 - **`_ReaderArticleHtmlBody`** hosts `ArticleHtmlReaderWebView` for article
   sources. Articles scroll vertically, report progress through stable sentence
-  anchors in `content.html`, and expose contents/search/bookmark chrome actions.
-  Text/image annotation editing remains on the foliate book/comic path.
+  anchors in `content.html`, expose contents/search/bookmark chrome actions,
+  and render text highlights through stable article anchors. Image-area
+  selection remains specific to the foliate comic/fixed-layout path.
 - Reader theme (`ReaderThemeData`, font preset, layout preset) is resolved
   from `ReaderAppearanceCubit` and passed as CSS / URL params to the WebView; the
   WebView body itself is rebuilt only on preference changes, never on selection

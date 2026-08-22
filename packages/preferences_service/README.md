@@ -21,7 +21,7 @@ through a dedicated secure-storage backed service.
 | `PreferencesService`            | concrete         | Loads, streams, and persists `Preferences`                         |
 | `PreferencesStorage`            | concrete         | Thin `SharedPreferences` wrapper                                   |
 | `PreferencesRepository`         | concrete         | JSON (de)serialization + locale resolution                         |
-| `PreferencesScope`              | StatelessWidget  | `InheritedModel` with `themeMode` / `readerAppearance` aspects     |
+| `PreferencesScope`              | StatelessWidget  | `InheritedModel` with locale, theme, and reader-appearance aspects |
 
 ### What is stored
 
@@ -34,7 +34,7 @@ through a dedicated secure-storage backed service.
 | `readerFontId`             | `String`    | `'serif'`   |
 | `readerLayoutId`           | `String`    | `'standard'`|
 | `readerTextScale`          | `double`    | `1.0`       |
-| `readerLineHeight`         | `double`    | `1.55`      |
+| `readerLineHeight`         | `double`    | `1.6`       |
 | `readerSideMargin`         | `double`    | `8.0`       |
 | `readerTextAlignment`      | `ReaderTextAlignment` | `start` |
 | `readerInvertImagesInDark` | `bool`      | `false`     |

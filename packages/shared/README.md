@@ -1,8 +1,8 @@
 # shared
 
 Cross-feature contracts. Currently hosts the `TextAction` plugin contract
-that lets the reader surface buttons from other features, such as highlight,
-without knowing anything about their persistence.
+that lets the reader surface Highlight, Translate, and Define without knowing
+anything about their persistence or service implementations.
 
 This is the only contract package in the project that depends on Flutter —
 `TextAction.icon` is an `IconData`, and actions are executed with a
@@ -14,14 +14,16 @@ This is the only contract package in the project that depends on Flutter —
 
 | Symbol                 | Kind           | Purpose                                                         |
 |------------------------|----------------|-----------------------------------------------------------------|
-| `TextAction`           | abstract class | Contract implemented by features that appear in the reader menu |
-| `TextSelectionContext` | data class     | Payload passed to an action when the user selects text          |
+| `TextAction`                | abstract class | Contract implemented by features that appear in the reader menu |
+| `ColorHighlightTextAction`  | abstract class | Highlight action contract with caller-selected color            |
+| `TextSelectionContext`      | data class     | Payload passed to an action when the user selects text           |
 
 ### TextAction
 
 ```dart
 abstract class TextAction {
   String get label;
+  String labelFor(BuildContext context) => label;
   IconData get icon;
   Future<void> onExecute(BuildContext context, TextSelectionContext selection);
 }
@@ -42,10 +44,14 @@ abstract class TextAction {
 | `effectiveMarkedContextText`      | `String?`    | Matching normalized marked context when valid   |
 | `sourceLanguageHint`              | `String?`    | Best-known document language hint for actions   |
 | `sourceId`                        | `String`     | Source ID                                       |
-| `sourceType`                      | `SourceType` | Book, article, comic, etc.                      |
-| `cfiRange`                        | `String?`    | EPUB CFI range                                  |
+| `sourceType`                      | `SourceType` | Book or article; comics are book sources        |
+| `cfiRange`                        | `String?`    | Reader anchor for the exact selection           |
+| `normalizedCfiRange`              | `String?`    | Reader anchor for the normalized selection      |
 | `pageNumber`                      | `int?`       | Legacy optional page position                   |
 | `scrollOffset`                    | `double?`    | Legacy optional scroll position                 |
+| `progress`                        | `double?`    | Normalized source progress at selection time    |
+| `chapterTitle`                    | `String?`    | Visible chapter title at selection time         |
+| `containedHighlightIds`           | `List<String>` | Existing highlights contained by the selection |
 
 ---
 
@@ -53,7 +59,7 @@ abstract class TextAction {
 
 ```dart
 // packages/features/highlight/lib/src/highlight_action.dart
-class HighlightAction extends TextAction {
+class HighlightAction extends ColorHighlightTextAction {
   const HighlightAction({
     required this.highlightRepository,
   });
@@ -64,17 +70,23 @@ class HighlightAction extends TextAction {
   String get label => 'Highlight';
 
   @override
+  String labelFor(BuildContext context) => context.l10n.highlightAction;
+
+  @override
   IconData get icon => AppIcons.highlight;
 
   @override
   Future<void> onExecute(
     BuildContext context,
     TextSelectionContext selection,
-  ) => showHighlightSheet(
-    context,
-    highlightRepository: highlightRepository,
-    selection: selection,
-  );
+  ) => onExecuteWithColor(context, selection, HighlightColor.yellow);
+
+  @override
+  Future<void> onExecuteWithColor(
+    BuildContext context,
+    TextSelectionContext selection,
+    HighlightColor color,
+  ) => highlightRepository.addHighlight(/* selection anchor + color */);
 }
 ```
 
@@ -90,6 +102,8 @@ purely from the list — it never imports a feature package.
 shared → domain_models, flutter (widgets)
 features/reader       → shared   (consumes TextAction list)
 features/highlight    → shared   (implements TextAction)
+features/translate    → shared   (implements TextAction)
+features/dictionary   → shared   (implements TextAction)
 ```
 
 ---

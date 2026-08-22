@@ -8,8 +8,7 @@ import 'package:shared/shared.dart';
 
 import 'highlight_cubit.dart';
 
-/// Opens the [HighlightSheet] as a modal bottom sheet. Called by
-/// [HighlightAction] from the reader's text-selection context panel.
+/// Opens the standalone [HighlightSheet] as a modal bottom sheet.
 Future<void> showHighlightSheet(
   BuildContext context, {
   required HighlightRepository highlightRepository,
