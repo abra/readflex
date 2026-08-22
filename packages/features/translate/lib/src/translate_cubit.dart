@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:shared/shared.dart';
 
+import 'translation_selection_mode.dart';
+
 enum TranslateSheetStatus {
   initial,
   loading,
@@ -155,7 +157,7 @@ class TranslateCubit extends Cubit<TranslateSheetState> {
     final currentText = contextText == null || contextText.isEmpty
         ? selection.effectiveSelectedText
         : contextText;
-    final mode = _translationModeFor(selection, currentText);
+    final mode = translationModeForSelection(selection);
     return ContextualTranslationRequest(
       sourceLanguage: state.sourceLanguageCode,
       sourceLanguageHint: selection.sourceLanguageHint,
@@ -187,34 +189,6 @@ class TranslateCubit extends Cubit<TranslateSheetState> {
     );
   }
 }
-
-String _translationModeFor(
-  TextSelectionContext selection,
-  String currentContext,
-) {
-  final selected = _collapseWhitespace(selection.effectiveSelectedText);
-  if (selected.isEmpty) return contextualTranslationMode;
-
-  final words = selected.split(' ');
-  final context = _collapseWhitespace(currentContext);
-  final isWholeContext = words.length > 1 && selected == context;
-  final containsSentenceBoundary = RegExp(
-    r'[\r\n.!?\u2026\u3002\uFF01\uFF1F\u061F]',
-  ).hasMatch(selected);
-  final exceedsLexicalSpan =
-      words.length > _maxContextualLookupWords ||
-      selected.runes.length > _maxContextualLookupCharacters;
-
-  return isWholeContext || containsSentenceBoundary || exceedsLexicalSpan
-      ? selectedTextTranslationMode
-      : contextualTranslationMode;
-}
-
-String _collapseWhitespace(String value) =>
-    value.replaceAll(RegExp(r'\s+'), ' ').trim();
-
-const _maxContextualLookupWords = 6;
-const _maxContextualLookupCharacters = 64;
 
 TranslateSheetStatus _statusFor(ContextualTranslationFailureReason reason) {
   return switch (reason) {

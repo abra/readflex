@@ -33,6 +33,11 @@ Short words and expressions use `contextual_lookup` so the backend can resolve
 their meaning inside the surrounding sentence. Complete sentences, paragraphs,
 and long selections use `text_translation`; in that mode the complete selected
 range is the translation target and lexical analysis fields are not rendered.
-Single-token lookup results use headline typography. Multi-word expressions and
-complete-text translations use body typography so longer results remain compact
-and readable inside the bottom sheet.
+For contextual lookup, the sheet previews the complete source context and
+highlights the selected range from the reader's marked-context contract. The
+contextual translation remains the primary result, followed by the complete
+sentence translation and optional lexical details. Text-translation mode shows
+the exact selected source and one complete translation without those duplicate
+sections. Single-token lookup results use headline typography; multi-word and
+complete-text translations use body typography. The sheet body has a bounded,
+scrollable viewport so long contexts and lexical results do not overflow.

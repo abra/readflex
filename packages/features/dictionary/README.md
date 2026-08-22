@@ -12,6 +12,12 @@ its sentence context to the Readflex Dictionary API. That backend calls
 DeepSeek, validates its structured response, and caches valid definitions;
 the mobile app never calls DeepSeek or contains its provider key.
 
+Readflex keeps the selected term's canonical lemma as the first entry. When
+the marked sentence context contains a reliable lexicalized expression, the
+backend may append it as a second monolingual entry. For example, selecting
+`shutting` in `shutting off` shows `shut` first and `shut off` below it. The
+expression supplements the selected word and never replaces it.
+
 ## Architecture
 
 - `DictionaryAction` owns system-first orchestration and opens the sheet only

@@ -17,31 +17,10 @@ void main() {
   });
 
   testWidgets(
-    'renders compact language selectors without visible From and To labels',
+    'renders contextual source preview and compact language selectors',
     (tester) async {
       final semantics = tester.ensureSemantics();
-      final preferences = await PreferencesService.create(
-        supportedCodes: const ['en', 'ru'],
-      );
-      await preferences.update(
-        (prefs) => prefs.copyWith(translationTargetLanguageCode: 'ru'),
-      );
-
-      await tester.pumpWidget(
-        MaterialApp(
-          supportedLocales: ReadflexSupportedLocales.locales,
-          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
-          theme: AppTheme.light(),
-          home: Scaffold(
-            body: TranslateSheet(
-              selection: _selection,
-              translationService: _FakeTranslationService(),
-              preferencesService: preferences,
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
+      await _pumpTranslateSheet(tester, selection: _selection);
 
       expect(find.text('From'), findsNothing);
       expect(find.text('To'), findsNothing);
@@ -57,8 +36,25 @@ void main() {
         );
       }
 
-      final translation = find.widgetWithText(SelectableText, 'сила');
+      final preview = _previewText(tester);
+      expect(
+        preview.textSpan?.toPlainText(),
+        'This power bank provides emergency power.',
+      );
+      final selectedSpan = _previewSpans(
+        tester,
+      ).singleWhere((span) => span.text == 'power');
+      expect(selectedSpan.style?.fontWeight, FontWeight.w600);
+      expect(
+        selectedSpan.style?.backgroundColor,
+        Theme.of(tester.element(_previewFinder)).colorScheme.primaryContainer,
+      );
+
+      final translation = find.byKey(
+        const ValueKey('translation-primary-result'),
+      );
       final translationWidget = tester.widget<SelectableText>(translation);
+      expect(translationWidget.data, 'сила');
       expect(
         translationWidget.style,
         Theme.of(tester.element(translation)).textTheme.headlineSmall,
@@ -67,43 +63,61 @@ void main() {
     },
   );
 
-  testWidgets('text translation hides lexical-only result fields', (
+  testWidgets(
+    'lexical lookup shows the full sentence translation before details',
+    (tester) async {
+      await _pumpTranslateSheet(
+        tester,
+        selection: _selection,
+        service: const _FakeTranslationService(includeLexicalDetails: true),
+      );
+
+      expect(find.text('питание'), findsOneWidget);
+      expect(find.text('Sentence'), findsOneWidget);
+      expect(
+        find.text('Этот аккумулятор обеспечивает аварийное питание.'),
+        findsOneWidget,
+      );
+      expect(find.text('power'), findsOneWidget);
+      expect(find.text('Lexical explanation'), findsOneWidget);
+      expect(find.text('релизы'), findsOneWidget);
+
+      final primary = find.byKey(const ValueKey('translation-primary-result'));
+      final sentence = find.byKey(
+        const ValueKey('translation-sentence-result'),
+      );
+      expect(
+        tester.getTopLeft(primary).dy,
+        lessThan(tester.getTopLeft(sentence).dy),
+      );
+      expect(
+        tester.getTopLeft(sentence).dy,
+        lessThan(tester.getTopLeft(find.text('Lexical explanation')).dy),
+      );
+    },
+  );
+
+  testWidgets('text translation uses exact source and hides lexical fields', (
     tester,
   ) async {
-    final preferences = await PreferencesService.create(
-      supportedCodes: const ['en', 'ru'],
-    );
-    await preferences.update(
-      (prefs) => prefs.copyWith(translationTargetLanguageCode: 'ru'),
+    await _pumpTranslateSheet(
+      tester,
+      selection: _paragraphSelection,
+      service: const _FakeTranslationService(includeLexicalDetails: true),
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        supportedLocales: ReadflexSupportedLocales.locales,
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
-        theme: AppTheme.light(),
-        home: Scaffold(
-          body: TranslateSheet(
-            selection: _paragraphSelection,
-            translationService: _FakeTranslationService(
-              includeLexicalDetails: true,
-            ),
-            preferencesService: preferences,
-          ),
-        ),
-      ),
+    expect(
+      _previewText(tester).textSpan?.toPlainText(),
+      _paragraphSelection.selectedText,
     );
-    await tester.pumpAndSettle();
-
     expect(find.text('Запуски в наши дни в основном произвольны.'), findsOne);
-    expect(find.text('launch'), findsNothing);
+    expect(find.text('power'), findsNothing);
     expect(find.text('Sentence'), findsNothing);
     expect(find.text('Lexical explanation'), findsNothing);
     expect(find.text('релизы'), findsNothing);
 
-    final translation = find.widgetWithText(
-      SelectableText,
-      'Запуски в наши дни в основном произвольны.',
+    final translation = find.byKey(
+      const ValueKey('translation-primary-result'),
     );
     final translationWidget = tester.widget<SelectableText>(translation);
     expect(
@@ -115,41 +129,120 @@ void main() {
   testWidgets('short multi-word translation uses readable body typography', (
     tester,
   ) async {
-    final preferences = await PreferencesService.create(
-      supportedCodes: const ['en', 'ru'],
-    );
-    await preferences.update(
-      (prefs) => prefs.copyWith(translationTargetLanguageCode: 'ru'),
-    );
+    await _pumpTranslateSheet(tester, selection: _phraseSelection);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        supportedLocales: ReadflexSupportedLocales.locales,
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
-        theme: AppTheme.light(),
-        home: Scaffold(
-          body: TranslateSheet(
-            selection: _phraseSelection,
-            translationService: const _FakeTranslationService(),
-            preferencesService: preferences,
-          ),
-        ),
-      ),
+    final translation = find.byKey(
+      const ValueKey('translation-primary-result'),
     );
-    await tester.pumpAndSettle();
-
-    final translation = find.widgetWithText(SelectableText, 'сила');
     final translationWidget = tester.widget<SelectableText>(translation);
     expect(
       translationWidget.style,
       Theme.of(tester.element(translation)).textTheme.bodyLarge,
     );
   });
+
+  testWidgets('malformed marked context falls back to clean context text', (
+    tester,
+  ) async {
+    await _pumpTranslateSheet(tester, selection: _malformedMarkedSelection);
+
+    final preview = _previewText(tester);
+    expect(
+      preview.textSpan?.toPlainText(),
+      'A portable battery stores power safely.',
+    );
+    expect(preview.textSpan?.toPlainText(), isNot(contains('[[')));
+    expect(
+      _previewSpans(tester).singleWhere((span) => span.text == 'power'),
+      isNotNull,
+    );
+  });
+
+  testWidgets('stale marked context is rejected for the current selection', (
+    tester,
+  ) async {
+    await _pumpTranslateSheet(tester, selection: _staleMarkedSelection);
+
+    expect(
+      _previewText(tester).textSpan?.toPlainText(),
+      'This power bank is compact.',
+    );
+    expect(
+      _previewSpans(tester).singleWhere((span) => span.text == 'power bank'),
+      isNotNull,
+    );
+  });
+
+  testWidgets('long lexical result is constrained and scrollable', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await _pumpTranslateSheet(
+      tester,
+      selection: _selection,
+      service: const _FakeTranslationService(
+        includeLexicalDetails: true,
+        alternativeCount: 16,
+      ),
+    );
+
+    final scrollView = find.byType(SingleChildScrollView);
+    expect(scrollView, findsOneWidget);
+    expect(tester.getSize(scrollView).height, closeTo(408, 0.001));
+    expect(find.text('вариант 16'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+}
+
+Future<void> _pumpTranslateSheet(
+  WidgetTester tester, {
+  required TextSelectionContext selection,
+  ContextualTranslationService service = const _FakeTranslationService(),
+}) async {
+  final preferences = await PreferencesService.create(
+    supportedCodes: const ['en', 'ru'],
+  );
+  await preferences.update(
+    (prefs) => prefs.copyWith(translationTargetLanguageCode: 'ru'),
+  );
+
+  await tester.pumpWidget(
+    MaterialApp(
+      supportedLocales: ReadflexSupportedLocales.locales,
+      localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+      theme: AppTheme.light(),
+      home: Scaffold(
+        body: TranslateSheet(
+          selection: selection,
+          translationService: service,
+          preferencesService: preferences,
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Finder get _previewFinder =>
+    find.byKey(const ValueKey('translation-selection-preview-text'));
+
+Text _previewText(WidgetTester tester) => tester.widget<Text>(_previewFinder);
+
+List<TextSpan> _previewSpans(WidgetTester tester) {
+  final root = _previewText(tester).textSpan! as TextSpan;
+  return root.children!.whereType<TextSpan>().toList(growable: false);
 }
 
 const _selection = TextSelectionContext(
   selectedText: 'power',
   normalizedSelectedText: 'power',
+  contextText: 'This power bank provides emergency power.',
+  markedContextText: 'This [[power]] bank provides emergency power.',
+  normalizedMarkedContextText: 'This [[power]] bank provides emergency power.',
   sourceId: 'source-1',
   sourceType: SourceType.article,
   sourceLanguageHint: 'en',
@@ -157,6 +250,11 @@ const _selection = TextSelectionContext(
 
 const _paragraphSelection = TextSelectionContext(
   selectedText: 'Launches are mostly arbitrary these days.',
+  contextText:
+      'Before this point. Launches are mostly arbitrary these days. After it.',
+  markedContextText:
+      'Before this point. [[Launches are mostly arbitrary these days.]] '
+      'After it.',
   sourceId: 'source-1',
   sourceType: SourceType.article,
   sourceLanguageHint: 'en',
@@ -169,16 +267,39 @@ const _phraseSelection = TextSelectionContext(
   sourceLanguageHint: 'en',
 );
 
+const _malformedMarkedSelection = TextSelectionContext(
+  selectedText: 'power',
+  contextText: 'A portable battery stores power safely.',
+  markedContextText: 'A portable battery stores [[power safely.',
+  sourceId: 'source-1',
+  sourceType: SourceType.article,
+  sourceLanguageHint: 'en',
+);
+
+const _staleMarkedSelection = TextSelectionContext(
+  selectedText: 'power bank',
+  contextText: 'This power bank is compact.',
+  markedContextText: 'This [[power]] bank is compact.',
+  sourceId: 'source-1',
+  sourceType: SourceType.article,
+  sourceLanguageHint: 'en',
+);
+
 class _FakeTranslationService implements ContextualTranslationService {
-  const _FakeTranslationService({this.includeLexicalDetails = false});
+  const _FakeTranslationService({
+    this.includeLexicalDetails = false,
+    this.alternativeCount = 1,
+  });
 
   final bool includeLexicalDetails;
+  final int alternativeCount;
 
   @override
   Future<ContextualTranslationResult> translate(
     ContextualTranslationRequest request, {
     bool allowOfflineModelDownload = false,
   }) async {
+    final isTextTranslation = request.mode == selectedTextTranslationMode;
     return ContextualTranslationResult(
       requestId: request.requestId,
       mode: request.mode,
@@ -187,19 +308,26 @@ class _FakeTranslationService implements ContextualTranslationService {
       detectedSourceLanguage: 'en',
       targetLanguage: request.targetLanguage,
       analysis: includeLexicalDetails
-          ? const ContextualTranslationAnalysis(lemma: 'launch')
+          ? const ContextualTranslationAnalysis(lemma: 'power')
           : null,
       translation: ContextualTranslationText(
-        contextualTranslation: includeLexicalDetails
+        contextualTranslation: isTextTranslation
             ? 'Запуски в наши дни в основном произвольны.'
+            : includeLexicalDetails
+            ? 'питание'
             : 'сила',
         sentenceTranslation: includeLexicalDetails
-            ? 'Лексический перевод предложения.'
+            ? 'Этот аккумулятор обеспечивает аварийное питание.'
             : null,
       ),
       explanation: includeLexicalDetails ? 'Lexical explanation' : null,
       alternatives: includeLexicalDetails
-          ? const [ContextualTranslationAlternative(translation: 'релизы')]
+          ? List.generate(
+              alternativeCount,
+              (index) => ContextualTranslationAlternative(
+                translation: index == 0 ? 'релизы' : 'вариант ${index + 1}',
+              ),
+            )
           : const [],
     );
   }

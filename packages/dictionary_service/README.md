@@ -31,8 +31,11 @@ request shape:
 }
 ```
 
-`source_language` is an optional hint. `context_text` is optional and is used
-only to choose the relevant meaning; `[[...]]` marks the selected text when
-marked context is available. Responses use typed statuses `found`, `not_found`,
-or `unsupported_language`, include the same `request_id`, and may include
-lexical entries, examples, and pronunciation.
+`source_language` is an optional hint. `context_text` is optional;
+`[[...]]` marks the selected text when marked context is available. The backend
+uses it to choose the relevant meaning and may recognize a conventional
+lexicalized expression containing the selection. Responses use typed statuses
+`found`, `not_found`, or `unsupported_language`, include the same `request_id`,
+and may include ordered lexical entries, examples, and pronunciation. The
+selected term's canonical lemma remains first; a contextual expression such as
+`shut off` follows as a separate entry.

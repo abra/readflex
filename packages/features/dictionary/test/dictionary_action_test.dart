@@ -95,12 +95,67 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('renders a contextual expression after the selected lemma', (
+    tester,
+  ) async {
+    final remoteService = _FakeLookupService(
+      result: const DictionaryLookupResult(
+        requestId: 'request-2',
+        status: DictionaryLookupStatus.found,
+        term: 'shutting',
+        language: 'en',
+        entries: [
+          DictionaryLexicalEntry(
+            lemma: 'shut',
+            partOfSpeech: 'verb',
+            definitions: [DictionaryDefinition(text: 'To close something.')],
+          ),
+          DictionaryLexicalEntry(
+            lemma: 'shut off',
+            partOfSpeech: 'phrasal verb',
+            definitions: [
+              DictionaryDefinition(
+                text: 'To stop operating or make something stop operating.',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    final action = DictionaryAction(
+      systemDictionaryService: _FakeSystemDictionaryService(presented: false),
+      dictionaryLookupService: remoteService,
+    );
+    await tester.pumpWidget(
+      _ActionHost(action: action, selection: _phrasalVerbSelection),
+    );
+
+    await tester.tap(find.text('Run'));
+    await tester.pumpAndSettle();
+
+    expect(remoteService.lastRequest?.term, 'shutting');
+    expect(
+      remoteService.lastRequest?.contextText,
+      'The device keeps [[shutting]] off.',
+    );
+    expect(find.text('shut'), findsOneWidget);
+    expect(find.text('shut off'), findsOneWidget);
+    expect(find.text('verb'), findsOneWidget);
+    expect(find.text('phrasal verb'), findsOneWidget);
+    expect(find.byType(Divider), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('shut')).dy,
+      lessThan(tester.getTopLeft(find.text('shut off')).dy),
+    );
+  });
 }
 
 class _ActionHost extends StatelessWidget {
-  const _ActionHost({required this.action});
+  const _ActionHost({required this.action, this.selection = _selection});
 
   final DictionaryAction action;
+  final TextSelectionContext selection;
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +166,7 @@ class _ActionHost extends StatelessWidget {
       home: Scaffold(
         body: Builder(
           builder: (context) => TextButton(
-            onPressed: () => action.onExecute(context, _selection),
+            onPressed: () => action.onExecute(context, selection),
             child: const Text('Run'),
           ),
         ),
@@ -128,6 +183,16 @@ const _selection = TextSelectionContext(
   sourceLanguageHint: 'en',
   contextText: 'The power bank is compact.',
   normalizedMarkedContextText: 'The [[power]] bank is compact.',
+);
+
+const _phrasalVerbSelection = TextSelectionContext(
+  selectedText: 'shutting',
+  normalizedSelectedText: 'shutting',
+  sourceId: 'source-2',
+  sourceType: SourceType.article,
+  sourceLanguageHint: 'en',
+  contextText: 'The device keeps shutting off.',
+  normalizedMarkedContextText: 'The device keeps [[shutting]] off.',
 );
 
 class _FakeSystemDictionaryService implements SystemDictionaryService {

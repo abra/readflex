@@ -48,6 +48,41 @@ void main() {
     ]);
   });
 
+  test('result preserves primary and contextual entry order', () {
+    final result = DictionaryLookupResult.fromJson({
+      'request_id': 'request-2',
+      'status': 'found',
+      'term': 'shutting',
+      'language': 'en',
+      'entries': [
+        {
+          'lemma': 'shut',
+          'language': 'en',
+          'part_of_speech': 'verb',
+          'definitions': [
+            {'text': 'To close something.', 'examples': <String>[]},
+          ],
+        },
+        {
+          'lemma': 'shut off',
+          'language': 'en',
+          'part_of_speech': 'phrasal verb',
+          'definitions': [
+            {
+              'text': 'To stop operating or make something stop operating.',
+              'examples': <String>[],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(
+      result.entries.map((entry) => entry.lemma),
+      orderedEquals(['shut', 'shut off']),
+    );
+  });
+
   test('result rejects unknown statuses', () {
     expect(
       () => DictionaryLookupResult.fromJson({

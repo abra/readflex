@@ -6,6 +6,8 @@ import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:shared/shared.dart';
 
+import 'translation_selection_mode.dart';
+import 'translation_selection_preview.dart';
 import 'translate_cubit.dart';
 
 Future<void> showTranslateSheet(
@@ -56,6 +58,9 @@ class _TranslateSheetView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = TranslateSheetStrings.of(context);
+    final isTextTranslation =
+        translationModeForSelection(selection) == selectedTextTranslationMode;
+    final maxBodyHeight = MediaQuery.sizeOf(context).height * 0.68;
     return ActionBottomSheetLayout(
       title: strings.title,
       headerSpacing: AppSpacing.sm,
@@ -63,55 +68,63 @@ class _TranslateSheetView extends StatelessWidget {
         horizontal: AppSpacing.xl,
         vertical: AppSpacing.lg,
       ),
-      child: BlocBuilder<TranslateCubit, TranslateSheetState>(
-        builder: (context, state) {
-          final cubit = context.read<TranslateCubit>();
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SelectionPreviewCard(text: selection.effectiveSelectedText),
-              const SizedBox(height: AppSpacing.md),
-              Row(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxBodyHeight),
+        child: SingleChildScrollView(
+          child: BlocBuilder<TranslateCubit, TranslateSheetState>(
+            builder: (context, state) {
+              final cubit = context.read<TranslateCubit>();
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: _LanguageDropdown(
-                      semanticsLabel: strings.sourceLabel,
-                      value: state.sourceLanguageCode,
-                      items: [
-                        _LanguageOption(
-                          code: autoSourceLanguageCode,
-                          name: strings.autoSource,
+                  TranslationSelectionPreview(
+                    selection: selection,
+                    showContext: !isTextTranslation,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _LanguageDropdown(
+                          semanticsLabel: strings.sourceLabel,
+                          value: state.sourceLanguageCode,
+                          items: [
+                            _LanguageOption(
+                              code: autoSourceLanguageCode,
+                              name: strings.autoSource,
+                            ),
+                            ..._supportedLanguageOptions,
+                          ],
+                          enabled: !state.isBusy,
+                          onChanged: (value) {
+                            if (value == null) return;
+                            cubit.setSourceLanguage(selection, value);
+                          },
                         ),
-                        ..._supportedLanguageOptions,
-                      ],
-                      enabled: !state.isBusy,
-                      onChanged: (value) {
-                        if (value == null) return;
-                        cubit.setSourceLanguage(selection, value);
-                      },
-                    ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: _LanguageDropdown(
+                          semanticsLabel: strings.targetLabel,
+                          value: state.targetLanguageCode,
+                          items: _supportedLanguageOptions,
+                          enabled: !state.isBusy,
+                          onChanged: (value) {
+                            if (value == null) return;
+                            cubit.setTargetLanguage(selection, value);
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: _LanguageDropdown(
-                      semanticsLabel: strings.targetLabel,
-                      value: state.targetLanguageCode,
-                      items: _supportedLanguageOptions,
-                      enabled: !state.isBusy,
-                      onChanged: (value) {
-                        if (value == null) return;
-                        cubit.setTargetLanguage(selection, value);
-                      },
-                    ),
-                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  _TranslateBody(selection: selection, state: state),
                 ],
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              _TranslateBody(selection: selection, state: state),
-            ],
-          );
-        },
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -180,11 +193,21 @@ class _TranslationResultView extends StatelessWidget {
         !_selectionWhitespacePattern.hasMatch(
           selection.effectiveSelectedText.trim(),
         );
-    final primary =
-        result.translation.contextualTranslation ??
-        result.translation.translatedFragment ??
-        result.translation.baseTranslation ??
-        result.translation.sentenceTranslation;
+    final primary = _firstNonEmptyText([
+      result.translation.contextualTranslation,
+      result.translation.translatedFragment,
+      result.translation.baseTranslation,
+      result.translation.sentenceTranslation,
+    ]);
+    final sentenceTranslation = _nonEmptyText(
+      result.translation.sentenceTranslation,
+    );
+    final lemma = _nonEmptyText(result.analysis?.lemma);
+    final explanation = _nonEmptyText(result.explanation);
+    final alternatives = result.alternatives
+        .map((alternative) => alternative.translation.trim())
+        .where((translation) => translation.isNotEmpty)
+        .toList(growable: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -206,21 +229,14 @@ class _TranslationResultView extends StatelessWidget {
         if (primary != null)
           SelectableText(
             primary,
+            key: const ValueKey('translation-primary-result'),
             style: usesLexicalHeadline
                 ? context.text.headlineSmall
                 : context.text.bodyLarge,
           ),
-        if (!isTextTranslation && result.analysis?.lemma != null) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            result.analysis!.lemma!,
-            style: context.text.bodyMedium.copyWith(
-              color: context.colors.onSurfaceVariant,
-            ),
-          ),
-        ],
         if (!isTextTranslation &&
-            result.translation.sentenceTranslation != null) ...[
+            sentenceTranslation != null &&
+            sentenceTranslation != primary) ...[
           const SizedBox(height: AppSpacing.md),
           Text(
             strings.sentenceTranslation,
@@ -230,15 +246,25 @@ class _TranslationResultView extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           SelectableText(
-            result.translation.sentenceTranslation!,
+            sentenceTranslation,
+            key: const ValueKey('translation-sentence-result'),
             style: context.text.bodyMedium,
           ),
         ],
-        if (!isTextTranslation && result.explanation != null) ...[
+        if (!isTextTranslation && lemma != null) ...[
           const SizedBox(height: AppSpacing.md),
-          Text(result.explanation!, style: context.text.bodyMedium),
+          Text(
+            lemma,
+            style: context.text.bodyMedium.copyWith(
+              color: context.colors.onSurfaceVariant,
+            ),
+          ),
         ],
-        if (!isTextTranslation && result.alternatives.isNotEmpty) ...[
+        if (!isTextTranslation && explanation != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          Text(explanation, style: context.text.bodyMedium),
+        ],
+        if (!isTextTranslation && alternatives.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
           Text(
             strings.alternatives,
@@ -247,13 +273,10 @@ class _TranslationResultView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
-          for (final alternative in result.alternatives)
+          for (final alternative in alternatives)
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-              child: Text(
-                alternative.translation,
-                style: context.text.bodyMedium,
-              ),
+              child: Text(alternative, style: context.text.bodyMedium),
             ),
         ],
       ],
@@ -262,6 +285,19 @@ class _TranslationResultView extends StatelessWidget {
 }
 
 final _selectionWhitespacePattern = RegExp(r'\s');
+
+String? _firstNonEmptyText(Iterable<String?> values) {
+  for (final value in values) {
+    final text = _nonEmptyText(value);
+    if (text != null) return text;
+  }
+  return null;
+}
+
+String? _nonEmptyText(String? value) {
+  final text = value?.trim();
+  return text == null || text.isEmpty ? null : text;
+}
 
 class _LoadingTranslation extends StatelessWidget {
   const _LoadingTranslation();
