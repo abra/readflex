@@ -8,6 +8,7 @@ const contextualTranslationRequestSchemaVersion =
 const contextualTranslationResultSchemaVersion =
     'readflex.contextual_translation.result.v1';
 const contextualTranslationMode = 'contextual_lookup';
+const selectedTextTranslationMode = 'text_translation';
 const autoSourceLanguageCode = 'auto';
 const contextualTranslationAnchorChapterTitleMaxLength = 512;
 
@@ -238,6 +239,7 @@ class ContextualTranslationRequest extends Equatable {
     String? sourceLanguage,
     String? sourceLanguageHint,
     String? targetLanguage,
+    String? mode,
     TranslationSelection? selection,
     TranslationTextContext? context,
     TranslationAnchor? anchor,
@@ -250,7 +252,7 @@ class ContextualTranslationRequest extends Equatable {
       selection: selection ?? this.selection,
       context: context ?? this.context,
       anchor: anchor ?? this.anchor,
-      mode: mode,
+      mode: mode ?? this.mode,
     );
   }
 
@@ -536,6 +538,7 @@ class ContextualTranslationResult extends Equatable {
   }) {
     return ContextualTranslationResult(
       requestId: request.requestId,
+      mode: request.mode,
       provider: 'google_mlkit_translation',
       status: ContextualTranslationStatus.resolved,
       reliability: ContextualTranslationReliability.offline,

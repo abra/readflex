@@ -136,6 +136,7 @@ class _TranslateBody extends StatelessWidget {
         loading: true,
       ),
       TranslateSheetStatus.success => _TranslationResultView(
+        selection: selection,
         result: state.result!,
       ),
       TranslateSheetStatus.sourceLanguageRequired => _MessageWithAction(
@@ -165,13 +166,20 @@ class _TranslateBody extends StatelessWidget {
 }
 
 class _TranslationResultView extends StatelessWidget {
-  const _TranslationResultView({required this.result});
+  const _TranslationResultView({required this.selection, required this.result});
 
+  final TextSelectionContext selection;
   final ContextualTranslationResult result;
 
   @override
   Widget build(BuildContext context) {
     final strings = TranslateSheetStrings.of(context);
+    final isTextTranslation = result.mode == selectedTextTranslationMode;
+    final usesLexicalHeadline =
+        !isTextTranslation &&
+        !_selectionWhitespacePattern.hasMatch(
+          selection.effectiveSelectedText.trim(),
+        );
     final primary =
         result.translation.contextualTranslation ??
         result.translation.translatedFragment ??
@@ -196,8 +204,13 @@ class _TranslationResultView extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.sm),
         if (primary != null)
-          SelectableText(primary, style: context.text.headlineSmall),
-        if (result.analysis?.lemma != null) ...[
+          SelectableText(
+            primary,
+            style: usesLexicalHeadline
+                ? context.text.headlineSmall
+                : context.text.bodyLarge,
+          ),
+        if (!isTextTranslation && result.analysis?.lemma != null) ...[
           const SizedBox(height: AppSpacing.sm),
           Text(
             result.analysis!.lemma!,
@@ -206,7 +219,8 @@ class _TranslationResultView extends StatelessWidget {
             ),
           ),
         ],
-        if (result.translation.sentenceTranslation != null) ...[
+        if (!isTextTranslation &&
+            result.translation.sentenceTranslation != null) ...[
           const SizedBox(height: AppSpacing.md),
           Text(
             strings.sentenceTranslation,
@@ -220,11 +234,11 @@ class _TranslationResultView extends StatelessWidget {
             style: context.text.bodyMedium,
           ),
         ],
-        if (result.explanation != null) ...[
+        if (!isTextTranslation && result.explanation != null) ...[
           const SizedBox(height: AppSpacing.md),
           Text(result.explanation!, style: context.text.bodyMedium),
         ],
-        if (result.alternatives.isNotEmpty) ...[
+        if (!isTextTranslation && result.alternatives.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
           Text(
             strings.alternatives,
@@ -246,6 +260,8 @@ class _TranslationResultView extends StatelessWidget {
     );
   }
 }
+
+final _selectionWhitespacePattern = RegExp(r'\s');
 
 class _LoadingTranslation extends StatelessWidget {
   const _LoadingTranslation();

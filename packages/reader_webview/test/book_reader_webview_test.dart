@@ -251,7 +251,10 @@ void main() {
       expect(bookJs, contains('clearSelectionForAnnotationMenu(doc)'));
       expect(bookJs, contains('globalThis.reader?.annotationsByValue'));
       expect(bookJs, contains('installNativeTextActionMenuGuard(doc)'));
-      expect(bookJs, contains('clearSelectionForNativeTextActionMenu(doc)'));
+      expect(
+        bookJs,
+        isNot(contains('clearSelectionForNativeTextActionMenu')),
+      );
       expect(bookJs, contains('READFLEX_HIGHLIGHT_OPACITY'));
       expect(bookJs, contains('READFLEX_HIGHLIGHT_RADIUS'));
       expect(bookJs, contains('READFLEX_HIGHLIGHT_VERTICAL_INSET'));
@@ -296,6 +299,26 @@ void main() {
       expect(bookJs, contains('const selectionRangeForAppleGesture ='));
       expect(bookJs, contains('const wordRangeFromPoint ='));
       expect(bookJs, contains('const wordRangeNearestPoint ='));
+      expect(bookJs, contains('const synchronizeNativeSelectionRange ='));
+      expect(bookJs, contains('const textSelectionPayloadForRange ='));
+      expect(bookJs, contains('const rememberTextSelectionRange ='));
+      expect(bookJs, contains('__readflexTextSelectionRevision'));
+      expect(bookJs, contains('__readflexTextSelectionRange'));
+      expect(
+        bookJs,
+        contains('window.getCurrentTextSelection = () =>'),
+      );
+      expect(bookJs, contains('correctNextAppleSelectionFromTouch'));
+      expect(
+        bookJs,
+        contains('if (getSelectionRange(doc.getSelection())) return;'),
+      );
+      expect(bookJs, contains('clearRememberedTextSelection(doc);'));
+      expect(bookJs, contains("source: liveRange ? 'live' : 'snapshot'"));
+      expect(
+        bookJs,
+        contains('Keep the native range alive so WebKit'),
+      );
       expect(bookJs, contains('target: touch.target ?? event.target,'));
       expect(
         bookJs,
@@ -641,7 +664,7 @@ void main() {
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_118"));
+      expect(assetExtractor, contains("reader_webview_assets_121"));
       expect(assetExtractor, contains('assets/article-html/index.html'));
 
       final articleReader = _readPackageSource(
@@ -670,6 +693,20 @@ void main() {
       );
       expect(
         articleHtml,
+        contains('function synchronizeTextSelectionRange(range)'),
+      );
+      expect(
+        articleHtml,
+        contains('function textSelectionPayload(range)'),
+      );
+      expect(
+        articleHtml,
+        contains('function rememberTextSelectionRange(range)'),
+      );
+      expect(articleHtml, contains('let lastTextSelectionRange = null'));
+      expect(articleHtml, contains('correctNextTextSelectionFromTouch'));
+      expect(
+        articleHtml,
         contains('function wordSelectionRangeFromPoint(x, y, target)'),
       );
       expect(
@@ -682,10 +719,28 @@ void main() {
         articleHtml,
         contains('function selectionAnchor(range, selectedText)'),
       );
-      expect(articleHtml, contains('const cfi = encodePosition(anchor)'));
+      expect(
+        articleHtml,
+        contains(
+          'const cfi = encodePosition(selectionAnchor(range, selectedText))',
+        ),
+      );
       expect(
         articleHtml,
         contains("callHandler('onSelectionEnd', payload)"),
+      );
+      final emitSelectionStart = articleHtml.indexOf(
+        'const emitSelection = event =>',
+      );
+      final selectionListenersStart = articleHtml.indexOf(
+        "document.addEventListener('selectionchange', emitSelection)",
+        emitSelectionStart,
+      );
+      expect(emitSelectionStart, greaterThanOrEqualTo(0));
+      expect(selectionListenersStart, greaterThan(emitSelectionStart));
+      expect(
+        articleHtml.substring(emitSelectionStart, selectionListenersStart),
+        isNot(contains('clearTextSelection()')),
       );
       expect(
         articleHtml,
@@ -695,6 +750,14 @@ void main() {
       expect(
         articleHtml,
         contains('window.clearSelectionAfterTextAction ='),
+      );
+      expect(
+        articleHtml,
+        contains('window.getCurrentTextSelection = () =>'),
+      );
+      expect(
+        articleHtml,
+        contains('const range = liveRange || lastTextSelectionRange'),
       );
       expect(articleHtml, contains('-webkit-touch-callout: none !important'));
       expect(articleHtml, contains('function renderArticleHighlights()'));
@@ -1807,7 +1870,7 @@ void main() {
 
   group('asset extraction', () {
     test('versions bundled reader assets independently of app version', () {
-      expect(AssetExtractor.assetRevision, 'reader_webview_assets_118');
+      expect(AssetExtractor.assetRevision, 'reader_webview_assets_121');
       expect(
         AssetExtractor.extractionVersionFor('1.0.0+1'),
         '1.0.0+1|${AssetExtractor.assetRevision}',

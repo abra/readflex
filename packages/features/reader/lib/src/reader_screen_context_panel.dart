@@ -22,6 +22,37 @@ String? _normalizedNoteText(String? note) {
   return normalized;
 }
 
+typedef _ExecuteTextAction =
+    Future<void> Function(
+      TextAction action,
+      TextSelectionContext selection,
+    );
+
+TextSelectionContext _withLiveReaderSelection(
+  TextSelectionContext current,
+  ReaderSelection? live,
+) {
+  if (live == null || live.text.trim().isEmpty) return current;
+  return TextSelectionContext(
+    selectedText: live.text,
+    normalizedSelectedText: live.normalizedText,
+    selectionKind: live.selectionKind,
+    sourceId: current.sourceId,
+    sourceType: current.sourceType,
+    contextText: live.contextText,
+    markedContextText: live.markedContextText,
+    normalizedMarkedContextText: live.normalizedMarkedContextText,
+    cfiRange: live.cfiRange,
+    normalizedCfiRange: live.normalizedCfiRange,
+    pageNumber: current.pageNumber,
+    scrollOffset: live.scrollOffset,
+    progress: current.progress,
+    chapterTitle: current.chapterTitle,
+    sourceLanguageHint: current.sourceLanguageHint,
+    containedHighlightIds: live.containedHighlightIds,
+  );
+}
+
 /// Reads selection from [ReaderSelectionCubit] and source info from
 /// [ReaderBloc] to show/hide the text-action context panel.
 class _ContextPanelDriver extends StatelessWidget {
@@ -259,6 +290,13 @@ class _ContextPanelDriver extends StatelessWidget {
         .where((action) => action is! ColorHighlightTextAction)
         .toList(growable: false);
 
+    Future<TextSelectionContext> resolveCurrentSelection() async {
+      final live = sourceType == SourceType.article
+          ? await articleWebViewKey.currentState?.currentTextSelection()
+          : await webViewKey.currentState?.currentTextSelection();
+      return _withLiveReaderSelection(selection, live);
+    }
+
     void showHighlightPreview(HighlightColor color) {
       final cfiRange = sel.cfiRange;
       if (cfiRange == null || cfiRange.isEmpty) return;
@@ -315,8 +353,18 @@ class _ContextPanelDriver extends StatelessWidget {
       );
     }
 
-    void completeTextAction() {
+    Future<void> executeTextAction(
+      TextAction action,
+      TextSelectionContext resolvedSelection,
+    ) async {
       dismissSelection();
+      await WidgetsBinding.instance.endOfFrame;
+      if (!context.mounted) return;
+      try {
+        await action.onExecute(context, resolvedSelection);
+      } catch (error, stack) {
+        if (!bloc.isClosed) bloc.reportError(error, stack);
+      }
     }
 
     void handleActionError(Object error, StackTrace stack) {
@@ -339,11 +387,11 @@ class _ContextPanelDriver extends StatelessWidget {
           panelColor: colors.surface,
           foregroundColor: colors.onSurface,
           dividerColor: colors.outlineVariant,
+          resolveSelection: resolveCurrentSelection,
           onPreviewColorChanged: showHighlightPreview,
           onPreviewCleared: clearHighlightPreview,
-          onDismiss: dismissSelection,
           onActionCompleted: completeHighlightAction,
-          onExtraActionCompleted: completeTextAction,
+          onExecuteExtraAction: executeTextAction,
           onActionError: handleActionError,
         ),
       );
@@ -356,14 +404,12 @@ class _ContextPanelDriver extends StatelessWidget {
       right: 0,
       bottom: 0,
       child: _ContextPanel(
-        selection: selection,
         textActions: fallbackActions,
         panelColor: colors.surface,
         iconColor: colors.onSurface,
         dividerColor: colors.outlineVariant,
-        onActionCompleted: () {
-          completeTextAction();
-        },
+        resolveSelection: resolveCurrentSelection,
+        onExecuteAction: executeTextAction,
         onActionError: (e, st) {
           if (!bloc.isClosed) bloc.reportError(e, st);
         },
@@ -915,11 +961,11 @@ class _HighlightSelectionPopup extends StatefulWidget {
     required this.panelColor,
     required this.foregroundColor,
     required this.dividerColor,
+    required this.resolveSelection,
     required this.onPreviewColorChanged,
     required this.onPreviewCleared,
-    required this.onDismiss,
     required this.onActionCompleted,
-    required this.onExtraActionCompleted,
+    required this.onExecuteExtraAction,
     required this.onActionError,
     this.selectionPosition,
   });
@@ -932,11 +978,11 @@ class _HighlightSelectionPopup extends StatefulWidget {
   final Color panelColor;
   final Color foregroundColor;
   final Color dividerColor;
+  final Future<TextSelectionContext> Function() resolveSelection;
   final ValueChanged<HighlightColor> onPreviewColorChanged;
   final VoidCallback onPreviewCleared;
-  final VoidCallback onDismiss;
   final VoidCallback onActionCompleted;
-  final VoidCallback onExtraActionCompleted;
+  final _ExecuteTextAction onExecuteExtraAction;
   final void Function(Object error, StackTrace stack) onActionError;
 
   @override
@@ -948,6 +994,7 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
   HighlightColor _selectedColor = HighlightColor.yellow;
   bool _saving = false;
   bool _executingExtraAction = false;
+  Future<TextSelectionContext>? _selectionAtInteractionStart;
 
   bool get _busy => _saving || _executingExtraAction;
 
@@ -961,6 +1008,7 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
   void didUpdateWidget(covariant _HighlightSelectionPopup oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selection.cfiRange != widget.selection.cfiRange) {
+      _selectionAtInteractionStart = null;
       _selectedColor = HighlightColor.yellow;
       widget.onPreviewColorChanged(_selectedColor);
       return;
@@ -985,20 +1033,22 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
   Future<void> _save() async {
     if (_busy) return;
     final operationId = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
-    _debugTraceReaderHighlight(
-      'save-start '
-      'op=$operationId '
-      'source=${widget.selection.sourceId} '
-      'text="${_readerHighlightTraceText(widget.selection.selectedText)}" '
-      'anchor=${_readerHighlightTraceAnchor(widget.selection.cfiRange)} '
-      'color=${_selectedColor.name} '
-      'replace=${widget.selection.containedHighlightIds.length}',
-    );
     setState(() => _saving = true);
     try {
+      final selection = await _resolveSelectionForAction();
+      if (!mounted) return;
+      _debugTraceReaderHighlight(
+        'save-start '
+        'op=$operationId '
+        'source=${selection.sourceId} '
+        'text="${_readerHighlightTraceText(selection.selectedText)}" '
+        'anchor=${_readerHighlightTraceAnchor(selection.cfiRange)} '
+        'color=${_selectedColor.name} '
+        'replace=${selection.containedHighlightIds.length}',
+      );
       await widget.action.onExecuteWithColor(
         context,
-        widget.selection,
+        selection,
         _selectedColor,
       );
       _debugTraceReaderHighlight('save-action-success op=$operationId');
@@ -1015,6 +1065,17 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
       widget.onActionError(error, stack);
       setState(() => _saving = false);
     }
+  }
+
+  void _captureSelectionAtInteractionStart() {
+    if (_busy) return;
+    _selectionAtInteractionStart = widget.resolveSelection();
+  }
+
+  Future<TextSelectionContext> _resolveSelectionForAction() {
+    final pending = _selectionAtInteractionStart;
+    _selectionAtInteractionStart = null;
+    return pending ?? widget.resolveSelection();
   }
 
   @override
@@ -1044,23 +1105,6 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
 
         return Stack(
           children: [
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: _busy
-                    ? () {}
-                    : () {
-                        _debugTraceReaderHighlight(
-                          'popup-dismiss-outside '
-                          'source=${widget.selection.sourceId} '
-                          'text="${_readerHighlightTraceText(widget.selection.selectedText)}" '
-                          'anchor=${_readerHighlightTraceAnchor(widget.selection.cfiRange)}',
-                        );
-                        widget.onDismiss();
-                      },
-                child: const SizedBox.expand(),
-              ),
-            ),
             Positioned(
               left: left,
               top: top,
@@ -1072,6 +1116,7 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
                 readerTheme: widget.readerTheme,
                 panelColor: widget.panelColor,
                 dividerColor: widget.dividerColor,
+                onInteractionStarted: _captureSelectionAtInteractionStart,
                 onColorChanged: (color) {
                   if (_busy || _selectedColor == color) return;
                   _debugTraceReaderHighlight(
@@ -1112,9 +1157,10 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
     if (_busy) return;
     setState(() => _executingExtraAction = true);
     try {
-      await action.onExecute(context, widget.selection);
+      final selection = await _resolveSelectionForAction();
       if (!mounted) return;
-      widget.onExtraActionCompleted();
+      await widget.onExecuteExtraAction(action, selection);
+      if (mounted) setState(() => _executingExtraAction = false);
     } catch (error, stack) {
       if (!mounted) return;
       widget.onActionError(error, stack);
@@ -1163,6 +1209,7 @@ class _TextSelectionPopupSurface extends StatelessWidget {
     required this.onColorChanged,
     required this.highlightAction,
     required this.textActions,
+    this.onInteractionStarted,
   });
 
   final HighlightColor selectedColor;
@@ -1173,54 +1220,63 @@ class _TextSelectionPopupSurface extends StatelessWidget {
   final ValueChanged<HighlightColor> onColorChanged;
   final _HighlightPopupAction highlightAction;
   final List<_TextSelectionPopupAction> textActions;
+  final VoidCallback? onInteractionStarted;
 
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(AppRadius.lg);
-    return DecoratedBox(
-      decoration: _highlightPopupDecoration(context, panelColor, dividerColor),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: radius,
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: [
-            SizedBox(
-              height: _kHighlightPopupHeight,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: _kHighlightPopupHorizontalPadding,
-                ),
-                child: _HighlightControlsRow(
-                  selectedColor: selectedColor,
-                  busy: busy,
-                  readerTheme: readerTheme,
-                  dividerColor: dividerColor,
-                  onColorChanged: onColorChanged,
-                  actions: [highlightAction],
+    return Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: (_) => onInteractionStarted?.call(),
+      child: DecoratedBox(
+        decoration: _highlightPopupDecoration(
+          context,
+          panelColor,
+          dividerColor,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: radius,
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              SizedBox(
+                height: _kHighlightPopupHeight,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: _kHighlightPopupHorizontalPadding,
+                  ),
+                  child: _HighlightControlsRow(
+                    selectedColor: selectedColor,
+                    busy: busy,
+                    readerTheme: readerTheme,
+                    dividerColor: dividerColor,
+                    onColorChanged: onColorChanged,
+                    actions: [highlightAction],
+                  ),
                 ),
               ),
-            ),
-            Divider(
-              height: _kTextSelectionPopupDividerHeight,
-              thickness: _kTextSelectionPopupDividerHeight,
-              color: dividerColor,
-            ),
-            SizedBox(
-              height: _kTextSelectionActionRowHeight,
-              child: Row(
-                children: [
-                  for (final action in textActions)
-                    Expanded(
-                      child: _TextSelectionActionButton(
-                        action: action,
-                        enabled: !busy,
+              Divider(
+                height: _kTextSelectionPopupDividerHeight,
+                thickness: _kTextSelectionPopupDividerHeight,
+                color: dividerColor,
+              ),
+              SizedBox(
+                height: _kTextSelectionActionRowHeight,
+                child: Row(
+                  children: [
+                    for (final action in textActions)
+                      Expanded(
+                        child: _TextSelectionActionButton(
+                          action: action,
+                          enabled: !busy,
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1484,21 +1540,21 @@ String _localizedHighlightColorName(
 /// the injected [TextAction]s.
 class _ContextPanel extends StatelessWidget {
   const _ContextPanel({
-    required this.selection,
     required this.textActions,
     required this.panelColor,
     required this.iconColor,
     required this.dividerColor,
-    required this.onActionCompleted,
+    required this.resolveSelection,
+    required this.onExecuteAction,
     required this.onActionError,
   });
 
-  final TextSelectionContext selection;
   final List<TextAction> textActions;
   final Color panelColor;
   final Color iconColor;
   final Color dividerColor;
-  final VoidCallback onActionCompleted;
+  final Future<TextSelectionContext> Function() resolveSelection;
+  final _ExecuteTextAction onExecuteAction;
   final void Function(Object error, StackTrace stack) onActionError;
 
   @override
@@ -1524,8 +1580,9 @@ class _ContextPanel extends StatelessWidget {
                   tooltip: action.labelFor(context),
                   onPressed: () async {
                     try {
-                      await action.onExecute(context, selection);
-                      onActionCompleted();
+                      final currentSelection = await resolveSelection();
+                      if (!context.mounted) return;
+                      await onExecuteAction(action, currentSelection);
                     } catch (e, st) {
                       onActionError(e, st);
                     }

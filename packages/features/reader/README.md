@@ -46,6 +46,17 @@ actions in a two-row popup: highlight colors and Highlight are above the
 general Copy, Translate, and Define commands. Active feature implementations
 are supplied by sibling packages such as `highlight`, `translate`, and
 `dictionary`; the UI-only `CopyTextAction` remains in Reader.
+The popup captures input only inside its visible controls, leaving the WebView
+selection handles interactive so the selected range can be resized in place.
+Each action starts resolving the current WebView range on pointer down, before
+focus can collapse the native WebKit selection, and awaits that same snapshot
+on execution. The reader runtime also retains the latest changed range as a
+fallback, so expanding a word into a paragraph cannot send the initial word to
+Copy, Translate, Define, or Highlight.
+Before Translate or Define presents another surface, the driver dismisses the
+selection popup, waits for that frame to finish, and then executes the action
+from its stable context. This prevents a context menu from remaining visible
+behind a modal or native dictionary surface without losing the captured range.
 
 ```dart
 abstract class TextAction {

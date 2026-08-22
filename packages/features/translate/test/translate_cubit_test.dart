@@ -32,11 +32,66 @@ void main() {
     expect(service.lastRequest?.sourceLanguage, autoSourceLanguageCode);
     expect(service.lastRequest?.sourceLanguageHint, 'en');
     expect(service.lastRequest?.targetLanguage, 'ru');
+    expect(service.lastRequest?.mode, contextualTranslationMode);
     expect(service.lastRequest?.selection.effectiveText, 'gave up');
     expect(
       service.lastRequest?.context.current?.markedText,
       contains('[[up]]'),
     );
+  });
+
+  test('uses text translation mode for a paragraph selection', () async {
+    final service = _FakeTranslationService();
+    final preferences = await PreferencesService.create(
+      supportedCodes: const ['en', 'ru'],
+    );
+    final cubit = TranslateCubit(
+      translationService: service,
+      preferencesService: preferences,
+    );
+    const paragraph =
+        'Launches are mostly arbitrary these days. '
+        'With continuous development, you launch every few hours.';
+    const selection = TextSelectionContext(
+      selectedText: paragraph,
+      selectionKind: 'exact',
+      contextText: paragraph,
+      markedContextText:
+          '[[Launches are mostly arbitrary these days. '
+          'With continuous development, you launch every few hours.]]',
+      sourceId: 'source-1',
+      sourceType: SourceType.article,
+      sourceLanguageHint: 'en',
+    );
+
+    await cubit.translate(selection);
+
+    expect(service.lastRequest?.mode, selectedTextTranslationMode);
+    expect(service.lastRequest?.selection.effectiveText, paragraph);
+    expect(service.lastRequest?.context.level, 'selection');
+  });
+
+  test('uses text translation mode for a selected whole sentence', () async {
+    final service = _FakeTranslationService();
+    final preferences = await PreferencesService.create(
+      supportedCodes: const ['en', 'ru'],
+    );
+    final cubit = TranslateCubit(
+      translationService: service,
+      preferencesService: preferences,
+    );
+    const sentence = 'Continuous delivery changes release planning';
+    const selection = TextSelectionContext(
+      selectedText: sentence,
+      selectionKind: 'exact',
+      contextText: sentence,
+      sourceId: 'source-1',
+      sourceType: SourceType.article,
+    );
+
+    await cubit.translate(selection);
+
+    expect(service.lastRequest?.mode, selectedTextTranslationMode);
   });
 
   test('setTargetLanguage persists preference and retranslates', () async {
@@ -53,6 +108,35 @@ void main() {
 
     expect(preferences.current.translationTargetLanguageCode, 'ru');
     expect(service.lastRequest?.targetLanguage, 'ru');
+  });
+
+  test('ignores stale single-word normalization after range resize', () async {
+    final service = _FakeTranslationService();
+    final preferences = await PreferencesService.create(
+      supportedCodes: const ['en', 'ru'],
+    );
+    final cubit = TranslateCubit(
+      translationService: service,
+      preferencesService: preferences,
+    );
+    const selection = TextSelectionContext(
+      selectedText: 'power bank is light',
+      normalizedSelectedText: 'power',
+      selectionKind: 'partial_word',
+      contextText: 'This power bank is light enough for travel.',
+      markedContextText: 'This [[power bank is light]] enough for travel.',
+      normalizedMarkedContextText:
+          'This [[power]] bank is light enough for travel.',
+      sourceId: 'source-1',
+      sourceType: SourceType.article,
+    );
+
+    await cubit.translate(selection);
+
+    expect(service.lastRequest?.selection.text, 'power bank is light');
+    expect(service.lastRequest?.selection.normalizedText, isNull);
+    expect(service.lastRequest?.selection.effectiveText, 'power bank is light');
+    expect(service.lastRequest?.context.current?.normalizedMarkedText, isNull);
   });
 
   test('maps offline model requirement to sheet state', () async {

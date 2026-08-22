@@ -37,8 +37,9 @@ abstract class TextAction {
 | `contextText`                     | `String?`    | Plain surrounding reader context                |
 | `markedContextText`               | `String?`    | Context with the exact selection marked         |
 | `normalizedMarkedContextText`     | `String?`    | Context with the normalized selection marked    |
-| `effectiveSelectedText`           | `String`     | Normalized text when present, otherwise exact   |
-| `effectiveMarkedContextText`      | `String?`    | Normalized marked context when present          |
+| `compatibleNormalizedSelectedText`| `String?`    | Normalized text only when it contains the exact range |
+| `effectiveSelectedText`           | `String`     | Compatible normalized text, otherwise exact     |
+| `effectiveMarkedContextText`      | `String?`    | Matching normalized marked context when valid   |
 | `sourceLanguageHint`              | `String?`    | Best-known document language hint for actions   |
 | `sourceId`                        | `String`     | Source ID                                       |
 | `sourceType`                      | `SourceType` | Book, article, comic, etc.                      |

@@ -824,8 +824,12 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
     );
   }
 
-  /// Render a temporary highlight over the active selection after the native
-  /// WebView selection is cleared to suppress iOS edit menus.
+  /// Reads the live DOM range so actions cannot observe a stale bridge event
+  /// immediately after the user resizes the native selection handles.
+  Future<ReaderSelection?> currentTextSelection() =>
+      readCurrentReaderTextSelection(_controller);
+
+  /// Render a temporary highlight over the active native selection.
   void showSelectionHighlightPreview({
     required String cfiRange,
     required String color,

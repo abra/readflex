@@ -72,6 +72,17 @@ void main() {
     });
   });
 
+  test('live selection script reads the current DOM range', () {
+    expect(
+      currentReaderTextSelectionScript,
+      contains("typeof window.getCurrentTextSelection === 'function'"),
+    );
+    expect(
+      currentReaderTextSelectionScript,
+      contains('window.getCurrentTextSelection()'),
+    );
+  });
+
   group('baseReaderSettings', () {
     test('keeps text selection but disables the native action menu', () {
       final settings = baseReaderSettings();

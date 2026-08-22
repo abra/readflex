@@ -281,12 +281,11 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate,
             }
 
             // canPerformAction does not filter the UIEditMenuInteraction menu
-            // used by current iOS versions. Remove it after WebKit populates it.
+            // used by current iOS versions. Clear the root after WebKit
+            // populates it so direct actions introduced by newer iOS releases
+            // cannot flash before willPresentEditMenu dismisses the menu.
             if shouldHideDefaultSystemItems {
-                builder.remove(menu: .edit)
-                builder.remove(menu: .standardEdit)
-                builder.remove(menu: .share)
-                builder.remove(menu: .lookup)
+                builder.replaceChildren(ofMenu: .root) { _ in [] }
             }
             
             if #unavailable(iOS 16.4), settings?.disableContextMenu == false {

@@ -309,6 +309,8 @@
       let selectionClickSuppressedUntil = 0
       let lastSelectionFingerprint = ''
       let lastTextSelectionTouch = null
+      let lastTextSelectionRange = null
+      let correctNextTextSelectionFromTouch = false
       let articleHighlights = []
       let renderedArticleHighlights = new Map()
       let selectionHighlightPreview = null
@@ -549,8 +551,10 @@
       }
 
       function intendedTextSelectionRange(range) {
+        if (!range || !correctNextTextSelectionFromTouch) return range
+        correctNextTextSelectionFromTouch = false
         const touch = lastTextSelectionTouch
-        if (!range || !touch) return range
+        if (!touch) return range
         const age = Date.now() - touch.timestamp
         if (age < 0 || age > selectionTouchMaxAgeMs) return range
         return wordSelectionRangeFromPoint(
@@ -558,6 +562,35 @@
           touch.y,
           touch.target,
         ) || range
+      }
+
+      function synchronizeTextSelectionRange(range) {
+        const selection = window.getSelection?.()
+        const currentRange = selectionRange()
+        if (!selection || !range || !currentRange) return range
+        const unchanged =
+          currentRange.startContainer === range.startContainer &&
+          currentRange.startOffset === range.startOffset &&
+          currentRange.endContainer === range.endContainer &&
+          currentRange.endOffset === range.endOffset
+        if (unchanged) return currentRange
+
+        try {
+          if (typeof selection.setBaseAndExtent === 'function') {
+            selection.setBaseAndExtent(
+              range.startContainer,
+              range.startOffset,
+              range.endContainer,
+              range.endOffset,
+            )
+          } else {
+            selection.removeAllRanges()
+            selection.addRange(range)
+          }
+        } catch (_) {
+          return range
+        }
+        return selectionRange() || range
       }
 
       function selectionTextContext(range, selectedText) {
@@ -667,8 +700,39 @@
         }
       }
 
+      function textSelectionPayload(range) {
+        const selectedText = normalizeText(range?.toString())
+        if (!range || !selectedText) return null
+        const textContext = selectionTextContext(range, selectedText)
+        const cfi = encodePosition(selectionAnchor(range, selectedText))
+        return {
+          text: selectedText,
+          normalizedText: selectedText,
+          selectionKind: 'exact',
+          contextText: textContext.contextText,
+          markedContextText: textContext.markedContextText,
+          normalizedMarkedContextText: textContext.markedContextText,
+          cfi,
+          normalizedCfi: cfi,
+          pos: selectionPosition(range),
+          scrollOffset: window.scrollY,
+          containedHighlightIds: [],
+          footnote: false,
+        }
+      }
+
+      function rememberTextSelectionRange(range) {
+        if (!range) return
+        try {
+          lastTextSelectionRange = range.cloneRange()
+        } catch (_) {
+          lastTextSelectionRange = null
+        }
+      }
+
       function clearTextSelection() {
         const selection = window.getSelection?.()
+        lastTextSelectionRange = null
         if (!selection?.rangeCount) return
         suppressNextSelectionClear = true
         selection.removeAllRanges()
@@ -678,24 +742,33 @@
         document.addEventListener('touchstart', event => {
           const touch = event.touches?.[0]
           if (!touch) return
+          if (selectionRange()) return
+          lastTextSelectionRange = null
           lastTextSelectionTouch = {
             x: touch.clientX,
             y: touch.clientY,
             target: touch.target || event.target,
             timestamp: Date.now(),
           }
+          correctNextTextSelectionFromTouch = true
         }, { capture: true, passive: true })
 
         const emitSelection = event => {
           const nativeRange = selectionRange()
-          const range = intendedTextSelectionRange(nativeRange)
-          const selectedText = normalizeText(range?.toString())
+          const intendedRange = intendedTextSelectionRange(nativeRange)
+          const correctedFromTouch = Boolean(
+            nativeRange && intendedRange && nativeRange !== intendedRange,
+          )
+          const range = correctedFromTouch
+            ? synchronizeTextSelectionRange(intendedRange)
+            : intendedRange
+          rememberTextSelectionRange(range)
+          const payload = textSelectionPayload(range)
+          const selectedText = payload?.text || ''
           traceSelection('article-selection-event', {
             eventType: event?.type || 'unknown',
             hasRange: Boolean(range),
-            correctedFromTouch: Boolean(
-              nativeRange && range && nativeRange !== range,
-            ),
+            correctedFromTouch,
             touchX: lastTextSelectionTouch?.x ?? null,
             touchY: lastTextSelectionTouch?.y ?? null,
             touchTarget: lastTextSelectionTouch?.target?.nodeName ?? null,
@@ -708,6 +781,8 @@
             if (!selectionActive) return
             selectionActive = false
             lastSelectionFingerprint = ''
+            lastTextSelectionTouch = null
+            correctNextTextSelectionFromTouch = false
             if (suppressNextSelectionClear) {
               suppressNextSelectionClear = false
               return
@@ -718,6 +793,7 @@
 
           selectionActive = true
           const fingerprint = [
+            payload.cfi,
             selectedText,
             range.startOffset,
             range.endOffset,
@@ -725,33 +801,15 @@
           if (fingerprint === lastSelectionFingerprint) return
           lastSelectionFingerprint = fingerprint
 
-          const textContext = selectionTextContext(range, selectedText)
-          const anchor = selectionAnchor(range, selectedText)
-          const cfi = encodePosition(anchor)
-          const payload = {
-            text: selectedText,
-            normalizedText: selectedText,
-            selectionKind: 'exact',
-            contextText: textContext.contextText,
-            markedContextText: textContext.markedContextText,
-            normalizedMarkedContextText: textContext.markedContextText,
-            cfi,
-            normalizedCfi: cfi,
-            pos: selectionPosition(range),
-            scrollOffset: window.scrollY,
-            containedHighlightIds: [],
-            footnote: false,
-          }
           traceSelection('article-emit-selection-end', {
             textLength: selectedText.length,
             textPreview: selectedText.slice(0, 80),
             hasPosition: payload.pos != null,
-            hasAnchor: cfi != null,
+            hasAnchor: Boolean(payload.cfi),
           })
           callHandler('onSelectionEnd', payload)
           selectionClickSuppressedUntil = performance.now() +
             selectionClickSuppressMs
-          clearTextSelection()
         }
 
         document.addEventListener('selectionchange', emitSelection)
@@ -1648,6 +1706,16 @@
       window.clearSearch = clearSearch
       window.clearSelection = clearTextSelection
       window.clearSelectionAfterTextAction = clearTextSelection
+      window.getCurrentTextSelection = () => {
+        const liveRange = selectionRange()
+        const range = liveRange || lastTextSelectionRange
+        const payload = textSelectionPayload(range)
+        traceSelection('article-read-current-selection', {
+          source: liveRange ? 'live' : 'snapshot',
+          textLength: payload?.text?.length || 0,
+        })
+        return payload
+      }
 
       window.addEventListener('scroll', () => {
         if (performance.now() > restoringUntil) userInteracted = true

@@ -36,10 +36,22 @@ Shared selection/click handlers are registered by
 `registerSharedReaderHandlers` so the widget body stays focused on
 position + annotation glue.
 
+On touch devices the native DOM selection remains active while the reader
+popup is visible. This keeps the platform drag handles available and lets
+`selectionchange` update the popup payload as the user expands or contracts the
+range. The range is cleared only after an action completes or the selection is
+dismissed; iOS system edit-menu suppression is handled by the vendored
+`flutter_inappwebview_ios` patch.
+The JS runtime snapshots every changed DOM range. For books, the snapshot is
+revisioned per iframe so `currentTextSelection()` reads only the document the
+user most recently selected in instead of an older range from a neighboring
+page. The live range is preferred; the snapshot remains available if WebKit
+collapses the native selection while focus moves to the Flutter action popup.
+
 `ArticleHtmlReaderWebView` reports scroll progress through sentence anchors,
-table of contents from headings, document features, clicks, search batches, and
-bookmark changes. Text selection and highlight annotation mutation remain
-foliate-only until the article HTML surface gets equivalent contracts.
+table of contents from headings, document features, clicks, search batches,
+bookmark changes, text selections, and highlight taps. It also renders and
+updates article text highlights through stable article anchors.
 
 `onSelectionEnd` carries both the exact selected text and, when the user
 selects only part of a word/span, a lexical `normalizedText` expanded to

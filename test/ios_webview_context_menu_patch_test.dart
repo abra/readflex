@@ -21,16 +21,14 @@ void main() {
       'super.buildMenu(with: builder)',
       buildMenuStart,
     );
-    final removeEditMenu = source.indexOf(
-      'builder.remove(menu: .standardEdit)',
+    final clearRootMenu = source.indexOf(
+      'builder.replaceChildren(ofMenu: .root) { _ in [] }',
       buildMenuStart,
     );
 
     expect(buildMenuStart, greaterThanOrEqualTo(0));
     expect(superBuildMenu, greaterThan(buildMenuStart));
-    expect(removeEditMenu, greaterThan(superBuildMenu));
-    expect(source, contains('builder.remove(menu: .share)'));
-    expect(source, contains('builder.remove(menu: .lookup)'));
+    expect(clearRootMenu, greaterThan(superBuildMenu));
     expect(
       source,
       contains('if settings?.disableContextMenu == true {'),

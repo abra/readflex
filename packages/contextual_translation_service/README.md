@@ -18,6 +18,11 @@ cache details.
 | `MlKitOfflineTranslationService` | On-device fallback using Google ML Kit models |
 | `ContextualTranslationCoordinator` | Cache-first remote call with controlled offline fallback |
 
+Requests use `contextual_lookup` for short lexical selections and
+`text_translation` for complete sentences or longer fragments. The latter
+requires the provider to translate the complete selection without extracting a
+single focus word.
+
 ## Flow
 
 ```text

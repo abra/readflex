@@ -62,6 +62,29 @@ void main() {
     expect(anchor.toJson()['chapter_title'], 'Chapter One');
   });
 
+  test('offline result preserves selected text translation mode', () {
+    final request = ContextualTranslationRequest(
+      requestId: 'request-1',
+      sourceLanguage: 'en',
+      targetLanguage: 'ru',
+      mode: selectedTextTranslationMode,
+      selection: const TranslationSelection(text: 'Release continuously.'),
+      context: const TranslationTextContext(level: 'selection'),
+      anchor: const TranslationAnchor(
+        sourceId: 'article-1',
+        sourceType: 'article',
+      ),
+    );
+
+    final result = ContextualTranslationResult.offline(
+      request: request,
+      sourceLanguage: 'en',
+      selectedTranslation: 'Выпускайте непрерывно.',
+    );
+
+    expect(result.mode, selectedTextTranslationMode);
+  });
+
   test('ContextualTranslationResult parses backend response', () {
     final result = ContextualTranslationResult.fromJson({
       'request_id': 'request-1',

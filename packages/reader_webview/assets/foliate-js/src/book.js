@@ -947,8 +947,13 @@ const wordRangeFromPoint = (doc, x, y, target) => {
   return range;
 };
 
-const selectionRangeForAppleGesture = (doc, range, touchPoint) => {
-  if (!range || !touchPoint) return range;
+const selectionRangeForAppleGesture = (
+  doc,
+  range,
+  touchPoint,
+  shouldCorrectFromTouch,
+) => {
+  if (!range || !touchPoint || !shouldCorrectFromTouch) return range;
   const age = Date.now() - touchPoint.timestamp;
   if (age < 0 || age > READFLEX_SELECTION_TOUCH_MAX_AGE_MS) return range;
   return wordRangeFromPoint(
@@ -957,6 +962,36 @@ const selectionRangeForAppleGesture = (doc, range, touchPoint) => {
     touchPoint.y,
     touchPoint.target,
   ) ?? range;
+};
+
+const synchronizeNativeSelectionRange = (doc, range) => {
+  const selection = doc?.getSelection?.();
+  const currentRange = getSelectionRange(selection);
+  if (!selection || !range || !currentRange) return range;
+  const unchanged = (
+    currentRange.startContainer === range.startContainer
+    && currentRange.startOffset === range.startOffset
+    && currentRange.endContainer === range.endContainer
+    && currentRange.endOffset === range.endOffset
+  );
+  if (unchanged) return currentRange;
+
+  try {
+    if (typeof selection.setBaseAndExtent === 'function') {
+      selection.setBaseAndExtent(
+        range.startContainer,
+        range.startOffset,
+        range.endContainer,
+        range.endOffset,
+      );
+    } else {
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  } catch {
+    return range;
+  }
+  return getSelectionRange(selection) ?? range;
 };
 
 const isAppleTouchRuntime = () => (
@@ -1002,43 +1037,31 @@ const installNativeTextActionMenuGuard = doc => {
   }, { capture: true });
 };
 
-const clearSelectionForNativeTextActionMenu = doc => {
-  if (!isAppleTouchRuntime()) return;
-
-  const selection = doc?.getSelection?.();
-  if (!getSelectionRange(selection)) return;
-
-  traceTextSelection('clear-native-selection', {
-    ...readflexSelectionTraceSnapshot(doc),
-  });
-
-  doc.__readflexSuppressNextSelectionCleared = true;
-  doc.__anxSelectionClearedAt = Date.now();
-  doc.__anxSuppressClick = true;
-  selection.removeAllRanges();
-
-  setTimeout(() => {
-    if (doc.__readflexSuppressNextSelectionCleared === true) {
-      doc.__readflexSuppressNextSelectionCleared = false;
-    }
-  }, 250);
-};
-
 const clearSelectionForAnnotationMenu = doc => {
-  clearSelectionForNativeTextActionMenu(doc);
-
-  if (isAppleTouchRuntime()) return;
-
   const selection = doc?.getSelection?.();
   if (!getSelectionRange(selection)) return;
+
+  if (isAppleTouchRuntime()) {
+    traceTextSelection('clear-annotation-selection', {
+      ...readflexSelectionTraceSnapshot(doc),
+    });
+    doc.__readflexSuppressNextSelectionCleared = true;
+    doc.__anxSelectionClearedAt = Date.now();
+    doc.__anxSuppressClick = true;
+    setTimeout(() => {
+      if (doc.__readflexSuppressNextSelectionCleared === true) {
+        doc.__readflexSuppressNextSelectionCleared = false;
+      }
+    }, 250);
+  }
   selection.removeAllRanges();
 };
 
 const allowImmediateClickAfterTextAction = doc => {
   if (!doc) return;
 
-  // iOS menu suppression may clear selection before the action is saved. In
-  // that path no selectionchange fires here, so reset tap suppression directly.
+  // Reset any tap suppression left by programmatic deselection before the
+  // action result returns control to the reader.
   doc.__readflexSuppressNextSelectionCleared = false;
   doc.__anxAllowNextClickAfterProgrammaticDeselect = true;
   doc.__anxSelectionClearedAt = 0;
@@ -1240,6 +1263,62 @@ const containedHighlightIdsForRange = (view, index, doc, range) => {
   return ids;
 };
 
+const textSelectionPayloadForRange = (view, doc, index, range) => {
+  if (!range) return null;
+
+  const cfi = view.getCFI(index, range);
+  let text = range.toString();
+  if (!text) {
+    const selection = range.startContainer.ownerDocument.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    text = selection.toString();
+  }
+  if (!text) return null;
+
+  const normalizedSelection = normalizeSelectionRange(range);
+  const normalizedRange = normalizedSelection?.range ?? range;
+  return {
+    index,
+    lang: 'en-US',
+    cfi,
+    normalizedCfi: view.getCFI(index, normalizedRange),
+    pos: getPosition(range),
+    text,
+    normalizedText: normalizedSelection?.normalizedText ?? text,
+    selectionKind: normalizedSelection?.selectionKind ?? 'exact',
+    contextText: buildRangeContextText(normalizedRange),
+    markedContextText: buildMarkedRangeContextText(range),
+    normalizedMarkedContextText: buildMarkedRangeContextText(normalizedRange),
+    containedHighlightIds: containedHighlightIdsForRange(
+      view,
+      index,
+      doc,
+      range,
+    ),
+  };
+};
+
+let readflexTextSelectionRevision = 0;
+
+const rememberTextSelectionRange = (doc, index, range) => {
+  if (!doc || !range) return;
+  try {
+    doc.__readflexTextSelectionRange = range.cloneRange();
+  } catch {
+    return;
+  }
+  doc.__readflexTextSelectionIndex = index;
+  doc.__readflexTextSelectionRevision = ++readflexTextSelectionRevision;
+};
+
+const clearRememberedTextSelection = doc => {
+  if (!doc) return;
+  doc.__readflexTextSelectionRange = null;
+  doc.__readflexTextSelectionIndex = null;
+  doc.__readflexTextSelectionRevision = 0;
+};
+
 const handleSelection = (view, doc, index, explicitRange = null) => {
   const selection = doc.getSelection();
   const range = explicitRange ?? getSelectionRange(selection);
@@ -1265,51 +1344,19 @@ const handleSelection = (view, doc, index, explicitRange = null) => {
     return;
   }
 
-  const cfi = view.getCFI(index, range);
-  const lang = 'en-US'
-
-  let text = range.toString();
-  if (!text) {
-    const newSelection = range.startContainer.ownerDocument.getSelection();
-    newSelection.removeAllRanges();
-    newSelection.addRange(range);
-    text = newSelection.toString();
-  }
-
-  const normalizedSelection = normalizeSelectionRange(range);
-  const normalizedRange = normalizedSelection?.range ?? range;
-  const normalizedCfi = view.getCFI(index, normalizedRange);
-  const contextText = buildRangeContextText(normalizedRange);
-  const markedContextText = buildMarkedRangeContextText(range);
-  const normalizedMarkedContextText =
-    buildMarkedRangeContextText(normalizedRange);
-  const containedHighlightIds =
-    containedHighlightIdsForRange(view, index, doc, range);
+  const payload = textSelectionPayloadForRange(view, doc, index, range);
+  if (!payload) return;
+  rememberTextSelectionRange(doc, index, range);
 
   traceTextSelection('emit-selection-end', {
     index,
-    cfi: normalizedCfi ?? cfi,
-    selectionKind: normalizedSelection?.selectionKind ?? 'exact',
-    textLength: text.length,
-    textPreview: text.slice(0, 80),
+    cfi: payload.normalizedCfi ?? payload.cfi,
+    selectionKind: payload.selectionKind,
+    textLength: payload.text.length,
+    textPreview: payload.text.slice(0, 80),
   });
 
-  onSelectionEnd({
-    index,
-    range,
-    lang,
-    cfi,
-    normalizedCfi,
-    pos: position,
-    text,
-    normalizedText: normalizedSelection?.normalizedText ?? text,
-    selectionKind: normalizedSelection?.selectionKind ?? 'exact',
-    contextText,
-    markedContextText,
-    normalizedMarkedContextText,
-    containedHighlightIds
-  });
-  clearSelectionForNativeTextActionMenu(doc);
+  onSelectionEnd(payload);
 };
 
 const setSelectionHandler = (view, doc, index) => {
@@ -1326,6 +1373,7 @@ const setSelectionHandler = (view, doc, index) => {
   let hasActiveSelection = false;
   let lastPointerUpRange = null;
   let lastAppleTouchPoint = null;
+  let correctNextAppleSelectionFromTouch = false;
   doc.__anxSelectionClearedAt = 0;
   doc.__anxSuppressClick = false;
   doc.__anxAllowNextClickAfterProgrammaticDeselect = false;
@@ -1341,6 +1389,7 @@ const setSelectionHandler = (view, doc, index) => {
       ...readflexSelectionTraceSnapshot(doc),
     });
     if (selectionRange) {
+      rememberTextSelectionRange(doc, index, selectionRange);
       hasActiveSelection = true;
       doc.__anxSelectionClearedAt = 0;
       doc.__anxSuppressClick = false;
@@ -1391,26 +1440,34 @@ const setSelectionHandler = (view, doc, index) => {
     doc.addEventListener('touchstart', event => {
       const touch = event.touches?.[0];
       if (!touch) return;
+      if (getSelectionRange(doc.getSelection())) return;
+      clearRememberedTextSelection(doc);
       lastAppleTouchPoint = {
         x: touch.clientX,
         y: touch.clientY,
         target: touch.target ?? event.target,
         timestamp: Date.now(),
       };
+      correctNextAppleSelectionFromTouch = true;
     }, { capture: true, passive: true });
 
     const dispatchAppleSelection = event => {
       const nativeSelectionRange = getSelectionRange(doc.getSelection());
-      const selectionRange = selectionRangeForAppleGesture(
+      const intendedSelectionRange = selectionRangeForAppleGesture(
         doc,
         nativeSelectionRange,
         lastAppleTouchPoint,
+        correctNextAppleSelectionFromTouch,
       );
       const correctedFromTouch = Boolean(
         nativeSelectionRange
-        && selectionRange
-        && nativeSelectionRange !== selectionRange,
+        && intendedSelectionRange
+        && nativeSelectionRange !== intendedSelectionRange,
       );
+      if (nativeSelectionRange) correctNextAppleSelectionFromTouch = false;
+      const selectionRange = correctedFromTouch
+        ? synchronizeNativeSelectionRange(doc, intendedSelectionRange)
+        : intendedSelectionRange;
       const duplicate = selectionRange
         ? shouldSkipPointerUp(selectionRange)
         : false;
@@ -1429,9 +1486,8 @@ const setSelectionHandler = (view, doc, index) => {
       handleSelection(view, doc, index, selectionRange);
     };
 
-    // Safari 18.2+ builds Copy Link with Highlight outside the legacy action
-    // filtering path. Commit and clear the range in the selectionchange turn,
-    // before WebKit presents its native edit menu.
+    // Keep the native range alive so WebKit's drag handles remain interactive.
+    // The host WebView suppresses the system edit menu independently.
     doc.addEventListener('selectionchange', dispatchAppleSelection);
     doc.addEventListener('touchend', dispatchAppleSelection, {
       capture: true,
@@ -2319,11 +2375,65 @@ class Reader {
     return handleSelection(this.view, this.#doc, this.#index)
   }
 
-  clearSelectionAfterTextAction() {
+  getCurrentTextSelection() {
+    const contents = this.view?.renderer?.getContents?.() ?? []
+    const tracked = contents.reduce((latest, content) => {
+      const revision = Number(
+        content.doc?.__readflexTextSelectionRevision ?? 0,
+      )
+      if (!Number.isFinite(revision) || revision <= 0) return latest
+      if (latest && latest.revision >= revision) return latest
+      return { ...content, revision }
+    }, null)
+    if (tracked) {
+      const selectionIndex = Number.isInteger(
+        tracked.doc?.__readflexTextSelectionIndex,
+      )
+        ? tracked.doc.__readflexTextSelectionIndex
+        : Number.isInteger(tracked.index)
+          ? tracked.index
+          : this.#index
+      const liveRange = getSelectionRange(tracked.doc?.getSelection?.())
+      const range = liveRange ?? tracked.doc?.__readflexTextSelectionRange
+      const payload = textSelectionPayloadForRange(
+        this.view,
+        tracked.doc,
+        selectionIndex,
+        range,
+      )
+      traceTextSelection('read-current-selection', {
+        index: selectionIndex,
+        revision: tracked.revision,
+        source: liveRange ? 'live' : 'snapshot',
+        textLength: payload?.text?.length ?? 0,
+      })
+      return payload
+    }
+
+    for (const { doc, index } of contents) {
+      const range = getSelectionRange(doc?.getSelection?.())
+      if (!range) continue
+      const selectionIndex = Number.isInteger(index) ? index : this.#index
+      return textSelectionPayloadForRange(this.view, doc, selectionIndex, range)
+    }
+    return null
+  }
+
+  clearTextSelection() {
     this.clearSelectionHighlightPreview()
     const contents = this.view?.renderer?.getContents?.() ?? []
     for (const { doc } of contents)
+      clearRememberedTextSelection(doc)
+    this.view?.deselect()
+  }
+
+  clearSelectionAfterTextAction() {
+    this.clearSelectionHighlightPreview()
+    const contents = this.view?.renderer?.getContents?.() ?? []
+    for (const { doc } of contents) {
+      clearRememberedTextSelection(doc)
       allowImmediateClickAfterTextAction(doc)
+    }
     this.view?.deselect()
   }
 
@@ -3774,7 +3884,9 @@ window.showContextMenu = () => {
 
 window.getSelection = () => reader.getSelection()
 
-window.clearSelection = () => reader.view.deselect()
+window.getCurrentTextSelection = () => reader.getCurrentTextSelection()
+
+window.clearSelection = () => reader.clearTextSelection()
 
 window.clearSelectionAfterTextAction = () => reader.clearSelectionAfterTextAction()
 

@@ -53,7 +53,6 @@ void main() {
       contextPanelSource,
       contains('_kHighlightPopupHorizontalPadding * 2'),
     );
-    expect(contextPanelSource, contains('onDismiss: dismissSelection'));
     expect(contextPanelSource, contains('HitTestBehavior.translucent'));
     expect(contextPanelSource, contains('AppShadows.popover'));
     expect(
@@ -108,10 +107,88 @@ void main() {
     expect(contextPanelSource, contains('clearSelectionHighlightPreview'));
     expect(contextPanelSource, contains('onPreviewColorChanged'));
     expect(contextPanelSource, contains('onPreviewCleared'));
+    expect(
+      contextPanelSource,
+      contains('currentState?.currentTextSelection()'),
+    );
+    expect(
+      contextPanelSource,
+      contains('final selection = await _resolveSelectionForAction();'),
+    );
+    expect(
+      contextPanelSource,
+      contains('_selectionAtInteractionStart = widget.resolveSelection();'),
+    );
+    expect(
+      contextPanelSource,
+      contains('onPointerDown: (_) => onInteractionStarted?.call()'),
+    );
+    expect(
+      contextPanelSource,
+      contains('await action.onExecute(context, resolvedSelection);'),
+    );
+    expect(
+      contextPanelSource,
+      contains('await widget.onExecuteExtraAction(action, selection);'),
+    );
+    expect(
+      contextPanelSource,
+      contains('await onExecuteAction(action, currentSelection);'),
+    );
+    final executeTextActionStart = contextPanelSource.indexOf(
+      'Future<void> executeTextAction(',
+    );
+    final executeTextActionEnd = contextPanelSource.indexOf(
+      'void handleActionError',
+      executeTextActionStart,
+    );
+    expect(executeTextActionStart, greaterThanOrEqualTo(0));
+    expect(executeTextActionEnd, greaterThan(executeTextActionStart));
+    final executeTextActionSource = contextPanelSource.substring(
+      executeTextActionStart,
+      executeTextActionEnd,
+    );
+    expect(
+      executeTextActionSource.indexOf('dismissSelection();'),
+      lessThan(
+        executeTextActionSource.indexOf(
+          'await WidgetsBinding.instance.endOfFrame;',
+        ),
+      ),
+    );
+    expect(
+      executeTextActionSource.indexOf(
+        'await WidgetsBinding.instance.endOfFrame;',
+      ),
+      lessThan(
+        executeTextActionSource.indexOf(
+          'await action.onExecute(context, resolvedSelection);',
+        ),
+      ),
+    );
+    expect(
+      contextPanelSource,
+      isNot(contains('widget.onExtraActionCompleted();')),
+    );
     expect(contextPanelSource, contains("'save-start '"));
     expect(contextPanelSource, contains("'save-action-success op="));
     expect(contextPanelSource, contains("'save-failed '"));
-    expect(contextPanelSource, contains("'popup-dismiss-outside '"));
+    final activeSelectionPopupStart = contextPanelSource.indexOf(
+      'class _HighlightSelectionPopupState',
+    );
+    final activeSelectionPopupEnd = contextPanelSource.indexOf(
+      'class _HighlightPopupAction',
+      activeSelectionPopupStart,
+    );
+    expect(activeSelectionPopupStart, greaterThanOrEqualTo(0));
+    expect(activeSelectionPopupEnd, greaterThan(activeSelectionPopupStart));
+    expect(
+      contextPanelSource.substring(
+        activeSelectionPopupStart,
+        activeSelectionPopupEnd,
+      ),
+      isNot(contains('GestureDetector(')),
+    );
     expect(contextPanelSource, contains('_ImageHighlightSelectionPopup'));
     expect(contextPanelSource, contains('_ImageHighlightNoteSheet'));
     expect(contextPanelSource, contains('showAppBottomSheet'));

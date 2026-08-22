@@ -151,24 +151,29 @@ class TranslateCubit extends Cubit<TranslateSheetState> {
 
   ContextualTranslationRequest _requestFor(TextSelectionContext selection) {
     final contextText = selection.contextText?.trim();
+    final normalizedText = selection.compatibleNormalizedSelectedText;
     final currentText = contextText == null || contextText.isEmpty
         ? selection.effectiveSelectedText
         : contextText;
+    final mode = _translationModeFor(selection, currentText);
     return ContextualTranslationRequest(
       sourceLanguage: state.sourceLanguageCode,
       sourceLanguageHint: selection.sourceLanguageHint,
       targetLanguage: state.targetLanguageCode,
+      mode: mode,
       selection: TranslationSelection(
         text: selection.selectedText,
-        normalizedText: selection.normalizedSelectedText,
+        normalizedText: normalizedText,
         kind: selection.selectionKind,
       ),
       context: TranslationTextContext(
-        level: 'sentence',
+        level: mode == selectedTextTranslationMode ? 'selection' : 'sentence',
         current: TranslationContextPassage(
           text: currentText,
           markedText: selection.markedContextText,
-          normalizedMarkedText: selection.normalizedMarkedContextText,
+          normalizedMarkedText: normalizedText == null
+              ? null
+              : selection.normalizedMarkedContextText,
         ),
       ),
       anchor: TranslationAnchor(
@@ -182,6 +187,34 @@ class TranslateCubit extends Cubit<TranslateSheetState> {
     );
   }
 }
+
+String _translationModeFor(
+  TextSelectionContext selection,
+  String currentContext,
+) {
+  final selected = _collapseWhitespace(selection.effectiveSelectedText);
+  if (selected.isEmpty) return contextualTranslationMode;
+
+  final words = selected.split(' ');
+  final context = _collapseWhitespace(currentContext);
+  final isWholeContext = words.length > 1 && selected == context;
+  final containsSentenceBoundary = RegExp(
+    r'[\r\n.!?\u2026\u3002\uFF01\uFF1F\u061F]',
+  ).hasMatch(selected);
+  final exceedsLexicalSpan =
+      words.length > _maxContextualLookupWords ||
+      selected.runes.length > _maxContextualLookupCharacters;
+
+  return isWholeContext || containsSentenceBoundary || exceedsLexicalSpan
+      ? selectedTextTranslationMode
+      : contextualTranslationMode;
+}
+
+String _collapseWhitespace(String value) =>
+    value.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+const _maxContextualLookupWords = 6;
+const _maxContextualLookupCharacters = 64;
 
 TranslateSheetStatus _statusFor(ContextualTranslationFailureReason reason) {
   return switch (reason) {

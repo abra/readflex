@@ -58,6 +58,24 @@ void main() {
     },
   );
 
+  test('TextSelectionContext rejects stale normalized selection', () {
+    const selection = TextSelectionContext(
+      selectedText: 'power bank is light',
+      normalizedSelectedText: 'power',
+      sourceId: 'article-1',
+      sourceType: SourceType.article,
+      markedContextText: 'The [[power bank is light]] enough.',
+      normalizedMarkedContextText: 'The [[power]] bank is light enough.',
+    );
+
+    expect(selection.compatibleNormalizedSelectedText, isNull);
+    expect(selection.effectiveSelectedText, 'power bank is light');
+    expect(
+      selection.effectiveMarkedContextText,
+      'The [[power bank is light]] enough.',
+    );
+  });
+
   test('TextAction contract can be implemented', () {
     final action = _FakeTextAction();
 

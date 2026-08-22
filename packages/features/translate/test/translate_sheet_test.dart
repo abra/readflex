@@ -56,9 +56,95 @@ void main() {
           AppSizes.buttonHeight,
         );
       }
+
+      final translation = find.widgetWithText(SelectableText, 'сила');
+      final translationWidget = tester.widget<SelectableText>(translation);
+      expect(
+        translationWidget.style,
+        Theme.of(tester.element(translation)).textTheme.headlineSmall,
+      );
       semantics.dispose();
     },
   );
+
+  testWidgets('text translation hides lexical-only result fields', (
+    tester,
+  ) async {
+    final preferences = await PreferencesService.create(
+      supportedCodes: const ['en', 'ru'],
+    );
+    await preferences.update(
+      (prefs) => prefs.copyWith(translationTargetLanguageCode: 'ru'),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        supportedLocales: ReadflexSupportedLocales.locales,
+        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: TranslateSheet(
+            selection: _paragraphSelection,
+            translationService: _FakeTranslationService(
+              includeLexicalDetails: true,
+            ),
+            preferencesService: preferences,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Запуски в наши дни в основном произвольны.'), findsOne);
+    expect(find.text('launch'), findsNothing);
+    expect(find.text('Sentence'), findsNothing);
+    expect(find.text('Lexical explanation'), findsNothing);
+    expect(find.text('релизы'), findsNothing);
+
+    final translation = find.widgetWithText(
+      SelectableText,
+      'Запуски в наши дни в основном произвольны.',
+    );
+    final translationWidget = tester.widget<SelectableText>(translation);
+    expect(
+      translationWidget.style,
+      Theme.of(tester.element(translation)).textTheme.bodyLarge,
+    );
+  });
+
+  testWidgets('short multi-word translation uses readable body typography', (
+    tester,
+  ) async {
+    final preferences = await PreferencesService.create(
+      supportedCodes: const ['en', 'ru'],
+    );
+    await preferences.update(
+      (prefs) => prefs.copyWith(translationTargetLanguageCode: 'ru'),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        supportedLocales: ReadflexSupportedLocales.locales,
+        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: TranslateSheet(
+            selection: _phraseSelection,
+            translationService: const _FakeTranslationService(),
+            preferencesService: preferences,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final translation = find.widgetWithText(SelectableText, 'сила');
+    final translationWidget = tester.widget<SelectableText>(translation);
+    expect(
+      translationWidget.style,
+      Theme.of(tester.element(translation)).textTheme.bodyLarge,
+    );
+  });
 }
 
 const _selection = TextSelectionContext(
@@ -69,7 +155,25 @@ const _selection = TextSelectionContext(
   sourceLanguageHint: 'en',
 );
 
+const _paragraphSelection = TextSelectionContext(
+  selectedText: 'Launches are mostly arbitrary these days.',
+  sourceId: 'source-1',
+  sourceType: SourceType.article,
+  sourceLanguageHint: 'en',
+);
+
+const _phraseSelection = TextSelectionContext(
+  selectedText: 'power bank',
+  sourceId: 'source-1',
+  sourceType: SourceType.article,
+  sourceLanguageHint: 'en',
+);
+
 class _FakeTranslationService implements ContextualTranslationService {
+  const _FakeTranslationService({this.includeLexicalDetails = false});
+
+  final bool includeLexicalDetails;
+
   @override
   Future<ContextualTranslationResult> translate(
     ContextualTranslationRequest request, {
@@ -77,13 +181,26 @@ class _FakeTranslationService implements ContextualTranslationService {
   }) async {
     return ContextualTranslationResult(
       requestId: request.requestId,
+      mode: request.mode,
       status: ContextualTranslationStatus.resolved,
       reliability: ContextualTranslationReliability.verified,
       detectedSourceLanguage: 'en',
       targetLanguage: request.targetLanguage,
-      translation: const ContextualTranslationText(
-        contextualTranslation: 'сила',
+      analysis: includeLexicalDetails
+          ? const ContextualTranslationAnalysis(lemma: 'launch')
+          : null,
+      translation: ContextualTranslationText(
+        contextualTranslation: includeLexicalDetails
+            ? 'Запуски в наши дни в основном произвольны.'
+            : 'сила',
+        sentenceTranslation: includeLexicalDetails
+            ? 'Лексический перевод предложения.'
+            : null,
       ),
+      explanation: includeLexicalDetails ? 'Lexical explanation' : null,
+      alternatives: includeLexicalDetails
+          ? const [ContextualTranslationAlternative(translation: 'релизы')]
+          : const [],
     );
   }
 

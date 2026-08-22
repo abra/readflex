@@ -33,6 +33,37 @@ ReaderTapPayload? parseReaderTapPayload(Object? raw) {
   return ReaderTapPayload(x: x.toDouble(), y: y.toDouble());
 }
 
+@visibleForTesting
+const currentReaderTextSelectionScript = '''
+(() => {
+  try {
+    return typeof window.getCurrentTextSelection === 'function'
+      ? window.getCurrentTextSelection()
+      : null;
+  } catch (error) {
+    console.error('[readflex-eval:currentTextSelection]', error);
+    return null;
+  }
+})()
+''';
+
+Future<ReaderSelection?> readCurrentReaderTextSelection(
+  InAppWebViewController? controller,
+) async {
+  if (controller == null) return null;
+  try {
+    final raw = await controller.evaluateJavascript(
+      source: currentReaderTextSelectionScript,
+    );
+    return parseReaderSelectionPayload(raw);
+  } catch (error) {
+    if (kDebugMode) {
+      debugPrint('[reader-selection-dart] live selection failed: $error');
+    }
+    return null;
+  }
+}
+
 /// Registers the three JS → Flutter bridge handlers that the reader
 /// WebView fires — `onSelectionEnd`, `onSelectionCleared`, `onClick` —
 /// and wires each one to the provided Dart callback.

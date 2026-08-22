@@ -57,12 +57,27 @@ class TextSelectionContext {
 
   /// Text that an action should use when selection was partial.
   String get effectiveSelectedText {
-    final normalized = normalizedSelectedText?.trim();
-    return normalized == null || normalized.isEmpty ? selectedText : normalized;
+    return compatibleNormalizedSelectedText ?? selectedText;
+  }
+
+  /// Normalized text only when it is a genuine expansion of the exact range.
+  ///
+  /// This rejects stale reader snapshots, for example an old single-word
+  /// normalization paired with a newer multi-word exact selection.
+  String? get compatibleNormalizedSelectedText {
+    final exact = _collapseSelectionWhitespace(selectedText);
+    final normalized = _collapseSelectionWhitespace(
+      normalizedSelectedText ?? '',
+    );
+    if (exact.isEmpty || normalized.isEmpty || !normalized.contains(exact)) {
+      return null;
+    }
+    return normalized;
   }
 
   /// Marked context that an action should use when selection was partial.
   String? get effectiveMarkedContextText {
+    if (compatibleNormalizedSelectedText == null) return markedContextText;
     final normalized = normalizedMarkedContextText?.trim();
     return normalized == null || normalized.isEmpty
         ? markedContextText
@@ -98,11 +113,18 @@ class TextSelectionContext {
   final List<String> containedHighlightIds;
 }
 
+String _collapseSelectionWhitespace(String value) =>
+    value.replaceAll(RegExp(r'\s+'), ' ').trim();
+
 /// Contract for reader context-panel actions.
 ///
 /// Each action appears as a button in the reader's context panel
 /// when the user selects text. The reader knows nothing about
 /// specific features — it just calls [onExecute].
+///
+/// Hosts should resolve the selection and dismiss transient context UI before
+/// invoking an action from a [BuildContext] that remains mounted while any
+/// modal or platform surface is open.
 abstract class TextAction {
   String get label;
 
