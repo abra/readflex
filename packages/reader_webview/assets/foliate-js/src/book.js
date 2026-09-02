@@ -2323,7 +2323,7 @@ class Reader {
     })
     view.addEventListener('external-link', e => {
       e.preventDefault()
-      onExternalLink(e.detail)
+      onExternalLink(e.detail.href)
     })
 
     view.addEventListener('link', e =>
@@ -3784,7 +3784,7 @@ const onAnnotationClick = (annotation) => callFlutter('onAnnotationClick', annot
 
 const onClickView = (x, y) => callFlutter('onClick', { x, y })
 
-const onExternalLink = (link) => callFlutter('onExternalLink', link)
+const onExternalLink = (href) => callFlutter('onExternalLink', href)
 
 const onSetToc = () => callFlutter('onSetToc', reader.toc)
 

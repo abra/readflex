@@ -5,8 +5,7 @@ import 'source_type.dart';
 
 enum HighlightKind {
   text,
-  imageArea
-  ;
+  imageArea;
 
   static HighlightKind from(String? value) => switch (value) {
     'imageArea' || 'image_area' => HighlightKind.imageArea,

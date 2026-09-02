@@ -36,3 +36,9 @@ TranslateCubit
 Remote translation may use `source_language: "auto"` and
 `source_language_hint`. Offline translation requires a concrete source language
 because ML Kit does not auto-detect inside the translation API.
+
+The remote client treats the backend payload as an untrusted versioned
+contract. It requires the supported schema version and enums, verifies that the
+response `request_id` and mode match the request, and maps malformed responses
+to a stable invalid-response failure. Backend response bodies and credential
+details are never surfaced directly in user-facing errors.

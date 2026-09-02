@@ -7,11 +7,13 @@ class _ReaderView extends StatelessWidget {
     required this.serverBaseUri,
     required this.textActions,
     this.onArticleTitlePressed,
+    this.onExternalLink,
   });
 
   final Uri serverBaseUri;
   final List<TextAction> textActions;
   final void Function(String url, String title)? onArticleTitlePressed;
+  final ValueChanged<String>? onExternalLink;
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +35,7 @@ class _ReaderView extends StatelessWidget {
                     serverBaseUri: serverBaseUri,
                     textActions: textActions,
                     onArticleTitlePressed: onArticleTitlePressed,
+                    onExternalLink: onExternalLink,
                   ),
                 ),
               ),
@@ -52,6 +55,7 @@ class _ReaderBody extends StatefulWidget {
     required this.serverBaseUri,
     required this.textActions,
     this.onArticleTitlePressed,
+    this.onExternalLink,
   });
 
   final ReaderStatus status;
@@ -59,6 +63,7 @@ class _ReaderBody extends StatefulWidget {
   final Uri serverBaseUri;
   final List<TextAction> textActions;
   final void Function(String url, String title)? onArticleTitlePressed;
+  final ValueChanged<String>? onExternalLink;
 
   @override
   State<_ReaderBody> createState() => _ReaderBodyState();
@@ -114,6 +119,7 @@ class _ReaderBodyState extends State<_ReaderBody> {
               serverBaseUri: widget.serverBaseUri,
               textActions: widget.textActions,
               onArticleTitlePressed: widget.onArticleTitlePressed,
+              onExternalLink: widget.onExternalLink,
               onWebViewReady: _handleWebViewReady,
             ),
             ReaderStatus.initial ||
@@ -142,12 +148,14 @@ class _ReadyContent extends StatelessWidget {
     required this.textActions,
     required this.onWebViewReady,
     this.onArticleTitlePressed,
+    this.onExternalLink,
   });
 
   final Uri serverBaseUri;
   final List<TextAction> textActions;
   final ValueChanged<String?> onWebViewReady;
   final void Function(String url, String title)? onArticleTitlePressed;
+  final ValueChanged<String>? onExternalLink;
 
   @override
   Widget build(BuildContext context) {
@@ -155,6 +163,7 @@ class _ReadyContent extends StatelessWidget {
       serverBaseUri: serverBaseUri,
       textActions: textActions,
       onArticleTitlePressed: onArticleTitlePressed,
+      onExternalLink: onExternalLink,
       onWebViewReady: onWebViewReady,
     );
   }
@@ -167,12 +176,14 @@ class _ReadyContentBody extends StatefulWidget {
     required this.textActions,
     required this.onWebViewReady,
     this.onArticleTitlePressed,
+    this.onExternalLink,
   });
 
   final Uri serverBaseUri;
   final List<TextAction> textActions;
   final ValueChanged<String?> onWebViewReady;
   final void Function(String url, String title)? onArticleTitlePressed;
+  final ValueChanged<String>? onExternalLink;
 
   @override
   State<_ReadyContentBody> createState() => _ReadyContentBodyState();
@@ -471,6 +482,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                       serverBaseUri: widget.serverBaseUri,
                       readerTheme: readerTheme,
                       webViewKey: _webViewKey,
+                      onExternalLink: widget.onExternalLink,
                       onPositionChanged: _handleReaderPositionChanged,
                       onReady: () {
                         if (!mounted) return;
@@ -786,6 +798,7 @@ class _ReaderWebViewBody extends StatefulWidget {
     this.webViewKey,
     this.onPositionChanged,
     this.onReady,
+    this.onExternalLink,
   });
 
   final String? sourceId;
@@ -801,6 +814,7 @@ class _ReaderWebViewBody extends StatefulWidget {
   final ValueChanged<BookPosition>? onPositionChanged;
 
   final VoidCallback? onReady;
+  final ValueChanged<String>? onExternalLink;
 
   @override
   State<_ReaderWebViewBody> createState() => _ReaderWebViewBodyState();
@@ -1073,6 +1087,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
           ),
         );
       },
+      onExternalLink: widget.onExternalLink,
       onTextSelected: (selection) {
         if (kDebugMode) {
           debugPrint(

@@ -156,6 +156,9 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                 onArticleTitlePressed: (url, title) {
                   unawaited(_openArticleUrl(url));
                 },
+                onExternalLink: (url) {
+                  unawaited(_openExternalUrl(url));
+                },
                 initialSearchHistory:
                     deps.preferencesService.current.readerSearchHistory,
                 onSearchHistoryChanged: (queries) {

@@ -18,6 +18,10 @@ class PreferencesService {
   final PreferencesRepository _repository;
   final _controller = StreamController<Preferences>.broadcast();
   Preferences _current;
+  Future<void>? _updateTail;
+  int _latestUpdateId = 0;
+  Future<void>? _disposeFuture;
+  bool _acceptsUpdates = true;
 
   /// Constructs the service asynchronously, loading the initial
   /// [Preferences] from disk. [supportedCodes] bounds locale resolution
@@ -143,10 +147,47 @@ class PreferencesService {
   /// Applies [transform] to the current snapshot, saves the result, and
   /// emits it on [stream]. Persistence failures are logged, not thrown —
   /// the new value still takes effect for this session.
-  Future<void> update(Preferences Function(Preferences) transform) async {
-    _current = transform(_current);
+  Future<void> update(Preferences Function(Preferences) transform) {
+    if (!_acceptsUpdates) {
+      return Future<void>.error(
+        StateError('PreferencesService has been disposed'),
+      );
+    }
+
+    late final Preferences updated;
     try {
-      await _repository.save(_current);
+      updated = transform(_current);
+    } catch (e, st) {
+      return Future<void>.error(e, st);
+    }
+    _current = updated;
+
+    final previous = _updateTail;
+    final updateId = ++_latestUpdateId;
+
+    Future<void> persist() async {
+      try {
+        await _persistAndEmit(updated);
+      } finally {
+        if (_latestUpdateId == updateId) {
+          _updateTail = null;
+        }
+      }
+    }
+
+    final operation = previous == null
+        ? persist()
+        : previous.then<void>(
+            (_) => persist(),
+            onError: (Object _, StackTrace _) => persist(),
+          );
+    _updateTail = operation;
+    return operation;
+  }
+
+  Future<void> _persistAndEmit(Preferences snapshot) async {
+    try {
+      await _repository.save(snapshot);
     } catch (e, st) {
       // Save failure is non-fatal: in-memory state is updated and emitted
       // so the UI stays consistent for this session. On next launch the old
@@ -158,10 +199,18 @@ class PreferencesService {
         name: 'PreferencesService',
       );
     }
-    _controller.add(_current);
+    _controller.add(snapshot);
   }
 
-  Future<void> dispose() => _controller.close();
+  Future<void> dispose() {
+    _acceptsUpdates = false;
+    return _disposeFuture ??= _dispose();
+  }
+
+  Future<void> _dispose() async {
+    await _updateTail;
+    await _controller.close();
+  }
 }
 
 double? _normalizeReaderBrightness(double? value) {

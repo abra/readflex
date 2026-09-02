@@ -81,12 +81,27 @@ class TranslateCubit extends Cubit<TranslateSheetState> {
 
   final ContextualTranslationService _translationService;
   final PreferencesService _preferencesService;
+  int _operationGeneration = 0;
 
   Future<void> translate(
     TextSelectionContext selection, {
     bool allowOfflineModelDownload = false,
   }) async {
-    if (state.isBusy) return;
+    if (isClosed || state.isBusy) return;
+    final operationGeneration = ++_operationGeneration;
+    await _runTranslation(
+      selection,
+      operationGeneration: operationGeneration,
+      allowOfflineModelDownload: allowOfflineModelDownload,
+    );
+  }
+
+  Future<void> _runTranslation(
+    TextSelectionContext selection, {
+    required int operationGeneration,
+    bool allowOfflineModelDownload = false,
+  }) async {
+    if (!_isCurrentOperation(operationGeneration)) return;
     emit(
       state.copyWith(
         status: allowOfflineModelDownload
@@ -102,15 +117,30 @@ class TranslateCubit extends Cubit<TranslateSheetState> {
         _requestFor(selection),
         allowOfflineModelDownload: allowOfflineModelDownload,
       );
+      if (!_isCurrentOperation(operationGeneration)) return;
       emit(
         state.copyWith(status: TranslateSheetStatus.success, result: result),
       );
     } on ContextualTranslationException catch (error) {
+      if (!_isCurrentOperation(operationGeneration)) return;
       emit(
         state.copyWith(
           status: _statusFor(error.reason),
           failure: error,
           result: null,
+        ),
+      );
+    } catch (error, stackTrace) {
+      if (!_isCurrentOperation(operationGeneration)) return;
+      addError(error, stackTrace);
+      emit(
+        state.copyWith(
+          status: TranslateSheetStatus.failure,
+          result: null,
+          failure: const ContextualTranslationException(
+            ContextualTranslationFailureReason.invalidResponse,
+            'Unexpected translation failure',
+          ),
         ),
       );
     }
@@ -120,7 +150,8 @@ class TranslateCubit extends Cubit<TranslateSheetState> {
     TextSelectionContext selection,
     String code,
   ) async {
-    if (state.sourceLanguageCode == code) return;
+    if (isClosed || state.sourceLanguageCode == code) return;
+    final operationGeneration = ++_operationGeneration;
     emit(
       state.copyWith(
         sourceLanguageCode: code,
@@ -129,14 +160,15 @@ class TranslateCubit extends Cubit<TranslateSheetState> {
         failure: null,
       ),
     );
-    await translate(selection);
+    await _runTranslation(selection, operationGeneration: operationGeneration);
   }
 
   Future<void> setTargetLanguage(
     TextSelectionContext selection,
     String code,
   ) async {
-    if (state.targetLanguageCode == code) return;
+    if (isClosed || state.targetLanguageCode == code) return;
+    final operationGeneration = ++_operationGeneration;
     emit(
       state.copyWith(
         targetLanguageCode: code,
@@ -148,7 +180,12 @@ class TranslateCubit extends Cubit<TranslateSheetState> {
     await _preferencesService.update(
       (prefs) => prefs.copyWith(translationTargetLanguageCode: code),
     );
-    await translate(selection);
+    if (!_isCurrentOperation(operationGeneration)) return;
+    await _runTranslation(selection, operationGeneration: operationGeneration);
+  }
+
+  bool _isCurrentOperation(int generation) {
+    return !isClosed && generation == _operationGeneration;
   }
 
   ContextualTranslationRequest _requestFor(TextSelectionContext selection) {

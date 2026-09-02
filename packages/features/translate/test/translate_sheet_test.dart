@@ -196,6 +196,21 @@ void main() {
     expect(find.text('вариант 16'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('does not render raw service failure details', (tester) async {
+    await _pumpTranslateSheet(
+      tester,
+      selection: _selection,
+      service: const _FailingTranslationService(),
+    );
+
+    expect(find.text('Translation failed'), findsOneWidget);
+    expect(
+      find.text('Check the network connection or try again later.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('credential leaked'), findsNothing);
+  });
 }
 
 Future<void> _pumpTranslateSheet(
@@ -329,6 +344,25 @@ class _FakeTranslationService implements ContextualTranslationService {
               ),
             )
           : const [],
+    );
+  }
+
+  @override
+  void dispose() {}
+}
+
+class _FailingTranslationService implements ContextualTranslationService {
+  const _FailingTranslationService();
+
+  @override
+  Future<ContextualTranslationResult> translate(
+    ContextualTranslationRequest request, {
+    bool allowOfflineModelDownload = false,
+  }) {
+    throw const ContextualTranslationException(
+      ContextualTranslationFailureReason.http,
+      'internal provider credential leaked',
+      statusCode: 500,
     );
   }
 

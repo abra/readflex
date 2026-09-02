@@ -2,8 +2,7 @@
 enum CreationSource {
   manual,
   aiHighlight,
-  aiSelection
-  ;
+  aiSelection;
 
   /// Parses a [CreationSource] from its stored [name]. Falls back to [manual]
   /// on unknown values.

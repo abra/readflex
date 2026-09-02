@@ -9,6 +9,8 @@ environment:
 dependencies:
   domain_models:
     path: ../domain_models
+  remote_content_policy:
+    path: ../remote_content_policy
   http: ^1.6.0
 
 dev_dependencies:

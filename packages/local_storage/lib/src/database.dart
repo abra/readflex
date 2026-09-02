@@ -57,10 +57,18 @@ part 'database.g.dart';
   ],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(_openConnection());
+  AppDatabase()
+    : _documentsDirectoryProvider = getApplicationDocumentsDirectory,
+      super(_openConnection());
 
   @visibleForTesting
-  AppDatabase.forTesting(super.executor);
+  AppDatabase.forTesting(
+    super.executor, {
+    Future<Directory> Function()? documentsDirectoryProvider,
+  }) : _documentsDirectoryProvider =
+           documentsDirectoryProvider ?? getApplicationDocumentsDirectory;
+
+  final Future<Directory> Function() _documentsDirectoryProvider;
 
   @override
   int get schemaVersion => 22;
@@ -259,59 +267,8 @@ class AppDatabase extends _$AppDatabase {
           'ALTER TABLE articles_table ADD COLUMN text_length INTEGER NOT NULL DEFAULT 0',
         );
       }
-      if (from < 6) {
-        // Historical article schema: cleanedHtml TEXT was replaced by
-        // contentPath pointing to a file on disk. Keep this step for
-        // upgrade fidelity from v5.
-        await customStatement('DROP TABLE IF EXISTS articles_table');
-        await customStatement('''
-          CREATE TABLE articles_table (
-            id TEXT NOT NULL PRIMARY KEY,
-            title TEXT NOT NULL,
-            site_name TEXT,
-            url TEXT NOT NULL,
-            content_path TEXT NOT NULL,
-            cover_image_url TEXT,
-            cover_image_path TEXT,
-            byline TEXT,
-            excerpt TEXT,
-            published_time TEXT,
-            lang TEXT,
-            text_length INTEGER NOT NULL DEFAULT 0,
-            estimated_word_count INTEGER NOT NULL DEFAULT 0,
-            current_scroll_offset REAL NOT NULL DEFAULT 0.0,
-            added_at TEXT NOT NULL,
-            last_opened_at TEXT,
-            is_finished INTEGER NOT NULL DEFAULT 0
-          )
-        ''');
-      }
-      if (from < 7) {
-        // Historical article schema: contentPath / coverImagePath flipped
-        // from absolute paths to filenames only.
-        await customStatement('DROP TABLE IF EXISTS articles_table');
-        await customStatement('''
-          CREATE TABLE articles_table (
-            id TEXT NOT NULL PRIMARY KEY,
-            title TEXT NOT NULL,
-            site_name TEXT,
-            url TEXT NOT NULL,
-            content_path TEXT NOT NULL,
-            cover_image_url TEXT,
-            cover_image_path TEXT,
-            byline TEXT,
-            excerpt TEXT,
-            published_time TEXT,
-            lang TEXT,
-            text_length INTEGER NOT NULL DEFAULT 0,
-            estimated_word_count INTEGER NOT NULL DEFAULT 0,
-            current_scroll_offset REAL NOT NULL DEFAULT 0.0,
-            added_at TEXT NOT NULL,
-            last_opened_at TEXT,
-            is_finished INTEGER NOT NULL DEFAULT 0
-          )
-        ''');
-      }
+      // v5 inline HTML and v6 absolute paths are left intact until the v13
+      // step, which migrates every historical article layout in one pass.
       if (from < 8) {
         // Add normalized reading_progress to articles, mirroring
         // books_table. Purely additive with a 0.0 default — no backfill
@@ -358,9 +315,7 @@ class AppDatabase extends _$AppDatabase {
         );
       }
       if (from < 13) {
-        // Legacy article-table reset from v13. Safe to skip if the user
-        // never had article data; v18 creates the current article schema.
-        await customStatement('DROP TABLE IF EXISTS articles_table');
+        await _migrateLegacyArticles();
       }
       if (from < 14) {
         // The `txt` format was dropped from BookFormat (foliate-js
@@ -429,6 +384,170 @@ class AppDatabase extends _$AppDatabase {
       )
     ''');
     await _createArticlesIndexes();
+  }
+
+  Future<void> _migrateLegacyArticles() async {
+    final table = await customSelect(
+      "SELECT name FROM sqlite_master "
+      "WHERE type = 'table' AND name = 'articles_table'",
+    ).getSingleOrNull();
+    if (table == null) {
+      await _createArticlesTable();
+      return;
+    }
+
+    final columnRows = await customSelect(
+      'PRAGMA table_info(articles_table)',
+    ).get();
+    final columns = {
+      for (final row in columnRows) row.read<String>('name'),
+    };
+    final legacyRows = await customSelect('SELECT * FROM articles_table').get();
+    final documentsDirectory = await _legacyDocumentsDirectory();
+
+    final migratedRows = <_LegacyArticleMigration>[];
+    for (final row in legacyRows) {
+      final id = row.read<String>('id');
+      final url = row.read<String>('url');
+      final parsedHostname = Uri.tryParse(url)?.host;
+      final files = documentsDirectory == null
+          ? const _MigratedArticleFiles(contentFilename: 'content.html')
+          : await _migrateLegacyArticleFiles(
+              documentsDirectory: documentsDirectory,
+              id: id,
+              inlineHtml: _readLegacy<String>(row, columns, 'cleaned_html'),
+              contentPath: _readLegacy<String>(row, columns, 'content_path'),
+              coverPath: _readLegacy<String>(row, columns, 'cover_image_path'),
+            );
+      final rawProgress =
+          _readLegacy<double>(row, columns, 'current_scroll_offset') ?? 0;
+      migratedRows.add(
+        _LegacyArticleMigration(
+          id: id,
+          title: row.read<String>('title'),
+          url: url,
+          author: _readLegacy<String>(row, columns, 'byline'),
+          siteName: _readLegacy<String>(row, columns, 'site_name'),
+          hostname: parsedHostname == null || parsedHostname.isEmpty
+              ? null
+              : parsedHostname,
+          description: _readLegacy<String>(row, columns, 'excerpt'),
+          imageUrl: _readLegacy<String>(row, columns, 'cover_image_url'),
+          coverImagePath: files.coverFilename,
+          language: _readLegacy<String>(row, columns, 'lang'),
+          contentPath: files.contentFilename,
+          textLength: _readLegacy<int>(row, columns, 'text_length') ?? 0,
+          estimatedWordCount:
+              _readLegacy<int>(row, columns, 'estimated_word_count') ?? 0,
+          currentCfi: _readLegacy<String>(row, columns, 'current_cfi'),
+          readingProgress: rawProgress.toDouble().clamp(0.0, 1.0).toDouble(),
+          addedAt: row.read<String>('added_at'),
+          lastOpenedAt: _readLegacy<String>(
+            row,
+            columns,
+            'last_opened_at',
+          ),
+          isFinished: (_readLegacy<int>(row, columns, 'is_finished') ?? 0) != 0,
+        ),
+      );
+    }
+
+    await customStatement(
+      'ALTER TABLE articles_table RENAME TO articles_table_legacy',
+    );
+    await _createArticlesTable();
+    for (final article in migratedRows) {
+      await customStatement(
+        '''
+          INSERT INTO articles_table (
+            id, title, url, resolved_url, canonical_url, author, site_name,
+            hostname, description, image_url, cover_image_path, language,
+            content_path, plain_text, text_length, estimated_word_count,
+            current_cfi, reading_progress, added_at, last_opened_at, is_finished
+          ) VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, ?, ?, ?, ?, ?)
+        ''',
+        article.variables,
+      );
+    }
+    await customStatement('DROP TABLE articles_table_legacy');
+  }
+
+  Future<Directory?> _legacyDocumentsDirectory() async {
+    try {
+      return await _documentsDirectoryProvider();
+    } on Object {
+      // A transient platform-channel failure must not turn a schema upgrade
+      // into article data loss. File repair can be retried independently.
+      return null;
+    }
+  }
+
+  Future<_MigratedArticleFiles> _migrateLegacyArticleFiles({
+    required Directory documentsDirectory,
+    required String id,
+    required String? inlineHtml,
+    required String? contentPath,
+    required String? coverPath,
+  }) async {
+    const contentFilename = 'content.html';
+    if (p.basename(id) != id) {
+      return const _MigratedArticleFiles(contentFilename: contentFilename);
+    }
+
+    final articlesDirectory = Directory(
+      p.join(documentsDirectory.path, 'articles'),
+    );
+    final articleDirectory = Directory(p.join(articlesDirectory.path, id));
+    final contentFile = File(p.join(articleDirectory.path, contentFilename));
+
+    try {
+      await articleDirectory.create(recursive: true);
+      if (inlineHtml != null) {
+        if (!await contentFile.exists()) {
+          await contentFile.writeAsString(inlineHtml, flush: true);
+        }
+      } else if (!await contentFile.exists()) {
+        final source = await _firstExistingFile([
+          if (contentPath != null && p.isAbsolute(contentPath))
+            File(contentPath),
+          if (contentPath != null)
+            File(p.join(articlesDirectory.path, p.basename(contentPath))),
+        ]);
+        if (source != null && source.path != contentFile.path) {
+          await source.copy(contentFile.path);
+        }
+      }
+
+      final coverBaseName = coverPath == null ? null : p.basename(coverPath);
+      if (coverBaseName == null || coverBaseName.isEmpty) {
+        return const _MigratedArticleFiles(contentFilename: contentFilename);
+      }
+
+      final coverFile = File(p.join(articleDirectory.path, coverBaseName));
+      if (!await coverFile.exists()) {
+        final source = await _firstExistingFile([
+          if (p.isAbsolute(coverPath!)) File(coverPath),
+          File(
+            p.join(
+              documentsDirectory.path,
+              'article_covers',
+              coverBaseName,
+            ),
+          ),
+        ]);
+        if (source != null && source.path != coverFile.path) {
+          await source.copy(coverFile.path);
+        }
+      }
+      return _MigratedArticleFiles(
+        contentFilename: contentFilename,
+        coverFilename: await coverFile.exists() ? coverBaseName : null,
+      );
+    } on FileSystemException {
+      // Keep the database row even if an old file is already missing or the
+      // filesystem cannot be repaired during this one-time migration.
+      return const _MigratedArticleFiles(contentFilename: contentFilename);
+    }
   }
 
   Future<void> _createArticlesIndexes() async {
@@ -588,6 +707,95 @@ class AppDatabase extends _$AppDatabase {
       ON dictionary_anchors_table (entry_id)
     ''');
   }
+}
+
+T? _readLegacy<T extends Object>(
+  QueryRow row,
+  Set<String> columns,
+  String column,
+) {
+  if (!columns.contains(column)) return null;
+  return row.readNullable<T>(column);
+}
+
+Future<File?> _firstExistingFile(Iterable<File> candidates) async {
+  for (final candidate in candidates) {
+    if (await candidate.exists()) return candidate;
+  }
+  return null;
+}
+
+class _MigratedArticleFiles {
+  const _MigratedArticleFiles({
+    required this.contentFilename,
+    this.coverFilename,
+  });
+
+  final String contentFilename;
+  final String? coverFilename;
+}
+
+class _LegacyArticleMigration {
+  const _LegacyArticleMigration({
+    required this.id,
+    required this.title,
+    required this.url,
+    required this.author,
+    required this.siteName,
+    required this.hostname,
+    required this.description,
+    required this.imageUrl,
+    required this.coverImagePath,
+    required this.language,
+    required this.contentPath,
+    required this.textLength,
+    required this.estimatedWordCount,
+    required this.currentCfi,
+    required this.readingProgress,
+    required this.addedAt,
+    required this.lastOpenedAt,
+    required this.isFinished,
+  });
+
+  final String id;
+  final String title;
+  final String url;
+  final String? author;
+  final String? siteName;
+  final String? hostname;
+  final String? description;
+  final String? imageUrl;
+  final String? coverImagePath;
+  final String? language;
+  final String contentPath;
+  final int textLength;
+  final int estimatedWordCount;
+  final String? currentCfi;
+  final double readingProgress;
+  final String addedAt;
+  final String? lastOpenedAt;
+  final bool isFinished;
+
+  List<Object?> get variables => [
+    id,
+    title,
+    url,
+    author,
+    siteName,
+    hostname,
+    description,
+    imageUrl,
+    coverImagePath,
+    language,
+    contentPath,
+    textLength,
+    estimatedWordCount,
+    currentCfi,
+    readingProgress,
+    addedAt,
+    lastOpenedAt,
+    isFinished ? 1 : 0,
+  ];
 }
 
 LazyDatabase _openConnection() => LazyDatabase(() async {

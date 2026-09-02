@@ -16,6 +16,7 @@ import 'package:readflex/app/bloc/app_bloc_observer.dart';
 import 'package:readflex/app/bloc/bloc_transformer.dart';
 import 'package:readflex/app/composition.dart';
 import 'package:readflex/app/config/application_config.dart';
+import 'package:readflex/app/dependency_container.dart';
 import 'package:readflex/app/frame_timing_tracing.dart';
 import 'package:readflex/app/root_context.dart';
 import 'package:readflex/app/screens/initialization_failed_screen.dart';
@@ -63,6 +64,7 @@ Future<void> starter() async {
     // allowing the error screen to re-run the full initialization without
     // restarting the process.
     Future<void> composeAndRun() async {
+      DependenciesContainer? dependencies;
       try {
         config.validate();
         final compositionResult = await composeDependencies(
@@ -72,6 +74,7 @@ Future<void> starter() async {
         );
 
         final deps = compositionResult.dependencies;
+        dependencies = deps;
 
         // Extract the Foliate and article-reader assets to cache so the local
         // HTTP server can serve them as plain files.
@@ -93,7 +96,9 @@ Future<void> starter() async {
         await deps.readerServer.start();
 
         runApp(RootContext(compositionResult: compositionResult));
+        dependencies = null;
       } on Object catch (e, stackTrace) {
+        await dependencies?.disposeAfterBootstrapFailure();
         // Catches both Exception and Error (e.g. OutOfMemoryError),
         // ensuring no failure silently escapes during initialization.
         logger.error('Initialization failed', error: e, stackTrace: stackTrace);

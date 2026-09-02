@@ -26,11 +26,20 @@ class MlKitOfflineTranslationService
     required String sourceLanguage,
     required String targetLanguage,
   }) async {
-    final source = _requiredLanguage(sourceLanguage);
-    final target = _requiredLanguage(targetLanguage);
-    final sourceReady = await _modelManager.isModelDownloaded(source.bcpCode);
-    final targetReady = await _modelManager.isModelDownloaded(target.bcpCode);
-    return sourceReady && targetReady;
+    try {
+      final source = _requiredLanguage(sourceLanguage);
+      final target = _requiredLanguage(targetLanguage);
+      final sourceReady = await _modelManager.isModelDownloaded(source.bcpCode);
+      final targetReady = await _modelManager.isModelDownloaded(target.bcpCode);
+      return sourceReady && targetReady;
+    } on ContextualTranslationException {
+      rethrow;
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(
+        _offlineUnavailable(error, sourceLanguage, targetLanguage),
+        stackTrace,
+      );
+    }
   }
 
   @override
@@ -38,11 +47,25 @@ class MlKitOfflineTranslationService
     required String sourceLanguage,
     required String targetLanguage,
   }) async {
-    final source = _requiredLanguage(sourceLanguage);
-    final target = _requiredLanguage(targetLanguage);
-    await _modelManager.downloadModel(source.bcpCode);
-    if (source.bcpCode != target.bcpCode) {
-      await _modelManager.downloadModel(target.bcpCode);
+    try {
+      final source = _requiredLanguage(sourceLanguage);
+      final target = _requiredLanguage(targetLanguage);
+      final sourceDownloaded = await _modelManager.downloadModel(
+        source.bcpCode,
+      );
+      final targetDownloaded = source.bcpCode == target.bcpCode
+          ? sourceDownloaded
+          : await _modelManager.downloadModel(target.bcpCode);
+      if (!sourceDownloaded || !targetDownloaded) {
+        throw _offlineUnavailable(null, sourceLanguage, targetLanguage);
+      }
+    } on ContextualTranslationException {
+      rethrow;
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(
+        _offlineUnavailable(error, sourceLanguage, targetLanguage),
+        stackTrace,
+      );
     }
   }
 
@@ -74,6 +97,13 @@ class MlKitOfflineTranslationService
         selectedTranslation: selected,
         sentenceTranslation: sentenceTranslation,
       );
+    } on ContextualTranslationException {
+      rethrow;
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(
+        _offlineUnavailable(error, sourceLanguage, request.targetLanguage),
+        stackTrace,
+      );
     } finally {
       await translator.close();
     }
@@ -104,4 +134,18 @@ TranslateLanguage? _translateLanguageForCode(String code) {
     'zh' => TranslateLanguage.chinese,
     _ => null,
   };
+}
+
+ContextualTranslationException _offlineUnavailable(
+  Object? cause,
+  String sourceLanguage,
+  String targetLanguage,
+) {
+  return ContextualTranslationException(
+    ContextualTranslationFailureReason.unavailable,
+    'Offline translation is unavailable',
+    sourceLanguage: sourceLanguage,
+    targetLanguage: targetLanguage,
+    cause: cause,
+  );
 }

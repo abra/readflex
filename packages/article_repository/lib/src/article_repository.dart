@@ -1,12 +1,16 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
+import 'dart:math' as math;
 
+import 'package:crypto/crypto.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'package:local_storage/local_storage.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:path/path.dart' as p;
+import 'package:remote_content_policy/remote_content_policy.dart';
 import 'package:uuid/uuid.dart' show Uuid;
 
 import 'mappers/article_to_domain.dart';
@@ -20,12 +24,45 @@ class ArticleRepository {
     required Directory articlesDirectory,
     http.Client? httpClient,
     Logger? logger,
+    RemoteUriPolicy? remoteUriPolicy,
+    int maxArticleImages = defaultMaxArticleImages,
+    int maxImageBytes = defaultMaxImageBytes,
+    int maxTotalImageBytes = defaultMaxTotalImageBytes,
+    Duration imageDownloadTimeout = defaultImageDownloadTimeout,
+    Duration totalImageDownloadTimeout = defaultTotalImageDownloadTimeout,
+    int maxImageRedirects = defaultMaxImageRedirects,
   }) : _db = database,
        _dao = database.articlesDao,
        _articlesDir = articlesDirectory,
-       _httpClient = httpClient ?? http.Client(),
+       _httpClient =
+           httpClient ??
+           IOClient(
+             createPublicRemoteHttpClient(
+               uriPolicy: remoteUriPolicy ?? RemoteUriPolicy(),
+             ),
+           ),
        _ownsHttpClient = httpClient == null,
-       _logger = logger;
+       _logger = logger,
+       _remoteUriPolicy = remoteUriPolicy ?? RemoteUriPolicy(),
+       _maxArticleImages = maxArticleImages,
+       _maxImageBytes = maxImageBytes,
+       _maxTotalImageBytes = maxTotalImageBytes,
+       _imageDownloadTimeout = imageDownloadTimeout,
+       _totalImageDownloadTimeout = totalImageDownloadTimeout,
+       _maxImageRedirects = maxImageRedirects,
+       assert(maxArticleImages > 0),
+       assert(maxImageBytes > 0),
+       assert(maxTotalImageBytes > 0),
+       assert(imageDownloadTimeout > Duration.zero),
+       assert(totalImageDownloadTimeout > Duration.zero),
+       assert(maxImageRedirects >= 0);
+
+  static const defaultMaxArticleImages = 64;
+  static const defaultMaxImageBytes = 10 * 1024 * 1024;
+  static const defaultMaxTotalImageBytes = 48 * 1024 * 1024;
+  static const defaultImageDownloadTimeout = Duration(seconds: 30);
+  static const defaultTotalImageDownloadTimeout = Duration(seconds: 90);
+  static const defaultMaxImageRedirects = 5;
 
   final AppDatabase _db;
   final ArticlesDao _dao;
@@ -33,8 +70,13 @@ class ArticleRepository {
   final http.Client _httpClient;
   final bool _ownsHttpClient;
   final Logger? _logger;
-
-  static const _downloadTimeout = Duration(seconds: 30);
+  final RemoteUriPolicy _remoteUriPolicy;
+  final int _maxArticleImages;
+  final int _maxImageBytes;
+  final int _maxTotalImageBytes;
+  final Duration _imageDownloadTimeout;
+  final Duration _totalImageDownloadTimeout;
+  final int _maxImageRedirects;
 
   void dispose() {
     if (_ownsHttpClient) _httpClient.close();
@@ -81,7 +123,7 @@ class ArticleRepository {
       );
       await File(
         p.join(articleDir.path, 'content.html'),
-      ).writeAsString(htmlWithLocalImages.html, flush: true);
+      ).writeAsString(htmlWithLocalImages, flush: true);
 
       String? coverFilename;
       if (extracted.imageUrl case final url? when url.isNotEmpty) {
@@ -163,63 +205,156 @@ class ArticleRepository {
     }
   }
 
-  Future<_DownloadedArticleImages> _downloadArticleImages({
+  Future<String> _downloadArticleImages({
     required String html,
     required Directory articleDir,
     required Uri? baseUri,
   }) async {
     final matches = _imgSrcRegex.allMatches(html);
     final sources = <String, Uri>{};
+    final uniqueUris = <String>{};
     for (final match in matches) {
       final source = match.group(1);
       final uri = _resolveRemoteUri(source, baseUri);
-      if (source != null && uri != null) sources[source] = uri;
+      if (source == null || uri == null || sources.containsKey(source)) {
+        continue;
+      }
+      final uriKey = uri.toString();
+      if (!uniqueUris.contains(uriKey) &&
+          uniqueUris.length >= _maxArticleImages) {
+        continue;
+      }
+      uniqueUris.add(uriKey);
+      sources[source] = uri;
     }
-    if (sources.isEmpty) {
-      return _DownloadedArticleImages(html: html, images: const []);
-    }
+    if (sources.isEmpty) return html;
 
     final replacements = <String, String>{};
-    final images = <_DownloadedArticleImage>[];
+    final downloadedByUri = <String, _DownloadedArticleImage?>{};
+    final imagesDir = Directory(p.join(articleDir.path, 'images'));
+    final totalDeadline = DateTime.now().add(_totalImageDownloadTimeout);
+    final downloadBudget = _ImageDownloadBudget(_maxTotalImageBytes);
+
     for (final entry in sources.entries) {
-      final image = await _tryDownloadImage(entry.value);
+      final now = DateTime.now();
+      final remainingBytes = downloadBudget.remainingBytes;
+      if (!now.isBefore(totalDeadline) || remainingBytes <= 0) break;
+
+      final uriKey = entry.value.toString();
+      _DownloadedArticleImage? image;
+      if (downloadedByUri.containsKey(uriKey)) {
+        image = downloadedByUri[uriKey];
+      } else {
+        await imagesDir.create(recursive: true);
+        final imageDeadline = _earlierOf(
+          totalDeadline,
+          now.add(_imageDownloadTimeout),
+        );
+        image = await _tryDownloadImage(
+          directory: imagesDir,
+          uri: entry.value,
+          maxBytes: math.min(_maxImageBytes, remainingBytes),
+          deadline: imageDeadline,
+          downloadBudget: downloadBudget,
+        );
+        downloadedByUri[uriKey] = image;
+      }
       if (image == null) continue;
       replacements[entry.key] = 'images/${image.filename}';
-      images.add(image);
     }
-    if (replacements.isEmpty) {
-      return _DownloadedArticleImages(html: html, images: const []);
-    }
+    if (replacements.isEmpty) return html;
 
-    final imagesDir = Directory(p.join(articleDir.path, 'images'));
-    await imagesDir.create(recursive: true);
-    for (final image in images) {
-      await File(
-        p.join(imagesDir.path, image.filename),
-      ).writeAsBytes(image.bytes, flush: true);
-    }
-
-    final rewritten = html.replaceAllMapped(
+    return html.replaceAllMapped(
       RegExp(replacements.keys.map(RegExp.escape).join('|')),
       (match) => replacements[match.group(0)] ?? match.group(0)!,
     );
-    return _DownloadedArticleImages(html: rewritten, images: images);
   }
 
-  Future<_DownloadedArticleImage?> _tryDownloadImage(Uri uri) async {
+  Future<_DownloadedArticleImage?> _tryDownloadImage({
+    required Directory directory,
+    required Uri uri,
+    required int maxBytes,
+    required DateTime deadline,
+    _ImageDownloadBudget? downloadBudget,
+    String Function(Uri uri, String extension)? filenameFor,
+  }) async {
     try {
-      final response = await _httpClient.get(uri).timeout(_downloadTimeout);
-      if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
+      final remote = await _openImageResponse(uri, deadline);
+      if (remote == null) return null;
+      final declaredLength = int.tryParse(
+        remote.response.headers['content-length'] ?? '',
+      );
+      if (declaredLength != null && declaredLength > maxBytes) {
+        await _cancelResponse(remote.response);
         return null;
       }
-      final mime = _contentType(response.headers['content-type']);
-      final ext = _extensionFor(uri, mime);
-      final filename =
-          '${uri.toString().hashCode.toUnsigned(32).toRadixString(16)}$ext';
-      return _DownloadedArticleImage(
-        filename: filename,
-        bytes: Uint8List.fromList(response.bodyBytes),
+      final contentType = _contentType(
+        remote.response.headers['content-type'],
       );
+      if (contentType != null &&
+          !_allowedImageContentTypes.contains(contentType)) {
+        await _cancelResponse(remote.response);
+        return null;
+      }
+
+      final temporaryFile = File(
+        p.join(directory.path, '.${_uuid.v4()}.download'),
+      );
+      IOSink? output;
+      try {
+        output = temporaryFile.openWrite();
+        final prefix = <int>[];
+        var byteCount = 0;
+        final chunks = StreamIterator(remote.response.stream);
+        try {
+          while (await chunks.moveNext().timeout(
+            _remainingUntil(deadline),
+          )) {
+            final chunk = chunks.current;
+            if (downloadBudget != null &&
+                !downloadBudget.consume(chunk.length)) {
+              throw const _ImageDownloadLimitReached();
+            }
+            byteCount += chunk.length;
+            if (byteCount > maxBytes) {
+              throw const _ImageDownloadLimitReached();
+            }
+            if (prefix.length < _imageSignatureLength) {
+              prefix.addAll(
+                chunk.take(_imageSignatureLength - prefix.length),
+              );
+            }
+            output.add(chunk);
+          }
+        } finally {
+          await chunks.cancel();
+        }
+        await output.flush();
+        await output.close();
+        output = null;
+
+        if (byteCount == 0) return null;
+        final extension = _validatedImageExtension(
+          prefix,
+          contentType,
+        );
+        if (extension == null) return null;
+
+        final filename =
+            filenameFor?.call(remote.uri, extension) ??
+            '${sha256.convert(utf8.encode(remote.uri.toString()))}$extension';
+        await temporaryFile.rename(p.join(directory.path, filename));
+        return _DownloadedArticleImage(filename: filename);
+      } finally {
+        if (output != null) {
+          try {
+            await output.close();
+          } catch (_) {
+            // Best-effort cleanup; the original download error is primary.
+          }
+        }
+        if (await temporaryFile.exists()) await temporaryFile.delete();
+      }
     } catch (e, st) {
       _logger?.debug(
         'ArticleRepository: image download failed ($uri)',
@@ -231,41 +366,92 @@ class ArticleRepository {
   }
 
   Future<String?> _tryDownloadCover(Directory articleDir, Uri uri) async {
-    try {
-      final response = await _httpClient.get(uri).timeout(_downloadTimeout);
-      if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
+    final image = await _tryDownloadImage(
+      directory: articleDir,
+      uri: uri,
+      maxBytes: _maxImageBytes,
+      deadline: DateTime.now().add(_imageDownloadTimeout),
+      filenameFor: (_, extension) => 'cover$extension',
+    );
+    return image?.filename;
+  }
+
+  Future<_ValidatedImageResponse?> _openImageResponse(
+    Uri initialUri,
+    DateTime deadline,
+  ) async {
+    var currentUri = initialUri;
+    var redirectCount = 0;
+
+    while (true) {
+      await _remoteUriPolicy
+          .validate(currentUri)
+          .timeout(
+            _remainingUntil(deadline),
+          );
+      final request = http.Request('GET', currentUri)
+        ..followRedirects = false
+        ..maxRedirects = 0
+        ..headers['accept'] =
+            'image/avif,image/webp,image/png,image/jpeg,image/gif;q=0.9,*/*;q=0.1';
+      final response = await _httpClient
+          .send(request)
+          .timeout(
+            _remainingUntil(deadline),
+          );
+
+      if (_isRedirectStatus(response.statusCode)) {
+        await _cancelResponse(response);
+        final location = response.headers['location'];
+        if (location == null ||
+            location.trim().isEmpty ||
+            redirectCount >= _maxImageRedirects) {
+          return null;
+        }
+        currentUri = currentUri.resolve(location);
+        redirectCount++;
+        continue;
+      }
+
+      if (response.statusCode != 200) {
+        await _cancelResponse(response);
         return null;
       }
-      final mime = _contentType(response.headers['content-type']);
-      final filename = 'cover${_extensionFor(uri, mime)}';
-      await File(
-        p.join(articleDir.path, filename),
-      ).writeAsBytes(response.bodyBytes, flush: true);
-      return filename;
-    } catch (e, st) {
-      _logger?.debug(
-        'ArticleRepository: cover download failed ($uri)',
-        error: e,
-        stackTrace: st,
-      );
-      return null;
+      return _ValidatedImageResponse(uri: currentUri, response: response);
     }
   }
 }
 
-/// Result of rewriting article HTML image sources to local files.
-class _DownloadedArticleImages {
-  const _DownloadedArticleImages({required this.html, required this.images});
-
-  final String html;
-  final List<_DownloadedArticleImage> images;
-}
-
 class _DownloadedArticleImage {
-  const _DownloadedArticleImage({required this.filename, required this.bytes});
+  const _DownloadedArticleImage({required this.filename});
 
   final String filename;
-  final Uint8List bytes;
+}
+
+class _ValidatedImageResponse {
+  const _ValidatedImageResponse({required this.uri, required this.response});
+
+  final Uri uri;
+  final http.StreamedResponse response;
+}
+
+class _ImageDownloadLimitReached implements Exception {
+  const _ImageDownloadLimitReached();
+}
+
+class _ImageDownloadBudget {
+  _ImageDownloadBudget(this.remainingBytes);
+
+  int remainingBytes;
+
+  bool consume(int byteCount) {
+    if (byteCount > remainingBytes) {
+      remainingBytes = 0;
+      return false;
+    }
+    remainingBytes -= byteCount;
+    return true;
+  }
 }
 
 final _imgSrcRegex = RegExp(
@@ -464,24 +650,86 @@ String? _contentType(String? value) {
   return value.split(';').first.trim().toLowerCase();
 }
 
-String _extensionFor(Uri uri, String? mime) {
-  return switch (mime) {
-    'image/jpeg' || 'image/jpg' => '.jpg',
-    'image/png' => '.png',
-    'image/gif' => '.gif',
-    'image/webp' => '.webp',
-    'image/svg+xml' => '.svg',
-    _ => switch (p.extension(uri.path).toLowerCase()) {
-      '.jpg' ||
-      '.jpeg' ||
-      '.png' ||
-      '.gif' ||
-      '.webp' ||
-      '.svg' => p.extension(uri.path).toLowerCase(),
-      _ => '.jpg',
-    },
-  };
+String? _validatedImageExtension(List<int> prefix, String? mime) {
+  if (mime != null && !_allowedImageContentTypes.contains(mime)) return null;
+  if (_startsWith(prefix, const [0xff, 0xd8, 0xff])) return '.jpg';
+  if (_startsWith(prefix, const [
+    0x89,
+    0x50,
+    0x4e,
+    0x47,
+    0x0d,
+    0x0a,
+    0x1a,
+    0x0a,
+  ])) {
+    return '.png';
+  }
+  if (_startsWith(prefix, utf8.encode('GIF87a')) ||
+      _startsWith(prefix, utf8.encode('GIF89a'))) {
+    return '.gif';
+  }
+  if (prefix.length >= 12 &&
+      _startsWith(prefix, utf8.encode('RIFF')) &&
+      _matchesAt(prefix, 8, utf8.encode('WEBP'))) {
+    return '.webp';
+  }
+  if (prefix.length >= 12 &&
+      _matchesAt(prefix, 4, utf8.encode('ftyp')) &&
+      (_matchesAt(prefix, 8, utf8.encode('avif')) ||
+          _matchesAt(prefix, 8, utf8.encode('avis')))) {
+    return '.avif';
+  }
+  return null;
 }
+
+bool _startsWith(List<int> bytes, List<int> signature) {
+  return _matchesAt(bytes, 0, signature);
+}
+
+bool _matchesAt(List<int> bytes, int offset, List<int> signature) {
+  if (bytes.length < offset + signature.length) return false;
+  for (var index = 0; index < signature.length; index++) {
+    if (bytes[offset + index] != signature[index]) return false;
+  }
+  return true;
+}
+
+bool _isRedirectStatus(int statusCode) {
+  return statusCode == 301 ||
+      statusCode == 302 ||
+      statusCode == 303 ||
+      statusCode == 307 ||
+      statusCode == 308;
+}
+
+Future<void> _cancelResponse(http.StreamedResponse response) {
+  return response.stream.listen((_) {}).cancel();
+}
+
+Duration _remainingUntil(DateTime deadline) {
+  final remaining = deadline.difference(DateTime.now());
+  if (remaining <= Duration.zero) {
+    throw TimeoutException('Image download timed out');
+  }
+  return remaining;
+}
+
+DateTime _earlierOf(DateTime first, DateTime second) {
+  return first.isBefore(second) ? first : second;
+}
+
+const _imageSignatureLength = 16;
+const _allowedImageContentTypes = {
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/avif',
+  'application/octet-stream',
+  'binary/octet-stream',
+};
 
 String _text(String value) => const HtmlEscape().convert(value);
 

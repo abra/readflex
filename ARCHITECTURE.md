@@ -64,7 +64,7 @@ The root package (`readflex`) is the composition and integration layer.
 | `lib/app/starter.dart` | Flutter binding, error zone, bloc observer, build/frame tracing, asset extraction, reader server startup, `runApp`. |
 | `lib/app/config` | Compile-time/runtime configuration via `ApplicationConfig` and environment helpers. |
 | `lib/app/composition.dart` | Creates the database, repositories, services, filesystem directories, and app-wide dependencies. |
-| `lib/app/dependency_container.dart` | Plain dependency holder plus best-effort shutdown/dispose. |
+| `lib/app/dependency_container.dart` | Dependency holder plus ordered, idempotent resource disposal and bootstrap rollback. |
 | `lib/app/dependency_scope.dart` | Inherited scope for app-wide dependencies. |
 | `lib/app/root_context.dart` | Mounts dependency, preference, connectivity, and material contexts. |
 | `lib/app/material_context.dart` | Material app setup and reader-server lifecycle handling on resume. |
@@ -74,6 +74,9 @@ The root package (`readflex`) is the composition and integration layer.
 There is no global service locator. App-wide objects are created once in
 `composition.dart`, stored in `DependenciesContainer`, mounted in the widget
 tree, and passed explicitly into feature entry points from `routing.dart`.
+Owned resources register cleanup as they are created and close in reverse
+order. A partially failed bootstrap rolls back only resources created by that
+attempt; the logger and error reporter remain available for retry diagnostics.
 
 ## Dependency Flow
 
@@ -169,7 +172,7 @@ and UI. Storage rows and DAO types should remain behind repositories.
 | Package | Responsibility | Local dependencies |
 |---------|----------------|--------------------|
 | `book_repository` | Imported books, cover metadata, source bookmark/progress, filesystem ownership for books. | `domain_models`, `local_storage`, `monitoring` |
-| `article_repository` | Extracted articles, article assets, and vertical HTML reader content. | `domain_models`, `local_storage`, `monitoring` |
+| `article_repository` | Extracted articles, bounded remote assets, and vertical HTML reader content. | `domain_models`, `local_storage`, `monitoring`, `remote_content_policy` |
 | `collection_repository` | Manual library collections and built-in favorite membership. | `domain_models`, `local_storage` |
 | `highlight_repository` | Highlight persistence and domain mapping. | `domain_models`, `local_storage` |
 
@@ -186,13 +189,14 @@ vocabulary features is `189e2cc1`.
 
 | Package | Responsibility | Notes |
 |---------|----------------|-------|
-| `article_extraction_service` | Remote article cleaner client and fallback extraction contract. | Returns `ExtractedArticle` domain data. |
+| `article_extraction_service` | Remote article cleaner client and guarded client-fetch fallback extraction contract. | Validates every URL and redirect hop, bounds response size/time, and returns `ExtractedArticle` domain data. |
 | `connectivity_service` | Reactive connectivity status and UI scope. | UI signal only; services still handle their own failures. |
 | `contextual_translation_service` | Contextual translation request/result contracts, remote client, cache, and ML Kit offline fallback coordinator. | Used by the `translate` feature. |
 | `dictionary_service` | System definition UI bridge contract and typed HTTP client/models for monolingual dictionary lookup. | Used by the `dictionary` feature; native implementations live in the app runners. |
 | `device_screen_brightness` | Native/plugin brightness access. | Low-level platform package used by `screen_control_service`. |
 | `monitoring` | Logger, log observers, analytics/error reporter contracts, GlitchTip reporting, and no-op fallbacks. | GlitchTip is active when configured; analytics remains a no-op. |
 | `preferences_service` | Preferences model, storage, repository, service, and scope. | Used by Library, Reader, and app composition. |
+| `remote_content_policy` | Shared outbound HTTP URL and DNS safety policy plus validated direct transport. | Rejects credentials, non-HTTP(S) schemes, private/local addresses, and unsafe or mixed DNS results; connects to the accepted address without a second DNS lookup. |
 | `reader_server` | Localhost HTTP server for reader assets and book/article files. | Supports range requests for books and local article HTML/assets for WebView readers. |
 | `reader_webview` | Foliate book WebView wrapper, vertical article HTML wrapper, JS bridges, asset extraction, metadata extraction. | Used by Reader and Import Flow. |
 | `screen_control_service` | Keep-awake and brightness coordination for active reading sessions. | Wraps low-level brightness plugin. |
@@ -316,6 +320,12 @@ ImportFlowSheet
   -> ReaderBloc persists the same source progress model through repositories
 ```
 
+Both the client-side extraction fallback and repository-owned image downloads
+treat remote URLs as untrusted input. They validate every redirect target,
+reject private/local address resolution, pin connections to validated IPs, and
+enforce explicit request, byte, and asset-count limits before committing files
+to article storage.
+
 The import UI does not own storage details. It receives callbacks and reports
 progress/result state back to the route that opened it.
 
@@ -327,7 +337,8 @@ Use one domain model layer and source-specific storage/service models:
   `LibrarySource`, `Highlight`, `SourceType`, and domain exceptions. Dormant
   dictionary/flashcard/review models remain for storage compatibility.
 - `local_storage` contains Drift tables, DAOs, migrations, and storage row
-  shapes.
+  shapes. File-backed migration fixtures cover historical schemas that require
+  filesystem as well as SQL migration.
 - Repositories map storage rows and filesystem/backend results into domain
   models.
 - Feature blocs/cubits emit feature states built from domain models, not DAO
@@ -395,9 +406,14 @@ document, the relevant package README, and tests around the public contract.
 Preferred checks:
 
 ```sh
+make verify
 make analyze
 make test
 ```
+
+`make verify` is the full local quality gate. It checks formatting without
+rewriting files, analyzes the root app and every active package, then runs all
+Dart, Flutter, and reader JavaScript tests.
 
 Focused package changes can use package-level `flutter test` or `dart test`.
 Use broader checks when changing:

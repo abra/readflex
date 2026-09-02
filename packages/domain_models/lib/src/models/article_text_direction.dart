@@ -1,7 +1,6 @@
 enum ArticleTextDirection {
   ltr('ltr'),
-  rtl('rtl')
-  ;
+  rtl('rtl');
 
   const ArticleTextDirection(this.value);
 

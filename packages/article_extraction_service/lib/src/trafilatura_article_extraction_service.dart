@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show SocketException;
 
 import 'package:domain_models/domain_models.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
+import 'package:remote_content_policy/remote_content_policy.dart';
 
 import 'article_extraction_service.dart';
 
@@ -10,24 +13,45 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
   TrafilaturaArticleExtractionService({
     required Uri baseUri,
     http.Client? httpClient,
+    http.Client? remoteContentHttpClient,
     String? apiKey,
     Duration timeout = const Duration(seconds: 45),
     int maxDownloadBytes = defaultMaxDownloadBytes,
+    int maxRedirects = 5,
+    RemoteUriPolicy? remoteUriPolicy,
   }) : _baseUri = baseUri,
        _httpClient = httpClient ?? http.Client(),
        _ownsClient = httpClient == null,
+       _remoteContentHttpClient =
+           remoteContentHttpClient ??
+           httpClient ??
+           IOClient(
+             createPublicRemoteHttpClient(
+               uriPolicy: remoteUriPolicy ?? RemoteUriPolicy(),
+             ),
+           ),
+       _ownsRemoteContentClient =
+           remoteContentHttpClient == null && httpClient == null,
        _apiKey = apiKey,
        _timeout = timeout,
-       _maxDownloadBytes = maxDownloadBytes;
+       _maxDownloadBytes = maxDownloadBytes,
+       _maxRedirects = maxRedirects,
+       _remoteUriPolicy = remoteUriPolicy ?? RemoteUriPolicy(),
+       assert(maxDownloadBytes > 0),
+       assert(maxRedirects >= 0);
 
   static const defaultMaxDownloadBytes = 8 * 1024 * 1024;
 
   final Uri _baseUri;
   final http.Client _httpClient;
   final bool _ownsClient;
+  final http.Client _remoteContentHttpClient;
+  final bool _ownsRemoteContentClient;
   final String? _apiKey;
   final Duration _timeout;
   final int _maxDownloadBytes;
+  final int _maxRedirects;
+  final RemoteUriPolicy _remoteUriPolicy;
 
   @override
   Future<ExtractedArticle> extract(String url) async {
@@ -114,44 +138,111 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
 
   Future<_DownloadedArticleDocument> _downloadArticle(String url) async {
     final uri = _validateArticleUrl(url);
+    final deadline = DateTime.now().add(_timeout);
 
     try {
-      final request = http.Request('GET', uri)
-        ..headers.addAll(_downloadHeaders());
+      return await _downloadArticleFollowingRedirects(
+        requestedUrl: url,
+        initialUri: uri,
+        deadline: deadline,
+      );
+    } on ArticleExtractionException {
+      rethrow;
+    } on TimeoutException {
+      throw const ArticleExtractionException('Article URL download timed out');
+    } on SocketException {
+      throw const ArticleExtractionException('Could not resolve article URL');
+    } on http.ClientException {
+      throw const ArticleExtractionException('Could not download article URL');
+    }
+  }
 
-      final response = await _httpClient.send(request).timeout(_timeout);
+  Future<_DownloadedArticleDocument> _downloadArticleFollowingRedirects({
+    required String requestedUrl,
+    required Uri initialUri,
+    required DateTime deadline,
+  }) async {
+    var currentUri = initialUri;
+    var redirectCount = 0;
+
+    while (true) {
+      try {
+        await _remoteUriPolicy
+            .validate(currentUri)
+            .timeout(_remainingUntil(deadline));
+      } on RemoteUriPolicyException {
+        throw _unsafeArticleUrlException;
+      }
+      final request = http.Request('GET', currentUri)
+        ..followRedirects = false
+        ..maxRedirects = 0
+        ..headers.addAll(_downloadHeaders());
+      final response = await _remoteContentHttpClient
+          .send(request)
+          .timeout(_remainingUntil(deadline));
       final statusCode = response.statusCode;
+
+      if (_isRedirectStatus(statusCode)) {
+        await _cancelResponse(response);
+        final location = response.headers['location'];
+        if (location == null || location.trim().isEmpty) {
+          throw const ArticleExtractionException(
+            'Article URL returned a redirect without a location',
+          );
+        }
+        if (redirectCount >= _maxRedirects) {
+          throw const ArticleExtractionException(
+            'Article URL has too many redirects',
+          );
+        }
+        currentUri = _validateArticleUri(currentUri.resolve(location));
+        redirectCount++;
+        continue;
+      }
+
       if (statusCode < 200 || statusCode >= 300) {
+        await _cancelResponse(response);
         throw ArticleExtractionException(
           'Article URL returned HTTP status $statusCode',
           statusCode: statusCode,
         );
       }
 
+      final declaredLength = int.tryParse(
+        response.headers['content-length'] ?? '',
+      );
+      if (declaredLength != null && declaredLength > _maxDownloadBytes) {
+        await _cancelResponse(response);
+        throw const ArticleExtractionException(
+          'Article is too large to import',
+          statusCode: 413,
+        );
+      }
+
       final bytes = <int>[];
-      await for (final chunk in response.stream.timeout(_timeout)) {
-        bytes.addAll(chunk);
-        if (bytes.length > _maxDownloadBytes) {
-          throw const ArticleExtractionException(
-            'Article is too large to import',
-            statusCode: 413,
-          );
+      final chunks = StreamIterator(response.stream);
+      try {
+        while (await chunks.moveNext().timeout(_remainingUntil(deadline))) {
+          final chunk = chunks.current;
+          if (bytes.length + chunk.length > _maxDownloadBytes) {
+            throw const ArticleExtractionException(
+              'Article is too large to import',
+              statusCode: 413,
+            );
+          }
+          bytes.addAll(chunk);
         }
+      } finally {
+        await chunks.cancel();
       }
 
       return _DownloadedArticleDocument(
-        requestedUrl: url,
-        resolvedUrl: response.request?.url.toString() ?? url,
+        requestedUrl: requestedUrl,
+        resolvedUrl: currentUri.toString(),
         contentType: response.headers['content-type'],
         bodyBytes: bytes,
         metadata: _articleHtmlMetadataFromBytes(bytes),
       );
-    } on ArticleExtractionException {
-      rethrow;
-    } on TimeoutException {
-      throw const ArticleExtractionException('Article URL download timed out');
-    } on http.ClientException {
-      throw const ArticleExtractionException('Could not download article URL');
     }
   }
 
@@ -255,24 +346,57 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
   @override
   void dispose() {
     if (_ownsClient) _httpClient.close();
+    if (_ownsRemoteContentClient) _remoteContentHttpClient.close();
   }
 }
 
 const _clientHtmlFallbackErrorCodes = {
   'fetch_failed',
   'extract_failed',
-  'unsafe_redirect',
 };
 
 Uri _validateArticleUrl(String url) {
   final uri = Uri.tryParse(url);
-  if (uri == null ||
-      !(uri.scheme == 'http' || uri.scheme == 'https') ||
-      !uri.hasAuthority) {
+  if (uri == null) {
+    throw const ArticleExtractionException('Enter a valid article URL');
+  }
+  return _validateArticleUri(uri);
+}
+
+Uri _validateArticleUri(Uri uri) {
+  if (!(uri.scheme == 'http' || uri.scheme == 'https') ||
+      !uri.hasAuthority ||
+      uri.host.isEmpty ||
+      uri.userInfo.isNotEmpty) {
     throw const ArticleExtractionException('Enter a valid article URL');
   }
   return uri;
 }
+
+bool _isRedirectStatus(int statusCode) {
+  return statusCode == 301 ||
+      statusCode == 302 ||
+      statusCode == 303 ||
+      statusCode == 307 ||
+      statusCode == 308;
+}
+
+Future<void> _cancelResponse(http.StreamedResponse response) {
+  return response.stream.listen((_) {}).cancel();
+}
+
+Duration _remainingUntil(DateTime deadline) {
+  final remaining = deadline.difference(DateTime.now());
+  if (remaining <= Duration.zero) {
+    throw TimeoutException('Article URL download timed out');
+  }
+  return remaining;
+}
+
+const _unsafeArticleUrlException = ArticleExtractionException(
+  'Article URL points to a private or reserved network',
+  errorCode: 'unsafe_url',
+);
 
 Map<String, String> _cleanerHeaders(String? apiKey) {
   final headers = {

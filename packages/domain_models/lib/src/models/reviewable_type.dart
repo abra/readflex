@@ -2,8 +2,7 @@
 enum ReviewableType {
   flashcard,
   highlight,
-  dictionary
-  ;
+  dictionary;
 
   /// Parses a [ReviewableType] from its stored [name]. Falls back to
   /// [flashcard] on unknown values.

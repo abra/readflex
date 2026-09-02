@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -174,6 +176,31 @@ void main() {
 
     expect(service.calls, const ['keepAwake', 'allowSleep', 'keepAwake']);
   });
+
+  test(
+    'serializes platform calls and releases a pending request on close',
+    () async {
+      final service = _ControlledScreenControlService();
+      final cubit = ReaderKeepAwakeCubit(screenControlService: service);
+
+      cubit.setActive(true);
+      await pumpEventQueue();
+      expect(service.calls, const ['keepAwake']);
+
+      cubit.setActive(false);
+      final closing = cubit.close();
+      await pumpEventQueue();
+      expect(service.calls, const ['keepAwake']);
+
+      service.keepAwakeCompletion.complete();
+      await pumpEventQueue();
+      expect(service.calls, const ['keepAwake', 'allowSleep']);
+
+      service.allowSleepCompletion.complete();
+      await closing;
+      expect(cubit.isClosed, isTrue);
+    },
+  );
 }
 
 Widget _keepAwakeTestHost({
@@ -211,4 +238,31 @@ class _FakeScreenControlService implements ScreenControlService {
   Future<void> resetApplicationBrightness() async {
     calls.add('resetBrightness');
   }
+}
+
+class _ControlledScreenControlService implements ScreenControlService {
+  final calls = <String>[];
+  final keepAwakeCompletion = Completer<void>();
+  final allowSleepCompletion = Completer<void>();
+
+  @override
+  Future<void> keepAwake() {
+    calls.add('keepAwake');
+    return keepAwakeCompletion.future;
+  }
+
+  @override
+  Future<void> allowSleep() {
+    calls.add('allowSleep');
+    return allowSleepCompletion.future;
+  }
+
+  @override
+  Future<double?> readApplicationBrightness() async => 0.4;
+
+  @override
+  Future<void> setApplicationBrightness(double brightness) async {}
+
+  @override
+  Future<void> resetApplicationBrightness() async {}
 }

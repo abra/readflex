@@ -3,6 +3,7 @@
 // StatefulWidget so that GoRouter is created once in initState and disposed
 // properly, avoiding recreation on every settings change (theme/locale).
 
+import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:component_library/component_library.dart';
@@ -62,7 +63,7 @@ class _MaterialContextState extends State<MaterialContext>
     // honours it reliably enough that we get a clean socket close on
     // most graceful shutdowns.
     if (state == AppLifecycleState.detached) {
-      DependenciesScope.of(context).dispose();
+      unawaited(DependenciesScope.of(context).dispose());
     }
   }
 

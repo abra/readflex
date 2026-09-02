@@ -16,7 +16,7 @@ can serve them over localhost.
 | `BookReaderWebView`      | Widget    | Loads foliate-js `index.html`, which fetches the book file from `/book/<path>`. Emits position, selection, search, highlight-tap and bookmark events; accepts imperative calls (goToCfi, pageLeft/pageRight, nextPage, changeStyle, addAnnotation, toggleBookmark). |
 | `ArticleHtmlReaderWebView` | Widget  | Loads the vertical article shell, fetches saved `content.html` from `/article/<dir>/content.html`, emits progress/TOC/document-feature/search/bookmark events, and accepts `goToPercent`, `goToHref`, `goToCfi`, `changeStyle`, `startSearch`, `cancelSearch`, `clearSearch`, `toggleBookmarkHere`, and `setArticleBookmarks`. |
 | `AssetExtractor`         | Utility   | Copies bundled foliate-js assets from rootBundle to a target directory. Version-gated via app version plus reader asset revision: unchanged version skips, changed version re-writes everything. |
-| `BookMetadataExtractor`  | Utility   | Spawns a `HeadlessInAppWebView` running foliate-js in import mode to extract `{title, author, description, coverData, coverMimeType}` from any supported format. Used by the import flow. |
+| `BookMetadataExtractor`  | Utility   | Spawns a timeout-bounded `HeadlessInAppWebView` running foliate-js in import mode to extract `{title, author, description, coverData, coverMimeType}` from any supported format. Malformed bridge payloads fail promptly; an invalid optional cover does not discard valid metadata. Used by the import flow. |
 | Bridge types             | Models    | `BookPosition`, `ReaderSelection`, `ReaderImageAreaSelection`, `ReaderHighlight`, `ReaderBookmark`, `ReaderBookmarkChange`, `FoliateStyle` — DTOs exchanged with JS. |
 
 ## JS <-> Flutter bridge
@@ -24,7 +24,8 @@ can serve them over localhost.
 ```
 JS -> Flutter:  onLoadEnd, onRelocated/onArticlePositionChanged,
                 onSelectionEnd, onImageAreaSelected, onSelectionCleared,
-                onAnnotationClick, onClick, onSearch, handleBookmark, onJsError
+                onAnnotationClick, onExternalLink, onClick, onSearch,
+                handleBookmark, onJsError
 Flutter -> JS:  goToCfi, goToBookmark, goToSectionIndex, goToPercent, goToHref,
                 pageLeft, pageRight, nextPage, prevPage, changeStyle,
                 addAnnotation, removeAnnotation, toggleBookmarkHere,
@@ -35,6 +36,16 @@ Flutter -> JS:  goToCfi, goToBookmark, goToSectionIndex, goToPercent, goToHref,
 Shared selection/click handlers are registered by
 `registerSharedReaderHandlers` so the widget body stays focused on
 position + annotation glue.
+
+On Android, visible reader WebViews use Texture Layer Hybrid Composition and
+mirror the app lifecycle into native `WebView.onPause()` / `onResume()` calls.
+This keeps the platform view attached to the current Flutter surface after the
+app moves between the foreground and background. Other platforms keep their
+native lifecycle behavior.
+
+EPUB link events cross the bridge as the destination URL only. The reader
+feature forwards that value through its callback boundary, and app routing
+opens only validated HTTP(S) links with the platform URL launcher.
 
 On touch devices the native DOM selection remains active while the reader
 popup is visible. This keeps the platform drag handles available and lets

@@ -49,6 +49,7 @@ class _DictionarySheetView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final maxBodyHeight = MediaQuery.sizeOf(context).height * 0.68;
     return ActionBottomSheetLayout(
       title: context.l10n.dictionaryTitle,
       headerSpacing: AppSpacing.sm,
@@ -56,18 +57,23 @@ class _DictionarySheetView extends StatelessWidget {
         horizontal: AppSpacing.xl,
         vertical: AppSpacing.lg,
       ),
-      child: BlocBuilder<DictionaryCubit, DictionarySheetState>(
-        builder: (context, state) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SelectionPreviewCard(text: selection.effectiveSelectedText),
-              const SizedBox(height: AppSpacing.lg),
-              _DictionaryBody(selection: selection, state: state),
-            ],
-          );
-        },
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxBodyHeight),
+        child: SingleChildScrollView(
+          child: BlocBuilder<DictionaryCubit, DictionarySheetState>(
+            builder: (context, state) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SelectionPreviewCard(text: selection.effectiveSelectedText),
+                  const SizedBox(height: AppSpacing.lg),
+                  _DictionaryBody(selection: selection, state: state),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -164,6 +166,55 @@ void main() {
     expect(cubit.state.status, TranslateSheetStatus.offlineModelRequired);
     expect(cubit.state.failure?.sourceLanguage, 'en');
   });
+
+  test('ignores a translation result delivered after close', () async {
+    final service = _ControlledTranslationService();
+    final preferences = await PreferencesService.create(
+      supportedCodes: const ['en', 'ru'],
+    );
+    final cubit = TranslateCubit(
+      translationService: service,
+      preferencesService: preferences,
+    );
+
+    final translation = cubit.translate(_selection());
+    expect(service.requests, hasLength(1));
+    expect(cubit.state.status, TranslateSheetStatus.loading);
+
+    await cubit.close();
+    service.complete(0, translation: 'late');
+
+    await expectLater(translation, completes);
+    expect(cubit.state.status, TranslateSheetStatus.loading);
+  });
+
+  test('a stale translation cannot replace a newer language result', () async {
+    final service = _ControlledTranslationService();
+    final preferences = await PreferencesService.create(
+      supportedCodes: const ['en', 'ru'],
+    );
+    final cubit = TranslateCubit(
+      translationService: service,
+      preferencesService: preferences,
+    );
+
+    final firstTranslation = cubit.translate(_selection());
+    final secondTranslation = cubit.setTargetLanguage(_selection(), 'ru');
+    await pumpEventQueue();
+
+    expect(service.requests, hasLength(2));
+    expect(service.requests[0].targetLanguage, 'en');
+    expect(service.requests[1].targetLanguage, 'ru');
+
+    service.complete(1, translation: 'new');
+    await secondTranslation;
+    service.complete(0, translation: 'stale');
+    await firstTranslation;
+
+    expect(cubit.state.status, TranslateSheetStatus.success);
+    expect(cubit.state.targetLanguageCode, 'ru');
+    expect(cubit.state.result?.translation.contextualTranslation, 'new');
+  });
 }
 
 TextSelectionContext _selection() {
@@ -205,6 +256,41 @@ class _FakeTranslationService implements ContextualTranslationService {
       targetLanguage: request.targetLanguage,
       translation: const ContextualTranslationText(
         contextualTranslation: 'бросил',
+      ),
+    );
+  }
+
+  @override
+  void dispose() {}
+}
+
+class _ControlledTranslationService implements ContextualTranslationService {
+  final requests = <ContextualTranslationRequest>[];
+  final _responses = <Completer<ContextualTranslationResult>>[];
+
+  @override
+  Future<ContextualTranslationResult> translate(
+    ContextualTranslationRequest request, {
+    bool allowOfflineModelDownload = false,
+  }) {
+    requests.add(request);
+    final response = Completer<ContextualTranslationResult>();
+    _responses.add(response);
+    return response.future;
+  }
+
+  void complete(int index, {required String translation}) {
+    final request = requests[index];
+    _responses[index].complete(
+      ContextualTranslationResult(
+        requestId: request.requestId,
+        status: ContextualTranslationStatus.resolved,
+        reliability: ContextualTranslationReliability.verified,
+        detectedSourceLanguage: 'en',
+        targetLanguage: request.targetLanguage,
+        translation: ContextualTranslationText(
+          contextualTranslation: translation,
+        ),
       ),
     );
   }

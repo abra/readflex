@@ -14,8 +14,7 @@ enum DictionaryAnchorKind {
   expression,
 
   /// Saved range is a larger text selection rather than a lexical item.
-  longSelection
-  ;
+  longSelection;
 
   static DictionaryAnchorKind from(String value) {
     for (final kind in values) {

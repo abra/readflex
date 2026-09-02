@@ -12,16 +12,18 @@ import 'package:connectivity_service/connectivity_service.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:dictionary_service/dictionary_service.dart';
 import 'package:highlight_repository/highlight_repository.dart';
+import 'package:local_storage/local_storage.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:reader_server/reader_server.dart';
 import 'package:readflex/app/config/application_config.dart';
+import 'package:readflex/app/resource_disposer.dart';
 import 'package:screen_control_service/screen_control_service.dart';
 
 /// Container for global dependencies.
 class DependenciesContainer {
-  const DependenciesContainer({
+  DependenciesContainer({
     required this.logger,
     required this.config,
     required this.errorReporter,
@@ -38,7 +40,9 @@ class DependenciesContainer {
     required this.dictionaryLookupService,
     required this.screenControlService,
     required this.readerServer,
-  });
+    required this.database,
+    required ResourceDisposer resourceDisposer,
+  }) : _resourceDisposer = resourceDisposer;
 
   final Logger logger;
   final ApplicationConfig config;
@@ -56,55 +60,17 @@ class DependenciesContainer {
   final DictionaryLookupService dictionaryLookupService;
   final ScreenControlService screenControlService;
   final ReaderServer readerServer;
+  final AppDatabase database;
+  final ResourceDisposer _resourceDisposer;
 
-  /// Releases resources owned by the container — the local reader HTTP
-  /// server and any other long-lived sockets/handles.
+  /// Releases all resources owned by the running application exactly once.
+  Future<void> dispose() => _resourceDisposer.dispose();
+
+  /// Releases resources created for an unsuccessful bootstrap attempt.
   ///
-  /// Wired into a `WidgetsBindingObserver` for `AppLifecycleState.detached`
-  /// so a long-running session doesn't leak sockets, and so the reader
-  /// server's port is freed if the OS gives the process a chance to wind
-  /// down before kill. Best-effort: if a `close()` throws, we swallow and
-  /// continue with the rest — losing one socket is preferable to leaking
-  /// the others because the first one panicked.
-  Future<void> dispose() async {
-    try {
-      await readerServer.stop();
-    } catch (e, st) {
-      logger.warn('readerServer.stop failed', error: e, stackTrace: st);
-    }
-    try {
-      contextualTranslationService.dispose();
-    } catch (e, st) {
-      logger.warn(
-        'contextualTranslationService.dispose failed',
-        error: e,
-        stackTrace: st,
-      );
-    }
-    try {
-      dictionaryLookupService.dispose();
-    } catch (e, st) {
-      logger.warn(
-        'dictionaryLookupService.dispose failed',
-        error: e,
-        stackTrace: st,
-      );
-    }
-    try {
-      articleExtractionService.dispose();
-    } catch (e, st) {
-      logger.warn(
-        'articleExtractionService.dispose failed',
-        error: e,
-        stackTrace: st,
-      );
-    }
-    try {
-      articleRepository.dispose();
-    } catch (e, st) {
-      logger.warn('articleRepository.dispose failed', error: e, stackTrace: st);
-    }
-  }
+  /// The logger and error reporter belong to the retry loop and stay alive.
+  Future<void> disposeAfterBootstrapFailure() =>
+      _resourceDisposer.dispose(rollback: true);
 }
 
 /// A special version of [DependenciesContainer] that is used in tests.

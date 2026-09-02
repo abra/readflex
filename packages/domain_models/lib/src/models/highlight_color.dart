@@ -4,8 +4,7 @@ enum HighlightColor {
   green,
   blue,
   pink,
-  purple
-  ;
+  purple;
 
   /// Parses a [HighlightColor] from its stored [name]. Falls back to [yellow]
   /// on unknown values.

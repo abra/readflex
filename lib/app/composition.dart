@@ -23,6 +23,7 @@ import 'package:preferences_service/preferences_service.dart';
 import 'package:reader_server/reader_server.dart';
 import 'package:readflex/app/config/application_config.dart';
 import 'package:readflex/app/dependency_container.dart';
+import 'package:readflex/app/resource_disposer.dart';
 import 'package:screen_control_service/screen_control_service.dart';
 
 /// Creates the [Logger] instance and attaches any provided observers.
@@ -105,79 +106,113 @@ Future<DependenciesContainer> createDependenciesContainer(
   Logger logger,
   ErrorReportingService errorReporter,
 ) async {
-  final packageInfo = await PackageInfo.fromPlatform();
+  final resources = ResourceDisposer(logger: logger)
+    ..add('logger.destroy', logger.destroy, disposeOnRollback: false)
+    ..add(
+      'errorReporter.close',
+      errorReporter.close,
+      disposeOnRollback: false,
+    );
 
-  // ─── Database ───
-  final database = AppDatabase();
+  try {
+    final packageInfo = await PackageInfo.fromPlatform();
 
-  // ─── Filesystem layout ───
-  final documentsDir = await getApplicationDocumentsDirectory();
-  final booksDir = Directory(p.join(documentsDir.path, 'books'));
-  final articlesDir = Directory(p.join(documentsDir.path, 'articles'));
-  final readerAssetsDir = Directory(p.join(documentsDir.path, 'reader_assets'));
+    // ─── Database ───
+    final database = AppDatabase();
+    resources.add('database.close', database.close);
 
-  final readerServer = ReaderServer(
-    assetsDirectory: readerAssetsDir,
-    booksDirectory: booksDir,
-    articlesDirectory: articlesDir,
-    logger: logger,
-  );
+    // ─── Filesystem layout ───
+    final documentsDir = await getApplicationDocumentsDirectory();
+    final booksDir = Directory(p.join(documentsDir.path, 'books'));
+    final articlesDir = Directory(p.join(documentsDir.path, 'articles'));
+    final readerAssetsDir = Directory(
+      p.join(documentsDir.path, 'reader_assets'),
+    );
 
-  // ─── Repositories ───
-  final bookRepository = BookRepository(
-    database: database,
-    booksDirectory: booksDir,
-    logger: logger,
-  );
-  final articleRepository = ArticleRepository(
-    database: database,
-    articlesDirectory: articlesDir,
-    logger: logger,
-  );
-  final collectionRepository = CollectionRepository(database: database);
-  final highlightRepository = HighlightRepository(database: database);
+    final readerServer = ReaderServer(
+      assetsDirectory: readerAssetsDir,
+      booksDirectory: booksDir,
+      articlesDirectory: articlesDir,
+      logger: logger,
+    );
+    resources.add('readerServer.stop', readerServer.stop);
 
-  // ─── Preferences ───
-  final preferencesService = await PreferencesService.create(
-    supportedCodes: config.supportedLocaleCodes,
-  );
+    // ─── Repositories ───
+    final bookRepository = BookRepository(
+      database: database,
+      booksDirectory: booksDir,
+      logger: logger,
+    );
+    final articleRepository = ArticleRepository(
+      database: database,
+      articlesDirectory: articlesDir,
+      logger: logger,
+    );
+    resources.add('articleRepository.dispose', articleRepository.dispose);
+    final collectionRepository = CollectionRepository(database: database);
+    final highlightRepository = HighlightRepository(database: database);
 
-  final connectivityService = await ConnectivityPlusService.create();
-  final screenControlService = WakelockScreenControlService();
-  final developmentApiKey = config.developmentApiKey;
-  final articleExtractionService = TrafilaturaArticleExtractionService(
-    baseUri: Uri.parse(config.articleCleanerBaseUrl),
-    apiKey: developmentApiKey.isEmpty ? null : developmentApiKey,
-  );
-  final contextualTranslationService = ContextualTranslationCoordinator(
-    remoteService: RemoteContextualTranslationService(
-      baseUri: Uri.parse(config.contextualTranslationBaseUrl),
+    // ─── Preferences ───
+    final preferencesService = await PreferencesService.create(
+      supportedCodes: config.supportedLocaleCodes,
+    );
+    resources.add('preferencesService.dispose', preferencesService.dispose);
+
+    final connectivityService = await ConnectivityPlusService.create();
+    resources.add('connectivityService.dispose', connectivityService.dispose);
+    final screenControlService = WakelockScreenControlService();
+    final developmentApiKey = config.developmentApiKey;
+    final articleExtractionService = TrafilaturaArticleExtractionService(
+      baseUri: Uri.parse(config.articleCleanerBaseUrl),
       apiKey: developmentApiKey.isEmpty ? null : developmentApiKey,
-    ),
-    offlineService: MlKitOfflineTranslationService(),
-  );
-  final systemDictionaryService = PlatformSystemDictionaryService();
-  final dictionaryLookupService = RemoteDictionaryLookupService(
-    baseUri: Uri.parse(config.dictionaryBaseUrl),
-    apiKey: developmentApiKey.isEmpty ? null : developmentApiKey,
-  );
+    );
+    resources.add(
+      'articleExtractionService.dispose',
+      articleExtractionService.dispose,
+    );
+    final contextualTranslationService = ContextualTranslationCoordinator(
+      remoteService: RemoteContextualTranslationService(
+        baseUri: Uri.parse(config.contextualTranslationBaseUrl),
+        apiKey: developmentApiKey.isEmpty ? null : developmentApiKey,
+      ),
+      offlineService: MlKitOfflineTranslationService(),
+    );
+    resources.add(
+      'contextualTranslationService.dispose',
+      contextualTranslationService.dispose,
+    );
+    final systemDictionaryService = PlatformSystemDictionaryService();
+    final dictionaryLookupService = RemoteDictionaryLookupService(
+      baseUri: Uri.parse(config.dictionaryBaseUrl),
+      apiKey: developmentApiKey.isEmpty ? null : developmentApiKey,
+    );
+    resources.add(
+      'dictionaryLookupService.dispose',
+      dictionaryLookupService.dispose,
+    );
 
-  return DependenciesContainer(
-    logger: logger,
-    config: config,
-    errorReporter: errorReporter,
-    packageInfo: packageInfo,
-    preferencesService: preferencesService,
-    articleExtractionService: articleExtractionService,
-    articleRepository: articleRepository,
-    bookRepository: bookRepository,
-    collectionRepository: collectionRepository,
-    highlightRepository: highlightRepository,
-    connectivityService: connectivityService,
-    contextualTranslationService: contextualTranslationService,
-    systemDictionaryService: systemDictionaryService,
-    dictionaryLookupService: dictionaryLookupService,
-    screenControlService: screenControlService,
-    readerServer: readerServer,
-  );
+    return DependenciesContainer(
+      logger: logger,
+      config: config,
+      errorReporter: errorReporter,
+      packageInfo: packageInfo,
+      preferencesService: preferencesService,
+      articleExtractionService: articleExtractionService,
+      articleRepository: articleRepository,
+      bookRepository: bookRepository,
+      collectionRepository: collectionRepository,
+      highlightRepository: highlightRepository,
+      connectivityService: connectivityService,
+      contextualTranslationService: contextualTranslationService,
+      systemDictionaryService: systemDictionaryService,
+      dictionaryLookupService: dictionaryLookupService,
+      screenControlService: screenControlService,
+      readerServer: readerServer,
+      database: database,
+      resourceDisposer: resources,
+    );
+  } on Object {
+    await resources.dispose(rollback: true);
+    rethrow;
+  }
 }

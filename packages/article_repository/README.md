@@ -33,6 +33,15 @@ Remote article images referenced by extracted blocks are downloaded when
 available, rewritten to local paths, and stored next to `content.html`. Missing
 images are skipped so article import can still succeed.
 
+Remote assets are untrusted input. The repository validates the initial URL and
+every redirect target, rejects private/local or ambiguously resolved hosts,
+connects to the exact validated address to prevent DNS rebinding, limits the
+number and total bytes of downloaded assets, streams each response to a
+temporary file, and verifies the file signature before publishing it. The
+aggregate byte budget counts rejected payloads as well as accepted images.
+Content-addressed SHA-256 filenames avoid trusting remote path extensions or
+query strings.
+
 `content.html` is the primary article reading file. Text blocks are marked with
 stable block ids and sentence anchors so the vertical HTML reader can restore
 position without depending on paginated EPUB layout.
@@ -53,6 +62,7 @@ does not adapt articles into books.
 - `domain_models` - article and storage exception models
 - `local_storage` - Drift database and DAOs
 - `monitoring` - optional cleanup/download logging
+- `remote_content_policy` - URL, DNS, and redirect safety policy
 - `http` - best-effort image and cover downloads
 - `path`
 - `uuid`

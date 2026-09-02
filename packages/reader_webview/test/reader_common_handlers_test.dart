@@ -72,6 +72,25 @@ void main() {
     });
   });
 
+  group('parseReaderExternalLinkPayload', () {
+    test('normalizes string and legacy map payloads', () {
+      expect(
+        parseReaderExternalLinkPayload(' https://example.com/path '),
+        'https://example.com/path',
+      );
+      expect(
+        parseReaderExternalLinkPayload({'href': 'https://example.com'}),
+        'https://example.com',
+      );
+    });
+
+    test('rejects missing and empty links', () {
+      expect(parseReaderExternalLinkPayload(null), isNull);
+      expect(parseReaderExternalLinkPayload('  '), isNull);
+      expect(parseReaderExternalLinkPayload({'href': 42}), isNull);
+    });
+  });
+
   test('live selection script reads the current DOM range', () {
     expect(
       currentReaderTextSelectionScript,
@@ -90,6 +109,7 @@ void main() {
       expect(settings.disableContextMenu, isTrue);
       expect(settings.disableLongPressContextMenuOnLinks, isTrue);
       expect(settings.isTextInteractionEnabled, isNot(false));
+      expect(settings.useHybridComposition, isFalse);
     });
   });
 

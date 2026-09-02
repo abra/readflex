@@ -49,9 +49,11 @@ class DictionaryCubit extends Cubit<DictionarySheetState> {
       super(const DictionarySheetState());
 
   final DictionaryLookupService _dictionaryService;
+  int _lookupGeneration = 0;
 
   Future<void> lookup(TextSelectionContext selection) async {
-    if (state.status == DictionarySheetStatus.loading) return;
+    if (isClosed || state.status == DictionarySheetStatus.loading) return;
+    final lookupGeneration = ++_lookupGeneration;
     emit(
       state.copyWith(
         status: DictionarySheetStatus.loading,
@@ -68,6 +70,7 @@ class DictionaryCubit extends Cubit<DictionarySheetState> {
               selection.effectiveMarkedContextText ?? selection.contextText,
         ),
       );
+      if (!_isCurrentLookup(lookupGeneration)) return;
       emit(
         state.copyWith(
           status: _statusFor(result.status),
@@ -76,6 +79,7 @@ class DictionaryCubit extends Cubit<DictionarySheetState> {
         ),
       );
     } on DictionaryLookupException catch (error) {
+      if (!_isCurrentLookup(lookupGeneration)) return;
       emit(
         state.copyWith(
           status: DictionarySheetStatus.failure,
@@ -84,6 +88,7 @@ class DictionaryCubit extends Cubit<DictionarySheetState> {
         ),
       );
     } catch (error, stackTrace) {
+      if (!_isCurrentLookup(lookupGeneration)) return;
       addError(error, stackTrace);
       emit(
         state.copyWith(
@@ -96,6 +101,10 @@ class DictionaryCubit extends Cubit<DictionarySheetState> {
         ),
       );
     }
+  }
+
+  bool _isCurrentLookup(int generation) {
+    return !isClosed && generation == _lookupGeneration;
   }
 }
 

@@ -50,9 +50,16 @@ class RemoteDictionaryLookupService implements DictionaryLookupService {
           'Dictionary service returned an invalid response',
         );
       }
-      return DictionaryLookupResult.fromJson(
+      final result = DictionaryLookupResult.fromJson(
         Map<String, Object?>.from(decoded),
       );
+      if (result.requestId != request.requestId) {
+        throw const DictionaryLookupException(
+          DictionaryLookupFailureReason.invalidResponse,
+          'Dictionary response does not match the request',
+        );
+      }
+      return result;
     } on DictionaryLookupException {
       rethrow;
     } on TimeoutException catch (error) {
@@ -70,7 +77,13 @@ class RemoteDictionaryLookupService implements DictionaryLookupService {
     } on FormatException catch (error) {
       throw DictionaryLookupException(
         DictionaryLookupFailureReason.invalidResponse,
-        'Dictionary service returned invalid JSON',
+        'Dictionary service returned an invalid response',
+        cause: error,
+      );
+    } on TypeError catch (error) {
+      throw DictionaryLookupException(
+        DictionaryLookupFailureReason.invalidResponse,
+        'Dictionary service returned an invalid response',
         cause: error,
       );
     }
@@ -95,16 +108,12 @@ Map<String, String> _headers(String? apiKey) {
 }
 
 String _errorMessageFor(http.Response response) {
-  try {
-    final decoded = jsonDecode(response.body);
-    if (decoded is Map) {
-      for (final key in const ['detail', 'error', 'message']) {
-        final value = decoded[key];
-        if (value is String && value.trim().isNotEmpty) return value.trim();
-      }
-    }
-  } on FormatException {
-    // Fall through to the status-code message.
-  }
-  return 'Dictionary service returned HTTP ${response.statusCode}';
+  return switch (response.statusCode) {
+    401 || 403 => 'Dictionary service authorization failed',
+    413 => 'Selected term is too large',
+    422 => 'Dictionary request is invalid',
+    429 => 'Dictionary service is temporarily busy',
+    >= 500 => 'Dictionary service is unavailable',
+    _ => 'Dictionary request failed',
+  };
 }

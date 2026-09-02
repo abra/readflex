@@ -263,6 +263,41 @@ void main() {
       await service.update((s) => s.copyWith(themeMode: ThemeMode.dark));
     });
 
+    test(
+      'concurrent updates persist and emit their snapshots in order',
+      () async {
+        final service = await PreferencesService.create(
+          supportedCodes: _supportedCodes,
+        );
+        final initialLocale = service.current.locale;
+        final emitted = service.stream.take(2).toList();
+
+        final first = service.update(
+          (s) => s.copyWith(themeMode: ThemeMode.dark),
+        );
+        final second = service.update(
+          (s) => s.copyWith(locale: const Locale('ru')),
+        );
+
+        expect(service.current.themeMode, ThemeMode.dark);
+        expect(service.current.locale, const Locale('ru'));
+
+        await Future.wait([first, second]);
+        final snapshots = await emitted;
+
+        expect(snapshots[0].themeMode, ThemeMode.dark);
+        expect(snapshots[0].locale, initialLocale);
+        expect(snapshots[1].themeMode, ThemeMode.dark);
+        expect(snapshots[1].locale, const Locale('ru'));
+
+        final restored = await PreferencesService.create(
+          supportedCodes: _supportedCodes,
+        );
+        expect(restored.current.themeMode, ThemeMode.dark);
+        expect(restored.current.locale, const Locale('ru'));
+      },
+    );
+
     test('preferences persist across service recreations', () async {
       final service = await PreferencesService.create(
         supportedCodes: _supportedCodes,

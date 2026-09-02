@@ -34,6 +34,7 @@ class BookReaderWebView extends StatefulWidget {
     this.onTocChanged,
     this.onDocumentFeaturesChanged,
     this.onBookmarkChanged,
+    this.onExternalLink,
     this.onTapped,
     super.key,
   });
@@ -93,6 +94,9 @@ class BookReaderWebView extends StatefulWidget {
 
   /// Fires when foliate-js requests adding/removing a bookmark.
   final void Function(ReaderBookmarkChange change)? onBookmarkChanged;
+
+  /// Fires when the book requests opening an external link.
+  final ValueChanged<String>? onExternalLink;
 
   /// Fires when the user taps empty reader space (no selection, no link).
   /// Coordinates are normalized to [0, 1] over the viewport.

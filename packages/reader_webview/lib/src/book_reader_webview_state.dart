@@ -1,6 +1,7 @@
 part of 'book_reader_webview.dart';
 
-class BookReaderWebViewState extends State<BookReaderWebView> {
+class BookReaderWebViewState extends State<BookReaderWebView>
+    with ReaderWebViewLifecycleMixin<BookReaderWebView> {
   InAppWebViewController? _controller;
   bool _isReady = false;
   StreamController<ReaderSearchEvent>? _searchEvents;
@@ -358,6 +359,7 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
 
   void _onWebViewCreated(InAppWebViewController controller) {
     _controller = controller;
+    attachReaderWebViewLifecycle(controller);
     if (readerTextSelectionTracingEnabled) {
       debugPrint('[reader-selection-dart] book WebView created url=$_indexUrl');
     }
@@ -469,6 +471,16 @@ class BookReaderWebViewState extends State<BookReaderWebView> {
         if (raw == null) return;
         final change = ReaderBookmarkChange.fromMap(raw);
         widget.onBookmarkChanged?.call(change);
+      },
+    );
+
+    controller.addJavaScriptHandler(
+      handlerName: 'onExternalLink',
+      callback: (args) {
+        if (args.isEmpty) return;
+        final href = parseReaderExternalLinkPayload(args.first);
+        if (href == null) return;
+        widget.onExternalLink?.call(href);
       },
     );
 

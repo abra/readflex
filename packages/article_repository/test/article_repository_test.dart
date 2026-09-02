@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:local_storage/local_storage.dart';
 import 'package:path/path.dart' as p;
+import 'package:remote_content_policy/remote_content_policy.dart';
 
 void main() {
   late AppDatabase db;
@@ -113,6 +114,7 @@ void main() {
       repository = ArticleRepository(
         database: db,
         articlesDirectory: Directory(p.join(tempDir.path, 'articles')),
+        remoteUriPolicy: _publicRemoteUriPolicy,
         httpClient: MockClient((request) async {
           expect(request.url.toString(), 'https://example.com/image.png');
           return http.Response.bytes(
@@ -217,13 +219,14 @@ void main() {
       repository = ArticleRepository(
         database: db,
         articlesDirectory: Directory(p.join(tempDir.path, 'articles')),
+        remoteUriPolicy: _publicRemoteUriPolicy,
         httpClient: MockClient((request) async {
           expect(
             request.url.toString(),
             'https://example.com/images/photo.png',
           );
           return http.Response.bytes(
-            [1, 2, 3],
+            _pngBytes,
             200,
             headers: {'content-type': 'image/png'},
           );
@@ -253,7 +256,153 @@ void main() {
       );
     },
   );
+
+  test('does not request article images from private addresses', () async {
+    repository.dispose();
+    repository = ArticleRepository(
+      database: db,
+      articlesDirectory: Directory(p.join(tempDir.path, 'articles')),
+      httpClient: MockClient((request) async {
+        fail('Private image URLs must not reach the HTTP client.');
+      }),
+    );
+
+    final article = await repository.addExtractedArticle(
+      _extractedArticle(
+        blocks: const [
+          ArticleImageBlock(src: 'http://127.0.0.1/private.png'),
+        ],
+      ),
+    );
+
+    final contentHtml = File(article.contentHtmlPath).readAsStringSync();
+    final imagesDir = Directory(
+      p.join(p.dirname(article.contentPath), 'images'),
+    );
+    expect(contentHtml, contains('127.0.0.1'));
+    expect(contentHtml, isNot(contains('src="images/')));
+    expect(imagesDir.listSync().whereType<File>(), isEmpty);
+  });
+
+  test('does not persist images that exceed the per-file limit', () async {
+    repository.dispose();
+    repository = ArticleRepository(
+      database: db,
+      articlesDirectory: Directory(p.join(tempDir.path, 'articles')),
+      remoteUriPolicy: _publicRemoteUriPolicy,
+      maxImageBytes: 16,
+      maxTotalImageBytes: 16,
+      httpClient: MockClient((request) async {
+        return http.Response.bytes(
+          _pngBytes,
+          200,
+          headers: {'content-type': 'image/png'},
+        );
+      }),
+    );
+
+    final article = await repository.addExtractedArticle(
+      _extractedArticle(
+        blocks: const [
+          ArticleImageBlock(src: 'https://example.com/large.png'),
+        ],
+      ),
+    );
+
+    final contentHtml = File(article.contentHtmlPath).readAsStringSync();
+    final imagesDir = Directory(
+      p.join(p.dirname(article.contentPath), 'images'),
+    );
+    expect(contentHtml, contains('large.png'));
+    expect(contentHtml, isNot(contains('src="images/')));
+    expect(imagesDir.listSync().whereType<File>(), isEmpty);
+  });
+
+  test('limits the number of unique article image downloads', () async {
+    var requests = 0;
+    repository.dispose();
+    repository = ArticleRepository(
+      database: db,
+      articlesDirectory: Directory(p.join(tempDir.path, 'articles')),
+      remoteUriPolicy: _publicRemoteUriPolicy,
+      maxArticleImages: 1,
+      httpClient: MockClient((request) async {
+        requests++;
+        return http.Response.bytes(
+          _pngBytes,
+          200,
+          headers: {'content-type': 'image/png'},
+        );
+      }),
+    );
+
+    final article = await repository.addExtractedArticle(
+      _extractedArticle(
+        blocks: const [
+          ArticleImageBlock(src: 'https://example.com/first.png'),
+          ArticleImageBlock(src: 'https://example.com/second.png'),
+        ],
+      ),
+    );
+
+    final contentHtml = File(article.contentHtmlPath).readAsStringSync();
+    expect(requests, 1);
+    expect(contentHtml, contains('src="images/'));
+    expect(contentHtml, contains('second.png'));
+  });
+
+  test(
+    'counts rejected image payloads against the total byte budget',
+    () async {
+      repository.dispose();
+      repository = ArticleRepository(
+        database: db,
+        articlesDirectory: Directory(p.join(tempDir.path, 'articles')),
+        remoteUriPolicy: _publicRemoteUriPolicy,
+        maxImageBytes: 128,
+        maxTotalImageBytes: 80,
+        httpClient: MockClient((request) async {
+          if (request.url.path.endsWith('invalid.bin')) {
+            return http.Response.bytes(
+              List<int>.filled(60, 0),
+              200,
+              headers: {'content-type': 'application/octet-stream'},
+            );
+          }
+          return http.Response.bytes(
+            _pngBytes,
+            200,
+            headers: {'content-type': 'image/png'},
+          );
+        }),
+      );
+
+      final article = await repository.addExtractedArticle(
+        _extractedArticle(
+          blocks: const [
+            ArticleImageBlock(src: 'https://example.com/invalid.bin'),
+            ArticleImageBlock(src: 'https://example.com/valid.png'),
+          ],
+        ),
+      );
+
+      final contentHtml = File(article.contentHtmlPath).readAsStringSync();
+      final imagesDir = Directory(
+        p.join(p.dirname(article.contentPath), 'images'),
+      );
+      expect(contentHtml, isNot(contains('src="images/')));
+      expect(imagesDir.listSync().whereType<File>(), isEmpty);
+    },
+  );
 }
+
+final _pngBytes = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADElEQVR4nGNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=',
+);
+
+final _publicRemoteUriPolicy = RemoteUriPolicy(
+  resolveHost: (_) async => [InternetAddress('93.184.216.34')],
+);
 
 ExtractedArticle _extractedArticle({
   String requestedUrl = 'https://example.com/article',

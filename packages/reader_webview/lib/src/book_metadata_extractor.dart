@@ -69,6 +69,7 @@ class BookMetadataExtractor {
   }) async {
     final completer = Completer<BookMetadata>();
     HeadlessInAppWebView? headless;
+    Timer? timeoutTimer;
 
     try {
       headless = HeadlessInAppWebView(
@@ -82,8 +83,19 @@ class BookMetadataExtractor {
             handlerName: 'onMetadata',
             callback: (args) {
               if (completer.isCompleted) return;
-              final data = args.first as Map<String, dynamic>;
-              completer.complete(parseMetadata(data));
+              try {
+                final payload = args.isEmpty ? null : args.first;
+                if (payload is! Map) {
+                  throw const BookImportException(
+                    'Book metadata response is invalid',
+                  );
+                }
+                completer.complete(
+                  parseMetadata(Map<String, dynamic>.from(payload)),
+                );
+              } on Object catch (error, stackTrace) {
+                completer.completeError(error, stackTrace);
+              }
             },
           );
           // foliate-js posts here when its open() pipeline rejects (most
@@ -94,8 +106,11 @@ class BookMetadataExtractor {
             handlerName: 'onImportError',
             callback: (args) {
               if (completer.isCompleted) return;
-              final data = args.first as Map<String, dynamic>?;
-              final message = (data?['message'] as String?) ?? 'Import failed';
+              final payload = args.isEmpty ? null : args.first;
+              final rawMessage = payload is Map && payload['message'] is String
+                  ? (payload['message'] as String).trim()
+                  : '';
+              final message = rawMessage.isEmpty ? 'Import failed' : rawMessage;
               completer.completeError(BookImportException(message));
             },
           );
@@ -112,17 +127,17 @@ class BookMetadataExtractor {
         },
       );
 
-      await headless.run();
-
-      return await completer.future.timeout(timeout);
-    } on TimeoutException {
-      if (!completer.isCompleted) {
+      timeoutTimer = Timer(timeout, () {
+        if (completer.isCompleted) return;
         completer.completeError(
           TimeoutException('Book metadata extraction timed out', timeout),
         );
-      }
-      rethrow;
+      });
+      await headless.run();
+
+      return await completer.future;
     } finally {
+      timeoutTimer?.cancel();
       await headless?.dispose();
     }
   }
@@ -176,7 +191,8 @@ class BookMetadataExtractor {
     };
 
     // Cover arrives as a data URL: "data:image/jpeg;base64,..."
-    final coverDataUrl = data['cover'] as String?;
+    final rawCover = data['cover'];
+    final coverDataUrl = rawCover is String ? rawCover : null;
     Uint8List? coverBytes;
     String? coverMime;
 
@@ -184,15 +200,25 @@ class BookMetadataExtractor {
       final commaIndex = coverDataUrl.indexOf(',');
       if (commaIndex > 0) {
         final header = coverDataUrl.substring(5, commaIndex);
-        coverMime = header.replaceAll(';base64', '');
-        coverBytes = base64Decode(coverDataUrl.substring(commaIndex + 1));
+        try {
+          coverBytes = base64Decode(coverDataUrl.substring(commaIndex + 1));
+          coverMime = header.replaceAll(';base64', '');
+        } on FormatException {
+          coverBytes = null;
+          coverMime = null;
+        }
       }
     }
 
+    final rawTitle = data['title'];
+    final rawDescription = data['description'];
+
     return BookMetadata(
-      title: (data['title'] as String?) ?? 'Unknown',
+      title: rawTitle is String && rawTitle.trim().isNotEmpty
+          ? rawTitle.trim()
+          : 'Unknown',
       author: author,
-      description: data['description'] as String?,
+      description: rawDescription is String ? rawDescription : null,
       coverData: coverBytes,
       coverMimeType: coverMime,
     );

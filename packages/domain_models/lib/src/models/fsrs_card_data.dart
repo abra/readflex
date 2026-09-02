@@ -5,8 +5,7 @@ enum FsrsState {
   newCard('new'),
   learning('learning'),
   review('review'),
-  relearning('relearning')
-  ;
+  relearning('relearning');
 
   const FsrsState(this.storageKey);
 

@@ -62,8 +62,10 @@ distinguish pages when a book format reports coarse section-level CFI values.
 `articles_table` stores saved web-article metadata and reader state. Heavy
 article payloads stay on disk under `articles/<id>/`; the row stores local
 filenames/paths plus extracted metadata such as language, author, site, CFI,
-and reading progress. Older migrations still contain the historical
-article-table removal step from v13; v18 creates the current article schema.
+and reading progress. Upgrades from the historical v5-v12 article schemas
+migrate rows directly into the current table. Inline v5 HTML, v6 absolute
+paths, and later filename-only layouts are copied into the current per-article
+directory instead of being deleted.
 
 `collections_table` stores manual collection metadata;
 `collection_sources_table` stores manual and protected favourites membership.
@@ -77,6 +79,10 @@ Schema version is bumped on every change. `MigrationStrategy.onUpgrade`
 in `database.dart` handles each step with `ALTER TABLE` / `CREATE
 TABLE` statements. Indexes are rebuilt via `_createIndexes()` at
 `onCreate` and whenever a migration touches query paths.
+
+Migration tests open file-backed SQLite fixtures at representative historical
+versions. Any change to an upgrade path must preserve those fixtures and add a
+new one when a schema shape changes.
 
 ---
 
@@ -157,7 +163,8 @@ through a repository.
   `AppDatabase` instance at runtime.
 - Tables stay here. Domain types stay in `domain_models`. Mapping lives
   in the repository that owns the domain concept.
-- Every schema change bumps `schemaVersion` and adds an `if (from < N)`
-  branch. Never edit a past migration.
+- Every current-schema change bumps `schemaVersion` and adds an
+  `if (from < N)` branch. Historical migration behavior may be corrected only
+  to prevent data loss, with file-backed tests for every affected source shape.
 - Hot-path queries get a matching index in `_createIndexes()` or beside the
   custom table setup that owns them.

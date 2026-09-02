@@ -3,8 +3,7 @@ enum Rating {
   again,
   hard,
   good,
-  easy
-  ;
+  easy;
 
   /// Parses a [Rating] from its stored [name]. Falls back to [again] on
   /// unknown values.

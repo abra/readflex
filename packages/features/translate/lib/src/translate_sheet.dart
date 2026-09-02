@@ -170,7 +170,7 @@ class _TranslateBody extends StatelessWidget {
       ),
       TranslateSheetStatus.failure => _MessageWithAction(
         title: strings.failureTitle,
-        body: state.failure?.message ?? strings.failureBody,
+        body: strings.failureBody,
         actionLabel: strings.retry,
         onPressed: () => cubit.translate(selection),
       ),

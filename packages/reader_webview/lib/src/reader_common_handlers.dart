@@ -33,6 +33,16 @@ ReaderTapPayload? parseReaderTapPayload(Object? raw) {
   return ReaderTapPayload(x: x.toDouble(), y: y.toDouble());
 }
 
+String? parseReaderExternalLinkPayload(Object? raw) {
+  final value = switch (raw) {
+    String() => raw,
+    _ => readerBridgeMap(raw)?['href'],
+  };
+  if (value is! String) return null;
+  final href = value.trim();
+  return href.isEmpty ? null : href;
+}
+
 @visibleForTesting
 const currentReaderTextSelectionScript = '''
 (() => {
@@ -144,13 +154,13 @@ void registerSharedReaderHandlers(
 }
 
 /// Base [InAppWebViewSettings] for the reader WebView: zoom off,
-/// transparent background, hybrid composition, JS enabled, native text
-/// action menu off, DevTools inspectable only in debug.
+/// transparent background, texture-layer composition on Android, JS enabled,
+/// native text action menu off, DevTools inspectable only in debug.
 InAppWebViewSettings baseReaderSettings() => InAppWebViewSettings(
   supportZoom: false,
   transparentBackground: true,
   isInspectable: kDebugMode,
-  useHybridComposition: true,
+  useHybridComposition: false,
   javaScriptEnabled: true,
   disableContextMenu: true,
   disableLongPressContextMenuOnLinks: true,

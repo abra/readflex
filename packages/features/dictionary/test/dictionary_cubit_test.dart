@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dictionary/dictionary.dart';
 import 'package:dictionary_service/dictionary_service.dart';
@@ -69,6 +71,20 @@ void main() {
           ),
     ],
   );
+
+  test('ignores a dictionary result delivered after close', () async {
+    final service = _ControlledDictionaryService();
+    final cubit = DictionaryCubit(dictionaryService: service);
+
+    final lookup = cubit.lookup(_selection());
+    expect(cubit.state.status, DictionarySheetStatus.loading);
+
+    await cubit.close();
+    service.complete();
+
+    await expectLater(lookup, completes);
+    expect(cubit.state.status, DictionarySheetStatus.loading);
+  });
 }
 
 TextSelectionContext _selection() {
@@ -94,6 +110,33 @@ class _FakeDictionaryService implements DictionaryLookupService {
     final failure = this.failure;
     if (failure != null) throw failure;
     return result!;
+  }
+
+  @override
+  void dispose() {}
+}
+
+class _ControlledDictionaryService implements DictionaryLookupService {
+  final _response = Completer<DictionaryLookupResult>();
+  DictionaryLookupRequest? request;
+
+  @override
+  Future<DictionaryLookupResult> lookup(DictionaryLookupRequest request) {
+    this.request = request;
+    return _response.future;
+  }
+
+  void complete() {
+    final request = this.request!;
+    _response.complete(
+      DictionaryLookupResult(
+        requestId: request.requestId,
+        status: DictionaryLookupStatus.found,
+        term: request.term,
+        language: request.sourceLanguage ?? 'en',
+        entries: const [],
+      ),
+    );
   }
 
   @override

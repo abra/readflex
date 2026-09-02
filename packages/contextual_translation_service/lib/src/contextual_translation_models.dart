@@ -31,7 +31,9 @@ enum ContextualTranslationStatus {
       'ambiguous' => ambiguous,
       'needs_more_context' => needsMoreContext,
       'unsupported' => unsupported,
-      _ => unsupported,
+      _ => throw FormatException(
+        'Unsupported contextual translation status: $value',
+      ),
     };
   }
 }
@@ -48,8 +50,11 @@ enum ContextualTranslationReliability {
     return switch (value) {
       'verified' => verified,
       'probable' => probable,
+      'unresolved' => unresolved,
       'offline' => offline,
-      _ => unresolved,
+      _ => throw FormatException(
+        'Unsupported contextual translation reliability: $value',
+      ),
     };
   }
 }
@@ -336,14 +341,17 @@ class ContextualTranslationAnalysis extends Equatable {
 
   factory ContextualTranslationAnalysis.fromJson(Map<String, Object?> json) {
     return ContextualTranslationAnalysis(
-      selectedTokenIds: _intList(json['selected_token_ids']),
-      expressionTokenIds: _intList(json['expression_token_ids']),
-      surfaceForm: _nullableString(json['surface_form']),
-      lemma: _nullableString(json['lemma']),
-      expressionType: _nullableString(json['expression_type']),
-      partOfSpeech: _nullableString(json['part_of_speech']),
-      grammaticalForm: _nullableString(json['grammatical_form']),
-      contextualMeaningEn: _nullableString(json['contextual_meaning_en']),
+      selectedTokenIds: _checkedIntList(json, 'selected_token_ids'),
+      expressionTokenIds: _checkedIntList(json, 'expression_token_ids'),
+      surfaceForm: _checkedOptionalString(json, 'surface_form'),
+      lemma: _checkedOptionalString(json, 'lemma'),
+      expressionType: _checkedOptionalString(json, 'expression_type'),
+      partOfSpeech: _checkedOptionalString(json, 'part_of_speech'),
+      grammaticalForm: _checkedOptionalString(json, 'grammatical_form'),
+      contextualMeaningEn: _checkedOptionalString(
+        json,
+        'contextual_meaning_en',
+      ),
     );
   }
 
@@ -382,10 +390,13 @@ class ContextualTranslationText extends Equatable {
 
   factory ContextualTranslationText.fromJson(Map<String, Object?> json) {
     return ContextualTranslationText(
-      baseTranslation: _nullableString(json['base_translation']),
-      contextualTranslation: _nullableString(json['contextual_translation']),
-      translatedFragment: _nullableString(json['translated_fragment']),
-      sentenceTranslation: _nullableString(json['sentence_translation']),
+      baseTranslation: _checkedOptionalString(json, 'base_translation'),
+      contextualTranslation: _checkedOptionalString(
+        json,
+        'contextual_translation',
+      ),
+      translatedFragment: _checkedOptionalString(json, 'translated_fragment'),
+      sentenceTranslation: _checkedOptionalString(json, 'sentence_translation'),
     );
   }
 
@@ -417,9 +428,9 @@ class ContextualTranslationAlternative extends Equatable {
 
   factory ContextualTranslationAlternative.fromJson(Map<String, Object?> json) {
     return ContextualTranslationAlternative(
-      translation: _string(json['translation']),
-      meaning: _nullableString(json['meaning']),
-      note: _nullableString(json['note']),
+      translation: _requiredString(json, 'translation'),
+      meaning: _checkedOptionalString(json, 'meaning'),
+      note: _checkedOptionalString(json, 'note'),
     );
   }
 
@@ -449,10 +460,10 @@ class ContextualTranslationSource extends Equatable {
 
   factory ContextualTranslationSource.fromJson(Map<String, Object?> json) {
     return ContextualTranslationSource(
-      provider: _nullableString(json['provider']),
-      modelId: _nullableString(json['model_id']),
-      promptVersion: _nullableString(json['prompt_version']),
-      schemaVersion: _nullableString(json['schema_version']),
+      provider: _checkedOptionalString(json, 'provider'),
+      modelId: _checkedOptionalString(json, 'model_id'),
+      promptVersion: _checkedOptionalString(json, 'prompt_version'),
+      schemaVersion: _checkedOptionalString(json, 'schema_version'),
     );
   }
 
@@ -506,27 +517,57 @@ class ContextualTranslationResult extends Equatable {
   };
 
   factory ContextualTranslationResult.fromJson(Map<String, Object?> json) {
+    final schemaVersion = _requiredString(json, 'schema_version');
+    if (schemaVersion != contextualTranslationResultSchemaVersion) {
+      throw FormatException(
+        'Unsupported contextual translation result schema: $schemaVersion',
+      );
+    }
+
+    final mode = _requiredString(json, 'mode');
+    if (mode != contextualTranslationMode &&
+        mode != selectedTextTranslationMode) {
+      throw FormatException('Unsupported contextual translation mode: $mode');
+    }
+
+    final status = ContextualTranslationStatus.fromWireName(json['status']);
+    final translation = ContextualTranslationText.fromJson(
+      _requiredMap(json, 'translation'),
+    );
+    if ((status == ContextualTranslationStatus.resolved ||
+            status == ContextualTranslationStatus.ambiguous) &&
+        !_hasTranslationText(translation)) {
+      throw const FormatException(
+        'Resolved contextual translation must contain translated text',
+      );
+    }
+    final analysis = _optionalMap(json, 'analysis');
+
     return ContextualTranslationResult(
-      requestId: _string(json['request_id']),
-      mode: _string(json['mode'], fallback: contextualTranslationMode),
-      provider: _nullableString(json['provider']),
-      status: ContextualTranslationStatus.fromWireName(json['status']),
+      requestId: _requiredString(json, 'request_id'),
+      mode: mode,
+      provider: _checkedOptionalString(json, 'provider'),
+      status: status,
       reliability: ContextualTranslationReliability.fromWireName(
         json['reliability'],
       ),
-      detectedSourceLanguage: _nullableString(json['detected_source_language']),
-      targetLanguage: _nullableString(json['target_language']),
-      analysis: _map(json['analysis']) == null
-          ? null
-          : ContextualTranslationAnalysis.fromJson(_map(json['analysis'])!),
-      translation: ContextualTranslationText.fromJson(
-        _map(json['translation']) ?? {},
+      detectedSourceLanguage: _checkedOptionalString(
+        json,
+        'detected_source_language',
       ),
-      explanation: _nullableString(json['explanation']),
-      alternatives: _objectList(
-        json['alternatives'],
+      targetLanguage: _checkedOptionalString(json, 'target_language'),
+      analysis: analysis == null
+          ? null
+          : ContextualTranslationAnalysis.fromJson(analysis),
+      translation: translation,
+      explanation: _checkedOptionalString(json, 'explanation'),
+      alternatives: _checkedObjectList(
+        json,
+        'alternatives',
       ).map(ContextualTranslationAlternative.fromJson).toList(growable: false),
-      source: ContextualTranslationSource.fromJson(_map(json['source']) ?? {}),
+      source: ContextualTranslationSource.fromJson(
+        _requiredMap(json, 'source'),
+      ),
     );
   }
 
@@ -605,21 +646,76 @@ Map<String, Object?>? _map(Object? value) {
   return null;
 }
 
-List<Map<String, Object?>> _objectList(Object? value) {
-  if (value is! List) return const [];
-  return value
-      .whereType<Map>()
-      .map((item) => Map<String, Object?>.from(item))
-      .toList(growable: false);
-}
-
-List<int> _intList(Object? value) {
-  if (value is! List) return const [];
-  return value.whereType<num>().map((item) => item.toInt()).toList();
-}
-
 String? _normalizedLanguageCode(String? value) {
   final normalized = value?.trim().toLowerCase();
   if (normalized == null || normalized.isEmpty) return null;
   return normalized.split(RegExp(r'[-_]')).first;
+}
+
+String _requiredString(Map<String, Object?> json, String key) {
+  final value = _checkedOptionalString(json, key);
+  if (value == null) throw FormatException('$key must be a non-empty string');
+  return value;
+}
+
+String? _checkedOptionalString(Map<String, Object?> json, String key) {
+  final value = json[key];
+  if (value == null) return null;
+  if (value is! String) throw FormatException('$key must be a string');
+  return _nullableString(value);
+}
+
+Map<String, Object?> _requiredMap(Map<String, Object?> json, String key) {
+  final value = _optionalMap(json, key);
+  if (value == null) throw FormatException('$key must be an object');
+  return value;
+}
+
+Map<String, Object?>? _optionalMap(Map<String, Object?> json, String key) {
+  final value = json[key];
+  if (value == null) return null;
+  if (value is! Map) throw FormatException('$key must be an object');
+  try {
+    return Map<String, Object?>.from(value);
+  } on TypeError catch (error) {
+    throw FormatException('$key must have string keys', error);
+  }
+}
+
+List<Map<String, Object?>> _checkedObjectList(
+  Map<String, Object?> json,
+  String key,
+) {
+  final value = json[key];
+  if (value == null) return const [];
+  if (value is! List) throw FormatException('$key must be a list');
+  return [
+    for (var index = 0; index < value.length; index++)
+      if (value[index] is Map)
+        Map<String, Object?>.from(value[index] as Map)
+      else
+        throw FormatException('$key[$index] must be an object'),
+  ];
+}
+
+List<int> _checkedIntList(Map<String, Object?> json, String key) {
+  final value = json[key];
+  if (value == null) return const [];
+  if (value is! List) throw FormatException('$key must be a list');
+  return [
+    for (var index = 0; index < value.length; index++)
+      if (value[index] case final int item)
+        item
+      else
+        throw FormatException('$key[$index] must be an integer'),
+  ];
+}
+
+bool _hasTranslationText(ContextualTranslationText translation) {
+  return [
+    translation.baseTranslation,
+    translation.contextualTranslation,
+    translation.translatedFragment,
+    translation.sentenceTranslation,
+  ].any((value) => value != null && value.isNotEmpty);
 }

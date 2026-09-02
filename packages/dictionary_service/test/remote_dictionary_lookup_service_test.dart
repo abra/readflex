@@ -79,8 +79,38 @@ void main() {
             .having(
               (error) => error.message,
               'message',
-              'Missing or invalid X-API-Key',
+              'Dictionary service authorization failed',
             ),
+      ),
+    );
+  });
+
+  test('rejects a response correlated to another request', () async {
+    final service = RemoteDictionaryLookupService(
+      baseUri: Uri.parse('https://api.readflex.app'),
+      httpClient: MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'request_id': 'another-request',
+            'status': 'not_found',
+            'term': 'power',
+            'entries': const [],
+          }),
+          200,
+        ),
+      ),
+    );
+
+    expect(
+      () => service.lookup(
+        DictionaryLookupRequest(requestId: 'request-1', term: 'power'),
+      ),
+      throwsA(
+        isA<DictionaryLookupException>().having(
+          (error) => error.reason,
+          'reason',
+          DictionaryLookupFailureReason.invalidResponse,
+        ),
       ),
     );
   });

@@ -1,4 +1,4 @@
-.PHONY: get format analyze test clean build build-android build-apk run help
+.PHONY: get format format-check analyze test verify clean build build-android build-apk run help
 
 FLUTTER ?= fvm flutter
 DART ?= fvm dart
@@ -13,6 +13,7 @@ PACKAGES = \
 	packages/book_repository \
 	packages/collection_repository \
 	packages/article_extraction_service \
+	packages/remote_content_policy \
 	packages/article_repository \
 	packages/highlight_repository \
 	packages/preferences_service \
@@ -36,7 +37,7 @@ ROOT_ANALYZE_PATHS = lib test benchmarks
 ## Install dependencies for root and all packages
 get:
 	$(FLUTTER) pub get
-	@for pkg in $(PACKAGES); do \
+	@set -e; for pkg in $(PACKAGES); do \
 		echo "▶ pub get $$pkg"; \
 		(cd $$pkg && $(FLUTTER) pub get); \
 	done
@@ -45,10 +46,14 @@ get:
 format:
 	$(DART) format ./
 
+## Check Dart formatting without changing files
+format-check:
+	$(DART) format --output=none --set-exit-if-changed lib test benchmarks packages
+
 ## Analyze all Dart code
 analyze:
 	$(FLUTTER) analyze $(ROOT_ANALYZE_PATHS)
-	@for pkg in $(PACKAGES); do \
+	@set -e; for pkg in $(PACKAGES); do \
 		echo "▶ analyze $$pkg"; \
 		(cd $$pkg && $(FLUTTER) analyze); \
 	done
@@ -56,6 +61,9 @@ analyze:
 ## Run all tests across packages
 test:
 	@FLUTTER="$(FLUTTER)" DART="$(DART)" bash test_all.sh
+
+## Run the full local quality gate without modifying source files
+verify: format-check analyze test
 
 ## Run the app in debug mode
 run:

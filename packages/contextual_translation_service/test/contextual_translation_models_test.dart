@@ -87,7 +87,9 @@ void main() {
 
   test('ContextualTranslationResult parses backend response', () {
     final result = ContextualTranslationResult.fromJson({
+      'schema_version': contextualTranslationResultSchemaVersion,
       'request_id': 'request-1',
+      'mode': contextualTranslationMode,
       'status': 'resolved',
       'reliability': 'verified',
       'detected_source_language': 'en',
@@ -105,6 +107,10 @@ void main() {
       'alternatives': [
         {'translation': 'отказался'},
       ],
+      'source': {
+        'provider': 'deepseek',
+        'schema_version': contextualTranslationResultSchemaVersion,
+      },
     });
 
     expect(result.status, ContextualTranslationStatus.resolved);
@@ -113,4 +119,54 @@ void main() {
     expect(result.translation.contextualTranslation, 'бросил');
     expect(result.alternatives.single.translation, 'отказался');
   });
+
+  test('ContextualTranslationResult rejects an unknown schema', () {
+    expect(
+      () => ContextualTranslationResult.fromJson({
+        ..._validResultJson,
+        'schema_version': 'readflex.contextual_translation.result.v2',
+      }),
+      throwsFormatException,
+    );
+  });
+
+  test('ContextualTranslationResult rejects unknown enum values', () {
+    expect(
+      () => ContextualTranslationResult.fromJson({
+        ..._validResultJson,
+        'status': 'complete',
+      }),
+      throwsFormatException,
+    );
+    expect(
+      () => ContextualTranslationResult.fromJson({
+        ..._validResultJson,
+        'reliability': 'certain',
+      }),
+      throwsFormatException,
+    );
+  });
+
+  test('resolved result requires non-empty translated text', () {
+    expect(
+      () => ContextualTranslationResult.fromJson({
+        ..._validResultJson,
+        'translation': <String, Object?>{},
+      }),
+      throwsFormatException,
+    );
+  });
 }
+
+final _validResultJson = <String, Object?>{
+  'schema_version': contextualTranslationResultSchemaVersion,
+  'request_id': 'request-1',
+  'mode': contextualTranslationMode,
+  'status': 'resolved',
+  'reliability': 'verified',
+  'translation': <String, Object?>{'contextual_translation': 'сила'},
+  'source': <String, Object?>{
+    'provider': 'deepseek',
+    'schema_version': contextualTranslationResultSchemaVersion,
+  },
+};

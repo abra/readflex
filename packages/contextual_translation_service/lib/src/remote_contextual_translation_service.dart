@@ -54,9 +54,17 @@ class RemoteContextualTranslationService
           'Translation service returned an invalid response',
         );
       }
-      return ContextualTranslationResult.fromJson(
+      final result = ContextualTranslationResult.fromJson(
         Map<String, Object?>.from(decoded),
       );
+      if (result.requestId != request.requestId ||
+          result.mode != request.mode) {
+        throw const ContextualTranslationException(
+          ContextualTranslationFailureReason.invalidResponse,
+          'Translation response does not match the request',
+        );
+      }
+      return result;
     } on ContextualTranslationException {
       rethrow;
     } on TimeoutException catch (error) {
@@ -74,7 +82,13 @@ class RemoteContextualTranslationService
     } on FormatException catch (error) {
       throw ContextualTranslationException(
         ContextualTranslationFailureReason.invalidResponse,
-        'Translation service returned invalid JSON',
+        'Translation service returned an invalid response',
+        cause: error,
+      );
+    } on TypeError catch (error) {
+      throw ContextualTranslationException(
+        ContextualTranslationFailureReason.invalidResponse,
+        'Translation service returned an invalid response',
         cause: error,
       );
     }
@@ -99,20 +113,12 @@ Map<String, String> _headers(String? apiKey) {
 }
 
 String _errorMessageFor(http.Response response) {
-  try {
-    final decoded = jsonDecode(response.body);
-    if (decoded is Map) {
-      final detail = decoded['detail'];
-      if (detail is String && detail.trim().isNotEmpty) return detail.trim();
-      final error = decoded['error'];
-      if (error is String && error.trim().isNotEmpty) return error.trim();
-      final message = decoded['message'];
-      if (message is String && message.trim().isNotEmpty) {
-        return message.trim();
-      }
-    }
-  } on FormatException {
-    // Fall through to the status-code message.
-  }
-  return 'Translation service returned HTTP ${response.statusCode}';
+  return switch (response.statusCode) {
+    401 || 403 => 'Translation service authorization failed',
+    413 => 'Selected text is too large',
+    422 => 'Translation request is invalid',
+    429 => 'Translation service is temporarily busy',
+    >= 500 => 'Translation service is unavailable',
+    _ => 'Translation request failed',
+  };
 }

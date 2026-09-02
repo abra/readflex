@@ -160,6 +160,31 @@ void main() {
       expect(metadata.coverMimeType, isNull);
     });
 
+    test('ignores malformed base64 cover without dropping metadata', () {
+      final metadata = BookMetadataExtractor.parseMetadata({
+        'title': 'Bad Cover',
+        'author': 'Valid Author',
+        'cover': 'data:image/jpeg;base64,not-valid-base64!',
+      });
+
+      expect(metadata.title, 'Bad Cover');
+      expect(metadata.author, 'Valid Author');
+      expect(metadata.coverData, isNull);
+      expect(metadata.coverMimeType, isNull);
+    });
+
+    test('normalizes malformed scalar metadata to safe defaults', () {
+      final metadata = BookMetadataExtractor.parseMetadata({
+        'title': 42,
+        'description': <String>['not', 'text'],
+        'cover': 7,
+      });
+
+      expect(metadata.title, 'Unknown');
+      expect(metadata.description, isNull);
+      expect(metadata.coverData, isNull);
+    });
+
     test('parses complete metadata map', () {
       final imageBytes = Uint8List.fromList([1, 2, 3]);
       final base64Data = base64Encode(imageBytes);

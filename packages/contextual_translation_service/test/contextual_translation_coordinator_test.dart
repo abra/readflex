@@ -20,6 +20,22 @@ void main() {
     expect(offline.calls, 0);
   });
 
+  test('correlates a cached result with the current request', () async {
+    final remote = _FakeRemoteService();
+    final coordinator = ContextualTranslationCoordinator(
+      remoteService: remote,
+      offlineService: _FakeOfflineService(),
+    );
+
+    final first = await coordinator.translate(_request(requestId: 'first'));
+    final second = await coordinator.translate(_request(requestId: 'second'));
+
+    expect(first.requestId, 'first');
+    expect(second.requestId, 'second');
+    expect(second.translation, first.translation);
+    expect(remote.calls, 1);
+  });
+
   test('falls back offline when remote has a network failure', () async {
     final remote = _FakeRemoteService(
       error: const ContextualTranslationException(
@@ -120,11 +136,46 @@ void main() {
     expect(result.translation.contextualTranslation, 'offline');
     expect(offline.downloads, 1);
   });
+
+  test(
+    'does not translate when downloaded models remain unavailable',
+    () async {
+      final offline = _FakeOfflineService(
+        downloaded: false,
+        completesDownload: false,
+      );
+      final coordinator = ContextualTranslationCoordinator(
+        remoteService: _FakeRemoteService(
+          error: const ContextualTranslationException(
+            ContextualTranslationFailureReason.network,
+            'offline',
+          ),
+        ),
+        offlineService: offline,
+      );
+
+      await expectLater(
+        coordinator.translate(_request(), allowOfflineModelDownload: true),
+        throwsA(
+          isA<ContextualTranslationException>().having(
+            (error) => error.reason,
+            'reason',
+            ContextualTranslationFailureReason.unavailable,
+          ),
+        ),
+      );
+      expect(offline.downloads, 1);
+      expect(offline.calls, 0);
+    },
+  );
 }
 
-ContextualTranslationRequest _request({String? sourceHint = 'en'}) {
+ContextualTranslationRequest _request({
+  String requestId = 'request-1',
+  String? sourceHint = 'en',
+}) {
   return ContextualTranslationRequest(
-    requestId: 'request-1',
+    requestId: requestId,
     sourceLanguage: autoSourceLanguageCode,
     sourceLanguageHint: sourceHint,
     targetLanguage: 'ru',
@@ -168,9 +219,10 @@ class _FakeRemoteService implements ContextualTranslationService {
 }
 
 class _FakeOfflineService implements OfflineContextualTranslationService {
-  _FakeOfflineService({this.downloaded = false});
+  _FakeOfflineService({this.downloaded = false, this.completesDownload = true});
 
   bool downloaded;
+  final bool completesDownload;
   var calls = 0;
   var downloads = 0;
 
@@ -188,7 +240,7 @@ class _FakeOfflineService implements OfflineContextualTranslationService {
     required String targetLanguage,
   }) async {
     downloads++;
-    downloaded = true;
+    if (completesDownload) downloaded = true;
   }
 
   @override

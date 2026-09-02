@@ -22,7 +22,7 @@ class ContextualTranslationCoordinator implements ContextualTranslationService {
     bool allowOfflineModelDownload = false,
   }) async {
     final cached = _cache.read(request);
-    if (cached != null) return cached;
+    if (cached != null) return _resultForRequest(cached, request.requestId);
 
     try {
       final result = await _remoteService.translate(request);
@@ -70,6 +70,18 @@ class ContextualTranslationCoordinator implements ContextualTranslationService {
         sourceLanguage: sourceLanguage,
         targetLanguage: request.targetLanguage,
       );
+      final modelsReady = await _offlineService.areModelsDownloaded(
+        sourceLanguage: sourceLanguage,
+        targetLanguage: request.targetLanguage,
+      );
+      if (!modelsReady) {
+        throw ContextualTranslationException(
+          ContextualTranslationFailureReason.unavailable,
+          'Offline translation models could not be downloaded',
+          sourceLanguage: sourceLanguage,
+          targetLanguage: request.targetLanguage,
+        );
+      }
     }
 
     final result = await _offlineService.translate(
@@ -103,4 +115,25 @@ bool _canFallbackOffline(ContextualTranslationException error) {
 bool _isTransientHttpStatus(int? statusCode) {
   if (statusCode == null) return false;
   return statusCode == 408 || statusCode == 429 || statusCode >= 500;
+}
+
+ContextualTranslationResult _resultForRequest(
+  ContextualTranslationResult result,
+  String requestId,
+) {
+  if (result.requestId == requestId) return result;
+  return ContextualTranslationResult(
+    requestId: requestId,
+    mode: result.mode,
+    provider: result.provider,
+    status: result.status,
+    reliability: result.reliability,
+    detectedSourceLanguage: result.detectedSourceLanguage,
+    targetLanguage: result.targetLanguage,
+    analysis: result.analysis,
+    translation: result.translation,
+    explanation: result.explanation,
+    alternatives: result.alternatives,
+    source: result.source,
+  );
 }

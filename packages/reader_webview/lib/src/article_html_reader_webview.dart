@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import 'asset_extractor.dart';
 import 'reader_bridge.dart';
 import 'reader_common_handlers.dart';
+import 'reader_webview_lifecycle.dart';
 
 /// Vertical WebView reader for saved article HTML fragments.
 ///
@@ -64,7 +65,8 @@ class ArticleHtmlReaderWebView extends StatefulWidget {
       ArticleHtmlReaderWebViewState();
 }
 
-class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView> {
+class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
+    with ReaderWebViewLifecycleMixin<ArticleHtmlReaderWebView> {
   InAppWebViewController? _controller;
   bool _isReady = false;
   StreamController<ReaderSearchEvent>? _searchEvents;
@@ -140,6 +142,7 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView> {
 
   void _onWebViewCreated(InAppWebViewController controller) {
     _controller = controller;
+    attachReaderWebViewLifecycle(controller);
     if (readerTextSelectionTracingEnabled) {
       debugPrint(
         '[reader-selection-dart] article HTML WebView created url=$_indexUrl',

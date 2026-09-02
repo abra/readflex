@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:article_extraction_service/article_extraction_service.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:remote_content_policy/remote_content_policy.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -54,6 +57,7 @@ void main() {
     late Map<String, Object?> htmlRequestBody;
     final service = TrafilaturaArticleExtractionService(
       baseUri: Uri.parse('http://127.0.0.1:9090'),
+      remoteUriPolicy: _publicRemoteUriPolicy,
       httpClient: MockClient((request) async {
         if (request.method == 'GET') {
           events.add('GET ${request.url}');
@@ -105,6 +109,7 @@ void main() {
       late Map<String, Object?> htmlRequestBody;
       final service = TrafilaturaArticleExtractionService(
         baseUri: Uri.parse('http://127.0.0.1:9090'),
+        remoteUriPolicy: _publicRemoteUriPolicy,
         httpClient: MockClient((request) async {
           if (request.method == 'GET') {
             return http.Response(
@@ -162,6 +167,7 @@ void main() {
       });
       final service = TrafilaturaArticleExtractionService(
         baseUri: Uri.parse('http://127.0.0.1:9090'),
+        remoteUriPolicy: _publicRemoteUriPolicy,
         httpClient: MockClient((request) async {
           if (request.method == 'GET') {
             return http.Response(
@@ -233,6 +239,7 @@ void main() {
   test('maps article download failures from client fallback', () async {
     final service = TrafilaturaArticleExtractionService(
       baseUri: Uri.parse('http://127.0.0.1:9090'),
+      remoteUriPolicy: _publicRemoteUriPolicy,
       httpClient: MockClient((request) async {
         if (request.method == 'GET') {
           return http.Response('Not found', 404, request: request);
@@ -263,6 +270,7 @@ void main() {
     final service = TrafilaturaArticleExtractionService(
       baseUri: Uri.parse('http://127.0.0.1:9090'),
       maxDownloadBytes: 4,
+      remoteUriPolicy: _publicRemoteUriPolicy,
       httpClient: MockClient((request) async {
         if (request.method == 'GET') {
           return http.Response('too large', 200, request: request);
@@ -287,6 +295,51 @@ void main() {
             .having((e) => e.statusCode, 'statusCode', 413),
       ),
     );
+  });
+
+  test('cancels a fallback HTML stream when its deadline expires', () async {
+    final streamCancelled = Completer<void>();
+    final responseController = StreamController<List<int>>(
+      onCancel: () {
+        if (!streamCancelled.isCompleted) streamCancelled.complete();
+      },
+    );
+    final service = TrafilaturaArticleExtractionService(
+      baseUri: Uri.parse('http://127.0.0.1:9090'),
+      timeout: const Duration(milliseconds: 20),
+      remoteUriPolicy: _publicRemoteUriPolicy,
+      httpClient: MockClient.streaming((request, bodyStream) async {
+        await bodyStream.drain<void>();
+        if (request.method == 'GET') {
+          return http.StreamedResponse(
+            responseController.stream,
+            200,
+            request: request,
+          );
+        }
+        return _streamedResponse(
+          _errorResponse(
+            'Backend download failed',
+            502,
+            code: 'fetch_failed',
+          ),
+          request,
+        );
+      }),
+    );
+
+    await expectLater(
+      service.extract('https://example.com/slow'),
+      throwsA(
+        isA<ArticleExtractionException>().having(
+          (error) => error.message,
+          'message',
+          'Article URL download timed out',
+        ),
+      ),
+    );
+    await streamCancelled.future.timeout(const Duration(seconds: 1));
+    await responseController.close();
   });
 
   test('maps backend error payloads without client fallback', () async {
@@ -342,6 +395,7 @@ void main() {
       final requestBodies = <Map<String, Object?>>[];
       final service = TrafilaturaArticleExtractionService(
         baseUri: Uri.parse('http://127.0.0.1:9090'),
+        remoteUriPolicy: _publicRemoteUriPolicy,
         httpClient: MockClient((request) async {
           if (request.method == 'GET') {
             fail('Server recall retry should succeed before client fallback.');
@@ -381,6 +435,7 @@ void main() {
       late Map<String, Object?> htmlRequestBody;
       final service = TrafilaturaArticleExtractionService(
         baseUri: Uri.parse('http://127.0.0.1:9090'),
+        remoteUriPolicy: _publicRemoteUriPolicy,
         httpClient: MockClient((request) async {
           if (request.method == 'GET') {
             events.add('GET ${request.url}');
@@ -457,35 +512,113 @@ void main() {
     },
   );
 
-  test('falls back to client HTML when server stops unsafe redirect', () async {
+  test('does not bypass a server unsafe redirect rejection', () async {
     final paths = <String>[];
     final service = TrafilaturaArticleExtractionService(
       baseUri: Uri.parse('http://127.0.0.1:9090'),
       httpClient: MockClient((request) async {
         if (request.method == 'GET') {
-          return http.Response(
-            '<html><body><article>Safe fallback</article></body></html>',
-            200,
-            request: request,
-          );
+          fail('Unsafe redirects must not trigger client fallback.');
         }
 
         paths.add(request.url.path);
-        if (request.url.path == '/v1/extract') {
-          return _errorResponse(
-            'Unsafe redirect stopped',
-            508,
-            code: 'unsafe_redirect',
+        return _errorResponse(
+          'Unsafe redirect stopped',
+          508,
+          code: 'unsafe_redirect',
+        );
+      }),
+    );
+
+    await expectLater(
+      service.extract('https://example.com/a'),
+      throwsA(
+        isA<ArticleExtractionException>()
+            .having((error) => error.statusCode, 'statusCode', 508)
+            .having(
+              (error) => error.errorCode,
+              'errorCode',
+              'unsafe_redirect',
+            ),
+      ),
+    );
+
+    expect(paths, ['/v1/extract']);
+  });
+
+  test('blocks a client fallback redirect to a private address', () async {
+    final downloadedUrls = <Uri>[];
+    final service = TrafilaturaArticleExtractionService(
+      baseUri: Uri.parse('http://127.0.0.1:9090'),
+      remoteUriPolicy: _publicRemoteUriPolicy,
+      httpClient: MockClient((request) async {
+        if (request.method == 'GET') {
+          downloadedUrls.add(request.url);
+          if (request.url.host == '127.0.0.1') {
+            fail('Private redirect targets must not be requested.');
+          }
+          return http.Response(
+            '',
+            302,
+            headers: {'location': 'http://127.0.0.1/private'},
+            request: request,
           );
         }
-        return _articleResponse(text: 'Safe fallback');
+        return _errorResponse(
+          'Backend download failed',
+          502,
+          code: 'fetch_failed',
+        );
+      }),
+    );
+
+    await expectLater(
+      service.extract('https://example.com/a'),
+      throwsA(
+        isA<ArticleExtractionException>().having(
+          (error) => error.errorCode,
+          'errorCode',
+          'unsafe_url',
+        ),
+      ),
+    );
+
+    expect(downloadedUrls, [Uri.parse('https://example.com/a')]);
+  });
+
+  test('follows validated public redirects during client fallback', () async {
+    late Map<String, Object?> htmlRequestBody;
+    final service = TrafilaturaArticleExtractionService(
+      baseUri: Uri.parse('http://127.0.0.1:9090'),
+      remoteUriPolicy: _publicRemoteUriPolicy,
+      httpClient: MockClient((request) async {
+        if (request.method == 'GET') {
+          if (request.url.host == 'example.com') {
+            return http.Response(
+              '',
+              302,
+              headers: {'location': 'https://cdn.example/article'},
+              request: request,
+            );
+          }
+          return http.Response('<html>Article</html>', 200, request: request);
+        }
+        if (request.url.path == '/v1/extract') {
+          return _errorResponse(
+            'Backend download failed',
+            502,
+            code: 'fetch_failed',
+          );
+        }
+        htmlRequestBody = jsonDecode(request.body) as Map<String, Object?>;
+        return _articleResponse(text: 'Article');
       }),
     );
 
     final article = await service.extract('https://example.com/a');
 
-    expect(paths, ['/v1/extract', '/v1/extract-html']);
-    expect(article.plainText, 'Safe fallback');
+    expect(htmlRequestBody['resolved_url'], 'https://cdn.example/article');
+    expect(article.plainText, 'Article');
   });
 
   test('formats FastAPI validation errors without client fallback', () async {
@@ -543,6 +676,10 @@ void main() {
   });
 }
 
+final _publicRemoteUriPolicy = RemoteUriPolicy(
+  resolveHost: (_) async => [InternetAddress('93.184.216.34')],
+);
+
 http.Response _articleResponse({
   String title = 'Readable article',
   String? site,
@@ -579,5 +716,17 @@ http.Response _jsonResponse(
     jsonEncode(body),
     statusCode,
     headers: {'content-type': 'application/json'},
+  );
+}
+
+http.StreamedResponse _streamedResponse(
+  http.Response response,
+  http.BaseRequest request,
+) {
+  return http.StreamedResponse(
+    Stream.value(response.bodyBytes),
+    response.statusCode,
+    request: request,
+    headers: response.headers,
   );
 }
