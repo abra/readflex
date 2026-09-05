@@ -4243,5 +4243,7 @@ import('./remote_file.js')
     // with reader-mode error reporting.
     if (importing) {
       callFlutter('onImportError', { message: String(e && e.message || e) })
+    } else {
+      callFlutter('onReaderLoadFailed', { kind: 'document' })
     }
   })

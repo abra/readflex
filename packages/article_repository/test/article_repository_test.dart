@@ -213,6 +213,29 @@ void main() {
   });
 
   test(
+    'reader position and opened timestamp preserve article metadata',
+    () async {
+      final article = await repository.addExtractedArticle(_extractedArticle());
+      final openedAt = DateTime(2026, 9, 5);
+      await repository.updateArticle(
+        article.copyWith(title: 'Edited', isFinished: true),
+      );
+      await repository.markOpened(article.id, openedAt);
+      await repository.updateReadingPosition(
+        article.id,
+        cfi: 'latest',
+        progress: 0.7,
+      );
+      final stored = (await repository.getArticleById(article.id))!;
+      expect(stored.title, 'Edited');
+      expect(stored.isFinished, isTrue);
+      expect(stored.lastOpenedAt, openedAt);
+      expect(stored.currentCfi, 'latest');
+      expect(stored.readingProgress, 0.7);
+    },
+  );
+
+  test(
     'addExtractedArticle resolves relative image URLs into article HTML',
     () async {
       repository.dispose();
@@ -279,7 +302,7 @@ void main() {
     final imagesDir = Directory(
       p.join(p.dirname(article.contentPath), 'images'),
     );
-    expect(contentHtml, contains('127.0.0.1'));
+    expect(contentHtml, isNot(contains('src=')));
     expect(contentHtml, isNot(contains('src="images/')));
     expect(imagesDir.listSync().whereType<File>(), isEmpty);
   });
@@ -313,7 +336,7 @@ void main() {
     final imagesDir = Directory(
       p.join(p.dirname(article.contentPath), 'images'),
     );
-    expect(contentHtml, contains('large.png'));
+    expect(contentHtml, isNot(contains('src=')));
     expect(contentHtml, isNot(contains('src="images/')));
     expect(imagesDir.listSync().whereType<File>(), isEmpty);
   });
@@ -348,7 +371,7 @@ void main() {
     final contentHtml = File(article.contentHtmlPath).readAsStringSync();
     expect(requests, 1);
     expect(contentHtml, contains('src="images/'));
-    expect(contentHtml, contains('second.png'));
+    expect(RegExp('src=').allMatches(contentHtml), hasLength(1));
   });
 
   test(
@@ -391,9 +414,95 @@ void main() {
         p.join(p.dirname(article.contentPath), 'images'),
       );
       expect(contentHtml, isNot(contains('src="images/')));
+      expect(contentHtml, isNot(contains('src=')));
       expect(imagesDir.listSync().whereType<File>(), isEmpty);
     },
   );
+  test(
+    'rewrites exact image sources including query strings and duplicates',
+    () async {
+      final requested = <Uri>[];
+      repository.dispose();
+      repository = ArticleRepository(
+        database: db,
+        articlesDirectory: Directory(p.join(tempDir.path, 'articles')),
+        remoteUriPolicy: _publicRemoteUriPolicy,
+        httpClient: MockClient((request) async {
+          requested.add(request.url);
+          return http.Response.bytes(
+            _pngBytes,
+            200,
+            headers: {'content-type': 'image/png'},
+          );
+        }),
+      );
+      final article = await repository.addExtractedArticle(
+        _extractedArticle(
+          blocks: const [
+            ArticleImageBlock(src: 'https://example.com/image.png'),
+            ArticleImageBlock(
+              src: 'https://example.com/image.png?width=500&height=300',
+            ),
+            ArticleImageBlock(src: 'https://example.com/image.png'),
+            ArticleImageBlock(
+              src: 'https://example.com/image.png?literal=&amp;',
+            ),
+          ],
+        ),
+      );
+      final html = await File(article.contentHtmlPath).readAsString();
+      final sources = RegExp(
+        'src="([^"]+)"',
+      ).allMatches(html).map((match) => match.group(1)!).toList();
+      expect(requested.map((uri) => uri.toString()), [
+        'https://example.com/image.png',
+        'https://example.com/image.png?width=500&height=300',
+        'https://example.com/image.png?literal=&amp;',
+      ]);
+      expect(sources, hasLength(4));
+      expect(sources[0], sources[2]);
+      expect(sources[1], isNot(sources[0]));
+      for (final source in sources) {
+        expect(source, isNot(contains('?')));
+        expect(
+          await File(p.join(p.dirname(article.contentPath), source)).exists(),
+          isTrue,
+        );
+      }
+    },
+  );
+
+  test('redirects to private images remain inactive in saved HTML', () async {
+    repository.dispose();
+    var requests = 0;
+    repository = ArticleRepository(
+      database: db,
+      articlesDirectory: Directory(p.join(tempDir.path, 'articles')),
+      remoteUriPolicy: _publicRemoteUriPolicy,
+      httpClient: MockClient((request) async {
+        requests++;
+        return http.Response(
+          '',
+          302,
+          headers: {'location': 'http://127.0.0.1/private.png'},
+        );
+      }),
+    );
+    final article = await repository.addExtractedArticle(
+      _extractedArticle(
+        blocks: const [
+          ArticleImageBlock(
+            src: 'https://example.com/redirect.png',
+            alt: 'Preserved alternative',
+          ),
+        ],
+      ),
+    );
+    final html = await File(article.contentHtmlPath).readAsString();
+    expect(requests, 1);
+    expect(html, isNot(contains('src=')));
+    expect(html, contains('Preserved alternative'));
+  });
 }
 
 final _pngBytes = base64Decode(

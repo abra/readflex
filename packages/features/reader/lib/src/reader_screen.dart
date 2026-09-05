@@ -245,6 +245,9 @@ class ReaderScreen extends StatelessWidget {
               child: _ReaderView(
                 serverBaseUri: serverBaseUri,
                 textActions: textActions,
+                onRetry: () => context.read<ReaderBloc>().add(
+                  ReaderSourceLoadRequested(sourceId: sourceId),
+                ),
                 onArticleTitlePressed: onArticleTitlePressed,
                 onExternalLink: onExternalLink,
               ),

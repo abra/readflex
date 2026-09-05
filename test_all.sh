@@ -48,6 +48,8 @@ run "preferences_service"         "$FLUTTER test test/" "$SCRIPT_DIR/packages/pr
 run "reader_server"               "$FLUTTER test test/" "$SCRIPT_DIR/packages/reader_server"
 run "reader_webview"              "$FLUTTER test test/" "$SCRIPT_DIR/packages/reader_webview"
 run "reader_webview_js"           "node --test test_js/*.test.mjs" "$SCRIPT_DIR/packages/reader_webview"
+run "reader_browser_chromium"     "npm run test:browser" "$SCRIPT_DIR/packages/reader_webview"
+run "reader_browser_webkit"       "READER_BROWSER=webkit npm run test:browser" "$SCRIPT_DIR/packages/reader_webview"
 run "toast_service"               "$FLUTTER test test/" "$SCRIPT_DIR/packages/toast_service"
 run "library"                     "$FLUTTER test test/" "$SCRIPT_DIR/packages/features/library"
 run "import_flow"                 "$FLUTTER test test/" "$SCRIPT_DIR/packages/features/import_flow"

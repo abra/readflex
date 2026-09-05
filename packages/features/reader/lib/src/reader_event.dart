@@ -7,6 +7,16 @@ sealed class ReaderEvent extends Equatable {
   List<Object?> get props => [];
 }
 
+final class ReaderWebViewFailed extends ReaderEvent {
+  const ReaderWebViewFailed({required this.sourceId, required this.failure});
+
+  final String sourceId;
+  final ReaderLoadFailure failure;
+
+  @override
+  List<Object?> get props => [sourceId, failure];
+}
+
 /// Fired once when [ReaderScreen] mounts — resolves the source and loads
 /// its highlights.
 final class ReaderSourceLoadRequested extends ReaderEvent {

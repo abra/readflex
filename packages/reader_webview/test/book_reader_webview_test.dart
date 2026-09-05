@@ -146,73 +146,6 @@ void main() {
     });
   });
 
-  group('shouldAttemptWebContentRecovery', () {
-    test('allows one retry for saved CFI restores', () {
-      expect(
-        shouldAttemptWebContentRecovery(
-          initialCfi: 'epubcfi(/6/14!/4/2)',
-          isArticle: false,
-          recoveryAttempts: 0,
-          maxRecoveryAttempts: 1,
-          recoveryInProgress: false,
-        ),
-        isTrue,
-      );
-    });
-
-    test('allows one retry for fresh articles without a saved CFI', () {
-      expect(
-        shouldAttemptWebContentRecovery(
-          initialCfi: null,
-          isArticle: true,
-          recoveryAttempts: 0,
-          maxRecoveryAttempts: 1,
-          recoveryInProgress: false,
-        ),
-        isTrue,
-      );
-    });
-
-    test('does not retry non-article opens without a saved CFI', () {
-      expect(
-        shouldAttemptWebContentRecovery(
-          initialCfi: null,
-          isArticle: false,
-          recoveryAttempts: 0,
-          maxRecoveryAttempts: 1,
-          recoveryInProgress: false,
-        ),
-        isFalse,
-      );
-    });
-
-    test('does not retry after the attempt budget is exhausted', () {
-      expect(
-        shouldAttemptWebContentRecovery(
-          initialCfi: 'epubcfi(/6/14!/4/2)',
-          isArticle: true,
-          recoveryAttempts: 1,
-          maxRecoveryAttempts: 1,
-          recoveryInProgress: false,
-        ),
-        isFalse,
-      );
-    });
-
-    test('does not retry while a recovery reload is already in progress', () {
-      expect(
-        shouldAttemptWebContentRecovery(
-          initialCfi: 'epubcfi(/6/14!/4/2)',
-          isArticle: true,
-          recoveryAttempts: 0,
-          maxRecoveryAttempts: 1,
-          recoveryInProgress: true,
-        ),
-        isFalse,
-      );
-    });
-  });
-
   group('foliate bootstrap', () {
     test('always uses the modern app bridge', () {
       final indexHtml = _readPackageSource('assets/foliate-js/index.html');
@@ -664,7 +597,7 @@ void main() {
       expect(normalizerJs, contains('normalizeCodeLikeBlocks(doc)'));
       expect(assetExtractor, contains('readflex_document_normalizer.js'));
       expect(assetExtractor, contains('readflex_selection_normalizer.js'));
-      expect(assetExtractor, contains("reader_webview_assets_121"));
+      expect(assetExtractor, contains(AssetExtractor.assetRevision));
       expect(assetExtractor, contains('assets/article-html/index.html'));
 
       final articleReader = _readPackageSource(
@@ -1122,20 +1055,6 @@ void main() {
       expect(html, contains('pre code,'));
       expect(html, contains('#article-content pre > code'));
       expect(html, contains('padding: 0;'));
-    });
-
-    test('limits WebContent crash recovery to one eligible reload', () {
-      final webViewDart = readBookReaderWebViewLibrarySource();
-
-      expect(webViewDart, contains('_maxWebContentRecoveryAttempts = 1'));
-      expect(webViewDart, contains('shouldAttemptWebContentRecovery('));
-      expect(webViewDart, contains('article without initial CFI'));
-      expect(
-        webViewDart,
-        contains('skipping reload to avoid a recovery loop'),
-      );
-      expect(webViewDart, contains('_webContentRecoveryAttempts += 1'));
-      expect(webViewDart, contains('_webContentRecoveryAttempts = 0'));
     });
 
     test('bundles only supported format adapters', () {
@@ -1870,7 +1789,7 @@ void main() {
 
   group('asset extraction', () {
     test('versions bundled reader assets independently of app version', () {
-      expect(AssetExtractor.assetRevision, 'reader_webview_assets_121');
+      expect(AssetExtractor.assetRevision, 'reader_webview_assets_122');
       expect(
         AssetExtractor.extractionVersionFor('1.0.0+1'),
         '1.0.0+1|${AssetExtractor.assetRevision}',

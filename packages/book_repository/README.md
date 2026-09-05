@@ -33,6 +33,8 @@ filenames before being written to the DB.
 | `getBookById(id)`                   | Lookup by id, returns null if missing         |
 | `addBook({sourceFile, title, format, author, coverData, ...})` | Copy file in, save cover, insert row |
 | `updateBook(book)`                  | Update metadata + reading position            |
+| `updateReadingPosition(id, {cfi, progress})` | Update only CFI/progress without replacing metadata |
+| `markOpened(id, openedAt)`          | Update only the last-opened timestamp |
 | `getBookmarksBySource(sourceId)`    | List saved positions for a source in reading order |
 | `addBookmark({sourceId, cfi, content, progress, anchorExact, anchorSectionPage, ...})` | Save a source position, idempotent by visual/text anchor when present |
 | `deleteBookmarkById(sourceId, bookmarkId)` | Remove one saved bookmark precisely |
@@ -41,6 +43,12 @@ filenames before being written to the DB.
 
 Cover bytes (`coverData`) are typically produced upstream by
 `reader_webview`'s `BookMetadataExtractor`.
+
+Reader writes use partial Drift companions, not a previously read `Book`
+snapshot. Concurrent metadata/finished-state edits survive position saves.
+Both partial updates are no-ops if the row has already been deleted; they do
+not recreate a source. Callers retain responsibility for ordering position
+writes and awaiting them on close.
 
 ## Dependencies
 

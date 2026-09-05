@@ -44,6 +44,10 @@ flutter:
     - assets/foliate-js/src/readflex_contrast_guard.js
     - assets/foliate-js/src/readflex_document_normalizer.js
     - assets/foliate-js/src/readflex_selection_normalizer.js
+    - assets/foliate-js/src/readflex_content_security.js
+    - assets/foliate-js/src/readflex_article_highlighter.js
+    - assets/foliate-js/src/vendor/purify.js
+    - assets/foliate-js/src/vendor/DOMPurify-LICENSE
     - assets/foliate-js/src/pdf.js
     - assets/foliate-js/src/fb2.js
     - assets/foliate-js/src/mobi.js

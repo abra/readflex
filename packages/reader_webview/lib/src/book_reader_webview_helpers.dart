@@ -37,24 +37,6 @@ ReaderInitialLocation resolveInitialReaderLocation({
 }
 
 @visibleForTesting
-bool shouldAttemptWebContentRecovery({
-  required String? initialCfi,
-  required bool isArticle,
-  required int recoveryAttempts,
-  required int maxRecoveryAttempts,
-  required bool recoveryInProgress,
-}) {
-  if (recoveryInProgress) return false;
-  if (recoveryAttempts >= maxRecoveryAttempts) return false;
-
-  final hasInitialCfi = switch (initialCfi?.trim()) {
-    final String value when value.isNotEmpty => true,
-    _ => false,
-  };
-  return hasInitialCfi || isArticle;
-}
-
-@visibleForTesting
 final class ReaderInitialLocation {
   const ReaderInitialLocation({required this.cfi, required this.progress});
 

@@ -57,6 +57,12 @@ final class ReaderWebViewLifecycleCoordinator {
     _targetGeneration += 1;
   }
 
+  void detach() {
+    _target = null;
+    _targetGeneration++;
+    _lastScheduledState = null;
+  }
+
   @visibleForTesting
   Future<void> get settled => _pendingOperation;
 
@@ -110,6 +116,8 @@ mixin ReaderWebViewLifecycleMixin<T extends StatefulWidget> on State<T> {
       resume: controller.resume,
     );
   }
+
+  void detachReaderWebViewLifecycle() => _readerWebViewLifecycle?.detach();
 
   @override
   void dispose() {

@@ -34,7 +34,29 @@ class FakeBookRepository implements BookRepository {
     if (shouldThrow) throw Exception('updateBook failed');
     updatedBook = book;
     updateCallCount += 1;
+    final index = books.indexWhere((existing) => existing.id == book.id);
+    if (index >= 0) books[index] = book;
     return book;
+  }
+
+  @override
+  Future<void> markOpened(String id, DateTime openedAt) async {
+    final book = books.where((book) => book.id == id).firstOrNull;
+    if (book != null) await updateBook(book.copyWith(lastOpenedAt: openedAt));
+  }
+
+  @override
+  Future<void> updateReadingPosition(
+    String id, {
+    required String? cfi,
+    required double progress,
+  }) async {
+    final book = books.where((book) => book.id == id).firstOrNull;
+    if (book != null) {
+      await updateBook(
+        book.copyWith(currentCfi: cfi, readingProgress: progress),
+      );
+    }
   }
 
   @override

@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:domain_models/domain_models.dart';
-import 'package:drift/drift.dart' show QueryRow, Variable;
+import 'package:drift/drift.dart' show QueryRow, Value, Variable;
 import 'package:local_storage/local_storage.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:path/path.dart' as p;
@@ -175,6 +175,38 @@ class BookRepository {
       final storageBook = _unresolve(book);
       await _dao.updateBook(storageBook.toStorageModel());
       return book;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  /// Updates only reader-owned fields, without overwriting metadata from other flows.
+  Future<void> updateReadingPosition(
+    String id, {
+    required String? cfi,
+    required double progress,
+  }) async {
+    try {
+      await _dao.updateBook(
+        BooksTableCompanion(
+          id: Value(id),
+          currentCfi: Value(cfi),
+          readingProgress: Value(progress),
+        ),
+      );
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  Future<void> markOpened(String id, DateTime openedAt) async {
+    try {
+      await _dao.updateBook(
+        BooksTableCompanion(
+          id: Value(id),
+          lastOpenedAt: Value(openedAt.toIso8601String()),
+        ),
+      );
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }

@@ -15,6 +15,8 @@ Key methods:
 - `getArticleById(id)`
 - `addExtractedArticle(extracted)`
 - `updateArticle(article)`
+- `updateReadingPosition(id, {cfi, progress})`
+- `markOpened(id, openedAt)`
 - `deleteArticle(id)`
 
 ## On-Disk Layout
@@ -31,7 +33,10 @@ articles/<article-id>/
 
 Remote article images referenced by extracted blocks are downloaded when
 available, rewritten to local paths, and stored next to `content.html`. Missing
-images are skipped so article import can still succeed.
+images retain their alt/caption but have no active `src`, so article import can
+still succeed without a later unguarded WebView retry. Downloads are keyed by
+the exact structured block source; HTML is serialized once after download.
+Query variants and shared URL prefixes cannot overwrite each other's paths.
 
 Remote assets are untrusted input. The repository validates the initial URL and
 every redirect target, rejects private/local or ambiguously resolved hosts,
@@ -56,6 +61,10 @@ article directory on disk.
 The reader opens saved articles from `Article.contentHtmlPath` and persists
 article progress by updating the original `Article` row. `article_repository`
 does not adapt articles into books.
+
+`updateReadingPosition` and `markOpened` write partial Drift companions. They
+preserve unrelated metadata, including finished state, and never recreate a
+deleted row. The reader serializes these writes and drains them on close.
 
 ## Dependencies
 

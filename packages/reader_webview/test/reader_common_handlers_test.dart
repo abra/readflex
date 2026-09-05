@@ -103,6 +103,9 @@ void main() {
   });
 
   group('baseReaderSettings', () {
+    test('opts into Android renderer termination handling', () {
+      expect(baseReaderSettings().useOnRenderProcessGone, isTrue);
+    });
     test('keeps text selection but disables the native action menu', () {
       final settings = baseReaderSettings();
 

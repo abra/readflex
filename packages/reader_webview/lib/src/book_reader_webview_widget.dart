@@ -26,6 +26,8 @@ class BookReaderWebView extends StatefulWidget {
     this.highlights = const [],
     this.bookmarks = const [],
     this.onReady,
+    this.onLoading,
+    this.onLoadFailed,
     this.onPositionChanged,
     this.onTextSelected,
     this.onImageAreaSelected,
@@ -69,6 +71,8 @@ class BookReaderWebView extends StatefulWidget {
 
   /// Fires once when foliate-js has loaded the book and is ready.
   final VoidCallback? onReady;
+  final VoidCallback? onLoading;
+  final void Function(ReaderLoadFailure)? onLoadFailed;
 
   /// Fires on page turn with the new position.
   final void Function(BookPosition position)? onPositionChanged;

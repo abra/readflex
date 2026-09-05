@@ -68,6 +68,9 @@ class BookMetadataExtractor {
     Duration timeout = const Duration(seconds: 30),
   }) async {
     final completer = Completer<BookMetadata>();
+    // Native callbacks can fail before run() returns. The await below still
+    // propagates the error, but attach a handler now to avoid an unhandled one.
+    completer.future.ignore();
     HeadlessInAppWebView? headless;
     Timer? timeoutTimer;
 
@@ -77,7 +80,22 @@ class BookMetadataExtractor {
         initialSettings: InAppWebViewSettings(
           javaScriptEnabled: true,
           supportZoom: false,
+          useOnRenderProcessGone: true,
         ),
+        onRenderProcessGone: (_, _) {
+          if (!completer.isCompleted) {
+            completer.completeError(
+              const BookImportException('Book metadata renderer terminated'),
+            );
+          }
+        },
+        onWebContentProcessDidTerminate: (_) {
+          if (!completer.isCompleted) {
+            completer.completeError(
+              const BookImportException('Book metadata renderer terminated'),
+            );
+          }
+        },
         onWebViewCreated: (controller) {
           controller.addJavaScriptHandler(
             handlerName: 'onMetadata',

@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import 'asset_extractor.dart';
 import 'reader_bridge.dart';
 import 'reader_common_handlers.dart';
+import 'reader_load_session.dart';
 import 'reader_webview_lifecycle.dart';
 
 /// Vertical WebView reader for saved article HTML fragments.
@@ -28,6 +29,8 @@ class ArticleHtmlReaderWebView extends StatefulWidget {
     this.bookmarks = const [],
     this.highlights = const [],
     this.onReady,
+    this.onLoading,
+    this.onLoadFailed,
     this.onPositionChanged,
     this.onTocChanged,
     this.onDocumentFeaturesChanged,
@@ -50,6 +53,8 @@ class ArticleHtmlReaderWebView extends StatefulWidget {
   final List<ReaderBookmark> bookmarks;
   final List<ReaderHighlight> highlights;
   final VoidCallback? onReady;
+  final VoidCallback? onLoading;
+  final void Function(ReaderLoadFailure)? onLoadFailed;
   final void Function(BookPosition position)? onPositionChanged;
   final void Function(List<ReaderTocItem> items)? onTocChanged;
   final void Function(ReaderDocumentFeatures features)?
@@ -69,6 +74,9 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
     with ReaderWebViewLifecycleMixin<ArticleHtmlReaderWebView> {
   InAppWebViewController? _controller;
   bool _isReady = false;
+  BookPosition? _lastPosition;
+  FoliateStyle? _bootstrapStyle;
+  late final _loadSession = ReaderLoadSession(onFailed: _failLoad);
   StreamController<ReaderSearchEvent>? _searchEvents;
   int _searchRequestSerial = 0;
   int? _activeSearchRequestId;
@@ -91,8 +99,12 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
     final params = {
       'contentUrl': jsonEncode(_contentUrl),
       'contentBaseUrl': jsonEncode(_articleDirectoryUrl),
-      'initialPosition': jsonEncode(widget.initialPosition),
-      'initialProgress': jsonEncode(widget.initialProgress),
+      'initialPosition': jsonEncode(
+        _lastPosition?.cfi ?? widget.initialPosition,
+      ),
+      'initialProgress': jsonEncode(
+        _lastPosition?.fraction ?? widget.initialProgress,
+      ),
       'style': jsonEncode(widget.foliateStyle.toMap()),
       'assetRevision': jsonEncode(AssetExtractor.assetRevision),
       'traceTextSelection': jsonEncode(readerTextSelectionTracingEnabled),
@@ -105,6 +117,7 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
 
   @override
   void dispose() {
+    _loadSession.dispose();
     _cancelSearchWatchdog();
     _closeSearchEvents();
     super.dispose();
@@ -131,17 +144,51 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
 
   @override
   Widget build(BuildContext context) {
+    _bootstrapStyle ??= widget.foliateStyle;
     return InAppWebView(
+      key: ValueKey(_loadSession.generation),
       initialUrlRequest: URLRequest(url: WebUri(_indexUrl)),
       initialSettings: baseReaderSettings(),
       contextMenu: readerContextMenu(),
       onWebViewCreated: _onWebViewCreated,
       onConsoleMessage: _onConsoleMessage,
+      onRenderProcessGone: (controller, _) => _onRendererTerminated(controller),
+      onWebContentProcessDidTerminate: _onRendererTerminated,
+      onReceivedError: (controller, request, _) {
+        if (request.isForMainFrame == true &&
+            identical(controller, _controller)) {
+          _loadSession.fail(
+            const ReaderLoadFailure(ReaderLoadFailureKind.network),
+          );
+        }
+      },
     );
+  }
+
+  void _failLoad(ReaderLoadFailure failure) {
+    if (!mounted) return;
+    _isReady = false;
+    _controller = null;
+    detachReaderWebViewLifecycle();
+    _closeSearchEvents();
+    widget.onLoadFailed?.call(failure);
+  }
+
+  void _onRendererTerminated(InAppWebViewController controller) {
+    if (!mounted || !identical(controller, _controller)) return;
+    _isReady = false;
+    _controller = null;
+    detachReaderWebViewLifecycle();
+    _closeSearchEvents();
+    if (!_loadSession.recoverRenderer()) return;
+    _bootstrapStyle = null;
+    widget.onLoading?.call();
+    setState(() {});
   }
 
   void _onWebViewCreated(InAppWebViewController controller) {
     _controller = controller;
+    _loadSession.start();
     attachReaderWebViewLifecycle(controller);
     if (readerTextSelectionTracingEnabled) {
       debugPrint(
@@ -152,27 +199,41 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
   }
 
   void _registerHandlers(InAppWebViewController controller) {
-    controller.addJavaScriptHandler(
+    final handlers = ReaderHandlerScope(
+      controller,
+      isActive: () => mounted && identical(controller, _controller),
+    );
+    handlers.add(
+      handlerName: 'onReaderLoadFailed',
+      callback: (_) {
+        _loadSession.fail(
+          const ReaderLoadFailure(ReaderLoadFailureKind.document),
+        );
+      },
+    );
+    handlers.add(
       handlerName: 'onLoadEnd',
       callback: (_) => _markReady(),
     );
-    controller.addJavaScriptHandler(
+    handlers.add(
       handlerName: 'onArticlePositionChanged',
       callback: (args) {
         if (args.isEmpty) return;
         final data = readerBridgeMap(args.first);
         if (data == null) return;
-        widget.onPositionChanged?.call(BookPosition.fromMap(data));
+        final position = BookPosition.fromMap(data);
+        _lastPosition = position;
+        widget.onPositionChanged?.call(position);
       },
     );
-    controller.addJavaScriptHandler(
+    handlers.add(
       handlerName: 'onSetToc',
       callback: (args) {
         if (args.isEmpty) return;
         widget.onTocChanged?.call(readerTocItemsFromBridge(args.first));
       },
     );
-    controller.addJavaScriptHandler(
+    handlers.add(
       handlerName: 'onDocumentFeatures',
       callback: (args) {
         if (args.isEmpty) return;
@@ -183,7 +244,7 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
         );
       },
     );
-    controller.addJavaScriptHandler(
+    handlers.add(
       handlerName: 'onSearch',
       callback: (args) {
         if (args.isEmpty) return;
@@ -192,7 +253,7 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
         _handleSearchEvent(ReaderSearchEvent.fromMap(raw));
       },
     );
-    controller.addJavaScriptHandler(
+    handlers.add(
       handlerName: 'handleBookmark',
       callback: (args) {
         if (args.isEmpty) return;
@@ -201,7 +262,7 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
         widget.onBookmarkChanged?.call(ReaderBookmarkChange.fromMap(raw));
       },
     );
-    controller.addJavaScriptHandler(
+    handlers.add(
       handlerName: 'onAnnotationClick',
       callback: (args) {
         if (args.isEmpty) return;
@@ -211,7 +272,7 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
         if (tap != null) widget.onHighlightTapped?.call(tap);
       },
     );
-    controller.addJavaScriptHandler(
+    handlers.add(
       handlerName: 'onJsError',
       callback: (args) {
         if (args.isEmpty) return;
@@ -230,6 +291,7 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
     );
     registerSharedReaderHandlers(
       controller,
+      isActive: () => mounted && identical(controller, _controller),
       onTextSelected: (selection) => widget.onTextSelected?.call(selection),
       onTextDeselected: () => widget.onTextDeselected?.call(),
       onTapped: (x, y) => widget.onTapped?.call(x, y),
@@ -237,8 +299,12 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
   }
 
   void _markReady() {
+    if (!mounted || !_loadSession.markReady()) return;
     if (_isReady) return;
     _isReady = true;
+    if (_bootstrapStyle != widget.foliateStyle) {
+      changeStyle(widget.foliateStyle);
+    }
     _syncBookmarks();
     _syncHighlights();
     widget.onReady?.call();

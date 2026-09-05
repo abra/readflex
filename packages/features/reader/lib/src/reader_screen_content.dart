@@ -6,12 +6,14 @@ class _ReaderView extends StatelessWidget {
   const _ReaderView({
     required this.serverBaseUri,
     required this.textActions,
+    required this.onRetry,
     this.onArticleTitlePressed,
     this.onExternalLink,
   });
 
   final Uri serverBaseUri;
   final List<TextAction> textActions;
+  final VoidCallback onRetry;
   final void Function(String url, String title)? onArticleTitlePressed;
   final ValueChanged<String>? onExternalLink;
 
@@ -34,6 +36,7 @@ class _ReaderView extends StatelessWidget {
                     canMountWebView: canMountWebView,
                     serverBaseUri: serverBaseUri,
                     textActions: textActions,
+                    onRetry: onRetry,
                     onArticleTitlePressed: onArticleTitlePressed,
                     onExternalLink: onExternalLink,
                   ),
@@ -54,6 +57,7 @@ class _ReaderBody extends StatefulWidget {
     required this.canMountWebView,
     required this.serverBaseUri,
     required this.textActions,
+    required this.onRetry,
     this.onArticleTitlePressed,
     this.onExternalLink,
   });
@@ -62,6 +66,7 @@ class _ReaderBody extends StatefulWidget {
   final bool canMountWebView;
   final Uri serverBaseUri;
   final List<TextAction> textActions;
+  final VoidCallback onRetry;
   final void Function(String url, String title)? onArticleTitlePressed;
   final ValueChanged<String>? onExternalLink;
 
@@ -108,6 +113,14 @@ class _ReaderBodyState extends State<_ReaderBody> {
                   const SizedBox(height: AppSpacing.md),
                   Text(context.l10n.readerFailedToLoadContent),
                   const SizedBox(height: AppSpacing.md),
+                  FilledButton(
+                    onPressed: () {
+                      setState(() => _readyWebViewSourceId = null);
+                      widget.onRetry();
+                    },
+                    child: AppButtonLabel(context.l10n.commonRetry),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
                   FilledButton(
                     onPressed: () => Navigator.of(context).pop(),
                     child: AppButtonLabel(context.l10n.readerGoBack),
@@ -465,6 +478,11 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                       serverBaseUri: widget.serverBaseUri,
                       readerTheme: readerTheme,
                       webViewKey: _articleWebViewKey,
+                      onLoading: () {
+                        if (!mounted) return;
+                        setState(() => _webViewReadySourceId = null);
+                        widget.onWebViewReady(null);
+                      },
                       onPositionChanged: _handleReaderPositionChanged,
                       onReady: () {
                         if (!mounted) return;
@@ -482,6 +500,11 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                       serverBaseUri: widget.serverBaseUri,
                       readerTheme: readerTheme,
                       webViewKey: _webViewKey,
+                      onLoading: () {
+                        if (!mounted) return;
+                        setState(() => _webViewReadySourceId = null);
+                        widget.onWebViewReady(null);
+                      },
                       onExternalLink: widget.onExternalLink,
                       onPositionChanged: _handleReaderPositionChanged,
                       onReady: () {
@@ -798,6 +821,7 @@ class _ReaderWebViewBody extends StatefulWidget {
     this.webViewKey,
     this.onPositionChanged,
     this.onReady,
+    this.onLoading,
     this.onExternalLink,
   });
 
@@ -814,6 +838,7 @@ class _ReaderWebViewBody extends StatefulWidget {
   final ValueChanged<BookPosition>? onPositionChanged;
 
   final VoidCallback? onReady;
+  final VoidCallback? onLoading;
   final ValueChanged<String>? onExternalLink;
 
   @override
@@ -1028,6 +1053,22 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       pageProgressionRtl: state.pageProgressionRtl,
       highlights: highlights,
       bookmarks: bookmarks,
+      onLoading: () {
+        if (!mounted) return;
+        setState(() => _foliateReady = false);
+        selectionCubit.deselect();
+        imageSelectionCubit.deselect();
+        highlightFocusCubit.clear();
+        widget.onLoading?.call();
+      },
+      onLoadFailed: (failure) {
+        selectionCubit.deselect();
+        imageSelectionCubit.deselect();
+        highlightFocusCubit.clear();
+        bloc.add(
+          ReaderWebViewFailed(sourceId: state.sourceId!, failure: failure),
+        );
+      },
       onReady: () {
         if (mounted && !_foliateReady) {
           _debugTraceReader('_ReaderWebViewBody onReady');
@@ -1169,6 +1210,7 @@ class _ReaderArticleHtmlBody extends StatefulWidget {
     required this.webViewKey,
     this.onPositionChanged,
     this.onReady,
+    this.onLoading,
   });
 
   final String? sourceId;
@@ -1177,6 +1219,7 @@ class _ReaderArticleHtmlBody extends StatefulWidget {
   final GlobalKey<ArticleHtmlReaderWebViewState> webViewKey;
   final ValueChanged<BookPosition>? onPositionChanged;
   final VoidCallback? onReady;
+  final VoidCallback? onLoading;
 
   @override
   State<_ReaderArticleHtmlBody> createState() => _ReaderArticleHtmlBodyState();
@@ -1288,6 +1331,20 @@ class _ReaderArticleHtmlBodyState extends State<_ReaderArticleHtmlBody> {
       foliateStyle: articleStyle,
       bookmarks: bookmarks,
       highlights: highlights,
+      onLoading: () {
+        if (!mounted) return;
+        setState(() => _htmlReady = false);
+        selectionCubit.deselect();
+        highlightFocusCubit.clear();
+        widget.onLoading?.call();
+      },
+      onLoadFailed: (failure) {
+        selectionCubit.deselect();
+        highlightFocusCubit.clear();
+        bloc.add(
+          ReaderWebViewFailed(sourceId: state.sourceId!, failure: failure),
+        );
+      },
       onReady: () {
         if (mounted && !_htmlReady) {
           setState(() => _htmlReady = true);

@@ -1,4 +1,5 @@
 import * as CFI from './epubcfi.js'
+import { sanitizePublisherDocument } from './readflex_content_security.js'
 
 const NS = {
     CONTAINER: 'urn:oasis:names:tc:opendocument:xmlns:container',
@@ -600,7 +601,7 @@ class Loader {
         this.assets = resources.manifest
 
         var urlParams = new URLSearchParams(window.location.search)
-        this.allowScript = JSON.parse(urlParams.get('style')).allowScript
+        this.allowScript = JSON.parse(urlParams.get('style'))?.allowScript === true
 
         // needed only when replacing in (X)HTML w/o parsing (see below)
         //.filter(({ mediaType }) => ![MIME.XHTML, MIME.HTML].includes(mediaType))
@@ -710,6 +711,7 @@ class Loader {
                 item.mediaType = MIME.HTML
                 doc = new DOMParser().parseFromString(str, item.mediaType)
             }
+            if (!this.allowScript) sanitizePublisherDocument(doc)
             // replace hrefs in XML processing instructions
             // this is mainly for SVGs that use xml-stylesheet
             if ([MIME.XHTML, MIME.SVG].includes(item.mediaType)) {

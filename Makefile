@@ -1,4 +1,4 @@
-.PHONY: get format format-check analyze test verify clean build build-android build-apk run help
+.PHONY: get format format-check analyze test verify reader-browser-setup clean build build-android build-apk run help
 
 FLUTTER ?= fvm flutter
 DART ?= fvm dart
@@ -64,6 +64,11 @@ test:
 
 ## Run the full local quality gate without modifying source files
 verify: format-check analyze test
+
+## Install pinned reader browser-test dependencies and browser engines
+reader-browser-setup:
+	cd packages/reader_webview && npm ci
+	cd packages/reader_webview && npx playwright install chromium webkit
 
 ## Run the app in debug mode
 run:

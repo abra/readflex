@@ -84,6 +84,18 @@ abstract class TextAction {
 `addError()` so widgets (e.g. the context panel) can route non-fatal errors
 through the bloc's error pipeline without emitting state themselves.
 
+Position persistence keeps the 500ms trailing debounce and serializes writes,
+including the first immediate article position. Repository partial updates
+avoid overwriting metadata from an old snapshot. Source loading preserves live
+position/document features; `close()` waits for an already-running write as
+well as the latest pending position.
+
+WebView recovery clears stale selection UI and temporarily clears readiness.
+`ReaderWebViewFailed` reports terminal failure through the bloc's error pipeline
+and switches to the localized failure surface with Retry and Go Back. Retry
+recreates the reading surface from the retained document, while a late source
+load cannot erase a renderer failure.
+
 ## Widget tree highlights
 
 - **`ReaderKeepAwakeDriver` / `ReaderKeepAwakeScope`** — content-only

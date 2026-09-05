@@ -1,0 +1,11 @@
+{
+  "name": "readflex-reader-verification",
+  "private": true,
+  "scripts": {
+    "test:browser": "node --test test_browser/*.test.mjs"
+  },
+  "devDependencies": {
+    "dompurify": "3.4.14",
+    "playwright": "1.63.0"
+  }
+}

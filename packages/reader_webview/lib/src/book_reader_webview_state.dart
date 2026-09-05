@@ -4,6 +4,9 @@ class BookReaderWebViewState extends State<BookReaderWebView>
     with ReaderWebViewLifecycleMixin<BookReaderWebView> {
   InAppWebViewController? _controller;
   bool _isReady = false;
+  BookPosition? _lastPosition;
+  FoliateStyle? _bootstrapStyle;
+  late final _loadSession = ReaderLoadSession(onFailed: _failLoad);
   StreamController<ReaderSearchEvent>? _searchEvents;
   int _searchRequestSerial = 0;
   int? _activeSearchRequestId;
@@ -19,15 +22,13 @@ class BookReaderWebViewState extends State<BookReaderWebView>
   // This flag overrides the URL-built initialCfi during the recovery
   // reload, then clears itself once the reload signals onLoadEnd.
   bool _recoveringFromCrash = false;
-  int _webContentRecoveryAttempts = 0;
-
-  static const _maxWebContentRecoveryAttempts = 1;
 
   bool get _effectiveArticle =>
       widget.isArticle || isGeneratedArticleReaderPath(widget.bookFilePath);
 
   @override
   void dispose() {
+    _loadSession.dispose();
     _cancelSearchWatchdog();
     _closeSearchEvents();
     super.dispose();
@@ -39,7 +40,6 @@ class BookReaderWebViewState extends State<BookReaderWebView>
     if (oldWidget.bookFilePath != widget.bookFilePath ||
         oldWidget.initialCfi != widget.initialCfi) {
       _recoveringFromCrash = false;
-      _webContentRecoveryAttempts = 0;
     }
     if (!_isReady) return;
 
@@ -253,8 +253,8 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       'assets/foliate-js/index.html',
     );
     final initialLocation = resolveInitialReaderLocation(
-      initialCfi: widget.initialCfi,
-      initialProgress: widget.initialProgress,
+      initialCfi: _lastPosition?.cfi ?? widget.initialCfi,
+      initialProgress: _lastPosition?.fraction ?? widget.initialProgress,
       recoveringFromCrash: _recoveringFromCrash,
       isArticle: _effectiveArticle,
     );
@@ -279,12 +279,24 @@ class BookReaderWebViewState extends State<BookReaderWebView>
 
   @override
   Widget build(BuildContext context) {
+    _bootstrapStyle ??= widget.foliateStyle;
     return InAppWebView(
+      key: ValueKey(_loadSession.generation),
       initialUrlRequest: URLRequest(url: WebUri(_indexUrl)),
       initialSettings: baseReaderSettings(),
       contextMenu: readerContextMenu(),
       onWebViewCreated: _onWebViewCreated,
       onConsoleMessage: _onConsoleMessage,
+      onRenderProcessGone: (controller, _) =>
+          _onContentProcessTerminated(controller),
+      onReceivedError: (controller, request, _) {
+        if (request.isForMainFrame == true &&
+            identical(controller, _controller)) {
+          _loadSession.fail(
+            const ReaderLoadFailure(ReaderLoadFailureKind.network),
+          );
+        }
+      },
       // TEMP — see _recoveringFromCrash field doc for context.
       onWebContentProcessDidTerminate: _onContentProcessTerminated,
     );
@@ -301,64 +313,34 @@ class BookReaderWebViewState extends State<BookReaderWebView>
     debugPrint('[reader-console] $level: ${message.message}');
   }
 
-  /// TEMP WORKAROUND for WKWebView content-process crashes while opening.
-  /// Remove this handler (and the [_recoveringFromCrash] state field plus
-  /// its branch in [_indexUrl]) once foliate-js / our integration handles
-  /// CFI/progress restoration and article pagination without crashing the
-  /// WebContent process.
+  void _failLoad(ReaderLoadFailure failure) {
+    if (!mounted) return;
+    _isReady = false;
+    _controller = null;
+    detachReaderWebViewLifecycle();
+    _closeSearchEvents();
+    widget.onLoadFailed?.call(failure);
+  }
+
   void _onContentProcessTerminated(InAppWebViewController controller) {
-    final initialCfi = widget.initialCfi?.trim();
-
-    // Avoid re-entering recovery if a second crash arrives before the
-    // first reload finishes. If we hit this twice, something else is
-    // wrong and reloading again will only spin.
-    if (_recoveringFromCrash) {
-      debugPrint(
-        '[reader-recovery] second WebContent crash before first reload '
-        'finished — skipping to avoid loop',
-      );
-      return;
-    }
-
-    if (_webContentRecoveryAttempts >= _maxWebContentRecoveryAttempts) {
-      debugPrint(
-        '[reader-recovery] WebContent process died after recovery attempt; '
-        'skipping reload to avoid a recovery loop',
-      );
-      return;
-    }
-
-    if (!shouldAttemptWebContentRecovery(
-      initialCfi: initialCfi,
-      isArticle: _effectiveArticle,
-      recoveryAttempts: _webContentRecoveryAttempts,
-      maxRecoveryAttempts: _maxWebContentRecoveryAttempts,
-      recoveryInProgress: _recoveringFromCrash,
-    )) {
-      debugPrint(
-        '[reader-recovery] WebContent process died without an initial CFI '
-        'or article fallback; skipping reload to avoid a recovery loop',
-      );
-      return;
-    }
-
-    final recoveryTarget = initialCfi == null || initialCfi.isEmpty
-        ? 'article without initial CFI'
-        : 'cfi=${widget.initialCfi}';
-    debugPrint(
-      '[reader-recovery] WebContent process died ($recoveryTarget), '
-      'reloading with cfi=null',
-    );
-    _webContentRecoveryAttempts += 1;
-    setState(() {
-      _recoveringFromCrash = true;
-      _isReady = false;
-    });
-    controller.loadUrl(urlRequest: URLRequest(url: WebUri(_indexUrl)));
+    if (!mounted || !identical(controller, _controller)) return;
+    // Keep the existing iOS startup workaround, but restore the last live CFI
+    // after a renderer death during reading (including Android).
+    _recoveringFromCrash =
+        defaultTargetPlatform == TargetPlatform.iOS && !_isReady;
+    _isReady = false;
+    _controller = null;
+    detachReaderWebViewLifecycle();
+    _closeSearchEvents();
+    if (!_loadSession.recoverRenderer()) return;
+    _bootstrapStyle = null;
+    widget.onLoading?.call();
+    setState(() {});
   }
 
   void _onWebViewCreated(InAppWebViewController controller) {
     _controller = controller;
+    _loadSession.start();
     attachReaderWebViewLifecycle(controller);
     if (readerTextSelectionTracingEnabled) {
       debugPrint('[reader-selection-dart] book WebView created url=$_indexUrl');
@@ -367,7 +349,19 @@ class BookReaderWebViewState extends State<BookReaderWebView>
   }
 
   void _registerHandlers(InAppWebViewController controller) {
-    controller.addJavaScriptHandler(
+    final handlers = ReaderHandlerScope(
+      controller,
+      isActive: () => mounted && identical(controller, _controller),
+    );
+    handlers.add(
+      handlerName: 'onReaderLoadFailed',
+      callback: (_) {
+        _loadSession.fail(
+          const ReaderLoadFailure(ReaderLoadFailureKind.document),
+        );
+      },
+    );
+    handlers.add(
       handlerName: 'onLoadEnd',
       callback: (_) => _markReady('onLoadEnd'),
     );
@@ -375,7 +369,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
     // Capture uncaught JS errors and unhandled promise rejections from
     // the reader iframe. The matching JS-side hook lives at the top of
     // index.html's bootstrap IIFE.
-    controller.addJavaScriptHandler(
+    handlers.add(
       handlerName: 'onJsError',
       callback: (args) {
         if (args.isEmpty) return;
@@ -398,19 +392,20 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       },
     );
 
-    controller.addJavaScriptHandler(
+    handlers.add(
       handlerName: 'onRelocated',
       callback: (args) {
         if (args.isEmpty) return;
         final data = readerBridgeMap(args.first);
         if (data == null) return;
         final position = BookPosition.fromMap(data);
+        _lastPosition = position;
         widget.onPositionChanged?.call(position);
         _markReady('onRelocated');
       },
     );
 
-    controller.addJavaScriptHandler(
+    handlers.add(
       handlerName: 'onAnnotationClick',
       callback: (args) {
         if (args.isEmpty) return;
@@ -421,7 +416,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       },
     );
 
-    controller.addJavaScriptHandler(
+    handlers.add(
       handlerName: 'onImageAreaSelected',
       callback: (args) {
         if (args.isEmpty) return;
@@ -432,7 +427,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       },
     );
 
-    controller.addJavaScriptHandler(
+    handlers.add(
       handlerName: 'onSetToc',
       callback: (args) {
         if (args.isEmpty) return;
@@ -440,7 +435,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       },
     );
 
-    controller.addJavaScriptHandler(
+    handlers.add(
       handlerName: 'onDocumentFeatures',
       callback: (args) {
         if (args.isEmpty) return;
@@ -452,7 +447,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       },
     );
 
-    controller.addJavaScriptHandler(
+    handlers.add(
       handlerName: 'onSearch',
       callback: (args) {
         if (args.isEmpty) return;
@@ -463,7 +458,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       },
     );
 
-    controller.addJavaScriptHandler(
+    handlers.add(
       handlerName: 'handleBookmark',
       callback: (args) {
         if (args.isEmpty) return;
@@ -474,7 +469,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       },
     );
 
-    controller.addJavaScriptHandler(
+    handlers.add(
       handlerName: 'onExternalLink',
       callback: (args) {
         if (args.isEmpty) return;
@@ -486,6 +481,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
 
     registerSharedReaderHandlers(
       controller,
+      isActive: () => mounted && identical(controller, _controller),
       onTextSelected: (selection) {
         if (readerTextSelectionTracingEnabled) {
           debugPrint(
@@ -502,6 +498,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
   }
 
   void _markReady(String source) {
+    if (!mounted || !_loadSession.markReady()) return;
     final wasReady = _isReady;
     _isReady = true;
 
@@ -526,6 +523,9 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       return;
     }
     _renderAnnotations();
+    if (_bootstrapStyle != widget.foliateStyle) {
+      changeStyle(widget.foliateStyle);
+    }
     _applyArticleTextDirectionPatch();
     widget.onReady?.call();
   }

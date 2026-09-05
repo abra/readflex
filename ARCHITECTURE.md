@@ -298,6 +298,23 @@ UI changes do not recreate the reader runtime unnecessarily. Books and comics
 use the foliate WebView; articles use a separate vertical HTML WebView that
 loads `content.html` and restores position through stable sentence anchors.
 
+Reader position writes are serialized and retain the 500ms trailing debounce.
+Repositories update only CFI/progress; `markOpened` updates only the opened
+timestamp. A delayed source refresh preserves live position and document
+capabilities, and closing the bloc drains both queued and active writes.
+
+Each reader WebView owns a bounded load session: one automatic replacement
+after renderer termination, then a terminal failure exposed to `ReaderBloc`.
+The replacement restores the last known position and ignores old bridge
+callbacks. The feature shows its localized error/retry state on terminal load
+failure; the WebView package does not access repositories or feature cubits.
+
+Untrusted EPUB sections are sanitized before Blob creation when publisher
+scripts are disabled (the application default). Article images are activated
+only after the repository's guarded download succeeds; the article shell also
+filters legacy saved fragments before insertion. These policies live in the
+content-loading layers, separately from post-load typography normalization.
+
 ## Import and Article Flow
 
 Book import:
@@ -414,6 +431,12 @@ make test
 `make verify` is the full local quality gate. It checks formatting without
 rewriting files, analyzes the root app and every active package, then runs all
 Dart, Flutter, and reader JavaScript tests.
+
+Browser regressions use pinned Playwright Chromium and WebKit against the real
+bundled reader assets. Run `make reader-browser-setup` once after checkout (or
+after updating its npm lockfile); Node.js 20+ and the browser engines are
+required by `make test`. On Linux, install Playwright's host dependencies as
+described in `packages/reader_webview/README.md`.
 
 Focused package changes can use package-level `flutter test` or `dart test`.
 Use broader checks when changing:

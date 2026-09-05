@@ -29,4 +29,26 @@ class FakeArticleRepository implements ArticleRepository {
     }
     return article;
   }
+
+  @override
+  Future<void> markOpened(String id, DateTime openedAt) async {
+    final article = await getArticleById(id);
+    if (article != null) {
+      await updateArticle(article.copyWith(lastOpenedAt: openedAt));
+    }
+  }
+
+  @override
+  Future<void> updateReadingPosition(
+    String id, {
+    required String? cfi,
+    required double progress,
+  }) async {
+    final article = await getArticleById(id);
+    if (article != null) {
+      await updateArticle(
+        article.copyWith(currentCfi: cfi, readingProgress: progress),
+      );
+    }
+  }
 }

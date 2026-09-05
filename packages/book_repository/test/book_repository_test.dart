@@ -39,6 +39,29 @@ void main() {
   }
 
   group('BookRepository', () {
+    test(
+      'reader writes preserve metadata and do not recreate deleted books',
+      () async {
+        final book = await repo.addBook(
+          sourceFile: await createTempBookFile(),
+          title: 'Book',
+          format: BookFormat.epub,
+        );
+        final openedAt = DateTime(2026, 9, 5);
+        await repo.updateBook(book.copyWith(title: 'Edited', isFinished: true));
+        await repo.markOpened(book.id, openedAt);
+        await repo.updateReadingPosition(book.id, cfi: 'latest', progress: 0.7);
+        final stored = (await repo.getBookById(book.id))!;
+        expect(stored.title, 'Edited');
+        expect(stored.isFinished, isTrue);
+        expect(stored.lastOpenedAt, openedAt);
+        expect(stored.currentCfi, 'latest');
+        expect(stored.readingProgress, 0.7);
+        await repo.deleteBook(book.id);
+        await repo.updateReadingPosition(book.id, cfi: 'late', progress: 0.9);
+        expect(await repo.getBookById(book.id), isNull);
+      },
+    );
     test('addBook copies file and returns book with resolved paths', () async {
       final sourceFile = await createTempBookFile();
       final book = await repo.addBook(

@@ -5,6 +5,7 @@ import 'dart:math' as math;
 
 import 'package:crypto/crypto.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 import 'package:local_storage/local_storage.dart';
@@ -113,17 +114,18 @@ class ArticleRepository {
       await contentFile.writeAsString(extracted.rawJson, flush: true);
 
       final baseUri = _articleBaseUri(extracted);
-      final articleHtml = _htmlForBlocks(
-        _withoutDuplicateTitleHeading(extracted.blocks, extracted.title),
+      final blocks = _withoutDuplicateTitleHeading(
+        extracted.blocks,
+        extracted.title,
       );
-      final htmlWithLocalImages = await _downloadArticleImages(
-        html: articleHtml,
+      final localImages = await _downloadArticleImages(
+        blocks: blocks,
         articleDir: articleDir,
         baseUri: baseUri,
       );
       await File(
         p.join(articleDir.path, 'content.html'),
-      ).writeAsString(htmlWithLocalImages, flush: true);
+      ).writeAsString(_htmlForBlocks(blocks, localImages), flush: true);
 
       String? coverFilename;
       if (extracted.imageUrl case final url? when url.isNotEmpty) {
@@ -173,6 +175,38 @@ class ArticleRepository {
     }
   }
 
+  /// Position writes never replace concurrently edited article metadata.
+  Future<void> updateReadingPosition(
+    String id, {
+    required String? cfi,
+    required double progress,
+  }) async {
+    try {
+      await _dao.updateArticle(
+        ArticlesTableCompanion(
+          id: Value(id),
+          currentCfi: Value(cfi),
+          readingProgress: Value(progress),
+        ),
+      );
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  Future<void> markOpened(String id, DateTime openedAt) async {
+    try {
+      await _dao.updateArticle(
+        ArticlesTableCompanion(
+          id: Value(id),
+          lastOpenedAt: Value(openedAt.toIso8601String()),
+        ),
+      );
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
   Future<void> deleteArticle(String id) async {
     try {
       await _db.transaction(() async {
@@ -205,18 +239,17 @@ class ArticleRepository {
     }
   }
 
-  Future<String> _downloadArticleImages({
-    required String html,
+  Future<Map<String, String>> _downloadArticleImages({
+    required List<ArticleBlock> blocks,
     required Directory articleDir,
     required Uri? baseUri,
   }) async {
-    final matches = _imgSrcRegex.allMatches(html);
     final sources = <String, Uri>{};
     final uniqueUris = <String>{};
-    for (final match in matches) {
-      final source = match.group(1);
+    for (final block in blocks.whereType<ArticleImageBlock>()) {
+      final source = block.src;
       final uri = _resolveRemoteUri(source, baseUri);
-      if (source == null || uri == null || sources.containsKey(source)) {
+      if (uri == null || sources.containsKey(source)) {
         continue;
       }
       final uriKey = uri.toString();
@@ -227,7 +260,7 @@ class ArticleRepository {
       uniqueUris.add(uriKey);
       sources[source] = uri;
     }
-    if (sources.isEmpty) return html;
+    if (sources.isEmpty) return const {};
 
     final replacements = <String, String>{};
     final downloadedByUri = <String, _DownloadedArticleImage?>{};
@@ -262,12 +295,7 @@ class ArticleRepository {
       if (image == null) continue;
       replacements[entry.key] = 'images/${image.filename}';
     }
-    if (replacements.isEmpty) return html;
-
-    return html.replaceAllMapped(
-      RegExp(replacements.keys.map(RegExp.escape).join('|')),
-      (match) => replacements[match.group(0)] ?? match.group(0)!,
-    );
+    return replacements;
   }
 
   Future<_DownloadedArticleImage?> _tryDownloadImage({
@@ -454,12 +482,10 @@ class _ImageDownloadBudget {
   }
 }
 
-final _imgSrcRegex = RegExp(
-  r'''<img[^>]+src=["']([^"']+)["']''',
-  caseSensitive: false,
-);
-
-String _htmlForBlocks(List<ArticleBlock> blocks) {
+String _htmlForBlocks(
+  List<ArticleBlock> blocks,
+  Map<String, String> localImages,
+) {
   final buffer = StringBuffer();
   var headingIndex = 0;
   var blockIndex = 0;
@@ -484,9 +510,14 @@ String _htmlForBlocks(List<ArticleBlock> blocks) {
         }
       case ArticleImageBlock(:final src, :final alt, :final title):
         if (src.trim().isNotEmpty) {
+          // Rejected or over-budget images must not trigger an unguarded WebView retry.
+          final localSource = localImages[src];
+          final sourceAttribute = localSource == null
+              ? ''
+              : ' src="${_attr(localSource)}"';
           buffer.writeln(
             '<figure id="${_attr(blockId)}" data-rf-block-id="${_attr(blockId)}">'
-            '<img src="${_attr(src)}" alt="${_attr(alt ?? '')}"/>'
+            '<img$sourceAttribute alt="${_attr(alt ?? '')}"/>'
             '${title == null ? '' : '<figcaption>${_text(title)}</figcaption>'}'
             '</figure>',
           );
@@ -613,7 +644,7 @@ Uri? _articleBaseUri(ExtractedArticle article) {
 }
 
 Uri? _resolveRemoteUri(String? value, Uri? baseUri) {
-  final trimmed = _decodeHtmlAttribute(value?.trim() ?? '');
+  final trimmed = value?.trim() ?? '';
   if (trimmed.isEmpty) return null;
 
   final uri = Uri.tryParse(trimmed);
@@ -625,24 +656,6 @@ Uri? _resolveRemoteUri(String? value, Uri? baseUri) {
     'http' || 'https' => resolved,
     _ => null,
   };
-}
-
-String _decodeHtmlAttribute(String value) {
-  return value
-      .replaceAll('&amp;', '&')
-      .replaceAll('&quot;', '"')
-      .replaceAll('&apos;', "'")
-      .replaceAll('&lt;', '<')
-      .replaceAll('&gt;', '>')
-      .replaceAll('&sol;', '/')
-      .replaceAllMapped(RegExp(r'&#(?:x([0-9a-fA-F]+)|([0-9]+));'), (match) {
-        final codePoint = int.tryParse(
-          match.group(1) ?? match.group(2)!,
-          radix: match.group(1) == null ? 10 : 16,
-        );
-        if (codePoint == null) return match.group(0)!;
-        return String.fromCharCode(codePoint);
-      });
 }
 
 String? _contentType(String? value) {
@@ -733,4 +746,5 @@ const _allowedImageContentTypes = {
 
 String _text(String value) => const HtmlEscape().convert(value);
 
-String _attr(String value) => _text(value).replaceAll('"', '&quot;');
+String _attr(String value) =>
+    const HtmlEscape(HtmlEscapeMode.attribute).convert(value);

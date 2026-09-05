@@ -78,6 +78,12 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
                ),
        ) {
     on<ReaderSourceLoadRequested>(_onSourceLoadRequested);
+    on<ReaderWebViewFailed>((event, emit) {
+      if (event.sourceId != state.sourceId) return;
+      _loadGeneration++;
+      addError(event.failure, StackTrace.current);
+      emit(state.copyWith(status: ReaderStatus.failure));
+    });
     on<ReaderBookPositionUpdated>(_onBookPositionUpdated);
     on<ReaderSeekRequested>(_onSeekRequested);
     on<ReaderHighlightsRefreshed>(_onHighlightsRefreshed);
@@ -101,6 +107,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   /// `onRelocated`. State is still emitted on every event so UI stays in sync.
   ReaderDocument? _pendingPersist;
   Timer? _persistTimer;
+  Future<void>? _persistenceTail;
+  Future<void>? _closeFuture;
+  int _loadGeneration = 0;
+  String? _livePositionSourceId;
   double? _pendingArticleSeekProgress;
   Timer? _pendingArticleSeekTimer;
   static const _persistDebounce = Duration(milliseconds: 500);
@@ -108,23 +118,22 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   static const _articleSeekBounceThreshold = 0.02;
 
   @override
-  Future<void> close() async {
+  Future<void> close() {
+    final closing = _closeFuture;
+    if (closing != null) return closing;
+    _loadGeneration++;
+    return _closeFuture = _finishClose(super.close());
+  }
+
+  Future<void> _finishClose(Future<void> closing) async {
+    await closing;
     _persistTimer?.cancel();
     _persistTimer = null;
     _clearPendingArticleSeek();
-    // Flush whatever's pending so closing the reader (or hot
-    // restart) doesn't drop the latest position. Awaited so the
-    // write actually completes before the bloc's stream closes.
-    final pending = _pendingPersist;
-    _pendingPersist = null;
-    if (pending != null) {
-      try {
-        await _persistReaderDocument(pending);
-      } catch (e, st) {
-        addError(e, st);
-      }
-    }
-    return super.close();
+    await _flushPersist();
+    // A timer may already have consumed the pending value; drain its write too.
+    final activeWrite = _persistenceTail;
+    if (activeWrite != null) await activeWrite;
   }
 
   void _onSeekRequested(
@@ -152,8 +161,11 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     ReaderSourceLoadRequested event,
     Emitter<ReaderState> emit,
   ) async {
+    final generation = ++_loadGeneration;
     final hasInitialSource = state.document?.id == event.sourceId;
-    if (!hasInitialSource) {
+    final hasUsableSource =
+        hasInitialSource && state.status == ReaderStatus.ready;
+    if (!hasUsableSource) {
       emit(state.copyWith(status: ReaderStatus.loading));
     }
 
@@ -166,27 +178,29 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         _bookRepository.getBookmarksBySource(event.sourceId),
       ).wait;
 
+      if (emit.isDone || generation != _loadGeneration) return;
+
       if (book != null) {
-        // Bump `lastOpenedAt` in BOTH the persisted row AND the
-        // in-memory state. Earlier the emit kept the pre-bump
-        // `book`, so the very first `_onBookPositionUpdated`
-        // dispatched after open would copyWith on a stale
-        // lastOpenedAt and overwrite the freshly-written value
-        // back to its previous (often null) state — leaving the
-        // book labelled "New" in the library forever.
         final updatedBook = book.copyWith(lastOpenedAt: DateTime.now());
-        await _bookRepository.updateBook(updatedBook);
+        await _enqueuePersistence(
+          () => _bookRepository.markOpened(book.id, updatedBook.lastOpenedAt!),
+        );
+        if (emit.isDone || generation != _loadGeneration) return;
         emit(
           state.copyWith(
             status: ReaderStatus.ready,
             title: updatedBook.title,
-            document: ReaderDocument.fromBook(updatedBook),
+            document: _mergeLoadedPosition(
+              ReaderDocument.fromBook(updatedBook),
+            ),
             sourceType: SourceType.book,
             articleUrl: null,
-            pageProgressionRtl: _inferredBookPageProgressionRtl(updatedBook),
+            pageProgressionRtl: hasInitialSource
+                ? state.pageProgressionRtl
+                : _inferredBookPageProgressionRtl(updatedBook),
             highlights: highlights,
             bookmarks: bookmarks,
-            documentFeatures: null,
+            documentFeatures: hasInitialSource ? state.documentFeatures : null,
           ),
         );
         return;
@@ -199,12 +213,20 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
           emit(state.copyWith(status: ReaderStatus.failure));
           return;
         }
-        await articleRepository.updateArticle(updatedArticle);
+        await _enqueuePersistence(
+          () => articleRepository.markOpened(
+            article.id,
+            updatedArticle.lastOpenedAt!,
+          ),
+        );
+        if (emit.isDone || generation != _loadGeneration) return;
         emit(
           state.copyWith(
             status: ReaderStatus.ready,
             title: updatedArticle.title,
-            document: ReaderDocument.fromArticle(updatedArticle),
+            document: _mergeLoadedPosition(
+              ReaderDocument.fromArticle(updatedArticle),
+            ),
             sourceType: SourceType.article,
             articleUrl: updatedArticle.url,
             pageProgressionRtl: _inferredArticlePageProgressionRtl(
@@ -212,7 +234,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             ),
             highlights: highlights,
             bookmarks: bookmarks,
-            documentFeatures: null,
+            documentFeatures: hasInitialSource ? state.documentFeatures : null,
           ),
         );
         return;
@@ -221,10 +243,21 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       emit(state.copyWith(status: ReaderStatus.failure));
     } catch (e, st) {
       addError(e, st);
-      if (!hasInitialSource) {
+      if (!emit.isDone && generation == _loadGeneration && !hasUsableSource) {
         emit(state.copyWith(status: ReaderStatus.failure));
       }
     }
+  }
+
+  ReaderDocument _mergeLoadedPosition(ReaderDocument loaded) {
+    final current = state.document;
+    if (current?.id != loaded.id || _livePositionSourceId != loaded.id) {
+      return loaded;
+    }
+    return loaded.copyWith(
+      currentCfi: current!.currentCfi,
+      readingProgress: current.readingProgress,
+    );
   }
 
   /// Persists a CFI + progress fraction emitted by the WebView for the
@@ -319,6 +352,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         state.currentPageBookmarkCfi != event.currentPageBookmarkCfi ||
         state.currentPageBookmarkId != event.currentPageBookmarkId;
     if (!hasMeaningfulChange) return;
+    _livePositionSourceId = document.id;
 
     // Emit immediately so chrome stays in sync with the WebView.
     // `sizeTotal` is constant per book; cache the first non-null value and
@@ -357,7 +391,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       _persistTimer?.cancel();
       _persistTimer = null;
       _pendingPersist = null;
-      await _persistReaderDocument(updated);
+      await _enqueuePersistence(() => _persistReaderDocument(updated));
       return;
     }
 
@@ -376,10 +410,29 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     if (pending == null) return;
     _pendingPersist = null;
     try {
-      await _persistReaderDocument(pending);
-    } catch (e, st) {
-      addError(e, st);
+      await _enqueuePersistence(() => _persistReaderDocument(pending));
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
     }
+  }
+
+  Future<void> _enqueuePersistence(Future<void> Function() write) {
+    final previous = _persistenceTail;
+    final operation = previous == null
+        ? Future<void>.sync(write)
+        : previous.then((_) => write());
+    late final Future<void> tail;
+    void clearIfSettled() {
+      if (identical(_persistenceTail, tail)) _persistenceTail = null;
+    }
+
+    // The caller reports the error; the queue must still accept later writes.
+    tail = operation.then<void>(
+      (_) => clearIfSettled(),
+      onError: (Object _, StackTrace _) => clearIfSettled(),
+    );
+    _persistenceTail = tail;
+    return operation;
   }
 
   void _clearPendingArticleSeek() {
@@ -416,19 +469,18 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     if (document.sourceType == SourceType.article) {
       final articleRepository = _articleRepository;
       if (articleRepository == null) return;
-      final article = await articleRepository.getArticleById(document.id);
-      if (article == null) return;
-      await articleRepository.updateArticle(
-        article.copyWith(
-          currentCfi: document.currentCfi,
-          readingProgress: document.readingProgress,
-          lastOpenedAt: document.lastOpenedAt,
-          isFinished: document.isFinished,
-        ),
+      await articleRepository.updateReadingPosition(
+        document.id,
+        cfi: document.currentCfi,
+        progress: document.readingProgress,
       );
       return;
     }
-    await _bookRepository.updateBook(document.toBook());
+    await _bookRepository.updateReadingPosition(
+      document.id,
+      cfi: document.currentCfi,
+      progress: document.readingProgress,
+    );
   }
 
   /// Routes an external error through BLoC's error pipeline (e.g. from a

@@ -74,17 +74,41 @@ Future<ReaderSelection?> readCurrentReaderTextSelection(
   }
 }
 
-/// Registers the three JS → Flutter bridge handlers that the reader
-/// WebView fires — `onSelectionEnd`, `onSelectionCleared`, `onClick` —
-/// and wires each one to the provided Dart callback.
+/// Ignores callbacks from a disposed or superseded native WebView.
+final class ReaderHandlerScope {
+  const ReaderHandlerScope(this.controller, {required this.isActive});
+
+  final InAppWebViewController controller;
+  final bool Function() isActive;
+
+  void add({
+    required String handlerName,
+    required JavaScriptHandlerCallback callback,
+  }) {
+    controller.addJavaScriptHandler(
+      handlerName: handlerName,
+      callback: (args) {
+        if (!isActive()) return null;
+        return callback(args);
+      },
+    );
+  }
+}
+
+/// Wires selection and tap bridge messages to the active reader callbacks.
 void registerSharedReaderHandlers(
   InAppWebViewController controller, {
   void Function(ReaderSelection)? onTextSelected,
   VoidCallback? onTextDeselected,
   void Function(double x, double y)? onTapped,
+  bool Function()? isActive,
 }) {
+  final handlers = ReaderHandlerScope(
+    controller,
+    isActive: isActive ?? () => true,
+  );
   if (readerTextSelectionTracingEnabled) {
-    controller.addJavaScriptHandler(
+    handlers.add(
       handlerName: 'onTextSelectionDebug',
       callback: (args) {
         final payload = args.isEmpty ? const <String, Object?>{} : args.first;
@@ -93,7 +117,7 @@ void registerSharedReaderHandlers(
     );
   }
 
-  controller.addJavaScriptHandler(
+  handlers.add(
     handlerName: 'onSelectionEnd',
     callback: (args) {
       if (readerTextSelectionTracingEnabled) {
@@ -129,7 +153,7 @@ void registerSharedReaderHandlers(
     },
   );
 
-  controller.addJavaScriptHandler(
+  handlers.add(
     handlerName: 'onSelectionCleared',
     callback: (_) {
       if (readerTextSelectionTracingEnabled) {
@@ -142,7 +166,7 @@ void registerSharedReaderHandlers(
     },
   );
 
-  controller.addJavaScriptHandler(
+  handlers.add(
     handlerName: 'onClick',
     callback: (args) {
       if (args.isEmpty) return;
@@ -161,6 +185,7 @@ InAppWebViewSettings baseReaderSettings() => InAppWebViewSettings(
   transparentBackground: true,
   isInspectable: kDebugMode,
   useHybridComposition: false,
+  useOnRenderProcessGone: true,
   javaScriptEnabled: true,
   disableContextMenu: true,
   disableLongPressContextMenuOnLinks: true,
