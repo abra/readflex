@@ -1789,7 +1789,7 @@ void main() {
 
   group('asset extraction', () {
     test('versions bundled reader assets independently of app version', () {
-      expect(AssetExtractor.assetRevision, 'reader_webview_assets_122');
+      expect(AssetExtractor.assetRevision, 'reader_webview_assets_123');
       expect(
         AssetExtractor.extractionVersionFor('1.0.0+1'),
         '1.0.0+1|${AssetExtractor.assetRevision}',

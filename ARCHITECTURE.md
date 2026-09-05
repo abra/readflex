@@ -298,6 +298,13 @@ UI changes do not recreate the reader runtime unnecessarily. Books and comics
 use the foliate WebView; articles use a separate vertical HTML WebView that
 loads `content.html` and restores position through stable sentence anchors.
 
+Book selection gesture ownership stays inside `reader_webview`'s JS paginator:
+an active selection suppresses normal touch page turns through release/cancel.
+Vertical pagination does not auto-advance from `selectionchange`; native range
+and handle scrolling remain browser-owned. On iOS the live system selection
+is not overpainted by the temporary SVG highlight preview. Flutter still owns
+the selected highlight color and receives the final text/CFI via the bridge.
+
 Reader position writes are serialized and retain the 500ms trailing debounce.
 Repositories update only CFI/progress; `markOpened` updates only the opened
 timestamp. A delayed source refresh preserves live position and document

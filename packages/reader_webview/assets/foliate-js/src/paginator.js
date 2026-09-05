@@ -4,10 +4,14 @@ const lerp = (min, max, x) => x * (max - min) + min
 const easeOutSine = x => Math.sin((x * Math.PI) / 2)
 const easeInOutSine = x => -(Math.cos(Math.PI * x) - 1) / 2
 // const easeOutSine = x => 1 - (1 - x) * (1 - x);
-const animate = (a, b, duration, ease, render, { initialProgress = 0 } = {}) => new Promise(resolve => {
+const animate = (a, b, duration, ease, render, { initialProgress = 0, isCancelled } = {}) => new Promise(resolve => {
   let start
   const clampedInitial = Math.max(0, Math.min(initialProgress, 0.95))
   const step = now => {
+    if (isCancelled?.()) {
+      resolve()
+      return
+    }
     start ??= now - clampedInitial * duration
     const fraction = Math.min(1, (now - start) / duration)
     render(lerp(a, b, ease(fraction)))
@@ -721,10 +725,16 @@ export class Paginator extends HTMLElement {
     this.addEventListener('touchstart', this.#onTouchStart.bind(this), opts)
     this.addEventListener('touchmove', this.#onTouchMove.bind(this), opts)
     this.addEventListener('touchend', this.#onTouchEnd.bind(this), opts)
+    this.addEventListener('touchcancel', () => this.#cancelTouch(), opts)
     this.addEventListener('load', ({ detail: { doc } }) => {
       doc.addEventListener('touchstart', this.#onTouchStart.bind(this), opts)
       doc.addEventListener('touchmove', this.#onTouchMove.bind(this), opts)
       doc.addEventListener('touchend', this.#onTouchEnd.bind(this), opts)
+      doc.addEventListener('touchcancel', () => this.#cancelTouch(), opts)
+      doc.addEventListener('selectionchange', () => {
+        if (doc === this.#view?.document && this.#hasTextSelection())
+          this.#claimSelectionGesture()
+      })
     })
 
     this.#mediaQueryListener = () => {
@@ -762,7 +772,7 @@ export class Paginator extends HTMLElement {
     this.sections = book.sections
   }
   #createView() {
-    this.#clearVerticalDragPreview()
+    this.#cancelTouch({ flushRelocate: false })
     if (this.#view) {
       this.#view.destroy()
       this.#container.removeChild(this.#view.element)
@@ -1052,12 +1062,14 @@ export class Paginator extends HTMLElement {
       ? Math.max(0.25, 1 - progress)
       : Math.max(0.35, progress))))
 
+    const isCancelled = () => state.cancelled || state.selecting
     return animate(0, 1, duration, easeOutSine, t => {
       const currentY = lerp(deltaY, currentEnd, t)
       const targetY = lerp(targetStart, targetEnd, t)
       viewElement.style.transform = `translateY(${currentY}px)`
       if (targetLayer) targetLayer.style.transform = `translateY(${targetY}px)`
-    }).then(() => {
+    }, { isCancelled }).then(() => {
+      if (isCancelled()) return
       if (shouldCommit) {
         this.#ignoreNativeScroll = true
         this.#container[this.scrollProp] = this.#pageOffset(targetPage)
@@ -1082,6 +1094,7 @@ export class Paginator extends HTMLElement {
   }
   snap(vx, vy, touchState) {
     const state = touchState ?? this.#touchState
+    if (state?.selecting || state?.cancelled || this.#hasTextSelection()) return
     const pageStep = this.noContinuousScroll
     const pageStepVertical = pageStep && this.scrollProp === "scrollTop"
     const verticalTurn = this.pageTurnAxisVertical
@@ -1164,7 +1177,38 @@ export class Paginator extends HTMLElement {
       })
     })
   }
+  #hasTextSelection() {
+    const selection = this.#view?.document?.getSelection()
+    return Boolean(selection?.rangeCount && !selection.isCollapsed)
+  }
+  #claimSelectionGesture() {
+    if (!this.#touchState || this.#touchState.selecting) return
+    // Ownership lasts until lift/cancel, even if WebKit briefly collapses the
+    // range while transferring focus to the Flutter selection popup.
+    this.#touchState.selecting = true
+    this.#touchScrolled = false
+    this.#clearVerticalDragPreview()
+    this.#restoreMomentum()
+    this.dispatchEvent(new Event('doctouchcancel', { bubbles: true, composed: true }))
+  }
+  #cancelTouch({ flushRelocate = true } = {}) {
+    if (this.#touchState) {
+      this.#touchState.cancelled = true
+      this.dispatchEvent(new Event('doctouchcancel', { bubbles: true, composed: true }))
+    }
+    this.#touchState = null
+    this.#touchScrolled = false
+    this.#clearVerticalDragPreview()
+    this.#restoreMomentum()
+    const detail = this.#pendingRelocate
+    this.#pendingRelocate = null
+    if (flushRelocate && detail) {
+      this.dispatchEvent(new CustomEvent('relocate', { detail }))
+    }
+  }
   #onTouchStart(e) {
+    this.#cancelTouch()
+    if (!e.touches.length) return
     const touch = e.changedTouches[0]
     const scrollProp = this.scrollProp
     this.#touchState = {
@@ -1183,6 +1227,10 @@ export class Paginator extends HTMLElement {
       lockedOffset: null,
       axis: scrollProp,
     }
+    if (this.#hasTextSelection()) {
+      this.#claimSelectionGesture()
+      return
+    }
     this.dispatchEvent(new CustomEvent('doctouchstart', {
       detail: {
         touch: e.changedTouches[0],
@@ -1193,7 +1241,10 @@ export class Paginator extends HTMLElement {
     }))
   }
   #onTouchMove(e) {
-    if (window.getSelection()?.toString()) return
+    if (this.#touchState?.selecting || this.#hasTextSelection()) {
+      this.#claimSelectionGesture()
+      return
+    }
 
     const touch = e.changedTouches[0]
     const state = this.#touchState
@@ -1321,6 +1372,10 @@ export class Paginator extends HTMLElement {
   }
   #onTouchEnd(e) {
     const state = this.#touchState
+    if (state?.selecting || this.#hasTextSelection()) {
+      this.#cancelTouch()
+      return
+    }
     this.dispatchEvent(new CustomEvent('doctouchend', {
       detail: {
         touch: e.changedTouches[0],
@@ -1360,7 +1415,9 @@ export class Paginator extends HTMLElement {
 
     if (this.pageTurnAxisVertical && state?.verticalPreview) {
       Promise.resolve(this.#finishVerticalDragPreview(state))
-        .finally(() => { this.#touchState = null })
+        .finally(() => {
+          if (this.#touchState === state) this.#touchState = null
+        })
       return
     }
 
@@ -1369,9 +1426,16 @@ export class Paginator extends HTMLElement {
     // at this point I'm basically throwing `requestAnimationFrame` at
     // anything that doesn't work
     requestAnimationFrame(() => {
+      if (this.#touchState !== state) return
+      if (state?.selecting || this.#hasTextSelection()) {
+        this.#cancelTouch()
+        return
+      }
       if (globalThis.visualViewport.scale === 1 && state)
         Promise.resolve(this.snap(state.vx, state.vy, state))
-          .finally(() => { this.#touchState = null })
+          .finally(() => {
+            if (this.#touchState === state) this.#touchState = null
+          })
       else this.#touchState = null
     })
   }
@@ -1617,7 +1681,8 @@ export class Paginator extends HTMLElement {
       detail.fraction = (page - 1) / (pages - 2)
       detail.size = 1 / (pages - 2)
     }
-    if (!this.scrolled && reason === 'scroll' && (this.#touchState || this.#touchScrolled)) {
+    if (!this.scrolled && reason === 'scroll'
+      && ((this.#touchState && !this.#touchState.selecting) || this.#touchScrolled)) {
       this.#pendingRelocate = detail
       return
     }
@@ -1828,7 +1893,7 @@ export class Paginator extends HTMLElement {
     return this.#view?.writingMode
   }
   destroy() {
-    this.#clearVerticalDragPreview()
+    this.#cancelTouch({ flushRelocate: false })
     this.#observer.unobserve(this)
     this.#view.destroy()
     this.#view = null

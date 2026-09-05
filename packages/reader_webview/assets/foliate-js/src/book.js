@@ -1587,6 +1587,9 @@ const setSelectionHandler = (view, doc, index) => {
 
     doc.addEventListener('selectionchange', () => {
       if (view.renderer.getAttribute('flow') !== 'paginated') return
+      // Vertical page animation must not compete with native handle scrolling.
+      // Keep the DOM range/handles intact; ordinary swipes resume after deselect.
+      if (view.renderer.pageTurnAxisVertical) return
       const { lastLocation } = view
       if (!lastLocation) return
 
@@ -1602,6 +1605,8 @@ const setSelectionHandler = (view, doc, index) => {
 
       if (selRange.compareBoundaryPoints(Range.END_TO_END, lastLocation.range) >= 0) {
         globalThis.pageDebounceTimer = setTimeout(async () => {
+          globalThis.pageDebounceTimer = null;
+          if (view.renderer.pageTurnAxisVertical) return;
           await view.next();
           globalThis.originalScrollLeft = container.scrollLeft;
           globalThis.pageDebounceTimer = null;
@@ -1610,6 +1615,7 @@ const setSelectionHandler = (view, doc, index) => {
       }
 
       const preventScroll = () => {
+        if (view.renderer.pageTurnAxisVertical) return;
         const selRange = getSelectionRange(doc.getSelection());
         if (!selRange || !view.lastLocation || !view.lastLocation.range) return;
 
@@ -2261,6 +2267,7 @@ class Reader {
     this.view.addEventListener('doctouchstart', this.#onTouchStart.bind(this))
     this.view.addEventListener('doctouchmove', this.#onTouchMove.bind(this))
     this.view.addEventListener('doctouchend', this.#onTouchEnd.bind(this))
+    this.view.addEventListener('doctouchcancel', this.#onTouchCancel.bind(this))
 
     setStyle()
     const progressRestore = cfi ? null : readflexInitialProgressRestore(progress)
@@ -2446,6 +2453,11 @@ class Reader {
   }) {
     if (!cfi || !color) return
     this.clearSelectionHighlightPreview()
+    // iOS already paints the live range. An SVG preview would tint it twice;
+    // keep native handles and use previews only when the native range is gone.
+    if (isAppleTouchRuntime() && this.view.renderer.getContents().some(
+      ({ doc }) => getSelectionRange(doc.getSelection()),
+    )) return
     this.addAnnotation({
       id: READFLEX_SELECTION_PREVIEW_HIGHLIGHT_ID,
       type: 'highlight',
@@ -3130,6 +3142,9 @@ class Reader {
     this.#doc = doc
     this.#index = index
     setSelectionHandler(this.view, doc, index)
+    if (isAppleTouchRuntime()) doc.addEventListener('selectionchange', () => {
+      if (getSelectionRange(doc.getSelection())) this.clearSelectionHighlightPreview()
+    })
     installImageAreaSelectionHandler(this, doc, index)
     renderImageAreaAnnotations(this, doc, index)
     // Wire iframe touch events into the readflex gesture dispatcher so
@@ -3377,6 +3392,14 @@ class Reader {
         mainView.style.transition = '';
       }, 300);
     }
+  }
+
+  #onTouchCancel = () => {
+    const renderer = this.view.renderer
+    if (!renderer) return
+    renderer.style.transform = ''
+    renderer.style.transition = ''
+    this.#upTriggered = false
   }
 
   handleBookmark = (remove, source = 'unknown') => {

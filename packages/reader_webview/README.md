@@ -75,6 +75,21 @@ user most recently selected in instead of an older range from a neighboring
 page. The live range is preferred; the snapshot remains available if WebKit
 collapses the native selection while focus moves to the Flutter action popup.
 
+For reflowable books, a touch gesture that starts or acquires a DOM selection
+belongs to selection until release/cancel, even if the range briefly collapses.
+The paginator reads selection from its own iframe, skips ordinary swipe/snap
+handling and cancels vertical drag previews/release animations. `Vertical` is
+paginated layout with vertical page animation, not continuous `Scroll`.
+Its selection changes do not trigger the legacy one-second next-page timer or
+scroll-position rollback. Native selection scrolling is left intact; this is
+not a new edge-dwell or cross-chapter selection implementation.
+
+On iOS, an active native text range is the only temporary selection tint. The
+popup's SVG color preview is suppressed while native selection exists and is
+removed if native selection returns. Color swatches still choose the saved
+highlight color; fallback previews remain available without a native range.
+Saved highlights are not removed by selection-preview cleanup.
+
 `ArticleHtmlReaderWebView` reports scroll progress through sentence anchors,
 table of contents from headings, document features, clicks, search batches,
 bookmark changes, text selections, and highlight taps. It also renders and
@@ -146,9 +161,25 @@ Tests exercise actual EPUB fixed/reflow loaders and the article shell, including
 malicious markup, preserved styles/CFIs, image policy, load errors and fallback
 highlight geometry/pixel changes at desktop and mobile sizes. Flutter tests
 use the plugin platform interface to simulate renderer death and late callbacks.
+Book selection regressions load the actual `book.js` runtime and EPUB directory
+loader (with fixture transport) as well as the standalone paginator. They cover
+unwanted delayed page turns, iframe gesture ownership, cancelled gestures and
+release animations, backward range/CFI round trips and iOS preview suppression.
+Synthetic touch events and the iOS user-agent branch test the JS contracts,
+not the operating system's selection handles or native tint rendering.
 Desktop Playwright WebKit with feature detection disabled is not an actual old
 iOS device; neither browser tests nor fake platform callbacks replace native
 device smoke tests.
+
+Selection device smoke checks (iOS and Android): open a reflowable book in
+`Vertical`, long-press a word, drag either handle to the top/bottom edge and
+reverse direction, then release and wait at least two seconds. Check that no
+app-driven page animation starts, handles remain usable, and Copy/Translate/
+Highlight use the final range. Deselect and swipe both ways to verify normal
+page turns. On iOS check that native selection has no extra yellow/pink preview
+layer and that saving a highlight still applies the chosen color. Also verify
+continuous `Scroll` and horizontal `Slide`; selection across actual device page
+boundaries still requires this native check, beyond the DOM/CFI tests.
 
 DOMPurify is pinned and vendored without edits. See
 `assets/foliate-js/src/vendor/DOMPurify-README.md` for provenance and updates.
