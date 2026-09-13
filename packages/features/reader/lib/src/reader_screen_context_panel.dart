@@ -1,8 +1,7 @@
 part of 'reader_screen.dart';
 
 const _kHighlightPopupColorCount = 5;
-const _kHighlightSwatchSize = 24.0;
-const _kHighlightSwatchTapSize = 40.0;
+const _kHighlightSwatchTapSize = ReaderHighlightControls.tapTargetSize;
 const _kHighlightPopupHorizontalPadding = AppSpacing.xs;
 const _kHighlightPopupDividerWidth = AppSpacing.sm;
 const _kHighlightPopupHeight = 52.0;
@@ -718,7 +717,7 @@ class _ImageHighlightSelectionPopupState
                   widget.onPreviewColorChanged(color);
                 },
                 actions: [
-                  _HighlightPopupAction(
+                  ReaderHighlightAction(
                     color: widget.foregroundColor,
                     icon: AppIcons.highlight,
                     tooltip: context.l10n.highlightAction,
@@ -919,13 +918,13 @@ class _SavedHighlightPopup extends StatelessWidget {
                 onColorChanged: onColorChanged,
                 actions: [
                   if (onEditNote != null)
-                    _HighlightPopupAction(
+                    ReaderHighlightAction(
                       color: foregroundColor,
                       icon: AppIcons.edit,
                       tooltip: context.l10n.readerEditComment,
                       onPressed: onEditNote!,
                     ),
-                  _HighlightPopupAction(
+                  ReaderHighlightAction(
                     color: destructiveColor,
                     icon: AppIcons.delete,
                     tooltip: context.l10n.readerRemoveHighlight,
@@ -1119,7 +1118,7 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
                   setState(() => _selectedColor = color);
                   widget.onPreviewColorChanged(color);
                 },
-                highlightAction: _HighlightPopupAction(
+                highlightAction: ReaderHighlightAction(
                   color: widget.foregroundColor,
                   icon: AppIcons.highlight,
                   tooltip: context.l10n.highlightAction,
@@ -1159,22 +1158,6 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
   }
 }
 
-class _HighlightPopupAction {
-  const _HighlightPopupAction({
-    required this.color,
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-    this.loading = false,
-  });
-
-  final Color color;
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onPressed;
-  final bool loading;
-}
-
 class _TextSelectionPopupAction {
   const _TextSelectionPopupAction({
     required this.color,
@@ -1208,7 +1191,7 @@ class _TextSelectionPopupSurface extends StatelessWidget {
   final Color panelColor;
   final Color dividerColor;
   final ValueChanged<HighlightColor> onColorChanged;
-  final _HighlightPopupAction highlightAction;
+  final ReaderHighlightAction highlightAction;
   final List<_TextSelectionPopupAction> textActions;
   final VoidCallback? onInteractionStarted;
 
@@ -1236,7 +1219,7 @@ class _TextSelectionPopupSurface extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                     horizontal: _kHighlightPopupHorizontalPadding,
                   ),
-                  child: _HighlightControlsRow(
+                  child: ReaderHighlightControls(
                     selectedColor: selectedColor,
                     busy: busy,
                     readerTheme: readerTheme,
@@ -1329,7 +1312,7 @@ class _HighlightPopupSurface extends StatelessWidget {
   final Color panelColor;
   final Color dividerColor;
   final ValueChanged<HighlightColor> onColorChanged;
-  final List<_HighlightPopupAction> actions;
+  final List<ReaderHighlightAction> actions;
   final VoidCallback? onInteractionStarted;
 
   @override
@@ -1353,7 +1336,7 @@ class _HighlightPopupSurface extends StatelessWidget {
             padding: const EdgeInsets.symmetric(
               horizontal: _kHighlightPopupHorizontalPadding,
             ),
-            child: _HighlightControlsRow(
+            child: ReaderHighlightControls(
               selectedColor: selectedColor,
               busy: busy,
               readerTheme: readerTheme,
@@ -1364,69 +1347,6 @@ class _HighlightPopupSurface extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _HighlightControlsRow extends StatelessWidget {
-  const _HighlightControlsRow({
-    required this.selectedColor,
-    required this.busy,
-    required this.readerTheme,
-    required this.dividerColor,
-    required this.onColorChanged,
-    required this.actions,
-  });
-
-  final HighlightColor selectedColor;
-  final bool busy;
-  final ReaderThemeData readerTheme;
-  final Color dividerColor;
-  final ValueChanged<HighlightColor> onColorChanged;
-  final List<_HighlightPopupAction> actions;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (final color in HighlightColor.values)
-          _HighlightColorButton(
-            color: color,
-            readerTheme: readerTheme,
-            selected: selectedColor == color,
-            enabled: !busy,
-            onPressed: () => onColorChanged(color),
-          ),
-        SizedBox(
-          height: AppSizes.chipHeight,
-          child: VerticalDivider(
-            color: dividerColor,
-            thickness: 1,
-            width: _kHighlightPopupDividerWidth,
-          ),
-        ),
-        for (final action in actions)
-          SizedBox(
-            width: _kHighlightSwatchTapSize,
-            height: _kHighlightSwatchTapSize,
-            child: Tooltip(
-              message: action.tooltip,
-              child: InkResponse(
-                radius: _kHighlightSwatchTapSize / 2,
-                onTap: busy ? null : action.onPressed,
-                child: Center(
-                  child: action.loading
-                      ? const ButtonLoadingIndicator(size: AppIconSize.sm)
-                      : Icon(
-                          action.icon,
-                          size: AppIconSize.sm,
-                          color: action.color,
-                        ),
-                ),
-              ),
-            ),
-          ),
-      ],
     );
   }
 }
@@ -1446,82 +1366,6 @@ BoxDecoration _highlightPopupDecoration(
     ),
     boxShadow: AppShadows.popover,
   );
-}
-
-class _HighlightColorButton extends StatelessWidget {
-  const _HighlightColorButton({
-    required this.color,
-    required this.readerTheme,
-    required this.selected,
-    required this.enabled,
-    required this.onPressed,
-  });
-
-  final HighlightColor color;
-  final ReaderThemeData readerTheme;
-  final bool selected;
-  final bool enabled;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final swatch = readerHighlightColor(color, readerTheme);
-    final checkColor = swatch.computeLuminance() > 0.45
-        ? Colors.black.withValues(alpha: 0.78)
-        : Colors.white.withValues(alpha: 0.92);
-    final borderColor = context.colors.onSurface.withValues(
-      alpha: selected ? 0.42 : 0.16,
-    );
-    return SizedBox(
-      width: _kHighlightSwatchTapSize,
-      height: _kHighlightSwatchTapSize,
-      child: Tooltip(
-        message: _localizedHighlightColorName(context, color),
-        child: InkResponse(
-          radius: _kHighlightSwatchTapSize / 2,
-          onTap: enabled ? onPressed : null,
-          child: Center(
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 120),
-              curve: Curves.easeOutCubic,
-              alignment: Alignment.center,
-              width: selected ? _kHighlightSwatchSize : 20,
-              height: selected ? _kHighlightSwatchSize : 20,
-              decoration: BoxDecoration(
-                color: swatch,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: borderColor,
-                  width: selected ? 2 : 1,
-                ),
-              ),
-              child: selected
-                  ? Icon(
-                      AppIcons.check,
-                      size: AppIconSize.xs,
-                      color: checkColor,
-                    )
-                  : null,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-String _localizedHighlightColorName(
-  BuildContext context,
-  HighlightColor color,
-) {
-  final l10n = context.l10n;
-  return switch (color) {
-    HighlightColor.yellow => l10n.highlightColorYellow,
-    HighlightColor.green => l10n.highlightColorGreen,
-    HighlightColor.blue => l10n.highlightColorBlue,
-    HighlightColor.pink => l10n.highlightColorPink,
-    HighlightColor.purple => l10n.highlightColorPurple,
-  };
 }
 
 /// Bottom action strip shown for an active text selection.

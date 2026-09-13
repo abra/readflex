@@ -2,6 +2,9 @@ import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:shared/shared.dart';
 
+import 'translation_source_quote.dart';
+import 'translation_text_direction.dart';
+
 class TranslationSelectionPreview extends StatelessWidget {
   const TranslationSelectionPreview({
     required this.selection,
@@ -17,22 +20,20 @@ class TranslationSelectionPreview extends StatelessWidget {
     final preview = showContext
         ? _SelectionPreviewData.contextual(selection)
         : _SelectionPreviewData.plain(selection.effectiveSelectedText);
-    final baseStyle = context.text.bodyMedium;
-    final selectedStyle = baseStyle.copyWith(
-      color: context.colors.onPrimaryContainer,
-      backgroundColor: context.colors.primaryContainer,
-      fontWeight: FontWeight.w600,
+    final baseStyle = context.text.bodyMedium.copyWith(
+      color: context.colors.onSurface,
     );
+    final selectedStyle = baseStyle.copyWith(fontWeight: FontWeight.w600);
 
-    return Container(
+    final textDirection = translationTextDirection(
+      '${preview.before}${preview.selected}${preview.after}',
+    );
+    return TranslationSourceQuote(
       key: const ValueKey('translation-selection-preview'),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: context.colors.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-      ),
+      textDirection: textDirection,
       child: Text.rich(
         key: const ValueKey('translation-selection-preview-text'),
+        textDirection: textDirection,
         TextSpan(
           style: baseStyle,
           children: [

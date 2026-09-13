@@ -44,6 +44,8 @@ flutter:
     - assets/foliate-js/src/readflex_contrast_guard.js
     - assets/foliate-js/src/readflex_document_normalizer.js
     - assets/foliate-js/src/readflex_selection_normalizer.js
+    - assets/foliate-js/src/readflex_selection_context.js
+    - assets/foliate-js/src/readflex_range.js
     - assets/foliate-js/src/readflex_content_security.js
     - assets/foliate-js/src/readflex_article_highlighter.js
     - assets/foliate-js/src/vendor/purify.js

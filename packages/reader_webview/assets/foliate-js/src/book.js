@@ -42,6 +42,7 @@ const traceTextSelection = (stage, details = {}) => {
 import './view.js'
 import { FootnoteHandler } from './footnotes.js'
 import { Overlayer } from './overlayer.js'
+import { rangeContainsRange } from './readflex_range.js'
 import {
   attachGestures as readflexAttachGestures,
   registerGesture as readflexRegisterGesture,
@@ -52,6 +53,7 @@ import {
   normalizeSelectionRange,
   normalizeTextRange,
 } from './readflex_selection_normalizer.js'
+import { buildSelectionContext } from './readflex_selection_context.js'
 const { configure, ZipReader, BlobReader, TextWriter, BlobWriter } =
   await import('./vendor/zip.js')
 const { EPUB } = await import('./epub.js')
@@ -1037,26 +1039,6 @@ const installNativeTextActionMenuGuard = doc => {
   }, { capture: true });
 };
 
-const clearSelectionForAnnotationMenu = doc => {
-  const selection = doc?.getSelection?.();
-  if (!getSelectionRange(selection)) return;
-
-  if (isAppleTouchRuntime()) {
-    traceTextSelection('clear-annotation-selection', {
-      ...readflexSelectionTraceSnapshot(doc),
-    });
-    doc.__readflexSuppressNextSelectionCleared = true;
-    doc.__anxSelectionClearedAt = Date.now();
-    doc.__anxSuppressClick = true;
-    setTimeout(() => {
-      if (doc.__readflexSuppressNextSelectionCleared === true) {
-        doc.__readflexSuppressNextSelectionCleared = false;
-      }
-    }, 250);
-  }
-  selection.removeAllRanges();
-};
-
 const allowImmediateClickAfterTextAction = doc => {
   if (!doc) return;
 
@@ -1070,8 +1052,6 @@ const allowImmediateClickAfterTextAction = doc => {
 
 const unwrapCFI = cfi => cfi?.match(/^epubcfi\((.+)\)$/)?.[1] ?? cfi
 
-const CONTEXT_WINDOW_CHARS = 200;
-const MAX_CONTEXT_CHARS = 600;
 const READFLEX_HIGHLIGHT_OPACITY = '0.62';
 const READFLEX_HIGHLIGHT_RADIUS = 3;
 const READFLEX_HIGHLIGHT_VERTICAL_INSET = 1.5;
@@ -1086,147 +1066,7 @@ const _collapseWhitespace = (text) =>
     ? text.replace(/\s+/g, ' ').trim()
     : '';
 
-const _sliceWithWindow = (text, start, end) => {
-  if (!text) return '';
-  const safeStart = Math.max(0, Math.min(text.length, start));
-  const safeEnd = Math.max(safeStart, Math.min(text.length, end));
-  return text.slice(safeStart, safeEnd);
-};
-
-const _limitContext = (text) => {
-  const contextText = _collapseWhitespace(text);
-  if (contextText.length > MAX_CONTEXT_CHARS) {
-    return contextText.slice(0, MAX_CONTEXT_CHARS);
-  }
-  return contextText;
-};
-
-const buildRangeContextText = (range) => {
-  if (!range) return '';
-
-  const selectionText = range.toString().trim();
-  const startNode = range.startContainer;
-  const endNode = range.endContainer;
-  const startText = startNode?.textContent ?? '';
-  const endText = endNode?.textContent ?? '';
-
-  let contextText = '';
-
-  if (startNode === endNode) {
-    const segment = _sliceWithWindow(
-      startText,
-      range.startOffset - CONTEXT_WINDOW_CHARS,
-      range.endOffset + CONTEXT_WINDOW_CHARS
-    );
-    contextText = _collapseWhitespace(segment);
-  } else {
-    const startSegment = _collapseWhitespace(
-      _sliceWithWindow(
-        startText,
-        range.startOffset - CONTEXT_WINDOW_CHARS,
-        range.startOffset + CONTEXT_WINDOW_CHARS
-      )
-    );
-    const endSegment = _collapseWhitespace(
-      _sliceWithWindow(
-        endText,
-        range.endOffset - CONTEXT_WINDOW_CHARS,
-        range.endOffset + CONTEXT_WINDOW_CHARS
-      )
-    );
-    const parts = [
-      startSegment,
-      selectionText,
-      endSegment
-    ].filter(Boolean);
-    contextText = parts.join(' ');
-  }
-
-  return _limitContext(contextText || selectionText);
-};
-
-const buildMarkedRangeContextText = (range) => {
-  if (!range) return '';
-
-  const selectionText = range.toString().trim();
-  const startNode = range.startContainer;
-  const endNode = range.endContainer;
-  const startText = startNode?.textContent ?? '';
-  const endText = endNode?.textContent ?? '';
-
-  if (startNode === endNode) {
-    const segmentStart = Math.max(0, range.startOffset - CONTEXT_WINDOW_CHARS);
-    const segmentEnd = Math.min(
-      startText.length,
-      range.endOffset + CONTEXT_WINDOW_CHARS
-    );
-    const before = _sliceWithWindow(startText, segmentStart, range.startOffset);
-    const selected = _sliceWithWindow(
-      startText,
-      range.startOffset,
-      range.endOffset
-    );
-    const after = _sliceWithWindow(startText, range.endOffset, segmentEnd);
-    return _limitContext(`${before}[[${selected}]]${after}`);
-  }
-
-  const startSegment = _collapseWhitespace(
-    _sliceWithWindow(
-      startText,
-      range.startOffset - CONTEXT_WINDOW_CHARS,
-      range.startOffset + CONTEXT_WINDOW_CHARS
-    )
-  );
-  const endSegment = _collapseWhitespace(
-    _sliceWithWindow(
-      endText,
-      range.endOffset - CONTEXT_WINDOW_CHARS,
-      range.endOffset + CONTEXT_WINDOW_CHARS
-    )
-  );
-  const markedSelection = selectionText ? `[[${selectionText}]]` : '';
-  return _limitContext(
-    [startSegment, markedSelection, endSegment].filter(Boolean).join(' ')
-  );
-};
-
-const annotationHitForRange = (view, index, range) => {
-  const contents = view?.renderer?.getContents?.() ?? [];
-  const content = contents.find(x => x.index === index && x.overlayer);
-  if (!content) return null;
-
-  const rects = Array.from(range.getClientRects())
-    .filter(rect => rect.width > 0 && rect.height > 0);
-  for (const rect of rects) {
-    const points = [
-      { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
-      { x: rect.left + 1, y: rect.top + rect.height / 2 },
-      { x: rect.right - 1, y: rect.top + rect.height / 2 },
-    ];
-    for (const point of points) {
-      const [value, annotationRange] = content.overlayer.hitTest(point);
-      if (!value) continue;
-      if (value.startsWith(READFLEX_SELECTION_PREVIEW_HIGHLIGHT_VALUE_PREFIX)) {
-        continue;
-      }
-      const annotation = globalThis.reader?.annotationsByValue?.get(value);
-      if (annotation?.type === 'highlight') {
-        return { annotation, range: annotationRange };
-      }
-    }
-  }
-  return null;
-};
-
-const rangeStrictlyContainsRange = (outer, inner) => {
-  try {
-    const startCmp = outer.compareBoundaryPoints(Range.START_TO_START, inner);
-    const endCmp = outer.compareBoundaryPoints(Range.END_TO_END, inner);
-    return startCmp <= 0 && endCmp >= 0 && (startCmp < 0 || endCmp > 0);
-  } catch {
-    return false;
-  }
-};
+const buildRangeContextText = range => buildSelectionContext(range).contextText;
 
 const containedHighlightIdsForRange = (view, index, doc, range) => {
   const annotations = globalThis.reader?.annotations?.get(index) ?? [];
@@ -1252,7 +1092,7 @@ const containedHighlightIdsForRange = (view, index, doc, range) => {
         : resolved.anchor;
       if (
         annotationRange &&
-        rangeStrictlyContainsRange(range, annotationRange)
+        rangeContainsRange(range, annotationRange)
       ) {
         ids.push(annotation.id);
       }
@@ -1278,6 +1118,10 @@ const textSelectionPayloadForRange = (view, doc, index, range) => {
 
   const normalizedSelection = normalizeSelectionRange(range);
   const normalizedRange = normalizedSelection?.range ?? range;
+  const textContext = buildSelectionContext(range);
+  const normalizedContext = normalizedSelection?.selectionKind === 'exact'
+    ? textContext
+    : buildSelectionContext(normalizedRange);
   return {
     index,
     lang: 'en-US',
@@ -1287,9 +1131,9 @@ const textSelectionPayloadForRange = (view, doc, index, range) => {
     text,
     normalizedText: normalizedSelection?.normalizedText ?? text,
     selectionKind: normalizedSelection?.selectionKind ?? 'exact',
-    contextText: buildRangeContextText(normalizedRange),
-    markedContextText: buildMarkedRangeContextText(range),
-    normalizedMarkedContextText: buildMarkedRangeContextText(normalizedRange),
+    contextText: normalizedContext.contextText,
+    markedContextText: textContext.markedContextText,
+    normalizedMarkedContextText: normalizedContext.markedContextText,
     containedHighlightIds: containedHighlightIdsForRange(
       view,
       index,
@@ -1331,19 +1175,8 @@ const handleSelection = (view, doc, index, explicitRange = null) => {
 
   if (!range) return;
 
-  const position = getPosition(range);
-  const annotationHit = annotationHitForRange(view, index, range);
-  if (annotationHit) {
-    const annotationRange = annotationHit.range ?? range;
-    clearSelectionForAnnotationMenu(doc);
-    onAnnotationClick({
-      annotation: annotationHit.annotation,
-      pos: getPosition(annotationRange) ?? position,
-      contextText: buildRangeContextText(annotationRange)
-    });
-    return;
-  }
-
+  // A native selection can start inside a saved highlight and grow beyond it.
+  // Editing saved annotations belongs to the separate show-annotation tap path.
   const payload = textSelectionPayloadForRange(view, doc, index, range);
   if (!payload) return;
   rememberTextSelectionRange(doc, index, range);

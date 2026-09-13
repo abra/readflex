@@ -15,6 +15,33 @@ void main() {
       expect(theme.brightness, Brightness.dark);
     });
 
+    test('button themes explicitly use the app sans font', () {
+      for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+        for (final style in [
+          theme.filledButtonTheme.style,
+          theme.outlinedButtonTheme.style,
+          theme.textButtonTheme.style,
+        ]) {
+          expect(
+            style!.textStyle!.resolve({})!.fontFamily,
+            AppTypography.fontFamilySans,
+          );
+          expect(
+            style.textStyle!.resolve({})!.fontFamilyFallback,
+            AppTypography.fontFamilyFallback,
+          );
+        }
+        expect(
+          theme.textTheme.bodyLarge!.fontFamilyFallback,
+          AppTypography.fontFamilyFallback,
+        );
+        expect(
+          theme.textTheme.headlineSmall!.fontFamily,
+          AppTypography.fontFamilySerif,
+        );
+      }
+    });
+
     test('light() uses correct scaffold color', () {
       final theme = AppTheme.light();
       expect(theme.scaffoldBackgroundColor, PrimitiveColors.gray50);

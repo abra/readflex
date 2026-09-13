@@ -2,6 +2,7 @@ import 'package:component_library/component_library.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -17,6 +18,88 @@ void main() {
   });
 
   testWidgets(
+    'copy writes the result, not the selection, without translating again',
+    (tester) async {
+      final service = _RecordingTranslationService();
+      final copied = <String>[];
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copied.add((call.arguments as Map)['text'] as String);
+        }
+        return null;
+      });
+      addTearDown(
+        () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+      );
+      await _pumpTranslateSheet(
+        tester,
+        selection: _paragraphSelection,
+        service: service,
+      );
+      await tester.tap(find.byTooltip('Copy'));
+      await tester.pumpAndSettle();
+      expect(copied, ['Запуски в наши дни в основном произвольны.']);
+      expect(service.calls, 1);
+      expect(find.byTooltip('Copied'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('translation-primary-result')),
+        findsOneWidget,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets('large text on a narrow sheet keeps language selection usable', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await _pumpTranslateSheet(
+      tester,
+      selection: _selection,
+      service: _SourceRequiredService(),
+      textScaler: const TextScaler.linear(2),
+    );
+    final source = find.byKey(const ValueKey('translation-source-language'));
+    final target = find.byKey(const ValueKey('translation-target-language'));
+    expect(tester.getTopLeft(source).dx, tester.getTopLeft(target).dx);
+    expect(
+      tester.getBottomLeft(source).dy,
+      lessThan(tester.getTopLeft(target).dy),
+    );
+    final action = find.widgetWithText(FilledButton, 'Select language');
+    await tester.ensureVisible(action);
+    await tester.tap(action);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('English').hitTestable().last);
+    await tester.pumpAndSettle();
+    expect(find.text('сила'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('missing source opens language picker without retrying', (
+    tester,
+  ) async {
+    final service = _SourceRequiredService();
+    await _pumpTranslateSheet(tester, selection: _selection, service: service);
+    expect(service.sources, ['auto']);
+    expect(find.text('Retry'), findsNothing);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Select language'));
+    await tester.pumpAndSettle();
+    expect(service.sources, ['auto']);
+    await tester.tap(find.text('English').hitTestable().last);
+    await tester.pumpAndSettle();
+    expect(service.sources, ['auto', 'en']);
+    expect(find.text('сила'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
     'renders contextual source preview and compact language selectors',
     (tester) async {
       final semantics = tester.ensureSemantics();
@@ -27,7 +110,11 @@ void main() {
       expect(find.bySemanticsLabel('From'), findsOneWidget);
       expect(find.bySemanticsLabel('To'), findsOneWidget);
 
-      final selectors = find.byType(DropdownButtonFormField<String>);
+      final selectors = find.byWidgetPredicate(
+        (widget) =>
+            widget.key == const ValueKey('translation-source-language') ||
+            widget.key == const ValueKey('translation-target-language'),
+      );
       expect(selectors, findsNWidgets(2));
       for (final selector in selectors.evaluate()) {
         expect(
@@ -35,7 +122,9 @@ void main() {
           AppSizes.buttonHeight,
         );
       }
-
+      expect(find.text('Auto: English'), findsOneWidget);
+      expect(find.text('English -> Русский'), findsNothing);
+      expect(tester.getSize(selectors.last).width, lessThan(160));
       final preview = _previewText(tester);
       expect(
         preview.textSpan?.toPlainText(),
@@ -45,10 +134,8 @@ void main() {
         tester,
       ).singleWhere((span) => span.text == 'power');
       expect(selectedSpan.style?.fontWeight, FontWeight.w600);
-      expect(
-        selectedSpan.style?.backgroundColor,
-        Theme.of(tester.element(_previewFinder)).colorScheme.primaryContainer,
-      );
+      expect(selectedSpan.style?.color, preview.textSpan?.style?.color);
+      expect(selectedSpan.style?.backgroundColor, isNull);
 
       final translation = find.byKey(
         const ValueKey('translation-primary-result'),
@@ -57,14 +144,64 @@ void main() {
       expect(translationWidget.data, 'сила');
       expect(
         translationWidget.style,
-        Theme.of(tester.element(translation)).textTheme.headlineSmall,
+        Theme.of(tester.element(translation)).textTheme.titleLarge,
       );
       semantics.dispose();
     },
   );
 
+  for (final brightness in Brightness.values) {
+    testWidgets('context emphasis uses only font weight: $brightness', (
+      tester,
+    ) async {
+      await _pumpTranslateSheet(
+        tester,
+        selection: _selection,
+        brightness: brightness,
+      );
+      final baseStyle = _previewText(tester).textSpan!.style!;
+      final theme = Theme.of(tester.element(_previewFinder));
+      expect(baseStyle.color, theme.colorScheme.onSurface);
+      expect(
+        tester.widget<Text>(_selectedFragmentFinder).style!.color,
+        theme.colorScheme.onSurface,
+      );
+      final background =
+          theme.bottomSheetTheme.backgroundColor ?? theme.colorScheme.surface;
+      final luminances = [
+        baseStyle.color!.computeLuminance(),
+        background.computeLuminance(),
+      ]..sort();
+      expect(
+        (luminances.last + 0.05) / (luminances.first + 0.05),
+        greaterThanOrEqualTo(7),
+      );
+      final selectedStyle = _previewSpans(
+        tester,
+      ).singleWhere((span) => span.text == 'power').style!;
+      expect(selectedStyle.backgroundColor, isNull);
+      expect(selectedStyle.background, isNull);
+      expect(selectedStyle, baseStyle.copyWith(fontWeight: FontWeight.w600));
+    });
+  }
+
+  testWidgets('only source fragments and context have a quotation rule', (
+    tester,
+  ) async {
+    await _pumpTranslateSheet(tester, selection: _selection);
+    _expectSourceQuote(tester, _selectedFragmentFinder);
+    _expectSourceQuote(tester, _previewFinder);
+    expect(
+      find.ancestor(
+        of: find.byKey(const ValueKey('translation-primary-result')),
+        matching: _quoteSurfaceFinder,
+      ),
+      findsNothing,
+    );
+  });
+
   testWidgets(
-    'lexical lookup shows the full sentence translation before details',
+    'lexical lookup keeps the sentence visible and details collapsed',
     (tester) async {
       await _pumpTranslateSheet(
         tester,
@@ -79,8 +216,9 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('power'), findsOneWidget);
-      expect(find.text('Lexical explanation'), findsOneWidget);
-      expect(find.text('релизы'), findsOneWidget);
+      expect(find.text('Lexical explanation'), findsNothing);
+      expect(find.text('релизы'), findsNothing);
+      expect(find.text('Meaning & alternatives'), findsOneWidget);
 
       final primary = find.byKey(const ValueKey('translation-primary-result'));
       final sentence = find.byKey(
@@ -88,12 +226,21 @@ void main() {
       );
       expect(
         tester.getTopLeft(primary).dy,
+        lessThan(tester.getTopLeft(_previewFinder).dy),
+      );
+      expect(
+        tester.getTopLeft(_previewFinder).dy,
         lessThan(tester.getTopLeft(sentence).dy),
       );
       expect(
         tester.getTopLeft(sentence).dy,
-        lessThan(tester.getTopLeft(find.text('Lexical explanation')).dy),
+        lessThan(tester.getTopLeft(find.text('Meaning & alternatives')).dy),
       );
+      await tester.tap(find.text('Meaning & alternatives'));
+      await tester.pumpAndSettle();
+      expect(find.text('power'), findsOneWidget);
+      expect(find.text('Lexical explanation'), findsOneWidget);
+      expect(find.text('релизы'), findsOneWidget);
     },
   );
 
@@ -110,6 +257,7 @@ void main() {
       _previewText(tester).textSpan?.toPlainText(),
       _paragraphSelection.selectedText,
     );
+    _expectSourceQuote(tester, _previewFinder);
     expect(find.text('Запуски в наши дни в основном произвольны.'), findsOne);
     expect(find.text('power'), findsNothing);
     expect(find.text('Sentence'), findsNothing);
@@ -120,6 +268,11 @@ void main() {
       const ValueKey('translation-primary-result'),
     );
     final translationWidget = tester.widget<SelectableText>(translation);
+    expect(find.text('Original'), findsOneWidget);
+    expect(
+      tester.getTopLeft(translation).dy,
+      lessThan(tester.getTopLeft(_previewFinder).dy),
+    );
     expect(
       translationWidget.style,
       Theme.of(tester.element(translation)).textTheme.bodyLarge,
@@ -139,6 +292,61 @@ void main() {
       translationWidget.style,
       Theme.of(tester.element(translation)).textTheme.bodyLarge,
     );
+  });
+
+  testWidgets('a long answer to one word still uses body typography', (
+    tester,
+  ) async {
+    await _pumpTranslateSheet(
+      tester,
+      selection: _selection,
+      service: const _FakeTranslationService(
+        primary: 'A longer explanation of the selected word in this context.',
+      ),
+    );
+    final result = find.byKey(const ValueKey('translation-primary-result'));
+    expect(
+      tester.widget<SelectableText>(result).style,
+      Theme.of(tester.element(result)).textTheme.bodyLarge,
+    );
+  });
+
+  testWidgets('long context cannot push the primary answer below the fold', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final contextText =
+        'Before. ${List.filled(100, 'More context.').join(' ')} '
+        'The power bank is compact.';
+    final service = _RecordingTranslationService();
+    await _pumpTranslateSheet(
+      tester,
+      selection: TextSelectionContext(
+        selectedText: 'power',
+        contextText: contextText,
+        markedContextText: contextText.replaceFirst('power', '[[power]]'),
+        sourceId: 'source-1',
+        sourceType: SourceType.book,
+      ),
+      service: service,
+    );
+    expect(
+      find.byKey(const ValueKey('translation-primary-result')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('Copy').hitTestable(), findsOneWidget);
+    expect(_previewText(tester).textSpan!.toPlainText(), contextText);
+    _expectSourceQuote(tester, _previewFinder);
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(0, -300),
+    );
+    await tester.pumpAndSettle();
+    expect(service.calls, 1);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('malformed marked context falls back to clean context text', (
@@ -192,9 +400,156 @@ void main() {
 
     final scrollView = find.byType(SingleChildScrollView);
     expect(scrollView, findsOneWidget);
-    expect(tester.getSize(scrollView).height, closeTo(408, 0.001));
+    await tester.ensureVisible(find.text('Meaning & alternatives'));
+    await tester.tap(find.text('Meaning & alternatives'));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(scrollView).height, lessThanOrEqualTo(600 * 0.68));
     expect(find.text('вариант 16'), findsOneWidget);
+    await tester.ensureVisible(find.text('вариант 16'));
+    expect(find.text('вариант 16').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('expanding details does not request another translation', (
+    tester,
+  ) async {
+    final service = _RecordingTranslationService(includeLexicalDetails: true);
+    await _pumpTranslateSheet(tester, selection: _selection, service: service);
+    final toggle = find.text('Meaning & alternatives');
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(find.text('Lexical explanation'), findsOneWidget);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(find.text('Lexical explanation'), findsNothing);
+    expect(service.calls, 1);
+    expect(
+      _previewText(tester).textSpan!.toPlainText(),
+      _selection.contextText,
+    );
+  });
+
+  testWidgets('changing target requests once and collapses previous details', (
+    tester,
+  ) async {
+    final service = _RecordingTranslationService(includeLexicalDetails: true);
+    await _pumpTranslateSheet(tester, selection: _selection, service: service);
+    await tester.tap(find.text('Meaning & alternatives'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('translation-target-language')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Deutsch').hitTestable().last);
+    await tester.pumpAndSettle();
+    expect(service.calls, 2);
+    expect(service.requests.last.targetLanguage, 'de');
+    expect(service.requests.last.sourceLanguage, 'auto');
+    expect(service.requests.last.selection.text, _selection.selectedText);
+    expect(find.text('Lexical explanation'), findsNothing);
+    expect(find.text('Auto: English'), findsOneWidget);
+    expect(find.text('Deutsch'), findsOneWidget);
+  });
+
+  testWidgets('no empty details control is shown', (tester) async {
+    await _pumpTranslateSheet(tester, selection: _selection);
+    expect(find.byType(ExpansionTile), findsNothing);
+  });
+
+  for (final locale in ReadflexSupportedLocales.locales) {
+    testWidgets('translation surface and action are localized: $locale', (
+      tester,
+    ) async {
+      await _pumpTranslateSheet(
+        tester,
+        selection: _selection,
+        service: const _FakeTranslationService(includeLexicalDetails: true),
+        locale: locale,
+      );
+      final context = tester.element(find.byType(TranslateSheet));
+      final l10n = context.l10n;
+      expect(l10n.localeName, locale.toString());
+      expect(find.text(l10n.translationTitle), findsOneWidget);
+      expect(find.text(l10n.translationDetails), findsOneWidget);
+      expect(
+        find.text(l10n.translationAutoDetectedSource('English')),
+        findsOne,
+      );
+      final sheet = tester.widget<TranslateSheet>(find.byType(TranslateSheet));
+      final action = TranslateAction(
+        translationService: sheet.translationService,
+        preferencesService: sheet.preferencesService,
+      );
+      expect(action.labelFor(context), l10n.translationAction);
+      expect(action.icon, AppIcons.translate);
+      expect(action.icon, isNot(AppIcons.language));
+      await tester.tap(find.text(l10n.translationDetails));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.translationAlternatives), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('selecting the current target does not translate again', (
+    tester,
+  ) async {
+    final service = _RecordingTranslationService();
+    await _pumpTranslateSheet(tester, selection: _selection, service: service);
+    await tester.tap(find.byKey(const ValueKey('translation-target-language')));
+    await tester.pumpAndSettle();
+    final option = find.widgetWithText(MenuItemButton, 'Русский');
+    await tester.ensureVisible(option);
+    await tester.tap(option);
+    await tester.pumpAndSettle();
+    expect(service.calls, 1);
+  });
+
+  testWidgets('LTR source and result keep their direction in an Arabic UI', (
+    tester,
+  ) async {
+    await _pumpTranslateSheet(
+      tester,
+      selection: _selection,
+      locale: const Locale('ar'),
+      service: const _FakeTranslationService(includeLexicalDetails: true),
+    );
+    expect(_previewText(tester).textDirection, TextDirection.ltr);
+    _expectSourceQuote(tester, _selectedFragmentFinder);
+    _expectSourceQuote(tester, _previewFinder);
+    for (final key in [
+      'translation-primary-result',
+      'translation-sentence-result',
+    ]) {
+      expect(
+        tester.widget<SelectableText>(find.byKey(ValueKey(key))).textDirection,
+        TextDirection.ltr,
+      );
+    }
+  });
+
+  testWidgets('Arabic source keeps its direction in an English UI', (
+    tester,
+  ) async {
+    await _pumpTranslateSheet(
+      tester,
+      selection: const TextSelectionContext(
+        selectedText: 'الطاقة',
+        contextText: 'توفر هذه البطارية الطاقة للأجهزة.',
+        markedContextText: 'توفر هذه البطارية [[الطاقة]] للأجهزة.',
+        sourceId: 'source-1',
+        sourceType: SourceType.article,
+        sourceLanguageHint: 'ar',
+      ),
+    );
+    expect(_previewText(tester).textDirection, TextDirection.rtl);
+    _expectSourceQuote(
+      tester,
+      _selectedFragmentFinder,
+      direction: TextDirection.rtl,
+    );
+    _expectSourceQuote(tester, _previewFinder, direction: TextDirection.rtl);
+    expect(
+      _previewText(tester).textSpan!.toPlainText(),
+      'توفر هذه البطارية الطاقة للأجهزة.',
+    );
   });
 
   testWidgets('does not render raw service failure details', (tester) async {
@@ -210,6 +565,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('credential leaked'), findsNothing);
+    _expectSourceQuote(tester, _previewFinder);
   });
 }
 
@@ -217,19 +573,30 @@ Future<void> _pumpTranslateSheet(
   WidgetTester tester, {
   required TextSelectionContext selection,
   ContextualTranslationService service = const _FakeTranslationService(),
+  TextScaler textScaler = TextScaler.noScaling,
+  Locale locale = const Locale('en'),
+  Brightness brightness = Brightness.light,
 }) async {
   final preferences = await PreferencesService.create(
-    supportedCodes: const ['en', 'ru'],
+    supportedCodes: ReadflexSupportedLocales.codes,
   );
+  addTearDown(preferences.dispose);
   await preferences.update(
     (prefs) => prefs.copyWith(translationTargetLanguageCode: 'ru'),
   );
 
   await tester.pumpWidget(
     MaterialApp(
+      locale: locale,
       supportedLocales: ReadflexSupportedLocales.locales,
       localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
-      theme: AppTheme.light(),
+      theme: brightness == Brightness.light
+          ? AppTheme.light()
+          : AppTheme.dark(),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+        child: child!,
+      ),
       home: Scaffold(
         body: TranslateSheet(
           selection: selection,
@@ -244,6 +611,46 @@ Future<void> _pumpTranslateSheet(
 
 Finder get _previewFinder =>
     find.byKey(const ValueKey('translation-selection-preview-text'));
+
+Finder get _selectedFragmentFinder =>
+    find.byKey(const ValueKey('translation-selected-fragment'));
+
+Finder get _quoteSurfaceFinder => find.byWidgetPredicate(
+  (widget) =>
+      widget is Container &&
+      widget.decoration is BoxDecoration &&
+      (widget.decoration! as BoxDecoration).border is BorderDirectional,
+);
+
+void _expectSourceQuote(
+  WidgetTester tester,
+  Finder text, {
+  TextDirection direction = TextDirection.ltr,
+}) {
+  final surface = find.ancestor(of: text, matching: _quoteSurfaceFinder);
+  expect(surface, findsOneWidget);
+  final container = tester.widget<Container>(surface);
+  final decoration = container.decoration! as BoxDecoration;
+  final border = decoration.border! as BorderDirectional;
+  final actualDirection = Directionality.of(tester.element(surface));
+  expect(actualDirection, direction);
+  final insets = border.dimensions.resolve(actualDirection);
+  final isRtl = direction == TextDirection.rtl;
+  expect(decoration.color, isNull);
+  expect((isRtl ? insets.right : insets.left), 2);
+  expect((isRtl ? insets.left : insets.right), 0);
+  expect(border.end.style, BorderStyle.none);
+  expect(border.top.style, BorderStyle.none);
+  expect(border.bottom.style, BorderStyle.none);
+
+  final textRect = tester.getRect(text);
+  final quoteRect = tester.getRect(surface);
+  final inset = isRtl
+      ? quoteRect.right - textRect.right
+      : textRect.left - quoteRect.left;
+  expect(inset, closeTo(AppSpacing.md + 2, 0.01));
+  expect(quoteRect.height, closeTo(textRect.height + 2 * AppSpacing.xs, 0.01));
+}
 
 Text _previewText(WidgetTester tester) => tester.widget<Text>(_previewFinder);
 
@@ -304,10 +711,12 @@ class _FakeTranslationService implements ContextualTranslationService {
   const _FakeTranslationService({
     this.includeLexicalDetails = false,
     this.alternativeCount = 1,
+    this.primary,
   });
 
   final bool includeLexicalDetails;
   final int alternativeCount;
+  final String? primary;
 
   @override
   Future<ContextualTranslationResult> translate(
@@ -326,11 +735,13 @@ class _FakeTranslationService implements ContextualTranslationService {
           ? const ContextualTranslationAnalysis(lemma: 'power')
           : null,
       translation: ContextualTranslationText(
-        contextualTranslation: isTextTranslation
-            ? 'Запуски в наши дни в основном произвольны.'
-            : includeLexicalDetails
-            ? 'питание'
-            : 'сила',
+        contextualTranslation:
+            primary ??
+            (isTextTranslation
+                ? 'Запуски в наши дни в основном произвольны.'
+                : includeLexicalDetails
+                ? 'питание'
+                : 'сила'),
         sentenceTranslation: includeLexicalDetails
             ? 'Этот аккумулятор обеспечивает аварийное питание.'
             : null,
@@ -364,6 +775,48 @@ class _FailingTranslationService implements ContextualTranslationService {
       'internal provider credential leaked',
       statusCode: 500,
     );
+  }
+
+  @override
+  void dispose() {}
+}
+
+class _RecordingTranslationService extends _FakeTranslationService {
+  _RecordingTranslationService({super.includeLexicalDetails});
+
+  var calls = 0;
+  final requests = <ContextualTranslationRequest>[];
+
+  @override
+  Future<ContextualTranslationResult> translate(
+    ContextualTranslationRequest request, {
+    bool allowOfflineModelDownload = false,
+  }) {
+    calls++;
+    requests.add(request);
+    return super.translate(
+      request,
+      allowOfflineModelDownload: allowOfflineModelDownload,
+    );
+  }
+}
+
+class _SourceRequiredService implements ContextualTranslationService {
+  final sources = <String>[];
+
+  @override
+  Future<ContextualTranslationResult> translate(
+    ContextualTranslationRequest request, {
+    bool allowOfflineModelDownload = false,
+  }) async {
+    sources.add(request.sourceLanguage);
+    if (request.sourceLanguage == 'auto') {
+      throw const ContextualTranslationException(
+        ContextualTranslationFailureReason.sourceLanguageRequired,
+        'Source required',
+      );
+    }
+    return const _FakeTranslationService().translate(request);
   }
 
   @override

@@ -516,7 +516,7 @@ class ReaderSelection {
   /// Legacy optional scroll position.
   final double? scrollOffset;
 
-  /// Existing highlights strictly contained inside this selection.
+  /// Saved highlights fully contained in the selection, including equal ranges.
   final List<String> containedHighlightIds;
 
   factory ReaderSelection.fromMap(Map<String, dynamic> map) {

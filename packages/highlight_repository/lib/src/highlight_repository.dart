@@ -91,33 +91,65 @@ class HighlightRepository {
     List<String> replaceHighlightIds = const [],
   }) async {
     try {
-      final highlight = Highlight(
-        id: _uuid.v4(),
-        sourceId: sourceId,
-        sourceType: sourceType,
-        text: text,
-        note: note,
-        cfiRange: cfiRange,
-        pageNumber: pageNumber,
-        scrollOffset: scrollOffset,
-        progress: progress,
-        chapterTitle: chapterTitle,
-        color: color,
-        createdAt: DateTime.now(),
-      );
-      await _db.transaction(() async {
-        if (replaceHighlightIds.isNotEmpty) {
-          final replaceIds = replaceHighlightIds.toSet().toList();
-          final sourceScopedIds = [
-            for (final row in await _dao.highlightsByIds(replaceIds))
-              if (row.sourceId == sourceId) row.id,
-          ];
-          await _db.reviewItemsDao.deleteItemsByIds(sourceScopedIds);
-          await _dao.deleteHighlightsByIds(sourceScopedIds);
+      return await _db.transaction(() async {
+        final candidates = replaceHighlightIds.isEmpty
+            ? <HighlightsTableData>[]
+            : (await _dao.highlightsByIds(replaceHighlightIds.toSet().toList()))
+                  .where(
+                    (row) =>
+                        row.sourceId == sourceId &&
+                        row.sourceType == sourceType.name &&
+                        row.kind == HighlightKind.text.name,
+                  )
+                  .toList();
+        final sameRange = cfiRange == null || cfiRange.isEmpty
+            ? null
+            : candidates
+                  .where(
+                    (row) =>
+                        row.cfiRange == cfiRange && row.highlightText == text,
+                  )
+                  .firstOrNull;
+        final removedIds = [
+          for (final row in candidates)
+            if (row.id != sameRange?.id) row.id,
+        ];
+        await _db.reviewItemsDao.deleteItemsByIds(removedIds);
+        await _dao.deleteHighlightsByIds(removedIds);
+
+        // Re-selecting the exact anchor changes its color, not its identity
+        // or review history. Only fully absorbed, different ranges are replaced.
+        if (sameRange != null) {
+          await _dao.updateHighlight(
+            HighlightsTableCompanion(
+              id: Value(sameRange.id),
+              color: Value(color.name),
+              note: note == null ? const Value.absent() : Value(note),
+            ),
+          );
+          return sameRange.toDomainModel().copyWith(
+            color: color,
+            note: note ?? sameRange.note,
+          );
         }
+
+        final highlight = Highlight(
+          id: _uuid.v4(),
+          sourceId: sourceId,
+          sourceType: sourceType,
+          text: text,
+          note: note,
+          cfiRange: cfiRange,
+          pageNumber: pageNumber,
+          scrollOffset: scrollOffset,
+          progress: progress,
+          chapterTitle: chapterTitle,
+          color: color,
+          createdAt: DateTime.now(),
+        );
         await _dao.insertHighlight(highlight.toStorageModel());
+        return highlight;
       });
-      return highlight;
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }

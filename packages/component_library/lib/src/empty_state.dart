@@ -14,12 +14,14 @@ class EmptyState extends StatelessWidget {
     required this.message,
     this.icon,
     this.subtitle,
+    this.action,
     super.key,
   });
 
   final String message;
   final IconData? icon;
   final String? subtitle;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +47,7 @@ class EmptyState extends StatelessWidget {
               ),
             ),
           if (icon != null) const SizedBox(height: AppSpacing.md),
-          Text(message, style: text.titleMedium),
+          Text(message, style: text.titleMedium, textAlign: TextAlign.center),
           if (subtitle != null) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(
@@ -53,6 +55,10 @@ class EmptyState extends StatelessWidget {
               style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
+          ],
+          if (action != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            action!,
           ],
         ],
       ),

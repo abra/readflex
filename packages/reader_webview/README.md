@@ -75,6 +75,35 @@ user most recently selected in instead of an older range from a neighboring
 page. The live range is preferred; the snapshot remains available if WebKit
 collapses the native selection while focus moves to the Flutter action popup.
 
+Selecting inside or across a saved text highlight never opens its edit menu or
+clears the native range. Only an ordinary tap without an active text selection
+opens the saved-highlight editor. Books and articles report fully contained
+highlight IDs (including equal ranges) using DOM boundaries, not rectangle hit
+tests; partial intersections and adjacent highlights are excluded. Articles
+reuse their rendered ranges. No highlight is deleted by selecting, previewing,
+translating or cancelling; replacement occurs only on explicit Highlight save.
+Browser tests exercise both touch event paths, both book pagination axes,
+forward/backward range changes, inline nodes, repeated occurrences and tap editing.
+
+Book text-action context is extracted by `readflex_selection_context.js` from
+the actual DOM range. `Intl.Segmenter` finds the containing sentence (or the
+sentences touched by a larger selection) within the nearest text block, across
+inline tags. Marked and plain context use the same source text and preserve
+the selected occurrence, punctuation and word adjacency. Publisher formatting
+whitespace is collapsed before segmentation; source line wraps are not treated
+as sentence boundaries. Extraction does not mutate DOM, selection handles or
+CFI anchors, and does not read layout metrics.
+
+Surrounding collection is capped at 2048 UTF-16 code units and 256 traversal
+steps per side; selections above 4096 units bypass sentence segmentation.
+It starts at the selected range, not the beginning of a chapter. Cross-block
+selections, unavailable `Intl.Segmenter`, or sentence boundaries outside the
+budget fall back to selected text only, never an arbitrarily clipped prefix.
+Exact and normalized selections reuse context when their boundaries agree.
+JS tests cover generated repeated-word occurrences and multilingual boundaries;
+Chromium/WebKit tests cover markup invariance, element offsets, CFI round trips,
+DOM/selection preservation and bounded work on very large blocks.
+
 For reflowable books, a touch gesture that starts or acquires a DOM selection
 belongs to selection until release/cancel, even if the range briefly collapses.
 The paginator reads selection from its own iframe, skips ordinary swipe/snap
@@ -181,6 +210,17 @@ not the operating system's selection handles or native tint rendering.
 Desktop Playwright WebKit with feature detection disabled is not an actual old
 iOS device; neither browser tests nor fake platform callbacks replace native
 device smoke tests.
+
+The root `make test-device DEVICE=<id>` suite also exercises actual native
+WebViews through the production router, local reader server, and isolated
+repositories. It verifies expanded book/article selections reaching Translate,
+Define fallback, clipboard, menu dismissal, persisted highlight geometry after
+reopening, and synthetic lifecycle callbacks. `debugController` and
+`debugIsReady` on both WebView states are read-only `@visibleForTesting` accessors
+for readiness and the existing JS bridge; they add no runtime polling or
+listeners. The suite sets DOM ranges, not native selection handles, and its
+lifecycle events do not background the actual OS application. See the root
+[`test/ui/README.md`](../../test/ui/README.md) for device artifacts and gaps.
 
 Selection device smoke checks (iOS and Android): open a reflowable book in
 `Vertical`, long-press a word, drag either handle to the top/bottom edge and

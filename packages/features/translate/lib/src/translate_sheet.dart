@@ -1,14 +1,18 @@
 import 'package:component_library/component_library.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:shared/shared.dart';
 
-import 'translation_selection_mode.dart';
-import 'translation_selection_preview.dart';
 import 'translate_cubit.dart';
+import 'translation_details.dart';
+import 'translation_language_direction.dart';
+import 'translation_selection_preview.dart';
+import 'translation_source_quote.dart';
+import 'translation_text_direction.dart';
 
 Future<void> showTranslateSheet(
   BuildContext context, {
@@ -45,28 +49,49 @@ class TranslateSheet extends StatelessWidget {
         translationService: translationService,
         preferencesService: preferencesService,
       )..translate(selection),
-      child: _TranslateSheetView(selection: selection),
+      child: _TranslateSheetView(
+        selection: selection,
+        onCopy: (text) => Clipboard.setData(ClipboardData(text: text)),
+      ),
     );
   }
 }
 
-class _TranslateSheetView extends StatelessWidget {
-  const _TranslateSheetView({required this.selection});
+class _TranslateSheetView extends StatefulWidget {
+  const _TranslateSheetView({required this.selection, required this.onCopy});
 
   final TextSelectionContext selection;
+  final Future<void> Function(String) onCopy;
+
+  @override
+  State<_TranslateSheetView> createState() => _TranslateSheetViewState();
+}
+
+class _TranslateSheetViewState extends State<_TranslateSheetView> {
+  final _sourceMenu = MenuController();
+  final _sourcePickerKey = GlobalKey();
+
+  Future<void> _chooseSourceLanguage() async {
+    final pickerContext = _sourcePickerKey.currentContext;
+    if (pickerContext == null) return;
+    await Scrollable.ensureVisible(pickerContext);
+    if (!mounted || context.read<TranslateCubit>().state.isBusy) return;
+    _sourceMenu.open();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final strings = TranslateSheetStrings.of(context);
-    final isTextTranslation =
-        translationModeForSelection(selection) == selectedTextTranslationMode;
+    final selection = widget.selection;
     final maxBodyHeight = MediaQuery.sizeOf(context).height * 0.68;
     return ActionBottomSheetLayout(
-      title: strings.title,
+      title: context.l10n.translationTitle,
       headerSpacing: AppSpacing.sm,
-      bodyPadding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xl,
-        vertical: AppSpacing.lg,
+      constrainBody: true,
+      bodyPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        0,
+        AppSpacing.xl,
+        AppSpacing.lg,
       ),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxBodyHeight),
@@ -78,48 +103,33 @@ class _TranslateSheetView extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TranslationSelectionPreview(
+                  TranslationLanguageDirection(
+                    sourceLanguageCode: state.sourceLanguageCode,
+                    targetLanguageCode: state.targetLanguageCode,
+                    detectedSourceLanguage:
+                        state.result?.detectedSourceLanguage,
+                    enabled: !state.isBusy,
+                    sourceMenu: _sourceMenu,
+                    sourcePickerKey: _sourcePickerKey,
+                    onSourceChanged: (value) =>
+                        cubit.setSourceLanguage(selection, value),
+                    onTargetChanged: (value) =>
+                        cubit.setTargetLanguage(selection, value),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  if (state.status != TranslateSheetStatus.success) ...[
+                    TranslationSelectionPreview(
+                      selection: selection,
+                      showContext: false,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+                  _TranslateBody(
                     selection: selection,
-                    showContext: !isTextTranslation,
+                    state: state,
+                    onChooseSourceLanguage: _chooseSourceLanguage,
+                    onCopy: widget.onCopy,
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _LanguageDropdown(
-                          semanticsLabel: strings.sourceLabel,
-                          value: state.sourceLanguageCode,
-                          items: [
-                            _LanguageOption(
-                              code: autoSourceLanguageCode,
-                              name: strings.autoSource,
-                            ),
-                            ..._supportedLanguageOptions,
-                          ],
-                          enabled: !state.isBusy,
-                          onChanged: (value) {
-                            if (value == null) return;
-                            cubit.setSourceLanguage(selection, value);
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: _LanguageDropdown(
-                          semanticsLabel: strings.targetLabel,
-                          value: state.targetLanguageCode,
-                          items: _supportedLanguageOptions,
-                          enabled: !state.isBusy,
-                          onChanged: (value) {
-                            if (value == null) return;
-                            cubit.setTargetLanguage(selection, value);
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  _TranslateBody(selection: selection, state: state),
                 ],
               );
             },
@@ -131,47 +141,55 @@ class _TranslateSheetView extends StatelessWidget {
 }
 
 class _TranslateBody extends StatelessWidget {
-  const _TranslateBody({required this.selection, required this.state});
+  const _TranslateBody({
+    required this.selection,
+    required this.state,
+    required this.onChooseSourceLanguage,
+    required this.onCopy,
+  });
 
   final TextSelectionContext selection;
   final TranslateSheetState state;
+  final VoidCallback onChooseSourceLanguage;
+  final Future<void> Function(String) onCopy;
 
   @override
   Widget build(BuildContext context) {
-    final strings = TranslateSheetStrings.of(context);
+    final l10n = context.l10n;
     final cubit = context.read<TranslateCubit>();
     return switch (state.status) {
       TranslateSheetStatus.initial ||
       TranslateSheetStatus.loading => const _LoadingTranslation(),
       TranslateSheetStatus.downloadingOfflineModel => _MessageWithAction(
-        title: strings.downloadingModels,
-        body: strings.downloadingModelsBody,
+        title: l10n.translationDownloadingModels,
+        body: l10n.translationDownloadingModelsBody,
         loading: true,
       ),
       TranslateSheetStatus.success => _TranslationResultView(
         selection: selection,
         result: state.result!,
+        onCopy: onCopy,
       ),
       TranslateSheetStatus.sourceLanguageRequired => _MessageWithAction(
-        title: strings.sourceRequiredTitle,
-        body: strings.sourceRequiredBody,
-        actionLabel: strings.retry,
-        onPressed: () => cubit.translate(selection),
+        title: l10n.translationSourceRequiredTitle,
+        body: l10n.translationSourceRequiredBody,
+        actionLabel: l10n.translationSelectLanguage,
+        onPressed: onChooseSourceLanguage,
       ),
       TranslateSheetStatus.offlineModelRequired => _MessageWithAction(
-        title: strings.offlineModelTitle,
-        body: strings.offlineModelBody(
-          _languageName(state.failure?.sourceLanguage),
-          _languageName(state.failure?.targetLanguage),
+        title: l10n.translationOfflineModelTitle,
+        body: l10n.translationOfflineModelBody(
+          translationLanguageName(state.failure?.sourceLanguage) ?? '?',
+          translationLanguageName(state.failure?.targetLanguage) ?? '?',
         ),
-        actionLabel: strings.downloadModels,
+        actionLabel: l10n.translationDownloadModels,
         onPressed: () =>
             cubit.translate(selection, allowOfflineModelDownload: true),
       ),
       TranslateSheetStatus.failure => _MessageWithAction(
-        title: strings.failureTitle,
-        body: strings.failureBody,
-        actionLabel: strings.retry,
+        title: l10n.translationFailureTitle,
+        body: l10n.translationFailureBody,
+        actionLabel: l10n.commonRetry,
         onPressed: () => cubit.translate(selection),
       ),
     };
@@ -179,30 +197,38 @@ class _TranslateBody extends StatelessWidget {
 }
 
 class _TranslationResultView extends StatelessWidget {
-  const _TranslationResultView({required this.selection, required this.result});
+  const _TranslationResultView({
+    required this.selection,
+    required this.result,
+    required this.onCopy,
+  });
 
   final TextSelectionContext selection;
   final ContextualTranslationResult result;
+  final Future<void> Function(String) onCopy;
 
   @override
   Widget build(BuildContext context) {
-    final strings = TranslateSheetStrings.of(context);
     final isTextTranslation = result.mode == selectedTextTranslationMode;
-    final usesLexicalHeadline =
-        !isTextTranslation &&
-        !_selectionWhitespacePattern.hasMatch(
-          selection.effectiveSelectedText.trim(),
-        );
     final primary = _firstNonEmptyText([
       result.translation.contextualTranslation,
       result.translation.translatedFragment,
       result.translation.baseTranslation,
       result.translation.sentenceTranslation,
     ]);
+    final selectedText = selection.effectiveSelectedText.trim();
+    final usesLexicalTitle =
+        !isTextTranslation &&
+        !_selectionWhitespacePattern.hasMatch(selectedText) &&
+        primary != null &&
+        !_selectionWhitespacePattern.hasMatch(primary);
     final sentenceTranslation = _nonEmptyText(
       result.translation.sentenceTranslation,
     );
-    final lemma = _nonEmptyText(result.analysis?.lemma);
+    final resultLemma = _nonEmptyText(result.analysis?.lemma);
+    final lemma = resultLemma?.toLowerCase() == selectedText.toLowerCase()
+        ? null
+        : resultLemma;
     final explanation = _nonEmptyText(result.explanation);
     final alternatives = result.alternatives
         .map((alternative) => alternative.translation.trim())
@@ -211,73 +237,93 @@ class _TranslationResultView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                _directionLabel(result, strings),
-                style: context.text.labelMedium.copyWith(
-                  color: context.colors.onSurfaceVariant,
-                ),
+        if (!isTextTranslation) ...[
+          TranslationSourceQuote(
+            textDirection: translationTextDirection(selectedText),
+            child: Text(
+              selectedText,
+              key: const ValueKey('translation-selected-fragment'),
+              style: context.text.bodyMedium.copyWith(
+                color: context.colors.onSurface,
               ),
             ),
-            if (result.reliability == ContextualTranslationReliability.offline)
-              _OfflineBadge(label: strings.offlineBadge),
-          ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+        ],
+        if (result.reliability == ContextualTranslationReliability.offline) ...[
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: _OfflineBadge(label: context.l10n.translationOffline),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+        if (primary != null)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.sm),
+                  child: SelectableText(
+                    primary,
+                    key: const ValueKey('translation-primary-result'),
+                    textDirection: translationTextDirection(primary),
+                    style: usesLexicalTitle
+                        ? context.text.titleLarge
+                        : context.text.bodyLarge,
+                  ),
+                ),
+              ),
+              AppCopyButton(
+                key: ValueKey(primary),
+                onCopy: () => onCopy(primary),
+                copyLabel: context.l10n.commonCopy,
+                copiedLabel: context.l10n.commonCopied,
+                failureLabel: context.l10n.commonCopyFailed,
+              ),
+            ],
+          ),
+        const SizedBox(height: AppSpacing.md),
+        Divider(height: 1, color: context.colors.outlineVariant),
+        const SizedBox(height: AppSpacing.md),
+        Semantics(
+          header: true,
+          child: Text(
+            isTextTranslation
+                ? context.l10n.translationOriginal
+                : context.l10n.translationSentence,
+            style: context.text.labelMedium.copyWith(
+              color: context.colors.onSurfaceVariant,
+            ),
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        if (primary != null)
-          SelectableText(
-            primary,
-            key: const ValueKey('translation-primary-result'),
-            style: usesLexicalHeadline
-                ? context.text.headlineSmall
-                : context.text.bodyLarge,
-          ),
+        TranslationSelectionPreview(
+          selection: selection,
+          showContext: !isTextTranslation,
+        ),
         if (!isTextTranslation &&
             sentenceTranslation != null &&
             sentenceTranslation != primary) ...[
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            strings.sentenceTranslation,
-            style: context.text.labelMedium.copyWith(
-              color: context.colors.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: AppSpacing.sm),
           SelectableText(
             sentenceTranslation,
             key: const ValueKey('translation-sentence-result'),
+            textDirection: translationTextDirection(sentenceTranslation),
             style: context.text.bodyMedium,
           ),
         ],
-        if (!isTextTranslation && lemma != null) ...[
+        if (!isTextTranslation &&
+            (lemma != null ||
+                explanation != null ||
+                alternatives.isNotEmpty)) ...[
           const SizedBox(height: AppSpacing.md),
-          Text(
-            lemma,
-            style: context.text.bodyMedium.copyWith(
-              color: context.colors.onSurfaceVariant,
-            ),
+          TranslationDetails(
+            key: ValueKey(result.requestId),
+            lemma: lemma,
+            explanation: explanation,
+            alternatives: alternatives,
           ),
-        ],
-        if (!isTextTranslation && explanation != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          Text(explanation, style: context.text.bodyMedium),
-        ],
-        if (!isTextTranslation && alternatives.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            strings.alternatives,
-            style: context.text.labelMedium.copyWith(
-              color: context.colors.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          for (final alternative in alternatives)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-              child: Text(alternative, style: context.text.bodyMedium),
-            ),
         ],
       ],
     );
@@ -357,63 +403,6 @@ class _MessageWithAction extends StatelessWidget {
   }
 }
 
-class _LanguageDropdown extends StatelessWidget {
-  const _LanguageDropdown({
-    required this.semanticsLabel,
-    required this.value,
-    required this.items,
-    required this.enabled,
-    required this.onChanged,
-  });
-
-  final String semanticsLabel;
-  final String value;
-  final List<_LanguageOption> items;
-  final bool enabled;
-  final ValueChanged<String?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      borderSide: BorderSide.none,
-    );
-    return Semantics(
-      label: semanticsLabel,
-      button: true,
-      child: SizedBox(
-        height: AppSizes.buttonHeight,
-        child: DropdownButtonFormField<String>(
-          initialValue: value,
-          isExpanded: true,
-          icon: const Icon(AppIcons.chevronDown, size: AppIconSize.xs),
-          decoration: InputDecoration(
-            isDense: true,
-            filled: true,
-            fillColor: context.colors.surfaceContainerHighest,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
-            ),
-            border: border,
-            enabledBorder: border,
-            focusedBorder: border,
-            disabledBorder: border,
-          ),
-          items: [
-            for (final item in items)
-              DropdownMenuItem<String>(
-                value: item.code,
-                child: Text(item.name, overflow: TextOverflow.ellipsis),
-              ),
-          ],
-          onChanged: enabled ? onChanged : null,
-        ),
-      ),
-    );
-  }
-}
-
 class _OfflineBadge extends StatelessWidget {
   const _OfflineBadge({required this.label});
 
@@ -434,127 +423,5 @@ class _OfflineBadge extends StatelessWidget {
         child: Text(label, style: context.text.labelSmall),
       ),
     );
-  }
-}
-
-String _directionLabel(
-  ContextualTranslationResult result,
-  TranslateSheetStrings strings,
-) {
-  final source =
-      _languageName(result.detectedSourceLanguage) ?? strings.autoSource;
-  final target = _languageName(result.targetLanguage) ?? '';
-  return target.isEmpty ? source : '$source -> $target';
-}
-
-String? _languageName(String? code) {
-  if (code == null || code.isEmpty) return null;
-  final normalized = code.toLowerCase().split(RegExp(r'[-_]')).first;
-  for (final option in _supportedLanguageOptions) {
-    if (option.code == normalized) return option.name;
-  }
-  return normalized.toUpperCase();
-}
-
-class _LanguageOption {
-  const _LanguageOption({required this.code, required this.name});
-
-  final String code;
-  final String name;
-}
-
-final _supportedLanguageOptions = ReadflexSupportedLocales.languages
-    .map(
-      (language) => _LanguageOption(code: language.code, name: language.name),
-    )
-    .toList(growable: false);
-
-class TranslateSheetStrings {
-  const TranslateSheetStrings({
-    required this.title,
-    required this.sourceLabel,
-    required this.targetLabel,
-    required this.autoSource,
-    required this.offlineBadge,
-    required this.sentenceTranslation,
-    required this.alternatives,
-    required this.sourceRequiredTitle,
-    required this.sourceRequiredBody,
-    required this.offlineModelTitle,
-    required this.offlineModelBody,
-    required this.downloadModels,
-    required this.downloadingModels,
-    required this.downloadingModelsBody,
-    required this.failureTitle,
-    required this.failureBody,
-    required this.retry,
-  });
-
-  final String title;
-  final String sourceLabel;
-  final String targetLabel;
-  final String autoSource;
-  final String offlineBadge;
-  final String sentenceTranslation;
-  final String alternatives;
-  final String sourceRequiredTitle;
-  final String sourceRequiredBody;
-  final String offlineModelTitle;
-  final String Function(String? source, String? target) offlineModelBody;
-  final String downloadModels;
-  final String downloadingModels;
-  final String downloadingModelsBody;
-  final String failureTitle;
-  final String failureBody;
-  final String retry;
-
-  static TranslateSheetStrings of(BuildContext context) {
-    final code = Localizations.localeOf(context).languageCode;
-    return switch (code) {
-      'ru' => TranslateSheetStrings(
-        title: 'Перевод',
-        sourceLabel: 'С языка',
-        targetLabel: 'На язык',
-        autoSource: 'Авто',
-        offlineBadge: 'Offline',
-        sentenceTranslation: 'Предложение',
-        alternatives: 'Варианты',
-        sourceRequiredTitle: 'Нужно выбрать исходный язык',
-        sourceRequiredBody:
-            'Без сети исходный язык нельзя определить автоматически.',
-        offlineModelTitle: 'Нужны offline-модели',
-        offlineModelBody: (source, target) =>
-            'Скачай модели для пары ${source ?? '?'} -> ${target ?? '?'}.',
-        downloadModels: 'Скачать модели',
-        downloadingModels: 'Скачиваем модели',
-        downloadingModelsBody:
-            'После загрузки перевод будет выполнен на устройстве.',
-        failureTitle: 'Не удалось перевести',
-        failureBody: 'Проверь сеть или попробуй позже.',
-        retry: context.l10n.commonRetry,
-      ),
-      _ => TranslateSheetStrings(
-        title: 'Translation',
-        sourceLabel: 'From',
-        targetLabel: 'To',
-        autoSource: 'Auto',
-        offlineBadge: 'Offline',
-        sentenceTranslation: 'Sentence',
-        alternatives: 'Alternatives',
-        sourceRequiredTitle: 'Choose the source language',
-        sourceRequiredBody:
-            'Offline translation needs a concrete source language.',
-        offlineModelTitle: 'Offline models required',
-        offlineModelBody: (source, target) =>
-            'Download models for ${source ?? '?'} -> ${target ?? '?'}.',
-        downloadModels: 'Download models',
-        downloadingModels: 'Downloading models',
-        downloadingModelsBody:
-            'Translation will run on device after the models are ready.',
-        failureTitle: 'Translation failed',
-        failureBody: 'Check the network connection or try again later.',
-        retry: context.l10n.commonRetry,
-      ),
-    };
   }
 }

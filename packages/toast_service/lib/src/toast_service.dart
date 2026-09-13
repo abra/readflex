@@ -5,8 +5,8 @@ import 'package:toastification/toastification.dart';
 enum NotificationType { success, error }
 
 /// Shows a top-anchored toast that slides down from the status bar and
-/// auto-dismisses after 3 seconds. Type-driven coloring/icon comes from
-/// `ToastificationStyle.flat` so a feature package only chooses success
+/// auto-dismisses after 1 second. Type-driven coloring/icon comes from
+/// `ToastificationStyle.fillColored` so a feature package only chooses success
 /// vs error and never touches presentation.
 ///
 /// Corner radius matches `AppRadius.lg` (the rounded-card scale used in
@@ -38,7 +38,7 @@ void showToast(
     title: messageSuffix == null
         ? Text(message)
         : _SplitToastTitle(message: message, suffix: messageSuffix),
-    autoCloseDuration: const Duration(seconds: 3),
+    autoCloseDuration: const Duration(seconds: 1),
     alignment: Alignment.topCenter,
     borderRadius: BorderRadius.circular(AppRadius.lg),
     margin: EdgeInsets.zero,

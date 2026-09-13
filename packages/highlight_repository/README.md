@@ -26,6 +26,14 @@ Text highlights are anchored by `cfiRange` (via foliate-js). Comic/image-page
 highlights are anchored by a zero-based `pageIndex` plus normalized rectangle
 coordinates. Both kinds share optional `note` and `HighlightColor`.
 
+`addHighlight` accepts `replaceHighlightIds` from the reader's DOM containment
+check. Saving a wider selection replaces fully absorbed text highlights and
+their review rows in one transaction, scoped to the same source and source type.
+Partial overlaps are not replacement candidates. An equal anchor and text among
+those candidates updates the existing color instead of creating a duplicate;
+its ID, note (unless explicitly supplied), metadata and review state survive.
+Selecting or translating text alone never invokes this replacement path.
+
 Editors should use the field-specific methods: one SQL UPDATE, no read/modify/
 write of stale fields and no schema change. Patches preserve anchors, metadata,
 and independent edits; a missing row raises `StorageException` instead of

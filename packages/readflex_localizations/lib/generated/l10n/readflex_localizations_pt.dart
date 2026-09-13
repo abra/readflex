@@ -9,6 +9,91 @@ class ReadflexLocalizationsPt extends ReadflexLocalizations {
   ReadflexLocalizationsPt([String locale = 'pt']) : super(locale);
 
   @override
+  String get translationOriginal => 'Original';
+
+  @override
+  String get dictionaryInContext => 'Neste contexto';
+
+  @override
+  String get translationAction => 'Traduzir';
+
+  @override
+  String get translationTitle => 'Tradução';
+
+  @override
+  String get translationSourceLanguage => 'Idioma de origem';
+
+  @override
+  String get translationTargetLanguage => 'Idioma de destino';
+
+  @override
+  String get translationAutoSource => 'Automático';
+
+  @override
+  String translationAutoDetectedSource(String language) {
+    return 'Automático: $language';
+  }
+
+  @override
+  String get translationOffline => 'Sem conexão';
+
+  @override
+  String get translationSentence => 'Frase';
+
+  @override
+  String get translationDetails => 'Significado e alternativas';
+
+  @override
+  String get translationAlternatives => 'Alternativas';
+
+  @override
+  String get translationSourceRequiredTitle => 'Escolha o idioma de origem';
+
+  @override
+  String get translationSourceRequiredBody =>
+      'Não é possível detectar automaticamente o idioma de origem sem conexão.';
+
+  @override
+  String get translationSelectLanguage => 'Escolher idioma';
+
+  @override
+  String get translationOfflineModelTitle => 'Modelos offline necessários';
+
+  @override
+  String translationOfflineModelBody(String source, String target) {
+    return 'Baixe os modelos de idioma de $source e $target.';
+  }
+
+  @override
+  String get translationDownloadModels => 'Baixar modelos';
+
+  @override
+  String get translationDownloadingModels => 'Baixando modelos';
+
+  @override
+  String get translationDownloadingModelsBody =>
+      'A tradução será feita neste dispositivo após o download.';
+
+  @override
+  String get translationFailureTitle => 'Não foi possível traduzir';
+
+  @override
+  String get translationFailureBody =>
+      'Verifique a conexão de rede ou tente novamente mais tarde.';
+
+  @override
+  String get libraryResetFilters => 'Redefinir filtros';
+
+  @override
+  String get libraryClearCollectionFilter => 'Limpar filtro de coleção';
+
+  @override
+  String get commonCopied => 'Copiado';
+
+  @override
+  String get commonCopyFailed => 'Não foi possível copiar';
+
+  @override
   String get appSkip => 'Pular';
 
   @override

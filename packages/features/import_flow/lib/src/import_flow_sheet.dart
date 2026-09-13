@@ -82,12 +82,15 @@ class _ImportFlowSheet extends StatelessWidget {
         final isOffline = snapshot.data ?? this.isOffline;
         return BlocBuilder<ImportFlowCubit, ImportFlowState>(
           builder: (context, state) {
-            // Hard-pin all states to the same body height so the
-            // sheet never resizes between menu / uploading / done /
-            // failure. Action-heavy states control their own spacing so
-            // controls stay visually close to their related content.
+            // Keep steps stable, but give larger system text more room.
+            // Each step scrolls when the keyboard or viewport limits height.
             return SizedBox(
-              height: 280,
+              height:
+                  280 *
+                  (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(
+                    1.0,
+                    3.0,
+                  ),
               child: _ImportFlowStepSwitcher(
                 state: state,
                 child: KeyedSubtree(
@@ -298,10 +301,9 @@ class _MenuView extends StatelessWidget {
     final warning = context.appColors.warning;
     final l10n = context.l10n;
 
-    return Padding(
-      padding: _kStatusViewPadding,
-      child: Column(
-        mainAxisSize: MainAxisSize.max,
+    return _ImportFormLayout(
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BottomSheetHeader(title: l10n.importAddToLibraryTitle),
@@ -320,12 +322,11 @@ class _MenuView extends StatelessWidget {
             iconColor: isOffline ? warning : null,
             onTap: isOffline ? null : cubit.showArticleUrlEntry,
           ),
-          const Spacer(),
-          _PlainTextButton(
-            label: l10n.commonCancel,
-            onPressed: () => Navigator.of(context).pop(),
-          ),
         ],
+      ),
+      actions: _PlainTextButton(
+        label: l10n.commonCancel,
+        onPressed: () => Navigator.of(context).pop(),
       ),
     );
   }
@@ -612,9 +613,9 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
     final muted = colors.onSurface.withValues(alpha: 0.55);
     final l10n = context.l10n;
 
-    return Padding(
-      padding: _kStatusViewPadding,
-      child: Column(
+    return _ImportFormLayout(
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BottomSheetHeader(title: l10n.importSaveArticle),
@@ -642,25 +643,24 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
           ),
           const SizedBox(height: AppSpacing.md),
           _ArticleUrlHints(color: muted),
-          const Spacer(),
-          Row(
-            children: [
-              Expanded(
-                child: _PlainTextButton(
-                  label: l10n.commonBack,
-                  onPressed: cubit.backToMenu,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: FilledButton(
-                  onPressed: widget.isOffline || !widget.state.canSubmit
-                      ? null
-                      : cubit.submitArticleUrl,
-                  child: AppButtonLabel(l10n.commonSave),
-                ),
-              ),
-            ],
+        ],
+      ),
+      actions: Row(
+        children: [
+          Expanded(
+            child: _PlainTextButton(
+              label: l10n.commonBack,
+              onPressed: cubit.backToMenu,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: FilledButton(
+              onPressed: widget.isOffline || !widget.state.canSubmit
+                  ? null
+                  : cubit.submitArticleUrl,
+              child: AppButtonLabel(l10n.commonSave),
+            ),
           ),
         ],
       ),
@@ -677,30 +677,55 @@ class _PasteUrlButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
 
-    return SizedBox(
-      width: 52,
-      height: 48,
-      child: Padding(
-        padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
-        child: Align(
-          alignment: AlignmentDirectional.centerEnd,
-          child: Semantics(
-            label: context.l10n.importPasteUrl,
-            button: true,
-            child: GestureDetector(
-              key: const ValueKey('articleUrlPasteButton'),
-              behavior: HitTestBehavior.opaque,
-              onTap: onPressed,
-              child: SizedBox.square(
-                dimension: 40,
-                child: Center(
-                  child: Icon(
-                    AppIcons.paste,
-                    size: AppIconSize.sm,
-                    color: colors.primary,
-                  ),
+    return Semantics(
+      label: context.l10n.importPasteUrl,
+      button: true,
+      child: GestureDetector(
+        key: const ValueKey('articleUrlPasteButton'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed,
+        child: SizedBox(
+          width: 52,
+          height: 48,
+          child: Center(
+            child: Icon(
+              AppIcons.paste,
+              size: AppIconSize.sm,
+              color: colors.primary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Uses the available height without intrinsic layout or unbounded flex.
+class _ImportFormLayout extends StatelessWidget {
+  const _ImportFormLayout({required this.content, required this.actions});
+
+  final Widget content;
+  final Widget actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Padding(
+            padding: _kStatusViewPadding,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                content,
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.md),
+                  child: actions,
                 ),
-              ),
+              ],
             ),
           ),
         ),
@@ -935,7 +960,9 @@ class _StatusLayout extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(child: Center(child: content)),
+          Expanded(
+            child: Center(child: SingleChildScrollView(child: content)),
+          ),
           const SizedBox(height: AppSpacing.md),
           if (action case final action?)
             action

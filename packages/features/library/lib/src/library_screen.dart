@@ -460,6 +460,11 @@ class _LibraryViewState extends State<_LibraryView> {
                                     const LibraryRefreshRequested(),
                                   );
                                 },
+                                onResetFilters: () {
+                                  _searchController.clear();
+                                  _searchFocusNode.unfocus();
+                                  bloc.add(const LibraryFiltersReset());
+                                },
                               ),
                             ),
                           ),

@@ -294,6 +294,9 @@ Reader-specific UI state is split by responsibility:
 - `ReaderBloc` loads the source and persists reader position/highlight data.
 - `ReaderUiCubit` owns chrome, drawer, tap-zone, and search-highlight UI state.
 - `ReaderSearchCubit` owns in-reader search state and recent query callbacks.
+  Streamed results/progress are batched at 16ms intervals, with an immediate
+  terminal flush. Reset/replacement/close invalidate pending updates; renderer
+  failures become UI error state, including synchronous failures.
 - `ReaderSelectionCubit` owns active text selection payloads.
 - `ReaderAppearanceCubit` owns reader appearance preferences.
 - `ReaderBrightnessCubit` coordinates widget brightness, system brightness, and
@@ -470,6 +473,37 @@ make test
 `make verify` is the full local quality gate. It checks formatting without
 rewriting files, analyzes the root app and every active package, then runs all
 Dart, Flutter, and reader JavaScript tests.
+
+Root UI flows in `test/ui/` mount the production root and router with real
+repositories, isolated SQLite/preferences, and deterministic external services.
+The same test-only composition serves `integration_test/`; it never invokes
+production dependency composition or reads API keys. Native tests additionally
+start the actual loopback reader server and load the bundled HTML/JS assets.
+Views keep their normal bloc/cubit contracts; test fixtures do not introduce a
+second production dependency path.
+
+`make test-ui` runs these root flows and exact golden comparisons using bundled
+fonts and explicit light/dark, compact/large-text, landscape, and RTL/tablet profiles.
+`make update-goldens` is a separate, deliberate baseline update. Test fonts and
+committed PNG baselines are not application assets. `make test-device DEVICE=<id>`
+is opt-in and preserves the device's real viewport. It records screenshots under
+`.local/ui-device/`, but does not replace native handle, OS lifecycle, GPU,
+screen-reader, or live-backend checks. Coverage and limitations live in
+[`test/ui/README.md`](test/ui/README.md).
+
+`make coverage` runs the same suites with Dart VM line/branch instrumentation
+and creates a fresh `.local/coverage/run-*/` report. The collector unions hits
+from root and package tests, excludes generated/third-party code, and lists
+unmeasured owned files explicitly. `COVERAGE=1 make test-device DEVICE=<id>`
+collects native Dart line coverage after interaction tests. Combining reports
+requires matching hashes of Dart sources, tests, pubspecs, lockfile, and SDK pin.
+Native Swift/Kotlin and JS execution are not represented as Dart coverage.
+
+Performance regressions have structural tests in the normal suite: Library
+tile count stays bounded at 20,000 items and cached projections are reused;
+bursty reader search bounds emissions and published result entries without
+losing matches. `make test-performance` records workload timing separately in
+`.local/performance/`. Timings are diagnostic, not machine-independent CI limits.
 
 Browser regressions use pinned Playwright Chromium and WebKit against the real
 bundled reader assets. Run `make reader-browser-setup` once after checkout (or

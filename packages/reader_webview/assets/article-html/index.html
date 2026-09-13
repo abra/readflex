@@ -229,6 +229,7 @@
   <script type="module">
     import { articleContentFragment } from '../foliate-js/src/readflex_content_security.js'
     import { ArticleHighlighter } from '../foliate-js/src/readflex_article_highlighter.js'
+    import { rangeContainsRange } from '../foliate-js/src/readflex_range.js'
     (() => {
       const positionPrefix = 'readflex-html-position:'
       const centerHysteresisPx = 24
@@ -708,6 +709,12 @@
         if (!range || !selectedText) return null
         const textContext = selectionTextContext(range, selectedText)
         const cfi = encodePosition(selectionAnchor(range, selectedText))
+        const containedHighlightIds = []
+        for (const saved of renderedArticleHighlights.values()) {
+          if (rangeContainsRange(range, saved.range)) {
+            containedHighlightIds.push(saved.annotation.id)
+          }
+        }
         return {
           text: selectedText,
           normalizedText: selectedText,
@@ -719,7 +726,7 @@
           normalizedCfi: cfi,
           pos: selectionPosition(range),
           scrollOffset: window.scrollY,
-          containedHighlightIds: [],
+          containedHighlightIds,
           footnote: false,
         }
       }

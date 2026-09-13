@@ -73,6 +73,12 @@ class ArticleHtmlReaderWebView extends StatefulWidget {
 class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
     with ReaderWebViewLifecycleMixin<ArticleHtmlReaderWebView> {
   InAppWebViewController? _controller;
+
+  /// Device tests exercise the real JS bridge without adding runtime hooks.
+  @visibleForTesting
+  InAppWebViewController? get debugController => _controller;
+  @visibleForTesting
+  bool get debugIsReady => _isReady;
   bool _isReady = false;
   BookPosition? _lastPosition;
   FoliateStyle? _bootstrapStyle;

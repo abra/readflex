@@ -9,6 +9,92 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
   ReadflexLocalizationsFr([String locale = 'fr']) : super(locale);
 
   @override
+  String get translationOriginal => 'Original';
+
+  @override
+  String get dictionaryInContext => 'Dans ce contexte';
+
+  @override
+  String get translationAction => 'Traduire';
+
+  @override
+  String get translationTitle => 'Traduction';
+
+  @override
+  String get translationSourceLanguage => 'Langue source';
+
+  @override
+  String get translationTargetLanguage => 'Langue cible';
+
+  @override
+  String get translationAutoSource => 'Automatique';
+
+  @override
+  String translationAutoDetectedSource(String language) {
+    return 'Automatique : $language';
+  }
+
+  @override
+  String get translationOffline => 'Hors connexion';
+
+  @override
+  String get translationSentence => 'Phrase';
+
+  @override
+  String get translationDetails => 'Sens et variantes';
+
+  @override
+  String get translationAlternatives => 'Variantes';
+
+  @override
+  String get translationSourceRequiredTitle => 'Choisissez la langue source';
+
+  @override
+  String get translationSourceRequiredBody =>
+      'La langue source ne peut pas être détectée automatiquement hors connexion.';
+
+  @override
+  String get translationSelectLanguage => 'Choisir la langue';
+
+  @override
+  String get translationOfflineModelTitle =>
+      'Modèles hors connexion nécessaires';
+
+  @override
+  String translationOfflineModelBody(String source, String target) {
+    return 'Téléchargez les modèles de langue pour $source et $target.';
+  }
+
+  @override
+  String get translationDownloadModels => 'Télécharger les modèles';
+
+  @override
+  String get translationDownloadingModels => 'Téléchargement des modèles';
+
+  @override
+  String get translationDownloadingModelsBody =>
+      'La traduction sera effectuée sur cet appareil après le téléchargement.';
+
+  @override
+  String get translationFailureTitle => 'Échec de la traduction';
+
+  @override
+  String get translationFailureBody =>
+      'Vérifiez la connexion réseau ou réessayez plus tard.';
+
+  @override
+  String get libraryResetFilters => 'Réinitialiser les filtres';
+
+  @override
+  String get libraryClearCollectionFilter => 'Effacer le filtre de collection';
+
+  @override
+  String get commonCopied => 'Copié';
+
+  @override
+  String get commonCopyFailed => 'Impossible de copier';
+
+  @override
   String get appSkip => 'Ignorer';
 
   @override

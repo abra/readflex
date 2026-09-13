@@ -59,8 +59,12 @@ Helpers exported from `import_flow.dart`:
 ## Architecture
 
 Multi-step animated sheet driven by `ImportFlowCubit` — menu → uploading →
-done / failure. The body height is pinned so the sheet does not resize between
-states.
+done / failure. Steps share a stable preferred body height (280px at normal text
+scale), with more space for larger system text. Menu and URL forms scroll when
+content exceeds the viewport or the keyboard leaves less room. Their shared
+layout uses finite minimum height without intrinsic measurement or unbounded
+flex children. Status content also scrolls when necessary. Clipboard access is
+still explicit: Paste has a full 52x48px target and never reads on sheet open.
 
 ## Dependencies
 

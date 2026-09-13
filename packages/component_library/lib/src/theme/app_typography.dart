@@ -12,6 +12,12 @@ import 'package:flutter/material.dart';
 /// Reader-specific font choices live in [ReaderFontPreset].
 abstract final class AppTypography {
   static const String fontFamilySans = 'Geist';
+  static const fontFamilyFallback = [
+    'Noto Sans Arabic',
+    'Noto Sans Devanagari',
+    'Noto Sans JP',
+    'Noto Sans SC',
+  ];
   static const String fontFamilySerif = 'Literata';
   static const String fontFamilyPtSerif = 'PT Serif';
   static const String fontFamilyOpenSans = 'Open Sans';

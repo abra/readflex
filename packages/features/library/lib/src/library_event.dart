@@ -26,10 +26,18 @@ final class LibrarySourcesDeleted extends LibraryEvent {
   final BookDeletionScope scope;
 }
 
-final class LibrarySearchQueryChanged extends LibraryEvent {
+sealed class LibraryQueryEvent extends LibraryEvent {
+  const LibraryQueryEvent();
+}
+
+final class LibrarySearchQueryChanged extends LibraryQueryEvent {
   const LibrarySearchQueryChanged(this.query);
 
   final String query;
+}
+
+final class LibraryFiltersReset extends LibraryQueryEvent {
+  const LibraryFiltersReset();
 }
 
 final class LibraryFilterChanged extends LibraryEvent {

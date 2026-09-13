@@ -53,6 +53,24 @@ Test:
 make test
 ```
 
+UI flows and committed visual comparisons run without API keys:
+
+```sh
+make test-ui
+make test-device DEVICE=<device-id>
+make coverage
+make test-performance
+```
+
+See [UI verification](test/ui/README.md) for coverage, native prerequisites,
+baseline updates, and remaining manual checks. Native screenshots and failure
+diagnostics go under `.local/`; `make verify` never updates visual baselines.
+Coverage reports enumerate unmeasured files and uncovered executable lines and
+branches instead of treating test counts as full coverage. For native Dart line
+coverage, add `COVERAGE=1` to `make test-device`; see the UI guide for combining
+matching runs. Benchmarks record elapsed time plus structural work counters,
+not release-device FPS.
+
 Run the app:
 
 ```sh

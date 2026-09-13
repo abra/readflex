@@ -1,7 +1,9 @@
 import 'package:component_library/component_library.dart';
 import 'package:dictionary_service/dictionary_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart' show Bidi;
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:shared/shared.dart';
 
@@ -37,15 +39,19 @@ class DictionarySheet extends StatelessWidget {
       create: (_) =>
           DictionaryCubit(dictionaryService: dictionaryService)
             ..lookup(selection),
-      child: _DictionarySheetView(selection: selection),
+      child: _DictionarySheetView(
+        selection: selection,
+        onCopy: (text) => Clipboard.setData(ClipboardData(text: text)),
+      ),
     );
   }
 }
 
 class _DictionarySheetView extends StatelessWidget {
-  const _DictionarySheetView({required this.selection});
+  const _DictionarySheetView({required this.selection, required this.onCopy});
 
   final TextSelectionContext selection;
+  final Future<void> Function(String) onCopy;
 
   @override
   Widget build(BuildContext context) {
@@ -53,9 +59,12 @@ class _DictionarySheetView extends StatelessWidget {
     return ActionBottomSheetLayout(
       title: context.l10n.dictionaryTitle,
       headerSpacing: AppSpacing.sm,
-      bodyPadding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xl,
-        vertical: AppSpacing.lg,
+      constrainBody: true,
+      bodyPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.sm,
+        AppSpacing.xl,
+        AppSpacing.lg,
       ),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxBodyHeight),
@@ -66,9 +75,21 @@ class _DictionarySheetView extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SelectionPreviewCard(text: selection.effectiveSelectedText),
-                  const SizedBox(height: AppSpacing.lg),
-                  _DictionaryBody(selection: selection, state: state),
+                  if (state.status != DictionarySheetStatus.success) ...[
+                    Text(
+                      selection.effectiveSelectedText,
+                      textDirection: _contentDirection(
+                        selection.effectiveSelectedText,
+                      ),
+                      style: context.text.titleLarge,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+                  _DictionaryBody(
+                    selection: selection,
+                    state: state,
+                    onCopy: onCopy,
+                  ),
                 ],
               );
             },
@@ -80,10 +101,15 @@ class _DictionarySheetView extends StatelessWidget {
 }
 
 class _DictionaryBody extends StatelessWidget {
-  const _DictionaryBody({required this.selection, required this.state});
+  const _DictionaryBody({
+    required this.selection,
+    required this.state,
+    required this.onCopy,
+  });
 
   final TextSelectionContext selection;
   final DictionarySheetState state;
+  final Future<void> Function(String) onCopy;
 
   @override
   Widget build(BuildContext context) {
@@ -98,6 +124,8 @@ class _DictionaryBody extends StatelessWidget {
       ),
       DictionarySheetStatus.success => _DictionaryResultView(
         result: state.result!,
+        selectedText: selection.effectiveSelectedText,
+        onCopy: onCopy,
       ),
       DictionarySheetStatus.notFound => _DictionaryMessage(
         title: context.l10n.dictionaryNotFoundTitle,
@@ -118,9 +146,15 @@ class _DictionaryBody extends StatelessWidget {
 }
 
 class _DictionaryResultView extends StatelessWidget {
-  const _DictionaryResultView({required this.result});
+  const _DictionaryResultView({
+    required this.result,
+    required this.selectedText,
+    required this.onCopy,
+  });
 
   final DictionaryLookupResult result;
+  final String selectedText;
+  final Future<void> Function(String) onCopy;
 
   @override
   Widget build(BuildContext context) {
@@ -129,11 +163,27 @@ class _DictionaryResultView extends StatelessWidget {
       children: [
         for (var index = 0; index < result.entries.length; index++) ...[
           if (index > 0) ...[
-            const SizedBox(height: AppSpacing.lg),
-            Divider(color: context.colors.outlineVariant),
             const SizedBox(height: AppSpacing.md),
+            Divider(height: 1, color: context.colors.outlineVariant),
+            const SizedBox(height: AppSpacing.md),
+            if (index == 1) ...[
+              Semantics(
+                header: true,
+                child: Text(
+                  context.l10n.dictionaryInContext,
+                  style: context.text.labelMedium.copyWith(
+                    color: context.colors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
           ],
-          _DictionaryEntryView(entry: result.entries[index]),
+          _DictionaryEntryView(
+            entry: result.entries[index],
+            selectedText: index == 0 ? selectedText : null,
+            onCopy: onCopy,
+          ),
         ],
       ],
     );
@@ -141,9 +191,15 @@ class _DictionaryResultView extends StatelessWidget {
 }
 
 class _DictionaryEntryView extends StatelessWidget {
-  const _DictionaryEntryView({required this.entry});
+  const _DictionaryEntryView({
+    required this.entry,
+    required this.selectedText,
+    required this.onCopy,
+  });
 
   final DictionaryLexicalEntry entry;
+  final String? selectedText;
+  final Future<void> Function(String) onCopy;
 
   @override
   Widget build(BuildContext context) {
@@ -155,11 +211,38 @@ class _DictionaryEntryView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SelectableText(entry.lemma, style: context.text.headlineSmall),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: _DictionaryLemma(
+                  lemma: entry.lemma,
+                  selectedText: selectedText,
+                ),
+              ),
+            ),
+            AppCopyButton(
+              key: ValueKey(entry),
+              onCopy: () => onCopy(
+                [
+                  entry.lemma,
+                  for (var i = 0; i < entry.definitions.length; i++)
+                    '${i + 1}. ${entry.definitions[i].text}',
+                ].join('\n'),
+              ),
+              copyLabel: context.l10n.commonCopy,
+              copiedLabel: context.l10n.commonCopied,
+              failureLabel: context.l10n.commonCopyFailed,
+            ),
+          ],
+        ),
         if (metadata.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.xs),
           Text(
             metadata.join(' · '),
+            textDirection: _contentDirection(metadata.join(' ')),
             style: context.text.bodyMedium.copyWith(
               color: context.colors.onSurfaceVariant,
             ),
@@ -179,6 +262,55 @@ class _DictionaryEntryView extends StatelessWidget {
   }
 }
 
+class _DictionaryLemma extends StatelessWidget {
+  const _DictionaryLemma({required this.lemma, required this.selectedText});
+
+  final String lemma;
+  final String? selectedText;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = selectedText?.trim();
+    final hasDifferentForm =
+        selected != null &&
+        selected.isNotEmpty &&
+        selected.toLowerCase() != lemma.trim().toLowerCase();
+    final direction = _contentDirection(lemma);
+    return Directionality(
+      textDirection: direction,
+      child: Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.xs,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          if (hasDifferentForm) ...[
+            Text(
+              selected,
+              style: context.text.bodyMedium.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
+            ),
+            ExcludeSemantics(
+              child: Transform.flip(
+                flipX: direction == TextDirection.rtl,
+                child: Icon(
+                  AppIcons.arrowRight,
+                  size: AppIconSize.xs,
+                  color: context.colors.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+          Semantics(
+            header: true,
+            child: SelectableText(lemma, style: context.text.titleLarge),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DefinitionView extends StatelessWidget {
   const _DefinitionView({required this.number, required this.definition});
 
@@ -187,40 +319,47 @@ class _DefinitionView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 28,
-          child: Text(
-            '$number.',
-            style: context.text.bodyMedium.copyWith(
-              color: context.colors.onSurfaceVariant,
+    return Directionality(
+      textDirection: _contentDirection(definition.text),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 28,
+            child: Text(
+              '$number.',
+              style: context.text.bodyMedium.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SelectableText(definition.text, style: context.text.bodyMedium),
-              for (final example in definition.examples) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  example,
-                  style: context.text.bodySmall.copyWith(
-                    color: context.colors.onSurfaceVariant,
-                    fontStyle: FontStyle.italic,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SelectableText(definition.text, style: context.text.bodyMedium),
+                for (final example in definition.examples) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    example,
+                    textDirection: _contentDirection(example),
+                    style: context.text.bodySmall.copyWith(
+                      color: context.colors.onSurfaceVariant,
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
+
+TextDirection _contentDirection(String text) =>
+    Bidi.detectRtlDirectionality(text) ? TextDirection.rtl : TextDirection.ltr;
 
 class _DictionaryMessage extends StatelessWidget {
   const _DictionaryMessage({

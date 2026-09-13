@@ -4,6 +4,7 @@ set -e
 
 FLUTTER=${FLUTTER:-flutter}
 DART=${DART:-dart}
+COVERAGE_DIR=${COVERAGE_DIR:-}
 
 PASS=0
 FAIL=0
@@ -13,19 +14,52 @@ run() {
   local label=$1
   local cmd=$2
   local dir=$3
+  local measured=false
+  local status=0
+
+  if [ -n "$COVERAGE_DIR" ]; then
+    local output="$COVERAGE_DIR/$label"
+    mkdir -p "$output"
+    case "$cmd" in
+      "$FLUTTER test "*)
+        cmd="$cmd --coverage --branch-coverage --coverage-path='$output/lcov.info' --coverage-package='$COVERAGE_PACKAGES' --file-reporter=json:'$output/tests.jsonl'"
+        measured=true
+        ;;
+      "$DART test "*)
+        cmd="$cmd --branch-coverage --coverage-path='$output/lcov.info' --coverage-package='$COVERAGE_PACKAGES' --file-reporter=json:'$output/tests.jsonl'"
+        measured=true
+        ;;
+    esac
+  fi
 
   echo ""
   echo "▶ $label"
   if (cd "$dir" && eval "$cmd" 2>&1); then
     PASS=$((PASS + 1))
   else
+    status=$?
     FAIL=$((FAIL + 1))
     FAILED_LABELS+=("$label")
+  fi
+  if [ -n "$COVERAGE_DIR" ]; then
+    printf '%s\t%s\t%s\t%s\n' "$label" "$dir" "$status" "$measured" >> "$COVERAGE_DIR/suites.tsv"
   fi
 }
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+if [ -n "$COVERAGE_DIR" ]; then
+  mkdir -p "$COVERAGE_DIR"
+  COVERAGE_DIR="$(cd "$COVERAGE_DIR" && pwd)"
+  if [ -e "$COVERAGE_DIR/suites.tsv" ]; then
+    echo "Use a fresh COVERAGE_DIR to avoid mixing results from different runs." >&2
+    exit 2
+  fi
+  node "$SCRIPT_DIR/scripts/coverage_report.mjs" --snapshot "$COVERAGE_DIR"
+  COVERAGE_PACKAGES="$(node -e 'const fs = require("node:fs"); const s = JSON.parse(fs.readFileSync(process.argv[1])); process.stdout.write("^(" + s.packages.join("|") + ")$");' "$COVERAGE_DIR/sources.json")"
+fi
+
+run "test_harness"                 "node --test scripts/test/*.test.mjs" "$SCRIPT_DIR"
 run "app"                          "$FLUTTER test test/" "$SCRIPT_DIR"
 run "domain_models"                "$FLUTTER test test/" "$SCRIPT_DIR/packages/domain_models"
 run "shared"                       "$FLUTTER test test/" "$SCRIPT_DIR/packages/shared"
@@ -66,4 +100,7 @@ if [ $FAIL -ne 0 ]; then
 fi
 echo "────────────────────────────"
 
+if [ -n "$COVERAGE_DIR" ]; then
+  printf 'complete\n' > "$COVERAGE_DIR/completed"
+fi
 [ $FAIL -eq 0 ]

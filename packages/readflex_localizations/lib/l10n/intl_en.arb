@@ -1,5 +1,48 @@
 {
+  "translationOriginal": "Original",
+  "dictionaryInContext": "In this context",
+  "translationAction": "Translate",
+  "translationTitle": "Translation",
+  "translationSourceLanguage": "From",
+  "translationTargetLanguage": "To",
+  "translationAutoSource": "Auto",
+  "translationAutoDetectedSource": "Auto: {language}",
+  "translationOffline": "Offline",
+  "translationSentence": "Sentence",
+  "translationDetails": "Meaning & alternatives",
+  "translationAlternatives": "Alternatives",
+  "translationSourceRequiredTitle": "Choose the source language",
+  "translationSourceRequiredBody": "The source language cannot be detected automatically while offline.",
+  "translationSelectLanguage": "Select language",
+  "translationOfflineModelTitle": "Offline models required",
+  "translationOfflineModelBody": "Download language models for {source} and {target}.",
+  "translationDownloadModels": "Download models",
+  "translationDownloadingModels": "Downloading models",
+  "translationDownloadingModelsBody": "Translation will run on this device after the download.",
+  "translationFailureTitle": "Translation failed",
+  "translationFailureBody": "Check the network connection or try again later.",
+  "@translationAutoDetectedSource": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "@translationOfflineModelBody": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
   "@@locale": "en",
+  "libraryResetFilters": "Reset filters",
+  "libraryClearCollectionFilter": "Clear collection filter",
+  "commonCopied": "Copied",
+  "commonCopyFailed": "Could not copy",
   "appSkip": "Skip",
   "appNext": "Next",
   "appGetStarted": "Get Started",

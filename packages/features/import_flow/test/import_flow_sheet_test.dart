@@ -37,6 +37,73 @@ void main() {
         .setMockMethodCallHandler(SystemChannels.platform, null);
   });
 
+  testWidgets('large text and keyboard keep the import form usable', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+    final urls = <String>[];
+    await tester.pumpWidget(
+      _TestHost(
+        textScaler: const TextScaler.linear(2),
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => null,
+          onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (url, {onStage}) async {
+            urls.add(url);
+            return null;
+          },
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.ensureVisible(find.text('Save Article'));
+    await tester.tap(find.text('Save Article'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 240);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byType(TextField));
+    await tester.enterText(find.byType(TextField), 'https://example.com/a');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Save'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+    expect(urls, ['https://example.com/a']);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('paste responds at the edge of a 48px target', (tester) async {
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => null,
+          onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (_, {onStage}) async => null,
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Article'));
+    await tester.pumpAndSettle();
+    clipboardText = 'https://example.com/pasted';
+    final paste = find.byKey(const ValueKey('articleUrlPasteButton'));
+    expect(tester.getSize(paste).width, greaterThanOrEqualTo(48));
+    expect(tester.getSize(paste).height, greaterThanOrEqualTo(48));
+    await tester.tapAt(tester.getTopLeft(paste) + const Offset(1, 1));
+    await tester.pumpAndSettle();
+    expect(clipboardReadCount, 1);
+    expect(find.text(clipboardText!), findsOneWidget);
+  });
+
   testWidgets('menu state shows the Upload Book option', (tester) async {
     await tester.pumpWidget(
       _TestHost(
@@ -340,7 +407,7 @@ void main() {
       find.byKey(const ValueKey('articleUrlPasteButton')),
     );
     expect(pasteRect.center.dx, greaterThan(fieldRect.center.dx));
-    expect(fieldRect.right - pasteRect.right, closeTo(AppSpacing.sm, 1));
+    expect(fieldRect.right - pasteRect.right, closeTo(0, 1));
 
     await tester.tap(pasteButtonFinder);
     await tester.pump();
@@ -804,9 +871,13 @@ Article _fakeArticle({String title = 'Article'}) => Article(
 );
 
 class _TestHost extends StatefulWidget {
-  const _TestHost({required this.onOpen});
+  const _TestHost({
+    required this.onOpen,
+    this.textScaler = TextScaler.noScaling,
+  });
 
   final Future<void> Function(BuildContext context) onOpen;
+  final TextScaler textScaler;
 
   @override
   State<_TestHost> createState() => _TestHostState();
@@ -817,6 +888,10 @@ class _TestHostState extends State<_TestHost> {
   Widget build(BuildContext context) {
     return MaterialApp(
       theme: AppTheme.light(),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaler: widget.textScaler),
+        child: child!,
+      ),
       home: Scaffold(
         body: Builder(
           builder: (context) => Center(

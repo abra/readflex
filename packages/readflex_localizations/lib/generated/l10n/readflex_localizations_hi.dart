@@ -9,6 +9,91 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   ReadflexLocalizationsHi([String locale = 'hi']) : super(locale);
 
   @override
+  String get translationOriginal => 'मूल पाठ';
+
+  @override
+  String get dictionaryInContext => 'इस संदर्भ में';
+
+  @override
+  String get translationAction => 'अनुवाद करें';
+
+  @override
+  String get translationTitle => 'अनुवाद';
+
+  @override
+  String get translationSourceLanguage => 'स्रोत भाषा';
+
+  @override
+  String get translationTargetLanguage => 'लक्ष्य भाषा';
+
+  @override
+  String get translationAutoSource => 'स्वचालित';
+
+  @override
+  String translationAutoDetectedSource(String language) {
+    return 'स्वचालित: $language';
+  }
+
+  @override
+  String get translationOffline => 'ऑफ़लाइन';
+
+  @override
+  String get translationSentence => 'वाक्य';
+
+  @override
+  String get translationDetails => 'अर्थ और विकल्प';
+
+  @override
+  String get translationAlternatives => 'विकल्प';
+
+  @override
+  String get translationSourceRequiredTitle => 'स्रोत भाषा चुनें';
+
+  @override
+  String get translationSourceRequiredBody =>
+      'ऑफ़लाइन होने पर स्रोत भाषा का अपने आप पता नहीं लगाया जा सकता।';
+
+  @override
+  String get translationSelectLanguage => 'भाषा चुनें';
+
+  @override
+  String get translationOfflineModelTitle => 'ऑफ़लाइन भाषा मॉडल चाहिए';
+
+  @override
+  String translationOfflineModelBody(String source, String target) {
+    return '$source और $target के भाषा मॉडल डाउनलोड करें।';
+  }
+
+  @override
+  String get translationDownloadModels => 'मॉडल डाउनलोड करें';
+
+  @override
+  String get translationDownloadingModels => 'मॉडल डाउनलोड हो रहे हैं';
+
+  @override
+  String get translationDownloadingModelsBody =>
+      'डाउनलोड होने के बाद अनुवाद इसी डिवाइस पर किया जाएगा।';
+
+  @override
+  String get translationFailureTitle => 'अनुवाद नहीं हो सका';
+
+  @override
+  String get translationFailureBody =>
+      'नेटवर्क कनेक्शन जाँचें या बाद में फिर कोशिश करें।';
+
+  @override
+  String get libraryResetFilters => 'फ़िल्टर रीसेट करें';
+
+  @override
+  String get libraryClearCollectionFilter => 'संग्रह फ़िल्टर हटाएँ';
+
+  @override
+  String get commonCopied => 'कॉपी किया गया';
+
+  @override
+  String get commonCopyFailed => 'कॉपी नहीं हो सका';
+
+  @override
   String get appSkip => 'छोड़ें';
 
   @override

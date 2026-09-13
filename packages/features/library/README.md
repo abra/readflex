@@ -65,6 +65,11 @@ each layout and a local `TextEditingController` for the search field so
 keystrokes don't churn bloc state.
 
 Empty-state is handled twice: truly empty library vs. all items filtered out.
+The filtered empty state offers **Reset filters**. It clears search text,
+content filter, and collection scope in one `LibraryFiltersReset` event without
+reading storage. Reset and query events share a switchable debounce stream so
+pending search text cannot restore an obsolete filter. Collection selection
+and clearing use separate labeled 48px targets; clearing never opens the picker.
 Load errors go through `addError` and a `LibraryStatus.failure` retry surface.
 Delete errors keep the list usable and report failure through a deletion effect.
 

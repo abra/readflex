@@ -30,6 +30,9 @@ class SearchField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final clearIconColor = colors.brightness == Brightness.dark
+        ? colors.primaryFixedDim
+        : colors.primary;
 
     return TextField(
       controller: controller,
@@ -68,7 +71,7 @@ class SearchField extends StatelessWidget {
                         child: Icon(
                           AppIcons.close,
                           size: AppIconSize.xs,
-                          color: colors.onSurface.withValues(alpha: 0.55),
+                          color: clearIconColor,
                         ),
                       ),
                     ),

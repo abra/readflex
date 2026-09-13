@@ -9,6 +9,88 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   ReadflexLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get translationOriginal => '原文';
+
+  @override
+  String get dictionaryInContext => 'この文脈では';
+
+  @override
+  String get translationAction => '翻訳';
+
+  @override
+  String get translationTitle => '翻訳';
+
+  @override
+  String get translationSourceLanguage => '翻訳元の言語';
+
+  @override
+  String get translationTargetLanguage => '翻訳先の言語';
+
+  @override
+  String get translationAutoSource => '自動';
+
+  @override
+  String translationAutoDetectedSource(String language) {
+    return '自動：$language';
+  }
+
+  @override
+  String get translationOffline => 'オフライン';
+
+  @override
+  String get translationSentence => '文';
+
+  @override
+  String get translationDetails => '意味と別の訳';
+
+  @override
+  String get translationAlternatives => '別の訳';
+
+  @override
+  String get translationSourceRequiredTitle => '翻訳元の言語を選択';
+
+  @override
+  String get translationSourceRequiredBody => 'オフラインでは翻訳元の言語を自動検出できません。';
+
+  @override
+  String get translationSelectLanguage => '言語を選択';
+
+  @override
+  String get translationOfflineModelTitle => 'オフライン用モデルが必要です';
+
+  @override
+  String translationOfflineModelBody(String source, String target) {
+    return '$sourceと$targetの言語モデルをダウンロードしてください。';
+  }
+
+  @override
+  String get translationDownloadModels => 'モデルをダウンロード';
+
+  @override
+  String get translationDownloadingModels => 'モデルをダウンロード中';
+
+  @override
+  String get translationDownloadingModelsBody => 'ダウンロード後、この端末で翻訳します。';
+
+  @override
+  String get translationFailureTitle => '翻訳できませんでした';
+
+  @override
+  String get translationFailureBody => 'ネットワーク接続を確認するか、後でもう一度お試しください。';
+
+  @override
+  String get libraryResetFilters => 'フィルターをリセット';
+
+  @override
+  String get libraryClearCollectionFilter => 'コレクションのフィルターを解除';
+
+  @override
+  String get commonCopied => 'コピーしました';
+
+  @override
+  String get commonCopyFailed => 'コピーできませんでした';
+
+  @override
   String get appSkip => 'スキップ';
 
   @override

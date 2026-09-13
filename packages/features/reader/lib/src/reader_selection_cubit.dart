@@ -66,7 +66,7 @@ class ReaderSelectionState extends Equatable {
   /// Visible chapter title at selection time.
   final String? chapterTitle;
 
-  /// Existing highlights strictly contained inside the current selection.
+  /// Saved highlights fully contained in the selection, including equal ranges.
   final List<String> containedHighlightIds;
 
   final bool hasSelection;

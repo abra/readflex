@@ -22,9 +22,16 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     on<LibrarySourceDeleted>(_onSourceDeleted);
     on<LibrarySourcesDeleted>(_onSourcesDeleted);
     on<LibraryRefreshRequested>(_onRefreshRequested);
-    on<LibrarySearchQueryChanged>(
-      _onSearchQueryChanged,
-      transformer: _debounce(_searchDelay),
+    on<LibraryQueryEvent>(
+      _onQueryEvent,
+      transformer: (events, mapper) => events
+          .switchMap(
+            (event) =>
+                event is LibrarySearchQueryChanged && event.query.isNotEmpty
+                ? Stream.value(event).debounce(_searchDelay)
+                : Stream.value(event),
+          )
+          .asyncExpand(mapper),
     );
     on<LibraryFilterChanged>(_onFilterChanged);
     on<LibraryCollectionScopeChanged>(_onCollectionScopeChanged);
@@ -32,15 +39,23 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
 
   static const _searchDelay = Duration(milliseconds: 300);
 
-  static EventTransformer<E> _debounce<E>(Duration duration) {
-    return (events, mapper) => events.debounce(duration).asyncExpand(mapper);
-  }
-
-  void _onSearchQueryChanged(
-    LibrarySearchQueryChanged event,
+  // Reset shares the search stream so a debounced query cannot restore filters.
+  void _onQueryEvent(
+    LibraryQueryEvent event,
     Emitter<LibraryState> emit,
   ) {
-    emit(state.copyWith(searchQuery: event.query));
+    switch (event) {
+      case LibrarySearchQueryChanged(:final query):
+        emit(state.copyWith(searchQuery: query));
+      case LibraryFiltersReset():
+        emit(
+          state.copyWith(
+            searchQuery: '',
+            filter: LibraryFilter.all,
+            selectedCollectionScope: null,
+          ),
+        );
+    }
   }
 
   void _onFilterChanged(

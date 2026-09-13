@@ -32,6 +32,7 @@ class LibraryBody extends StatelessWidget {
     required this.onSourceLongPressed,
     required this.onConfirmSwipeDelete,
     required this.onRefresh,
+    required this.onResetFilters,
     super.key,
   });
 
@@ -41,6 +42,7 @@ class LibraryBody extends StatelessWidget {
   final void Function(LibrarySource source) onSourceLongPressed;
   final Future<bool> Function(LibrarySource source) onConfirmSwipeDelete;
   final Future<void> Function() onRefresh;
+  final VoidCallback onResetFilters;
 
   @override
   Widget build(BuildContext context) {
@@ -54,19 +56,28 @@ class LibraryBody extends StatelessWidget {
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),
           ),
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.6,
-            child: state.isEmpty
-                ? EmptyState(
-                    icon: AppIcons.book,
-                    message: l10n.libraryEmptyTitle,
-                    subtitle: l10n.libraryEmptySubtitle,
-                  )
-                : EmptyState(
-                    icon: AppIcons.searchOff,
-                    message: l10n.libraryNoResultsTitle,
-                    subtitle: l10n.libraryNoResultsSubtitle,
-                  ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.sizeOf(context).height * 0.6,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: state.isEmpty
+                  ? EmptyState(
+                      icon: AppIcons.book,
+                      message: l10n.libraryEmptyTitle,
+                      subtitle: l10n.libraryEmptySubtitle,
+                    )
+                  : EmptyState(
+                      icon: AppIcons.searchOff,
+                      message: l10n.libraryNoResultsTitle,
+                      subtitle: l10n.libraryNoResultsSubtitle,
+                      action: TextButton(
+                        onPressed: onResetFilters,
+                        child: AppButtonLabel(l10n.libraryResetFilters),
+                      ),
+                    ),
+            ),
           ),
         ),
       );

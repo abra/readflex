@@ -1,4 +1,4 @@
-.PHONY: get format format-check analyze test verify reader-browser-setup clean build build-android build-apk run help
+.PHONY: get format format-check analyze test test-ui test-goldens update-goldens test-device coverage test-performance verify reader-browser-setup clean build build-android build-apk run help
 
 FLUTTER ?= fvm flutter
 DART ?= fvm dart
@@ -32,7 +32,7 @@ PACKAGES = \
 	packages/features/dictionary \
 	packages/features/reader
 
-ROOT_ANALYZE_PATHS = lib test benchmarks
+ROOT_ANALYZE_PATHS = lib test integration_test test_driver benchmarks
 
 ## Install dependencies for root and all packages
 get:
@@ -48,7 +48,7 @@ format:
 
 ## Check Dart formatting without changing files
 format-check:
-	$(DART) format --output=none --set-exit-if-changed lib test benchmarks packages
+	$(DART) format --output=none --set-exit-if-changed $(ROOT_ANALYZE_PATHS) packages
 
 ## Analyze all Dart code
 analyze:
@@ -61,6 +61,31 @@ analyze:
 ## Run all tests across packages
 test:
 	@FLUTTER="$(FLUTTER)" DART="$(DART)" bash test_all.sh
+
+## Run root UI flows and visual comparisons without a device or API keys
+test-ui:
+	$(FLUTTER) test test/ui
+
+## Measure Dart line/branch coverage across all suites (fresh report in .local/)
+coverage:
+	@FLUTTER="$(FLUTTER)" DART="$(DART)" bash scripts/test_coverage.sh
+
+## Run repeatable workload benchmarks, with reports in .local/performance/
+test-performance:
+	$(FLUTTER) test benchmarks/reader_search_benchmark_test.dart benchmarks/library_benchmark_test.dart --concurrency=1 --reporter expanded
+
+## Compare committed visual baselines (does not update them)
+test-goldens:
+	$(FLUTTER) test test/ui --tags golden
+
+## Explicitly regenerate visual baselines; review images before committing
+update-goldens:
+	$(FLUTTER) test test/ui --tags golden --update-goldens
+
+## Run native reader flows: DEVICE=<id>, optionally COVERAGE=1 (artifacts in .local/)
+test-device:
+	@test -n "$(DEVICE)" || { echo "Specify DEVICE from '$(FLUTTER) devices'."; exit 2; }
+	READFLEX_NATIVE_COVERAGE="$(COVERAGE)" $(FLUTTER) drive --driver=test_driver/ui_driver.dart --target=integration_test/reader_flows_test.dart -d "$(DEVICE)"
 
 ## Run the full local quality gate without modifying source files
 verify: format-check analyze test

@@ -9,6 +9,92 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   ReadflexLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
+  String get translationOriginal => 'النص الأصلي';
+
+  @override
+  String get dictionaryInContext => 'في هذا السياق';
+
+  @override
+  String get translationAction => 'ترجمة';
+
+  @override
+  String get translationTitle => 'الترجمة';
+
+  @override
+  String get translationSourceLanguage => 'لغة المصدر';
+
+  @override
+  String get translationTargetLanguage => 'اللغة الهدف';
+
+  @override
+  String get translationAutoSource => 'تلقائي';
+
+  @override
+  String translationAutoDetectedSource(String language) {
+    return 'تلقائي: $language';
+  }
+
+  @override
+  String get translationOffline => 'دون اتصال';
+
+  @override
+  String get translationSentence => 'الجملة';
+
+  @override
+  String get translationDetails => 'المعنى والبدائل';
+
+  @override
+  String get translationAlternatives => 'البدائل';
+
+  @override
+  String get translationSourceRequiredTitle => 'اختر لغة المصدر';
+
+  @override
+  String get translationSourceRequiredBody =>
+      'لا يمكن اكتشاف لغة المصدر تلقائيًا دون اتصال بالإنترنت.';
+
+  @override
+  String get translationSelectLanguage => 'اختيار اللغة';
+
+  @override
+  String get translationOfflineModelTitle =>
+      'يلزم تنزيل نماذج الترجمة دون اتصال';
+
+  @override
+  String translationOfflineModelBody(String source, String target) {
+    return 'نزّل نماذج اللغتين $source و$target.';
+  }
+
+  @override
+  String get translationDownloadModels => 'تنزيل النماذج';
+
+  @override
+  String get translationDownloadingModels => 'جارٍ تنزيل النماذج';
+
+  @override
+  String get translationDownloadingModelsBody =>
+      'ستتم الترجمة على هذا الجهاز بعد التنزيل.';
+
+  @override
+  String get translationFailureTitle => 'تعذّرت الترجمة';
+
+  @override
+  String get translationFailureBody =>
+      'تحقّق من اتصال الشبكة أو حاول مرة أخرى لاحقًا.';
+
+  @override
+  String get libraryResetFilters => 'إعادة ضبط المرشحات';
+
+  @override
+  String get libraryClearCollectionFilter => 'مسح مرشح المجموعة';
+
+  @override
+  String get commonCopied => 'تم النسخ';
+
+  @override
+  String get commonCopyFailed => 'تعذر النسخ';
+
+  @override
   String get appSkip => 'تخطي';
 
   @override

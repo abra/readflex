@@ -659,6 +659,59 @@ void main() {
     expect(lastQuery, 'hello');
   });
 
+  testWidgets('SearchField clear icon follows readable theme accents', (
+    tester,
+  ) async {
+    final controller = TextEditingController(text: 'power');
+    addTearDown(controller.dispose);
+    final changes = <String>[];
+
+    for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: theme,
+          home: Scaffold(
+            body: SearchField(
+              hintText: 'Search...',
+              controller: controller,
+              onChanged: changes.add,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final clear = tester.widget<Icon>(find.byIcon(AppIcons.close));
+      final colors = theme.colorScheme;
+      expect(
+        clear.color,
+        theme.brightness == Brightness.dark
+            ? colors.primaryFixedDim
+            : colors.primary,
+      );
+      final iconLuminance = clear.color!.computeLuminance();
+      final fillLuminance = colors.surfaceContainerHighest.computeLuminance();
+      final contrast = iconLuminance > fillLuminance
+          ? (iconLuminance + 0.05) / (fillLuminance + 0.05)
+          : (fillLuminance + 0.05) / (iconLuminance + 0.05);
+      expect(contrast, greaterThanOrEqualTo(3));
+      expect(clear.size, AppIconSize.xs);
+      expect(
+        tester.widget<Icon>(find.byIcon(AppIcons.search)).color,
+        theme.colorScheme.onSurface.withValues(alpha: 0.55),
+      );
+      expect(controller.text, 'power');
+      expect(changes, isEmpty);
+    }
+
+    await tester.tap(find.byIcon(AppIcons.close));
+    await tester.pumpAndSettle();
+    expect(controller.text, isEmpty);
+    expect(changes, ['']);
+    expect(find.byIcon(AppIcons.close), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('BottomSheetHeader renders title', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(

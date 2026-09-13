@@ -26,6 +26,8 @@ abstract final class AppIcons {
   static const IconData chevronLeft = LucideIcons.chevronLeft;
   static const IconData chevronRight = LucideIcons.chevronRight;
   static const IconData chevronDown = LucideIcons.chevronDown;
+  static const IconData arrowRight = LucideIcons.arrowRight;
+  static const IconData arrowDown = LucideIcons.arrowDown;
 
   // ── Content ───────────────────────────────────────────────
   static const IconData book = LucideIcons.bookOpen;
@@ -43,6 +45,7 @@ abstract final class AppIcons {
   static const IconData clock = LucideIcons.clock;
   static const IconData global = LucideIcons.globe;
   static const IconData dictionary = LucideIcons.bookOpen;
+  static const IconData translate = LucideIcons.languages;
 
   // ── Reader ────────────────────────────────────────────────
   static const IconData volumeUp = LucideIcons.volume2;

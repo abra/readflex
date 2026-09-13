@@ -218,6 +218,7 @@ ThemeData _assembleTheme({
     useMaterial3: true,
     brightness: brightness,
     fontFamily: AppTypography.fontFamilySans,
+    fontFamilyFallback: AppTypography.fontFamilyFallback,
     textTheme: textTheme,
     scaffoldBackgroundColor: palette.background,
     colorScheme: colorScheme,

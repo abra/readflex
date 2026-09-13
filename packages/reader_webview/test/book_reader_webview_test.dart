@@ -177,12 +177,8 @@ void main() {
       expect(bookJs, contains('window.setImageAreaSelectionPreviewRetained'));
       expect(bookJs, contains('isImageAreaDraftRetained()'));
       expect(bookJs, contains('setImageAreaDraftRetained'));
-      expect(bookJs, contains('annotationHitForRange'));
       expect(bookJs, contains('containedHighlightIdsForRange'));
-      expect(bookJs, contains('rangeStrictlyContainsRange'));
       expect(bookJs, contains('containedHighlightIds'));
-      expect(bookJs, contains('clearSelectionForAnnotationMenu(doc)'));
-      expect(bookJs, contains('globalThis.reader?.annotationsByValue'));
       expect(bookJs, contains('installNativeTextActionMenuGuard(doc)'));
       expect(
         bookJs,
@@ -902,20 +898,32 @@ void main() {
       );
     });
 
-    test('keeps same-node marked selection adjacent to punctuation', () {
+    test('bundles and extracts the book sentence context module', () {
       final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
-
+      const contextAsset =
+          'assets/foliate-js/src/readflex_selection_context.js';
+      expect(bookJs, contains("from './readflex_selection_context.js'"));
+      expect(_readPackageSource('pubspec.yaml'), contains(contextAsset));
       expect(
-        bookJs,
-        contains(r'return _limitContext(`${before}[[${selected}]]${after}`);'),
+        _readPackageSource('lib/src/asset_extractor.dart'),
+        contains(contextAsset),
+      );
+    });
+
+    test('bundles shared range comparison for books and articles', () {
+      const asset = 'assets/foliate-js/src/readflex_range.js';
+      expect(
+        _readPackageSource('assets/foliate-js/src/book.js'),
+        contains("from './readflex_range.js'"),
       );
       expect(
-        bookJs,
-        isNot(
-          contains(
-            r'return _limitContext(`${before} [[${selected}]] ${after}`);',
-          ),
-        ),
+        _readPackageSource('assets/article-html/index.html'),
+        contains("from '../foliate-js/src/readflex_range.js'"),
+      );
+      expect(_readPackageSource('pubspec.yaml'), contains(asset));
+      expect(
+        _readPackageSource('lib/src/asset_extractor.dart'),
+        contains(asset),
       );
     });
 
@@ -1789,7 +1797,7 @@ void main() {
 
   group('asset extraction', () {
     test('versions bundled reader assets independently of app version', () {
-      expect(AssetExtractor.assetRevision, 'reader_webview_assets_123');
+      expect(AssetExtractor.assetRevision, 'reader_webview_assets_125');
       expect(
         AssetExtractor.extractionVersionFor('1.0.0+1'),
         '1.0.0+1|${AssetExtractor.assetRevision}',

@@ -133,25 +133,32 @@ class _OnboardingPage extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(data.icon, size: 80, color: colorScheme.primary),
-          const SizedBox(height: AppSpacing.lg),
-          Text(
-            data.title,
-            style: textTheme.headlineSmall,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            data.description,
-            style: textTheme.bodyLarge.copyWith(
-              color: colorScheme.onSurfaceVariant,
+      child: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(data.icon, size: 80, color: colorScheme.primary),
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  data.title,
+                  style: textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  data.description,
+                  style: textTheme.bodyLarge.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-            textAlign: TextAlign.center,
           ),
-        ],
+        ),
       ),
     );
   }

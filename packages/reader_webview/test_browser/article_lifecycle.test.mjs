@@ -11,6 +11,48 @@ test('article HTTP failure reports a terminal load failure to Flutter', async t 
     assert.equal(calls.includes('onLoadEnd'), false)
 })
 
+test('article selection reports only fully contained saved highlights', async t => {
+    const { page, routes, articleUrl } = await createHarness(t)
+    routes.set('/article-content', '<p id="block-0" data-rf-block-id="block-0"><span id="block-0-s0" data-rf-sentence="0">The power bank keeps devices running.</span></p>')
+    await page.goto(articleUrl())
+    await page.waitForFunction(() => window.bridgeCalls.some(call => call[0] === 'onLoadEnd'))
+    await page.evaluate(() => {
+        const node = document.getElementById('block-0-s0').firstChild
+        window.selectHighlightTestRange = text => {
+            const start = node.data.indexOf(text)
+            if (start < 0) throw new Error('Missing fixture text')
+            const selection = window.getSelection()
+            selection.setBaseAndExtent(node, start, node, start + text.length)
+            document.dispatchEvent(new Event('selectionchange'))
+            return window.getCurrentTextSelection()
+        }
+        const saved = [['phrase', 'power bank'], ['word', 'devices']].map(([id, text]) => ({
+            id, text, cfiRange: window.selectHighlightTestRange(text).cfi, color: '#FFE600',
+        }))
+        window.setArticleHighlights(saved)
+    })
+    for (const [text, ids] of [
+        ['The power bank keeps', ['phrase']],
+        ['power', []],
+        ['power bank', ['phrase']],
+        ['The power', []],
+        ['bank keeps', []],
+        ['The power bank keeps devices running.', ['phrase', 'word']],
+        ['running.', []],
+    ]) {
+        const result = await page.evaluate(text => {
+            window.bridgeCalls.length = 0
+            const payload = window.selectHighlightTestRange(text)
+            return {
+                text: payload.text, ids: payload.containedHighlightIds,
+                native: window.getSelection().toString(),
+                edits: window.bridgeCalls.filter(([name]) => name === 'onAnnotationClick').length,
+            }
+        }, text)
+        assert.deepEqual(result, { text, ids, native: text, edits: 0 })
+    }
+})
+
 test('article highlights remain visible without CSS Custom Highlight support', async t => {
     const { page, routes, articleUrl } = await createHarness(t)
     await page.addInitScript(() => { window.Highlight = undefined })

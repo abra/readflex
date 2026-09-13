@@ -30,6 +30,7 @@ class ActionBottomSheetLayout extends StatelessWidget {
       AppSpacing.lg,
     ),
     this.headerSpacing = AppSpacing.lg,
+    this.constrainBody = false,
     super.key,
   });
 
@@ -51,14 +52,21 @@ class ActionBottomSheetLayout extends StatelessWidget {
   /// Vertical gap between the title row and the body. Default 16 dp.
   final double headerSpacing;
 
+  /// Keep the header visible and give the body the remaining height.
+  /// Requires bounded vertical constraints and a scrollable body.
+  final bool constrainBody;
+
   @override
   Widget build(BuildContext context) {
     final header = headerTrailing == null
         ? BottomSheetHeader(title: title)
-        : Row(
+        : OverflowBar(
+            alignment: MainAxisAlignment.spaceBetween,
+            overflowAlignment: OverflowBarAlignment.start,
+            spacing: AppSpacing.md,
+            overflowSpacing: AppSpacing.xs,
             children: [
-              Expanded(child: BottomSheetHeader(title: title)),
-              const SizedBox(width: AppSpacing.md),
+              BottomSheetHeader(title: title),
               headerTrailing!,
             ],
           );
@@ -72,7 +80,12 @@ class ActionBottomSheetLayout extends StatelessWidget {
           child: header,
         ),
         if (headerSpacing > 0) SizedBox(height: headerSpacing),
-        Padding(padding: bodyPadding, child: child),
+        if (constrainBody)
+          Flexible(
+            child: Padding(padding: bodyPadding, child: child),
+          )
+        else
+          Padding(padding: bodyPadding, child: child),
       ],
     );
   }

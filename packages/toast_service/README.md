@@ -40,6 +40,9 @@ screens, and slide down from the status bar. Features should not import
 `toastification` directly; keeping this wrapper small makes it easy to change
 toast libraries later.
 
+Success and error toasts start auto-dismissal after 1 second, followed by the
+standard exit animation.
+
 ## Dependencies
 
 - `component_library` - spacing, radius, and design tokens

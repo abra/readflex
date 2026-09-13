@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app_typography.dart';
 import '../tokens/app_colors.dart';
 import '../tokens/app_radius.dart';
 import '../tokens/app_sizes.dart';
@@ -21,7 +22,10 @@ class AppButtonThemes {
       style: FilledButton.styleFrom(
         backgroundColor: palette.primary,
         foregroundColor: palette.onPrimary,
-        textStyle: textTheme.labelLarge,
+        textStyle: textTheme.labelLarge?.copyWith(
+          fontFamily: AppTypography.fontFamilySans,
+          fontFamilyFallback: AppTypography.fontFamilyFallback,
+        ),
         elevation: 0,
         shadowColor: Colors.transparent,
         // `Size(0, h)`, NOT `Size.fromHeight(h)`. The latter is
@@ -47,7 +51,10 @@ class AppButtonThemes {
     return OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: palette.foreground,
-        textStyle: textTheme.labelLarge,
+        textStyle: textTheme.labelLarge?.copyWith(
+          fontFamily: AppTypography.fontFamilySans,
+          fontFamilyFallback: AppTypography.fontFamilyFallback,
+        ),
         // `Size(0, h)`, NOT `Size.fromHeight(h)`. The latter is
         // `Size(double.infinity, h)`, which makes minimumSize.width
         // infinite — fine when the parent gives a bounded width
@@ -73,7 +80,10 @@ class AppButtonThemes {
     return TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: palette.primary,
-        textStyle: textTheme.labelLarge,
+        textStyle: textTheme.labelLarge?.copyWith(
+          fontFamily: AppTypography.fontFamilySans,
+          fontFamilyFallback: AppTypography.fontFamilyFallback,
+        ),
         // `Size(0, h)`, NOT `Size.fromHeight(h)`. The latter is
         // `Size(double.infinity, h)`, which makes minimumSize.width
         // infinite — fine when the parent gives a bounded width

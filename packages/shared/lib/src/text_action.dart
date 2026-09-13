@@ -109,7 +109,7 @@ class TextSelectionContext {
   /// to auto-detect the final language per selection.
   final String? sourceLanguageHint;
 
-  /// Existing highlights strictly contained inside the current selection.
+  /// Saved highlights fully contained in the selection, including equal ranges.
   final List<String> containedHighlightIds;
 }
 

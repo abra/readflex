@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'app_icons.dart';
 import 'source_cover_tokens.dart';
+import 'theme/app_typography.dart';
 import 'theme/tokens/app_radius.dart';
 
 /// Stylised cover placeholder used when a book has no real cover image of
@@ -458,6 +459,8 @@ class _CoverTextColumn extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               inherit: false,
+              fontFamily: AppTypography.fontFamilySans,
+              fontFamilyFallback: AppTypography.fontFamilyFallback,
               fontSize: titleFontSize,
               fontWeight: FontWeight.w600,
               color: textColor,
@@ -475,6 +478,8 @@ class _CoverTextColumn extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 inherit: false,
+                fontFamily: AppTypography.fontFamilySans,
+                fontFamilyFallback: AppTypography.fontFamilyFallback,
                 fontSize: authorFontSize,
                 color: metaColor,
                 letterSpacing: 1,
@@ -492,6 +497,8 @@ class _CoverTextColumn extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 inherit: false,
+                fontFamily: AppTypography.fontFamilySans,
+                fontFamilyFallback: AppTypography.fontFamilyFallback,
                 fontSize: sourceFontSize,
                 color: sourceColor,
                 letterSpacing: 1,

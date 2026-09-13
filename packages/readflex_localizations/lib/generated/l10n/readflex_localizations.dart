@@ -117,6 +117,162 @@ abstract class ReadflexLocalizations {
     Locale('ja'),
   ];
 
+  /// No description provided for @translationOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
+  String get translationOriginal;
+
+  /// No description provided for @dictionaryInContext.
+  ///
+  /// In en, this message translates to:
+  /// **'In this context'**
+  String get dictionaryInContext;
+
+  /// No description provided for @translationAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Translate'**
+  String get translationAction;
+
+  /// No description provided for @translationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation'**
+  String get translationTitle;
+
+  /// No description provided for @translationSourceLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get translationSourceLanguage;
+
+  /// No description provided for @translationTargetLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get translationTargetLanguage;
+
+  /// No description provided for @translationAutoSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get translationAutoSource;
+
+  /// No description provided for @translationAutoDetectedSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto: {language}'**
+  String translationAutoDetectedSource(String language);
+
+  /// No description provided for @translationOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get translationOffline;
+
+  /// No description provided for @translationSentence.
+  ///
+  /// In en, this message translates to:
+  /// **'Sentence'**
+  String get translationSentence;
+
+  /// No description provided for @translationDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Meaning & alternatives'**
+  String get translationDetails;
+
+  /// No description provided for @translationAlternatives.
+  ///
+  /// In en, this message translates to:
+  /// **'Alternatives'**
+  String get translationAlternatives;
+
+  /// No description provided for @translationSourceRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the source language'**
+  String get translationSourceRequiredTitle;
+
+  /// No description provided for @translationSourceRequiredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The source language cannot be detected automatically while offline.'**
+  String get translationSourceRequiredBody;
+
+  /// No description provided for @translationSelectLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Select language'**
+  String get translationSelectLanguage;
+
+  /// No description provided for @translationOfflineModelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline models required'**
+  String get translationOfflineModelTitle;
+
+  /// No description provided for @translationOfflineModelBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Download language models for {source} and {target}.'**
+  String translationOfflineModelBody(String source, String target);
+
+  /// No description provided for @translationDownloadModels.
+  ///
+  /// In en, this message translates to:
+  /// **'Download models'**
+  String get translationDownloadModels;
+
+  /// No description provided for @translationDownloadingModels.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading models'**
+  String get translationDownloadingModels;
+
+  /// No description provided for @translationDownloadingModelsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation will run on this device after the download.'**
+  String get translationDownloadingModelsBody;
+
+  /// No description provided for @translationFailureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation failed'**
+  String get translationFailureTitle;
+
+  /// No description provided for @translationFailureBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the network connection or try again later.'**
+  String get translationFailureBody;
+
+  /// No description provided for @libraryResetFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset filters'**
+  String get libraryResetFilters;
+
+  /// No description provided for @libraryClearCollectionFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear collection filter'**
+  String get libraryClearCollectionFilter;
+
+  /// No description provided for @commonCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get commonCopied;
+
+  /// No description provided for @commonCopyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not copy'**
+  String get commonCopyFailed;
+
   /// No description provided for @appSkip.
   ///
   /// In en, this message translates to:

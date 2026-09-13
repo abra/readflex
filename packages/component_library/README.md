@@ -95,9 +95,18 @@ as static semantic token classes:
 - `AppTypography.textTheme` -- `TextTheme` with all 15 Material roles; display
   and headline roles use Literata, title/body/label roles use Geist
 - `AppTypography.fontFamilySans` / `fontFamilySerif` -- `Geist` / `Literata`
+- `AppTypography.fontFamilyFallback` -- named Arabic, Devanagari, and Japanese
+  fallbacks before the operating system fallback; these do not bundle fonts
 - `AppTypography.serif(...)` / `sans(...)` -- factory methods for one-off styles
 - `context.text.screenCounter`, `sourceMetadata`, `readerChromeLabel`, etc. --
   semantic styles for repeated compact UI surfaces
+
+Button theme and generated cover text styles explicitly select Geist and the
+same fallbacks; passing an unresolved typography role into a button style would
+otherwise lose the theme's font family. Cover styles retain `inherit: false`
+for route/Hero isolation without losing their font family. Root golden tests
+register deterministic test-only fallback fonts; see `test/fonts/README.md`
+in the repository root.
 
 ### Rules
 
@@ -124,25 +133,31 @@ Reusable presentation-only widgets used across features:
 
 | Widget                              | Purpose                                        |
 |-------------------------------------|------------------------------------------------|
-| `ActionBottomSheetLayout`           | Bottom sheet shell with header and content     |
+| `ActionBottomSheetLayout`           | Bottom sheet shell; optional constrained scroll body and wrapping header actions |
 | `AppActionCard`                     | Reusable command card for action pickers       |
 | `AppBottomSafeArea`                 | Bottom inset handling for app-owned surfaces   |
 | `AppButtonLabel`                    | Bounded label for localized button text        |
+| `AppCopyButton`                     | 48px copy command with local success/error feedback |
 | `AppFilterChip`                     | App-styled filter chip with stable tap target  |
 | `BottomSheetHeader`                 | Bottom sheet title row                         |
 | `ButtonLoadingIndicator`            | Compact circular progress for buttons          |
 | `CenteredCircularProgressIndicator` | Centered loading spinner                       |
-| `EmptyState`                        | Centered empty state message                   |
+| `EmptyState`                        | Centered empty state with optional recovery action |
 | `ErrorState`                        | Error message with retry button                |
 | `AppSourceCover` / `AppSourceCoverFrame` | Shared source cover rendering and frame |
 | `appSourceCoverImageFromPath`       | Resolves an optional local cover image path    |
-| `SearchField`                       | App search field                               |
+| `SearchField`                       | App search field with an adaptive primary-tone clear icon |
 | `ScrollEdgeFadeStack`               | Scroll-edge fade/scrim wrapper                 |
 | `ScrollEdgeFade`                    | Individual top/bottom scroll-edge fade         |
 | `SelectionPreviewCard`              | Compact preview of selected text               |
 | `showAppBottomSheet`                | Shared modal bottom-sheet presentation helper  |
 
 ## What Belongs Here
+
+`AppCopyButton` receives a clipboard callback and localized labels from its
+feature. It performs no service lookup, blocks duplicate in-flight taps, and
+shows success only after the callback completes. Feedback rebuilds only the
+button; its timer is cancelled on disposal. Clipboard failures remain retryable.
 
 - Design tokens and theme primitives
 - Reusable visual widgets used by multiple features

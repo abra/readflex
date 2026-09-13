@@ -376,5 +376,142 @@ void main() {
       expect(await repo.getHighlightById(other.id), isNotNull);
       expect(await db.reviewItemsDao.byItemId(other.id), isNotNull);
     });
+
+    for (final sourceType in [SourceType.book, SourceType.article]) {
+      test(
+        'same $sourceType range keeps identity, note and review state',
+        () async {
+          final saved = await repo.addHighlight(
+            sourceId: 's1',
+            sourceType: sourceType,
+            text: 'Selected phrase',
+            cfiRange: 'stable-range',
+            note: 'My note',
+            progress: 0.3,
+            chapterTitle: 'Chapter',
+          );
+          await db.reviewItemsDao.upsertItem(
+            ReviewItemsTableCompanion.insert(
+              itemId: saved.id,
+              itemType: ReviewableType.highlight.name,
+              sourceId: const Value('s1'),
+            ),
+          );
+          final review = await db.reviewItemsDao.byItemId(saved.id);
+
+          final updated = await repo.addHighlight(
+            sourceId: 's1',
+            sourceType: sourceType,
+            text: saved.text,
+            cfiRange: saved.cfiRange,
+            color: HighlightColor.green,
+            replaceHighlightIds: [saved.id, saved.id, 'missing'],
+          );
+
+          expect(updated, saved.copyWith(color: HighlightColor.green));
+          expect(await repo.getHighlightsBySource('s1'), [updated]);
+          expect(await db.reviewItemsDao.byItemId(saved.id), review);
+        },
+      );
+    }
+
+    test('same-range save still removes other contained highlights', () async {
+      final full = await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.book,
+        text: 'A wider selection',
+        cfiRange: 'full-range',
+        note: 'Keep this note',
+      );
+      final inner = await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.book,
+        text: 'wider',
+        cfiRange: 'inner-range',
+      );
+      await db.reviewItemsDao.upsertItem(
+        ReviewItemsTableCompanion.insert(
+          itemId: inner.id,
+          itemType: ReviewableType.highlight.name,
+          sourceId: const Value('s1'),
+        ),
+      );
+
+      final saved = await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.book,
+        text: full.text,
+        cfiRange: full.cfiRange,
+        color: HighlightColor.pink,
+        replaceHighlightIds: [inner.id, full.id],
+      );
+
+      expect(saved, full.copyWith(color: HighlightColor.pink));
+      expect(await repo.getHighlightsBySource('s1'), [saved]);
+      expect(await db.reviewItemsDao.byItemId(inner.id), isNull);
+    });
+
+    test('same text at different anchors remains separate', () async {
+      final first = await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.book,
+        text: 'Repeated',
+        cfiRange: 'first-occurrence',
+      );
+      final second = await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.book,
+        text: first.text,
+        cfiRange: 'second-occurrence',
+      );
+      final updated = await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.book,
+        text: second.text,
+        cfiRange: second.cfiRange,
+        color: HighlightColor.blue,
+        replaceHighlightIds: [second.id],
+      );
+      expect(updated.id, second.id);
+      expect(
+        await repo.getHighlightsBySource('s1'),
+        unorderedEquals([first, updated]),
+      );
+    });
+
+    test(
+      'failed replacement rolls back highlight and review deletion',
+      () async {
+        final saved = await repo.addHighlight(
+          sourceId: 's1',
+          sourceType: SourceType.book,
+          text: 'Original',
+        );
+        await db.reviewItemsDao.upsertItem(
+          ReviewItemsTableCompanion.insert(
+            itemId: saved.id,
+            itemType: ReviewableType.highlight.name,
+            sourceId: const Value('s1'),
+          ),
+        );
+        final review = await db.reviewItemsDao.byItemId(saved.id);
+        await db.customStatement('''
+        CREATE TRIGGER fail_highlight_insert BEFORE INSERT ON highlights_table
+        BEGIN SELECT RAISE(ABORT, 'Test storage failure'); END;
+      ''');
+
+        await expectLater(
+          repo.addHighlight(
+            sourceId: 's1',
+            sourceType: SourceType.book,
+            text: 'Wider text',
+            replaceHighlightIds: [saved.id],
+          ),
+          throwsA(isA<StorageException>()),
+        );
+        expect(await repo.getHighlightsBySource('s1'), [saved]);
+        expect(await db.reviewItemsDao.byItemId(saved.id), review);
+      },
+    );
   });
 }

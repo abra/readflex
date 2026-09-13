@@ -85,16 +85,22 @@ class ReaderSearchCubit extends Cubit<ReaderSearchState> {
   static const minQueryLength = 2;
   static const historyLimit = 10;
   static const _debounceDelay = Duration(milliseconds: 300);
+  static const _publishInterval = Duration(milliseconds: 16);
 
   final ValueChanged<List<String>>? _onRecentQueriesChanged;
 
   Timer? _debounce;
+  Timer? _publishTimer;
+  final _pendingResults = <ReaderSearchResult>[];
+  double? _pendingProgress;
   StreamSubscription<ReaderSearchEvent>? _searchSubscription;
   int _searchGeneration = 0;
 
   @override
   Future<void> close() async {
     _debounce?.cancel();
+    _searchGeneration++;
+    _discardPendingUpdates();
     await _searchSubscription?.cancel();
     return super.close();
   }
@@ -129,6 +135,7 @@ class ReaderSearchCubit extends Cubit<ReaderSearchState> {
   void reset() {
     _debounce?.cancel();
     _searchGeneration++;
+    _discardPendingUpdates();
     unawaited(_searchSubscription?.cancel());
     _searchSubscription = null;
     emit(
@@ -151,6 +158,7 @@ class ReaderSearchCubit extends Cubit<ReaderSearchState> {
     final query = value.trim();
     final shouldClearCurrentSearch = state.hasSearchContent;
     _searchGeneration++;
+    _discardPendingUpdates();
     unawaited(_searchSubscription?.cancel());
     _searchSubscription = null;
 
@@ -202,54 +210,87 @@ class ReaderSearchCubit extends Cubit<ReaderSearchState> {
 
   void _runSearch(String query, ReaderBookSearch searchBook) {
     final generation = ++_searchGeneration;
-    var completedWithError = false;
+    var completed = false;
     unawaited(_searchSubscription?.cancel());
 
-    _searchSubscription = searchBook(query).listen(
-      (event) {
-        if (isClosed || generation != _searchGeneration) return;
-        switch (event) {
-          case ReaderSearchProgress(:final progress):
-            if (progress == state.progress) return;
-            emit(state.copyWith(progress: progress));
-          case ReaderSearchResults(:final results):
-            if (results.isEmpty) return;
-            emit(state.copyWith(results: [...state.results, ...results]));
-          case ReaderSearchDone():
-            emit(state.copyWith(progress: 1));
-          case ReaderSearchError(:final message):
-            completedWithError = true;
-            emit(
-              state.copyWith(
-                results: const [],
-                isLoading: false,
-                errorMessage: message,
-              ),
-            );
-        }
-      },
-      onError: (_) {
-        if (isClosed || generation != _searchGeneration) return;
-        completedWithError = true;
-        emit(
-          state.copyWith(
-            results: const [],
-            isLoading: false,
-            errorCode: ReaderSearchErrorCode.searchFailed,
-          ),
-        );
-      },
-      onDone: () {
-        if (isClosed || generation != _searchGeneration || completedWithError) {
-          return;
-        }
-        emit(
-          state.copyWith(
-            progress: 1,
-            isLoading: false,
-          ),
-        );
-      },
+    bool isActive() =>
+        !isClosed && generation == _searchGeneration && !completed;
+
+    void finish() {
+      if (!isActive()) return;
+      completed = true;
+      _publishPendingUpdates(finished: true);
+    }
+
+    void fail({String? message}) {
+      if (!isActive()) return;
+      completed = true;
+      _discardPendingUpdates();
+      emit(
+        state.copyWith(
+          results: const [],
+          isLoading: false,
+          errorMessage: message,
+          errorCode: message == null
+              ? ReaderSearchErrorCode.searchFailed
+              : null,
+        ),
+      );
+    }
+
+    try {
+      _searchSubscription = searchBook(query).listen(
+        (event) {
+          if (!isActive()) return;
+          switch (event) {
+            case ReaderSearchProgress(:final progress):
+              if (progress == (_pendingProgress ?? state.progress)) return;
+              _pendingProgress = progress;
+            case ReaderSearchResults(:final results):
+              if (results.isEmpty) return;
+              _pendingResults.addAll(results);
+            case ReaderSearchDone():
+              finish();
+              return;
+            case ReaderSearchError(:final message):
+              fail(message: message);
+              return;
+          }
+          // A renderer can emit thousands of tiny chunks in one event-loop turn.
+          // Publish bounded batches, preserving immediate completion and errors.
+          _publishTimer ??= Timer(_publishInterval, () {
+            if (isActive()) _publishPendingUpdates();
+          });
+        },
+        onError: (_) => fail(),
+        onDone: finish,
+      );
+    } catch (_) {
+      fail();
+    }
+  }
+
+  void _publishPendingUpdates({bool finished = false}) {
+    final results = _pendingResults.isEmpty
+        ? state.results
+        : List<ReaderSearchResult>.unmodifiable(
+            state.results.followedBy(_pendingResults),
+          );
+    final progress = finished ? 1.0 : _pendingProgress ?? state.progress;
+    _discardPendingUpdates();
+    emit(
+      state.copyWith(
+        results: results,
+        progress: progress,
+        isLoading: !finished,
+      ),
     );
+  }
+
+  void _discardPendingUpdates() {
+    _publishTimer?.cancel();
+    _publishTimer = null;
+    _pendingResults.clear();
+    _pendingProgress = null;
   }
 }

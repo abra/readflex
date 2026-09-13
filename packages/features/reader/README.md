@@ -60,6 +60,20 @@ selection popup, waits for that frame to finish, and then executes the action
 from its stable context. This prevents a context menu from remaining visible
 behind a modal or native dictionary surface without losing the captured range.
 
+`ReaderHighlightControls` is a presentation-only leaf: 48px swatches expose
+their selected/enabled states, and only the palette scrolls when the popup is
+narrow. Save/edit/delete commands stay visible. Its callbacks preserve the
+existing preview/explicit-save contract and pointer-down selection capture.
+`ReaderSearchResultTile` respects the system text scaler for both its chapter
+label and highlighted excerpt, while retaining document direction and the
+three-line excerpt limit. Neither leaf owns repositories or WebView lifecycle.
+
+The appearance sheet constrains its scrollable body to the remaining modal
+height while keeping the header visible. Narrow large-text layouts stack the
+title/reset and setting label/control pairs; numeric fields grow with the text
+scaler. Root goldens check portrait, landscape, 2x text, and RTL layouts, including
+untruncated setting labels/values and access to the final page-turn control.
+
 ```dart
 abstract class TextAction {
   String get label;
@@ -80,6 +94,16 @@ abstract class TextAction {
 | `ReaderImageHighlightCubit`   | Persists image-page highlights with optional notes, then `ReaderBloc` refreshes annotations |
 | `ReaderAppearanceCubit`       | Per-source reader appearance overrides over global preferences             |
 | `ReaderBrightnessCubit`       | System/custom reader brightness state and active window override lifecycle |
+
+`ReaderSearchCubit` debounces typing by 300ms and batches incoming results and
+progress at 16ms intervals. A done event or stream close flushes immediately;
+published result lists remain immutable snapshots. Reset, query replacement,
+terminal error, and close discard pending updates and reject late events.
+Synchronous renderer failures and stream errors become recoverable error state.
+Stress tests bound emissions and cumulative published entries for bursts; the
+benchmark under `benchmarks/` measures 1k/5k/20k-result workloads separately from
+device frame performance. Continuous streams still publish cumulative snapshots,
+so the burst benchmark is not a claim of constant work for every stream shape.
 
 `ReaderBloc.reportError(e, st)` is a public facade over the protected
 `addError()` so widgets (e.g. the context panel) can route non-fatal errors

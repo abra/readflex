@@ -9,6 +9,88 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   ReadflexLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get translationOriginal => '原文';
+
+  @override
+  String get dictionaryInContext => '在此语境中';
+
+  @override
+  String get translationAction => '翻译';
+
+  @override
+  String get translationTitle => '翻译';
+
+  @override
+  String get translationSourceLanguage => '源语言';
+
+  @override
+  String get translationTargetLanguage => '目标语言';
+
+  @override
+  String get translationAutoSource => '自动';
+
+  @override
+  String translationAutoDetectedSource(String language) {
+    return '自动：$language';
+  }
+
+  @override
+  String get translationOffline => '离线';
+
+  @override
+  String get translationSentence => '句子';
+
+  @override
+  String get translationDetails => '释义与其他译法';
+
+  @override
+  String get translationAlternatives => '其他译法';
+
+  @override
+  String get translationSourceRequiredTitle => '请选择源语言';
+
+  @override
+  String get translationSourceRequiredBody => '离线时无法自动检测源语言。';
+
+  @override
+  String get translationSelectLanguage => '选择语言';
+
+  @override
+  String get translationOfflineModelTitle => '需要离线语言模型';
+
+  @override
+  String translationOfflineModelBody(String source, String target) {
+    return '请下载$source和$target的语言模型。';
+  }
+
+  @override
+  String get translationDownloadModels => '下载模型';
+
+  @override
+  String get translationDownloadingModels => '正在下载模型';
+
+  @override
+  String get translationDownloadingModelsBody => '下载完成后，将在此设备上进行翻译。';
+
+  @override
+  String get translationFailureTitle => '翻译失败';
+
+  @override
+  String get translationFailureBody => '请检查网络连接或稍后重试。';
+
+  @override
+  String get libraryResetFilters => '重置筛选';
+
+  @override
+  String get libraryClearCollectionFilter => '清除合集筛选';
+
+  @override
+  String get commonCopied => '已复制';
+
+  @override
+  String get commonCopyFailed => '无法复制';
+
+  @override
   String get appSkip => '跳过';
 
   @override

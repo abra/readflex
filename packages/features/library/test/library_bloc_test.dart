@@ -162,6 +162,28 @@ void main() {
     );
 
     blocTest<LibraryBloc, LibraryState>(
+      'reset cancels a pending search and clears all filters without IO',
+      build: () => LibraryBloc(bookRepository: repository),
+      seed: () => LibraryState(
+        status: LibraryStatus.success,
+        books: [_book],
+        filter: LibraryFilter.comics,
+        selectedCollectionScope: _favouritesScope,
+        searchQuery: 'old',
+      ),
+      act: (bloc) async {
+        bloc.add(const LibrarySearchQueryChanged('pending'));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        bloc.add(const LibraryFiltersReset());
+      },
+      wait: const Duration(milliseconds: 400),
+      expect: () => [
+        LibraryState(status: LibraryStatus.success, books: [_book]),
+      ],
+      verify: (_) => expect(repository.getBooksCallCount, 0),
+    );
+
+    blocTest<LibraryBloc, LibraryState>(
       'LibrarySourceDeleted removes source and reloads',
       setUp: () => repository.seedBooks([_book]),
       build: () => LibraryBloc(bookRepository: repository),

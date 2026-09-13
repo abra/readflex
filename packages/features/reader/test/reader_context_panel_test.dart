@@ -55,7 +55,7 @@ void main() {
     expect(contextPanelSource, contains('AppShadows.popover'));
     expect(
       contextPanelSource,
-      contains('readerHighlightColor(color, readerTheme)'),
+      contains('ReaderHighlightControls('),
     );
     expect(
       contentSource,
@@ -175,7 +175,7 @@ void main() {
       'class _HighlightSelectionPopupState',
     );
     final activeSelectionPopupEnd = contextPanelSource.indexOf(
-      'class _HighlightPopupAction',
+      'class _TextSelectionPopupAction',
       activeSelectionPopupStart,
     );
     expect(activeSelectionPopupStart, greaterThanOrEqualTo(0));
@@ -212,9 +212,7 @@ void main() {
       isNot(contains('onDismiss: dismissImageSelection')),
     );
     expect(contextPanelSource, contains('widget.onPreviewColorChanged(color)'));
-    expect(contextPanelSource, contains('AppIcons.check'));
     expect(contextPanelSource, contains('AppIcons.edit'));
-    expect(contextPanelSource, contains('computeLuminance()'));
     expect(
       contextPanelSource,
       contains(
@@ -247,7 +245,6 @@ void main() {
     expect(contextPanelSource, contains('icon: AppIcons.highlight'));
     expect(contextPanelSource, contains('bool get _busy =>'));
     expect(contextPanelSource, contains('loading: _saving'));
-    expect(contextPanelSource, contains('child: action.loading'));
     expect(contextPanelSource, contains('_executingExtraAction = true'));
     expect(contextPanelSource, contains('_TextSelectionPopupSurface'));
     expect(contextPanelSource, contains('_kTextSelectionPopupHeight'));

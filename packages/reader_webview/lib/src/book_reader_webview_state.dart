@@ -3,6 +3,12 @@ part of 'book_reader_webview.dart';
 class BookReaderWebViewState extends State<BookReaderWebView>
     with ReaderWebViewLifecycleMixin<BookReaderWebView> {
   InAppWebViewController? _controller;
+
+  /// Device tests exercise the real JS bridge without adding runtime hooks.
+  @visibleForTesting
+  InAppWebViewController? get debugController => _controller;
+  @visibleForTesting
+  bool get debugIsReady => _isReady;
   bool _isReady = false;
   BookPosition? _lastPosition;
   FoliateStyle? _bootstrapStyle;

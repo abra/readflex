@@ -9,6 +9,92 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   ReadflexLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
+  String get translationOriginal => 'Оригинал';
+
+  @override
+  String get dictionaryInContext => 'В этом контексте';
+
+  @override
+  String get translationAction => 'Перевести';
+
+  @override
+  String get translationTitle => 'Перевод';
+
+  @override
+  String get translationSourceLanguage => 'С языка';
+
+  @override
+  String get translationTargetLanguage => 'На язык';
+
+  @override
+  String get translationAutoSource => 'Авто';
+
+  @override
+  String translationAutoDetectedSource(String language) {
+    return 'Авто: $language';
+  }
+
+  @override
+  String get translationOffline => 'Без сети';
+
+  @override
+  String get translationSentence => 'Предложение';
+
+  @override
+  String get translationDetails => 'Значение и варианты';
+
+  @override
+  String get translationAlternatives => 'Варианты';
+
+  @override
+  String get translationSourceRequiredTitle => 'Выберите исходный язык';
+
+  @override
+  String get translationSourceRequiredBody =>
+      'Без сети исходный язык нельзя определить автоматически.';
+
+  @override
+  String get translationSelectLanguage => 'Выбрать язык';
+
+  @override
+  String get translationOfflineModelTitle =>
+      'Нужны модели для перевода без сети';
+
+  @override
+  String translationOfflineModelBody(String source, String target) {
+    return 'Загрузите языковые модели: $source и $target.';
+  }
+
+  @override
+  String get translationDownloadModels => 'Скачать модели';
+
+  @override
+  String get translationDownloadingModels => 'Загрузка моделей';
+
+  @override
+  String get translationDownloadingModelsBody =>
+      'После загрузки перевод будет выполнен на устройстве.';
+
+  @override
+  String get translationFailureTitle => 'Не удалось перевести';
+
+  @override
+  String get translationFailureBody =>
+      'Проверьте подключение к сети или попробуйте позже.';
+
+  @override
+  String get libraryResetFilters => 'Сбросить фильтры';
+
+  @override
+  String get libraryClearCollectionFilter => 'Сбросить фильтр коллекции';
+
+  @override
+  String get commonCopied => 'Скопировано';
+
+  @override
+  String get commonCopyFailed => 'Не удалось скопировать';
+
+  @override
   String get appSkip => 'Пропустить';
 
   @override

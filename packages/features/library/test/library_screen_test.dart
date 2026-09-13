@@ -135,6 +135,29 @@ void main() {
     await tester.pump();
 
     expect(find.text('Your library is empty'), findsOneWidget);
+    expect(find.text('Reset filters'), findsNothing);
+  });
+
+  testWidgets('empty search resets filters without reloading the library', (
+    tester,
+  ) async {
+    bookRepository.seedBooks([_book]);
+    await tester.pumpWidget(buildSubject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Comics'));
+    await tester.enterText(find.byType(TextField), 'missing');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Reset filters'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      '',
+    );
+    expect(find.text(_book.title), findsOneWidget);
+    expect(find.text('Reset filters'), findsNothing);
+    expect(bookRepository.getBooksCallCount, 1);
   });
 
   testWidgets('shows Library header and item count with content', (

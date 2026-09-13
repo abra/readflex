@@ -41,17 +41,14 @@ class _ReaderAppearanceSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxBodyHeight = MediaQuery.sizeOf(context).height * 0.76;
     return ActionBottomSheetLayout(
       title: context.l10n.readerAppearanceTitle,
       headerTrailing: const _ResetAppearanceButton(),
       headerSpacing: AppSpacing.md,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: maxBodyHeight),
-        child: SingleChildScrollView(
-          child: _LayeredAppearanceControls(
-            showPageTurnControls: showPageTurnControls,
-          ),
+      constrainBody: true,
+      child: SingleChildScrollView(
+        child: _LayeredAppearanceControls(
+          showPageTurnControls: showPageTurnControls,
         ),
       ),
     );
@@ -456,27 +453,45 @@ class _AppearanceSettingRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(
-        minHeight: _compactControlSurfaceHeight,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: context.text.labelLarge.copyWith(
-                color: context.colors.onSurface.withValues(alpha: 0.74),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stacked =
+            constraints.maxWidth < 360 &&
+            MediaQuery.textScalerOf(context).scale(14) > 18;
+        final title = Text(
+          label,
+          maxLines: stacked ? null : 2,
+          overflow: stacked ? TextOverflow.visible : TextOverflow.ellipsis,
+          style: context.text.labelLarge.copyWith(
+            color: context.colors.onSurface.withValues(alpha: 0.74),
+            fontWeight: FontWeight.w600,
           ),
-          const SizedBox(width: AppSpacing.md),
-          control,
-        ],
-      ),
+        );
+        return ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: _compactControlSurfaceHeight,
+          ),
+          child: stacked
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    title,
+                    const SizedBox(height: AppSpacing.xs),
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: control,
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(child: title),
+                    const SizedBox(width: AppSpacing.md),
+                    control,
+                  ],
+                ),
+        );
+      },
     );
   }
 }
@@ -686,7 +701,12 @@ class _AppearanceStepper extends StatelessWidget {
     final radius = BorderRadius.circular(AppRadius.sm);
     return SizedBox(
       key: stepperKey,
-      width: width,
+      width:
+          width *
+          (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(
+            1,
+            double.infinity,
+          ),
       height: _compactControlSurfaceHeight,
       child: Material(
         color: cs.surfaceContainerHighest.withValues(alpha: 0.38),

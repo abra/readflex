@@ -242,74 +242,99 @@ class _CollectionScopeButton extends StatelessWidget {
         ? colors.primary
         : colors.surfaceContainerHighest.withValues(alpha: 0.5);
 
-    return SizedBox(
-      height: AppSizes.chipTapTarget,
-      child: Center(
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: selected ? 176 : AppSizes.chipTapTarget,
+      ),
+      child: SizedBox(
+        height: AppSizes.chipTapTarget,
         child: Material(
-          color: background,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          child: InkWell(
-            onTap: onPressed,
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minWidth: AppSizes.chipHeight,
-                maxWidth: selected ? 176 : AppSizes.chipHeight,
-                minHeight: AppSizes.chipHeight,
+          color: Colors.transparent,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Positioned.fill(
+                child: Center(
+                  child: Container(
+                    height: AppSizes.chipHeight,
+                    decoration: BoxDecoration(
+                      color: background,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                  ),
+                ),
               ),
-              child: selected
-                  ? Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _iconFor(scope!.type),
-                            size: AppIconSize.sm,
-                            color: foreground,
-                          ),
-                          const SizedBox(width: AppSpacing.xs),
-                          Flexible(
-                            child: Text(
-                              label!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: context.text.labelSmall.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: foreground,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.xxs),
-                          GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: onClearPressed,
+              Row(
+                children: [
+                  Expanded(
+                    child: Semantics(
+                      container: true,
+                      label: context.l10n.libraryCollectionsTitle,
+                      value: label,
+                      button: true,
+                      selected: selected,
+                      enabled: true,
+                      excludeSemantics: true,
+                      onTap: onPressed,
+                      child: Tooltip(
+                        message: label ?? context.l10n.libraryCollectionsTitle,
+                        excludeFromSemantics: true,
+                        child: InkWell(
+                          onTap: onPressed,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                          child: SizedBox(
+                            height: AppSizes.chipTapTarget,
                             child: Padding(
-                              padding: const EdgeInsets.all(AppSpacing.xxs),
-                              child: Icon(
-                                AppIcons.close,
-                                size: AppIconSize.xs,
-                                color: foreground,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.sm,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    selected
+                                        ? _iconFor(scope!.type)
+                                        : AppIcons.collection,
+                                    size: AppIconSize.sm,
+                                    color: foreground,
+                                  ),
+                                  if (label != null) ...[
+                                    const SizedBox(width: AppSpacing.xs),
+                                    Expanded(
+                                      child: Text(
+                                        label,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: context.text.labelSmall.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: foreground,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                    )
-                  : SizedBox(
-                      width: AppSizes.chipHeight,
-                      height: AppSizes.chipHeight,
-                      child: Center(
-                        child: Icon(
-                          AppIcons.collection,
-                          size: AppIconSize.sm,
-                          color: foreground,
                         ),
                       ),
                     ),
-            ),
+                  ),
+                  if (selected)
+                    IconButton(
+                      tooltip: context.l10n.libraryClearCollectionFilter,
+                      onPressed: onClearPressed,
+                      style: IconButton.styleFrom(
+                        fixedSize: const Size.square(AppSizes.chipTapTarget),
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: foreground,
+                        padding: EdgeInsets.zero,
+                      ),
+                      icon: const Icon(AppIcons.close, size: AppIconSize.xs),
+                    ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -414,8 +439,8 @@ class _HeaderIconButton extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppRadius.sm),
           child: SizedBox(
-            width: AppSizes.chipHeight,
-            height: AppSizes.chipHeight,
+            width: AppSizes.chipTapTarget,
+            height: AppSizes.chipTapTarget,
             child: Center(
               child: Icon(icon, size: AppIconSize.sm, color: iconColor),
             ),
