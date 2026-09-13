@@ -116,13 +116,18 @@ final class ReaderSeekRequested extends ReaderEvent {
   List<Object?> get props => [progress];
 }
 
+/// Annotation operations share ordering, independently of position events.
+sealed class ReaderHighlightEvent extends ReaderEvent {
+  const ReaderHighlightEvent();
+}
+
 /// Reloads the highlight list from storage after a TextAction mutated it.
-final class ReaderHighlightsRefreshed extends ReaderEvent {
+final class ReaderHighlightsRefreshed extends ReaderHighlightEvent {
   const ReaderHighlightsRefreshed();
 }
 
 /// Removes a saved highlight, then refreshes the reader annotation list.
-final class ReaderHighlightDeleteRequested extends ReaderEvent {
+final class ReaderHighlightDeleteRequested extends ReaderHighlightEvent {
   const ReaderHighlightDeleteRequested({required this.highlightId});
 
   final String highlightId;
@@ -132,7 +137,7 @@ final class ReaderHighlightDeleteRequested extends ReaderEvent {
 }
 
 /// Changes the color of a saved highlight.
-final class ReaderHighlightColorChangeRequested extends ReaderEvent {
+final class ReaderHighlightColorChangeRequested extends ReaderHighlightEvent {
   const ReaderHighlightColorChangeRequested({
     required this.highlightId,
     required this.color,
@@ -146,7 +151,7 @@ final class ReaderHighlightColorChangeRequested extends ReaderEvent {
 }
 
 /// Changes the note of a saved highlight.
-final class ReaderHighlightNoteChangeRequested extends ReaderEvent {
+final class ReaderHighlightNoteChangeRequested extends ReaderHighlightEvent {
   const ReaderHighlightNoteChangeRequested({
     required this.highlightId,
     required this.note,

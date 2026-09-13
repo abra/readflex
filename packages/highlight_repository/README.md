@@ -16,13 +16,20 @@ wrapped into `StorageException` (from `domain_models`) before surfacing.
 | `getHighlightsByIds(ids)`                                     | Batch lookup                           |
 | `addHighlight({sourceId, sourceType, text, note, cfiRange, color})` | Create text highlight            |
 | `addImageAreaHighlight({sourceId, sourceType, pageIndex, x, y, width, height, note, color})` | Create image-page area highlight |
-| `updateHighlight(highlight)`                                  | Update fields                          |
+| `updateHighlight(highlight)`                                  | Replace a complete snapshot             |
+| `updateHighlightColor(id, color)`                              | Atomically patch only the color         |
+| `updateHighlightNote(id, note)`                                | Atomically patch/clear only the note    |
 | `deleteHighlight(id)`                                         | Delete by id                           |
 | `deleteHighlightsBySource(sourceId)`                          | Cascade delete when a source is removed|
 
 Text highlights are anchored by `cfiRange` (via foliate-js). Comic/image-page
 highlights are anchored by a zero-based `pageIndex` plus normalized rectangle
 coordinates. Both kinds share optional `note` and `HighlightColor`.
+
+Editors should use the field-specific methods: one SQL UPDATE, no read/modify/
+write of stale fields and no schema change. Patches preserve anchors, metadata,
+and independent edits; a missing row raises `StorageException` instead of
+silently reporting success or recreating a deleted highlight.
 
 > The storage row also carries legacy `pageNumber` and `scrollOffset`
 > columns for old rows and tests. Current reader selections primarily use

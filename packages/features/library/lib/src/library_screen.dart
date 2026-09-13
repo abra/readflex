@@ -3,7 +3,6 @@ import 'package:book_repository/book_repository.dart';
 import 'package:collection_repository/collection_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:preferences_service/preferences_service.dart';
@@ -26,6 +25,11 @@ import 'confirm_book_deletion_sheet.dart';
 
 const _sourceRouteReturnRefreshDelay = Duration(milliseconds: 320);
 const _libraryFabBottomLift = AppSpacing.sm;
+
+/// Completes when the import UI closes. [onImported] fires only after storage
+/// commits, including when the user dismissed the sheet during an import.
+typedef LibraryImportLauncher =
+    Future<void> Function({required VoidCallback onImported});
 
 /// Entry point for the Library screen.
 ///
@@ -56,7 +60,7 @@ class LibraryScreen extends StatelessWidget {
     VoidCallback? onSourceOpened,
   })
   onSourcePressed;
-  final AsyncCallback onAddPressed;
+  final LibraryImportLauncher onAddPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -127,7 +131,7 @@ class _LibraryView extends StatefulWidget {
     VoidCallback? onSourceOpened,
   })
   onSourcePressed;
-  final AsyncCallback onAddPressed;
+  final LibraryImportLauncher onAddPressed;
 
   @override
   State<_LibraryView> createState() => _LibraryViewState();
@@ -157,9 +161,14 @@ class _LibraryViewState extends State<_LibraryView> {
     if (_addInFlight) return;
     setState(() => _addInFlight = true);
     try {
-      await widget.onAddPressed();
-      if (!context.mounted) return;
-      context.read<LibraryBloc>().add(const LibraryRefreshRequested());
+      final bloc = context.read<LibraryBloc>();
+      await widget.onAddPressed(
+        onImported: () {
+          if (mounted && !bloc.isClosed) {
+            bloc.add(const LibraryRefreshRequested());
+          }
+        },
+      );
     } finally {
       // mounted check: the screen may have been popped while
       // onAddPressed awaited. setState on an unmounted State throws.

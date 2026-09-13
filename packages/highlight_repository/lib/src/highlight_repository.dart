@@ -1,4 +1,5 @@
 import 'package:domain_models/domain_models.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:local_storage/local_storage.dart';
 import 'package:uuid/uuid.dart' show Uuid;
 
@@ -164,10 +165,30 @@ class HighlightRepository {
     }
   }
 
+  /// Replaces a full snapshot. Editors should use field-specific updates below
+  /// so an older UI snapshot cannot overwrite independently edited fields.
   Future<Highlight> updateHighlight(Highlight highlight) async {
     try {
       await _dao.updateHighlight(highlight.toStorageModel());
       return highlight;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  Future<void> updateHighlightColor(String id, HighlightColor color) =>
+      _updateFields(
+        HighlightsTableCompanion(id: Value(id), color: Value(color.name)),
+      );
+
+  Future<void> updateHighlightNote(String id, String? note) =>
+      _updateFields(HighlightsTableCompanion(id: Value(id), note: Value(note)));
+
+  Future<void> _updateFields(HighlightsTableCompanion fields) async {
+    try {
+      if (await _dao.updateHighlight(fields) != 1) {
+        throw StateError('Highlight no longer exists');
+      }
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }

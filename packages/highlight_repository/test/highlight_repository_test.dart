@@ -177,6 +177,45 @@ void main() {
       expect(highlights, isEmpty);
     });
 
+    test('field patches preserve other fields, anchors and identity', () async {
+      final created = await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.book,
+        text: 'Words',
+        cfiRange: 'epubcfi(/6/2)',
+        progress: 0.4,
+        chapterTitle: 'Chapter',
+      );
+      await Future.wait([
+        repo.updateHighlightColor(created.id, HighlightColor.pink),
+        repo.updateHighlightNote(created.id, 'New note'),
+      ]);
+      expect(
+        await repo.getHighlightById(created.id),
+        created.copyWith(color: HighlightColor.pink, note: 'New note'),
+      );
+      await repo.updateHighlightNote(created.id, null);
+      final cleared = await repo.getHighlightById(created.id);
+      expect(cleared!.note, isNull);
+      expect(cleared.color, HighlightColor.pink);
+      expect(cleared.cfiRange, created.cfiRange);
+    });
+
+    test(
+      'editing a deleted highlight reports failure without recreating it',
+      () async {
+        await expectLater(
+          repo.updateHighlightColor('missing', HighlightColor.blue),
+          throwsA(isA<StorageException>()),
+        );
+        await expectLater(
+          repo.updateHighlightNote('missing', 'Note'),
+          throwsA(isA<StorageException>()),
+        );
+        expect(await repo.getHighlights(), isEmpty);
+      },
+    );
+
     // Co-deletion: deleting a highlight must also remove its
     // `review_items_table` row in the same transaction. Without this,
     // the highlight disappears from the UI but its FSRS row can still

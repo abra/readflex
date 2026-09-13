@@ -90,6 +90,17 @@ removed if native selection returns. Color swatches still choose the saved
 highlight color; fallback previews remain available without a native range.
 Saved highlights are not removed by selection-preview cleanup.
 
+Horizontal boundary selection can still advance to the next page. Its timer is
+cancelled when selection clears, and checks the live document/range and page
+mode before navigation. Range changes replace the temporary scroll guard,
+instead of accumulating one listener per change.
+
+`RemoteFile` bounds its LRU by 128 entries and 8 MiB of retained bytes, including
+larger ZIP chunks. An oversized read bypasses cache admission without flushing
+recent chunks. Neighbour probes and identical in-flight ranges still share
+bytes/requests. The limit excludes returned slice copies, in-flight buffers,
+decompressed content and decoded images; it is not a total reader memory limit.
+
 `ArticleHtmlReaderWebView` reports scroll progress through sentence anchors,
 table of contents from headings, document features, clicks, search batches,
 bookmark changes, text selections, and highlight taps. It also renders and

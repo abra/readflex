@@ -244,6 +244,12 @@ Choose Cubit for simple command-style state changes and Bloc when the feature
 needs event ordering, debouncing, restartable/droppable behavior, pagination,
 streams, or several independent event types.
 
+The root sequential Bloc transformer orders events within each `on<E>`
+registration, not across event types. Related highlight edits/refreshes use one
+explicitly sequential event bucket; independent Library loads use a generation
+guard so a late result or failure cannot replace a newer snapshot. Deletion
+feedback remains observable even when its accompanying snapshot is superseded.
+
 ## Reader Architecture
 
 The reader is intentionally split across several packages:
@@ -310,6 +316,19 @@ Repositories update only CFI/progress; `markOpened` updates only the opened
 timestamp. A delayed source refresh preserves live position and document
 capabilities, and closing the bloc drains both queued and active writes.
 
+Saved highlight edits use field-specific repository updates for color/note,
+not full-object replacements from UI snapshots. Their event queue is separate
+from position handling; annotation operations do not delay live page metrics.
+Source reloads preserve newer annotation state. Typed mutation effects report
+completion/failure through a listener without rebuilding the WebView subtree;
+the context popup does not report success when merely enqueueing an edit.
+
+The remote book byte cache is bounded by both 128 entries and 8 MiB of retained
+buffers. Oversized reads are returned without admission to the cache, preserving
+the working set. This is not a cap on total WebView memory or in-flight reads.
+Horizontal selection auto-page timers revalidate the live range/mode and are
+cancelled on deselection; repeated range changes retain at most one scroll guard.
+
 Each reader WebView owns a bounded load session: one automatic replacement
 after renderer termination, then a terminal failure exposed to `ReaderBloc`.
 The replacement restores the last known position and ignores old bridge
@@ -352,6 +371,19 @@ to article storage.
 
 The import UI does not own storage details. It receives callbacks and reports
 progress/result state back to the route that opened it.
+
+Closing the import sheet does not cancel an already-started import.
+`LibraryImportLauncher` separates sheet dismissal (its returned Future) from
+successful persistence (`onImported`). The composition root invokes that
+callback after book/article storage completes, even if the sheet is gone.
+Library ignores completion after disposal. Cancellation/failure does not trigger
+a redundant list read, and no database-wide subscription reloads Library on
+every debounced reader-position write.
+
+Library still loads full Book/Article snapshots, then caches its visible-item
+projection per state. A SQL-level lightweight list projection and further
+Reader controller decomposition remain separate work; neither is necessary to
+fix these consistency bugs and both need their own behavioral/performance baseline.
 
 ## Data, Models, and Mapping
 

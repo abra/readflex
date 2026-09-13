@@ -83,7 +83,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
               AppRoutes.reader(source.id),
               extra: _ReaderRouteExtra(onSourceOpened: onSourceOpened),
             ),
-            onAddPressed: () async {
+            onAddPressed: ({required onImported}) async {
               await showImportFlowSheet(
                 context,
                 isOffline: isOffline,
@@ -93,22 +93,28 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
                   final grant = await deps.readerServer
                       .grantTemporaryBookAccess(file);
                   try {
-                    return await importBookFile(
+                    final book = await importBookFile(
                       sourceFile: file,
                       bookRepository: deps.bookRepository,
                       readerServerBaseUri: deps.readerServer.baseUri,
                       logger: deps.logger,
                       onProgress: onProgress,
                     );
+                    if (book != null) onImported();
+                    return book;
                   } finally {
                     grant.revoke();
                   }
                 },
-                onImportArticle: (url, {onStage}) => _importArticleUrl(
-                  deps,
-                  url,
-                  onStage: onStage,
-                ),
+                onImportArticle: (url, {onStage}) async {
+                  final article = await _importArticleUrl(
+                    deps,
+                    url,
+                    onStage: onStage,
+                  );
+                  onImported();
+                  return article;
+                },
                 isBookImportTermsAccepted: () =>
                     deps.preferencesService.hasAcceptedBookImportTerms(
                       _currentBookImportTermsVersion,

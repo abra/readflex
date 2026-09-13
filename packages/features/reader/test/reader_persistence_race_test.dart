@@ -51,11 +51,210 @@ class _DelayedWriteRepository extends FakeBookRepository {
   }
 }
 
+class _DelayedHighlightRepository extends FakeHighlightRepository {
+  final writing = Completer<void>();
+  final gate = Completer<void>();
+  int reads = 0;
+  bool failFirstColor = false;
+
+  @override
+  Future<List<Highlight>> getHighlightsBySource(String sourceId) async {
+    reads++;
+    return super.getHighlightsBySource(sourceId);
+  }
+
+  @override
+  Future<void> updateHighlightColor(String id, HighlightColor color) async {
+    if (!writing.isCompleted) {
+      writing.complete();
+      await gate.future;
+      if (failFirstColor) throw StateError('Color write failed');
+    }
+    await super.updateHighlightColor(id, color);
+  }
+}
+
+Highlight _highlight() => Highlight(
+  id: 'highlight',
+  sourceId: 'book',
+  sourceType: SourceType.book,
+  text: 'Words',
+  note: 'Old note',
+  createdAt: DateTime(2026),
+);
+
 void main() {
   setUp(() {
     final previous = Bloc.transformer;
     Bloc.transformer = (events, mapper) => events.asyncExpand(mapper);
     addTearDown(() => Bloc.transformer = previous);
+  });
+
+  for (final failFirstColor in [false, true]) {
+    test(
+      'highlight edits are ordered without blocking position (failure=$failFirstColor)',
+      () async {
+        final books = FakeBookRepository()..seedBook(_book());
+        final highlights = _DelayedHighlightRepository()
+          ..failFirstColor = failFirstColor
+          ..seedHighlights('book', [_highlight()]);
+        final bloc = ReaderBloc(
+          bookRepository: books,
+          highlightRepository: highlights,
+          initialSource: _book(),
+        );
+        addTearDown(bloc.close);
+        addTearDown(() {
+          if (!highlights.gate.isCompleted) highlights.gate.complete();
+        });
+        final loaded = bloc.stream.firstWhere(
+          (state) => state.highlights.isNotEmpty,
+        );
+        bloc.add(const ReaderHighlightsRefreshed());
+        await loaded;
+        final originalHighlights = bloc.state.highlights;
+        bloc.add(
+          const ReaderHighlightColorChangeRequested(
+            highlightId: 'highlight',
+            color: HighlightColor.blue,
+          ),
+        );
+        await highlights.writing.future;
+        bloc.add(
+          const ReaderHighlightNoteChangeRequested(
+            highlightId: 'highlight',
+            note: 'New note',
+          ),
+        );
+        bloc.add(
+          const ReaderHighlightColorChangeRequested(
+            highlightId: 'highlight',
+            color: HighlightColor.yellow,
+          ),
+        );
+        final moved = bloc.stream.firstWhere(
+          (state) => state.document?.currentCfi == 'position-100',
+        );
+        for (var i = 1; i <= 100; i++) {
+          bloc.add(
+            ReaderBookPositionUpdated(
+              cfi: 'position-$i',
+              progress: 0.1 + i / 1000,
+            ),
+          );
+        }
+        await moved;
+        expect(bloc.state.highlights, same(originalHighlights));
+        expect(
+          highlights.reads,
+          1,
+          reason: 'Position events must not reload annotations',
+        );
+        expect(
+          bloc.state.highlightEffect,
+          isNull,
+          reason: 'Storage has not completed',
+        );
+        final finished = bloc.stream.firstWhere(
+          (state) => state.highlightEffect?.version == (failFirstColor ? 2 : 3),
+        );
+        highlights.gate.complete();
+        await finished;
+        expect(
+          bloc.state.highlights.single,
+          _highlight().copyWith(note: 'New note'),
+        );
+        expect(highlights.reads, failFirstColor ? 2 : 4);
+        expect(highlights.updatedHighlights, hasLength(failFirstColor ? 1 : 3));
+        await bloc.close();
+        expect(books.updatedBook?.currentCfi, 'position-100');
+        expect(
+          books.updateCallCount,
+          1,
+          reason: 'Burst still collapses into one position write',
+        );
+      },
+    );
+  }
+
+  test(
+    'a source reload cannot restore highlights captured before an edit',
+    () async {
+      final books = _DelayedLoadRepository()..seedBook(_book());
+      final highlights = FakeHighlightRepository()
+        ..seedHighlights('book', [_highlight()]);
+      final bloc = ReaderBloc(
+        bookRepository: books,
+        highlightRepository: highlights,
+        initialSource: _book(),
+      );
+      addTearDown(bloc.close);
+      addTearDown(() {
+        if (!books.gate.isCompleted) books.gate.complete();
+      });
+      final initial = bloc.stream.firstWhere(
+        (state) => state.highlights.isNotEmpty,
+      );
+      bloc.add(const ReaderHighlightsRefreshed());
+      await initial;
+      bloc.add(const ReaderSourceLoadRequested(sourceId: 'book'));
+      await books.loading.future;
+      final edited = bloc.stream.firstWhere(
+        (state) => state.highlightEffect != null,
+      );
+      bloc.add(
+        const ReaderHighlightNoteChangeRequested(
+          highlightId: 'highlight',
+          note: 'New note',
+        ),
+      );
+      await edited;
+      final loaded = bloc.stream.firstWhere(
+        (state) => state.document?.lastOpenedAt != null,
+      );
+      books.gate.complete();
+      await loaded;
+      expect(bloc.state.highlights.single.note, 'New note');
+    },
+  );
+
+  test('closing the reader drains queued annotation edits', () async {
+    final highlights = _DelayedHighlightRepository()
+      ..seedHighlights('book', [_highlight()]);
+    final bloc = ReaderBloc(
+      bookRepository: FakeBookRepository(),
+      highlightRepository: highlights,
+      initialSource: _book(),
+    );
+    addTearDown(bloc.close);
+    addTearDown(() {
+      if (!highlights.gate.isCompleted) highlights.gate.complete();
+    });
+    final loaded = bloc.stream.firstWhere(
+      (state) => state.highlights.isNotEmpty,
+    );
+    bloc.add(const ReaderHighlightsRefreshed());
+    await loaded;
+    bloc.add(
+      const ReaderHighlightColorChangeRequested(
+        highlightId: 'highlight',
+        color: HighlightColor.blue,
+      ),
+    );
+    await highlights.writing.future;
+    bloc.add(
+      const ReaderHighlightNoteChangeRequested(
+        highlightId: 'highlight',
+        note: 'New note',
+      ),
+    );
+    final closing = bloc.close();
+    highlights.gate.complete();
+    await closing;
+    expect(
+      highlights.highlightsBySourceId['book']!.single,
+      _highlight().copyWith(color: HighlightColor.blue, note: 'New note'),
+    );
   });
 
   test(

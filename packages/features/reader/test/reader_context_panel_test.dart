@@ -44,8 +44,6 @@ void main() {
     expect(contextPanelSource, contains('ReaderHighlightNoteChangeRequested'));
     expect(contextPanelSource, contains('_SavedHighlightPopup'));
     expect(contextPanelSource, isNot(contains('_HighlightDeletePopup')));
-    expect(contextPanelSource, contains('readerHighlightRemoved'));
-    expect(contextPanelSource, contains('readerCommentUpdated'));
     expect(contextPanelSource, contains('ColorHighlightTextAction'));
     expect(contextPanelSource, contains('readerHighlightSaved'));
     expect(contextPanelSource, contains('_kHighlightPopupColorCount'));

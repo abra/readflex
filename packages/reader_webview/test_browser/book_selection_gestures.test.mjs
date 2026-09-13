@@ -7,7 +7,7 @@ const chapter = `<html xmlns="http://www.w3.org/1999/xhtml"><head><title>Selecti
 ${Array.from({ length: 60 }, (_, i) => `<p id="p${i}">Paragraph ${i}. The power bank keeps devices running. Select these words without turning the page.</p>`).join('')}
 </body></html>`
 
-async function openVerticalBook(t, { runtime = false, appleTouch = false } = {}) {
+async function openVerticalBook(t, { runtime = false, appleTouch = false, pageTurnStyle = 'vertical' } = {}) {
     const harness = await createHarness(t)
     const { page, origin } = harness
     const errors = []
@@ -41,7 +41,7 @@ async function openVerticalBook(t, { runtime = false, appleTouch = false } = {})
         const params = new URLSearchParams({
             url: JSON.stringify(origin + '/selection.epub'),
             style: JSON.stringify({
-                pageTurnStyle: 'vertical', allowScript: false,
+                pageTurnStyle, allowScript: false,
                 fontName: 'serif', fontColor: '#000000', backgroundColor: '#ffffff',
                 fontSize: 20, textScale: 1, fontWeight: 400, spacing: 1.5,
                 topMargin: 24, bottomMargin: 24, sideMargin: 8,
@@ -96,6 +96,87 @@ async function openVerticalBook(t, { runtime = false, appleTouch = false } = {})
     })
     return harness
 }
+
+for (const clearMethod of ['clearSelectionAfterTextAction', 'clearTextSelection']) {
+    test(`horizontal boundary selection cancels its page turn on ${clearMethod}`, async t => {
+        const { page } = await openVerticalBook(t, { runtime: true, pageTurnStyle: 'slide' })
+        const before = await page.evaluate(() => {
+            const view = window.testView
+            const doc = view.renderer.getContents()[0].doc
+            doc.dispatchEvent(new Event('selectstart'))
+            doc.getSelection().addRange(view.lastLocation.range.cloneRange())
+            doc.dispatchEvent(new Event('selectionchange'))
+            return { page: view.renderer.page, scheduled: !!globalThis.pageDebounceTimer }
+        })
+        assert.equal(before.scheduled, true, 'must exercise the cross-page selection timer')
+        await page.evaluate(method => window.reader[method](), clearMethod)
+        await page.waitForTimeout(1500)
+        assert.equal(await page.evaluate(() => window.testView.renderer.page), before.page)
+        assert.equal(await page.evaluate(() => window.testView.renderer.getContents()[0]
+            .doc.getSelection().toString()), '')
+    })
+}
+
+test('active horizontal selection can still advance across a page boundary', async t => {
+    const { page } = await openVerticalBook(t, { runtime: true, pageTurnStyle: 'slide' })
+    const before = await page.evaluate(() => {
+        const view = window.testView
+        const doc = view.renderer.getContents()[0].doc
+        doc.dispatchEvent(new Event('selectstart'))
+        doc.getSelection().addRange(view.lastLocation.range.cloneRange())
+        doc.dispatchEvent(new Event('selectionchange'))
+        return view.renderer.page
+    })
+    await page.waitForFunction(before => window.testView.renderer.page > before, before)
+    assert.equal(await page.evaluate(() => window.testView.renderer.page), before + 1)
+})
+
+test('changing to vertical pagination cancels a pending horizontal selection turn', async t => {
+    const { page } = await openVerticalBook(t, { runtime: true, pageTurnStyle: 'slide' })
+    const before = await page.evaluate(() => {
+        const view = window.testView
+        const doc = view.renderer.getContents()[0].doc
+        doc.getSelection().addRange(view.lastLocation.range.cloneRange())
+        doc.dispatchEvent(new Event('selectionchange'))
+        view.renderer.setAttribute('page-turn-axis', 'vertical')
+        return view.renderer.page
+    })
+    await page.waitForTimeout(1500)
+    assert.equal(await page.evaluate(() => window.testView.renderer.page), before)
+})
+
+test('horizontal range changes keep at most one scroll guard', async t => {
+    const { page } = await openVerticalBook(t, { runtime: true, pageTurnStyle: 'slide' })
+    const result = await page.evaluate(() => {
+        const view = window.testView
+        const doc = view.renderer.getContents()[0].doc
+        const container = view.renderer.shadowRoot.querySelector('#container')
+        const guards = new Set()
+        const add = container.addEventListener.bind(container)
+        const remove = container.removeEventListener.bind(container)
+        container.addEventListener = (name, callback, ...args) => {
+            if (name === 'scroll' && callback.name === 'preventScroll') guards.add(callback)
+            return add(name, callback, ...args)
+        }
+        container.removeEventListener = (name, callback, ...args) => {
+            if (name === 'scroll') guards.delete(callback)
+            return remove(name, callback, ...args)
+        }
+        let peak = 0
+        const range = view.lastLocation.range.cloneRange()
+        range.setEnd(range.endContainer, range.endOffset - 1)
+        for (let i = 0; i < 100; i++) {
+            doc.getSelection().removeAllRanges()
+            doc.getSelection().addRange(range.cloneRange())
+            doc.dispatchEvent(new Event('selectionchange'))
+            peak = Math.max(peak, guards.size)
+        }
+        doc.getSelection().removeAllRanges()
+        doc.dispatchEvent(new Event('selectionchange'))
+        return { peak, remaining: guards.size }
+    })
+    assert.deepEqual(result, { peak: 1, remaining: 0 })
+})
 
 test('vertical book selection at the page boundary does not schedule a page turn', async t => {
     const { page } = await openVerticalBook(t, { runtime: true })

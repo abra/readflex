@@ -1181,7 +1181,13 @@ void main() {
         act: (bloc) => bloc.add(
           const ReaderHighlightDeleteRequested(highlightId: 'h-1'),
         ),
-        expect: () => <ReaderState>[],
+        expect: () => [
+          isA<ReaderState>().having(
+            (state) => state.highlightEffect?.success,
+            'mutation failed',
+            false,
+          ),
+        ],
         errors: () => [isA<Exception>()],
       );
     });
@@ -1278,7 +1284,13 @@ void main() {
             color: HighlightColor.blue,
           ),
         ),
-        expect: () => <ReaderState>[],
+        expect: () => [
+          isA<ReaderState>().having(
+            (state) => state.highlightEffect?.success,
+            'mutation failed',
+            false,
+          ),
+        ],
         errors: () => [isA<Exception>()],
       );
     });
@@ -1385,7 +1397,13 @@ void main() {
             note: 'Updated note',
           ),
         ),
-        expect: () => <ReaderState>[],
+        expect: () => [
+          isA<ReaderState>().having(
+            (state) => state.highlightEffect?.success,
+            'mutation failed',
+            false,
+          ),
+        ],
         errors: () => [isA<Exception>()],
       );
     });

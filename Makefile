@@ -72,7 +72,7 @@ reader-browser-setup:
 
 ## Run the app in debug mode
 run:
-	$(FLUTTER) run
+	@sh run.sh $(ARGS)
 
 ## Build the signed Android App Bundle used by Google Play
 build: build-android

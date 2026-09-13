@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:book_repository/book_repository.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:library_feature/src/library_bloc.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,6 +20,78 @@ final _book = Book(
 final _favouritesScope = LibraryCollectionScope.favourites();
 
 void main() {
+  setUp(() {
+    final previous = Bloc.transformer;
+    Bloc.transformer = (events, mapper) => events.asyncExpand(mapper);
+    addTearDown(() => Bloc.transformer = previous);
+  });
+  for (final failOldLoad in [false, true]) {
+    test(
+      'superseded delete refresh retains feedback (failure=$failOldLoad)',
+      () async {
+        final repository = _DelayedBookRepository();
+        final bloc = LibraryBloc(bookRepository: repository);
+        addTearDown(bloc.close);
+        bloc.add(
+          const LibrarySourceDeleted(
+            'deleted',
+            scope: BookDeletionScope.keepLearningData,
+          ),
+        );
+        await repository.started.future;
+        repository.seedBooks([_book]);
+        final refreshed = bloc.stream.firstWhere(
+          (state) => state.books.isNotEmpty,
+        );
+        bloc.add(const LibraryRefreshRequested());
+        await refreshed;
+        final feedback = bloc.stream.firstWhere(
+          (state) => state.deletionEffect != null,
+        );
+        if (failOldLoad) {
+          repository.pending.completeError(StateError('Delete refresh failed'));
+        } else {
+          repository.pending.complete([]);
+        }
+        await feedback;
+        expect(bloc.state.books, [_book]);
+        expect(bloc.state.status, LibraryStatus.success);
+        expect(bloc.state.deletionEffect?.success, !failOldLoad);
+        expect(repository.reads, 2);
+      },
+    );
+
+    test(
+      'stale load cannot replace a refresh (failure=$failOldLoad)',
+      () async {
+        final repository = _DelayedBookRepository();
+        final bloc = LibraryBloc(bookRepository: repository);
+        addTearDown(bloc.close);
+        bloc.add(const LibraryLoadRequested());
+        await repository.started.future;
+        repository.seedBooks([_book]);
+        final refreshed = bloc.stream.firstWhere(
+          (state) => state.books.isNotEmpty,
+        );
+        bloc.add(const LibraryRefreshRequested());
+        await refreshed;
+        if (failOldLoad) {
+          repository.pending.completeError(StateError('Old request failed'));
+        } else {
+          repository.pending.complete([]);
+        }
+        await Future<void>.delayed(Duration.zero);
+        expect(bloc.state.status, LibraryStatus.success);
+        expect(bloc.state.books, [_book]);
+        expect(
+          repository.reads,
+          2,
+          reason: 'No retry or extra read',
+        );
+      },
+    );
+  }
+
   group('LibraryBloc', () {
     late FakeBookRepository repository;
 
@@ -509,4 +584,20 @@ void main() {
       expect(state.isEmpty, isTrue);
     });
   });
+}
+
+class _DelayedBookRepository extends FakeBookRepository {
+  final started = Completer<void>();
+  final pending = Completer<List<Book>>();
+  int reads = 0;
+
+  @override
+  Future<List<Book>> getBooks({int? limit, int? offset}) {
+    reads++;
+    if (!started.isCompleted) {
+      started.complete();
+      return pending.future;
+    }
+    return super.getBooks(limit: limit, offset: offset);
+  }
 }

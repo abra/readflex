@@ -21,7 +21,7 @@ and UI preference cubits internally.
 | `preferencesService`  | `PreferencesService`                | Persist list/grid, theme, and locale choices |
 | `isOffline`           | `bool`                               | Connectivity indicator for the Library UI   |
 | `onSourcePressed`     | `Future<void> Function(...)`        | Open reader, then refresh                    |
-| `onAddPressed`        | `AsyncCallback`                     | Open the import-flow bottom sheet            |
+| `onAddPressed`        | `LibraryImportLauncher`             | Open import UI; notify successful persistence |
 
 ## Architecture
 
@@ -48,13 +48,25 @@ selection, and collection commands separate:
 The Library exposes protected Favourites, persisted manual collections, and
 derived author/site smart collections.
 
+`LibraryImportLauncher({required onImported})` completes when the import UI
+closes. Its caller invokes `onImported()` after each successful persistence,
+even if a dismissed sheet's import finishes later. Only that callback refreshes
+Library; closing/cancelling the sheet alone does not read storage again.
+Late callbacks after Library disposal are ignored.
+
+Books and articles are requested together. Loads carry a generation token so
+an older response/error cannot replace newer data. A superseded delete refresh
+still emits its completion effect without restoring stale list contents.
+The existing delayed refresh on reader-route return remains intact to avoid
+moving list tiles during a reverse route/Hero transition.
+
 The screen uses separate widgets (`LibraryListView`, `LibraryGridView`) for
 each layout and a local `TextEditingController` for the search field so
 keystrokes don't churn bloc state.
 
 Empty-state is handled twice: truly empty library vs. all items filtered out.
-Non-fatal repository errors from delete/load go through `addError` + a
-`LibraryStatus.failure` state with a retry button.
+Load errors go through `addError` and a `LibraryStatus.failure` retry surface.
+Delete errors keep the list usable and report failure through a deletion effect.
 
 ## Dependencies
 

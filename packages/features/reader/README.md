@@ -39,8 +39,9 @@ from the top reader chrome without coupling the reader package to
 
 ## TextAction plugin system
 
-The reader knows nothing about highlight persistence, translation, or
-dictionary services.
+The reader does not depend on sibling action implementations or translation/
+dictionary services. New text-highlight creation is delegated through TextAction;
+saved-highlight edits and image highlights use its injected repository.
 Callers assemble a `List<TextAction>` (from `shared/`) in the composition root
 (`routing.dart`) and pass it in. On text selection the context panel renders
 actions in a two-row popup: highlight colors and Highlight are above the
@@ -89,6 +90,15 @@ including the first immediate article position. Repository partial updates
 avoid overwriting metadata from an old snapshot. Source loading preserves live
 position/document features; `close()` waits for an already-running write as
 well as the latest pending position.
+
+Highlight refresh/delete/color/note events share a separate sequential bucket.
+This preserves user edit order without serializing position events behind
+storage work. Color/note updates patch only their own SQL fields, and source
+reloads do not replace newer annotation state. Mutation success/failure is a
+typed `ReaderHighlightEffect`, rendered by `ReaderHighlightEffectListener`
+without rebuilding its content child. A queued command alone never produces a
+success toast. Selecting a color for a new text selection remains a preview;
+the Highlight action still explicitly saves it.
 
 WebView recovery clears stale selection UI and temporarily clears readiness.
 `ReaderWebViewFailed` reports terminal failure through the bloc's error pipeline

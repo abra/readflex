@@ -231,11 +231,6 @@ class _ContextPanelDriver extends StatelessWidget {
                 highlightId: focusedHighlight.id,
               ),
             );
-            showToast(
-              context,
-              type: NotificationType.success,
-              message: context.l10n.readerHighlightRemoved,
-            );
           },
           onEditNote: canEditFocusedHighlightNote
               ? () async {
@@ -256,11 +251,6 @@ class _ContextPanelDriver extends StatelessWidget {
                     ),
                   );
                   highlightFocusCubit.clear();
-                  showToast(
-                    context,
-                    type: NotificationType.success,
-                    message: context.l10n.readerCommentUpdated,
-                  );
                 }
               : null,
         ),

@@ -1585,7 +1585,11 @@ const setSelectionHandler = (view, doc, index) => {
     });
 
 
+    let removeSelectionScrollGuard = null;
     doc.addEventListener('selectionchange', () => {
+      cancelSelectionPageTurn();
+      removeSelectionScrollGuard?.();
+      removeSelectionScrollGuard = null;
       if (view.renderer.getAttribute('flow') !== 'paginated') return
       // Vertical page animation must not compete with native handle scrolling.
       // Keep the DOM range/handles intact; ordinary swipes resume after deselect.
@@ -1596,17 +1600,17 @@ const setSelectionHandler = (view, doc, index) => {
       const selRange = getSelectionRange(doc.getSelection())
       if (!selRange) return
 
-      if (globalThis.pageDebounceTimer) {
-        clearTimeout(globalThis.pageDebounceTimer);
-        globalThis.pageDebounceTimer = null;
-      }
-
       const container = view.shadowRoot.querySelector('foliate-paginator').shadowRoot.querySelector("#container");
 
       if (selRange.compareBoundaryPoints(Range.END_TO_END, lastLocation.range) >= 0) {
         globalThis.pageDebounceTimer = setTimeout(async () => {
           globalThis.pageDebounceTimer = null;
-          if (view.renderer.pageTurnAxisVertical) return;
+          const currentRange = getSelectionRange(doc.getSelection());
+          if (view.renderer.pageTurnAxisVertical ||
+              view.renderer.getAttribute('flow') !== 'paginated' ||
+              !currentRange || !view.lastLocation?.range ||
+              !view.renderer.getContents().some(content => content.doc === doc) ||
+              currentRange.compareBoundaryPoints(Range.END_TO_END, view.lastLocation.range) < 0) return;
           await view.next();
           globalThis.originalScrollLeft = container.scrollLeft;
           globalThis.pageDebounceTimer = null;
@@ -1626,13 +1630,20 @@ const setSelectionHandler = (view, doc, index) => {
 
       container.addEventListener('scroll', preventScroll);
 
-      doc.addEventListener('pointerup', () => {
+      const removeScrollGuard = () => {
         container.removeEventListener('scroll', preventScroll);
-      }, { once: true });
+        doc.removeEventListener('pointerup', removeScrollGuard);
+      };
+      removeSelectionScrollGuard = removeScrollGuard;
+      doc.addEventListener('pointerup', removeScrollGuard, { once: true });
     })
 
   }
 }
+const cancelSelectionPageTurn = () => {
+  clearTimeout(globalThis.pageDebounceTimer);
+  globalThis.pageDebounceTimer = null;
+};
 const isZip = async file => {
   const arr = new Uint8Array(await file.slice(0, 4).arrayBuffer())
   return arr[0] === 0x50 && arr[1] === 0x4b && arr[2] === 0x03 && arr[3] === 0x04
@@ -2427,6 +2438,7 @@ class Reader {
   }
 
   clearTextSelection() {
+    cancelSelectionPageTurn()
     this.clearSelectionHighlightPreview()
     const contents = this.view?.renderer?.getContents?.() ?? []
     for (const { doc } of contents)
@@ -2435,6 +2447,7 @@ class Reader {
   }
 
   clearSelectionAfterTextAction() {
+    cancelSelectionPageTurn()
     this.clearSelectionHighlightPreview()
     const contents = this.view?.renderer?.getContents?.() ?? []
     for (const { doc } of contents) {

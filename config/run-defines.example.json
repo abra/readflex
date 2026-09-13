@@ -1,0 +1,6 @@
+{
+  "ENVIRONMENT": "DEV",
+  "ARTICLE_CLEANER_BASE_URL": "https://api.readflex.app",
+  "READFLEX_API_KEY": "",
+  "GLITCHTIP_DSN": ""
+}

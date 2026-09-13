@@ -2,6 +2,23 @@ part of 'reader_bloc.dart';
 
 enum ReaderStatus { initial, loading, ready, failure }
 
+enum ReaderHighlightOperation { color, note, delete }
+
+final class ReaderHighlightEffect extends Equatable {
+  const ReaderHighlightEffect({
+    required this.version,
+    required this.operation,
+    required this.success,
+  });
+
+  final int version;
+  final ReaderHighlightOperation operation;
+  final bool success;
+
+  @override
+  List<Object?> get props => [version, operation, success];
+}
+
 /// Snapshot of the loaded reader document and its highlights. Highlights are
 /// loaded alongside the source and refreshed on demand via
 /// [ReaderHighlightsRefreshed].
@@ -14,6 +31,7 @@ class ReaderState extends Equatable {
     this.articleUrl,
     this.pageProgressionRtl = false,
     this.highlights = const [],
+    this.highlightEffect,
     this.bookmarks = const [],
     this.tocItems = const [],
     this.documentFeatures,
@@ -37,6 +55,7 @@ class ReaderState extends Equatable {
   final String? articleUrl;
   final bool pageProgressionRtl;
   final List<Highlight> highlights;
+  final ReaderHighlightEffect? highlightEffect;
   final List<SourceBookmark> bookmarks;
   final List<ReaderTocItem> tocItems;
   final ReaderDocumentFeatures? documentFeatures;
@@ -80,6 +99,7 @@ class ReaderState extends Equatable {
     Object? articleUrl = _absent,
     bool? pageProgressionRtl,
     List<Highlight>? highlights,
+    ReaderHighlightEffect? highlightEffect,
     List<SourceBookmark>? bookmarks,
     List<ReaderTocItem>? tocItems,
     Object? documentFeatures = _absent,
@@ -102,6 +122,7 @@ class ReaderState extends Equatable {
     articleUrl: articleUrl == _absent ? this.articleUrl : articleUrl as String?,
     pageProgressionRtl: pageProgressionRtl ?? this.pageProgressionRtl,
     highlights: highlights ?? this.highlights,
+    highlightEffect: highlightEffect ?? this.highlightEffect,
     bookmarks: bookmarks ?? this.bookmarks,
     tocItems: tocItems ?? this.tocItems,
     documentFeatures: documentFeatures == _absent
@@ -143,6 +164,7 @@ class ReaderState extends Equatable {
     articleUrl,
     pageProgressionRtl,
     highlights,
+    highlightEffect,
     bookmarks,
     tocItems,
     documentFeatures,

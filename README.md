@@ -56,10 +56,31 @@ make test
 Run the app:
 
 ```sh
-fvm flutter run \
-  --dart-define=ARTICLE_CLEANER_BASE_URL=https://your-cleaner.example \
-  --dart-define=READFLEX_API_KEY="$READFLEX_API_KEY"
+./run.sh
+# Or: make run
 ```
+
+On the first run the script creates `.local/run-defines.json` from
+`config/run-defines.example.json` with owner-only permissions and exits without
+launching Flutter. Set `READFLEX_API_KEY` and, optionally, `GLITCHTIP_DSN` in that
+local file once; subsequent runs require no `export` commands. `.local/` is
+ignored by version control. Do not commit or share this file.
+
+The script uses the FVM-pinned SDK and passes the file to Flutter with
+`--dart-define-from-file`, without printing its contents. Arguments are forwarded
+unchanged, and the script also works when invoked from another directory:
+
+```sh
+./run.sh -d <device-id>
+./run.sh --release -d <device-id>
+make run ARGS='--profile'
+```
+
+The template explicitly selects `ENVIRONMENT=DEV`, including for `--release`:
+this is a local device-testing setup, not a store-distribution configuration.
+Build-time credentials are still embedded in the app and build artifacts. Do
+not distribute builds made with this private file. Individual
+`--dart-define=NAME=value` arguments override values from the file.
 
 Common dart-defines:
 

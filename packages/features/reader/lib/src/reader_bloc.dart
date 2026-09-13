@@ -86,12 +86,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     });
     on<ReaderBookPositionUpdated>(_onBookPositionUpdated);
     on<ReaderSeekRequested>(_onSeekRequested);
-    on<ReaderHighlightsRefreshed>(_onHighlightsRefreshed);
-    on<ReaderHighlightDeleteRequested>(_onHighlightDeleteRequested);
-    on<ReaderHighlightColorChangeRequested>(
-      _onHighlightColorChangeRequested,
+    on<ReaderHighlightEvent>(
+      _onHighlightEvent,
+      transformer: (events, mapper) => events.asyncExpand(mapper),
     );
-    on<ReaderHighlightNoteChangeRequested>(_onHighlightNoteChangeRequested);
     on<ReaderTocUpdated>(_onTocUpdated);
     on<ReaderDocumentFeaturesUpdated>(_onDocumentFeaturesUpdated);
     on<ReaderBookmarkChanged>(_onBookmarkChanged);
@@ -110,6 +108,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   Future<void>? _persistenceTail;
   Future<void>? _closeFuture;
   int _loadGeneration = 0;
+  int _highlightRevision = 0;
+  int _highlightEffectVersion = 0;
   String? _livePositionSourceId;
   double? _pendingArticleSeekProgress;
   Timer? _pendingArticleSeekTimer;
@@ -162,6 +162,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     Emitter<ReaderState> emit,
   ) async {
     final generation = ++_loadGeneration;
+    final highlightRevision = _highlightRevision;
     final hasInitialSource = state.document?.id == event.sourceId;
     final hasUsableSource =
         hasInitialSource && state.status == ReaderStatus.ready;
@@ -198,7 +199,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             pageProgressionRtl: hasInitialSource
                 ? state.pageProgressionRtl
                 : _inferredBookPageProgressionRtl(updatedBook),
-            highlights: highlights,
+            highlights:
+                hasInitialSource && highlightRevision != _highlightRevision
+                ? state.highlights
+                : highlights,
             bookmarks: bookmarks,
             documentFeatures: hasInitialSource ? state.documentFeatures : null,
           ),
@@ -232,7 +236,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             pageProgressionRtl: _inferredArticlePageProgressionRtl(
               updatedArticle,
             ),
-            highlights: highlights,
+            highlights:
+                hasInitialSource && highlightRevision != _highlightRevision
+                ? state.highlights
+                : highlights,
             bookmarks: bookmarks,
             documentFeatures: hasInitialSource ? state.documentFeatures : null,
           ),
@@ -488,106 +495,72 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   void reportError(Object error, StackTrace stackTrace) =>
       addError(error, stackTrace);
 
-  Future<void> _onHighlightsRefreshed(
-    ReaderHighlightsRefreshed event,
+  Future<void> _onHighlightEvent(
+    ReaderHighlightEvent event,
     Emitter<ReaderState> emit,
   ) async {
     final sourceId = state.sourceId;
-    if (sourceId == null) {
-      _debugTraceReaderHighlightBloc('refresh-skipped reason=no-source');
-      return;
+    if (sourceId == null) return;
+    final operation = switch (event) {
+      ReaderHighlightsRefreshed() => null,
+      ReaderHighlightColorChangeRequested() => ReaderHighlightOperation.color,
+      ReaderHighlightNoteChangeRequested() => ReaderHighlightOperation.note,
+      ReaderHighlightDeleteRequested() => ReaderHighlightOperation.delete,
+    };
+    Future<void> Function()? write;
+    switch (event) {
+      case ReaderHighlightsRefreshed():
+        break;
+      case ReaderHighlightColorChangeRequested(
+        :final highlightId,
+        :final color,
+      ):
+        final highlight = _highlightById(state.highlights, highlightId);
+        if (highlight == null || highlight.color == color) return;
+        write = () =>
+            _highlightRepository.updateHighlightColor(highlightId, color);
+      case ReaderHighlightNoteChangeRequested(:final highlightId, :final note):
+        final normalized = _normalizedHighlightNote(note);
+        final highlight = _highlightById(state.highlights, highlightId);
+        if (normalized == null ||
+            highlight == null ||
+            _normalizedHighlightNote(highlight.note) == normalized) {
+          return;
+        }
+        write = () =>
+            _highlightRepository.updateHighlightNote(highlightId, normalized);
+      case ReaderHighlightDeleteRequested(:final highlightId):
+        write = () => _highlightRepository.deleteHighlight(highlightId);
     }
-    _debugTraceReaderHighlightBloc(
-      'refresh-start source=$sourceId previous=${state.highlights.length}',
-    );
+
+    bool isCurrent() => !emit.isDone && state.sourceId == sourceId;
+    ReaderHighlightEffect? effect(bool success) => operation == null
+        ? null
+        : ReaderHighlightEffect(
+            version: ++_highlightEffectVersion,
+            operation: operation,
+            success: success,
+          );
+
     try {
+      if (write != null) await write();
       final highlights = await _highlightRepository.getHighlightsBySource(
         sourceId,
       );
+      if (!isCurrent()) return;
+      // Only published data invalidates an older source-load snapshot.
+      _highlightRevision++;
       _debugTraceReaderHighlightBloc(
-        'refresh-success '
-        'source=$sourceId '
-        'count=${highlights.length} '
-        'ids=${highlights.map((highlight) => highlight.id).join(',')}',
+        'refresh-success source=$sourceId count=${highlights.length}',
       );
-      emit(state.copyWith(highlights: highlights));
-    } catch (e, st) {
-      _debugTraceReaderHighlightBloc(
-        'refresh-failed '
-        'source=$sourceId '
-        'error=${e.runtimeType} '
-        'message="$e"',
+      emit(
+        state.copyWith(highlights: highlights, highlightEffect: effect(true)),
       );
-      addError(e, st);
-    }
-  }
-
-  Future<void> _onHighlightDeleteRequested(
-    ReaderHighlightDeleteRequested event,
-    Emitter<ReaderState> emit,
-  ) async {
-    final sourceId = state.sourceId;
-    if (sourceId == null) return;
-
-    try {
-      await _highlightRepository.deleteHighlight(event.highlightId);
-      final highlights = await _highlightRepository.getHighlightsBySource(
-        sourceId,
-      );
-      emit(state.copyWith(highlights: highlights));
     } catch (e, st) {
       addError(e, st);
-    }
-  }
-
-  Future<void> _onHighlightColorChangeRequested(
-    ReaderHighlightColorChangeRequested event,
-    Emitter<ReaderState> emit,
-  ) async {
-    final sourceId = state.sourceId;
-    if (sourceId == null) return;
-
-    final highlight = _highlightById(state.highlights, event.highlightId);
-    if (highlight == null || highlight.color == event.color) return;
-
-    try {
-      await _highlightRepository.updateHighlight(
-        highlight.copyWith(color: event.color),
-      );
-      final highlights = await _highlightRepository.getHighlightsBySource(
-        sourceId,
-      );
-      emit(state.copyWith(highlights: highlights));
-    } catch (e, st) {
-      addError(e, st);
-    }
-  }
-
-  Future<void> _onHighlightNoteChangeRequested(
-    ReaderHighlightNoteChangeRequested event,
-    Emitter<ReaderState> emit,
-  ) async {
-    final sourceId = state.sourceId;
-    if (sourceId == null) return;
-
-    final note = _normalizedHighlightNote(event.note);
-    if (note == null) return;
-
-    final highlight = _highlightById(state.highlights, event.highlightId);
-    if (highlight == null || _normalizedHighlightNote(highlight.note) == note) {
-      return;
-    }
-
-    try {
-      await _highlightRepository.updateHighlight(
-        highlight.copyWith(note: note),
-      );
-      final highlights = await _highlightRepository.getHighlightsBySource(
-        sourceId,
-      );
-      emit(state.copyWith(highlights: highlights));
-    } catch (e, st) {
-      addError(e, st);
+      if (isCurrent() && operation != null) {
+        emit(state.copyWith(highlightEffect: effect(false)));
+      }
     }
   }
 

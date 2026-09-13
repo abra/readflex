@@ -30,6 +30,7 @@ import 'reader_device_font_scale.dart';
 import 'reader_drawer_messages.dart';
 import 'reader_directional_layout.dart';
 import 'reader_highlight_focus_cubit.dart';
+import 'reader_highlight_effect_listener.dart';
 import 'reader_highlight_color.dart';
 import 'reader_highlight_filter.dart';
 import 'reader_highlight_location_label.dart';
@@ -241,15 +242,17 @@ class ReaderScreen extends StatelessWidget {
           onSourceOpened: onSourceOpened,
           child: ReaderBrightnessLifecycleScope(
             cubit: context.read<ReaderBrightnessCubit>(),
-            child: ReaderKeepAwakeDriver(
-              child: _ReaderView(
-                serverBaseUri: serverBaseUri,
-                textActions: textActions,
-                onRetry: () => context.read<ReaderBloc>().add(
-                  ReaderSourceLoadRequested(sourceId: sourceId),
+            child: ReaderHighlightEffectListener(
+              child: ReaderKeepAwakeDriver(
+                child: _ReaderView(
+                  serverBaseUri: serverBaseUri,
+                  textActions: textActions,
+                  onRetry: () => context.read<ReaderBloc>().add(
+                    ReaderSourceLoadRequested(sourceId: sourceId),
+                  ),
+                  onArticleTitlePressed: onArticleTitlePressed,
+                  onExternalLink: onExternalLink,
                 ),
-                onArticleTitlePressed: onArticleTitlePressed,
-                onExternalLink: onExternalLink,
               ),
             ),
           ),

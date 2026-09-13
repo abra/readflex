@@ -60,6 +60,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
   final BookRepository _bookRepository;
   final ArticleRepository? _articleRepository;
   final CollectionRepository? _collectionRepository;
+  int _loadGeneration = 0;
 
   Future<void> _onLoadRequested(
     LibraryLoadRequested event,
@@ -80,6 +81,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     LibrarySourceDeleted event,
     Emitter<LibraryState> emit,
   ) async {
+    _loadGeneration++;
     final deletion = _deletionDescriptorFor({event.sourceId});
     try {
       await _deleteSource(event.sourceId, event.scope);
@@ -102,6 +104,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     LibrarySourcesDeleted event,
     Emitter<LibraryState> emit,
   ) async {
+    _loadGeneration++;
     final deletion = _deletionDescriptorFor(event.sourceIds);
     // Loop deliberately continues on per-id failure: if id #2 throws we
     // still try ids #3..N. Stopping early would leave the user with a
@@ -120,41 +123,8 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
       }
     }
     await _removeCollectionMemberships(deletedIds);
-    if (anyFailed) {
-      // Re-pull the list so the rows that DID delete fall away from the
-      // grid. Keep the screen in success because the list remains usable;
-      // the error is surfaced through the deletion effect/toast.
-      try {
-        final snapshot = await _loadLibrarySnapshot();
-        final effect = _deletionEffect(deletion, success: false);
-        emit(
-          state.copyWith(
-            status: LibraryStatus.success,
-            books: snapshot.books,
-            articles: snapshot.articles,
-            collectionScopes: snapshot.collectionScopes,
-            selectedCollectionScope: _resolveSelectedCollectionScope(
-              state.selectedCollectionScope,
-              snapshot.collectionScopes,
-            ),
-            deletionVersion: effect.version,
-            deletionEffect: effect,
-          ),
-        );
-      } catch (e, st) {
-        addError(e, st);
-        final effect = _deletionEffect(deletion, success: false);
-        emit(
-          state.copyWith(
-            status: LibraryStatus.success,
-            deletionVersion: effect.version,
-            deletionEffect: effect,
-          ),
-        );
-      }
-      return;
-    }
-    await _loadItems(emit, deletion: deletion);
+    // Keep successful deletions visible even when another item failed.
+    await _loadItems(emit, deletion: deletion, deletionSuccess: !anyFailed);
   }
 
   /// Pulls the latest source list and emits a `success` (or `failure`)
@@ -164,12 +134,27 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
   Future<void> _loadItems(
     Emitter<LibraryState> emit, {
     _LibraryDeletionDescriptor? deletion,
+    bool deletionSuccess = true,
   }) async {
+    final generation = ++_loadGeneration;
     try {
       final snapshot = await _loadLibrarySnapshot();
+      if (emit.isDone) return;
       final effect = deletion == null
           ? null
-          : _deletionEffect(deletion, success: true);
+          : _deletionEffect(deletion, success: deletionSuccess);
+      if (generation != _loadGeneration) {
+        // A mutation still deserves feedback, but its older list must not win.
+        if (effect != null) {
+          emit(
+            state.copyWith(
+              deletionVersion: effect.version,
+              deletionEffect: effect,
+            ),
+          );
+        }
+        return;
+      }
       emit(
         state.copyWith(
           status: LibraryStatus.success,
@@ -186,9 +171,21 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
       );
     } catch (e, st) {
       addError(e, st);
+      if (emit.isDone) return;
       final effect = deletion == null
           ? null
           : _deletionEffect(deletion, success: false);
+      if (generation != _loadGeneration) {
+        if (effect != null) {
+          emit(
+            state.copyWith(
+              deletionVersion: effect.version,
+              deletionEffect: effect,
+            ),
+          );
+        }
+        return;
+      }
       final status = deletion == null
           ? LibraryStatus.failure
           : LibraryStatus.success;
@@ -221,10 +218,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     if (articleRepository == null) {
       return (await _bookRepository.getBooks(), const <Article>[]);
     }
-    return (
-      await _bookRepository.getBooks(),
-      await articleRepository.getArticles(),
-    );
+    return (_bookRepository.getBooks(), articleRepository.getArticles()).wait;
   }
 
   Future<List<LibraryCollectionScope>> _loadCollectionScopes(

@@ -54,6 +54,7 @@ void main() {
   Widget buildSubject({
     ArticleRepository? articleRepository,
     bool isOffline = false,
+    LibraryImportLauncher? onAddPressed,
   }) => PreferencesScope(
     service: preferencesService,
     child: Builder(
@@ -69,11 +70,46 @@ void main() {
           preferencesService: preferencesService,
           isOffline: isOffline,
           onSourcePressed: (_, {onSourceOpened}) async {},
-          onAddPressed: () async {},
+          onAddPressed: onAddPressed ?? ({required onImported}) async {},
         ),
       ),
     ),
   );
+
+  testWidgets('import completion refreshes after the import UI has closed', (
+    tester,
+  ) async {
+    late VoidCallback imported;
+    await tester.pumpWidget(
+      buildSubject(
+        onAddPressed: ({required onImported}) async {
+          imported = onImported;
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    expect(
+      bookRepository.getBooksCallCount,
+      1,
+      reason: 'Dismissal alone does not reload',
+    );
+    bookRepository.seedBooks([_book]);
+    imported();
+    await tester.pumpAndSettle();
+    expect(find.text(_book.title), findsOneWidget);
+    expect(bookRepository.getBooksCallCount, 2);
+    await tester.pumpWidget(const SizedBox.shrink());
+    imported();
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(
+      bookRepository.getBooksCallCount,
+      2,
+      reason: 'No work after Library disposal',
+    );
+  });
 
   testWidgets('shows loading indicator initially', (tester) async {
     bookRepository.shouldThrow = true;
@@ -331,7 +367,7 @@ void main() {
               ),
             );
           },
-          onAddPressed: () async {},
+          onAddPressed: ({required onImported}) async {},
         ),
       ),
     );
@@ -411,7 +447,7 @@ void main() {
           collectionRepository: collectionRepository,
           preferencesService: preferencesService,
           onSourcePressed: (_, {onSourceOpened}) async {},
-          onAddPressed: () async {
+          onAddPressed: ({required onImported}) async {
             invocations++;
             await gate.future;
           },
@@ -454,7 +490,7 @@ void main() {
           collectionRepository: collectionRepository,
           preferencesService: preferencesService,
           onSourcePressed: (_, {onSourceOpened}) async {},
-          onAddPressed: () async {
+          onAddPressed: ({required onImported}) async {
             await gate.future;
           },
         ),
@@ -533,7 +569,7 @@ void main() {
               second,
             ]);
           },
-          onAddPressed: () async {},
+          onAddPressed: ({required onImported}) async {},
         ),
       ),
     );
@@ -615,7 +651,7 @@ void main() {
             notifySourceOpened = onSourceOpened;
             await routeCompleter.future;
           },
-          onAddPressed: () async {},
+          onAddPressed: ({required onImported}) async {},
         ),
       ),
     );

@@ -49,7 +49,7 @@ class HighlightsDao extends DatabaseAccessor<AppDatabase>
   Future<void> insertHighlight(HighlightsTableCompanion highlight) =>
       into(highlightsTable).insert(highlight);
 
-  Future<void> updateHighlight(HighlightsTableCompanion highlight) => (update(
+  Future<int> updateHighlight(HighlightsTableCompanion highlight) => (update(
     highlightsTable,
   )..where((t) => t.id.equals(highlight.id.value))).write(highlight);
 

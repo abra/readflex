@@ -19,7 +19,7 @@ class FakeHighlightRepository implements HighlightRepository {
   @override
   Future<List<Highlight>> getHighlightsBySource(String sourceId) async {
     if (shouldThrow) throw Exception('getHighlightsBySource failed');
-    return highlightsBySourceId[sourceId] ?? [];
+    return List.of(highlightsBySourceId[sourceId] ?? []);
   }
 
   @override
@@ -69,6 +69,22 @@ class FakeHighlightRepository implements HighlightRepository {
     for (final entry in highlightsBySourceId.entries) {
       entry.value.removeWhere((highlight) => highlight.id == id);
     }
+  }
+
+  @override
+  Future<void> updateHighlightColor(String id, HighlightColor color) async {
+    final highlight = highlightsBySourceId.values
+        .expand((items) => items)
+        .firstWhere((highlight) => highlight.id == id);
+    await updateHighlight(highlight.copyWith(color: color));
+  }
+
+  @override
+  Future<void> updateHighlightNote(String id, String? note) async {
+    final highlight = highlightsBySourceId.values
+        .expand((items) => items)
+        .firstWhere((highlight) => highlight.id == id);
+    await updateHighlight(highlight.copyWith(note: note));
   }
 
   @override

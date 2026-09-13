@@ -29,9 +29,9 @@
 /// regions for a single 4-byte magic-number probe.
 const MIN_CHUNK_SIZE = 64 * 1024;
 
-/// Maximum number of cached chunks (LRU). 128 chunks × 64 KB = ~8 MB
-/// upper bound on the cache when chunks are at the minimum size.
+/// Bound both entry count and retained bytes; ZIP reads often exceed 64 KB.
 const MAX_CACHE_ITEMS = 128;
+const MAX_CACHE_BYTES = 8 * 1024 * 1024;
 
 class _DeferredBlob {
   constructor(promise, size, type) {
@@ -64,6 +64,7 @@ export class RemoteFile {
     /// Map<chunkStart, ArrayBuffer> — the entire chunk that was actually
     /// fetched. Recently-used chunks are kept at the head of `_lruOrder`.
     this._cache = new Map();
+    this._cacheBytes = 0;
     this._lruOrder = [];
 
     /// Map<"start-end", Promise<ArrayBuffer>> — in-flight fetches keyed by
@@ -166,9 +167,16 @@ export class RemoteFile {
     if (pending) return pending;
 
     const promise = this._fetchRange(chunkStart, chunkEnd).then(buffer => {
-      this._cache.set(chunkStart, buffer);
-      this._touchLru(chunkStart);
-      this._evictIfNeeded();
+      // Large one-off reads must not flush the useful working set.
+      if (buffer.byteLength <= MAX_CACHE_BYTES) {
+        const previous = this._cache.get(chunkStart);
+        if (!previous || previous.byteLength < buffer.byteLength) {
+          this._cacheBytes += buffer.byteLength - (previous?.byteLength ?? 0);
+          this._cache.set(chunkStart, buffer);
+        }
+        this._touchLru(chunkStart);
+        this._evictIfNeeded();
+      }
       return buffer;
     });
     this._inFlight.set(key, promise);
@@ -199,9 +207,12 @@ export class RemoteFile {
   }
 
   _evictIfNeeded() {
-    while (this._lruOrder.length > MAX_CACHE_ITEMS) {
+    while (this._lruOrder.length > MAX_CACHE_ITEMS || this._cacheBytes > MAX_CACHE_BYTES) {
       const evict = this._lruOrder.pop();
-      if (evict !== undefined) this._cache.delete(evict);
+      if (evict !== undefined) {
+        this._cacheBytes -= this._cache.get(evict).byteLength;
+        this._cache.delete(evict);
+      }
     }
   }
 

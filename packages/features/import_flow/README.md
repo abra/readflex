@@ -39,7 +39,12 @@ Future<ImportFlowResult?> showImportFlowSheet(
 - `onOpenTerms` / `onOpenPrivacy` — optional external legal-link callbacks.
 - Sheet resolves with `ImportFlowResult.bookImported` or
   `ImportFlowResult.articleImported` when the user finishes a successful import
-  so the caller (e.g. `library_screen`) can refresh.
+  while the sheet remains open. Dismissal is not an import-completion signal.
+
+An already-started import may finish after the sheet/cubit closes. The routing
+callbacks notify Library through `LibraryImportLauncher.onImported` after
+persistence succeeds, independently of this sheet's result. A closed cubit
+does not emit progress/results, but closing it does not cancel the storage work.
 
 Helpers exported from `import_flow.dart`:
 
