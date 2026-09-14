@@ -9,6 +9,12 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   ReadflexLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get readerSelectionStart => '選択範囲の始点';
+
+  @override
+  String get readerSelectionEnd => '選択範囲の終点';
+
+  @override
   String get translationOriginal => '原文';
 
   @override
@@ -39,6 +45,12 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
 
   @override
   String get translationSentence => '文';
+
+  @override
+  String get translationWord => '単語の訳';
+
+  @override
+  String get translationInContext => 'この文脈での訳';
 
   @override
   String get translationDetails => '意味と別の訳';

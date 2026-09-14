@@ -37,11 +37,14 @@ Shared selection/click handlers are registered by
 `registerSharedReaderHandlers` so the widget body stays focused on
 position + annotation glue.
 
-On Android, visible reader WebViews use Texture Layer Hybrid Composition and
-mirror the app lifecycle into native `WebView.onPause()` / `onResume()` calls.
-This keeps the platform view attached to the current Flutter surface after the
-app moves between the foreground and background. Other platforms keep their
-native lifecycle behavior.
+On Android, visible reader WebViews retain Hybrid Composition and the existing
+platform-view lifecycle contract. Selection handles are reader-owned (see below);
+this change does not also switch composition modes. The reader mirrors app
+lifecycle into native `WebView.onPause()` /
+`onResume()` calls and serializes transitions. Other platforms keep their native
+lifecycle behavior. Hybrid Composition trades Flutter compositing performance
+for native-view fidelity; actual foreground/background and frame-time checks on
+physical devices remain release gates.
 
 Both visible readers enable Android `onRenderProcessGone` and handle iOS
 `onWebContentProcessDidTerminate`. A terminated renderer is replaced with a new
@@ -64,11 +67,20 @@ feature forwards that value through its callback boundary, and app routing
 opens only validated HTTP(S) links with the platform URL launcher.
 
 On touch devices the native DOM selection remains active while the reader
-popup is visible. This keeps the platform drag handles available and lets
+popup is visible. This keeps selection controls available and lets
 `selectionchange` update the popup payload as the user expands or contracts the
 range. The range is cleared only after an action completes or the selection is
 dismissed; iOS system edit-menu suppression is handled by the vendored
-`flutter_inappwebview_ios` patch.
+`flutter_inappwebview_ios` patch. On Android the vendored
+`flutter_inappwebview_android` patch clears system action-menu items without
+finishing `ActionMode`, which would also hide native selection handles. Visible
+readers additionally opt into `useCustomSelectionHandles`: Android recognizes
+long press, consumes the native selection UI, and sends normalized viewport
+coordinates to `readflex_selection_start.js`. Browser word-boundary operations
+create the DOM range, including words spanning inline elements. Non-reader
+WebViews default to native handling. See
+[`README.readflex.md`](../../third_party/flutter_inappwebview_android/README.readflex.md)
+for native callback tests and update requirements.
 The JS runtime snapshots every changed DOM range. For books, the snapshot is
 revisioned per iframe so `currentTextSelection()` reads only the document the
 user most recently selected in instead of an older range from a neighboring
@@ -84,6 +96,19 @@ reuse their rendered ranges. No highlight is deleted by selecting, previewing,
 translating or cancelling; replacement occurs only on explicit Highlight save.
 Browser tests exercise both touch event paths, both book pagination axes,
 forward/backward range changes, inline nodes, repeated occurrences and tap editing.
+
+EPUB TOC navigation preserves publisher fragment IDs. When an element anchor
+has no layout boxes (for example a hidden empty span inside a heading), the
+paginator looks for nearby rendered content, forwards first and backwards at
+the document end. The fallback visits at most 128 DOM nodes per direction,
+only on the exceptional navigation path; normal element and CFI-range targets
+keep their existing rectangle path. No publisher DOM or saved CFI is rewritten.
+`test_browser/epub_toc_navigation.test.mjs` covers same/cross-chapter navigation,
+hidden inline/standalone/end markers, named anchors and `display: contents`
+in horizontal/vertical pagination and continuous scrolling.
+Chapter links without fragments target the body's first layout box instead
+of a numeric zero offset, avoiding empty leading columns from publisher
+margins without changing the book's layout or fractional progress navigation.
 
 Book text-action context is extracted by `readflex_selection_context.js` from
 the actual DOM range. `Intl.Segmenter` finds the containing sentence (or the
@@ -109,20 +134,39 @@ belongs to selection until release/cancel, even if the range briefly collapses.
 The paginator reads selection from its own iframe, skips ordinary swipe/snap
 handling and cancels vertical drag previews/release animations. `Vertical` is
 paginated layout with vertical page animation, not continuous `Scroll`.
-Its selection changes do not trigger the legacy one-second next-page timer or
-scroll-position rollback. Native selection scrolling is left intact; this is
-not a new edge-dwell or cross-chapter selection implementation.
+`readflex_selection_navigation.js` keeps handle adjustment separate from page
+navigation. Hold/release at an edge does not turn. A separate swipe or edge tap
+(including the page margins) turns exactly one page, preserving the fixed DOM
+boundary and placing the moving endpoint one visible grapheme into the incoming
+page. Reverse navigation shrinks the range and can cross the fixed endpoint;
+grabbing the other handle changes which endpoint is fixed. Cancelled gestures
+do not turn, and pending navigation cannot overwrite a newer selection.
+The paginator's existing scroll listener blocks native auto-scroll of paginated
+selected text, including Chromium's scrolling of overflow:hidden containers.
+There is no per-selection scroll listener or periodic polling. Continuous
+Scroll is unaffected. A native Range cannot span different spine documents:
+continuation stops at the current chapter boundary without unloading it.
 
-On iOS, an active native text range is the only temporary selection tint. The
+On iOS handles remain native. On Android `readflex_selection_handles.js` owns
+the controls from the initial word selection through extension and page
+continuation, including continuous-scroll and text-bearing fixed layouts.
+There is no handoff between OEM and reader handle shapes. Their 48px touch targets,
+localized labels and keyboard arrows operate on the same DOM selection. Controls
+are removed on document disposal and hidden on cancellation/layout changes.
+Android controls are restored on focus/visibility return and after resize if
+the active document still has a selection. This does not recreate a cleared range.
+Pointer work is coalesced per animation frame. Geometry reads only endpoints;
+page-boundary traversal is bounded. `onSelectionInteractionChanged` hides the
+Flutter action menu during adjustment, then a 160ms settle publishes the latest
+text/CFI. Trace-disabled handle updates do not serialize the selected text.
+Settled/action reads preserve native paragraph breaks and cache them for focus
+loss when the Flutter popup opens.
+
+On iOS and Android, an active native text range is the only temporary selection tint. The
 popup's SVG color preview is suppressed while native selection exists and is
 removed if native selection returns. Color swatches still choose the saved
 highlight color; fallback previews remain available without a native range.
 Saved highlights are not removed by selection-preview cleanup.
-
-Horizontal boundary selection can still advance to the next page. Its timer is
-cancelled when selection clears, and checks the live document/range and page
-mode before navigation. Range changes replace the temporary scroll guard,
-instead of accumulating one listener per change.
 
 `RemoteFile` bounds its LRU by 128 entries and 8 MiB of retained bytes, including
 larger ZIP chunks. An oversized read bypasses cache admission without flushing
@@ -137,6 +181,56 @@ updates article text highlights through stable article anchors.
 CSS Custom Highlights is preferred. Older WebViews use the existing SVG
 `Overlayer` implementation without wrapping or changing text nodes. Fallback
 redraws are coalesced on layout/font/image changes; scrolling needs no redraw.
+On both iOS and Android, articles suppress the temporary color preview while a
+native text selection exists. A fallback preview is removed when the native
+range returns, without clearing selection, mutating text or rebuilding saved
+highlights. Preview styles are separate from persisted annotation styles.
+Palette swatches choose the color for explicit Highlight save; they do not tint
+the native selection a second time.
+
+Continuous articles use `readflex_article_selection.js` to hold the viewport
+still during handle adjustment. Release the handle, scroll with a
+separate content swipe, then adjust again. Ordinary touch/wheel/keyboard
+scrolling and explicit navigation preserve the range. A range change revokes
+the scrolling permission; focus loss cannot leave a stale bypass behind.
+
+The Android article controller retains its layout guard against selection-driven
+scrolling: it temporarily pins the article container and preserves document
+height while an endpoint is visible or a control is being dragged. A
+separate content gesture unpins it before scrolling; with both endpoints
+offscreen it stays unpinned so subsequent swipes can latch normally. Original
+inline styles are restored on clear, cancellation and disposal. No text nodes
+are moved, and styles are not rewritten on every range update. iOS does not
+use this Android-specific layout guard.
+
+An offscreen endpoint has a temporary edge continuation control. Grabbing it
+alone does not change the range; dragging moves that endpoint and preserves
+the opposite DOM boundary, including when direction reverses or boundaries
+cross. When both endpoints are offscreen on the same side, only the nearer
+one is exposed. iOS returns to native handles when the endpoint is visible;
+Android keeps the same reader controls both onscreen and at the edge. Moving
+or scrolling an endpoint offscreen never transfers ownership to a native handle
+or resets the opposite boundary. Android content gestures do not use the native
+handle-distance heuristic; only the actual control owns a handle drag.
+The shared shadow host is named so the app's empty-content CSS does not hide
+its controls; it has no light-DOM text content by design.
+Touch targets respect host-provided and CSS environment safe-area insets.
+
+Selection text/context is published after a 160ms settle or read live for an
+explicit action, never serialized on every handle movement. Endpoint geometry
+is bounded; control motion is coalesced per frame. Scroll interception uses a
+passive listener, not polling. Adjustment hides the Flutter action menu without
+disposing its state. Continuation controls capture the fixed boundary on press
+but notify adjustment on movement: hiding the overlay during pointerdown can
+interrupt Android hybrid-composition input. Cancellation/disposal remove
+pending work and controls.
+Browser tests cover both directions, reversal/crossing, safe areas, focus loss,
+explicit navigation, gesture cancellation, disposal and deferred serialization.
+They also cover repeated scrolling, redundant selection events, layout/style
+restoration, repeated upward/downward continuation, the app's empty-content
+normalization and the absence of per-update style mutations. Native gesture
+probes supplement, but do not replace, real-device testing of the full app,
+including the Flutter action menu's visibility transitions.
 
 `onSelectionEnd` carries both the exact selected text and, when the user
 selects only part of a word/span, a lexical `normalizedText` expanded to
@@ -204,7 +298,12 @@ use the plugin platform interface to simulate renderer death and late callbacks.
 Book selection regressions load the actual `book.js` runtime and EPUB directory
 loader (with fixture transport) as well as the standalone paginator. They cover
 unwanted delayed page turns, iframe gesture ownership, cancelled gestures and
-release animations, backward range/CFI round trips and iOS preview suppression.
+release animations, both moving endpoints, reverse/crossing navigation, page
+margin taps, Android continuation controls, text serialization bounds, backward
+range/CFI round trips and iOS/Android preview suppression. Initial Android
+selection tests cover the normalized native gesture bridge, browser word
+boundaries across inline nodes, RTL/CJK/Cyrillic and supplementary Unicode
+letters, fixed layouts, and handle restoration after focus loss.
 Synthetic touch events and the iOS user-agent branch test the JS contracts,
 not the operating system's selection handles or native tint rendering.
 Desktop Playwright WebKit with feature detection disabled is not an actual old
@@ -214,23 +313,64 @@ device smoke tests.
 The root `make test-device DEVICE=<id>` suite also exercises actual native
 WebViews through the production router, local reader server, and isolated
 repositories. It verifies expanded book/article selections reaching Translate,
-Define fallback, clipboard, menu dismissal, persisted highlight geometry after
-reopening, and synthetic lifecycle callbacks. `debugController` and
+Define fallback, clipboard, menu dismissal, multi-page continuation in both
+directions/axes with menu hide/reanchor, handle clearance, retained color and
+complete translation payloads, persisted highlight geometry after reopening,
+and synthetic lifecycle callbacks. `debugController` and
 `debugIsReady` on both WebView states are read-only `@visibleForTesting` accessors
 for readiness and the existing JS bridge; they add no runtime polling or
 listeners. The suite sets DOM ranges, not native selection handles, and its
 lifecycle events do not background the actual OS application. See the root
 [`test/ui/README.md`](../../test/ui/README.md) for device artifacts and gaps.
+Android screenshots use the test driver's ADB capture, not
+`convertFlutterSurfaceToImage()`: the latter competes for the image frame used
+by Hybrid Composition and can leave the SDK screenshot future waiting forever.
+The transport is test-only, loopback-bound, restricted to the selected device
+and closed after the driver completes; it adds nothing to the normal app.
 
 Selection device smoke checks (iOS and Android): open a reflowable book in
 `Vertical`, long-press a word, drag either handle to the top/bottom edge and
-reverse direction, then release and wait at least two seconds. Check that no
-app-driven page animation starts, handles remain usable, and Copy/Translate/
-Highlight use the final range. Deselect and swipe both ways to verify normal
-page turns. On iOS check that native selection has no extra yellow/pink preview
+reverse direction, then release and wait at least two seconds. Check that the
+page remains still. Swipe/tap once, verify exactly one complete page advances,
+and physically re-grab the incoming handle. Test a fresh left-handle selection
+backwards as well as right-handle forwards; return and cross the initial point.
+Check that Copy/Translate/Highlight use the complete final range. Deselect and
+swipe both ways to verify normal page turns. On iOS check that native selection
+has no extra yellow/pink preview
 layer and that saving a highlight still applies the chosen color. Also verify
 continuous `Scroll` and horizontal `Slide`; selection across actual device page
 boundaries still requires this native check, beyond the DOM/CFI tests.
+In a long article, drag from mid-screen to each edge, hold, then reverse.
+The viewport must stay still while dragging. Release, scroll separately and
+re-grab either handle; verify both boundaries and the final action text.
+Sparse synthetic MOVE events are not equivalent to a physical high-frequency
+handle drag. On Android check that the same Readflex controls appear from the
+initial long press, without a second OEM pair or a transient change of shape.
+Reader-owned Android controls use the system `Magnifier` on API 28+ while
+dragging. The shared handle controller sends the moving text boundary, not the
+knob position, through a numeric-only private JS-to-Java bridge. Movement is
+batched with `requestAnimationFrame`; no Dart callbacks, widget rebuilds, text
+serialization or document-wide scans are added to the drag path. Android
+coalesces native updates and rejects requests outside an active physical touch.
+The magnifier is dismissed on release/cancellation, selection cleanup, loss of
+window focus, pause, detachment and disposal. API 24-27 keep working handles
+without a magnifier. iOS retains native handles and magnification.
+While a reader handle is captured, the book/article controller also rejects a
+new native long-press selection. A delayed Android MOVE must not let the
+long-click timer replace the active range with a new word.
+
+During device checks, inspect the magnified text while dragging both endpoints,
+including after a page turn, and check that no loupe remains after release or
+background/foreground. Android 29+ uses a compact rounded aperture; Android 28
+uses the platform's legacy magnifier appearance. This enhancement does not
+restore Chromium's native selection handles after programmatic range changes.
+Also check TalkBack/VoiceOver separately;
+localized labels and keyboard tests do not certify screen-reader usability.
+Flutter's Texture Layer Hybrid Composition has a
+[documented magnifier limitation](https://docs.flutter.dev/platform-integration/android/platform-views#texture-layer).
+The reader retains native Hybrid Composition for platform-view fidelity. Repeat
+performance and actual background/foreground checks on the affected device
+when changing this setting or updating Flutter/WebView.
 
 DOMPurify is pinned and vendored without edits. See
 `assets/foliate-js/src/vendor/DOMPurify-README.md` for provenance and updates.

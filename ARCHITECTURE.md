@@ -297,7 +297,8 @@ Reader-specific UI state is split by responsibility:
   Streamed results/progress are batched at 16ms intervals, with an immediate
   terminal flush. Reset/replacement/close invalidate pending updates; renderer
   failures become UI error state, including synchronous failures.
-- `ReaderSelectionCubit` owns active text selection payloads.
+- `ReaderSelectionCubit` owns active text selection payloads and the UI-only
+  adjustment phase; it never performs pagination or DOM geometry work.
 - `ReaderAppearanceCubit` owns reader appearance preferences.
 - `ReaderBrightnessCubit` coordinates widget brightness, system brightness, and
   platform override behavior.
@@ -307,12 +308,47 @@ UI changes do not recreate the reader runtime unnecessarily. Books and comics
 use the foliate WebView; articles use a separate vertical HTML WebView that
 loads `content.html` and restores position through stable sentence anchors.
 
-Book selection gesture ownership stays inside `reader_webview`'s JS paginator:
-an active selection suppresses normal touch page turns through release/cancel.
-Vertical pagination does not auto-advance from `selectionchange`; native range
-and handle scrolling remain browser-owned. On iOS the live system selection
-is not overpainted by the temporary SVG highlight preview. Flutter still owns
-the selected highlight color and receives the final text/CFI via the bridge.
+Book selection navigation stays inside `reader_webview`'s JS runtime. A handle
+drag never turns a page. A subsequent swipe or edge tap advances exactly one
+page and moves the active endpoint just inside the new viewport. The opposite
+DOM boundary stays fixed, including when navigation reverses or crosses it.
+The paginator blocks WebView auto-scroll while paginated text is selected;
+there are no edge-dwell timers. Selection cannot cross spine documents.
+Continuous Scroll and fixed-layout books keep their navigation behavior.
+iOS handles remain native; Android uses reader handles from the initial word
+selection onward. A reader-only Android plugin setting consumes native long
+press and dispatches normalized viewport coordinates to the JS selection start
+module. Browser word-boundary operations create the range; the existing JS
+controllers own handle movement and settling. No repository or feature bloc
+participates in per-pointer work. Non-reader WebViews stay native. The DOM
+Range remains the source of truth for text, CFI and annotations on both.
+Geometry uses endpoints, not all selected line rectangles. Pointer updates
+are coalesced per animation frame; full text/context is read only after the
+gesture settles or on an explicit action. The Flutter menu hides without
+disposal while adjusting and retains its chosen color. On iOS and Android the native
+selection is not overpainted by the temporary SVG highlight preview.
+The article reader applies the same single temporary tint rule on both iOS and
+Android, for CSS and SVG previews. Clearing that preview leaves native selection
+and persisted annotation renderers intact.
+The article selection controller locks native handle auto-scroll. A separate
+content swipe scrolls without changing the range; an offscreen endpoint gets
+a temporary continuation control. Dragging that control preserves the opposite
+DOM boundary, including reversal/crossing. iOS returns to visible native handles;
+Android keeps the same controls before and after range updates. Touch
+targets respect safe-area insets. Adjustment uses bounded endpoint geometry,
+frame-coalesced pointer work and deferred text/context serialization; its UI
+phase goes through the existing selection cubit. Book pagination is separate.
+For Android articles the JS controller temporarily pins the content container,
+preserving document height, to prevent native auto-scroll before JS events.
+It restores normal layout before separate content gestures and while both
+endpoints are offscreen. The guard does not move text nodes or rewrite
+styles on every range change; cancellation/disposal restore original styles.
+The Android WebView patch suppresses menu items without
+finishing the native selection action mode for other consumers. Visible Android
+readers opt into their own handles, retain Hybrid Composition and serialized pause/resume
+handling. This requires device performance and background/foreground checks.
+Browser tests do not substitute for native-handle checks on
+physical devices; see `packages/reader_webview/README.md`.
 
 Reader position writes are serialized and retain the 500ms trailing debounce.
 Repositories update only CFI/progress; `markOpened` updates only the opened
@@ -329,8 +365,8 @@ the context popup does not report success when merely enqueueing an edit.
 The remote book byte cache is bounded by both 128 entries and 8 MiB of retained
 buffers. Oversized reads are returned without admission to the cache, preserving
 the working set. This is not a cap on total WebView memory or in-flight reads.
-Horizontal selection auto-page timers revalidate the live range/mode and are
-cancelled on deselection; repeated range changes retain at most one scroll guard.
+Selection navigation validates its document and gesture generation before
+applying asynchronous results and disposes listeners when the chapter unloads.
 
 Each reader WebView owns a bounded load session: one automatic replacement
 after renderer termination, then a terminal failure exposed to `ReaderBloc`.

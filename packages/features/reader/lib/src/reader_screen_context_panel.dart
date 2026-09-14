@@ -12,6 +12,8 @@ const _kTextSelectionPopupHeight =
     _kTextSelectionPopupDividerHeight +
     _kTextSelectionActionRowHeight;
 const _kHighlightPopupGap = AppSpacing.sm;
+// Native and continuation handles extend beyond the selected text rectangle.
+const _kTextSelectionPopupGap = AppSpacing.xl + AppSpacing.lg;
 const _kImageHighlightPopupGap = AppSpacing.xl;
 const _kHighlightPopupHorizontalInset = AppSpacing.lg;
 
@@ -367,26 +369,32 @@ class _ContextPanelDriver extends StatelessWidget {
 
     if (highlightAction != null) {
       return Positioned.fill(
-        child: _HighlightSelectionPopup(
-          action: highlightAction,
-          extraActions: fallbackActions,
-          selection: selection,
-          selectionPosition: sel.position,
-          readerTheme: readerTheme,
-          panelColor: colors.surface,
-          foregroundColor: colors.onSurface,
-          dividerColor: colors.outlineVariant,
-          resolveSelection: resolveCurrentSelection,
-          onPreviewColorChanged: showHighlightPreview,
-          onPreviewCleared: clearHighlightPreview,
-          onActionCompleted: completeHighlightAction,
-          onExecuteExtraAction: executeTextAction,
-          onActionError: handleActionError,
+        child: Visibility(
+          visible: !sel.isAdjusting,
+          maintainState: true,
+          child: _HighlightSelectionPopup(
+            action: highlightAction,
+            extraActions: fallbackActions,
+            selection: selection,
+            selectionPosition: sel.position,
+            readerTheme: readerTheme,
+            panelColor: colors.surface,
+            foregroundColor: colors.onSurface,
+            dividerColor: colors.outlineVariant,
+            resolveSelection: resolveCurrentSelection,
+            onPreviewColorChanged: showHighlightPreview,
+            onPreviewCleared: clearHighlightPreview,
+            onActionCompleted: completeHighlightAction,
+            onExecuteExtraAction: executeTextAction,
+            onActionError: handleActionError,
+          ),
         ),
       );
     }
 
-    if (fallbackActions.isEmpty) return const SizedBox.shrink();
+    if (fallbackActions.isEmpty || sel.isAdjusting) {
+      return const SizedBox.shrink();
+    }
 
     return Positioned(
       left: 0,
@@ -998,7 +1006,6 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selection.cfiRange != widget.selection.cfiRange) {
       _selectionAtInteractionStart = null;
-      _selectedColor = HighlightColor.yellow;
       widget.onPreviewColorChanged(_selectedColor);
       return;
     }
@@ -1089,6 +1096,7 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
           constraints: constraints,
           mediaPadding: mediaPadding,
           position: widget.selectionPosition,
+          gap: _kTextSelectionPopupGap,
           popupHeight: _kTextSelectionPopupHeight,
         );
 

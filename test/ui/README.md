@@ -57,9 +57,10 @@ credentials to this deterministic test suite.
 | Shared text tools | Search clear control and highlight palette in all profiles; import menu layout | `surfaces_golden_test.dart` |
 | Reader appearance | Portrait/landscape, 2x text and RTL; header/values readable, body scrolls, final control reachable | `reader_appearance_golden_test.dart` |
 | Native book actions | Expand word to phrase, translate exact final range, copy result, Define fallback, dismiss selection menu | `integration_test/reader_flows_test.dart` |
+| Selected page continuation | Both endpoints in Slide/Vertical, one-page synthetic swipe, menu hides/reanchors, complete range reaches Translate | `integration_test/reader_flows_test.dart` |
 | Native persistence | Explicit highlight writes text/CFI to real repository and renders nonzero geometry after book reopen | `integration_test/reader_flows_test.dart` |
 | Native reader lifecycle | Search navigation and CFI survive synthetic pause/resume without replacing WebView state; DOM remains readable | `integration_test/reader_flows_test.dart` |
-| Native article actions | Store fixture article, expand word to sentence, translate complete range, close menu | `integration_test/reader_flows_test.dart` |
+| Native article actions | Store fixture article, keep one native tint when changing palette color, expand word to sentence, translate complete range, close menu | `integration_test/reader_flows_test.dart` |
 | Native search UI | Query actual book, navigate result, rerun history, clear field/remove history, empty results | `integration_test/reader_flows_test.dart` |
 | Native bookmarks | Create, reopen book, confirm storage, delete from Contents and reopen again | `integration_test/reader_flows_test.dart` |
 | Native appearance | Theme/font/size/page-turn reach preferences and DOM; persist per book, reset without replacing live WebView | `integration_test/reader_flows_test.dart` |
@@ -133,7 +134,18 @@ translates it without changing storage, explicitly replaces the contained
 highlights, re-saves without losing the note, and reopens the rendered result.
 Selection is constructed in the real WebView DOM; native handle dragging still
 requires a device gesture check.
-The eleven native scenarios write screenshots and `results.json` to a fresh
+Android captures use `adb exec-out screencap -p` on the device selected by
+`make test-device`, including native WebView handles and system overlays. A
+test-only loopback server on an ephemeral host port receives named capture
+requests through ADB reverse on device port 34179. It validates artifact names
+and PNG signatures, bounds waits, rejects overlapping captures and closes the
+forwarding on driver completion. Neither it nor its client is used by the app's
+normal entry point. Direct `flutter drive` invocations must also set
+`READFLEX_NATIVE_DEVICE=<device-id>`; iOS keeps the standard screenshot path.
+Do not use `convertFlutterSurfaceToImage()` with native Hybrid Composition:
+the SDK screenshot callback can wait indefinitely for an already-consumed frame.
+
+The fifteen native scenarios write screenshots and `results.json` to a fresh
 `.local/ui-device/run-*/` directory, printed by the driver.
 Screenshots are inspection artifacts, not cross-device golden assertions. The
 driver checks that screenshot data is nonempty; test assertions check actual

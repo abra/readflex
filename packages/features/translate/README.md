@@ -34,7 +34,16 @@ their meaning inside the surrounding sentence. Complete sentences, paragraphs,
 and long selections use `text_translation`; in that mode the complete selected
 range is the translation target and lexical analysis fields are not rendered.
 For contextual lookup, the sheet shows the selected fragment and its translation
-first. Below the result, the Sentence section pairs the source sentence supplied
+first. For a single-word selection, distinct non-empty `base_translation` and
+`contextual_translation` values appear as **Word translation** and **In this
+context**, each with its own Copy command. Comparison ignores case and whitespace
+differences, but not punctuation or diacritics. Missing or identical values keep
+the existing single-answer presentation; no additional request is made and no
+dictionary meaning is invented by the client. Offline responses without a base
+translation also retain one answer. Phrase and full-text translation behavior
+is unchanged. Single-word detection follows the existing lexical presentation
+rule (contextual mode and no whitespace), not a new linguistic tokenizer.
+Below the result, the Sentence section pairs the source sentence supplied
 by the reader with its translation. Book context is sentence-bounded at the
 DOM-range extraction layer, not trimmed or re-segmented in the sheet; unrelated
 sentences and clipped character-window prefixes are not part of that context.
@@ -47,6 +56,12 @@ Single-word answers to single-word selections use the compact `titleLarge`
 Geist role; multi-word and complete-text translations use `bodyLarge`. Neither
 surface uses reader-style headline typography. The sheet body has a bounded,
 scrollable viewport so long contexts and lexical results do not overflow.
+The shared `ScrollEdgeFadeStack` adds full-width shadows when content extends
+beyond the viewport: below the fixed header after scrolling, and at the bottom
+when more content remains below. Expanding details updates the bottom shadow
+without requiring a scroll gesture. Reaching either edge hides its shadow;
+content that fits needs neither. The overlays ignore pointer input and do not
+update translation state or request the service.
 
 Source words, sentence context and full selected originals are presented as
 quotations: a 2px leading rule with a 12px inner inset and no background fill.
@@ -92,6 +107,8 @@ visible in the existing scrollable body.
 ## Verification
 
 `flutter test` covers request construction, exact selection preservation,
+separate base/contextual answers and copying, duplicate/missing-value fallback,
+unchanged multi-word behavior, and both answers at 200% text in all ten locales,
 language changes and recovery, copy feedback, details reset without extra
 requests, all ten locale labels, RTL content/control direction and 200% text on
 a narrow viewport. Tests also keep the primary result and Copy reachable before

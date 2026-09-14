@@ -230,6 +230,8 @@
     import { articleContentFragment } from '../foliate-js/src/readflex_content_security.js'
     import { ArticleHighlighter } from '../foliate-js/src/readflex_article_highlighter.js'
     import { rangeContainsRange } from '../foliate-js/src/readflex_range.js'
+    import { installArticleSelection } from '../foliate-js/src/readflex_article_selection.js'
+    import { selectionViewportPosition } from '../foliate-js/src/readflex_selection_navigation.js'
     (() => {
       const positionPrefix = 'readflex-html-position:'
       const centerHysteresisPx = 24
@@ -244,14 +246,26 @@
       const params = new URLSearchParams(location.search)
       const content = document.getElementById('article-content')
       const articleHighlighter = new ArticleHighlighter(content)
+      let emitSettledSelection = () => {}
+      const articleSelection = installArticleSelection({
+        doc: document,
+        root: content,
+        handleLabels: readJsonParam('selectionHandleLabels', { start: 'Selection start', end: 'Selection end' }),
+        customHandles: /Android/i.test(navigator.userAgent),
+        lockContentWhileSelecting: /Android/i.test(navigator.userAgent),
+        onAdjusting: value => callHandler('onSelectionInteractionChanged', value),
+        onSettled: () => emitSettledSelection(),
+      })
       const fontStyle = document.createElement('style')
       const customStyle = document.createElement('style')
       const articleLayoutStyle = document.createElement('style')
       const articleHighlightStyle = document.createElement('style')
+      const selectionPreviewStyle = document.createElement('style')
       document.head.append(fontStyle)
       document.head.append(customStyle)
       document.head.append(articleLayoutStyle)
       document.head.append(articleHighlightStyle)
+      document.head.append(selectionPreviewStyle)
       articleLayoutStyle.textContent = `
         #article-content blockquote,
         #article-content pre,
@@ -724,7 +738,7 @@
           normalizedMarkedContextText: textContext.markedContextText,
           cfi,
           normalizedCfi: cfi,
-          pos: selectionPosition(range),
+          pos: selectionViewportPosition(range),
           scrollOffset: window.scrollY,
           containedHighlightIds,
           footnote: false,
@@ -763,22 +777,15 @@
           correctNextTextSelectionFromTouch = true
         }, { capture: true, passive: true })
 
-        const emitSelection = event => {
+        emitSettledSelection = () => {
           const nativeRange = selectionRange()
-          const intendedRange = intendedTextSelectionRange(nativeRange)
-          const correctedFromTouch = Boolean(
-            nativeRange && intendedRange && nativeRange !== intendedRange,
-          )
-          const range = correctedFromTouch
-            ? synchronizeTextSelectionRange(intendedRange)
-            : intendedRange
+          const range = nativeRange
           rememberTextSelectionRange(range)
           const payload = textSelectionPayload(range)
           const selectedText = payload?.text || ''
           traceSelection('article-selection-event', {
-            eventType: event?.type || 'unknown',
+            eventType: 'settled',
             hasRange: Boolean(range),
-            correctedFromTouch,
             touchX: lastTextSelectionTouch?.x ?? null,
             touchY: lastTextSelectionTouch?.y ?? null,
             touchTarget: lastTextSelectionTouch?.target?.nodeName ?? null,
@@ -807,6 +814,7 @@
             selectedText,
             range.startOffset,
             range.endOffset,
+            window.scrollY,
           ].join(':')
           if (fingerprint === lastSelectionFingerprint) return
           lastSelectionFingerprint = fingerprint
@@ -822,9 +830,20 @@
             selectionClickSuppressMs
         }
 
-        document.addEventListener('selectionchange', emitSelection)
-        document.addEventListener('touchend', emitSelection, { capture: true })
-        document.addEventListener('pointerup', emitSelection)
+        // Geometry/context serialization runs only after adjustment settles.
+        // Actions still read the live Range synchronously through the bridge.
+        document.addEventListener('selectionchange', () => {
+          const nativeRange = selectionRange()
+          const intendedRange = intendedTextSelectionRange(nativeRange)
+          const range = nativeRange && intendedRange && nativeRange !== intendedRange
+            ? synchronizeTextSelectionRange(intendedRange)
+            : intendedRange
+          if (range) {
+            clearSelectionHighlightPreview()
+            rememberTextSelectionRange(range)
+            selectionClickSuppressedUntil = performance.now() + selectionClickSuppressMs
+          } else emitSettledSelection()
+        })
         document.addEventListener('contextmenu', event => {
           const shouldSuppress = selectionRange() != null ||
             performance.now() < selectionClickSuppressedUntil
@@ -1400,14 +1419,11 @@
       }
 
       function renderArticleHighlights() {
+        clearSelectionHighlightPreview()
         for (const rendered of renderedArticleHighlights.values()) {
           articleHighlighter.delete(rendered.name)
         }
-        if (selectionHighlightPreview) {
-          articleHighlighter.delete(selectionHighlightPreview.name)
-        }
         renderedArticleHighlights = new Map()
-        selectionHighlightPreview = null
 
         const rules = []
         const skipped = []
@@ -1453,21 +1469,23 @@
 
       function showSelectionHighlightPreview(options) {
         clearSelectionHighlightPreview()
+        // Preserve native handles and their tint; preview only after focus loss.
+        if (selectionRange()) return
         const anchor = decodePosition(options?.cfiRange)
         const range = rangeForArticleAnchor(anchor)
         if (!range) return
         const name = 'readflex-article-selection-preview'
         articleHighlighter.set(name, range, articleHighlightBackground(options))
         selectionHighlightPreview = { name, range }
-        articleHighlightStyle.textContent +=
-          `\n::highlight(${name}) { background-color: ${articleHighlightBackground(options)}; }`
+        selectionPreviewStyle.textContent =
+          `::highlight(${name}) { background-color: ${articleHighlightBackground(options)}; }`
       }
 
       function clearSelectionHighlightPreview() {
         if (!selectionHighlightPreview) return
         articleHighlighter.delete(selectionHighlightPreview.name)
         selectionHighlightPreview = null
-        renderArticleHighlights()
+        selectionPreviewStyle.textContent = ''
       }
 
       function highlightAtPoint(x, y) {
@@ -1629,17 +1647,20 @@
       }
 
       window.changeStyle = nextStyle => {
+        articleSelection.allowScroll()
         applyStyle(nextStyle)
         schedulePosition('style', true)
       }
 
       window.goToPercent = value => {
+        articleSelection.allowScroll()
         restoringUntil = performance.now() + scrollRestoreSuppressMs
         scrollToProgress(value)
         schedulePosition('anchor', true)
       }
 
       window.goToHref = href => {
+        articleSelection.allowScroll()
         const raw = String(href || '')
         const id = raw.startsWith('#') ? raw.slice(1) : raw.split('#')[1]
         const target = id ? document.getElementById(decodeURIComponent(id)) : null
@@ -1650,6 +1671,7 @@
       }
 
       window.goToCfi = value => {
+        articleSelection.allowScroll()
         const decoded = decodePosition(value)
         const target = sentenceElementForAnchor(decoded)
         if (!target) return

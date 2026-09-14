@@ -117,6 +117,18 @@ abstract class ReadflexLocalizations {
     Locale('ja'),
   ];
 
+  /// No description provided for @readerSelectionStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Selection start'**
+  String get readerSelectionStart;
+
+  /// No description provided for @readerSelectionEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Selection end'**
+  String get readerSelectionEnd;
+
   /// No description provided for @translationOriginal.
   ///
   /// In en, this message translates to:
@@ -176,6 +188,18 @@ abstract class ReadflexLocalizations {
   /// In en, this message translates to:
   /// **'Sentence'**
   String get translationSentence;
+
+  /// No description provided for @translationWord.
+  ///
+  /// In en, this message translates to:
+  /// **'Word translation'**
+  String get translationWord;
+
+  /// No description provided for @translationInContext.
+  ///
+  /// In en, this message translates to:
+  /// **'In this context'**
+  String get translationInContext;
 
   /// No description provided for @translationDetails.
   ///

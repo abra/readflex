@@ -658,19 +658,9 @@ void main() {
         articleHtml,
         contains("callHandler('onSelectionEnd', payload)"),
       );
-      final emitSelectionStart = articleHtml.indexOf(
-        'const emitSelection = event =>',
-      );
-      final selectionListenersStart = articleHtml.indexOf(
-        "document.addEventListener('selectionchange', emitSelection)",
-        emitSelectionStart,
-      );
-      expect(emitSelectionStart, greaterThanOrEqualTo(0));
-      expect(selectionListenersStart, greaterThan(emitSelectionStart));
-      expect(
-        articleHtml.substring(emitSelectionStart, selectionListenersStart),
-        isNot(contains('clearTextSelection()')),
-      );
+      // Range retention and settled emission are exercised in browser tests.
+      expect(articleHtml, contains('installArticleSelection'));
+      expect(assetExtractor, contains('readflex_article_selection.js'));
       expect(
         articleHtml,
         contains("callHandler('onSelectionCleared', null)"),
@@ -1797,7 +1787,7 @@ void main() {
 
   group('asset extraction', () {
     test('versions bundled reader assets independently of app version', () {
-      expect(AssetExtractor.assetRevision, 'reader_webview_assets_125');
+      expect(AssetExtractor.assetRevision, 'reader_webview_assets_138');
       expect(
         AssetExtractor.extractionVersionFor('1.0.0+1'),
         '1.0.0+1|${AssetExtractor.assetRevision}',

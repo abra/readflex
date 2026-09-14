@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:coverage/coverage.dart';
 import 'package:integration_test/integration_test_driver_extended.dart';
 
+import '../test/support/native_screenshots.dart';
+
 Future<void> main() async {
   final root = Directory('.local/ui-device');
   await root.create(recursive: true);
@@ -20,27 +22,84 @@ Future<void> main() async {
     if (snapshot.exitCode != 0) throw StateError('${snapshot.stderr}');
   }
   final screenshots = <String>[];
-  await integrationDriver(
-    onScreenshot: (name, bytes, [args]) async {
-      if (!RegExp(r'^[a-z0-9_-]+$').hasMatch(name) || bytes.isEmpty) {
-        return false;
-      }
-      await File('${directory.path}/$name.png').writeAsBytes(bytes);
-      screenshots.add('$name.png');
-      // These are inspection artifacts, not device-independent goldens.
-      return true;
-    },
-    writeResponseOnFailure: true,
-    responseDataCallback: (data) async {
-      await File('${directory.path}/results.json').writeAsString(
-        const JsonEncoder.withIndent('  ').convert({
-          ...?data,
-          'screenshots': screenshots,
-        }),
+  Future<bool> saveScreenshot(
+    String name,
+    List<int> bytes, [
+    Map<String, Object?>? args,
+  ]) async {
+    if (!RegExp(r'^[a-z0-9_-]+$').hasMatch(name) || bytes.isEmpty) {
+      return false;
+    }
+    await File('${directory.path}/$name.png').writeAsBytes(bytes);
+    screenshots.add('$name.png');
+    // These are inspection artifacts, not device-independent goldens.
+    return true;
+  }
+
+  NativeScreenshotServer? nativeScreenshots;
+  final device = Platform.environment['READFLEX_NATIVE_DEVICE'];
+  if (device != null && device.isNotEmpty) {
+    var isAndroid = false;
+    try {
+      final state = await Process.run('adb', ['-s', device, 'get-state']);
+      isAndroid = state.exitCode == 0;
+    } on ProcessException {
+      // iOS-only hosts need no Android tooling.
+    }
+    if (isAndroid) {
+      nativeScreenshots = await NativeScreenshotServer.start(
+        capture: () => captureAdbScreenshot(device),
+        save: saveScreenshot,
       );
-      if (measureCoverage) await collectNativeCoverage(directory);
-    },
-  );
+      final reverse = await Process.run('adb', [
+        '-s',
+        device,
+        'reverse',
+        'tcp:$nativeScreenshotPort',
+        'tcp:${nativeScreenshots.port}',
+      ]);
+      if (reverse.exitCode != 0) {
+        await nativeScreenshots.close();
+        throw StateError('Cannot connect Android screenshot transport');
+      }
+    }
+  }
+  Future<void> closeNativeScreenshots() async {
+    final server = nativeScreenshots;
+    nativeScreenshots = null;
+    if (server == null) return;
+    await server.close();
+    await Process.run('adb', [
+      '-s',
+      device!,
+      'reverse',
+      '--remove',
+      'tcp:$nativeScreenshotPort',
+    ]);
+  }
+
+  try {
+    await integrationDriver(
+      onScreenshot: saveScreenshot,
+      writeResponseOnFailure: true,
+      responseDataCallback: (data) async {
+        try {
+          await File('${directory.path}/results.json').writeAsString(
+            const JsonEncoder.withIndent('  ').convert({
+              ...?data,
+              'screenshots': screenshots,
+            }),
+          );
+          if (measureCoverage) await collectNativeCoverage(directory);
+        } finally {
+          // integrationDriver calls exit(), which bypasses the outer finally.
+          await closeNativeScreenshots();
+        }
+      },
+    );
+  } finally {
+    await closeNativeScreenshots();
+  }
 }
 
 Future<void> collectNativeCoverage(Directory directory) async {

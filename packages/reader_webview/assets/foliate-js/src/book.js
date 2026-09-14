@@ -54,6 +54,7 @@ import {
   normalizeTextRange,
 } from './readflex_selection_normalizer.js'
 import { buildSelectionContext } from './readflex_selection_context.js'
+import { installSelectionNavigation, selectionPageEndpoint, selectionViewportPosition } from './readflex_selection_navigation.js'
 const { configure, ZipReader, BlobReader, TextWriter, BlobWriter } =
   await import('./vendor/zip.js')
 const { EPUB } = await import('./epub.js')
@@ -1029,7 +1030,7 @@ const installNativeTextActionMenuGuard = doc => {
 
   doc.addEventListener('contextmenu', event => {
     const hasRange = Boolean(getSelectionRange(doc.getSelection?.()));
-    traceTextSelection('contextmenu', {
+    if (READFLEX_TRACE_TEXT_SELECTION) traceTextSelection('contextmenu', {
       hasRange,
       ...readflexSelectionTraceSnapshot(doc),
     });
@@ -1103,18 +1104,25 @@ const containedHighlightIdsForRange = (view, index, doc, range) => {
   return ids;
 };
 
+const sameTextRange = (a, b) => a && b && (
+  a.startContainer === b.startContainer && a.startOffset === b.startOffset
+  && a.endContainer === b.endContainer && a.endOffset === b.endOffset
+);
+const selectionTextCache = new WeakMap();
+
 const textSelectionPayloadForRange = (view, doc, index, range) => {
   if (!range) return null;
 
   const cfi = view.getCFI(index, range);
-  let text = range.toString();
-  if (!text) {
-    const selection = range.startContainer.ownerDocument.getSelection();
-    selection.removeAllRanges();
-    selection.addRange(range);
-    text = selection.toString();
-  }
+  const selection = doc.getSelection();
+  const cached = selectionTextCache.get(doc);
+  // Selection preserves rendered paragraph separators; Range.toString does
+  // not. Cache only settled/action reads, never serialize text on handle moves.
+  const text = sameTextRange(range, getSelectionRange(selection))
+    ? selection.toString()
+    : sameTextRange(range, cached?.range) ? cached.text : range.toString();
   if (!text) return null;
+  selectionTextCache.set(doc, { range: range.cloneRange(), text });
 
   const normalizedSelection = normalizeSelectionRange(range);
   const normalizedRange = normalizedSelection?.range ?? range;
@@ -1127,9 +1135,10 @@ const textSelectionPayloadForRange = (view, doc, index, range) => {
     lang: 'en-US',
     cfi,
     normalizedCfi: view.getCFI(index, normalizedRange),
-    pos: getPosition(range),
+    pos: selectionViewportPosition(range) ?? (view.isFixedLayout ? getPosition(range) : null),
     text,
-    normalizedText: normalizedSelection?.normalizedText ?? text,
+    normalizedText: normalizedSelection?.selectionKind === 'exact'
+      ? text : normalizedSelection?.normalizedText ?? text,
     selectionKind: normalizedSelection?.selectionKind ?? 'exact',
     contextText: normalizedContext.contextText,
     markedContextText: textContext.markedContextText,
@@ -1158,16 +1167,18 @@ const rememberTextSelectionRange = (doc, index, range) => {
 
 const clearRememberedTextSelection = doc => {
   if (!doc) return;
+  selectionTextCache.delete(doc);
   doc.__readflexTextSelectionRange = null;
   doc.__readflexTextSelectionIndex = null;
   doc.__readflexTextSelectionRevision = 0;
 };
 
 const handleSelection = (view, doc, index, explicitRange = null) => {
+  if (doc.__readflexSelectionNavigation?.isAdjusting) return;
   const selection = doc.getSelection();
   const range = explicitRange ?? getSelectionRange(selection);
 
-  traceTextSelection('handle-selection', {
+  if (READFLEX_TRACE_TEXT_SELECTION) traceTextSelection('handle-selection', {
     index,
     hasRange: Boolean(range),
     ...readflexSelectionTraceSnapshot(doc),
@@ -1194,6 +1205,27 @@ const handleSelection = (view, doc, index, explicitRange = null) => {
 
 const setSelectionHandler = (view, doc, index) => {
   installNativeTextActionMenuGuard(doc);
+  if (!view.isFixedLayout || /Android/i.test(navigator.userAgent)) {
+    doc.__readflexSelectionNavigation?.dispose();
+    doc.__readflexSelectionNavigation = installSelectionNavigation({
+      doc,
+      customHandles: /Android/i.test(navigator.userAgent),
+      handleLabels: JSON.parse(new URLSearchParams(location.search).get('selectionHandleLabels') ?? 'null') ?? undefined,
+      isActive: () => view.renderer.getContents().some(content => content.doc === doc),
+      onAdjusting: active => callFlutter('onSelectionInteractionChanged', active),
+      onSettled: () => handleSelection(view, doc, index),
+      navigation: {
+        state: () => view.isFixedLayout || view.renderer.scrolled ? null : {
+          pageKey: `${index}:${view.renderer.page}`,
+          vertical: view.renderer.vertical || view.renderer.pageTurnAxisVertical,
+          rtl: view.renderer.pageProgressionDirection === 'rtl',
+        },
+        turnPage: direction => view.renderer.turnSelectionPage(direction),
+        target: direction => view.lastLocation?.range?.startContainer.ownerDocument === doc
+          ? selectionPageEndpoint(view.lastLocation.range, direction) : null,
+      },
+    });
+  }
 
   traceTextSelection('handler-installed', {
     index,
@@ -1215,7 +1247,7 @@ const setSelectionHandler = (view, doc, index) => {
   // Notify Flutter when the selection collapses so it can hide the context menu.
   const handleSelectionStateChange = () => {
     const selectionRange = getSelectionRange(doc.getSelection());
-    traceTextSelection('selection-state-change', {
+    if (READFLEX_TRACE_TEXT_SELECTION) traceTextSelection('selection-state-change', {
       hasRange: Boolean(selectionRange),
       hasActiveSelection,
       suppressNextClear: doc.__readflexSuppressNextSelectionCleared === true,
@@ -1250,18 +1282,11 @@ const setSelectionHandler = (view, doc, index) => {
 
   doc.addEventListener('selectionchange', handleSelectionStateChange);
 
-  const rangesEqual = (a, b) => (
-    a.startContainer === b.startContainer
-    && a.startOffset === b.startOffset
-    && a.endContainer === b.endContainer
-    && a.endOffset === b.endOffset
-  );
-
   const shouldSkipPointerUp = (range = null) => {
     const selectionRange = range ?? getSelectionRange(doc.getSelection());
     if (!selectionRange) return false;
 
-    if (lastPointerUpRange && rangesEqual(lastPointerUpRange, selectionRange)) {
+    if (lastPointerUpRange && sameTextRange(lastPointerUpRange, selectionRange)) {
       return true;
     }
 
@@ -1304,7 +1329,7 @@ const setSelectionHandler = (view, doc, index) => {
       const duplicate = selectionRange
         ? shouldSkipPointerUp(selectionRange)
         : false;
-      traceTextSelection('apple-selection-event', {
+      if (READFLEX_TRACE_TEXT_SELECTION) traceTextSelection('apple-selection-event', {
         eventType: event?.type ?? 'unknown',
         hasRange: Boolean(selectionRange),
         correctedFromTouch,
@@ -1407,76 +1432,7 @@ const setSelectionHandler = (view, doc, index) => {
   }
   // doc.addEventListener('selectionchange', () => handleSelection(view, doc, index));
 
-  if (!view.isFixedLayout) {
-    // go to the next page when selecting to the end of a page
-    // this makes it possible to select across pages
-
-    doc.addEventListener('selectstart', () => {
-      const container = view.shadowRoot.querySelector('foliate-paginator').shadowRoot.querySelector("#container");
-      if (!container) return;
-      globalThis.originalScrollLeft = container.scrollLeft;
-    });
-
-
-    let removeSelectionScrollGuard = null;
-    doc.addEventListener('selectionchange', () => {
-      cancelSelectionPageTurn();
-      removeSelectionScrollGuard?.();
-      removeSelectionScrollGuard = null;
-      if (view.renderer.getAttribute('flow') !== 'paginated') return
-      // Vertical page animation must not compete with native handle scrolling.
-      // Keep the DOM range/handles intact; ordinary swipes resume after deselect.
-      if (view.renderer.pageTurnAxisVertical) return
-      const { lastLocation } = view
-      if (!lastLocation) return
-
-      const selRange = getSelectionRange(doc.getSelection())
-      if (!selRange) return
-
-      const container = view.shadowRoot.querySelector('foliate-paginator').shadowRoot.querySelector("#container");
-
-      if (selRange.compareBoundaryPoints(Range.END_TO_END, lastLocation.range) >= 0) {
-        globalThis.pageDebounceTimer = setTimeout(async () => {
-          globalThis.pageDebounceTimer = null;
-          const currentRange = getSelectionRange(doc.getSelection());
-          if (view.renderer.pageTurnAxisVertical ||
-              view.renderer.getAttribute('flow') !== 'paginated' ||
-              !currentRange || !view.lastLocation?.range ||
-              !view.renderer.getContents().some(content => content.doc === doc) ||
-              currentRange.compareBoundaryPoints(Range.END_TO_END, view.lastLocation.range) < 0) return;
-          await view.next();
-          globalThis.originalScrollLeft = container.scrollLeft;
-          globalThis.pageDebounceTimer = null;
-        }, 1000);
-        return
-      }
-
-      const preventScroll = () => {
-        if (view.renderer.pageTurnAxisVertical) return;
-        const selRange = getSelectionRange(doc.getSelection());
-        if (!selRange || !view.lastLocation || !view.lastLocation.range) return;
-
-        if (view.lastLocation.range.startContainer === selRange.endContainer) {
-          container.scrollLeft = globalThis.originalScrollLeft;
-        }
-      };
-
-      container.addEventListener('scroll', preventScroll);
-
-      const removeScrollGuard = () => {
-        container.removeEventListener('scroll', preventScroll);
-        doc.removeEventListener('pointerup', removeScrollGuard);
-      };
-      removeSelectionScrollGuard = removeScrollGuard;
-      doc.addEventListener('pointerup', removeScrollGuard, { once: true });
-    })
-
-  }
 }
-const cancelSelectionPageTurn = () => {
-  clearTimeout(globalThis.pageDebounceTimer);
-  globalThis.pageDebounceTimer = null;
-};
 const isZip = async file => {
   const arr = new Uint8Array(await file.slice(0, 4).arrayBuffer())
   return arr[0] === 0x50 && arr[1] === 0x4b && arr[2] === 0x03 && arr[3] === 0x04
@@ -2271,19 +2227,20 @@ class Reader {
   }
 
   clearTextSelection() {
-    cancelSelectionPageTurn()
     this.clearSelectionHighlightPreview()
     const contents = this.view?.renderer?.getContents?.() ?? []
-    for (const { doc } of contents)
+    for (const { doc } of contents) {
+      doc.__readflexSelectionNavigation?.cancel()
       clearRememberedTextSelection(doc)
+    }
     this.view?.deselect()
   }
 
   clearSelectionAfterTextAction() {
-    cancelSelectionPageTurn()
     this.clearSelectionHighlightPreview()
     const contents = this.view?.renderer?.getContents?.() ?? []
     for (const { doc } of contents) {
+      doc.__readflexSelectionNavigation?.cancel()
       clearRememberedTextSelection(doc)
       allowImmediateClickAfterTextAction(doc)
     }
@@ -2299,9 +2256,9 @@ class Reader {
   }) {
     if (!cfi || !color) return
     this.clearSelectionHighlightPreview()
-    // iOS already paints the live range. An SVG preview would tint it twice;
+    // WebView already paints the live range. An SVG preview would tint it twice;
     // keep native handles and use previews only when the native range is gone.
-    if (isAppleTouchRuntime() && this.view.renderer.getContents().some(
+    if (this.view.renderer.getContents().some(
       ({ doc }) => getSelectionRange(doc.getSelection()),
     )) return
     this.addAnnotation({
@@ -2985,10 +2942,11 @@ class Reader {
   }
 
   #onLoad({ detail: { doc, index } }) {
+    if (this.#doc !== doc) this.#doc?.__readflexSelectionNavigation?.dispose()
     this.#doc = doc
     this.#index = index
     setSelectionHandler(this.view, doc, index)
-    if (isAppleTouchRuntime()) doc.addEventListener('selectionchange', () => {
+    doc.addEventListener('selectionchange', () => {
       if (getSelectionRange(doc.getSelection())) this.clearSelectionHighlightPreview()
     })
     installImageAreaSelectionHandler(this, doc, index)
@@ -3012,6 +2970,7 @@ class Reader {
   }
 
   #onRelocate({ detail }) {
+    this.#doc?.__readflexSelectionNavigation?.relocated()
     const { cfi, fraction, location, tocItem, pageItem, chapterLocation, reason } = detail
     const loc = pageItem
       ? `Page ${pageItem.label}`

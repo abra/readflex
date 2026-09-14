@@ -85,7 +85,7 @@ update-goldens:
 ## Run native reader flows: DEVICE=<id>, optionally COVERAGE=1 (artifacts in .local/)
 test-device:
 	@test -n "$(DEVICE)" || { echo "Specify DEVICE from '$(FLUTTER) devices'."; exit 2; }
-	READFLEX_NATIVE_COVERAGE="$(COVERAGE)" $(FLUTTER) drive --driver=test_driver/ui_driver.dart --target=integration_test/reader_flows_test.dart -d "$(DEVICE)"
+	READFLEX_NATIVE_DEVICE="$(DEVICE)" READFLEX_NATIVE_COVERAGE="$(COVERAGE)" $(FLUTTER) drive --driver=test_driver/ui_driver.dart --target=integration_test/reader_flows_test.dart -d "$(DEVICE)"
 
 ## Run the full local quality gate without modifying source files
 verify: format-check analyze test

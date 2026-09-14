@@ -38,6 +38,9 @@ class ArticleHtmlReaderWebView extends StatefulWidget {
     this.onHighlightTapped,
     this.onTextSelected,
     this.onTextDeselected,
+    this.onSelectionInteractionChanged,
+    this.selectionStartLabel = 'Selection start',
+    this.selectionEndLabel = 'Selection end',
     this.onTapped,
     super.key,
   });
@@ -63,6 +66,9 @@ class ArticleHtmlReaderWebView extends StatefulWidget {
   final void Function(ReaderHighlightTap tap)? onHighlightTapped;
   final void Function(ReaderSelection selection)? onTextSelected;
   final VoidCallback? onTextDeselected;
+  final ValueChanged<bool>? onSelectionInteractionChanged;
+  final String selectionStartLabel;
+  final String selectionEndLabel;
   final void Function(double x, double y)? onTapped;
 
   @override
@@ -114,6 +120,10 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
       'style': jsonEncode(widget.foliateStyle.toMap()),
       'assetRevision': jsonEncode(AssetExtractor.assetRevision),
       'traceTextSelection': jsonEncode(readerTextSelectionTracingEnabled),
+      'selectionHandleLabels': jsonEncode({
+        'start': widget.selectionStartLabel,
+        'end': widget.selectionEndLabel,
+      }),
     };
     final query = params.entries
         .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
@@ -292,6 +302,14 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
         );
         if (data['stack'] != null) {
           debugPrint('[article-reader-js-stack]\n${data['stack']}');
+        }
+      },
+    );
+    handlers.add(
+      handlerName: 'onSelectionInteractionChanged',
+      callback: (args) {
+        if (args.isNotEmpty && args.first is bool) {
+          widget.onSelectionInteractionChanged?.call(args.first as bool);
         }
       },
     );

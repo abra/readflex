@@ -17,6 +17,167 @@ void main() {
         InMemorySharedPreferencesAsync.empty();
   });
 
+  testWidgets('word shows base and contextual answers with independent copy', (
+    tester,
+  ) async {
+    final copied = <String>[];
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') {
+        copied.add((call.arguments as Map)['text'] as String);
+      }
+      return null;
+    });
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+    final service = _WordTranslationService(
+      const ContextualTranslationText(
+        baseTranslation: 'сила',
+        contextualTranslation: 'питание',
+        sentenceTranslation: 'Этот аккумулятор обеспечивает аварийное питание.',
+      ),
+    );
+    await _pumpTranslateSheet(tester, selection: _selection, service: service);
+    expect(find.text('Word translation'), findsOneWidget);
+    expect(find.text('In this context'), findsOneWidget);
+    final primary = find.byKey(const ValueKey('translation-primary-result'));
+    final contextual = find.byKey(
+      const ValueKey('translation-contextual-result'),
+    );
+    expect(tester.widget<SelectableText>(primary).data, 'сила');
+    expect(tester.widget<SelectableText>(contextual).data, 'питание');
+    expect(
+      tester.getTopLeft(primary).dy,
+      lessThan(tester.getTopLeft(contextual).dy),
+    );
+    expect(
+      find.byKey(const ValueKey('translation-sentence-result')),
+      findsOneWidget,
+    );
+    for (final key in [
+      'translation-primary-copy',
+      'translation-contextual-copy',
+    ]) {
+      final button = find.byKey(ValueKey(key));
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+    }
+    expect(copied, ['сила', 'питание']);
+    expect(service.calls, 1);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  for (final entry in <String, ContextualTranslationText>{
+    'identical': const ContextualTranslationText(
+      baseTranslation: 'сила',
+      contextualTranslation: 'сила',
+    ),
+    'case and whitespace': const ContextualTranslationText(
+      baseTranslation: '  Сила  ',
+      contextualTranslation: 'сила',
+    ),
+    'context only': const ContextualTranslationText(
+      contextualTranslation: 'сила',
+    ),
+    'base only': const ContextualTranslationText(baseTranslation: 'сила'),
+    'blank base': const ContextualTranslationText(
+      baseTranslation: '  ',
+      contextualTranslation: 'сила',
+    ),
+    'offline fragment': const ContextualTranslationText(
+      translatedFragment: 'сила',
+    ),
+  }.entries) {
+    testWidgets('does not duplicate word answer: ${entry.key}', (tester) async {
+      await _pumpTranslateSheet(
+        tester,
+        selection: _selection,
+        service: _WordTranslationService(entry.value),
+      );
+      expect(
+        find.byKey(const ValueKey('translation-primary-result')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('translation-contextual-result')),
+        findsNothing,
+      );
+      expect(find.text('In this context'), findsNothing);
+      expect(find.byTooltip('Copy'), findsOneWidget);
+    });
+  }
+
+  for (final locale in ReadflexSupportedLocales.locales) {
+    testWidgets(
+      'both answers fit narrow large-text UI: ${locale.languageCode}',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 568);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await _pumpTranslateSheet(
+          tester,
+          selection: _selection,
+          locale: locale,
+          textScaler: const TextScaler.linear(2),
+          service: _WordTranslationService(
+            const ContextualTranslationText(
+              baseTranslation: 'ordinary meaning with several words',
+              contextualTranslation: 'معنى الكلمة في سياق الجملة',
+            ),
+          ),
+        );
+        final l10n = ReadflexLocalizations.of(
+          tester.element(find.byType(TranslateSheet)),
+        )!;
+        expect(find.text(l10n.translationWord), findsOneWidget);
+        expect(find.text(l10n.translationInContext), findsOneWidget);
+        for (final id in ['primary', 'contextual']) {
+          final result = find.byKey(ValueKey('translation-$id-result'));
+          await tester.ensureVisible(result);
+          expect(result.hitTestable(), findsOneWidget);
+          final text = tester.widget<SelectableText>(result);
+          expect(
+            text.textDirection,
+            id == 'primary' ? TextDirection.ltr : TextDirection.rtl,
+          );
+          expect(
+            text.style,
+            Theme.of(tester.element(result)).textTheme.bodyLarge,
+          );
+          final copy = find.byKey(ValueKey('translation-$id-copy'));
+          await tester.ensureVisible(copy);
+          expect(copy.hitTestable(), findsOneWidget);
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final selection in [_phraseSelection, _paragraphSelection]) {
+    testWidgets(
+      'base answer does not change multi-word selection: ${selection.selectedText}',
+      (tester) async {
+        await _pumpTranslateSheet(
+          tester,
+          selection: selection,
+          service: _WordTranslationService(
+            const ContextualTranslationText(
+              baseTranslation: 'base',
+              contextualTranslation: 'contextual answer',
+            ),
+          ),
+        );
+        expect(find.text('base'), findsNothing);
+        expect(find.text('contextual answer'), findsOneWidget);
+        expect(find.text('Word translation'), findsNothing);
+      },
+    );
+  }
+
   testWidgets(
     'copy writes the result, not the selection, without translating again',
     (tester) async {
@@ -381,6 +542,78 @@ void main() {
     );
   });
 
+  for (final brightness in Brightness.values) {
+    testWidgets('edge shadows follow expanded details scroll: $brightness', (
+      tester,
+    ) async {
+      final service = _RecordingTranslationService(
+        includeLexicalDetails: true,
+        alternativeCount: 20,
+      );
+      await _pumpTranslateSheet(
+        tester,
+        selection: _selection,
+        service: service,
+        brightness: brightness,
+      );
+      final topFade = find.byWidgetPredicate(
+        (widget) =>
+            widget is ScrollEdgeFade && widget.edge == ScrollFadeEdge.top,
+      );
+      final bottomFade = find.byWidgetPredicate(
+        (widget) =>
+            widget is ScrollEdgeFade && widget.edge == ScrollFadeEdge.bottom,
+      );
+      expect(topFade, findsOneWidget);
+      expect(bottomFade, findsOneWidget);
+      expect(tester.widget<ScrollEdgeFade>(topFade).visible, isFalse);
+      expect(tester.widget<ScrollEdgeFade>(bottomFade).visible, isFalse);
+      final details = find.byType(ExpansionTile);
+      await tester.ensureVisible(details);
+      await tester.tap(details);
+      await tester.pumpAndSettle();
+      final scroll = tester
+          .state<ScrollableState>(
+            find
+                .descendant(
+                  of: find.byType(SingleChildScrollView).first,
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          )
+          .position;
+      expect(scroll.maxScrollExtent, greaterThan(0));
+      expect(tester.widget<ScrollEdgeFade>(bottomFade).visible, isTrue);
+      final headerTop = tester.getTopLeft(find.text('Translation'));
+      scroll.jumpTo(scroll.maxScrollExtent / 2);
+      await tester.pumpAndSettle();
+      expect(tester.widget<ScrollEdgeFade>(topFade).visible, isTrue);
+      expect(tester.widget<ScrollEdgeFade>(bottomFade).visible, isTrue);
+      scroll.jumpTo(scroll.maxScrollExtent);
+      await tester.pumpAndSettle();
+      expect(tester.widget<ScrollEdgeFade>(topFade).visible, isTrue);
+      expect(tester.widget<ScrollEdgeFade>(bottomFade).visible, isFalse);
+      expect(tester.getTopLeft(find.text('Translation')), headerTop);
+      expect(
+        tester.getSize(topFade).width,
+        tester.getSize(find.byType(TranslateSheet)).width,
+      );
+      scroll.jumpTo(0);
+      await tester.pumpAndSettle();
+      expect(tester.widget<ScrollEdgeFade>(topFade).visible, isFalse);
+      expect(tester.widget<ScrollEdgeFade>(bottomFade).visible, isTrue);
+      final detailsTitle = find.text('Meaning & alternatives');
+      await tester.ensureVisible(detailsTitle);
+      await tester.tap(detailsTitle);
+      await tester.pumpAndSettle();
+      expect(scroll.maxScrollExtent, 0);
+      expect(tester.widget<ScrollEdgeFade>(topFade).visible, isFalse);
+      expect(tester.widget<ScrollEdgeFade>(bottomFade).visible, isFalse);
+      expect(service.calls, 1);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('long lexical result is constrained and scrollable', (
     tester,
   ) async {
@@ -707,6 +940,31 @@ const _staleMarkedSelection = TextSelectionContext(
   sourceLanguageHint: 'en',
 );
 
+class _WordTranslationService implements ContextualTranslationService {
+  _WordTranslationService(this.translation);
+
+  final ContextualTranslationText translation;
+  int calls = 0;
+
+  @override
+  Future<ContextualTranslationResult> translate(
+    ContextualTranslationRequest request, {
+    bool allowOfflineModelDownload = false,
+  }) async {
+    calls++;
+    return ContextualTranslationResult(
+      requestId: request.requestId,
+      mode: request.mode,
+      status: ContextualTranslationStatus.resolved,
+      reliability: ContextualTranslationReliability.verified,
+      translation: translation,
+    );
+  }
+
+  @override
+  void dispose() {}
+}
+
 class _FakeTranslationService implements ContextualTranslationService {
   const _FakeTranslationService({
     this.includeLexicalDetails = false,
@@ -782,7 +1040,10 @@ class _FailingTranslationService implements ContextualTranslationService {
 }
 
 class _RecordingTranslationService extends _FakeTranslationService {
-  _RecordingTranslationService({super.includeLexicalDetails});
+  _RecordingTranslationService({
+    super.includeLexicalDetails,
+    super.alternativeCount,
+  });
 
   var calls = 0;
   final requests = <ContextualTranslationRequest>[];

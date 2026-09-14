@@ -30,11 +30,13 @@ class FixtureTranslation implements ContextualTranslationService {
   FixtureTranslation({
     this.includeLexicalDetails = false,
     this.primaryTranslation,
+    this.baseTranslation,
   });
 
   static const translatedText = 'Ein tragbarer Akku versorgt die Geraete.';
   bool includeLexicalDetails;
   final String? primaryTranslation;
+  final String? baseTranslation;
   final requests = <ContextualTranslationRequest>[];
   ContextualTranslationFailureReason? failure;
   Completer<void>? pending;
@@ -57,6 +59,7 @@ class FixtureTranslation implements ContextualTranslationService {
       detectedSourceLanguage: 'en',
       targetLanguage: request.targetLanguage,
       translation: ContextualTranslationText(
+        baseTranslation: baseTranslation,
         contextualTranslation:
             primaryTranslation ??
             (includeLexicalDetails ? 'Externer Akku' : translatedText),

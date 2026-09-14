@@ -30,6 +30,9 @@ class BookReaderWebView extends StatefulWidget {
     this.onLoadFailed,
     this.onPositionChanged,
     this.onTextSelected,
+    this.onSelectionInteractionChanged,
+    this.selectionStartLabel = 'Selection start',
+    this.selectionEndLabel = 'Selection end',
     this.onImageAreaSelected,
     this.onTextDeselected,
     this.onHighlightTapped,
@@ -79,6 +82,13 @@ class BookReaderWebView extends StatefulWidget {
 
   /// Fires when the user selects text.
   final void Function(ReaderSelection selection)? onTextSelected;
+
+  /// Keeps selection actions out of the way while handles or pages move.
+  final ValueChanged<bool>? onSelectionInteractionChanged;
+
+  /// Accessible labels for Android's paginated selection continuation handles.
+  final String selectionStartLabel;
+  final String selectionEndLabel;
 
   /// Fires when the user selects a normalized region on an image page.
   final void Function(ReaderImageAreaSelection selection)? onImageAreaSelected;

@@ -1,4 +1,6 @@
 {
+  "readerSelectionStart": "选择起点",
+  "readerSelectionEnd": "选择终点",
   "translationOriginal": "原文",
   "dictionaryInContext": "在此语境中",
   "translationAction": "翻译",
@@ -9,6 +11,8 @@
   "translationAutoDetectedSource": "自动：{language}",
   "translationOffline": "离线",
   "translationSentence": "句子",
+  "translationWord": "单词翻译",
+  "translationInContext": "在此语境中",
   "translationDetails": "释义与其他译法",
   "translationAlternatives": "其他译法",
   "translationSourceRequiredTitle": "请选择源语言",

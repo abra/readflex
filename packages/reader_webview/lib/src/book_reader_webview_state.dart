@@ -276,6 +276,10 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       'readingRules': jsonEncode(_defaultReadingRules),
       'assetRevision': jsonEncode(AssetExtractor.assetRevision),
       'traceTextSelection': jsonEncode(readerTextSelectionTracingEnabled),
+      'selectionHandleLabels': jsonEncode({
+        'start': widget.selectionStartLabel,
+        'end': widget.selectionEndLabel,
+      }),
     };
     final query = params.entries
         .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
@@ -482,6 +486,15 @@ class BookReaderWebViewState extends State<BookReaderWebView>
         final href = parseReaderExternalLinkPayload(args.first);
         if (href == null) return;
         widget.onExternalLink?.call(href);
+      },
+    );
+
+    handlers.add(
+      handlerName: 'onSelectionInteractionChanged',
+      callback: (args) {
+        if (args.isNotEmpty && args.first is bool) {
+          widget.onSelectionInteractionChanged?.call(args.first as bool);
+        }
       },
     );
 

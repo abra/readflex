@@ -1,4 +1,6 @@
 {
+  "readerSelectionStart": "بداية التحديد",
+  "readerSelectionEnd": "نهاية التحديد",
   "translationOriginal": "النص الأصلي",
   "dictionaryInContext": "في هذا السياق",
   "translationAction": "ترجمة",
@@ -9,6 +11,8 @@
   "translationAutoDetectedSource": "تلقائي: {language}",
   "translationOffline": "دون اتصال",
   "translationSentence": "الجملة",
+  "translationWord": "ترجمة الكلمة",
+  "translationInContext": "في هذا السياق",
   "translationDetails": "المعنى والبدائل",
   "translationAlternatives": "البدائل",
   "translationSourceRequiredTitle": "اختر لغة المصدر",

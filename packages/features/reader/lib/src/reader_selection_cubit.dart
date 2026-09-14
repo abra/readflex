@@ -26,6 +26,7 @@ class ReaderSelectionState extends Equatable {
     this.chapterTitle,
     this.containedHighlightIds = const [],
     this.hasSelection = false,
+    this.isAdjusting = false,
   });
 
   final String selectedText;
@@ -70,6 +71,7 @@ class ReaderSelectionState extends Equatable {
   final List<String> containedHighlightIds;
 
   final bool hasSelection;
+  final bool isAdjusting;
 
   static const _absent = Object();
 
@@ -89,6 +91,7 @@ class ReaderSelectionState extends Equatable {
     Object? chapterTitle = _absent,
     Object? containedHighlightIds = _absent,
     bool? hasSelection,
+    bool? isAdjusting,
   }) => ReaderSelectionState(
     selectedText: selectedText ?? this.selectedText,
     normalizedSelectedText: normalizedSelectedText == _absent
@@ -125,6 +128,7 @@ class ReaderSelectionState extends Equatable {
         ? this.containedHighlightIds
         : containedHighlightIds as List<String>,
     hasSelection: hasSelection ?? this.hasSelection,
+    isAdjusting: isAdjusting ?? this.isAdjusting,
   );
 
   @override
@@ -144,6 +148,7 @@ class ReaderSelectionState extends Equatable {
     chapterTitle,
     containedHighlightIds,
     hasSelection,
+    isAdjusting,
   ];
 }
 
@@ -186,9 +191,12 @@ class ReaderSelectionCubit extends Cubit<ReaderSelectionState> {
         chapterTitle: chapterTitle,
         containedHighlightIds: containedHighlightIds,
         hasSelection: true,
+        isAdjusting: state.isAdjusting,
       ),
     );
   }
 
   void deselect() => emit(const ReaderSelectionState());
+
+  void setAdjusting(bool value) => emit(state.copyWith(isAdjusting: value));
 }

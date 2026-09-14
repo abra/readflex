@@ -53,6 +53,73 @@ test('article selection reports only fully contained saved highlights', async t 
     }
 })
 
+for (const renderer of ['css', 'svg']) {
+    test(`article native selection is not painted twice (${renderer} highlights)`, async t => {
+        const { page, routes, articleUrl } = await createHarness(t)
+        if (renderer === 'svg') await page.addInitScript(() => { window.Highlight = undefined })
+        routes.set('/article-content', '<p id="block-0" data-rf-block-id="block-0"><span id="block-0-s0" data-rf-sentence="0">The power bank keeps devices running.</span></p>')
+        await page.goto(articleUrl())
+        await page.waitForFunction(() => window.bridgeCalls.some(call => call[0] === 'onLoadEnd'))
+        await page.evaluate(() => {
+            const node = document.getElementById('block-0-s0').firstChild
+            const selection = window.getSelection()
+            const rendered = () => window.Highlight && CSS.highlights
+                ? [...CSS.highlights.values()]
+                : [...document.querySelector('[data-rf-highlight-overlay]').children]
+            window.articleSelectionProbe = {
+                select(text, backwards = false) {
+                    const start = node.data.indexOf(text), end = start + text.length
+                    if (start < 0) throw new Error('Missing fixture text')
+                    selection.setBaseAndExtent(node, backwards ? end : start, node, backwards ? start : end)
+                    document.dispatchEvent(new Event('selectionchange'))
+                    return window.getCurrentTextSelection()
+                },
+                state: () => ({ text: selection.toString(), anchor: selection.anchorOffset,
+                    focus: selection.focusOffset, rendered: rendered().length }),
+                rendered,
+            }
+            const saved = window.articleSelectionProbe.select('devices')
+            window.setArticleHighlights([{ id: 'saved', cfiRange: saved.cfi, color: '#FFE600' }])
+        })
+        // Include selection across a saved highlight and backward handle movement.
+        for (const [text, backwards] of [['power', false], ['power bank keeps devices', false], ['bank keeps', true]]) {
+            const result = await page.evaluate(({ text, backwards }) => {
+                const probe = window.articleSelectionProbe
+                const payload = probe.select(text, backwards)
+                const before = probe.state()
+                for (const color of ['#FFE600', '#00FF00', '#FF0000']) {
+                    window.showSelectionHighlightPreview({ cfiRange: payload.cfi, color })
+                }
+                return { before, after: probe.state() }
+            }, { text, backwards })
+            assert.equal(result.before.text, text)
+            assert.equal(result.before.rendered, 1)
+            assert.deepEqual(result.after, result.before, 'preview must not layer over or alter native selection')
+        }
+        const fallback = await page.evaluate(() => {
+            const probe = window.articleSelectionProbe
+            const payload = probe.select('power')
+            window.clearSelectionAfterTextAction()
+            window.showSelectionHighlightPreview({ cfiRange: payload.cfi, color: '#FF0000' })
+            return probe.state()
+        })
+        assert.equal(fallback.text, '')
+        assert.equal(fallback.rendered, 2, 'fallback preview remains available without a native range')
+        const restored = await page.evaluate(() => {
+            const probe = window.articleSelectionProbe
+            const saved = probe.rendered()[0]
+            probe.select('power')
+            // Repeated bridge cleanup must not rebuild or remove persisted annotations.
+            window.clearSelectionHighlightPreview()
+            window.clearSelectionHighlightPreview()
+            return { ...probe.state(), sameSaved: saved === probe.rendered()[0],
+                content: document.getElementById('block-0-s0').textContent }
+        })
+        assert.deepEqual(restored, { text: 'power', anchor: 4, focus: 9, rendered: 1,
+            sameSaved: true, content: 'The power bank keeps devices running.' })
+    })
+}
+
 test('article highlights remain visible without CSS Custom Highlight support', async t => {
     const { page, routes, articleUrl } = await createHarness(t)
     await page.addInitScript(() => { window.Highlight = undefined })

@@ -1000,7 +1000,9 @@ ${doc.querySelector('parsererror').innerText}`)
         const item = this.resources.getItemByHref(decodeURI(path))
         if (!item) return null
         const index = this.resources.spine.findIndex(({ idref }) => idref === item.id)
-        const anchor = hash ? doc => getHTMLFragment(doc, hash) : () => 0
+        // Publisher margins can put the body's first box after an empty
+        // column. A chapter link targets its content, not that empty column.
+        const anchor = hash ? doc => getHTMLFragment(doc, hash) : doc => doc.body ?? 0
         return { index, anchor }
     }
     splitTOCHref(href) {

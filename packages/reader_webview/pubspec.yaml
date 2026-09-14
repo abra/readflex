@@ -45,6 +45,10 @@ flutter:
     - assets/foliate-js/src/readflex_document_normalizer.js
     - assets/foliate-js/src/readflex_selection_normalizer.js
     - assets/foliate-js/src/readflex_selection_context.js
+    - assets/foliate-js/src/readflex_selection_navigation.js
+    - assets/foliate-js/src/readflex_selection_handles.js
+    - assets/foliate-js/src/readflex_selection_start.js
+    - assets/foliate-js/src/readflex_article_selection.js
     - assets/foliate-js/src/readflex_range.js
     - assets/foliate-js/src/readflex_content_security.js
     - assets/foliate-js/src/readflex_article_highlighter.js

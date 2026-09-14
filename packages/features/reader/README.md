@@ -89,7 +89,7 @@ abstract class TextAction {
 | `ReaderBloc`                  | Content: load source document + highlights/bookmarks, debounced position save (500ms) |
 | `ReaderUiCubit`               | Chrome, drawer, appearance-sheet and search-highlight UI state             |
 | `ReaderSearchCubit`           | Document-search debounce, streamed results, progress and recent queries    |
-| `ReaderSelectionCubit`        | Current text selection (text + `cfiRange`)                                 |
+| `ReaderSelectionCubit`        | Current text selection (text + `cfiRange`) and adjustment phase             |
 | `ReaderImageSelectionCubit`   | Current image-page area selection for comics/fixed-layout pages            |
 | `ReaderImageHighlightCubit`   | Persists image-page highlights with optional notes, then `ReaderBloc` refreshes annotations |
 | `ReaderAppearanceCubit`       | Per-source reader appearance overrides over global preferences             |

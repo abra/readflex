@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:component_library/component_library.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:dictionary_service/dictionary_service.dart';
+import 'package:domain_models/domain_models.dart' show HighlightColor;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,6 +18,7 @@ import 'package:reader/src/reader_search_result_tile.dart';
 import 'package:reader_webview/reader_webview.dart';
 
 import '../test/support/reading_fixture.dart';
+import '../test/support/native_screenshots.dart';
 import '../test/support/ui_test_app.dart';
 import '../test/support/ui_test_driver.dart';
 import '../test/support/ui_test_services.dart';
@@ -40,21 +42,20 @@ void main() {
     );
   });
 
-  var screenshotSurfaceReady = false;
-  setUp(() => screenshotSurfaceReady = false);
   Future<void> capture(WidgetTester tester, String name) async {
-    if (Platform.isAndroid && !screenshotSurfaceReady) {
-      await binding.convertFlutterSurfaceToImage();
-      screenshotSurfaceReady = true;
-    }
-    await tester.pump();
+    // Finish short overlay transitions before capturing the native compositor.
+    await tester.pump(const Duration(milliseconds: 350));
     final size = tester.view.physicalSize / tester.view.devicePixelRatio;
     binding.reportData ??= {};
     binding.reportData!['viewport'] = {
       'width': size.width,
       'height': size.height,
     };
-    await binding.takeScreenshot(name);
+    if (Platform.isAndroid) {
+      await captureAndroidScreenshot(name);
+    } else {
+      await binding.takeScreenshot(name).timeout(const Duration(seconds: 20));
+    }
   }
 
   BookReaderWebViewState bookState(WidgetTester tester) =>
@@ -401,6 +402,177 @@ void main() {
     timeout: const Timeout(Duration(minutes: 3)),
     tags: ['native'],
   );
+
+  for (final style in [
+    ReaderPageTurnStyle.horizontal,
+    ReaderPageTurnStyle.vertical,
+  ]) {
+    for (final direction in [-1, 1]) {
+      testWidgets(
+        'book ${style.name} selection continues $direction and translates the full range',
+        (tester) async {
+          await app.preferencesService.setReaderAppearanceOverride(
+            app.book!.id,
+            ReaderAppearanceOverride(pageTurnStyle: style),
+          );
+          await openBook(tester);
+          final controller = bookState(tester).debugController!;
+          final setup = await controller.callAsyncJavaScript(
+            functionBody:
+                '''
+            const view = window.reader.view;
+            await view.renderer.goTo({index: 0, anchor: 0.4});
+            const doc = view.renderer.getContents()[0].doc;
+            const visible = view.lastLocation.range;
+            const frame = doc.defaultView.frameElement.getBoundingClientRect();
+            const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+            let node, chosen;
+            while (node = walker.nextNode()) {
+              if (!node.data.includes('power')) continue;
+              const probe = doc.createRange();
+              const start = node.data.indexOf('power');
+              probe.setStart(node, start); probe.setEnd(node, start + 5);
+              const rect = probe.getBoundingClientRect();
+              if (rect.left + frame.left > 0 && rect.right + frame.left < innerWidth &&
+                  rect.top + frame.top > innerHeight / 3 && rect.bottom + frame.top < innerHeight * 0.8) { chosen = node; break; }
+            }
+            if (!chosen) throw Error('No visible fixture paragraph');
+            const offset = chosen.data.indexOf('power');
+            const selection = doc.getSelection();
+            selection.setBaseAndExtent(chosen, offset, chosen, offset + 5);
+            doc.dispatchEvent(new Event('selectionchange'));
+            const range = selection.getRangeAt(0).cloneRange();
+            if ($direction < 0) range.setStart(visible.startContainer, visible.startOffset);
+            else range.setEnd(visible.endContainer, visible.endOffset);
+            selection.setBaseAndExtent(range.startContainer, range.startOffset, range.endContainer, range.endOffset);
+            doc.dispatchEvent(new Event('selectionchange'));
+            if (selection.isCollapsed) throw Error('Fixture selection must remain on the current page');
+            // Exercise the real JS bridge and Flutter popup, not native handles.
+            window.fixturePageTouch = (type, moved = false) => {
+              const frame = doc.defaultView.frameElement.getBoundingClientRect();
+              const vertical = view.renderer.pageTurnAxisVertical;
+              const x = innerWidth / 2 - (moved && !vertical ? $direction * 120 : 0) - frame.left;
+              const y = innerHeight / 2 - (moved && vertical ? $direction * 120 : 0) - frame.top;
+              const touch = {identifier: 91, target: doc.body, clientX:x, clientY:y, screenX:x, screenY:y};
+              const event = new Event(type, {bubbles:true, cancelable:true});
+              Object.defineProperties(event, {
+                touches: {value: type === 'touchend' ? [] : [touch]},
+                changedTouches: {value: [touch]},
+              });
+              doc.body.dispatchEvent(event);
+            };
+            return view.renderer.page;
+        ''',
+          );
+          expect(setup?.error, isNull);
+          expect(setup?.value, isA<num>());
+          final originalPage = setup!.value as num;
+          expect(originalPage, greaterThan(1));
+          await waitForUi(
+            tester,
+            () => find.text('Translate').evaluate().isNotEmpty,
+            description: 'settled multi-page selection menu',
+          );
+          await tapUi(tester, find.byTooltip('Green'));
+          expect(
+            tester
+                .widget<ReaderHighlightControls>(
+                  find.byType(ReaderHighlightControls),
+                )
+                .selectedColor,
+            HighlightColor.green,
+          );
+          await controller.evaluateJavascript(
+            source: "window.fixturePageTouch('touchstart')",
+          );
+          await waitForUi(
+            tester,
+            () => find.byType(ReaderHighlightControls).evaluate().isEmpty,
+            description: 'selection actions hidden throughout the page gesture',
+          );
+          await controller.evaluateJavascript(
+            source:
+                "window.fixturePageTouch('touchmove', true); window.fixturePageTouch('touchend', true)",
+          );
+          await waitForBookDom(
+            tester,
+            'reader.view.renderer.page === ${originalPage + direction} && !reader.view.renderer.getContents()[0].doc.__readflexSelectionNavigation.isAdjusting',
+            description: 'exactly one selected page turned',
+          );
+          await waitForUi(
+            tester,
+            () => find.text('Translate').evaluate().isNotEmpty,
+            description: 'reanchored selection actions',
+          );
+          expect(
+            tester
+                .widget<ReaderHighlightControls>(
+                  find.byType(ReaderHighlightControls),
+                )
+                .selectedColor,
+            HighlightColor.green,
+          );
+          if (Platform.isAndroid) {
+            final handles =
+                await controller.evaluateJavascript(
+                      source:
+                          '''Array.from(document.querySelector('[data-readflex-selection-handles]')
+                .shadowRoot.querySelectorAll('button')).filter(button => !button.hidden)
+                .map(button => {const r = button.getBoundingClientRect();
+                  return {left:r.left, top:r.top, width:r.width, height:r.height};})''',
+                    )
+                    as List;
+            expect(handles, isNotEmpty);
+            final popup = tester.getRect(
+              find
+                  .ancestor(
+                    of: find.byType(ReaderHighlightControls),
+                    matching: find.byType(Material),
+                  )
+                  .first,
+            );
+            final webView = tester.getRect(find.byType(BookReaderWebView));
+            for (final handle in handles.cast<Map>()) {
+              final rect = Rect.fromLTWH(
+                (handle['left'] as num).toDouble(),
+                (handle['top'] as num).toDouble(),
+                (handle['width'] as num).toDouble(),
+                (handle['height'] as num).toDouble(),
+              ).shift(webView.topLeft);
+              expect(
+                popup.overlaps(rect),
+                isFalse,
+                reason:
+                    'The menu must leave the entire continuation handle reachable',
+              );
+            }
+          }
+          final text =
+              await controller.evaluateJavascript(
+                    source: 'window.getCurrentTextSelection().text',
+                  )
+                  as String;
+          expect(text.length, greaterThan(5));
+          await capture(tester, 'selection-${style.name}-$direction');
+          await tapUi(tester, find.text('Translate'));
+          await waitForUi(
+            tester,
+            () => find
+                .text(FixtureTranslation.translatedText)
+                .evaluate()
+                .isNotEmpty,
+            description: 'continued selection translated',
+          );
+          expect(
+            app.contextualTranslationService.requests.single.selection.text,
+            text.trim(),
+          );
+          expect(find.byType(ReaderHighlightControls), findsNothing);
+          await tester.pumpWidget(const SizedBox.shrink());
+        },
+      );
+    }
+  }
 
   testWidgets(
     'book selection uses latest range, copies and dismisses action menu',
@@ -804,7 +976,36 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 300));
       await select(tester, 'power', article: true);
+      final controller = tester
+          .state<ArticleHtmlReaderWebViewState>(
+            find.byType(ArticleHtmlReaderWebView),
+          )
+          .debugController!;
+      Future<void> expectNativeSelectionOnly(String text) async {
+        final state = await controller.evaluateJavascript(
+          source: '''(() => ({
+            text: window.getSelection().toString(),
+            cssPreview: Boolean(window.CSS?.highlights?.has('readflex-article-selection-preview')),
+            svgRects: document.querySelectorAll('[data-rf-highlight-overlay] rect').length
+          }))()''',
+        );
+        expect(state, {'text': text, 'cssPreview': false, 'svgRects': 0});
+      }
+
+      await expectNativeSelectionOnly('power');
+      await tapUi(tester, find.byTooltip('Green'));
+      expect(
+        tester
+            .widget<ReaderHighlightControls>(
+              find.byType(ReaderHighlightControls),
+            )
+            .selectedColor,
+        HighlightColor.green,
+      );
+      await expectNativeSelectionOnly('power');
       await select(tester, ReadingFixture.sentence, article: true);
+      await expectNativeSelectionOnly(ReadingFixture.sentence);
+      await capture(tester, 'article-selection');
       await tapUi(tester, find.text('Translate'));
       await waitForUi(
         tester,

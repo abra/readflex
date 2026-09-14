@@ -178,18 +178,31 @@ void registerSharedReaderHandlers(
 }
 
 /// Base [InAppWebViewSettings] for the reader WebView: zoom off,
-/// transparent background, texture-layer composition on Android, JS enabled,
+/// transparent background, native hybrid composition on Android, JS enabled,
 /// native text action menu off, DevTools inspectable only in debug.
-InAppWebViewSettings baseReaderSettings() => InAppWebViewSettings(
-  supportZoom: false,
-  transparentBackground: true,
-  isInspectable: kDebugMode,
-  useHybridComposition: false,
-  useOnRenderProcessGone: true,
-  javaScriptEnabled: true,
-  disableContextMenu: true,
-  disableLongPressContextMenuOnLinks: true,
-);
+InAppWebViewSettings baseReaderSettings() => _ReaderWebViewSettings();
+
+class _ReaderWebViewSettings extends InAppWebViewSettings {
+  _ReaderWebViewSettings()
+    : super(
+        supportZoom: false,
+        transparentBackground: true,
+        isInspectable: kDebugMode,
+        useHybridComposition: true,
+        useOnRenderProcessGone: true,
+        javaScriptEnabled: true,
+        disableContextMenu: true,
+        disableLongPressContextMenuOnLinks: true,
+      );
+
+  // Reader-only extension implemented by the vendored Android plugin.
+  // Other WebViews and the iOS plugin retain their native selection behavior.
+  @override
+  Map<String, dynamic> toMap() => {
+    ...super.toMap(),
+    'useCustomSelectionHandles': true,
+  };
+}
 
 /// Hides default native edit-menu items such as iOS "Copy Link with Highlight"
 /// while keeping WebView text selection available for the reader popup.

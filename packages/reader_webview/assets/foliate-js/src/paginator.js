@@ -33,6 +33,36 @@ const uncollapse = range => {
   return range
 }
 
+// Some EPUBs hide empty TOC markers. Navigate to nearby rendered content
+// without changing publisher markup, which also anchors saved CFIs.
+const getBoxlessAnchorRect = anchor => {
+  const doc = anchor?.ownerDocument
+  if (anchor?.nodeType !== 1 || !doc?.body?.contains(anchor)) return
+  const walker = doc.createTreeWalker(doc.body,
+    NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT)
+  const range = doc.createRange()
+  for (const forward of [true, false]) {
+    walker.currentNode = anchor
+    // Bound the exceptional path; never scan an entire chapter to navigate.
+    for (let visited = 0; visited < 128; visited++) {
+      const node = forward ? walker.nextNode() : walker.previousNode()
+      if (!node) break
+      // Walking backwards also visits ancestors; their first page is not
+      // the position of a marker near the end of their content.
+      if (node.nodeType === 1 && node.contains(anchor)) continue
+      let rects
+      if (node.nodeType === 3) {
+        if (!node.nodeValue.trim()) continue
+        range.selectNodeContents(node)
+        rects = range.getClientRects()
+      } else rects = node.getClientRects()
+      const visible = Array.from(rects).filter(r => r.width > 0 && r.height > 0)
+      const rect = forward ? visible[0] : visible.at(-1)
+      if (rect) return rect
+    }
+  }
+}
+
 const makeRange = (doc, node, start, end = start) => {
   const range = doc.createRange()
   range.setStart(node, start)
@@ -550,6 +580,7 @@ export class Paginator extends HTMLElement {
   #mediaQueryListener
   #ignoreNativeScroll = false
   #pendingScrollFrame = null
+  #selectionScrollOffset = null
   #touchState
   #touchScrolled
   #loadingNext = false
@@ -708,6 +739,13 @@ export class Paginator extends HTMLElement {
     this.#observer.observe(this.#container)
     this.#container.addEventListener('scroll', () => {
       if (this.#ignoreNativeScroll) return
+      if (!this.scrolled && this.#selectionScrollOffset != null && this.#hasTextSelection()) {
+        // Chromium can auto-scroll even overflow:hidden while dragging a
+        // native handle. Only explicit reader navigation may move this page.
+        if (this.#container[this.scrollProp] !== this.#selectionScrollOffset)
+          this.#container[this.scrollProp] = this.#selectionScrollOffset
+        return
+      }
       if (this.#justAnchored) {
         this.#justAnchored = false
         return
@@ -732,8 +770,11 @@ export class Paginator extends HTMLElement {
       doc.addEventListener('touchend', this.#onTouchEnd.bind(this), opts)
       doc.addEventListener('touchcancel', () => this.#cancelTouch(), opts)
       doc.addEventListener('selectionchange', () => {
-        if (doc === this.#view?.document && this.#hasTextSelection())
+        if (doc !== this.#view?.document) return
+        if (this.#hasTextSelection()) {
+          if (!this.scrolled) this.#selectionScrollOffset ??= this.#container[this.scrollProp]
           this.#claimSelectionGesture()
+        } else this.#selectionScrollOffset = null
       })
     })
 
@@ -785,6 +826,7 @@ export class Paginator extends HTMLElement {
     return this.#view
   }
   #beforeRender({ vertical, rtl }) {
+    this.#selectionScrollOffset = null
     this.#vertical = vertical
     const explicitPageProgressionDirection =
       globalThis.readflexPageProgressionDirection || this.bookDir
@@ -1188,7 +1230,8 @@ export class Paginator extends HTMLElement {
     this.#touchState.selecting = true
     this.#touchScrolled = false
     this.#clearVerticalDragPreview()
-    this.#restoreMomentum()
+    if (this.scrolled) this.#restoreMomentum()
+    else this.#disableMomentum()
     this.dispatchEvent(new Event('doctouchcancel', { bubbles: true, composed: true }))
   }
   #cancelTouch({ flushRelocate = true } = {}) {
@@ -1479,6 +1522,8 @@ export class Paginator extends HTMLElement {
     const shouldAnimate = opts.animate ?? (reason === 'snap' || smooth === true)
     const easing = opts.easing ?? (reason === 'page' ? easeInOutSine : easeOutSine)
     const finish = () => {
+      this.#selectionScrollOffset = !this.scrolled && this.#hasTextSelection()
+        ? element[scrollProp] : null
       this.#afterScroll(reason)
       this.#ignoreNativeScroll = false
       if (reason === 'snap' || opts.restoreMomentum) {
@@ -1611,6 +1656,7 @@ export class Paginator extends HTMLElement {
       })
     } else {
       element.style.scrollBehavior = 'auto'
+      this.#selectionScrollOffset = !this.scrolled && this.#hasTextSelection() ? offset : null
       element[scrollProp] = offset
       finish()
       element.style.scrollBehavior = previousBehavior
@@ -1634,6 +1680,7 @@ export class Paginator extends HTMLElement {
       // previous column, there is an extra zero width rect in that column
       const rect = Array.from(rects)
         .find(r => r.width > 0 && r.height > 0) || rects[0]
+        || getBoxlessAnchorRect(anchor)
       if (!rect) return
       await this.#scrollToRect(rect, 'anchor')
       if (select) this.#selectAnchor()
@@ -1853,6 +1900,20 @@ export class Paginator extends HTMLElement {
   }
   prevSection() {
     return this.goTo({ index: this.#adjacentIndex(-1) })
+  }
+  async turnSelectionPage(direction) {
+    if (this.#locked || this.scrolled || !this.#hasTextSelection() ||
+      (direction !== -1 && direction !== 1)) return false
+    const page = Math.round(this.page) + direction
+    // Native ranges cannot span spine documents. Never unload the selected one.
+    if (page < 1 || page > this.pages - 2) return false
+    this.#locked = true
+    try {
+      await this.#scrollToPage(page, 'selection', { animate: false })
+      return true
+    } finally {
+      this.#locked = false
+    }
   }
   nextSection() {
     return this.goTo({ index: this.#adjacentIndex(1) })

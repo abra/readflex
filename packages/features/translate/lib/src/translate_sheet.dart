@@ -87,52 +87,50 @@ class _TranslateSheetViewState extends State<_TranslateSheetView> {
       title: context.l10n.translationTitle,
       headerSpacing: AppSpacing.sm,
       constrainBody: true,
-      bodyPadding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        0,
-        AppSpacing.xl,
-        AppSpacing.lg,
-      ),
+      bodyPadding: const EdgeInsets.only(bottom: AppSpacing.lg),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxBodyHeight),
-        child: SingleChildScrollView(
-          child: BlocBuilder<TranslateCubit, TranslateSheetState>(
-            builder: (context, state) {
-              final cubit = context.read<TranslateCubit>();
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TranslationLanguageDirection(
-                    sourceLanguageCode: state.sourceLanguageCode,
-                    targetLanguageCode: state.targetLanguageCode,
-                    detectedSourceLanguage:
-                        state.result?.detectedSourceLanguage,
-                    enabled: !state.isBusy,
-                    sourceMenu: _sourceMenu,
-                    sourcePickerKey: _sourcePickerKey,
-                    onSourceChanged: (value) =>
-                        cubit.setSourceLanguage(selection, value),
-                    onTargetChanged: (value) =>
-                        cubit.setTargetLanguage(selection, value),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  if (state.status != TranslateSheetStatus.success) ...[
-                    TranslationSelectionPreview(
-                      selection: selection,
-                      showContext: false,
+        child: ScrollEdgeFadeStack(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+            child: BlocBuilder<TranslateCubit, TranslateSheetState>(
+              builder: (context, state) {
+                final cubit = context.read<TranslateCubit>();
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TranslationLanguageDirection(
+                      sourceLanguageCode: state.sourceLanguageCode,
+                      targetLanguageCode: state.targetLanguageCode,
+                      detectedSourceLanguage:
+                          state.result?.detectedSourceLanguage,
+                      enabled: !state.isBusy,
+                      sourceMenu: _sourceMenu,
+                      sourcePickerKey: _sourcePickerKey,
+                      onSourceChanged: (value) =>
+                          cubit.setSourceLanguage(selection, value),
+                      onTargetChanged: (value) =>
+                          cubit.setTargetLanguage(selection, value),
                     ),
-                    const SizedBox(height: AppSpacing.md),
+                    const SizedBox(height: AppSpacing.sm),
+                    if (state.status != TranslateSheetStatus.success) ...[
+                      TranslationSelectionPreview(
+                        selection: selection,
+                        showContext: false,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
+                    _TranslateBody(
+                      selection: selection,
+                      state: state,
+                      onChooseSourceLanguage: _chooseSourceLanguage,
+                      onCopy: widget.onCopy,
+                    ),
                   ],
-                  _TranslateBody(
-                    selection: selection,
-                    state: state,
-                    onChooseSourceLanguage: _chooseSourceLanguage,
-                    onCopy: widget.onCopy,
-                  ),
-                ],
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -210,18 +208,26 @@ class _TranslationResultView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isTextTranslation = result.mode == selectedTextTranslationMode;
-    final primary = _firstNonEmptyText([
-      result.translation.contextualTranslation,
-      result.translation.translatedFragment,
-      result.translation.baseTranslation,
-      result.translation.sentenceTranslation,
-    ]);
     final selectedText = selection.effectiveSelectedText.trim();
-    final usesLexicalTitle =
+    final isSingleWord =
         !isTextTranslation &&
-        !_selectionWhitespacePattern.hasMatch(selectedText) &&
-        primary != null &&
-        !_selectionWhitespacePattern.hasMatch(primary);
+        selectedText.isNotEmpty &&
+        !_selectionWhitespacePattern.hasMatch(selectedText);
+    final base = _nonEmptyText(result.translation.baseTranslation);
+    final contextual = _nonEmptyText(result.translation.contextualTranslation);
+    final showBoth =
+        isSingleWord &&
+        base != null &&
+        contextual != null &&
+        _normalizedAnswer(base) != _normalizedAnswer(contextual);
+    final primary = showBoth
+        ? base
+        : _firstNonEmptyText([
+            result.translation.contextualTranslation,
+            result.translation.translatedFragment,
+            result.translation.baseTranslation,
+            result.translation.sentenceTranslation,
+          ]);
     final sentenceTranslation = _nonEmptyText(
       result.translation.sentenceTranslation,
     );
@@ -258,31 +264,23 @@ class _TranslationResultView extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
         ],
         if (primary != null)
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.sm),
-                  child: SelectableText(
-                    primary,
-                    key: const ValueKey('translation-primary-result'),
-                    textDirection: translationTextDirection(primary),
-                    style: usesLexicalTitle
-                        ? context.text.titleLarge
-                        : context.text.bodyLarge,
-                  ),
-                ),
-              ),
-              AppCopyButton(
-                key: ValueKey(primary),
-                onCopy: () => onCopy(primary),
-                copyLabel: context.l10n.commonCopy,
-                copiedLabel: context.l10n.commonCopied,
-                failureLabel: context.l10n.commonCopyFailed,
-              ),
-            ],
+          _TranslationAnswer(
+            id: 'primary',
+            text: primary,
+            label: showBoth ? context.l10n.translationWord : null,
+            isSingleWord: isSingleWord,
+            onCopy: onCopy,
           ),
+        if (showBoth) ...[
+          const SizedBox(height: AppSpacing.sm),
+          _TranslationAnswer(
+            id: 'contextual',
+            text: contextual,
+            label: context.l10n.translationInContext,
+            isSingleWord: isSingleWord,
+            onCopy: onCopy,
+          ),
+        ],
         const SizedBox(height: AppSpacing.md),
         Divider(height: 1, color: context.colors.outlineVariant),
         const SizedBox(height: AppSpacing.md),
@@ -304,7 +302,8 @@ class _TranslationResultView extends StatelessWidget {
         ),
         if (!isTextTranslation &&
             sentenceTranslation != null &&
-            sentenceTranslation != primary) ...[
+            sentenceTranslation != primary &&
+            (!showBoth || sentenceTranslation != contextual)) ...[
           const SizedBox(height: AppSpacing.sm),
           SelectableText(
             sentenceTranslation,
@@ -331,6 +330,74 @@ class _TranslationResultView extends StatelessWidget {
 }
 
 final _selectionWhitespacePattern = RegExp(r'\s');
+
+String _normalizedAnswer(String value) =>
+    value.replaceAll(RegExp(r'\s+'), ' ').trim().toLowerCase();
+
+class _TranslationAnswer extends StatelessWidget {
+  const _TranslationAnswer({
+    required this.id,
+    required this.text,
+    required this.isSingleWord,
+    required this.onCopy,
+    this.label,
+  });
+
+  final String id;
+  final String text;
+  final String? label;
+  final bool isSingleWord;
+  final Future<void> Function(String) onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    final usesLexicalTitle =
+        isSingleWord && !_selectionWhitespacePattern.hasMatch(text);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (label != null)
+          Semantics(
+            header: true,
+            child: Text(
+              label!,
+              style: context.text.labelMedium.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
+            ),
+          ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: SelectableText(
+                  text,
+                  key: ValueKey('translation-$id-result'),
+                  textDirection: translationTextDirection(text),
+                  style: usesLexicalTitle
+                      ? context.text.titleLarge
+                      : context.text.bodyLarge,
+                ),
+              ),
+            ),
+            KeyedSubtree(
+              key: ValueKey('translation-$id-copy'),
+              child: AppCopyButton(
+                key: ValueKey(text),
+                onCopy: () => onCopy(text),
+                copyLabel: context.l10n.commonCopy,
+                copiedLabel: context.l10n.commonCopied,
+                failureLabel: context.l10n.commonCopyFailed,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
 
 String? _firstNonEmptyText(Iterable<String?> values) {
   for (final value in values) {

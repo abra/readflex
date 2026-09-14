@@ -9,6 +9,12 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   ReadflexLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
+  String get readerSelectionStart => 'بداية التحديد';
+
+  @override
+  String get readerSelectionEnd => 'نهاية التحديد';
+
+  @override
   String get translationOriginal => 'النص الأصلي';
 
   @override
@@ -39,6 +45,12 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
 
   @override
   String get translationSentence => 'الجملة';
+
+  @override
+  String get translationWord => 'ترجمة الكلمة';
+
+  @override
+  String get translationInContext => 'في هذا السياق';
 
   @override
   String get translationDetails => 'المعنى والبدائل';

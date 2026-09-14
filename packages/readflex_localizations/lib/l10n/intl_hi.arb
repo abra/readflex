@@ -1,4 +1,6 @@
 {
+  "readerSelectionStart": "चयन की शुरुआत",
+  "readerSelectionEnd": "चयन का अंत",
   "translationOriginal": "मूल पाठ",
   "dictionaryInContext": "इस संदर्भ में",
   "translationAction": "अनुवाद करें",
@@ -9,6 +11,8 @@
   "translationAutoDetectedSource": "स्वचालित: {language}",
   "translationOffline": "ऑफ़लाइन",
   "translationSentence": "वाक्य",
+  "translationWord": "शब्द का अनुवाद",
+  "translationInContext": "इस संदर्भ में",
   "translationDetails": "अर्थ और विकल्प",
   "translationAlternatives": "विकल्प",
   "translationSourceRequiredTitle": "स्रोत भाषा चुनें",

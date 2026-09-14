@@ -115,6 +115,39 @@ void main() {
     });
 
     group('deselect', () {
+      test(
+        'adjustment retains the range until settled and resets on deselect',
+        () async {
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          cubit.select(text: 'first', cfiRange: 'first-cfi');
+          cubit.setAdjusting(true);
+          expect(cubit.state.hasSelection, isTrue);
+          expect(cubit.state.selectedText, 'first');
+          cubit.select(text: 'first and next page', cfiRange: 'extended-cfi');
+          expect(cubit.state.isAdjusting, isTrue);
+          cubit.setAdjusting(false);
+          expect(cubit.state.selectedText, 'first and next page');
+          expect(cubit.state.cfiRange, 'extended-cfi');
+          cubit.setAdjusting(true);
+          cubit.deselect();
+          expect(cubit.state, const ReaderSelectionState());
+        },
+      );
+
+      blocTest<ReaderSelectionCubit, ReaderSelectionState>(
+        'duplicate adjustment phases do not publish extra UI states',
+        build: buildCubit,
+        act: (c) => c
+          ..setAdjusting(true)
+          ..setAdjusting(true)
+          ..setAdjusting(false)
+          ..setAdjusting(false),
+        expect: () => [
+          const ReaderSelectionState(isAdjusting: true),
+          const ReaderSelectionState(),
+        ],
+      );
       blocTest<ReaderSelectionCubit, ReaderSelectionState>(
         'clears all selection fields',
         build: buildCubit,

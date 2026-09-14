@@ -1,4 +1,6 @@
 {
+  "readerSelectionStart": "Inicio de la selección",
+  "readerSelectionEnd": "Fin de la selección",
   "translationOriginal": "Original",
   "dictionaryInContext": "En este contexto",
   "translationAction": "Traducir",
@@ -9,6 +11,8 @@
   "translationAutoDetectedSource": "Automático: {language}",
   "translationOffline": "Sin conexión",
   "translationSentence": "Oración",
+  "translationWord": "Traducción de la palabra",
+  "translationInContext": "En este contexto",
   "translationDetails": "Significado y alternativas",
   "translationAlternatives": "Alternativas",
   "translationSourceRequiredTitle": "Elige el idioma de origen",

@@ -44,6 +44,7 @@ void main() {
         var loading = 0;
         final failures = <ReaderLoadFailure>[];
         final positions = <BookPosition>[];
+        final adjustments = <bool>[];
         final base = Uri.parse('http://127.0.0.1:1234/r/token/');
         final reader = article
             ? ArticleHtmlReaderWebView(
@@ -54,6 +55,9 @@ void main() {
                 onLoading: () => loading++,
                 onLoadFailed: failures.add,
                 onPositionChanged: positions.add,
+                onSelectionInteractionChanged: adjustments.add,
+                selectionStartLabel: 'Start test',
+                selectionEndLabel: 'End test',
               )
             : BookReaderWebView(
                 serverBaseUri: base,
@@ -63,9 +67,22 @@ void main() {
                 onLoading: () => loading++,
                 onLoadFailed: failures.add,
                 onPositionChanged: positions.add,
+                onSelectionInteractionChanged: adjustments.add,
               );
         await tester.pumpWidget(MaterialApp(home: reader));
         final first = platform.views.single;
+        if (article) {
+          final params = first.params.initialUrlRequest!.url!.queryParameters;
+          expect(jsonDecode(params['selectionHandleLabels']!), {
+            'start': 'Start test',
+            'end': 'End test',
+          });
+        }
+        first.emit('onSelectionInteractionChanged', [true]);
+        first.emit('onSelectionInteractionChanged', ['invalid']);
+        first.emit('onSelectionInteractionChanged', []);
+        first.emit('onSelectionInteractionChanged', [false]);
+        expect(adjustments, [true, false]);
         expect(first.params.initialSettings!.useOnRenderProcessGone, isTrue);
         first.emit('onLoadEnd', []);
         expect(
@@ -89,6 +106,11 @@ void main() {
           'latest',
         );
         first.emit('onReaderLoadFailed', []);
+        first.emit('onSelectionInteractionChanged', [true]);
+        expect(adjustments, [
+          true,
+          false,
+        ], reason: 'stale renderer cannot hide the menu');
         first.emit('onLoadEnd', []);
         first.emit(article ? 'onArticlePositionChanged' : 'onRelocated', [
           {'cfi': 'stale', 'fraction': 0.1},

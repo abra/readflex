@@ -9,6 +9,12 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   ReadflexLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
+  String get readerSelectionStart => 'Начало выделения';
+
+  @override
+  String get readerSelectionEnd => 'Конец выделения';
+
+  @override
   String get translationOriginal => 'Оригинал';
 
   @override
@@ -39,6 +45,12 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
 
   @override
   String get translationSentence => 'Предложение';
+
+  @override
+  String get translationWord => 'Перевод слова';
+
+  @override
+  String get translationInContext => 'В этом контексте';
 
   @override
   String get translationDetails => 'Значение и варианты';
@@ -124,7 +136,7 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
 
   @override
   String get onboardingHighlightSaveDescription =>
-      'Выделяйте текст, создавайте хайлайты и добавляйте заметки.';
+      'Сохраняйте выделенные фрагменты текста и добавляйте заметки.';
 
   @override
   String get onboardingOrganizeLibraryTitle => 'Организуйте библиотеку';
@@ -368,9 +380,9 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
       count,
       locale: localeName,
       other:
-          'Будут удалены элементы библиотеки и ваши хайлайты. Архивные учебные данные сохранятся.',
+          'Элементы библиотеки и ваши выделения будут удалены. Архивные учебные данные сохранятся.',
       one:
-          'Будет удален элемент библиотеки и ваши хайлайты. Архивные учебные данные сохранятся.',
+          'Элемент библиотеки и ваши выделения будут удалены. Архивные учебные данные сохранятся.',
     );
     return '$_temp0';
   }
@@ -581,16 +593,16 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get importArticleSaveFailed => 'Не удалось сохранить статью';
 
   @override
-  String get highlightAction => 'Хайлайт';
+  String get highlightAction => 'Выделить';
 
   @override
-  String get highlightTitle => 'Хайлайт';
+  String get highlightTitle => 'Выделение';
 
   @override
   String get highlightNoteHint => 'Добавить заметку (необязательно)';
 
   @override
-  String get highlightFailedToSave => 'Не удалось сохранить хайлайт';
+  String get highlightFailedToSave => 'Не удалось сохранить выделение';
 
   @override
   String get highlightColorYellow => 'Желтый';
@@ -609,11 +621,11 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
 
   @override
   String highlightColorSemantics(String color) {
-    return '$color цвет хайлайта';
+    return '$color цвет выделения';
   }
 
   @override
-  String get highlightSelectColor => 'Выбрать цвет хайлайта';
+  String get highlightSelectColor => 'Выбрать цвет выделения';
 
   @override
   String get readerFailedToLoadContent => 'Не удалось загрузить содержимое';
@@ -628,13 +640,13 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get readerNotReady => 'Ридер не готов';
 
   @override
-  String get readerHighlightSaved => 'Хайлайт сохранен';
+  String get readerHighlightSaved => 'Выделение сохранено';
 
   @override
-  String get readerHighlightRemoved => 'Хайлайт удален';
+  String get readerHighlightRemoved => 'Выделение удалено';
 
   @override
-  String get readerHighlightSaveFailed => 'Не удалось сохранить хайлайт';
+  String get readerHighlightSaveFailed => 'Не удалось сохранить выделение';
 
   @override
   String get readerCommentUpdated => 'Комментарий обновлен';
@@ -649,7 +661,7 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get readerBookmarks => 'Закладки';
 
   @override
-  String get readerHighlights => 'Хайлайты';
+  String get readerHighlights => 'Выделения';
 
   @override
   String get readerSearchChapters => 'Поиск глав';
@@ -658,7 +670,7 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get readerSearchBookmarks => 'Поиск закладок';
 
   @override
-  String get readerSearchHighlights => 'Поиск хайлайтов';
+  String get readerSearchHighlights => 'Поиск выделений';
 
   @override
   String get readerNoBookmarksYet => 'Закладок пока нет';
@@ -673,10 +685,10 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get readerDeleteBookmark => 'Удалить закладку';
 
   @override
-  String get readerNoHighlightsYet => 'Хайлайтов пока нет';
+  String get readerNoHighlightsYet => 'Выделений пока нет';
 
   @override
-  String get readerNoMatchingHighlights => 'Подходящих хайлайтов нет';
+  String get readerNoMatchingHighlights => 'Подходящих выделений нет';
 
   @override
   String get readerHighlightedText => 'Выделенный текст';
@@ -851,10 +863,10 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get readerEditComment => 'Редактировать комментарий';
 
   @override
-  String get readerRemoveHighlight => 'Удалить хайлайт';
+  String get readerRemoveHighlight => 'Удалить выделение';
 
   @override
-  String get readerHighlightNoteTitle => 'Заметка к хайлайту';
+  String get readerHighlightNoteTitle => 'Заметка к выделению';
 
   @override
   String get readerEditNoteTitle => 'Редактировать заметку';

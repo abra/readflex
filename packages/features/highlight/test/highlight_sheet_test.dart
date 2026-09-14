@@ -3,6 +3,7 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:highlight/highlight.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:shared/shared.dart';
 
 import 'helpers/fake_highlight_repository.dart';
@@ -22,7 +23,10 @@ void main() {
     repository = FakeHighlightRepository();
   });
 
-  Widget buildSubject() => MaterialApp(
+  Widget buildSubject({Locale locale = const Locale('en')}) => MaterialApp(
+    locale: locale,
+    supportedLocales: ReadflexSupportedLocales.locales,
+    localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
     theme: AppTheme.light(),
     home: Scaffold(
       body: SingleChildScrollView(
@@ -39,6 +43,44 @@ void main() {
 
     expect(find.text('Highlight'), findsOneWidget);
     expect(find.text('Important passage'), findsOneWidget);
+  });
+
+  testWidgets('Russian copy and semantics fit a narrow highlight sheet', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 740);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final semantics = tester.ensureSemantics();
+    try {
+      repository.shouldThrow = true;
+
+      await tester.pumpWidget(buildSubject(locale: const Locale('ru')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Выделение'), findsOneWidget);
+      expect(find.text('Important passage'), findsOneWidget);
+      expect(
+        tester.getSemantics(find.bySemanticsLabel('Желтый цвет выделения')),
+        matchesSemantics(
+          label: 'Желтый цвет выделения',
+          isButton: true,
+          hasSelectedState: true,
+          isSelected: true,
+          hasTapAction: true,
+          onTapHint: 'Выбрать цвет выделения',
+        ),
+      );
+
+      await tester.tap(find.text('Сохранить'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Не удалось сохранить выделение'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    } finally {
+      semantics.dispose();
+    }
   });
 
   testWidgets('renders color picker row with circular containers', (

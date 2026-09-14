@@ -1129,6 +1129,9 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         );
       },
       onExternalLink: widget.onExternalLink,
+      onSelectionInteractionChanged: selectionCubit.setAdjusting,
+      selectionStartLabel: context.l10n.readerSelectionStart,
+      selectionEndLabel: context.l10n.readerSelectionEnd,
       onTextSelected: (selection) {
         if (kDebugMode) {
           debugPrint(
@@ -1331,6 +1334,9 @@ class _ReaderArticleHtmlBodyState extends State<_ReaderArticleHtmlBody> {
       foliateStyle: articleStyle,
       bookmarks: bookmarks,
       highlights: highlights,
+      onSelectionInteractionChanged: selectionCubit.setAdjusting,
+      selectionStartLabel: context.l10n.readerSelectionStart,
+      selectionEndLabel: context.l10n.readerSelectionEnd,
       onLoading: () {
         if (!mounted) return;
         setState(() => _htmlReady = false);

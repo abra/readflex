@@ -1,4 +1,6 @@
 {
+  "readerSelectionStart": "選択範囲の始点",
+  "readerSelectionEnd": "選択範囲の終点",
   "translationOriginal": "原文",
   "dictionaryInContext": "この文脈では",
   "translationAction": "翻訳",
@@ -9,6 +11,8 @@
   "translationAutoDetectedSource": "自動：{language}",
   "translationOffline": "オフライン",
   "translationSentence": "文",
+  "translationWord": "単語の訳",
+  "translationInContext": "この文脈での訳",
   "translationDetails": "意味と別の訳",
   "translationAlternatives": "別の訳",
   "translationSourceRequiredTitle": "翻訳元の言語を選択",

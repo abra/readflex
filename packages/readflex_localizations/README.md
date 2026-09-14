@@ -17,6 +17,10 @@ en, zh, hi, es, ar, fr, ru, pt, de, ja
   toast text.
 - Do not translate user data such as titles, author names, URLs, or collection
   names.
+- Russian UI uses the native term for saved text selections, not a
+  transliteration of "highlight". Use a verb for the action and a noun for
+  the item/list; keep tooltips, accessibility labels and messages consistent.
+  Internal `highlight` keys and model names remain unchanged.
 
 ## Updating Copy
 

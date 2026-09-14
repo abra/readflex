@@ -9,6 +9,12 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
   ReadflexLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get readerSelectionStart => 'Selection start';
+
+  @override
+  String get readerSelectionEnd => 'Selection end';
+
+  @override
   String get translationOriginal => 'Original';
 
   @override
@@ -39,6 +45,12 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
 
   @override
   String get translationSentence => 'Sentence';
+
+  @override
+  String get translationWord => 'Word translation';
+
+  @override
+  String get translationInContext => 'In this context';
 
   @override
   String get translationDetails => 'Meaning & alternatives';

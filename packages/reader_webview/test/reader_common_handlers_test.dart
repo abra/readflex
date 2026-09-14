@@ -112,7 +112,10 @@ void main() {
       expect(settings.disableContextMenu, isTrue);
       expect(settings.disableLongPressContextMenuOnLinks, isTrue);
       expect(settings.isTextInteractionEnabled, isNot(false));
-      expect(settings.useHybridComposition, isFalse);
+    });
+    test('keeps Android hybrid composition and opts into reader handles', () {
+      expect(baseReaderSettings().useHybridComposition, isTrue);
+      expect(baseReaderSettings().toMap()['useCustomSelectionHandles'], isTrue);
     });
   });
 

@@ -9,6 +9,12 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   ReadflexLocalizationsHi([String locale = 'hi']) : super(locale);
 
   @override
+  String get readerSelectionStart => 'चयन की शुरुआत';
+
+  @override
+  String get readerSelectionEnd => 'चयन का अंत';
+
+  @override
   String get translationOriginal => 'मूल पाठ';
 
   @override
@@ -39,6 +45,12 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
 
   @override
   String get translationSentence => 'वाक्य';
+
+  @override
+  String get translationWord => 'शब्द का अनुवाद';
+
+  @override
+  String get translationInContext => 'इस संदर्भ में';
 
   @override
   String get translationDetails => 'अर्थ और विकल्प';

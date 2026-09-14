@@ -9,6 +9,12 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   ReadflexLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get readerSelectionStart => '选择起点';
+
+  @override
+  String get readerSelectionEnd => '选择终点';
+
+  @override
   String get translationOriginal => '原文';
 
   @override
@@ -39,6 +45,12 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
 
   @override
   String get translationSentence => '句子';
+
+  @override
+  String get translationWord => '单词翻译';
+
+  @override
+  String get translationInContext => '在此语境中';
 
   @override
   String get translationDetails => '释义与其他译法';
