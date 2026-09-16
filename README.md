@@ -38,12 +38,37 @@ Start here:
 Use the Flutter SDK pinned in `.fvmrc` through FVM. Install dependencies:
 
 ```sh
+fvm install
 make get
 make reader-browser-setup
 ```
 
 Browser tests require Node.js 20+ and the pinned Playwright engines. Android
 builds also need the project's JDK/SDK setup; iOS builds need Xcode and CocoaPods.
+
+### Versioned Configuration
+
+Keep `.fvmrc`, the application `pubspec.lock`, `ios/Podfile.lock`, the existing
+SwiftPM `Package.resolved` files, and the reader's `package-lock.json` in version
+control. They pin the SDK and resolved dependencies; update them deliberately
+and review their diffs. Use `pod install`, not `pod update`, when restoring iOS
+dependencies. Root and platform `.gitignore` files are shared too, so a fresh
+checkout does not depend on a developer's global ignore settings.
+
+The independent library packages under `packages/` and `third_party/` keep
+their own test-environment `pubspec.lock` files local. The root lockfile pins
+the application graph, not every library's standalone dev dependencies.
+
+Do not commit `.local/run-defines.json`, `.env` files, `android/key.properties`,
+keystores, machine-specific SDK paths, or generated caches/builds. Configure
+private defines and release signing separately on each computer. Keep a secure
+backup of the signing key; rebuilding dependencies does not recreate that key.
+
+This follows the [Dart lockfile guidance](https://dart.dev/tools/pub/private-files),
+[CocoaPods guidance](https://guides.cocoapods.org/using/pod-install-vs-update.html),
+and [FVM configuration guidance](https://fvm.app/documentation/getting-started/configuration).
+
+### Verification
 
 Analyze:
 

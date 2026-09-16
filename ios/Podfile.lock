@@ -1,0 +1,135 @@
+PODS:
+  - device_screen_brightness (0.0.1):
+    - Flutter
+  - Flutter (1.0.0)
+  - flutter_inappwebview_ios (0.0.1):
+    - Flutter
+    - flutter_inappwebview_ios/Core (= 0.0.1)
+    - OrderedSet (~> 6.0.3)
+  - flutter_inappwebview_ios/Core (0.0.1):
+    - Flutter
+    - OrderedSet (~> 6.0.3)
+  - google_mlkit_commons (0.12.0):
+    - Flutter
+    - MLKitVision (~> 10.0.0)
+  - google_mlkit_translation (0.14.0):
+    - Flutter
+    - google_mlkit_commons
+    - GoogleMLKit/Translate (~> 9.0.0)
+  - GoogleDataTransport (10.1.0):
+    - nanopb (~> 3.30910.0)
+    - PromisesObjC (~> 2.4)
+  - GoogleMLKit/MLKitCore (9.0.0):
+    - MLKitCommon (~> 14.0.0)
+  - GoogleMLKit/Translate (9.0.0):
+    - GoogleMLKit/MLKitCore
+    - MLKitTranslate (~> 8.0.0)
+  - GoogleToolboxForMac/Defines (4.2.1)
+  - GoogleToolboxForMac/Logger (4.2.1):
+    - GoogleToolboxForMac/Defines (= 4.2.1)
+  - "GoogleToolboxForMac/NSData+zlib (4.2.1)":
+    - GoogleToolboxForMac/Defines (= 4.2.1)
+  - GoogleToolboxForMac/StringEncoding (4.2.1):
+    - GoogleToolboxForMac/Defines (= 4.2.1)
+  - GoogleUtilities/Environment (8.1.0):
+    - GoogleUtilities/Privacy
+  - GoogleUtilities/Logger (8.1.0):
+    - GoogleUtilities/Environment
+    - GoogleUtilities/Privacy
+  - GoogleUtilities/Privacy (8.1.0)
+  - GoogleUtilities/UserDefaults (8.1.0):
+    - GoogleUtilities/Logger
+    - GoogleUtilities/Privacy
+  - GTMSessionFetcher/Core (3.5.0)
+  - MLImage (1.0.0-beta8)
+  - MLKitCommon (14.0.0):
+    - GoogleDataTransport (~> 10.0)
+    - GoogleToolboxForMac/Logger (< 5.0, >= 4.2.1)
+    - "GoogleToolboxForMac/NSData+zlib (< 5.0, >= 4.2.1)"
+    - GoogleUtilities/Logger (~> 8.0)
+    - GoogleUtilities/UserDefaults (~> 8.0)
+    - GTMSessionFetcher/Core (< 4.0, >= 3.3.2)
+  - MLKitNaturalLanguage (10.0.0):
+    - GoogleToolboxForMac/Logger (< 5.0, >= 4.2.1)
+    - "GoogleToolboxForMac/NSData+zlib (< 5.0, >= 4.2.1)"
+    - GoogleToolboxForMac/StringEncoding (< 5.0, >= 4.2.1)
+    - GTMSessionFetcher/Core (< 4.0, >= 3.3.2)
+    - MLKitCommon (~> 14.0)
+  - MLKitTranslate (8.0.0):
+    - MLKitNaturalLanguage (~> 10.0)
+    - SSZipArchive (< 3.0, >= 2.5.5)
+  - MLKitVision (10.0.0):
+    - GoogleToolboxForMac/Logger (< 5.0, >= 4.2.1)
+    - "GoogleToolboxForMac/NSData+zlib (< 5.0, >= 4.2.1)"
+    - GTMSessionFetcher/Core (< 4.0, >= 3.3.2)
+    - MLImage (= 1.0.0-beta8)
+    - MLKitCommon (~> 14.0)
+  - nanopb (3.30910.0):
+    - nanopb/decode (= 3.30910.0)
+    - nanopb/encode (= 3.30910.0)
+  - nanopb/decode (3.30910.0)
+  - nanopb/encode (3.30910.0)
+  - OrderedSet (6.0.3)
+  - PromisesObjC (2.4.0)
+  - SSZipArchive (2.6.0)
+
+DEPENDENCIES:
+  - device_screen_brightness (from `.symlinks/plugins/device_screen_brightness/ios`)
+  - Flutter (from `Flutter`)
+  - flutter_inappwebview_ios (from `.symlinks/plugins/flutter_inappwebview_ios/ios`)
+  - google_mlkit_commons (from `.symlinks/plugins/google_mlkit_commons/ios`)
+  - google_mlkit_translation (from `.symlinks/plugins/google_mlkit_translation/ios`)
+
+SPEC REPOS:
+  trunk:
+    - GoogleDataTransport
+    - GoogleMLKit
+    - GoogleToolboxForMac
+    - GoogleUtilities
+    - GTMSessionFetcher
+    - MLImage
+    - MLKitCommon
+    - MLKitNaturalLanguage
+    - MLKitTranslate
+    - MLKitVision
+    - nanopb
+    - OrderedSet
+    - PromisesObjC
+    - SSZipArchive
+
+EXTERNAL SOURCES:
+  device_screen_brightness:
+    :path: ".symlinks/plugins/device_screen_brightness/ios"
+  Flutter:
+    :path: Flutter
+  flutter_inappwebview_ios:
+    :path: ".symlinks/plugins/flutter_inappwebview_ios/ios"
+  google_mlkit_commons:
+    :path: ".symlinks/plugins/google_mlkit_commons/ios"
+  google_mlkit_translation:
+    :path: ".symlinks/plugins/google_mlkit_translation/ios"
+
+SPEC CHECKSUMS:
+  device_screen_brightness: 6696426852c120e21d5de19b317de9b63dd02930
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  flutter_inappwebview_ios: 6f63631e2c62a7c350263b13fa5427aedefe81d4
+  google_mlkit_commons: 75b2579ccf522fe01d42e689babda04c4510ba2f
+  google_mlkit_translation: ff8aebb952f811e7773fa7258a64a5c342885241
+  GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
+  GoogleMLKit: b1eee21a41c57704fe72483b15c85cb2c0cd7444
+  GoogleToolboxForMac: d1a2cbf009c453f4d6ded37c105e2f67a32206d8
+  GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
+  GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
+  MLImage: 0de5c6c2bf9e93b80ef752e2797f0836f03b58c0
+  MLKitCommon: 47d47b50a031d00db62f1b0efe5a1d8b09a3b2e6
+  MLKitNaturalLanguage: 498154f2461f97abb00eb161eb773670ffc46250
+  MLKitTranslate: fcb283a2cbaaa595e1cf1d3fedffcea2e97a1168
+  MLKitVision: 39a5a812db83c4a0794445088e567f3631c11961
+  nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
+  OrderedSet: e539b66b644ff081c73a262d24ad552a69be3a94
+  PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
+  SSZipArchive: 8a6ee5677c8e304bebc109e39cf0da91ccef22ea
+
+PODFILE CHECKSUM: 8d454061cb00f1949c11c83c49bb48d77d420c4f
+
+COCOAPODS: 1.16.2
