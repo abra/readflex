@@ -10,8 +10,8 @@ import 'preferences_storage.dart';
 /// snapshot on [stream] so [PreferencesScope] rebuilds listeners.
 ///
 /// Save failures are non-fatal — the in-memory value is kept and emitted
-/// so the current session stays consistent; the old value is restored on
-/// next launch.
+/// so the current session stays consistent. The next launch reads the last
+/// successfully persisted snapshot, which may come from a later update.
 class PreferencesService {
   PreferencesService._(this._repository, this._current);
 
@@ -48,9 +48,8 @@ class PreferencesService {
     return PreferencesService._(repository, current);
   }
 
-  /// Broadcast stream of [Preferences] snapshots, one per successful
-  /// [update]. Does not replay the current value — combine with [current]
-  /// or an `initialData:` on [StreamBuilder].
+  /// Broadcast snapshots in persistence order, including failed save attempts.
+  /// Does not replay the current value; use [current] for the initial snapshot.
   Stream<Preferences> get stream => _controller.stream;
 
   /// Latest in-memory [Preferences] snapshot.
@@ -144,9 +143,9 @@ class PreferencesService {
     });
   }
 
-  /// Applies [transform] to the current snapshot, saves the result, and
-  /// emits it on [stream]. Persistence failures are logged, not thrown —
-  /// the new value still takes effect for this session.
+  /// Applies [transform] to [current] immediately, then queues save and stream
+  /// emission in update order. Persistence failures are logged, not thrown;
+  /// transform failures and updates after disposal still fail the future.
   Future<void> update(Preferences Function(Preferences) transform) {
     if (!_acceptsUpdates) {
       return Future<void>.error(
@@ -189,9 +188,8 @@ class PreferencesService {
     try {
       await _repository.save(snapshot);
     } catch (e, st) {
-      // Save failure is non-fatal: in-memory state is updated and emitted
-      // so the UI stays consistent for this session. On next launch the old
-      // value is restored from disk.
+      // Keep the session usable on disk failure. A later successful save may
+      // still persist this edit as part of its complete snapshot.
       developer.log(
         'Failed to persist preferences',
         error: e,

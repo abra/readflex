@@ -18,7 +18,7 @@ function createContentLock(root) {
             const properties = [[doc.body, 'height'], [root, 'position'], [root, 'top']]
             restore = properties.map(([node, name]) => ({ node, name,
                 value: node.style.getPropertyValue(name), priority: node.style.getPropertyPriority(name) }))
-            // Chromium scrolls native handles before JS scroll listeners run.
+            // Chromium can scroll selected content before JS scroll listeners run.
             // Pin the content without moving text nodes or changing scroll extent.
             const height = doc.documentElement.scrollHeight, y = win.scrollY
             doc.body.style.height = `${height}px`
@@ -79,7 +79,7 @@ export function installArticleSelection({ doc, root = doc.body,
     const updateContentLock = () => {
         if (!contentLock) return
         const value = range()
-        // With no native endpoint onscreen there is nothing to drag. Leaving
+        // With no endpoint onscreen there is nothing to drag there. Leaving
         // fixed content here can prevent Chromium from latching the next swipe.
         if (value && (dragging || [false, true].some(end => selectionEndpointRect(value, end, win)))) {
             contentLock.lock()

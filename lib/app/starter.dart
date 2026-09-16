@@ -11,14 +11,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:monitoring/monitoring.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:readflex/app/app_bootstrap.dart';
+import 'package:readflex/app/app_scopes.dart';
 import 'package:readflex/app/bloc/app_bloc_observer.dart';
 import 'package:readflex/app/bloc/bloc_transformer.dart';
 import 'package:readflex/app/composition.dart';
 import 'package:readflex/app/config/application_config.dart';
-import 'package:readflex/app/dependency_container.dart';
 import 'package:readflex/app/frame_timing_tracing.dart';
-import 'package:readflex/app/root_context.dart';
 import 'package:readflex/app/screens/initialization_failed_screen.dart';
 
 // Prints dirty widget rebuilds to the console during rebuild audits.
@@ -36,11 +35,8 @@ const _profileUserBuilds = bool.fromEnvironment(
 Future<void> starter() async {
   const config = ApplicationConfig();
 
-  final errorReporter = await createErrorReporter(config);
-
   final logger = createAppLogger(
     observers: [
-      ErrorReporterLogObserver(errorReporter),
       if (!kReleaseMode) const PrintingLogObserver(logLevel: LogLevel.trace),
     ],
   );
@@ -60,57 +56,17 @@ Future<void> starter() async {
     Bloc.observer = AppBlocObserver(logger);
     Bloc.transformer = SequentialBlocTransformer<Object?>().transform;
 
-    // Defined as a local function so it can pass itself as onRetryInitialization,
-    // allowing the error screen to re-run the full initialization without
-    // restarting the process.
-    Future<void> composeAndRun() async {
-      DependenciesContainer? dependencies;
-      try {
-        config.validate();
-        final compositionResult = await composeDependencies(
-          config: config,
-          logger: logger,
-          errorReporter: errorReporter,
-        );
-
-        final deps = compositionResult.dependencies;
-        dependencies = deps;
-
-        // Extract the Foliate and article-reader assets to cache so the local
-        // HTTP server can serve them as plain files.
-        // Re-extracts when the app version changes. In dev builds we always
-        // force re-extract so local edits to foliate-js / reader assets are
-        // picked up without bumping pubspec version.
-        final assetExtractor = AssetExtractor(
-          targetDirectory: deps.readerServer.assetsDirectory,
-          logger: logger,
-        );
-        final assetVersion =
-            '${deps.packageInfo.version}+${deps.packageInfo.buildNumber}';
-        await assetExtractor.extractAll(
-          version: assetVersion,
-          force: config.isDev,
-        );
-
-        // Start the local HTTP server for reader assets and source files.
-        await deps.readerServer.start();
-
-        runApp(RootContext(compositionResult: compositionResult));
-        dependencies = null;
-      } on Object catch (e, stackTrace) {
-        await dependencies?.disposeAfterBootstrapFailure();
-        // Catches both Exception and Error (e.g. OutOfMemoryError),
-        // ensuring no failure silently escapes during initialization.
-        logger.error('Initialization failed', error: e, stackTrace: stackTrace);
-        runApp(
-          InitializationFailedScreen(
-            error: e,
-            stackTrace: stackTrace,
-            onRetryInitialization: composeAndRun,
-          ),
-        );
-      }
-    }
+    final bootstrap = AppBootstrap(config: config, logger: logger);
+    Future<void> composeAndRun() => bootstrap.run(
+      onReady: (dependencies) => runApp(AppScopes(dependencies: dependencies)),
+      onFailure: (error, stackTrace) => runApp(
+        InitializationFailedScreen(
+          error: error,
+          stackTrace: stackTrace,
+          onRetryInitialization: composeAndRun,
+        ),
+      ),
+    );
 
     // Launch the application.
     await composeAndRun();

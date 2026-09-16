@@ -52,7 +52,7 @@ flowchart LR
 
 Readflex is shipped as one Flutter mobile app, but internally it has clear
 runtime containers: the Flutter UI/runtime, a local Drift database, app-owned
-files, a local HTTP reader server, and a WebView-based Foliate reader.
+files, a local HTTP reader server, and WebView-based book/article readers.
 
 ```mermaid
 flowchart TB
@@ -65,7 +65,7 @@ flowchart TB
     db["Drift SQLite database\nreadflex.db"]
     files["App documents files\nbooks, articles, reader assets"]
     server["Local ReaderServer\nlocalhost HTTP"]
-    webview["Reader WebView\nFoliate JS runtime"]
+    webview["Reader WebView\nFoliate books / vertical article HTML"]
   end
 
   cleaner["Article Cleaner API"]
@@ -97,7 +97,7 @@ flowchart TB
 | Local database | `packages/local_storage` | Drift schema, DAOs, migrations, storage rows. |
 | App files | App documents directory | Imported books, extracted article HTML and assets, reader assets. |
 | Local ReaderServer | `packages/reader_server` | Serves root-confined Foliate assets and source bytes through a token-scoped localhost URI, including range requests. |
-| Reader WebView | `packages/reader_webview` + `foliate-js` assets | Hosts Foliate, JS bridge, reader metadata/search/highlight callbacks. |
+| Reader WebView | `packages/reader_webview` + book/article assets | Hosts Foliate books or the vertical article shell, JS bridge, metadata/search/highlight callbacks. |
 
 ## Level 3: Components
 
@@ -107,25 +107,30 @@ flowchart TB
 flowchart TB
   main["main.dart"]
   starter["starter.dart"]
+  bootstrap["AppBootstrap"]
   composition["composition.dart"]
   container["DependenciesContainer"]
-  scopes["Root scopes\npreferences, connectivity, material"]
+  scopes["AppScopes\ndependencies, preferences, connectivity, lifecycle"]
+  app["ReadflexApp\nMaterial app, theme, locale"]
   router["routing.dart"]
 
   main --> starter
-  starter --> composition
+  starter --> bootstrap
+  bootstrap --> composition
   composition --> container
   starter --> scopes
-  scopes --> router
+  scopes --> app
+  app --> router
   router -->|"Injects dependencies into Screen/Sheet entry points"| features["Feature entry points"]
 ```
 
 | Component | Responsibility |
 |-----------|----------------|
-| `starter.dart` | Flutter binding, error zone, logging, bloc observer, tracing, asset extraction, reader server startup. |
+| `starter.dart` | Flutter binding, error zone, logging, bloc observer, tracing, app mounting and recovery screen. |
+| `app_bootstrap.dart` | Configuration validation, monitoring initialization/reuse, dependency creation, asset extraction, reader server startup and failed-attempt cleanup. |
 | `composition.dart` | Creates database, repositories, services, document directories, and the reader server. |
-| `dependency_container.dart` | Plain dependency holder plus best-effort dispose. |
-| `root_context.dart` / `material_context.dart` | Root scopes, Material app, router, lifecycle handling. |
+| `dependency_container.dart` / `resource_disposer.dart` | Explicit dependency holder and reverse-order, idempotent cleanup; rollback retains monitoring for retry. |
+| `app_scopes.dart` / `readflex_app.dart` / `app_lifecycle.dart` | Root scopes, Material app, retained router, service lifecycle handling. |
 | `routing.dart` | Navigation table, entry redirects, feature wiring, app-level callbacks. |
 
 ### Feature Components
@@ -208,7 +213,7 @@ sequenceDiagram
 
   User->>LibraryView: Tap source
   LibraryView->>Router: onSourcePressed(source)
-  Router->>ReaderScreen: push /reader/:sourceId with metadata
+  Router->>ReaderScreen: push /reader/:sourceId with post-open callback
   ReaderScreen->>ReaderBloc: ReaderSourceLoadRequested
   ReaderBloc->>Repositories: load source, highlights, bookmarks
   Repositories-->>ReaderBloc: domain models
@@ -250,7 +255,7 @@ sequenceDiagram
   ReaderWebViewBody->>ReaderBloc: ReaderBookPositionUpdated
   ReaderBloc->>ReaderBloc: normalize article/book progress and emit state
   ReaderBloc->>ReaderBloc: debounce pending persistence
-  ReaderBloc->>Repository: updateBook/updateArticle
+  ReaderBloc->>Repository: updateReadingPosition(id, cfi, progress)
 ```
 
 ## Architectural Invariants

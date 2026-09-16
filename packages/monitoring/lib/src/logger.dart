@@ -10,7 +10,8 @@ import 'package:flutter/foundation.dart';
 ///
 /// To log a message, use [trace], [debug], [info], [warn], [error], [fatal] methods.
 ///
-/// To destroy the logger and release all resources, use the [destroy] method.
+/// [destroy] stops dispatch and removes observers; their resources remain
+/// the responsibility of the code that owns them.
 /// {@endtemplate}
 base class Logger {
   /// Constructs an instance of [Logger].
@@ -132,7 +133,7 @@ base class Logger {
   bool get destroyed => _destroyed;
   var _destroyed = false;
 
-  /// Destroys the logger and releases all resources.
+  /// Stops logging and removes observers without closing their resources.
   ///
   /// After calling this method, the logger should not be used anymore.
   @mustCallSuper

@@ -58,7 +58,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
       }
 
       if (location == AppRoutes.library) {
-        return _redirectMainIfNeeded(deps);
+        return _redirectLibraryIfNeeded(deps);
       }
 
       return null;
@@ -68,143 +68,164 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
         path: AppRoutes.root,
         builder: (context, state) => const SizedBox.shrink(),
       ),
-      GoRoute(
-        path: AppRoutes.library,
-        builder: (context, state) {
-          final isOffline =
-              ConnectivityScope.of(context) == ConnectivityStatus.offline;
-          return LibraryScreen(
-            bookRepository: deps.bookRepository,
-            articleRepository: deps.articleRepository,
-            collectionRepository: deps.collectionRepository,
-            preferencesService: deps.preferencesService,
-            isOffline: isOffline,
-            onSourcePressed: (source, {onSourceOpened}) => context.push(
-              AppRoutes.reader(source.id),
-              extra: _ReaderRouteExtra(onSourceOpened: onSourceOpened),
-            ),
-            onAddPressed: ({required onImported}) async {
-              await showImportFlowSheet(
-                context,
-                isOffline: isOffline,
-                isOfflineStream: _isOfflineStream(deps),
-                onPickBookFile: pickBookFile,
-                onImportBook: (file, {onProgress}) async {
-                  final grant = await deps.readerServer
-                      .grantTemporaryBookAccess(file);
-                  try {
-                    final book = await importBookFile(
-                      sourceFile: file,
-                      bookRepository: deps.bookRepository,
-                      readerServerBaseUri: deps.readerServer.baseUri,
-                      logger: deps.logger,
-                      onProgress: onProgress,
-                    );
-                    if (book != null) onImported();
-                    return book;
-                  } finally {
-                    grant.revoke();
-                  }
-                },
-                onImportArticle: (url, {onStage}) async {
-                  final article = await _importArticleUrl(
-                    deps,
-                    url,
-                    onStage: onStage,
-                  );
-                  onImported();
-                  return article;
-                },
-                isBookImportTermsAccepted: () =>
-                    deps.preferencesService.hasAcceptedBookImportTerms(
-                      _currentBookImportTermsVersion,
-                    ),
-                acceptBookImportTerms: () =>
-                    deps.preferencesService.acceptBookImportTerms(
-                      _currentBookImportTermsVersion,
-                    ),
-                onOpenTerms: () => _openExternalUrl(_readflexTermsUrl),
-                onOpenPrivacy: () => _openExternalUrl(
-                  _readflexPrivacyUrl,
-                ),
-              );
-            },
-          );
-        },
+      _buildLibraryRoute(deps),
+      _buildReaderRoute(deps),
+      _buildOnboardingRoute(deps),
+    ],
+  );
+}
+
+GoRoute _buildLibraryRoute(DependenciesContainer deps) => GoRoute(
+  path: AppRoutes.library,
+  builder: (context, state) {
+    final isOffline =
+        ConnectivityScope.of(context) == ConnectivityStatus.offline;
+    return LibraryScreen(
+      bookRepository: deps.bookRepository,
+      articleRepository: deps.articleRepository,
+      collectionRepository: deps.collectionRepository,
+      preferencesService: deps.preferencesService,
+      isOffline: isOffline,
+      onSourcePressed: (source, {onSourceOpened}) => context.push(
+        AppRoutes.reader(source.id),
+        extra: ReaderRouteArguments(onSourceOpened: onSourceOpened),
       ),
-      GoRoute(
-        path: AppRoutes.readerPath,
-        // fullscreenDialog: true disables the iOS left-edge back-swipe
-        // gesture (CupertinoPageTransition gates that gesture on
-        // !fullscreenDialog). Without this the gesture conflicts with
-        // foliate-js page-turn swipes — a swipe at the left edge would
-        // pop the reader instead of turning the page.
-        pageBuilder: (context, state) {
-          final sourceId = state.pathParameters['sourceId']!;
-          final initialSource = _initialReaderSourceFromRoute(state);
-          return CustomTransitionPage(
-            key: state.pageKey,
-            fullscreenDialog: true,
-            transitionDuration: Duration.zero,
-            reverseTransitionDuration: Duration.zero,
-            transitionsBuilder: (_, _, _, child) => child,
-            child: _AndroidReaderSystemNavigationBarMode(
-              child: ReaderScreen(
-                sourceId: sourceId,
-                initialSource: initialSource,
-                serverBaseUri: deps.readerServer.baseUri,
-                bookRepository: deps.bookRepository,
-                articleRepository: deps.articleRepository,
-                highlightRepository: deps.highlightRepository,
-                preferencesService: deps.preferencesService,
-                screenControlService: deps.screenControlService,
-                onSourceOpened: _onSourceOpenedFromRoute(state),
-                onArticleTitlePressed: (url, title) {
-                  unawaited(_openArticleUrl(url));
-                },
-                onExternalLink: (url) {
-                  unawaited(_openExternalUrl(url));
-                },
-                initialSearchHistory:
-                    deps.preferencesService.current.readerSearchHistory,
-                onSearchHistoryChanged: (queries) {
-                  unawaited(
-                    deps.preferencesService.update(
-                      (prefs) => prefs.copyWith(readerSearchHistory: queries),
-                    ),
-                  );
-                },
-                textActions: [
-                  HighlightAction(
-                    highlightRepository: deps.highlightRepository,
-                  ),
-                  CopyTextAction(),
-                  TranslateAction(
-                    translationService: deps.contextualTranslationService,
-                    preferencesService: deps.preferencesService,
-                  ),
-                  DictionaryAction(
-                    systemDictionaryService: deps.systemDictionaryService,
-                    dictionaryLookupService: deps.dictionaryLookupService,
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+      onAddPressed: ({required onImported}) => _showImportSheet(
+        context,
+        deps,
+        isOffline: isOffline,
+        onImported: onImported,
       ),
-      GoRoute(
-        path: AppRoutes.onboarding,
-        builder: (context, state) => OnboardingScreen(
-          onComplete: () {
-            deps.preferencesService.update(
-              (p) => p.copyWith(onboardingCompleted: true),
-            );
-            context.go(AppRoutes.library);
+    );
+  },
+);
+
+GoRoute _buildReaderRoute(DependenciesContainer deps) => GoRoute(
+  path: AppRoutes.readerPath,
+  // fullscreenDialog: true disables the iOS left-edge back-swipe
+  // gesture (CupertinoPageTransition gates that gesture on
+  // !fullscreenDialog). Without this the gesture conflicts with
+  // foliate-js page-turn swipes — a swipe at the left edge would
+  // pop the reader instead of turning the page.
+  pageBuilder: (context, state) {
+    final sourceId = state.pathParameters['sourceId']!;
+    final arguments = switch (state.extra) {
+      ReaderRouteArguments arguments => arguments,
+      _ => const ReaderRouteArguments(),
+    };
+    final initialSource = arguments.initialSource;
+    final matchingSource = initialSource?.id == sourceId ? initialSource : null;
+    return CustomTransitionPage(
+      key: state.pageKey,
+      fullscreenDialog: true,
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
+      transitionsBuilder: (_, _, _, child) => child,
+      child: _withReaderSystemNavigationBarMode(
+        child: ReaderScreen(
+          sourceId: sourceId,
+          initialSource: matchingSource,
+          serverBaseUri: deps.readerServer.baseUri,
+          bookRepository: deps.bookRepository,
+          articleRepository: deps.articleRepository,
+          highlightRepository: deps.highlightRepository,
+          preferencesService: deps.preferencesService,
+          screenControlService: deps.screenControlService,
+          onSourceOpened: arguments.onSourceOpened,
+          onArticleTitlePressed: (url, title) {
+            unawaited(_openExternalUrl(url));
           },
+          onExternalLink: (url) {
+            unawaited(_openExternalUrl(url));
+          },
+          initialSearchHistory:
+              deps.preferencesService.current.readerSearchHistory,
+          onSearchHistoryChanged: (queries) {
+            unawaited(
+              deps.preferencesService.update(
+                (prefs) => prefs.copyWith(readerSearchHistory: queries),
+              ),
+            );
+          },
+          textActions: [
+            HighlightAction(
+              highlightRepository: deps.highlightRepository,
+            ),
+            CopyTextAction(),
+            TranslateAction(
+              translationService: deps.contextualTranslationService,
+              preferencesService: deps.preferencesService,
+            ),
+            DictionaryAction(
+              systemDictionaryService: deps.systemDictionaryService,
+              dictionaryLookupService: deps.dictionaryLookupService,
+            ),
+          ],
         ),
       ),
-    ],
+    );
+  },
+);
+
+GoRoute _buildOnboardingRoute(DependenciesContainer deps) => GoRoute(
+  path: AppRoutes.onboarding,
+  builder: (context, state) => OnboardingScreen(
+    onComplete: () {
+      deps.preferencesService.update(
+        (p) => p.copyWith(onboardingCompleted: true),
+      );
+      context.go(AppRoutes.library);
+    },
+  ),
+);
+
+Future<void> _showImportSheet(
+  BuildContext context,
+  DependenciesContainer deps, {
+  required bool isOffline,
+  required VoidCallback onImported,
+}) async {
+  await showImportFlowSheet(
+    context,
+    isOffline: isOffline,
+    isOfflineStream: _isOfflineStream(deps),
+    onPickBookFile: pickBookFile,
+    onImportBook: (file, {onProgress}) async {
+      final grant = await deps.readerServer.grantTemporaryBookAccess(file);
+      try {
+        final book = await importBookFile(
+          sourceFile: file,
+          bookRepository: deps.bookRepository,
+          readerServerBaseUri: deps.readerServer.baseUri,
+          logger: deps.logger,
+          onProgress: onProgress,
+        );
+        if (book != null) onImported();
+        return book;
+      } finally {
+        grant.revoke();
+      }
+    },
+    onImportArticle: (url, {onStage}) async {
+      final article = await _importArticleUrl(
+        deps,
+        url,
+        onStage: onStage,
+      );
+      onImported();
+      return article;
+    },
+    isBookImportTermsAccepted: () =>
+        deps.preferencesService.hasAcceptedBookImportTerms(
+          _currentBookImportTermsVersion,
+        ),
+    acceptBookImportTerms: () => deps.preferencesService.acceptBookImportTerms(
+      _currentBookImportTermsVersion,
+    ),
+    onOpenTerms: () => _openExternalUrl(_readflexTermsUrl),
+    onOpenPrivacy: () => _openExternalUrl(
+      _readflexPrivacyUrl,
+    ),
   );
 }
 
@@ -220,19 +241,10 @@ Stream<bool> _isOfflineStream(DependenciesContainer deps) {
 /// three-button navigation, hiding only the bottom system overlay keeps those
 /// buttons from covering the reading area while leaving the app status bar
 /// policy unchanged.
-class _AndroidReaderSystemNavigationBarMode extends StatelessWidget {
-  const _AndroidReaderSystemNavigationBarMode({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    if (defaultTargetPlatform != TargetPlatform.android) return child;
-    return AppBottomSystemOverlayVisibility(visible: false, child: child);
-  }
+Widget _withReaderSystemNavigationBarMode({required Widget child}) {
+  if (defaultTargetPlatform != TargetPlatform.android) return child;
+  return AppBottomSystemOverlayVisibility(visible: false, child: child);
 }
-
-Future<void> _openArticleUrl(String rawUrl) => _openExternalUrl(rawUrl);
 
 /// Opens an external HTTP(S) URL without letting launcher failures affect app
 /// navigation or reader state.
@@ -247,36 +259,13 @@ Future<void> _openExternalUrl(String rawUrl) async {
   }
 }
 
-/// GoRouter payload for opening the reader with a post-open refresh callback
-/// from the previous screen.
-class _ReaderRouteExtra {
-  const _ReaderRouteExtra({this.onSourceOpened});
+/// Optional reader arguments. The path ID remains authoritative, including
+/// when opening a deep link without any payload.
+class ReaderRouteArguments {
+  const ReaderRouteArguments({this.initialSource, this.onSourceOpened});
 
+  final Book? initialSource;
   final VoidCallback? onSourceOpened;
-}
-
-/// Returns a preloaded reader source only when the route payload matches the
-/// source id in the path.
-Book? _initialReaderSourceFromRoute(GoRouterState state) {
-  final sourceId = state.pathParameters['sourceId'];
-  final extra = state.extra;
-  if (sourceId == null) return null;
-
-  final source = switch (extra) {
-    Book source => source,
-    _ => null,
-  };
-  if (source?.id != sourceId) return null;
-  return source;
-}
-
-/// Returns the callback used by the previous screen to refresh after a real
-/// reader open event.
-VoidCallback? _onSourceOpenedFromRoute(GoRouterState state) {
-  return switch (state.extra) {
-    _ReaderRouteExtra(:final onSourceOpened) => onSourceOpened,
-    _ => null,
-  };
 }
 
 /// Adapts the import sheet contract to article extraction and storage services.
@@ -298,11 +287,11 @@ Future<Article?> _importArticleUrl(
 
 /// Resolves the root route into the first concrete screen the user should see.
 String _resolveEntryRoute(DependenciesContainer deps) =>
-    _redirectMainIfNeeded(deps) ?? AppRoutes.library;
+    _redirectLibraryIfNeeded(deps) ?? AppRoutes.library;
 
 /// Applies first-run redirects without rechecking storage on every normal route
 /// transition.
-String? _redirectMainIfNeeded(DependenciesContainer deps) {
+String? _redirectLibraryIfNeeded(DependenciesContainer deps) {
   final prefs = deps.preferencesService.current;
 
   if (!prefs.onboardingCompleted) {

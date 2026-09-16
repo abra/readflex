@@ -46,10 +46,10 @@ class ReaderSelectionState extends Equatable {
   /// Same excerpt with the normalized lexical range wrapped in [[...]].
   final String? normalizedMarkedContextText;
 
-  /// CFI range of the selected text.
+  /// Exact selection anchor (EPUB CFI or serialized article HTML position).
   final String? cfiRange;
 
-  /// CFI range of the normalized lexical selection.
+  /// Anchor of the normalized lexical selection.
   final String? normalizedCfiRange;
 
   /// Normalized viewport rectangle used to anchor reader selection popups.

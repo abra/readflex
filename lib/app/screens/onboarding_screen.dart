@@ -6,7 +6,7 @@ import 'onboarding_page_data.dart';
 
 /// Onboarding intro shown on the first app launch.
 ///
-/// On completion, marks first launch as done and calls [onComplete].
+/// The caller persists completion through [onComplete].
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({required this.onComplete, super.key});
 
@@ -20,8 +20,6 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _controller = PageController();
   int _currentPage = 0;
-
-  bool get _isLastPage => _currentPage == onboardingPageCount - 1;
 
   @override
   void dispose() {
@@ -47,6 +45,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final colorScheme = context.colors;
     final l10n = context.l10n;
     final pages = onboardingPages(l10n);
+    final isLastPage = _currentPage == pages.length - 1;
 
     return Scaffold(
       body: SafeArea(
@@ -107,9 +106,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: _isLastPage ? _complete : _next,
+                  onPressed: isLastPage ? _complete : _next,
                   child: AppButtonLabel(
-                    _isLastPage ? l10n.appGetStarted : l10n.appNext,
+                    isLastPage ? l10n.appGetStarted : l10n.appNext,
                   ),
                 ),
               ),

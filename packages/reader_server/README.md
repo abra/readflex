@@ -20,7 +20,9 @@ app launch and stopped on dispose.
 | `GET /r/<token>/article/<encoded-dir>/<path>` | Files inside `articlesDirectory` and the selected article directory. |
 | `GET /r/<token>/assets/<path>`                | Files inside `assetsDirectory` (foliate-js etc.). |
 
-All other methods return `405`, unknown or unauthorized routes return `404`.
+All three route families also accept `HEAD`, returning file headers without a
+body so the reader can probe file size and type. Other methods return `405`;
+unknown or unauthorized routes return `404` for supported methods.
 Every file is resolved through symlinks and checked against its configured
 root before it is opened. Traversal, absolute-path substitution, and symlink
 escapes are rejected.

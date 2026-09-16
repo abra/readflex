@@ -61,13 +61,16 @@ The root package (`readflex`) is the composition and integration layer.
 | Path | Responsibility |
 |------|----------------|
 | `lib/main.dart` | Calls `starter()` only. |
-| `lib/app/starter.dart` | Flutter binding, error zone, bloc observer, build/frame tracing, asset extraction, reader server startup, `runApp`. |
+| `lib/app/starter.dart` | Flutter binding and `runApp` in the same error zone, bloc observer, build/frame tracing, recovery screen. |
+| `lib/app/app_bootstrap.dart` | Validates configuration before monitoring, retains monitoring across retries, prepares reader assets/server, transfers ownership to the running app. |
 | `lib/app/config` | Compile-time/runtime configuration via `ApplicationConfig` and environment helpers. |
 | `lib/app/composition.dart` | Creates the database, repositories, services, filesystem directories, and app-wide dependencies. |
 | `lib/app/dependency_container.dart` | Dependency holder plus ordered, idempotent resource disposal and bootstrap rollback. |
+| `lib/app/resource_disposer.dart` | Reverse-order cleanup registry; retains externally owned monitoring during rollback. |
 | `lib/app/dependency_scope.dart` | Inherited scope for app-wide dependencies. |
-| `lib/app/root_context.dart` | Mounts dependency, preference, connectivity, and material contexts. |
-| `lib/app/material_context.dart` | Material app setup and reader-server lifecycle handling on resume. |
+| `lib/app/app_scopes.dart` | Mounts dependency, preference, connectivity, and lifecycle scopes. |
+| `lib/app/readflex_app.dart` | Material app, theme/locale and a router retained across preference changes. |
+| `lib/app/app_lifecycle.dart` | Restores a stopped reader server on iOS resume; best-effort resource disposal on detach, not pause or widget unmount. |
 | `lib/app/routing.dart` | GoRouter route table, route guards, navigation callbacks, feature wiring. |
 | `lib/app/screens` | App-only screens that are not reusable feature packages. |
 
@@ -77,6 +80,30 @@ tree, and passed explicitly into feature entry points from `routing.dart`.
 Owned resources register cleanup as they are created and close in reverse
 order. A partially failed bootstrap rolls back only resources created by that
 attempt; the logger and error reporter remain available for retry diagnostics.
+
+`AppBootstrap.run` owns each attempt until its synchronous `onReady` callback
+returns. Dependency construction rolls back its partial resources internally;
+asset preparation or synchronous `onReady` failures roll back the completed
+container. Later Flutter build errors use the installed error handlers; they
+are not caught as a failed bootstrap attempt.
+Configuration and monitoring failures use the same recovery path. The running
+container closes monitoring on final disposal. Composition timing stays in logs,
+not in the widget tree. Tests substitute bootstrap factories rather than opening
+production storage or contacting a backend.
+
+Lifecycle resume requests share one in-flight reader-server restart. Detach
+waits for that restart before closing resources and prevents subsequent restarts
+on the disposed runtime. This preserves the existing terminal-detach policy;
+an embedding that reattaches a disposed runtime would need a fresh bootstrap.
+
+Reader navigation uses `ReaderRouteArguments` for both a preloaded book and the
+post-open callback. The URL source ID is authoritative; a mismatched preloaded
+book is ignored, and deep links need no payload. Route builders wire features;
+the import-sheet adapter retains temporary file access until import finishes.
+
+`AppBlocObserver` disables event/transition formatting in release, before any
+state `toString()` calls. Error reporting remains enabled. Test-only partial
+configuration/container doubles live in `test/support/app_fakes.dart`.
 
 ## Dependency Flow
 

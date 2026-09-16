@@ -22,7 +22,9 @@ wrapped into `StorageException` (from `domain_models`) before surfacing.
 | `deleteHighlight(id)`                                         | Delete by id                           |
 | `deleteHighlightsBySource(sourceId)`                          | Cascade delete when a source is removed|
 
-Text highlights are anchored by `cfiRange` (via foliate-js). Comic/image-page
+The `cfiRange` field holds an EPUB CFI for books or a serialized
+`readflex-html-position:` anchor for articles; it is not always an EPUB CFI.
+Comic/image-page
 highlights are anchored by a zero-based `pageIndex` plus normalized rectangle
 coordinates. Both kinds share optional `note` and `HighlightColor`.
 

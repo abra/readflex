@@ -1,8 +1,7 @@
 // InheritedWidget that exposes DependenciesContainer to the widget tree.
 //
-// Avoids prop-drilling: any widget in the tree can call
-// DependenciesScope.of(context) to access a dependency without
-// it being passed through every intermediate constructor.
+// Used by app-shell composition and routing. Feature Views consume their
+// Bloc/Cubit and UI callbacks, not this scope or its services directly.
 
 import 'package:flutter/widgets.dart';
 import 'package:readflex/app/dependency_container.dart';

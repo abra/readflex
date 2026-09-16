@@ -1,8 +1,8 @@
 // Dependency assembly: creates and wires all application-wide dependencies.
 //
 // Separates "what to create" from "how to launch" (starter.dart).
-// composeDependencies() can be called independently in tests
-// with substituted implementations.
+// Uses concrete platform/storage implementations; bootstrap tests substitute
+// this factory as a whole rather than initializing production resources.
 
 import 'dart:io';
 
@@ -52,12 +52,8 @@ Future<ErrorReportingService> createErrorReporter(
   return const NoopErrorReporter();
 }
 
-/// A place where Application-Wide dependencies are initialized.
-///
-/// Application-Wide dependencies are dependencies that have a global scope,
-/// used in the entire application and have a lifetime that is the same as the application.
-/// Composes dependencies and returns the result of composition.
-Future<CompositionResult> composeDependencies({
+/// Creates dependencies, rolling back partial construction on failure.
+Future<DependenciesContainer> composeDependencies({
   required ApplicationConfig config,
   required Logger logger,
   required ErrorReportingService errorReporter,
@@ -66,7 +62,7 @@ Future<CompositionResult> composeDependencies({
 
   logger.info('Initializing dependencies...');
 
-  final dependencies = await createDependenciesContainer(
+  final dependencies = await _createDependenciesContainer(
     config,
     logger,
     errorReporter,
@@ -77,35 +73,17 @@ Future<CompositionResult> composeDependencies({
     'Dependencies initialized successfully in ${stopwatch.elapsedMilliseconds} ms.',
   );
 
-  return CompositionResult(
-    dependencies: dependencies,
-    millisecondsSpent: stopwatch.elapsedMilliseconds,
-  );
-}
-
-class CompositionResult {
-  const CompositionResult({
-    required this.dependencies,
-    required this.millisecondsSpent,
-  });
-
-  final DependenciesContainer dependencies;
-  final int millisecondsSpent;
-
-  @override
-  String toString() =>
-      'CompositionResult('
-      'dependencies: $dependencies, '
-      'millisecondsSpent: $millisecondsSpent'
-      ')';
+  return dependencies;
 }
 
 /// Creates the initialized [DependenciesContainer].
-Future<DependenciesContainer> createDependenciesContainer(
+Future<DependenciesContainer> _createDependenciesContainer(
   ApplicationConfig config,
   Logger logger,
   ErrorReportingService errorReporter,
 ) async {
+  // Monitoring belongs to the retry loop until startup succeeds. Only the
+  // running app closes it; failed attempts release their own resources.
   final resources = ResourceDisposer(logger: logger)
     ..add('logger.destroy', logger.destroy, disposeOnRollback: false)
     ..add(

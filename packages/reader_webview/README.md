@@ -15,7 +15,7 @@ can serve them over localhost.
 |--------------------------|-----------|----------------------------------------------------------------------|
 | `BookReaderWebView`      | Widget    | Loads foliate-js `index.html`, which fetches the book file from `/book/<path>`. Emits position, selection, search, highlight-tap and bookmark events; accepts imperative calls (goToCfi, pageLeft/pageRight, nextPage, changeStyle, addAnnotation, toggleBookmark). |
 | `ArticleHtmlReaderWebView` | Widget  | Loads the vertical article shell, fetches saved `content.html` from `/article/<dir>/content.html`, emits progress/TOC/document-feature/search/bookmark events, and accepts `goToPercent`, `goToHref`, `goToCfi`, `changeStyle`, `startSearch`, `cancelSearch`, `clearSearch`, `toggleBookmarkHere`, and `setArticleBookmarks`. |
-| `AssetExtractor`         | Utility   | Copies bundled foliate-js assets from rootBundle to a target directory. Version-gated via app version plus reader asset revision: unchanged version skips, changed version re-writes everything. |
+| `AssetExtractor`         | Utility   | Copies book/article reader assets and reading fonts from rootBundle. Version/build plus asset revision controls replacement; matching existing files are skipped and missing files are retried. DEV bootstrap forces extraction. |
 | `BookMetadataExtractor`  | Utility   | Spawns a timeout-bounded `HeadlessInAppWebView` running foliate-js in import mode to extract `{title, author, description, coverData, coverMimeType}` from any supported format. Malformed bridge payloads fail promptly; an invalid optional cover does not discard valid metadata. Used by the import flow. |
 | Bridge types             | Models    | `BookPosition`, `ReaderSelection`, `ReaderImageAreaSelection`, `ReaderHighlight`, `ReaderBookmark`, `ReaderBookmarkChange`, `FoliateStyle` — DTOs exchanged with JS. |
 
@@ -23,13 +23,16 @@ can serve them over localhost.
 
 ```
 JS -> Flutter:  onLoadEnd, onRelocated/onArticlePositionChanged,
-                onSelectionEnd, onImageAreaSelected, onSelectionCleared,
+                onSelectionEnd, onSelectionInteractionChanged,
+                onImageAreaSelected, onSelectionCleared,
                 onAnnotationClick, onExternalLink, onClick, onSearch,
                 handleBookmark, onReaderLoadFailed, onJsError
 Flutter -> JS:  goToCfi, goToBookmark, goToSectionIndex, goToPercent, goToHref,
                 pageLeft, pageRight, nextPage, prevPage, changeStyle,
                 addAnnotation, removeAnnotation, toggleBookmarkHere,
                 startSearch, cancelSearch, clearSearch, setArticleBookmarks,
+                getCurrentTextSelection, clearSelection, clearSelectionAfterTextAction,
+                showSelectionHighlightPreview, clearSelectionHighlightPreview,
                 showImageAreaSelectionPreview, clearImageAreaSelectionPreview
 ```
 
@@ -147,7 +150,9 @@ There is no per-selection scroll listener or periodic polling. Continuous
 Scroll is unaffected. A native Range cannot span different spine documents:
 continuation stops at the current chapter boundary without unloading it.
 
-On iOS handles remain native. On Android `readflex_selection_handles.js` owns
+On iOS visible text endpoints use native handles; offscreen article endpoints
+can use the temporary continuation controls described below.
+On Android `readflex_selection_handles.js` owns
 the controls from the initial word selection through extension and page
 continuation, including continuous-scroll and text-bearing fixed layouts.
 There is no handoff between OEM and reader handle shapes. Their 48px touch targets,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/library_feature.dart';
 import 'package:readflex/app/screens/onboarding_screen.dart';
+import 'package:readflex/app/screens/onboarding_page_data.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import '../support/ui_test_app.dart';
@@ -28,8 +29,14 @@ void main() {
       if (skip) {
         await tapUi(tester, find.text('Skip'));
       } else {
-        await tapUi(tester, find.text('Next'));
-        await tapUi(tester, find.text('Next'));
+        final strings = ReadflexLocalizations.of(
+          tester.element(find.byType(OnboardingScreen)),
+        )!;
+        final pages = onboardingPages(strings);
+        for (var page = 1; page < pages.length; page++) {
+          expect(find.text(strings.appGetStarted), findsNothing);
+          await tapUi(tester, find.text(strings.appNext));
+        }
         await tapUi(tester, find.text('Get Started'));
       }
       await waitForUi(
@@ -61,7 +68,8 @@ void main() {
         tester.element(find.byType(OnboardingScreen)),
       )!;
       var scrolled = false;
-      for (var page = 0; page < 3; page++) {
+      final pages = onboardingPages(strings);
+      for (var page = 0; page < pages.length; page++) {
         await expectUiGolden(tester, profile, 'onboarding-$page');
         if (profile == VisualProfile.largeText) {
           final content = find.byType(SingleChildScrollView).hitTestable();
@@ -78,7 +86,7 @@ void main() {
           }
         }
         final next = find.text(
-          page == 2 ? strings.appGetStarted : strings.appNext,
+          page == pages.length - 1 ? strings.appGetStarted : strings.appNext,
         );
         expect(next.hitTestable(), findsOneWidget);
         await tapUi(

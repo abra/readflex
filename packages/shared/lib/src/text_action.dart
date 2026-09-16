@@ -3,8 +3,8 @@ import 'package:domain_models/domain_models.dart'
 import 'package:flutter/widgets.dart';
 
 /// Payload delivered to a [TextAction] when the user selects text in the
-/// reader — the selected string plus a CFI range for the action to save an
-/// anchor back to the source.
+/// reader: selected text plus an opaque anchor back to the source. Books use
+/// EPUB CFI; articles use a serialized `readflex-html-position:` anchor.
 ///
 /// [contextText] is the surrounding sentence/paragraph excerpt supplied by
 /// the reader runtime for context-aware actions. [progress] and [chapterTitle]
@@ -84,10 +84,10 @@ class TextSelectionContext {
         : normalized;
   }
 
-  /// CFI range for the text-reader selection.
+  /// Exact selection anchor: EPUB CFI or serialized article HTML position.
   final String? cfiRange;
 
-  /// CFI range for [normalizedSelectedText] when the reader expanded a partial
+  /// Anchor for [normalizedSelectedText] when the reader expanded a partial
   /// selection to complete lexical boundaries.
   final String? normalizedCfiRange;
 

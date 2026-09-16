@@ -1,21 +1,17 @@
-// Global BLoC observer: logs every event, state transition and error
-// across all blocs and cubits in the application.
-//
-// Registered once in starter.dart via Bloc.observer so that individual
-// blocs do not need their own logging logic.
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:readflex/utils/string_extension.dart';
 
 const _stateLogLimit = 300;
-const _newStateLogLimit = 150;
 const _eventLogLimit = 200;
 
-/// [BlocObserver] which logs all bloc state changes, errors and events.
+/// Optional Bloc event/transition diagnostics and unconditional Bloc/Cubit errors.
 class AppBlocObserver extends BlocObserver {
   /// Creates an instance of [AppBlocObserver] with the provided [logger].
-  const AppBlocObserver(this.logger);
+  const AppBlocObserver(this.logger, {this.logActivity = !kReleaseMode});
+
+  final bool logActivity;
 
   /// Logger used to log information during bloc transitions.
   final Logger logger;
@@ -25,6 +21,8 @@ class AppBlocObserver extends BlocObserver {
     Bloc<Object?, Object?> bloc,
     Transition<Object?, Object?> transition,
   ) {
+    super.onTransition(bloc, transition);
+    if (!logActivity) return;
     final currentState = _formatState(transition.currentState, _stateLogLimit);
     final nextState = _formatState(transition.nextState, _stateLogLimit);
     final logMessage = StringBuffer()
@@ -33,24 +31,21 @@ class AppBlocObserver extends BlocObserver {
       ..writeln(
         'Transition: $currentState =>\n'
         '           $nextState',
-      )
-      ..write(
-        'New State: ${_formatState(transition.nextState, _newStateLogLimit)}\n',
       );
 
     logger.info(logMessage.toString());
-    super.onTransition(bloc, transition);
   }
 
   @override
   void onEvent(Bloc<Object?, Object?> bloc, Object? event) {
+    super.onEvent(bloc, event);
+    if (!logActivity) return;
     final logMessage = StringBuffer()
       ..writeln('Bloc: ${bloc.runtimeType}')
       ..writeln('Event: ${event.runtimeType}')
       ..write('Details: ${_formatState(event, _eventLogLimit)}');
 
     logger.info(logMessage.toString());
-    super.onEvent(bloc, event);
   }
 
   @override

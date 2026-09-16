@@ -1,8 +1,6 @@
 // Fallback screen shown when app initialization throws an error.
 //
-// Displayed instead of a blank screen or a crash when composeDependencies()
-// fails. The retry button re-invokes composeAndRun() without restarting
-// the process.
+// The bootstrap callback owns recovery and replacement of the app tree.
 
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
@@ -37,9 +35,24 @@ class _InitializationFailedScreenState
   }
 
   Future<void> _retryInitialization() async {
+    if (_inProgress.value) return;
     _inProgress.value = true;
-    await widget.onRetryInitialization?.call();
-    _inProgress.value = false;
+    try {
+      await widget.onRetryInitialization?.call();
+    } on Object catch (error, stackTrace) {
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stackTrace,
+          library: 'readflex',
+          context: ErrorDescription(
+            'while retrying application initialization',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) _inProgress.value = false;
+    }
   }
 
   @override

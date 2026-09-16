@@ -8,9 +8,9 @@ import 'package:path/path.dart' as p;
 /// Extracts reader WebView assets from Flutter's rootBundle to a directory
 /// on the filesystem where the HTTP server can serve them.
 ///
-/// Assets bundled in a Flutter package are only accessible via rootBundle —
-/// dart:io HttpServer cannot read them. This utility copies them once to
-/// a cache directory at app startup.
+/// HttpServer needs filesystem paths, not Flutter bundle keys. Startup copies
+/// book/article assets and fonts into the configured reader-assets directory;
+/// version/revision changes or force mode replace existing files.
 class AssetExtractor {
   AssetExtractor({required this.targetDirectory, this.logger});
 
@@ -30,7 +30,7 @@ class AssetExtractor {
   static String extractionVersionFor(String version) =>
       '$version|$assetRevision';
 
-  /// All asset paths relative to the package's `assets/` directory.
+  /// Asset paths relative to the package root, including the `assets/` prefix.
   /// The rootBundle key includes the `packages/reader_webview/` prefix.
   static const _assetPaths = [
     // vertical HTML article reader entry

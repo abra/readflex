@@ -37,6 +37,20 @@ Remote translation may use `source_language: "auto"` and
 `source_language_hint`. Offline translation requires a concrete source language
 because ML Kit does not auto-detect inside the translation API.
 
+Fallback is limited to typed network/unavailable failures and HTTP 408, 429,
+or 5xx responses. Authentication/validation failures and malformed backend
+responses do not trigger it. A concrete source may come from an explicit
+language or the request's language hint; an unknown source requires user input.
+Both language models must already be downloaded, or the caller must explicitly
+allow a download. Downloading requires connectivity, so offline translation is
+not guaranteed on a fresh installation. The adapter currently exposes the ten
+app languages, not every language supported by ML Kit.
+
+The default in-memory LRU holds up to 128 results for 30 minutes from each
+write. Remote and offline results share this cache; a cached offline answer
+does not automatically refresh from the backend when connectivity returns.
+Cache hits are rebound to the current request ID. Nothing is persisted to disk.
+
 The remote client treats the backend payload as an untrusted versioned
 contract. It requires the supported schema version and enums, verifies that the
 response `request_id` and mode match the request, and maps malformed responses

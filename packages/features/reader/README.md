@@ -23,6 +23,7 @@ class ReaderScreen extends StatelessWidget {
     ValueChanged<List<String>>? onSearchHistoryChanged,
     VoidCallback? onSourceOpened,
     void Function(String url, String title)? onArticleTitlePressed,
+    ValueChanged<String>? onExternalLink,
   });
 }
 ```
@@ -36,6 +37,8 @@ when a book source was already loaded by the previous route. For articles,
 `onArticleTitlePressed` lets the composition root open the original article URL
 from the top reader chrome without coupling the reader package to
 `url_launcher`.
+`onExternalLink` separately forwards book links to the app shell's validated
+HTTP(S) launcher.
 
 ## TextAction plugin system
 
@@ -154,8 +157,9 @@ load cannot erase a renderer failure.
   selection remains specific to the foliate comic/fixed-layout path.
 - Reader theme (`ReaderThemeData`, font preset, layout preset) is resolved
   from `ReaderAppearanceCubit` and passed as CSS / URL params to the WebView; the
-  WebView body itself is rebuilt only on preference changes, never on selection
-  or reminder state.
+  WebView bodies subscribe to the document, readiness, appearance and annotation
+  state they need, not to each selection-menu update. Rebuilding a body does not
+  recreate its keyed WebView unless source/recovery identity changes.
 
 ## Dependencies
 

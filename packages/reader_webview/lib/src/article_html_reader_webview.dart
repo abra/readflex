@@ -541,7 +541,7 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
   }
 
   /// Reads the live DOM range so actions cannot observe a stale bridge event
-  /// immediately after the user resizes the native selection handles.
+  /// immediately after the user resizes the selection handles.
   Future<ReaderSelection?> currentTextSelection() =>
       readCurrentReaderTextSelection(_controller);
 

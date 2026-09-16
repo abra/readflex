@@ -67,7 +67,7 @@ final class SentryGlitchTipReporterClient implements GlitchTipReporterClient {
   Future<void> close() => Sentry.close();
 }
 
-/// Production error reporter for self-hosted GlitchTip.
+/// Error reporter for a configured Sentry-compatible GlitchTip endpoint.
 final class GlitchTipErrorReporter implements ErrorReportingService {
   GlitchTipErrorReporter({
     required String dsn,

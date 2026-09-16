@@ -1,9 +1,7 @@
 // Compile-time configuration read from --dart-define flags.
 //
-// Centralizes all String.fromEnvironment() calls so that missing flags
-// are caught in one place rather than scattered across the codebase.
-// TestConfig uses noSuchMethod to fail loudly when a test accesses
-// a config value it did not provide.
+// Owns backend/environment validation and monitoring settings. Opt-in tracing
+// flags remain local to the code that consumes them.
 
 import 'package:readflex/app/config/environment.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -44,8 +42,8 @@ class ApplicationConfig {
 
   /// Traces sample rate for GlitchTip performance events.
   ///
-  /// Defaults to `0` so production builds send crash/error events only unless
-  /// performance monitoring is explicitly enabled.
+  /// Defaults to `0`. This controls sampling, not instrumentation: the app
+  /// must create transactions before the SDK can send performance events.
   double get glitchTipTracesSampleRate {
     const configured = String.fromEnvironment('GLITCHTIP_TRACES_SAMPLE_RATE');
     final value = configured.trim();
@@ -201,21 +199,4 @@ bool _isLoopbackHost(String host) {
       normalized == '::1' ||
       normalized == '0:0:0:0:0:0:0:1' ||
       normalized.startsWith('127.');
-}
-
-/// A special version of [ApplicationConfig] that is used in tests.
-///
-/// In order to use [ApplicationConfig] in tests, it is needed to
-/// extend this class and provide the dependencies that are needed for the test.
-base class TestConfig implements ApplicationConfig {
-  const TestConfig();
-
-  @override
-  Object noSuchMethod(Invocation invocation) {
-    throw UnimplementedError(
-      'The test tries to access ${invocation.memberName} (${invocation.runtimeType}) config option, but '
-      'it was not provided. Please provide the option in the test. '
-      'You can do it by extending this class and providing the option.',
-    );
-  }
 }

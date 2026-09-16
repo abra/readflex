@@ -1,8 +1,9 @@
 # highlight
 
 Reader plug-in for saving text highlights, plus a reusable bottom sheet with a
-five-color picker, optional note, and save action. The reader feature itself
-knows nothing about highlight persistence.
+five-color picker, optional note, and save action. New text-highlight creation
+uses the shared action contract; Reader separately owns saved-highlight edits
+and image-area highlights through its injected repository.
 
 ## Public API
 
@@ -23,7 +24,11 @@ Future<void> showHighlightSheet(
 `HighlightAction` is wired into the reader's `List<TextAction>` in the
 composition root (`routing.dart`). It implements `ColorHighlightTextAction` so
 the reader can show its compact color row without importing this feature.
-Choosing a color saves immediately; invoking the generic action uses yellow.
+For a new selection, choosing a color only changes the draft/preview. Pressing
+Highlight calls `onExecuteWithColor` and persists the exact range with that
+color, replacing fully contained highlights when supplied by the reader.
+Dismissing the popup does not save. Direct `onExecute` calls default to yellow.
+Changing the color of an already saved highlight is a separate Reader edit.
 The localized label comes from `labelFor(context)` and the icon is
 `AppIcons.highlight`.
 

@@ -8,7 +8,7 @@ import 'mappers/highlight_to_storage.dart';
 
 const _uuid = Uuid();
 
-/// Domain repository for text highlights.
+/// Domain repository for text and image-area highlights.
 ///
 /// Wraps [HighlightsDao] from `local_storage` and turns low-level DB errors
 /// into [StorageException]. Matching FSRS review rows are co-deleted here in

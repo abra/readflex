@@ -4,9 +4,9 @@ Cross-feature contracts. Currently hosts the `TextAction` plugin contract
 that lets the reader surface Highlight, Translate, and Define without knowing
 anything about their persistence or service implementations.
 
-This is the only contract package in the project that depends on Flutter —
+These cross-feature contracts intentionally depend on Flutter:
 `TextAction.icon` is an `IconData`, and actions are executed with a
-`BuildContext`.
+`BuildContext`. Domain data without UI dependencies belongs in `domain_models`.
 
 ---
 
@@ -86,7 +86,16 @@ class HighlightAction extends ColorHighlightTextAction {
     BuildContext context,
     TextSelectionContext selection,
     HighlightColor color,
-  ) => highlightRepository.addHighlight(/* selection anchor + color */);
+  ) async {
+    await highlightRepository.addHighlight(
+      sourceId: selection.sourceId,
+      sourceType: selection.sourceType,
+      text: selection.selectedText,
+      cfiRange: selection.cfiRange,
+      color: color,
+      replaceHighlightIds: selection.containedHighlightIds,
+    );
+  }
 }
 ```
 

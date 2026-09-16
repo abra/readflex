@@ -35,11 +35,15 @@ Start here:
 
 ## Development
 
-Install dependencies:
+Use the Flutter SDK pinned in `.fvmrc` through FVM. Install dependencies:
 
 ```sh
 make get
+make reader-browser-setup
 ```
+
+Browser tests require Node.js 20+ and the pinned Playwright engines. Android
+builds also need the project's JDK/SDK setup; iOS builds need Xcode and CocoaPods.
 
 Analyze:
 
@@ -111,7 +115,7 @@ Common dart-defines:
 | `CONTEXTUAL_TRANSLATION_BASE_URL` | Contextual translation backend base URL; defaults to `ARTICLE_CLEANER_BASE_URL` |
 | `DICTIONARY_BASE_URL` | Readflex Dictionary backend base URL; defaults to `ARTICLE_CLEANER_BASE_URL` |
 | `GLITCHTIP_DSN` | Optional GlitchTip DSN for Sentry-compatible error reporting |
-| `GLITCHTIP_TRACES_SAMPLE_RATE` | Optional GlitchTip performance trace sampling rate; defaults to `0` |
+| `GLITCHTIP_TRACES_SAMPLE_RATE` | Sampling rate for explicitly created Sentry transactions; defaults to `0`, does not add instrumentation |
 
 Static API credentials are allowed only in DEV. Production requests must use a
 short-lived server-issued credential; implementing that backend authentication
@@ -122,6 +126,11 @@ Android release builds require an upload keystore. Copy
 provide the documented `READFLEX_ANDROID_*` variables in CI. `make build`
 produces the signed AAB used by Google Play; `make build-apk` is available for
 direct release-device testing.
+
+See [the signing template](android/key.properties.example) and
+[`android/app/build.gradle.kts`](android/app/build.gradle.kts) for the accepted
+signing properties/environment variables. `make build` and `make build-apk` do
+not load `.local/run-defines.json`; that private DEV file belongs to `run.sh`.
 
 GlitchTip uses the Sentry-compatible Dart SDK. Prefer `GLITCHTIP_DSN` for
 Readflex builds; `SENTRY_DSN` is accepted as a fallback for compatibility with

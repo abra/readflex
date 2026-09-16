@@ -2257,7 +2257,7 @@ class Reader {
     if (!cfi || !color) return
     this.clearSelectionHighlightPreview()
     // WebView already paints the live range. An SVG preview would tint it twice;
-    // keep native handles and use previews only when the native range is gone.
+    // preserve the live range and use previews only when that range is gone.
     if (this.view.renderer.getContents().some(
       ({ doc }) => getSelectionRange(doc.getSelection()),
     )) return

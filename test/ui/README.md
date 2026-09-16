@@ -177,7 +177,7 @@ are excluded. Export-only/constants files can legitimately be unmeasured; the
 report lists them rather than inventing a denominator. JS/browser suite success
 is recorded separately and is not included in a Dart coverage percentage.
 
-`test/support/ui_test_app.dart` mounts production `RootContext` and its router.
+`test/support/ui_test_app.dart` mounts production `AppScopes` and its router.
 Repositories use an in-memory SQLite connection and a temporary document root;
 preferences use their in-memory platform implementation. Services outside the
 app are deterministic test doubles. Cleanup stops the server, closes resources,

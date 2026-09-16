@@ -14,10 +14,9 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:reader_server/reader_server.dart';
 import 'package:reader_webview/reader_webview.dart';
-import 'package:readflex/app/composition.dart';
+import 'package:readflex/app/app_scopes.dart';
 import 'package:readflex/app/config/application_config.dart';
 import 'package:readflex/app/dependency_container.dart';
-import 'package:readflex/app/root_context.dart';
 import 'package:readflex/app/resource_disposer.dart';
 import 'package:screen_control_service/screen_control_service.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -168,12 +167,7 @@ final class UiTestApp {
     }
   }
 
-  Widget get widget => RootContext(
-    compositionResult: CompositionResult(
-      dependencies: dependencies,
-      millisecondsSpent: 0,
-    ),
-  );
+  Widget get widget => AppScopes(dependencies: dependencies);
 
   Future<void> dispose() => _resources.dispose();
 }

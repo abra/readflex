@@ -4,6 +4,57 @@ import 'package:monitoring/monitoring.dart';
 import 'package:readflex/app/bloc/app_bloc_observer.dart';
 
 void main() {
+  test(
+    'disabled activity does not format states or events but still logs errors',
+    () {
+      final sink = _CollectingLogObserver();
+      final observer = AppBlocObserver(
+        Logger(observers: [sink]),
+        logActivity: false,
+      );
+      final bloc = _ProbeBloc();
+      addTearDown(bloc.close);
+      final current = _CountingState();
+      final next = _CountingState();
+      final event = _CountingState();
+
+      observer.onEvent(bloc, event);
+      observer.onTransition(
+        bloc,
+        Transition<Object?, Object?>(
+          currentState: current,
+          event: event,
+          nextState: next,
+        ),
+      );
+      expect([current.formats, next.formats, event.formats], [0, 0, 0]);
+      expect(sink.messages, isEmpty);
+
+      observer.onError(bloc, StateError('failed'), StackTrace.empty);
+      expect(sink.messages.single, contains('failed'));
+    },
+  );
+
+  test('each transition state is formatted only once', () {
+    final observer = AppBlocObserver(Logger());
+    final bloc = _ProbeBloc();
+    addTearDown(bloc.close);
+    final current = _CountingState();
+    final next = _CountingState();
+
+    observer.onTransition(
+      bloc,
+      Transition<Object?, Object?>(
+        currentState: current,
+        event: const _VerboseEvent('load'),
+        nextState: next,
+      ),
+    );
+
+    expect(current.formats, 1);
+    expect(next.formats, 1);
+  });
+
   test('transition logs truncate large state payloads', () {
     final sink = _CollectingLogObserver();
     final logger = Logger(observers: [sink]);
@@ -26,6 +77,16 @@ void main() {
 
     bloc.close();
   });
+}
+
+class _CountingState {
+  int formats = 0;
+
+  @override
+  String toString() {
+    formats++;
+    return 'state';
+  }
 }
 
 class _CollectingLogObserver with LogObserver {

@@ -182,7 +182,7 @@ class BookPosition {
     this.bookmarkId,
   });
 
-  /// EPUB Canonical Fragment Identifier — exact position in the book.
+  /// Position anchor: EPUB CFI for books or serialized article HTML position.
   final String cfi;
 
   /// Overall reading progress in [0, 1].
@@ -192,8 +192,8 @@ class BookPosition {
   final int? chapterCurrentPage;
   final int? chapterTotalPages;
 
-  /// Page number across the whole book (1-based). Surfaced by foliate-js
-  /// alongside the chapter-scoped count for "page 84 of 200" UIs.
+  /// Zero-based, size-derived location from foliate-js, not a physical page.
+  /// Chapter page counters may be more useful for fixed-layout sources.
   final int? bookCurrentPage;
   final int? bookTotalPages;
 
@@ -208,9 +208,8 @@ class BookPosition {
   /// `page`, `scroll`, or `snap`; programmatic jumps may omit it.
   final String? relocationReason;
 
-  /// True when the publication progresses right-to-left. Text direction and
-  /// page progression are separate: saved articles keep their iframe root LTR
-  /// for stable pagination, but can still read forward from right to left.
+  /// True when the publication's page progression is right-to-left, independent
+  /// of text direction. Saved articles use continuous scrolling, not page turns.
   final bool? pageProgressionRtl;
 
   /// `true` when the paginator reports we are on its trailing "blank
@@ -220,9 +219,8 @@ class BookPosition {
   /// instead of trusting the bogus numbers.
   final bool atEnd;
 
-  /// `true` when the paginator reports we are at (or before) the very
-  /// first readable page. The complement of [atEnd]; surfaced for
-  /// symmetry, currently unused.
+  /// Whether backward navigation is at the start boundary. Used by reader
+  /// tap-zone availability; both this and [atEnd] can be false mid-document.
   final bool atStart;
 
   /// Current visible page has a bookmark annotation.
@@ -469,8 +467,8 @@ class ReaderSearchExcerpt {
   }
 }
 
-/// User text selection surfaced from the reader WebView. The CFI range is
-/// the anchor used to restore highlights later. [scrollOffset] is a legacy
+/// User text selection surfaced from the reader WebView. The anchor is an EPUB
+/// CFI or serialized article HTML position. [scrollOffset] is a legacy
 /// optional position field kept for compatibility with existing contracts.
 class ReaderSelection {
   const ReaderSelection({
@@ -504,10 +502,10 @@ class ReaderSelection {
   /// Same excerpt with the normalized lexical range wrapped in [[...]].
   final String? normalizedMarkedContextText;
 
-  /// CFI range of the selection.
+  /// Exact selection anchor (EPUB CFI or article HTML position).
   final String? cfiRange;
 
-  /// CFI range of the normalized lexical selection.
+  /// Anchor of the normalized lexical selection.
   final String? normalizedCfiRange;
 
   /// Normalized viewport rectangle of the selected text.
@@ -933,7 +931,7 @@ class FoliateStyle {
 }
 
 /// A highlight annotation the WebView should render. The [cfiRange] pins
-/// the annotation to exact text in the EPUB. [color] overrides the
+/// text via EPUB CFI or an article HTML anchor. [color] overrides the
 /// default yellow when set. [opacity], [mixBlendMode], and [verticalOffset]
 /// tune contrast and placement without changing the saved domain model.
 class ReaderHighlight {

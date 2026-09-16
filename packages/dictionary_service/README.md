@@ -39,3 +39,10 @@ lexicalized expression containing the selection. Responses use typed statuses
 and may include ordered lexical entries, examples, and pronunciation. The
 selected term's canonical lemma remains first; a contextual expression such as
 `shut off` follows as a separate entry.
+
+The client verifies response shape/status and matching request ID, and maps
+HTTP/network/invalid-response failures to typed errors without displaying raw
+backend bodies. The default request timeout is 40 seconds. There is no mobile
+dictionary cache or ML Kit definition fallback in this package: when native
+lookup is unavailable and the API fails, the sheet offers retry. Backend
+generation/caching is a separate service contract, not implemented in this repo.

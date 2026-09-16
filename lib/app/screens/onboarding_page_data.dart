@@ -15,8 +15,6 @@ class OnboardingPageData {
   final String description;
 }
 
-const onboardingPageCount = 3;
-
 List<OnboardingPageData> onboardingPages(ReadflexLocalizations l10n) => [
   OnboardingPageData(
     icon: AppIcons.readAnything,

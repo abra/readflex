@@ -19,11 +19,15 @@ through a dedicated secure-storage backed service.
 | `ReaderTextAlignment`           | enum             | Reader text alignment (`start`, `end`, `justify`)                 |
 | `ReaderPageTurnStyle`           | enum             | Reader page-turn mode (`horizontal`, `vertical`)                  |
 | `PreferencesService`            | concrete         | Loads, streams, and persists `Preferences`                         |
-| `PreferencesStorage`            | concrete         | Thin `SharedPreferences` wrapper                                   |
+| `PreferencesStorage`            | concrete         | Thin `SharedPreferencesAsync` wrapper                              |
 | `PreferencesRepository`         | concrete         | JSON (de)serialization + locale resolution                         |
 | `PreferencesScope`              | StatelessWidget  | `InheritedModel` with locale, theme, and reader-appearance aspects |
 
 ### What is stored
+
+Defaults below describe a fresh load through `PreferencesRepository`. The bare
+`Preferences()` constructor uses English for locale and translation target;
+repository loading resolves the device locale to a supported language.
 
 | Field                      | Type        | Default     |
 |----------------------------|-------------|-------------|
@@ -61,7 +65,7 @@ final preferencesService = await PreferencesService.create(
 // Mount scope high in the tree
 PreferencesScope(
   service: dependencies.preferencesService,
-  child: MaterialContext(...),
+  child: const ReadflexApp(),
 )
 
 // Read (rebuilds only when the relevant aspect changes)
@@ -79,14 +83,17 @@ await service.setReaderAppearanceOverride(
 );
 ```
 
-`update()` is non-fatal on disk errors: in-memory state still updates and
-emits, so the UI stays consistent for the current session; the next launch
-restores the last successfully-persisted value.
+`update()` changes `current` synchronously and queues disk writes and stream
+emissions in update order. Disk errors are non-fatal: that snapshot still emits;
+the next launch restores the last successfully persisted snapshot. A later
+successful write can persist edits from an earlier failed write. Transform
+errors and updates after disposal still fail. `dispose()` stops accepting new
+updates and drains pending writes before closing the stream.
 
 ## Where it fits
 
 Registered on `DependenciesContainer.preferencesService` in
 `lib/app/composition.dart` and exposed via `PreferencesScope` in
-`RootContext`. `MaterialContext` reads `themeModeOf(context)` to drive
+`AppScopes`. `ReadflexApp` reads `themeModeOf(context)` to drive
 `MaterialApp.themeMode`; the reader applies per-source overrides through
 `ReaderAppearanceCubit`.

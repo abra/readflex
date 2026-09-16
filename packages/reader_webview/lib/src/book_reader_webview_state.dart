@@ -856,11 +856,11 @@ class BookReaderWebViewState extends State<BookReaderWebView>
   }
 
   /// Reads the live DOM range so actions cannot observe a stale bridge event
-  /// immediately after the user resizes the native selection handles.
+  /// immediately after the user resizes the selection handles.
   Future<ReaderSelection?> currentTextSelection() =>
       readCurrentReaderTextSelection(_controller);
 
-  /// Render a temporary highlight over the active native selection.
+  /// Requests a temporary preview; JS suppresses it while a live range is tinted.
   void showSelectionHighlightPreview({
     required String cfiRange,
     required String color,

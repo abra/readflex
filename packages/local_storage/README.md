@@ -90,36 +90,25 @@ new one when a schema shape changes.
 
 Repositories receive `AppDatabase` and extract their DAO:
 
-```dart
-class BookRepository {
-  BookRepository({required AppDatabase database})
-      : _dao = database.booksDao;
+`BookRepository` calls `database.booksDao.allBooks()` and maps each row with
+`toDomainModel(booksDir: ...)`, resolving filenames against its managed book
+directory. It wraps storage failures in `StorageException`.
 
-  final BooksDao _dao;
-
-  Future<List<Book>> allBooks() async {
-    try {
-      final rows = await _dao.allBooks();
-      return rows.map((r) => r.toDomain()).toList();
-    } on Exception catch (e) {
-      throw StorageException(cause: e);
-    }
-  }
-}
-```
-
-The DI container constructs `AppDatabase` once and hands it to every
-repository:
+Composition constructs `AppDatabase` once and hands it to repositories. The
+essential setup is:
 
 ```dart
 // composition.dart
 final database = AppDatabase();
-return DependenciesContainer(
-  bookRepository: BookRepository(database: database),
-  highlightRepository: HighlightRepository(database: database),
-  // ...
+final bookRepository = BookRepository(
+  database: database,
+  booksDirectory: booksDir, // App documents/books directory from composition.
 );
+final highlightRepository = HighlightRepository(database: database);
 ```
+
+The application's resource disposer owns `database.close`; individual
+repositories must not close this shared database.
 
 Tests use `AppDatabase.forTesting(NativeDatabase.memory())` with an
 in-memory executor.

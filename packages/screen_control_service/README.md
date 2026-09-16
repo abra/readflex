@@ -8,12 +8,17 @@ content is visible. The reader owns the lifetime: it enables keep-awake when no
 chrome, drawer, or bottom sheet is visible, and releases it on controls,
 route disposal, or app backgrounding.
 
-Production uses the app window brightness override for temporary reader
-brightness. This does not write the device's system brightness; `System` mode
-resets the app window back to the platform default, while custom reader
-brightness is applied only while the reader is active. Android reads the best
-available platform value for the first custom step and diagnostics before
-falling back to `Settings.System`.
+On Android, production uses the Activity window brightness override, not a
+write to the device's system setting. `System` mode removes that override.
+Android reads platform brightness through the app's native channel, falling
+back to the brightness plugin when that channel is unavailable.
+
+On iOS, the plugin changes `UIScreen.brightness`; there is no Android-style
+window override. The service captures the brightness before the first override
+and restores that captured value on reset. It does not continuously track
+system brightness changes made during the override. Reader lifecycle drivers
+request reset on backgrounding/disposal and reapply the reader preference on
+return. The same capture/restore fallback is used on other plugin platforms.
 
 ## Public API
 

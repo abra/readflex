@@ -8,7 +8,7 @@
 ///
 /// Extend this to define typed events:
 /// ```dart
-/// class NoteCreatedEvent extends AnalyticsEvent {
+/// final class NoteCreatedEvent extends AnalyticsEvent {
 ///   const NoteCreatedEvent(this.noteId);
 ///   final String noteId;
 ///   @override

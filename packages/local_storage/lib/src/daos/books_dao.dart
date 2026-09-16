@@ -5,9 +5,9 @@ import '../tables/books_table.dart';
 
 part 'books_dao.g.dart';
 
-/// CRUD access to [BooksTable]. List queries sort by most-recently-opened
-/// first, falling back to added-at. Called only by `BookRepository`, which
-/// wraps errors in `StorageException` and owns the on-disk book files.
+/// CRUD access to [BooksTable]. Lists sort by last-opened descending (nulls
+/// last), then added-at descending. Library applies its own combined ordering.
+/// `BookRepository` maps rows, wraps errors and owns the on-disk book files.
 @DriftAccessor(tables: [BooksTable])
 class BooksDao extends DatabaseAccessor<AppDatabase> with _$BooksDaoMixin {
   BooksDao(super.db);

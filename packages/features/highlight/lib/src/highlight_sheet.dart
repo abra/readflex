@@ -57,14 +57,8 @@ class _HighlightSheetView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The note `TextField` pushes every keystroke to `setNote`, which
-    // emits a new state. Without `buildWhen` the entire sheet rebuilds
-    // on each character — re-mounting the color picker, the
-    // `SelectionPreviewCard`, and the failure message — and the IME /
-    // cursor jitters. Note text isn't reactively shown anywhere, so we
-    // only need to rebuild when something the UI actually displays
-    // changes: the saving / failure / success status, or the picked
-    // colour (which tints both the preview card and the picker).
+    // The TextField owns its editing state. Note-only changes need no rebuild
+    // of the surrounding form; status and color still update the visible UI.
     return BlocConsumer<HighlightCubit, HighlightSheetState>(
       listener: (context, state) {
         if (state.status == HighlightSheetStatus.success) {
