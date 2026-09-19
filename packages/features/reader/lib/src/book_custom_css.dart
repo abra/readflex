@@ -54,8 +54,8 @@ String buildBookCustomCSS({
     ':not(.FixedLine) { font-size: $proseFontSize !important; }',
   );
   if (isDark) {
-    // In dark reader themes, readability wins over publisher colors. Keep
-    // media untouched; the contrast guard still handles light inline panels.
+    // Inherit semantic colors from links/quotes instead of painting every
+    // descendant with primaryText. Book background normalization lives in JS.
     buffer.writeln(
       'html, body { color-scheme: dark; color: $primaryText !important; }',
     );
@@ -64,7 +64,7 @@ String buildBookCustomCSS({
       'caption, table, thead, tbody, tfoot, tr, td, th, div, p, font, span, '
       'h1, h2, h3, h4, h5, h6, li, dl, dt, dd, b, strong, em, i, u, s, q, '
       'cite, abbr, label, mark, pre, code, kbd, samp { '
-      'color: $primaryText !important; }',
+      'color: inherit !important; }',
     );
     buffer.writeln(
       'blockquote, figcaption, caption, small, sup, sub { '
@@ -89,7 +89,7 @@ String buildBookCustomCSS({
   // negative letter-spacing tightens the airy feel monospace fonts have
   // by default at small sizes.
   buffer.writeln(
-    'code { background: $panel !important; border: 1px solid $divider; '
+    'code { background: $panel !important; border: 1px solid $divider !important; '
     'padding: 0.1em 0.35em; border-radius: 4px; '
     'text-indent: 0 !important; line-height: inherit !important; '
     'font-family: ui-monospace, Menlo, monospace !important; '
@@ -108,7 +108,7 @@ String buildBookCustomCSS({
   // a sequence like "press Cmd+K" reads as physical keys, distinct from
   // inline code that happens to be short.
   buffer.writeln(
-    'kbd { background: $panel !important; border: 1px solid $divider; '
+    'kbd { background: $panel !important; border: 1px solid $divider !important; '
     'box-shadow: inset 0 -1px 0 $divider; '
     'padding: 0.1em 0.4em; border-radius: 4px; '
     'font-family: ui-monospace, Menlo, monospace !important; '
@@ -119,7 +119,7 @@ String buildBookCustomCSS({
   // inside foliate's column layout.
   buffer.writeln(
     'pre, .readflex-code-block, .ProgramCode, .ParaTypeProgramcode { '
-    'background: $panel !important; border: 1px solid $divider; '
+    'background: $panel !important; border: 1px solid $divider !important; '
     'padding: 0.85em 1em !important; border-radius: 6px; '
     'display: block !important; box-sizing: border-box; '
     'width: auto !important; max-width: 100% !important; '

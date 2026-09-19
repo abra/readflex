@@ -169,21 +169,28 @@ const restoreGuardedColor = element => {
   element.removeAttribute(ORIGINAL_PRIORITY_ATTR)
 }
 
-const effectiveBackgroundColor = (element, fallbackColor, win) => {
+const effectiveBackgroundColor = (element, fallbackColor, win, cache) => {
   let result = fallbackColor
   const chain = []
   let current = element
 
   while (current?.nodeType === Node.ELEMENT_NODE) {
-    chain.push(current)
+    if (cache.has(current)) {
+      result = cache.get(current)
+      break
+    }
+    const background = parseCssColor(win.getComputedStyle(current).backgroundColor)
+    chain.push([current, background])
+    // Ancestors cannot affect an opaque background.
+    if (background?.a === 1) break
     current = current.parentElement
   }
 
-  for (const item of chain.reverse()) {
-    const background = parseCssColor(win.getComputedStyle(item).backgroundColor)
+  for (const [item, background] of chain.reverse()) {
     if (background && background.a > 0) {
       result = composite(background, result)
     }
+    cache.set(item, result)
   }
 
   return result
@@ -203,10 +210,10 @@ const shouldSkipElement = (element, computedStyle) =>
   element.closest(SKIP_SELECTOR) ||
   element.closest('[hidden], [aria-hidden="true"]') ||
   computedStyle.display === 'none' ||
-  computedStyle.visibility === 'hidden' ||
-  !hasDirectText(element)
+  computedStyle.visibility === 'hidden'
 
 export const applyTextContrastGuard = (doc, {
+  enabled = true,
   backgroundColor,
   textColor,
   minContrast = 4.5,
@@ -215,26 +222,27 @@ export const applyTextContrastGuard = (doc, {
   const body = doc?.body
   if (!win || !body) return
 
-  const readerBackground = parseCssColor(backgroundColor)
-  if (!readerBackground) return
-
-  const safeTextColor = parseCssColor(textColor)
-  const isDarkReaderTheme = relativeLuminance(readerBackground) < 0.5
-
   for (const element of body.querySelectorAll(`[${GUARD_ATTR}="true"]`)) {
     restoreGuardedColor(element)
   }
 
-  if (!isDarkReaderTheme || !safeTextColor) return
+  if (!enabled) return
+  const readerBackground = parseCssColor(backgroundColor)
+  const safeTextColor = parseCssColor(textColor)
+  if (!readerBackground || !safeTextColor) return
 
+  // CSS handles ordinary publisher colors. This load/theme-change fallback
+  // also covers surviving !important colors on local panels in light themes.
+  const backgrounds = new Map()
   for (const element of body.querySelectorAll(TEXT_ELEMENT_SELECTOR)) {
+    if (!hasDirectText(element)) continue
     const computedStyle = win.getComputedStyle(element)
     if (shouldSkipElement(element, computedStyle)) continue
 
     const color = parseCssColor(computedStyle.color)
     if (!color || color.a <= 0) continue
 
-    const background = effectiveBackgroundColor(element, readerBackground, win)
+    const background = effectiveBackgroundColor(element, readerBackground, win, backgrounds)
     const visibleColor = color.a < 1 ? composite(color, background) : color
     if (contrastRatio(visibleColor, background) >= minContrast) continue
 

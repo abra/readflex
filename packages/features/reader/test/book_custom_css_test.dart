@@ -61,6 +61,10 @@ void main() {
       expect(css, contains('pre, code, kbd, samp'));
       expect(css, contains('color: #f1e7d9 !important'));
       expect(css, contains('color: #baad9b !important'));
+      expect(
+        css,
+        contains('pre, code, kbd, samp { color: inherit !important; }'),
+      );
       expect(css, isNot(contains('img, canvas, svg { filter')));
     });
 
@@ -97,6 +101,13 @@ void main() {
         ),
       );
       expect(css, contains('#f0e7d8'));
+      expect(
+        'border: 1px solid #d9cab4 !important'.allMatches(css).length,
+        3,
+        reason:
+            'Code, keyboard keys and pre keep their semantic border colors '
+            'above the base publisher-color reset',
+      );
       expect(css, contains('display: block !important'));
       expect(css, contains('white-space: pre-wrap !important'));
       expect(css, contains('.readflex-code-block'));

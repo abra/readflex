@@ -812,7 +812,9 @@ class FoliateStyle {
   /// When `false`, publisher font-family / font-weight win over reader prefs.
   final bool overrideFont;
 
-  /// When `false`, publisher text color wins over reader prefs.
+  /// Replace publisher text/background colors together in reflowable books.
+  /// When `false`, omit the base color reset and contrast guard; custom CSS
+  /// remains an independent overlay.
   final bool overrideColor;
 
   /// When `false`, publisher line-height / indent / hyphenation / margins win.

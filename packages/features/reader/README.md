@@ -160,6 +160,12 @@ load cannot erase a renderer failure.
   WebView bodies subscribe to the document, readiness, appearance and annotation
   state they need, not to each selection-menu update. Rebuilding a body does not
   recreate its keyed WebView unless source/recovery identity changes.
+- `buildBookCustomCSS` supplies semantic code panels, quotes, links and headings
+  above the reflowable book color reset in `reader_webview`. Code borders retain
+  the theme divider color; dark-theme descendants inherit semantic parent
+  colors instead of replacing link/quote colors with primary text. The same
+  semantic overlay is used by the article reader; book palette normalization
+  and its contrast fallback remain owned by the book JS runtime.
 
 ## Dependencies
 

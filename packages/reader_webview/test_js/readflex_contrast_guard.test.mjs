@@ -177,3 +177,58 @@ test('applyTextContrastGuard restores previous guard when theme becomes light', 
   assert.equal(element.style.getPropertyValue('color'), '')
   assert.equal(element.getAttribute('data-readflex-contrast-guard'), null)
 })
+
+test('light themes repair unreadable text on a surviving dark panel', () => {
+  const element = new FakeElement({ color: '#222222', backgroundColor: '#000055' })
+  const doc = makeDocument([element])
+  applyTextContrastGuard(doc, { backgroundColor: '#faf8f4', textColor: '#292521' })
+  assert.equal(element.style.getPropertyValue('color'), '#ffffff')
+})
+
+test('disabling the guard restores the exact inline color and priority without style reads', () => {
+  const element = new FakeElement({ color: '#222222', backgroundColor: '#000055' })
+  element.style.setProperty('color', '#222222', 'important')
+  const doc = makeDocument([element])
+  applyTextContrastGuard(doc, { backgroundColor: '#faf8f4', textColor: '#292521' })
+  assert.equal(element.style.getPropertyValue('color'), '#ffffff')
+  doc.defaultView.getComputedStyle = () => assert.fail('disabled guard must not scan styles')
+  applyTextContrastGuard(doc, { enabled: false })
+  assert.equal(element.style.getPropertyValue('color'), '#222222')
+  assert.equal(element.style.getPropertyPriority('color'), 'important')
+  assert.equal(element.getAttribute('data-readflex-contrast-guard'), null)
+})
+
+test('composites nested translucent backgrounds and skips media and hidden content', () => {
+  const panel = new FakeElement({ tagName: 'section', text: '', backgroundColor: '#000000' })
+  const text = new FakeElement({ color: '#222222', backgroundColor: 'rgba(255, 255, 255, 0.1)' })
+  const hidden = new FakeElement({ color: '#222222' })
+  hidden.setAttribute('hidden', '')
+  const svg = new FakeElement({ tagName: 'svg', color: '#222222' })
+  const svgChild = new FakeElement({ tagName: 'span', color: '#222222' })
+  const doc = makeDocument([panel, text, hidden, svg, svgChild])
+  text.parentElement = panel
+  svgChild.parentElement = svg
+  applyTextContrastGuard(doc, { backgroundColor: '#ffffff', textColor: '#292521' })
+  assert.equal(text.style.getPropertyValue('color'), '#ffffff')
+  for (const element of [panel, hidden, svg, svgChild]) {
+    assert.equal(element.style.getPropertyValue('color'), '')
+  }
+})
+
+test('shared background ancestry is read once per pass, not once per text node', () => {
+  const elements = Array.from({ length: 500 }, () => new FakeElement({ color: '#222222' }))
+  const doc = makeDocument(elements)
+  const parent = new FakeElement({ text: '', backgroundColor: '#ffffff' })
+  const unusedAncestor = new FakeElement({ text: '' })
+  parent.parentElement = unusedAncestor
+  for (const element of elements) element.parentElement = parent
+  const reads = new Map()
+  doc.defaultView.getComputedStyle = element => {
+    reads.set(element, (reads.get(element) ?? 0) + 1)
+    return element.computedStyle
+  }
+  applyTextContrastGuard(doc, { backgroundColor: '#faf8f4', textColor: '#292521' })
+  assert.equal(reads.get(parent), 1)
+  assert.equal(reads.has(unusedAncestor), false, 'opaque panels stop the ancestor walk')
+  assert.ok([...reads.values()].reduce((sum, count) => sum + count, 0) <= 2 * elements.length + 1)
+})

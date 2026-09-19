@@ -69,6 +69,34 @@ EPUB link events cross the bridge as the destination URL only. The reader
 feature forwards that value through its callback boundary, and app routing
 opens only validated HTTP(S) links with the platform URL launcher.
 
+### Book Colors
+
+For reflowable books, `FoliateStyle.overrideColor` replaces publisher text and
+solid background colors **together**: the document uses the reader palette,
+text descendants inherit their semantic parent's color, and publisher block
+fills become transparent. Borders use `currentColor`. This prevents reader-dark
+text from landing on a publisher-dark caption background in a light theme.
+The low-specificity reset runs before `customCSS`, so reader code panels, quotes
+and accent links can retain their own styling. SVG/MathML, images and embedded
+media are excluded; fixed-layout books do not receive this reset.
+
+`readflex_contrast_guard.js` is a fallback for surviving priority styles, such
+as inline `!important` text/backgrounds. On document load and CSS updates it
+checks direct text against composed solid ancestor backgrounds in light and
+dark themes. Background results are cached for that pass; there is no scroll
+listener, polling or text-node rewrite. It restores its inline overrides before
+rechecking and when `overrideColor` is disabled. Fixed-layout books are excluded.
+Background images/gradients and image pixels are not analyzed or recolored, so
+this is not a guarantee of contrast for text over arbitrary artwork.
+`customCSS` remains an independent overlay even with `overrideColor: false`.
+
+`test_browser/book_theme_colors.test.mjs` exercises the production EPUB loader
+and styling in Chromium/WebKit: nested publisher blocks, tables, semantic
+overrides, inline priority, fixed layout, and selection/CFI stability on theme
+changes. The guard's unit tests also bound repeated ancestor style reads.
+
+### Text Selection
+
 On touch devices the native DOM selection remains active while the reader
 popup is visible. This keeps selection controls available and lets
 `selectionchange` update the popup payload as the user expands or contracts the

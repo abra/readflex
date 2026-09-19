@@ -546,7 +546,10 @@ void main() {
       );
       expect(
         bookJs,
-        isNot(contains('background-color: transparent !important;')),
+        contains(
+          'background-image: none !important;\n'
+          '        background-color: var(--readflex-background-color) !important;',
+        ),
       );
     });
 
@@ -1787,7 +1790,7 @@ void main() {
 
   group('asset extraction', () {
     test('versions bundled reader assets independently of app version', () {
-      expect(AssetExtractor.assetRevision, 'reader_webview_assets_138');
+      expect(AssetExtractor.assetRevision, 'reader_webview_assets_139');
       expect(
         AssetExtractor.extractionVersionFor('1.0.0+1'),
         '1.0.0+1|${AssetExtractor.assetRevision}',

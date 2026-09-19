@@ -1630,7 +1630,7 @@ const getReaderStylePrelude = ({ fontSize,
 // Three override flags let callers decide whether reader preferences beat
 // publisher CSS:
 //   overrideFont   — force font-family and font-weight
-//   overrideColor  — force text color (accent links live in customCSS instead)
+//   overrideColor  — replace publisher text/background pairs with reader colors
 //   useBookLayout  — force line-height, text-indent, hyphenation, margins
 // When a flag is false, the corresponding rules are omitted and the book's
 // own CSS wins. Defaults preserve the historical "override everything" behavior.
@@ -1660,7 +1660,15 @@ const getCSS = style => {
     background-clip: content-box !important;`
 
   const htmlColorDecl = overrideColor ? 'color: var(--readflex-font-color) !important;' : ''
-  const paraColorDecl = overrideColor ? 'color: var(--readflex-font-color) !important;' : ''
+  // Keep specificity low so semantic colors in customCSS (links, code, quotes)
+  // win. Media retain their own palette; no inversion or DOM rewriting.
+  const colorOverrideCSS = overrideColor ? `
+    body *:not(:where(svg, svg *, math, math *, mjx-container, mjx-container *,
+        img, picture, picture *, canvas, video, audio, iframe, object, embed)) {
+        color: inherit !important;
+        background-color: transparent !important;
+        border-color: currentColor !important;
+    }` : ''
   const paraFontWeightDecl = overrideFont ? 'font-weight: var(--readflex-font-weight) !important;' : ''
   const headingLineHeightDecl = useBookLayout ? 'line-height: var(--readflex-line-height) !important;' : ''
   const paraLayoutDecl = useBookLayout ? `
@@ -1692,10 +1700,13 @@ const getCSS = style => {
     }
 
     body {
+        ${htmlColorDecl}
         background-image: none !important;
         background-color: var(--readflex-background-color) !important;
         padding: 0;
     }
+
+    ${colorOverrideCSS}
 
     /* Readflex patch: many EPUBs wrap content in <body><div class="container"
        style="padding: 5%">...</div></body> or <body><section>...</section></body>
@@ -1768,7 +1779,6 @@ const getCSS = style => {
     }
 
     p, li, blockquote, dd, div:not(:has(*:not(b, a, em, i, strong, u, span))), font {
-        ${paraColorDecl}
         ${paraFontWeightDecl}
         /* !important so publisher rules like "p { text-align: left !important }"
            do not override the user-selected justify. The [align="..."] rules
@@ -1875,6 +1885,7 @@ const bionicReadingHandler = (doc) => {
 
 const applyReaderContrastGuard = doc => {
   applyTextContrastGuard(doc, {
+    enabled: style.overrideColor !== false && !reader?.view?.isFixedLayout,
     backgroundColor: style.backgroundColor,
     textColor: style.fontColor,
   })
