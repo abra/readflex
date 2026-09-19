@@ -11,7 +11,27 @@
   "translationAutoDetectedSource": "Auto: {language}",
   "translationOffline": "Offline",
   "translationSentence": "Sentence",
-  "translationWord": "Word translation",
+  "translationGeneralMeaning": "General meaning",
+  "translationGeneralMeaningOf": "General meaning: {word}",
+  "translationInExpression": "In the expression",
+  "@translationGeneralMeaningOf": {
+    "placeholders": {
+      "word": {"type": "String"}
+    }
+  },
+  "translationBaseForm": "Base form:",
+  "translationPosNoun": "Noun",
+  "translationPosVerb": "Verb",
+  "translationPosAdjective": "Adjective",
+  "translationPosAdverb": "Adverb",
+  "translationPosPronoun": "Pronoun",
+  "translationPosPreposition": "Preposition",
+  "translationPosConjunction": "Conjunction",
+  "translationPosInterjection": "Interjection",
+  "translationPosDeterminer": "Determiner",
+  "translationPosNumeral": "Numeral",
+  "translationPosParticle": "Particle",
+  "translationPosAuxiliary": "Auxiliary verb",
   "translationInContext": "In this context",
   "translationDetails": "Meaning & alternatives",
   "translationAlternatives": "Alternatives",

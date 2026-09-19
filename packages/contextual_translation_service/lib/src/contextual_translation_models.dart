@@ -313,6 +313,8 @@ class ContextualTranslationAnalysis extends Equatable {
     this.expressionTokenIds = const [],
     this.surfaceForm,
     this.lemma,
+    this.pronunciation,
+    this.reading,
     this.expressionType,
     this.partOfSpeech,
     this.grammaticalForm,
@@ -323,6 +325,10 @@ class ContextualTranslationAnalysis extends Equatable {
   final List<int> expressionTokenIds;
   final String? surfaceForm;
   final String? lemma;
+
+  /// Pronunciation and reading belong to [surfaceForm], not the lemma.
+  final String? pronunciation;
+  final String? reading;
   final String? expressionType;
   final String? partOfSpeech;
   final String? grammaticalForm;
@@ -333,6 +339,8 @@ class ContextualTranslationAnalysis extends Equatable {
     'expression_token_ids': expressionTokenIds,
     'surface_form': surfaceForm,
     'lemma': lemma,
+    'pronunciation': pronunciation,
+    'reading': reading,
     'expression_type': expressionType,
     'part_of_speech': partOfSpeech,
     'grammatical_form': grammaticalForm,
@@ -345,6 +353,8 @@ class ContextualTranslationAnalysis extends Equatable {
       expressionTokenIds: _checkedIntList(json, 'expression_token_ids'),
       surfaceForm: _checkedOptionalString(json, 'surface_form'),
       lemma: _checkedOptionalString(json, 'lemma'),
+      pronunciation: _checkedOptionalString(json, 'pronunciation'),
+      reading: _checkedOptionalString(json, 'reading'),
       expressionType: _checkedOptionalString(json, 'expression_type'),
       partOfSpeech: _checkedOptionalString(json, 'part_of_speech'),
       grammaticalForm: _checkedOptionalString(json, 'grammatical_form'),
@@ -361,11 +371,41 @@ class ContextualTranslationAnalysis extends Equatable {
     expressionTokenIds,
     surfaceForm,
     lemma,
+    pronunciation,
+    reading,
     expressionType,
     partOfSpeech,
     grammaticalForm,
     contextualMeaningEn,
   ];
+}
+
+/// A larger source expression and its contextual translation, not the word's.
+class ContextualTranslationExpression extends Equatable {
+  const ContextualTranslationExpression({
+    required this.text,
+    required this.translation,
+  });
+
+  final String text;
+  final String translation;
+
+  factory ContextualTranslationExpression.fromJson(Map<String, Object?> json) {
+    final text = _requiredString(json, 'text');
+    final translation = _requiredString(json, 'translation');
+    if (text.length > 512 || translation.length > 2048) {
+      throw const FormatException('Contextual expression exceeds size limits');
+    }
+    return ContextualTranslationExpression(
+      text: text,
+      translation: translation,
+    );
+  }
+
+  Map<String, Object?> toJson() => {'text': text, 'translation': translation};
+
+  @override
+  List<Object?> get props => [text, translation];
 }
 
 class ContextualTranslationText extends Equatable {
@@ -482,6 +522,7 @@ class ContextualTranslationResult extends Equatable {
     this.detectedSourceLanguage,
     this.targetLanguage,
     this.analysis,
+    this.contextualExpression,
     this.explanation,
     this.alternatives = const [],
     this.source = const ContextualTranslationSource(),
@@ -496,6 +537,7 @@ class ContextualTranslationResult extends Equatable {
   final String? targetLanguage;
   final ContextualTranslationAnalysis? analysis;
   final ContextualTranslationText translation;
+  final ContextualTranslationExpression? contextualExpression;
   final String? explanation;
   final List<ContextualTranslationAlternative> alternatives;
   final ContextualTranslationSource source;
@@ -511,6 +553,7 @@ class ContextualTranslationResult extends Equatable {
     'target_language': targetLanguage,
     'analysis': analysis?.toJson(),
     'translation': translation.toJson(),
+    'contextual_expression': contextualExpression?.toJson(),
     'explanation': explanation,
     'alternatives': alternatives.map((item) => item.toJson()).toList(),
     'source': source.toJson(),
@@ -542,6 +585,9 @@ class ContextualTranslationResult extends Equatable {
       );
     }
     final analysis = _optionalMap(json, 'analysis');
+    final expression = mode == selectedTextTranslationMode
+        ? null
+        : _optionalMap(json, 'contextual_expression');
 
     return ContextualTranslationResult(
       requestId: _requiredString(json, 'request_id'),
@@ -560,6 +606,9 @@ class ContextualTranslationResult extends Equatable {
           ? null
           : ContextualTranslationAnalysis.fromJson(analysis),
       translation: translation,
+      contextualExpression: expression == null
+          ? null
+          : ContextualTranslationExpression.fromJson(expression),
       explanation: _checkedOptionalString(json, 'explanation'),
       alternatives: _checkedObjectList(
         json,
@@ -608,6 +657,7 @@ class ContextualTranslationResult extends Equatable {
     targetLanguage,
     analysis,
     translation,
+    contextualExpression,
     explanation,
     alternatives,
     source,

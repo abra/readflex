@@ -95,6 +95,8 @@ as static semantic token classes:
 - `AppTypography.textTheme` -- `TextTheme` with all 15 Material roles; display
   and headline roles use Literata, title/body/label roles use Geist
 - `AppTypography.fontFamilySans` / `fontFamilySerif` -- `Geist` / `Literata`
+- `AppTypography.fontFamilyPhonetic` -- bundled Noto Sans phonetic subset used
+  for IPA; see `fonts/README.md` for provenance, reproduction and license
 - `AppTypography.fontFamilyFallback` -- named Arabic, Devanagari, and Japanese
   fallbacks before the operating system fallback; these do not bundle fonts
 - `AppTypography.serif(...)` / `sans(...)` -- factory methods for one-off styles

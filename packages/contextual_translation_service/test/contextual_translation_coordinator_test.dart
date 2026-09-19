@@ -33,6 +33,8 @@ void main() {
     expect(first.requestId, 'first');
     expect(second.requestId, 'second');
     expect(second.translation, first.translation);
+    expect(first.contextualExpression, isNotNull);
+    expect(second.contextualExpression, first.contextualExpression);
     expect(remote.calls, 1);
   });
 
@@ -210,6 +212,10 @@ class _FakeRemoteService implements ContextualTranslationService {
       targetLanguage: 'ru',
       translation: const ContextualTranslationText(
         contextualTranslation: 'remote',
+      ),
+      contextualExpression: const ContextualTranslationExpression(
+        text: 'hello there',
+        translation: 'привет',
       ),
     );
   }

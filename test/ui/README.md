@@ -53,6 +53,8 @@ credentials to this deterministic test suite.
 | Collections | Create with selected book, rename, cancel/confirm deletion; preserve book and clean membership | `app_flows_test.dart` |
 | Article import | Extraction error, retry, actual repository/SQLite write, root remount; offline/online button availability | `app_flows_test.dart` |
 | Translate | Success, error, pending result; word/text answers before context, unfilled language menus and collapsed/expanded details in all profiles | `surfaces_golden_test.dart` |
+| Contextual translation | Selected word/IPA and its visible translation, separate contextual answer and expression scope, collapsed/expanded explanations in all visual profiles | `translation_word_golden_test.dart` |
+| Native translation sheet | Real phone viewport, word/expression scopes including rather, IPA rendering, visible general meaning, native clipboard and target-language change with deterministic responses | `integration_test/translation_sheet_test.dart` |
 | Define | Single definition, inflected word plus contextual expression, and not-found surfaces in all profiles | `surfaces_golden_test.dart` |
 | Shared text tools | Search clear control and highlight palette in all profiles; import menu layout | `surfaces_golden_test.dart` |
 | Reader appearance | Portrait/landscape, 2x text and RTL; header/values readable, body scrolls, final control reachable | `reader_appearance_golden_test.dart` |
@@ -82,10 +84,10 @@ and highlight geometry/pixels. See
 
 ## Visual Baselines
 
-There are 21 captures per profile (105 PNGs), including appearance before/after
+There are 26 captures per profile (130 PNGs), including appearance before/after
 scrolling to the last control, translation language menus and collapsed/expanded
 translation details, single-word/text translations and contextual dictionary
-expressions. Expanded-detail captures scroll to the final alternative
+expressions and separate word/contextual translations. Expanded-detail captures scroll to the final alternative
 when the viewport cannot display the complete result:
 
 | Profile | Logical viewport | Theme | Locale | Text scale |

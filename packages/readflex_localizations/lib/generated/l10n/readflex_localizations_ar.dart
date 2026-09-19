@@ -47,7 +47,54 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get translationSentence => 'الجملة';
 
   @override
-  String get translationWord => 'ترجمة الكلمة';
+  String get translationGeneralMeaning => 'المعنى العام';
+
+  @override
+  String translationGeneralMeaningOf(String word) {
+    return 'المعنى العام: $word';
+  }
+
+  @override
+  String get translationInExpression => 'في التعبير';
+
+  @override
+  String get translationBaseForm => 'الصيغة الأساسية:';
+
+  @override
+  String get translationPosNoun => 'اسم';
+
+  @override
+  String get translationPosVerb => 'فعل';
+
+  @override
+  String get translationPosAdjective => 'صفة';
+
+  @override
+  String get translationPosAdverb => 'ظرف';
+
+  @override
+  String get translationPosPronoun => 'ضمير';
+
+  @override
+  String get translationPosPreposition => 'حرف جر';
+
+  @override
+  String get translationPosConjunction => 'حرف عطف';
+
+  @override
+  String get translationPosInterjection => 'تعجب';
+
+  @override
+  String get translationPosDeterminer => 'محدد';
+
+  @override
+  String get translationPosNumeral => 'عدد';
+
+  @override
+  String get translationPosParticle => 'أداة';
+
+  @override
+  String get translationPosAuxiliary => 'فعل مساعد';
 
   @override
   String get translationInContext => 'في هذا السياق';

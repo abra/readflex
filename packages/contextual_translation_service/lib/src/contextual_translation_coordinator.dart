@@ -132,6 +132,7 @@ ContextualTranslationResult _resultForRequest(
     targetLanguage: result.targetLanguage,
     analysis: result.analysis,
     translation: result.translation,
+    contextualExpression: result.contextualExpression,
     explanation: result.explanation,
     alternatives: result.alternatives,
     source: result.source,

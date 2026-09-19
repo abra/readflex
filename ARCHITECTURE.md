@@ -298,6 +298,18 @@ selection popup renders colors and Highlight on the first row, then Copy,
 Translate, and Define on the second row. Reader executes all feature actions
 only through the `TextAction` contract.
 
+Translation pronunciation/reading are optional fields of its own backend
+response, obtained in the same provider call. The sheet displays them only when
+the analyzed surface form matches the selected word. It does not call the
+Dictionary service; offline translation remains usable without lexical metadata.
+The same response can supply a larger `contextual_expression` grounded by the
+backend in the selected occurrence. The sheet shows the general word meaning
+directly under the word/phonetics, then names the expression and its translation
+in a separate contextual section with the source sentence. Both answers remain
+visible without expanding details; only explanations and alternatives collapse.
+Phrase/full-text selections are not expanded, and no second provider request or
+client-side expression search is introduced.
+
 Dictionary lookup is deliberately distinct from translation:
 
 ```text

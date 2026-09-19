@@ -47,7 +47,54 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get translationSentence => 'Предложение';
 
   @override
-  String get translationWord => 'Перевод слова';
+  String get translationGeneralMeaning => 'Общее значение';
+
+  @override
+  String translationGeneralMeaningOf(String word) {
+    return 'Общее значение: $word';
+  }
+
+  @override
+  String get translationInExpression => 'В выражении';
+
+  @override
+  String get translationBaseForm => 'Начальная форма:';
+
+  @override
+  String get translationPosNoun => 'Существительное';
+
+  @override
+  String get translationPosVerb => 'Глагол';
+
+  @override
+  String get translationPosAdjective => 'Прилагательное';
+
+  @override
+  String get translationPosAdverb => 'Наречие';
+
+  @override
+  String get translationPosPronoun => 'Местоимение';
+
+  @override
+  String get translationPosPreposition => 'Предлог';
+
+  @override
+  String get translationPosConjunction => 'Союз';
+
+  @override
+  String get translationPosInterjection => 'Междометие';
+
+  @override
+  String get translationPosDeterminer => 'Определитель';
+
+  @override
+  String get translationPosNumeral => 'Числительное';
+
+  @override
+  String get translationPosParticle => 'Частица';
+
+  @override
+  String get translationPosAuxiliary => 'Вспомогательный глагол';
 
   @override
   String get translationInContext => 'В этом контексте';

@@ -31,12 +31,22 @@ class FixtureTranslation implements ContextualTranslationService {
     this.includeLexicalDetails = false,
     this.primaryTranslation,
     this.baseTranslation,
+    this.analysis,
+    this.expression,
+    this.explanation,
+    this.alternatives,
+    this.sentenceTranslation = 'Der Akku versorgt die Geraete mit Strom.',
   });
 
   static const translatedText = 'Ein tragbarer Akku versorgt die Geraete.';
   bool includeLexicalDetails;
   final String? primaryTranslation;
   final String? baseTranslation;
+  final ContextualTranslationAnalysis? analysis;
+  final ContextualTranslationExpression? expression;
+  final String? explanation;
+  final List<ContextualTranslationAlternative>? alternatives;
+  final String sentenceTranslation;
   final requests = <ContextualTranslationRequest>[];
   ContextualTranslationFailureReason? failure;
   Completer<void>? pending;
@@ -63,20 +73,27 @@ class FixtureTranslation implements ContextualTranslationService {
         contextualTranslation:
             primaryTranslation ??
             (includeLexicalDetails ? 'Externer Akku' : translatedText),
-        sentenceTranslation: 'Der Akku versorgt die Geraete mit Strom.',
+        sentenceTranslation: sentenceTranslation,
       ),
-      analysis: includeLexicalDetails
-          ? const ContextualTranslationAnalysis(lemma: 'power bank')
-          : null,
-      explanation: includeLexicalDetails
-          ? 'Ein tragbarer Akku zum Laden mobiler Geraete.'
-          : null,
-      alternatives: includeLexicalDetails
-          ? const [
-              ContextualTranslationAlternative(translation: 'Zusatzakku'),
-              ContextualTranslationAlternative(translation: 'Ersatzakku'),
-            ]
-          : const [],
+      contextualExpression: expression,
+      analysis:
+          analysis ??
+          (includeLexicalDetails
+              ? const ContextualTranslationAnalysis(lemma: 'power bank')
+              : null),
+      explanation:
+          explanation ??
+          (includeLexicalDetails
+              ? 'Ein tragbarer Akku zum Laden mobiler Geraete.'
+              : null),
+      alternatives:
+          alternatives ??
+          (includeLexicalDetails
+              ? const [
+                  ContextualTranslationAlternative(translation: 'Zusatzakku'),
+                  ContextualTranslationAlternative(translation: 'Ersatzakku'),
+                ]
+              : const []),
     );
   }
 

@@ -12,7 +12,12 @@ dependencies:
   lucide_icons_flutter: ^3.1.14+2
 
 flutter:
+  licenses:
+    - fonts/OFL-NotoSans.txt
   fonts:
+    - family: Noto Sans Phonetics
+      fonts:
+        - asset: fonts/NotoSans-Phonetics.ttf
     - family: Geist
       fonts:
         - asset: fonts/Geist-Variable.ttf

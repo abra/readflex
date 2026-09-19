@@ -47,7 +47,54 @@ class ReadflexLocalizationsEs extends ReadflexLocalizations {
   String get translationSentence => 'Oración';
 
   @override
-  String get translationWord => 'Traducción de la palabra';
+  String get translationGeneralMeaning => 'Significado general';
+
+  @override
+  String translationGeneralMeaningOf(String word) {
+    return 'Significado general: $word';
+  }
+
+  @override
+  String get translationInExpression => 'En la expresión';
+
+  @override
+  String get translationBaseForm => 'Forma base:';
+
+  @override
+  String get translationPosNoun => 'Sustantivo';
+
+  @override
+  String get translationPosVerb => 'Verbo';
+
+  @override
+  String get translationPosAdjective => 'Adjetivo';
+
+  @override
+  String get translationPosAdverb => 'Adverbio';
+
+  @override
+  String get translationPosPronoun => 'Pronombre';
+
+  @override
+  String get translationPosPreposition => 'Preposición';
+
+  @override
+  String get translationPosConjunction => 'Conjunción';
+
+  @override
+  String get translationPosInterjection => 'Interjección';
+
+  @override
+  String get translationPosDeterminer => 'Determinante';
+
+  @override
+  String get translationPosNumeral => 'Numeral';
+
+  @override
+  String get translationPosParticle => 'Partícula';
+
+  @override
+  String get translationPosAuxiliary => 'Verbo auxiliar';
 
   @override
   String get translationInContext => 'En este contexto';

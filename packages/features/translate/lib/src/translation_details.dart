@@ -6,13 +6,11 @@ import 'translation_text_direction.dart';
 
 class TranslationDetails extends StatefulWidget {
   const TranslationDetails({
-    required this.lemma,
     required this.explanation,
     required this.alternatives,
     super.key,
   });
 
-  final String? lemma;
   final String? explanation;
   final List<String> alternatives;
 
@@ -54,17 +52,6 @@ class _TranslationDetailsState extends State<TranslationDetails> {
         ),
       ),
       children: [
-        if (widget.lemma != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: Text(
-              widget.lemma!,
-              textDirection: translationTextDirection(widget.lemma!),
-              style: context.text.bodyMedium.copyWith(
-                color: context.colors.onSurfaceVariant,
-              ),
-            ),
-          ),
         if (widget.explanation != null)
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.sm),

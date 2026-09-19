@@ -189,11 +189,101 @@ abstract class ReadflexLocalizations {
   /// **'Sentence'**
   String get translationSentence;
 
-  /// No description provided for @translationWord.
+  /// No description provided for @translationGeneralMeaning.
   ///
   /// In en, this message translates to:
-  /// **'Word translation'**
-  String get translationWord;
+  /// **'General meaning'**
+  String get translationGeneralMeaning;
+
+  /// No description provided for @translationGeneralMeaningOf.
+  ///
+  /// In en, this message translates to:
+  /// **'General meaning: {word}'**
+  String translationGeneralMeaningOf(String word);
+
+  /// No description provided for @translationInExpression.
+  ///
+  /// In en, this message translates to:
+  /// **'In the expression'**
+  String get translationInExpression;
+
+  /// No description provided for @translationBaseForm.
+  ///
+  /// In en, this message translates to:
+  /// **'Base form:'**
+  String get translationBaseForm;
+
+  /// No description provided for @translationPosNoun.
+  ///
+  /// In en, this message translates to:
+  /// **'Noun'**
+  String get translationPosNoun;
+
+  /// No description provided for @translationPosVerb.
+  ///
+  /// In en, this message translates to:
+  /// **'Verb'**
+  String get translationPosVerb;
+
+  /// No description provided for @translationPosAdjective.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjective'**
+  String get translationPosAdjective;
+
+  /// No description provided for @translationPosAdverb.
+  ///
+  /// In en, this message translates to:
+  /// **'Adverb'**
+  String get translationPosAdverb;
+
+  /// No description provided for @translationPosPronoun.
+  ///
+  /// In en, this message translates to:
+  /// **'Pronoun'**
+  String get translationPosPronoun;
+
+  /// No description provided for @translationPosPreposition.
+  ///
+  /// In en, this message translates to:
+  /// **'Preposition'**
+  String get translationPosPreposition;
+
+  /// No description provided for @translationPosConjunction.
+  ///
+  /// In en, this message translates to:
+  /// **'Conjunction'**
+  String get translationPosConjunction;
+
+  /// No description provided for @translationPosInterjection.
+  ///
+  /// In en, this message translates to:
+  /// **'Interjection'**
+  String get translationPosInterjection;
+
+  /// No description provided for @translationPosDeterminer.
+  ///
+  /// In en, this message translates to:
+  /// **'Determiner'**
+  String get translationPosDeterminer;
+
+  /// No description provided for @translationPosNumeral.
+  ///
+  /// In en, this message translates to:
+  /// **'Numeral'**
+  String get translationPosNumeral;
+
+  /// No description provided for @translationPosParticle.
+  ///
+  /// In en, this message translates to:
+  /// **'Particle'**
+  String get translationPosParticle;
+
+  /// No description provided for @translationPosAuxiliary.
+  ///
+  /// In en, this message translates to:
+  /// **'Auxiliary verb'**
+  String get translationPosAuxiliary;
 
   /// No description provided for @translationInContext.
   ///

@@ -10,8 +10,8 @@ import 'package:shared/shared.dart';
 import 'translate_cubit.dart';
 import 'translation_details.dart';
 import 'translation_language_direction.dart';
+import 'translation_lexical_header.dart';
 import 'translation_selection_preview.dart';
-import 'translation_source_quote.dart';
 import 'translation_text_direction.dart';
 
 Future<void> showTranslateSheet(
@@ -209,32 +209,44 @@ class _TranslationResultView extends StatelessWidget {
   Widget build(BuildContext context) {
     final isTextTranslation = result.mode == selectedTextTranslationMode;
     final selectedText = selection.effectiveSelectedText.trim();
+    final analysis = result.analysis;
+    // Expression metadata may describe more tokens than the selected word.
+    final isWordWithinExpression =
+        analysis != null &&
+        analysis.selectedTokenIds.length == 1 &&
+        analysis.expressionTokenIds.length > 1 &&
+        analysis.expressionTokenIds.contains(analysis.selectedTokenIds.single);
     final isSingleWord =
         !isTextTranslation &&
         selectedText.isNotEmpty &&
-        !_selectionWhitespacePattern.hasMatch(selectedText);
+        !_selectionWhitespacePattern.hasMatch(selectedText) &&
+        (isWordWithinExpression ||
+            !const {
+              'phrase',
+              'phrasal_verb',
+              'idiom',
+              'expression',
+            }.contains(analysis?.expressionType?.trim().toLowerCase()));
     final base = _nonEmptyText(result.translation.baseTranslation);
-    final contextual = _nonEmptyText(result.translation.contextualTranslation);
-    final showBoth =
+    // The backend grounds this optional expression in the selected occurrence.
+    final expression = isSingleWord ? result.contextualExpression : null;
+    final primary = _firstNonEmptyText([
+      expression?.translation,
+      result.translation.contextualTranslation,
+      result.translation.translatedFragment,
+      result.translation.baseTranslation,
+      result.translation.sentenceTranslation,
+    ]);
+    // Equal answers are redundant only when they describe the same source span.
+    final showWordAnswer =
         isSingleWord &&
         base != null &&
-        contextual != null &&
-        _normalizedAnswer(base) != _normalizedAnswer(contextual);
-    final primary = showBoth
-        ? base
-        : _firstNonEmptyText([
-            result.translation.contextualTranslation,
-            result.translation.translatedFragment,
-            result.translation.baseTranslation,
-            result.translation.sentenceTranslation,
-          ]);
+        (expression != null ||
+            _normalizedAnswer(base) != _normalizedAnswer(primary ?? ''));
+    final showContextSection = expression != null || showWordAnswer;
     final sentenceTranslation = _nonEmptyText(
       result.translation.sentenceTranslation,
     );
-    final resultLemma = _nonEmptyText(result.analysis?.lemma);
-    final lemma = resultLemma?.toLowerCase() == selectedText.toLowerCase()
-        ? null
-        : resultLemma;
     final explanation = _nonEmptyText(result.explanation);
     final alternatives = result.alternatives
         .map((alternative) => alternative.translation.trim())
@@ -244,15 +256,10 @@ class _TranslationResultView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (!isTextTranslation) ...[
-          TranslationSourceQuote(
-            textDirection: translationTextDirection(selectedText),
-            child: Text(
-              selectedText,
-              key: const ValueKey('translation-selected-fragment'),
-              style: context.text.bodyMedium.copyWith(
-                color: context.colors.onSurface,
-              ),
-            ),
+          TranslationLexicalHeader(
+            selectedText: selectedText,
+            isSingleWord: isSingleWord,
+            analysis: result.analysis,
           ),
           const SizedBox(height: AppSpacing.xs),
         ],
@@ -263,38 +270,48 @@ class _TranslationResultView extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
         ],
-        if (primary != null)
-          _TranslationAnswer(
-            id: 'primary',
-            text: primary,
-            label: showBoth ? context.l10n.translationWord : null,
-            isSingleWord: isSingleWord,
-            onCopy: onCopy,
-          ),
-        if (showBoth) ...[
-          const SizedBox(height: AppSpacing.sm),
-          _TranslationAnswer(
-            id: 'contextual',
-            text: contextual,
-            label: context.l10n.translationInContext,
-            isSingleWord: isSingleWord,
-            onCopy: onCopy,
-          ),
-        ],
-        const SizedBox(height: AppSpacing.md),
-        Divider(height: 1, color: context.colors.outlineVariant),
-        const SizedBox(height: AppSpacing.md),
-        Semantics(
-          header: true,
-          child: Text(
-            isTextTranslation
-                ? context.l10n.translationOriginal
-                : context.l10n.translationSentence,
-            style: context.text.labelMedium.copyWith(
-              color: context.colors.onSurfaceVariant,
+        if (showWordAnswer)
+          _TranslationAnswer(id: 'base', text: base, onCopy: onCopy),
+        if (showContextSection) ...[
+          const SizedBox(height: AppSpacing.md),
+          Divider(height: 1, color: context.colors.outlineVariant),
+          const SizedBox(height: AppSpacing.md),
+          Semantics(
+            header: true,
+            child: Text(
+              context.l10n.translationInContext,
+              style: context.text.labelMedium.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
             ),
           ),
-        ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+        if (expression != null)
+          SelectableText(
+            expression.text,
+            key: const ValueKey('translation-contextual-expression'),
+            textDirection: translationTextDirection(expression.text),
+            style: context.text.titleMedium.copyWith(letterSpacing: 0),
+          ),
+        if (primary != null)
+          _TranslationAnswer(id: 'primary', text: primary, onCopy: onCopy),
+        if (!showContextSection) ...[
+          const SizedBox(height: AppSpacing.md),
+          Divider(height: 1, color: context.colors.outlineVariant),
+          const SizedBox(height: AppSpacing.md),
+          Semantics(
+            header: true,
+            child: Text(
+              isTextTranslation
+                  ? context.l10n.translationOriginal
+                  : context.l10n.translationSentence,
+              style: context.text.labelMedium.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: AppSpacing.sm),
         TranslationSelectionPreview(
           selection: selection,
@@ -302,8 +319,8 @@ class _TranslationResultView extends StatelessWidget {
         ),
         if (!isTextTranslation &&
             sentenceTranslation != null &&
-            sentenceTranslation != primary &&
-            (!showBoth || sentenceTranslation != contextual)) ...[
+            _normalizedAnswer(sentenceTranslation) !=
+                _normalizedAnswer(primary ?? '')) ...[
           const SizedBox(height: AppSpacing.sm),
           SelectableText(
             sentenceTranslation,
@@ -313,13 +330,10 @@ class _TranslationResultView extends StatelessWidget {
           ),
         ],
         if (!isTextTranslation &&
-            (lemma != null ||
-                explanation != null ||
-                alternatives.isNotEmpty)) ...[
+            (explanation != null || alternatives.isNotEmpty)) ...[
           const SizedBox(height: AppSpacing.md),
           TranslationDetails(
             key: ValueKey(result.requestId),
-            lemma: lemma,
             explanation: explanation,
             alternatives: alternatives,
           ),
@@ -332,67 +346,46 @@ class _TranslationResultView extends StatelessWidget {
 final _selectionWhitespacePattern = RegExp(r'\s');
 
 String _normalizedAnswer(String value) =>
-    value.replaceAll(RegExp(r'\s+'), ' ').trim().toLowerCase();
+    value.replaceAll(_answerWhitespacePattern, ' ').trim().toLowerCase();
+
+final _answerWhitespacePattern = RegExp(r'\s+');
 
 class _TranslationAnswer extends StatelessWidget {
   const _TranslationAnswer({
     required this.id,
     required this.text,
-    required this.isSingleWord,
     required this.onCopy,
-    this.label,
   });
 
   final String id;
   final String text;
-  final String? label;
-  final bool isSingleWord;
   final Future<void> Function(String) onCopy;
 
   @override
   Widget build(BuildContext context) {
-    final usesLexicalTitle =
-        isSingleWord && !_selectionWhitespacePattern.hasMatch(text);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (label != null)
-          Semantics(
-            header: true,
-            child: Text(
-              label!,
-              style: context.text.labelMedium.copyWith(
-                color: context.colors.onSurfaceVariant,
-              ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
+            child: SelectableText(
+              text,
+              key: ValueKey('translation-$id-result'),
+              textDirection: translationTextDirection(text),
+              style: context.text.bodyLarge.copyWith(letterSpacing: 0),
             ),
           ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.sm),
-                child: SelectableText(
-                  text,
-                  key: ValueKey('translation-$id-result'),
-                  textDirection: translationTextDirection(text),
-                  style: usesLexicalTitle
-                      ? context.text.titleLarge
-                      : context.text.bodyLarge,
-                ),
-              ),
-            ),
-            KeyedSubtree(
-              key: ValueKey('translation-$id-copy'),
-              child: AppCopyButton(
-                key: ValueKey(text),
-                onCopy: () => onCopy(text),
-                copyLabel: context.l10n.commonCopy,
-                copiedLabel: context.l10n.commonCopied,
-                failureLabel: context.l10n.commonCopyFailed,
-              ),
-            ),
-          ],
+        ),
+        KeyedSubtree(
+          key: ValueKey('translation-$id-copy'),
+          child: AppCopyButton(
+            key: ValueKey(text),
+            onCopy: () => onCopy(text),
+            copyLabel: context.l10n.commonCopy,
+            copiedLabel: context.l10n.commonCopied,
+            failureLabel: context.l10n.commonCopyFailed,
+          ),
         ),
       ],
     );

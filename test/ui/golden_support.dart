@@ -24,6 +24,7 @@ enum VisualProfile {
 
 Future<void> loadUiFonts() async {
   for (final entry in {
+    'Noto Sans Phonetics': 'NotoSans-Phonetics.ttf',
     'Geist': 'Geist-Variable.ttf',
     'Literata': 'Literata-Variable.ttf',
     'PT Serif': 'PTSerif-Regular.ttf',

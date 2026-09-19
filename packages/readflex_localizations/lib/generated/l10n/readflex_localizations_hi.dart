@@ -47,7 +47,54 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get translationSentence => 'वाक्य';
 
   @override
-  String get translationWord => 'शब्द का अनुवाद';
+  String get translationGeneralMeaning => 'सामान्य अर्थ';
+
+  @override
+  String translationGeneralMeaningOf(String word) {
+    return '$word का सामान्य अर्थ';
+  }
+
+  @override
+  String get translationInExpression => 'इस अभिव्यक्ति में';
+
+  @override
+  String get translationBaseForm => 'मूल रूप:';
+
+  @override
+  String get translationPosNoun => 'संज्ञा';
+
+  @override
+  String get translationPosVerb => 'क्रिया';
+
+  @override
+  String get translationPosAdjective => 'विशेषण';
+
+  @override
+  String get translationPosAdverb => 'क्रिया विशेषण';
+
+  @override
+  String get translationPosPronoun => 'सर्वनाम';
+
+  @override
+  String get translationPosPreposition => 'संबंधसूचक';
+
+  @override
+  String get translationPosConjunction => 'समुच्चयबोधक';
+
+  @override
+  String get translationPosInterjection => 'विस्मयादिबोधक';
+
+  @override
+  String get translationPosDeterminer => 'निर्धारक';
+
+  @override
+  String get translationPosNumeral => 'संख्यावाचक';
+
+  @override
+  String get translationPosParticle => 'निपात';
+
+  @override
+  String get translationPosAuxiliary => 'सहायक क्रिया';
 
   @override
   String get translationInContext => 'इस संदर्भ में';

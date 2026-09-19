@@ -47,7 +47,54 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get translationSentence => '文';
 
   @override
-  String get translationWord => '単語の訳';
+  String get translationGeneralMeaning => '一般的な意味';
+
+  @override
+  String translationGeneralMeaningOf(String word) {
+    return '「$word」の一般的な意味';
+  }
+
+  @override
+  String get translationInExpression => '表現の中で';
+
+  @override
+  String get translationBaseForm => '基本形：';
+
+  @override
+  String get translationPosNoun => '名詞';
+
+  @override
+  String get translationPosVerb => '動詞';
+
+  @override
+  String get translationPosAdjective => '形容詞';
+
+  @override
+  String get translationPosAdverb => '副詞';
+
+  @override
+  String get translationPosPronoun => '代名詞';
+
+  @override
+  String get translationPosPreposition => '前置詞';
+
+  @override
+  String get translationPosConjunction => '接続詞';
+
+  @override
+  String get translationPosInterjection => '感動詞';
+
+  @override
+  String get translationPosDeterminer => '限定詞';
+
+  @override
+  String get translationPosNumeral => '数詞';
+
+  @override
+  String get translationPosParticle => '助詞';
+
+  @override
+  String get translationPosAuxiliary => '助動詞';
 
   @override
   String get translationInContext => 'この文脈での訳';

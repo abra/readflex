@@ -17,58 +17,237 @@ void main() {
         InMemorySharedPreferencesAsync.empty();
   });
 
-  testWidgets('word shows base and contextual answers with independent copy', (
+  testWidgets(
+    'word and contextual meanings are visible with independent copy',
+    (tester) async {
+      final copied = <String>[];
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copied.add((call.arguments as Map)['text'] as String);
+        }
+        return null;
+      });
+      addTearDown(
+        () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+      );
+      final service = _WordTranslationService(
+        const ContextualTranslationText(
+          baseTranslation: 'сила',
+          contextualTranslation: 'питание',
+          sentenceTranslation:
+              'Этот аккумулятор обеспечивает аварийное питание.',
+        ),
+      );
+      await _pumpTranslateSheet(
+        tester,
+        selection: _selection,
+        service: service,
+      );
+      final primary = find.byKey(const ValueKey('translation-primary-result'));
+      final generalMeaning = find.byKey(
+        const ValueKey('translation-base-result'),
+      );
+      expect(tester.widget<SelectableText>(primary).data, 'питание');
+      expect(generalMeaning.hitTestable(), findsOneWidget);
+      expect(find.text('In this context'), findsOneWidget);
+      expect(find.byType(ExpansionTile), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('translation-primary-copy')));
+      await tester.pumpAndSettle();
+      expect(tester.widget<SelectableText>(generalMeaning).data, 'сила');
+      expect(
+        tester.widget<SelectableText>(generalMeaning).style,
+        Theme.of(
+          tester.element(generalMeaning),
+        ).textTheme.bodyLarge!.copyWith(letterSpacing: 0),
+      );
+      expect(
+        tester.getTopLeft(generalMeaning).dy,
+        lessThan(tester.getTopLeft(find.text('In this context')).dy),
+      );
+      expect(
+        find.byKey(const ValueKey('translation-sentence-result')),
+        findsOneWidget,
+      );
+      final copyGeneralMeaning = find.byKey(
+        const ValueKey('translation-base-copy'),
+      );
+      await tester.ensureVisible(copyGeneralMeaning);
+      await tester.tap(copyGeneralMeaning);
+      await tester.pumpAndSettle();
+      expect(copied, ['питание', 'сила']);
+      expect(service.calls, 1);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  for (final example in [
+    (
+      word: 'rather',
+      expression: 'rather than',
+      base: 'скорее; довольно',
+      translated: 'вместо того чтобы',
+      sentence: 'She walked rather than waited for the bus.',
+    ),
+    (
+      word: 'into',
+      expression: 'falls into',
+      base: 'в',
+      translated: 'относится к',
+      sentence: 'This service falls into the same category.',
+    ),
+    (
+      word: 'shutting',
+      expression: 'shutting the device off',
+      base: 'закрывающий',
+      translated: 'выключение устройства',
+      sentence: 'Try shutting the device off.',
+    ),
+    (
+      word: '気',
+      expression: '気をつけて',
+      base: 'дух',
+      translated: 'будь осторожен',
+      sentence: '気をつけて帰ってね。',
+    ),
+  ]) {
+    testWidgets('shows the source scope of ${example.expression}', (
+      tester,
+    ) async {
+      final service = _WordTranslationService(
+        ContextualTranslationText(
+          baseTranslation: example.base,
+          sentenceTranslation: 'A complete translated sentence.',
+        ),
+        expression: ContextualTranslationExpression(
+          text: example.expression,
+          translation: example.translated,
+        ),
+      );
+      await _pumpTranslateSheet(
+        tester,
+        service: service,
+        selection: TextSelectionContext(
+          selectedText: example.word,
+          contextText: example.sentence,
+          sourceId: 'source-1',
+          sourceType: SourceType.book,
+        ),
+      );
+      expect(find.text(example.word), findsOneWidget);
+      expect(find.text('In this context'), findsOneWidget);
+      final scope = find.byKey(
+        const ValueKey('translation-contextual-expression'),
+      );
+      final primary = find.byKey(const ValueKey('translation-primary-result'));
+      expect(tester.widget<SelectableText>(scope).data, example.expression);
+      expect(tester.widget<SelectableText>(primary).data, example.translated);
+      expect(
+        tester.getTopLeft(scope).dy,
+        lessThan(tester.getTopLeft(primary).dy),
+      );
+      final base = find.byKey(const ValueKey('translation-base-result'));
+      expect(tester.widget<SelectableText>(base).data, example.base);
+      expect(base.hitTestable(), findsOneWidget);
+      expect(tester.getTopLeft(base).dy, lessThan(tester.getTopLeft(scope).dy));
+      expect(
+        find.byKey(const ValueKey('translation-sentence-result')),
+        findsOneWidget,
+      );
+      expect(find.byType(ExpansionTile), findsNothing);
+      expect(service.calls, 1);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('rather without a larger expression keeps both word meanings', (
     tester,
   ) async {
-    final copied = <String>[];
-    final messenger =
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
-      if (call.method == 'Clipboard.setData') {
-        copied.add((call.arguments as Map)['text'] as String);
-      }
-      return null;
-    });
-    addTearDown(
-      () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
-    );
     final service = _WordTranslationService(
       const ContextualTranslationText(
-        baseTranslation: 'сила',
-        contextualTranslation: 'питание',
-        sentenceTranslation: 'Этот аккумулятор обеспечивает аварийное питание.',
+        baseTranslation: 'скорее; довольно',
+        contextualTranslation: 'довольно',
+        sentenceTranslation: 'Здесь довольно тихо.',
       ),
     );
-    await _pumpTranslateSheet(tester, selection: _selection, service: service);
-    expect(find.text('Word translation'), findsOneWidget);
+    await _pumpTranslateSheet(
+      tester,
+      service: service,
+      selection: const TextSelectionContext(
+        selectedText: 'rather',
+        contextText: 'It is rather quiet here.',
+        markedContextText: 'It is [[rather]] quiet here.',
+        sourceId: 'source-1',
+        sourceType: SourceType.article,
+      ),
+    );
+    expect(find.text('скорее; довольно').hitTestable(), findsOneWidget);
+    expect(find.text('довольно').hitTestable(), findsOneWidget);
     expect(find.text('In this context'), findsOneWidget);
-    final primary = find.byKey(const ValueKey('translation-primary-result'));
-    final contextual = find.byKey(
-      const ValueKey('translation-contextual-result'),
-    );
-    expect(tester.widget<SelectableText>(primary).data, 'сила');
-    expect(tester.widget<SelectableText>(contextual).data, 'питание');
     expect(
-      tester.getTopLeft(primary).dy,
-      lessThan(tester.getTopLeft(contextual).dy),
+      find.byKey(const ValueKey('translation-contextual-expression')),
+      findsNothing,
     );
-    expect(
-      find.byKey(const ValueKey('translation-sentence-result')),
-      findsOneWidget,
-    );
-    for (final key in [
-      'translation-primary-copy',
-      'translation-contextual-copy',
-    ]) {
-      final button = find.byKey(ValueKey(key));
-      await tester.ensureVisible(button);
-      await tester.tap(button);
-      await tester.pumpAndSettle();
-    }
-    expect(copied, ['сила', 'питание']);
+    expect(find.byType(ExpansionTile), findsNothing);
     expect(service.calls, 1);
-    await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  for (final example in [
+    (
+      name: 'equal translations still describe different source spans',
+      translation: const ContextualTranslationText(baseTranslation: 'выключен'),
+      wordAnswer: 'выключен',
+    ),
+    (
+      name:
+          'missing base does not relabel a contextual fallback as a word meaning',
+      translation: const ContextualTranslationText(
+        contextualTranslation: 'отключён',
+      ),
+      wordAnswer: null,
+    ),
+    (
+      name: 'expression-only response does not invent a word translation',
+      translation: const ContextualTranslationText(),
+      wordAnswer: null,
+    ),
+  ]) {
+    testWidgets(example.name, (tester) async {
+      await _pumpTranslateSheet(
+        tester,
+        selection: const TextSelectionContext(
+          selectedText: 'off',
+          contextText: 'The device is switched off.',
+          sourceId: 'source-1',
+          sourceType: SourceType.book,
+        ),
+        service: _WordTranslationService(
+          example.translation,
+          expression: const ContextualTranslationExpression(
+            text: 'switched off',
+            translation: 'выключен',
+          ),
+        ),
+      );
+      final word = find.byKey(const ValueKey('translation-base-result'));
+      if (example.wordAnswer case final answer?) {
+        expect(tester.widget<SelectableText>(word).data, answer);
+      } else {
+        expect(word, findsNothing);
+      }
+      expect(
+        tester
+            .widget<SelectableText>(
+              find.byKey(const ValueKey('translation-primary-result')),
+            )
+            .data,
+        'выключен',
+      );
+      expect(find.text('switched off'), findsOneWidget);
+      expect(find.byType(ExpansionTile), findsNothing);
+    });
+  }
 
   for (final entry in <String, ContextualTranslationText>{
     'identical': const ContextualTranslationText(
@@ -102,7 +281,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.byKey(const ValueKey('translation-contextual-result')),
+        find.byKey(const ValueKey('translation-base-result')),
         findsNothing,
       );
       expect(find.text('In this context'), findsNothing);
@@ -128,25 +307,41 @@ void main() {
               baseTranslation: 'ordinary meaning with several words',
               contextualTranslation: 'معنى الكلمة في سياق الجملة',
             ),
+            analysis: const ContextualTranslationAnalysis(
+              surfaceForm: 'power',
+              pronunciation: '/ˈpaʊər/',
+              partOfSpeech: 'noun',
+              expressionType: 'word',
+            ),
+            expression: const ContextualTranslationExpression(
+              text: 'supplies power',
+              translation: 'معنى الكلمة في سياق الجملة',
+            ),
           ),
         );
         final l10n = ReadflexLocalizations.of(
           tester.element(find.byType(TranslateSheet)),
         )!;
-        expect(find.text(l10n.translationWord), findsOneWidget);
+        expect(find.text(l10n.translationPosNoun), findsOneWidget);
         expect(find.text(l10n.translationInContext), findsOneWidget);
-        for (final id in ['primary', 'contextual']) {
+        expect(
+          find.byKey(const ValueKey('translation-pronunciation')).hitTestable(),
+          findsOneWidget,
+        );
+        for (final id in ['primary', 'base']) {
           final result = find.byKey(ValueKey('translation-$id-result'));
           await tester.ensureVisible(result);
           expect(result.hitTestable(), findsOneWidget);
           final text = tester.widget<SelectableText>(result);
           expect(
             text.textDirection,
-            id == 'primary' ? TextDirection.ltr : TextDirection.rtl,
+            id == 'primary' ? TextDirection.rtl : TextDirection.ltr,
           );
           expect(
             text.style,
-            Theme.of(tester.element(result)).textTheme.bodyLarge,
+            Theme.of(
+              tester.element(result),
+            ).textTheme.bodyLarge!.copyWith(letterSpacing: 0),
           );
           final copy = find.byKey(ValueKey('translation-$id-copy'));
           await tester.ensureVisible(copy);
@@ -169,11 +364,219 @@ void main() {
               baseTranslation: 'base',
               contextualTranslation: 'contextual answer',
             ),
+            expression: const ContextualTranslationExpression(
+              text: 'unwanted expansion',
+              translation: 'wrong answer',
+            ),
           ),
         );
         expect(find.text('base'), findsNothing);
         expect(find.text('contextual answer'), findsOneWidget);
-        expect(find.text('Word translation'), findsNothing);
+        expect(find.text('General meaning'), findsNothing);
+        expect(find.text('wrong answer'), findsNothing);
+        expect(
+          find.byKey(const ValueKey('translation-contextual-expression')),
+          findsNothing,
+        );
+      },
+    );
+  }
+
+  for (final expressionType in ['word', 'phrase', 'phrasal_verb', 'idiom']) {
+    testWidgets(
+      'word within $expressionType keeps pronunciation and base form',
+      (tester) async {
+        final service = _WordTranslationService(
+          const ContextualTranslationText(contextualTranslation: 'отключающий'),
+          analysis: ContextualTranslationAnalysis(
+            selectedTokenIds: const [3],
+            expressionTokenIds: expressionType == 'word'
+                ? const [3]
+                : const [3, 4],
+            surfaceForm: 'shutting',
+            lemma: 'shut',
+            pronunciation: '/ˈʃʌtɪŋ/',
+            partOfSpeech: 'verb',
+            expressionType: expressionType,
+          ),
+        );
+        await _pumpTranslateSheet(
+          tester,
+          service: service,
+          selection: const TextSelectionContext(
+            selectedText: 'shutting',
+            contextText: 'The device is shutting off.',
+            sourceId: 'source-1',
+            sourceType: SourceType.book,
+          ),
+        );
+        expect(find.text('shutting'), findsOneWidget);
+        expect(find.text('/ˈʃʌtɪŋ/').hitTestable(), findsOneWidget);
+        expect(find.text('Verb'), findsOneWidget);
+        expect(find.text('Base form:'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('translation-lemma')).hitTestable(),
+          findsOneWidget,
+        );
+        expect(find.text('shut'), findsOneWidget);
+        expect(find.byType(ExpansionTile), findsNothing);
+        expect(service.calls, 1);
+      },
+    );
+  }
+
+  for (final example in [
+    (word: 'rather', locale: const Locale('ar'), direction: TextDirection.ltr),
+    (word: 'قدرة', locale: const Locale('en'), direction: TextDirection.rtl),
+  ]) {
+    testWidgets('word metadata follows source direction for ${example.word}', (
+      tester,
+    ) async {
+      await _pumpTranslateSheet(
+        tester,
+        locale: example.locale,
+        selection: TextSelectionContext(
+          selectedText: example.word,
+          sourceId: 'source-1',
+          sourceType: SourceType.book,
+        ),
+        service: _WordTranslationService(
+          const ContextualTranslationText(baseTranslation: 'word meaning'),
+          analysis: ContextualTranslationAnalysis(
+            surfaceForm: example.word,
+            pronunciation: '/ipa/',
+            partOfSpeech: 'noun',
+          ),
+        ),
+      );
+      final metadata = find.ancestor(
+        of: find.byKey(const ValueKey('translation-pronunciation')),
+        matching: find.byType(Wrap),
+      );
+      expect(tester.widget<Wrap>(metadata).textDirection, example.direction);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final surface in <String?>[null, 'powered', 'power bank']) {
+    testWidgets(
+      'does not attribute pronunciation of $surface to selected word',
+      (tester) async {
+        await _pumpTranslateSheet(
+          tester,
+          selection: _selection,
+          service: _WordTranslationService(
+            const ContextualTranslationText(contextualTranslation: 'питание'),
+            analysis: ContextualTranslationAnalysis(
+              surfaceForm: surface,
+              pronunciation: '/wrong/',
+              reading: 'wrong reading',
+              partOfSpeech: 'verb',
+            ),
+          ),
+        );
+        expect(
+          find.byKey(const ValueKey('translation-pronunciation')),
+          findsNothing,
+        );
+        expect(find.byKey(const ValueKey('translation-reading')), findsNothing);
+        expect(find.text('Verb'), findsNothing);
+        expect(find.text('питание'), findsOneWidget);
+      },
+    );
+  }
+
+  testWidgets('blank metadata and unknown grammar add no empty controls', (
+    tester,
+  ) async {
+    await _pumpTranslateSheet(
+      tester,
+      selection: _selection,
+      service: _WordTranslationService(
+        const ContextualTranslationText(contextualTranslation: 'питание'),
+        analysis: const ContextualTranslationAnalysis(
+          surfaceForm: ' power ',
+          lemma: ' POWER ',
+          pronunciation: ' ',
+          reading: '\n',
+          partOfSpeech: 'unrecognized_tag',
+        ),
+      ),
+    );
+    expect(
+      find.byKey(const ValueKey('translation-pronunciation')),
+      findsNothing,
+    );
+    expect(find.byKey(const ValueKey('translation-reading')), findsNothing);
+    expect(find.byKey(const ValueKey('translation-lemma')), findsNothing);
+    expect(find.text('unrecognized_tag'), findsNothing);
+    expect(find.byType(ExpansionTile), findsNothing);
+  });
+
+  for (final entry in {'銀行': 'ぎんこう', '银行': 'yín háng'}.entries) {
+    testWidgets(
+      'reading for ${entry.key} is visible without duplicate pronunciation',
+      (tester) async {
+        await _pumpTranslateSheet(
+          tester,
+          selection: TextSelectionContext(
+            selectedText: entry.key,
+            sourceId: 'source-1',
+            sourceType: SourceType.book,
+          ),
+          service: _WordTranslationService(
+            const ContextualTranslationText(contextualTranslation: 'банк'),
+            analysis: ContextualTranslationAnalysis(
+              surfaceForm: entry.key,
+              reading: entry.value,
+              pronunciation: entry.value,
+              expressionType: 'word',
+            ),
+          ),
+        );
+        expect(find.text(entry.value).hitTestable(), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('translation-pronunciation')),
+          findsNothing,
+        );
+        expect(find.byType(ExpansionTile), findsNothing);
+      },
+    );
+  }
+
+  for (final selectedTokenIds in <List<int>>[
+    [],
+    [1, 2, 3],
+    [9],
+  ]) {
+    testWidgets(
+      'a non-spaced phrase stays a phrase: tokens $selectedTokenIds',
+      (tester) async {
+        await _pumpTranslateSheet(
+          tester,
+          selection: const TextSelectionContext(
+            selectedText: '銀行に行く',
+            sourceId: 'source-1',
+            sourceType: SourceType.book,
+          ),
+          service: _WordTranslationService(
+            const ContextualTranslationText(
+              baseTranslation: 'банк',
+              contextualTranslation: 'идти в банк',
+            ),
+            analysis: ContextualTranslationAnalysis(
+              selectedTokenIds: selectedTokenIds,
+              expressionTokenIds: const [1, 2, 3],
+              surfaceForm: '銀行に行く',
+              reading: 'ぎんこうにいく',
+              expressionType: 'phrase',
+            ),
+          ),
+        );
+        expect(find.text('идти в банк'), findsOneWidget);
+        expect(find.text('банк'), findsNothing);
+        expect(find.byKey(const ValueKey('translation-reading')), findsNothing);
+        _expectSourceQuote(tester, _selectedFragmentFinder);
       },
     );
   }
@@ -305,7 +708,9 @@ void main() {
       expect(translationWidget.data, 'сила');
       expect(
         translationWidget.style,
-        Theme.of(tester.element(translation)).textTheme.titleLarge,
+        Theme.of(
+          tester.element(translation),
+        ).textTheme.bodyLarge!.copyWith(letterSpacing: 0),
       );
       semantics.dispose();
     },
@@ -346,11 +751,20 @@ void main() {
     });
   }
 
-  testWidgets('only source fragments and context have a quotation rule', (
+  testWidgets('word is a heading; only the sentence has a quotation rule', (
     tester,
   ) async {
     await _pumpTranslateSheet(tester, selection: _selection);
-    _expectSourceQuote(tester, _selectedFragmentFinder);
+    expect(
+      find.ancestor(of: _selectedFragmentFinder, matching: _quoteSurfaceFinder),
+      findsNothing,
+    );
+    expect(
+      tester.widget<Text>(_selectedFragmentFinder).style!.fontSize,
+      Theme.of(
+        tester.element(_selectedFragmentFinder),
+      ).textTheme.titleLarge!.fontSize,
+    );
     _expectSourceQuote(tester, _previewFinder);
     expect(
       find.ancestor(
@@ -436,7 +850,9 @@ void main() {
     );
     expect(
       translationWidget.style,
-      Theme.of(tester.element(translation)).textTheme.bodyLarge,
+      Theme.of(
+        tester.element(translation),
+      ).textTheme.bodyLarge!.copyWith(letterSpacing: 0),
     );
   });
 
@@ -451,7 +867,9 @@ void main() {
     final translationWidget = tester.widget<SelectableText>(translation);
     expect(
       translationWidget.style,
-      Theme.of(tester.element(translation)).textTheme.bodyLarge,
+      Theme.of(
+        tester.element(translation),
+      ).textTheme.bodyLarge!.copyWith(letterSpacing: 0),
     );
   });
 
@@ -468,7 +886,9 @@ void main() {
     final result = find.byKey(const ValueKey('translation-primary-result'));
     expect(
       tester.widget<SelectableText>(result).style,
-      Theme.of(tester.element(result)).textTheme.bodyLarge,
+      Theme.of(
+        tester.element(result),
+      ).textTheme.bodyLarge!.copyWith(letterSpacing: 0),
     );
   });
 
@@ -745,7 +1165,10 @@ void main() {
       service: const _FakeTranslationService(includeLexicalDetails: true),
     );
     expect(_previewText(tester).textDirection, TextDirection.ltr);
-    _expectSourceQuote(tester, _selectedFragmentFinder);
+    expect(
+      tester.widget<Text>(_selectedFragmentFinder).textDirection,
+      TextDirection.ltr,
+    );
     _expectSourceQuote(tester, _previewFinder);
     for (final key in [
       'translation-primary-result',
@@ -773,10 +1196,9 @@ void main() {
       ),
     );
     expect(_previewText(tester).textDirection, TextDirection.rtl);
-    _expectSourceQuote(
-      tester,
-      _selectedFragmentFinder,
-      direction: TextDirection.rtl,
+    expect(
+      tester.widget<Text>(_selectedFragmentFinder).textDirection,
+      TextDirection.rtl,
     );
     _expectSourceQuote(tester, _previewFinder, direction: TextDirection.rtl);
     expect(
@@ -941,9 +1363,11 @@ const _staleMarkedSelection = TextSelectionContext(
 );
 
 class _WordTranslationService implements ContextualTranslationService {
-  _WordTranslationService(this.translation);
+  _WordTranslationService(this.translation, {this.analysis, this.expression});
 
   final ContextualTranslationText translation;
+  final ContextualTranslationAnalysis? analysis;
+  final ContextualTranslationExpression? expression;
   int calls = 0;
 
   @override
@@ -958,6 +1382,8 @@ class _WordTranslationService implements ContextualTranslationService {
       status: ContextualTranslationStatus.resolved,
       reliability: ContextualTranslationReliability.verified,
       translation: translation,
+      analysis: analysis,
+      contextualExpression: expression,
     );
   }
 

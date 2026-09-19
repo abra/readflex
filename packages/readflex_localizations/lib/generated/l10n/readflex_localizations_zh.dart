@@ -47,7 +47,54 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get translationSentence => '句子';
 
   @override
-  String get translationWord => '单词翻译';
+  String get translationGeneralMeaning => '一般含义';
+
+  @override
+  String translationGeneralMeaningOf(String word) {
+    return '$word的一般含义';
+  }
+
+  @override
+  String get translationInExpression => '在表达中';
+
+  @override
+  String get translationBaseForm => '原形：';
+
+  @override
+  String get translationPosNoun => '名词';
+
+  @override
+  String get translationPosVerb => '动词';
+
+  @override
+  String get translationPosAdjective => '形容词';
+
+  @override
+  String get translationPosAdverb => '副词';
+
+  @override
+  String get translationPosPronoun => '代词';
+
+  @override
+  String get translationPosPreposition => '介词';
+
+  @override
+  String get translationPosConjunction => '连词';
+
+  @override
+  String get translationPosInterjection => '感叹词';
+
+  @override
+  String get translationPosDeterminer => '限定词';
+
+  @override
+  String get translationPosNumeral => '数词';
+
+  @override
+  String get translationPosParticle => '助词';
+
+  @override
+  String get translationPosAuxiliary => '助动词';
 
   @override
   String get translationInContext => '在此语境中';
