@@ -1548,6 +1548,10 @@ const escapeCSSString = value => value
 
 const quoteFontFamily = value => `"${escapeCSSString(value)}"`
 
+const symbolFontFamily = 'Noto Sans Symbols'
+// Chapters use blob URLs, so resolve the shared font against the reader module.
+const symbolFontURL = new URL('../../fonts/NotoSansSymbols-Regular.ttf', import.meta.url).href
+
 const getFontFamilyToken = fontName =>
   fontName === 'system' ? 'system-ui' : quoteFontFamily(fontName)
 
@@ -1586,7 +1590,7 @@ const getReaderStylePrelude = ({ fontSize,
 
   const fontFamilyVarDecl = !overrideFont || fontName === 'book'
     ? ''
-    : `--readflex-font-family: ${getFontFamilyToken(fontName)};`
+    : `--readflex-font-family: ${getFontFamilyToken(fontName)}, ${quoteFontFamily(symbolFontFamily)};`
   const safeFontSize = Number(fontSize) || 1
   const safeTextScale = Number(textScale) || 1
   const rootFontSizePx = 16 * safeFontSize
@@ -1606,6 +1610,11 @@ const getReaderStylePrelude = ({ fontSize,
 
   return `
     ${fontFaceDecl}
+    @font-face {
+      font-family: ${quoteFontFamily(symbolFontFamily)};
+      src: url('${symbolFontURL}');
+      font-display: swap;
+    }
     :root {
       ${fontFamilyVarDecl}
       --readflex-font-size: ${fontSize}em;
@@ -1726,8 +1735,8 @@ const getCSS = style => {
         margin-inline-end: 0 !important;
     }
 
-    body > div:only-of-type,
-    body > div:only-of-type > div:only-of-type {
+    body > div:only-of-type:not(.readflex-wide-table),
+    body > div:only-of-type > div:only-of-type:not(.readflex-wide-table) {
         overflow: visible !important;
     }
 

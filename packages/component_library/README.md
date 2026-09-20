@@ -97,8 +97,11 @@ as static semantic token classes:
 - `AppTypography.fontFamilySans` / `fontFamilySerif` -- `Geist` / `Literata`
 - `AppTypography.fontFamilyPhonetic` -- bundled Noto Sans phonetic subset used
   for IPA; see `fonts/README.md` for provenance, reproduction and license
-- `AppTypography.fontFamilyFallback` -- named Arabic, Devanagari, and Japanese
-  fallbacks before the operating system fallback; these do not bundle fonts
+- `AppTypography.fontFamilySymbols` -- bundled Noto Sans Symbols regular font
+  for imported text symbols, including U+267E (permanent paper sign)
+- `AppTypography.fontFamilyFallback` -- bundled symbols, then named Arabic,
+  Devanagari, Japanese and Chinese fallbacks before the operating system
+  fallback; the language fonts are not bundled
 - `AppTypography.serif(...)` / `sans(...)` -- factory methods for one-off styles
 - `context.text.screenCounter`, `sourceMetadata`, `readerChromeLabel`, etc. --
   semantic styles for repeated compact UI surfaces
@@ -109,6 +112,12 @@ otherwise lose the theme's font family. Cover styles retain `inherit: false`
 for route/Hero isolation without losing their font family. Root golden tests
 register deterministic test-only fallback fonts; see `test/fonts/README.md`
 in the repository root.
+
+Symbol fallback does not rewrite selection or translation text and requires
+no runtime download. `test/ui/symbol_fallback_test.dart` compares rendered
+glyph pixels and checks that Latin/Cyrillic typography remains unchanged.
+`integration_test/translation_sheet_test.dart` includes symbols in both the
+source quote and translated sentence for native screenshot inspection.
 
 ### Rules
 

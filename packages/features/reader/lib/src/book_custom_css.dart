@@ -20,6 +20,8 @@ String buildBookCustomCSS({
   const inlineCodeFontSize = 'var(--readflex-inline-code-font-size, 0.9em)';
   const kbdFontSize = 'var(--readflex-kbd-font-size, 0.85em)';
   const codeBlockFontSize = 'var(--readflex-code-block-font-size, 0.875em)';
+  const codeFontFamily =
+      'ui-monospace, Menlo, monospace, "${AppTypography.fontFamilySymbols}"';
 
   final buffer = StringBuffer();
   // No `text-rendering: optimizeLegibility` — it re-measures kerning when
@@ -92,7 +94,7 @@ String buildBookCustomCSS({
     'code { background: $panel !important; border: 1px solid $divider !important; '
     'padding: 0.1em 0.35em; border-radius: 4px; '
     'text-indent: 0 !important; line-height: inherit !important; '
-    'font-family: ui-monospace, Menlo, monospace !important; '
+    'font-family: $codeFontFamily !important; '
     'font-size: $inlineCodeFontSize !important; letter-spacing: -0.01em; }',
   );
   // <samp> = sample program output. Same shape as inline code but without
@@ -101,7 +103,7 @@ String buildBookCustomCSS({
   buffer.writeln(
     'samp { background: $panel !important; '
     'padding: 0.15em 0.35em; border-radius: 4px; '
-    'font-family: ui-monospace, Menlo, monospace !important; '
+    'font-family: $codeFontFamily !important; '
     'font-size: $inlineCodeFontSize !important; }',
   );
   // <kbd> = key cap. Inset bottom shadow gives a subtle raised feel so
@@ -111,7 +113,7 @@ String buildBookCustomCSS({
     'kbd { background: $panel !important; border: 1px solid $divider !important; '
     'box-shadow: inset 0 -1px 0 $divider; '
     'padding: 0.1em 0.4em; border-radius: 4px; '
-    'font-family: ui-monospace, Menlo, monospace !important; '
+    'font-family: $codeFontFamily !important; '
     'font-size: $kbdFontSize !important; font-weight: 600; }',
   );
   // Code blocks must wrap instead of becoming inner scroll containers: iOS
@@ -130,7 +132,7 @@ String buildBookCustomCSS({
     'break-inside: auto !important; text-indent: 0 !important; '
     'text-align: start !important; '
     'overflow-wrap: break-word !important; word-break: normal !important; '
-    'font-family: ui-monospace, Menlo, monospace !important; '
+    'font-family: $codeFontFamily !important; '
     'font-size: $codeBlockFontSize !important; '
     'line-height: 1.45 !important; }',
   );
@@ -181,7 +183,14 @@ String buildBookCustomCSS({
     'overscroll-behavior-inline: contain; touch-action: pan-x pan-y; '
     'box-sizing: border-box; break-inside: avoid; }',
   );
-  // Keep the table intrinsic width inside the scroll wrapper.
+  // Keep the existing semantic overlay for article tables too.
+  buffer.writeln(
+    'table { width: max-content; max-width: none; display: table !important; '
+    'text-indent: 0 !important; text-align: start !important; '
+    'font-size: 0.95em; }',
+  );
+  // Override publisher percentages without making prose rows unbounded.
+  // A table's minimum content width can still exceed this preferred cap.
   // We deliberately omit the Readest pattern of
   // "table:has(> colgroup) { table-layout: fixed; }" because that combo
   // (the :has() selector + a forced table-layout switch) crashes
@@ -189,9 +198,17 @@ String buildBookCustomCSS({
   // RELEASE_ASSERT) when foliate-js is paginating. Bisect on iOS 18.7
   // sim isolated this exact rule as the trigger.
   buffer.writeln(
-    'table { width: max-content; max-width: none; display: table !important; '
-    'text-indent: 0 !important; text-align: start !important; '
-    'font-size: 0.95em; }',
+    '.readflex-wide-table > table { width: max-content !important; '
+    'max-width: max(100%, 40em) !important; '
+    'inline-size: max-content !important; '
+    'max-inline-size: max(100%, 40em) !important; '
+    'table-layout: auto !important; }',
+  );
+  // Prose's emergency word breaking reduces table minimum widths to a glyph.
+  // Include nested paragraphs/links: their explicit rules beat cell inheritance.
+  buffer.writeln(
+    '.readflex-wide-table table, .readflex-wide-table table * { '
+    'overflow-wrap: normal !important; word-break: normal !important; }',
   );
   buffer.writeln(
     'table img, table svg, table canvas { max-inline-size: 100% !important; '

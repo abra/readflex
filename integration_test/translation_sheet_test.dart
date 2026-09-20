@@ -23,6 +23,20 @@ void main() {
 
   for (final example in [
     (
+      name: 'symbols',
+      word: 'paper',
+      pronunciation: '/\u02C8pe\u026Ap\u0259/',
+      partOfSpeech: 'noun',
+      partOfSpeechLabel: 'Noun',
+      wordTranslation: 'Papier',
+      base: 'Papier; Dokument',
+      sentence: '\u267E This book is printed on acid-free paper.',
+      marked: '\u267E This book is printed on acid-free [[paper]].',
+      sentenceTranslation:
+          '\u267E Dieses Buch ist auf säurefreiem Papier gedruckt.',
+      expression: null,
+    ),
+    (
       name: 'word',
       word: 'power',
       pronunciation: '/ˈpaʊər/',

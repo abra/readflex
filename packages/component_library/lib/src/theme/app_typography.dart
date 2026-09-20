@@ -13,7 +13,10 @@ import 'package:flutter/material.dart';
 abstract final class AppTypography {
   static const String fontFamilySans = 'Geist';
   static const String fontFamilyPhonetic = 'Noto Sans Phonetics';
+  static const String fontFamilySymbols = 'Noto Sans Symbols';
   static const fontFamilyFallback = [
+    // Keep imported text symbols available without depending on device fonts.
+    fontFamilySymbols,
     'Noto Sans Arabic',
     'Noto Sans Devanagari',
     'Noto Sans JP',

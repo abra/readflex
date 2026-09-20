@@ -69,6 +69,22 @@ EPUB link events cross the bridge as the destination URL only. The reader
 feature forwards that value through its callback boundary, and app routing
 opens only validated HTTP(S) links with the platform URL launcher.
 
+### Book Fonts
+
+Reading presets use the selected family first, then the bundled Noto Sans
+Symbols for missing glyphs such as U+267E (permanent paper sign). `AssetExtractor`
+copies the same font used by Flutter into the local reader-server assets;
+Flutter's font registry is not visible to the WebView. Each reflowable chapter
+declares the fallback with an absolute local URL, because chapter documents use
+blob URLs. The browser fetches it only when needed; there is no remote font
+service, eager preload, text-node rewrite or per-character scan.
+
+`overrideFont: false` and the `book` preset retain publisher families. The reader
+feature's code overlay retains its monospace families first and adds the same
+symbol fallback last. Fixed-layout documents are not replaced. This is supplemental
+symbol coverage, not complete Unicode or emoji support. Browser tests verify
+actual font pixels, all reading presets, lazy loading and selection/CFI stability.
+
 ### Book Colors
 
 For reflowable books, `FoliateStyle.overrideColor` replaces publisher text and
@@ -295,9 +311,22 @@ Loaded iframe documents are treated as untrusted, publisher-controlled HTML.
 loads a section: language/direction metadata is normalized, wide tables are
 wrapped in a scroll container, inline images
 with text siblings are marked so prose CSS does not treat them as image-only
-paragraphs, and code-like blocks get a stable class for reader styling. The
+paragraphs, and code-like blocks get a stable class for reader styling. Publisher
+class/ID hints for annotations, captions, callouts, descriptions, explanations
+and titles exclude prose from code detection, including camel-case names.
+Otherwise, long code annotations would accidentally inherit a code panel and
+monospace typography while short annotations remained prose. Semantic `pre`
+content and separately nested code blocks keep their code treatment. The
 normalizer mutates only the live WebView document; it does not rewrite the
 user's original EPUB files or saved article files on disk.
+
+Table scroll wrappers keep their overflow even when they are a section's only
+`div`; the generic publisher-container overflow reset must not target
+`.readflex-wide-table`. Width and word-wrapping policy is supplied by
+`reader`'s `buildBookCustomCSS`. The existing gesture guard keeps horizontal
+table gestures out of page-turn handling, and `cfi-skip` keeps wrapping out of
+saved text positions. Do not add per-scroll DOM rewriting or layout observers
+to enforce table widths.
 
 ## Dependencies
 

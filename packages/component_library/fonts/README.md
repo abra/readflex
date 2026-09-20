@@ -1,4 +1,42 @@
-# Phonetic Font
+# Bundled Supplemental Fonts
+
+## Symbol Fallback
+
+`NotoSansSymbols-Regular.ttf` is the complete regular (weight 400) instance of
+[Noto Sans Symbols](https://github.com/google/fonts/tree/8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5/ofl/notosanssymbols),
+retrieved 2026-09-20. It includes U+267E (permanent paper sign), recycling,
+music and other symbols that may occur in book quotations and translations.
+This is not a subset tailored to a particular sentence. At about 181 KiB
+uncompressed, it avoids bundling unused variable-weight data.
+
+The app's common fallback chain uses it only when the primary UI font lacks
+a glyph. The book WebView separately exposes the same asset through the local
+reader server and declares it after the selected reading font. The reader's
+monospace code stack also uses it for missing symbols. Flutter font
+registration alone does not make fonts available inside a WebView. Text contents
+are not changed. The font provides monochrome symbols, not complete emoji or
+Unicode coverage.
+
+The font is declared in both the app and component-library pubspecs; the app
+declaration exposes the short family name used by `AppTypography`.
+`OFL-NotoSansSymbols.txt` is included through the package's `flutter.licenses`.
+Copyright metadata is retained. No runtime network access is needed.
+
+Reproduce with fontTools 4.39.4 (maintenance only, not a build/test dependency):
+
+```sh
+curl -fL 'https://raw.githubusercontent.com/google/fonts/8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5/ofl/notosanssymbols/NotoSansSymbols%5Bwght%5D.ttf' -o NotoSansSymbols-original.ttf
+fonttools varLib.instancer NotoSansSymbols-original.ttf wght=400 -o NotoSansSymbols-Regular.ttf
+```
+
+SHA-256 of the downloaded source and committed instance:
+
+```text
+f7e7e04b4a24b6c78893d50cbfd2b2f6cae49617ab047bfef668d252adb128f7  NotoSansSymbols-original.ttf
+544ba22a3cfac2fccc1b7a0c63b4f11af641e12bda0dc2a9419a62c061b8c4b8  NotoSansSymbols-Regular.ttf
+```
+
+## Phonetic Font
 
 `NotoSans-Phonetics.ttf` is a static regular subset of
 [Noto Sans](https://github.com/google/fonts/tree/main/ofl/notosans), retrieved

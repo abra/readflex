@@ -166,6 +166,41 @@ load cannot erase a renderer failure.
   colors instead of replacing link/quote colors with primary text. The same
   semantic overlay is used by the article reader; book palette normalization
   and its contrast fallback remain owned by the book JS runtime.
+- Code typography retains the system monospace families and adds the bundled
+  symbol fallback for missing callout numerals. The book normalizer excludes
+  publisher annotations/captions from code detection, so a long explanation
+  does not become a code panel merely because its class name contains `code`.
+  `flutter test test/book_typography_test.dart` exercises the generated CSS
+  with the production book runtime in Chromium/WebKit, including light/dark
+  themes, glyph pixels and selection/CFI stability.
+- Reflowable book tables use their intrinsic width inside the existing
+  horizontal scroll wrapper. Publisher percentage widths cannot compress
+  cells to individual letters. Paragraphs still wrap normally within cells;
+  a preferred `max(100%, 40em)` table width prevents prose rows from expanding
+  indefinitely, while minimum content width can exceed that cap. These rules
+  do not change article table sizing or emergency wrapping in ordinary prose.
+
+## Table Verification
+
+After `make reader-browser-setup`, run
+`flutter test test/book_table_layout_test.dart` from this package. It passes the actual
+Flutter-generated CSS to Chromium and WebKit and checks publisher widths,
+local scrolling, CFI stability, themes, viewport changes and sole-child tables.
+The native `integration_test/table_rendering_test.dart` additionally checks
+late-page table painting on iOS, scroll offsets and reading-position stability
+in all three reading modes. Run it from the repository root:
+
+```sh
+READFLEX_NATIVE_DEVICE=<device-id> fvm flutter drive \
+  --driver=test_driver/ui_driver.dart \
+  --target=integration_test/table_rendering_test.dart -d <device-id>
+```
+
+Artifacts go to `.local/ui-device/`. iOS screenshots include a text-pixel
+assertion; Android screenshots use the native driver transport. These checks
+do not simulate physical-device finger gestures. Playwright's WebKit build
+is not the system WKWebView: its late-column scroll-container painting can
+differ, so geometry-only browser results are not a native visual guarantee.
 
 ## Dependencies
 

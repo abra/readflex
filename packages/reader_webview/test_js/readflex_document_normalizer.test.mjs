@@ -289,6 +289,66 @@ test('normalizeCodeLikeBlocks marks long code-looking blocks', () => {
   assert.equal(code.classList.contains('readflex-code-block'), true)
 })
 
+for (const className of [
+  'fm-code-annotation-mob', 'code-annotations', 'codeAnnotation',
+  'listing-caption', 'ListingCaption', 'source-code-description',
+  'code-callout', 'code-explanation', 'codeTitle', 'programlisting_title',
+]) {
+  test(`code description stays prose regardless of length: ${className}`, () => {
+    for (const length of [40, 80, 160]) {
+      const paragraph = new FakeElement('p', {
+        className,
+        text: 'The code returns a value to its caller. '.repeat(5).slice(0, length),
+      })
+      normalizeCodeLikeBlocks(new FakeDocument([paragraph]))
+      assert.equal(paragraph.classList.contains('readflex-code-block'), false)
+    }
+  })
+}
+
+test('description IDs and monospace publisher styles do not turn prose into code', () => {
+  const paragraph = new FakeElement('p', {
+    id: 'code-annotation-1',
+    text: 'The annotation explains why the method returns an empty result if there are no matching values; this is prose.',
+    computedStyle: { fontFamily: 'monospace', whiteSpace: 'pre-wrap' },
+  })
+  const doc = new FakeDocument([paragraph])
+  doc.defaultView.getComputedStyle = () => {
+    assert.fail('Descriptive class/ID hints must skip computed-style reads')
+  }
+  normalizeCodeLikeBlocks(doc)
+  assert.equal(paragraph.classList.contains('readflex-code-block'), false)
+})
+
+for (const className of ['ProgramCode', 'ParaTypeProgramcode', 'programlisting',
+  'code-listing', 'sourceCode', 'codeBlock', 'highlight', 'hljs']) {
+  test(`real code still receives normalization: ${className}`, () => {
+    const code = new FakeElement('div', {
+      className,
+      text: 'public class Example { private final String value; public String value() { return value; } }',
+    })
+    normalizeCodeLikeBlocks(new FakeDocument([code]))
+    assert.equal(code.classList.contains('readflex-code-block'), true)
+  })
+}
+
+test('a description can contain an actual code block without becoming one', () => {
+  const description = new FakeElement('section', {
+    className: 'code-explanation',
+    text: 'A description of a program with a separate executable example.',
+  })
+  const code = new FakeElement('div', {
+    className: 'ProgramCode',
+    text: 'public class Example { private final String value; public String value() { return value; } }',
+  })
+  description.append(code)
+  const doc = new FakeDocument([description])
+  normalizeCodeLikeBlocks(doc)
+  normalizeCodeLikeBlocks(doc)
+  assert.equal(description.classList.contains('readflex-code-block'), false)
+  assert.equal(code.classList.contains('readflex-code-block'), true)
+})
+
 test('normalizeLoadedDocument runs the full safe post-load pipeline', () => {
   const table = new FakeElement('table')
   const paragraph = new FakeElement('p')

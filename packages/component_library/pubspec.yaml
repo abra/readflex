@@ -14,7 +14,11 @@ dependencies:
 flutter:
   licenses:
     - fonts/OFL-NotoSans.txt
+    - fonts/OFL-NotoSansSymbols.txt
   fonts:
+    - family: Noto Sans Symbols
+      fonts:
+        - asset: fonts/NotoSansSymbols-Regular.ttf
     - family: Noto Sans Phonetics
       fonts:
         - asset: fonts/NotoSans-Phonetics.ttf

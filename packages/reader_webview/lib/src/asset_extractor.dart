@@ -24,7 +24,7 @@ class AssetExtractor {
 
   // Bump when bundled reader HTML/JS assets must be re-extracted even if the
   // app version/build number did not change, e.g. release-mode device testing.
-  static const assetRevision = 'reader_webview_assets_139';
+  static const assetRevision = 'reader_webview_assets_142';
 
   @visibleForTesting
   static String extractionVersionFor(String version) =>
@@ -93,6 +93,7 @@ class AssetExtractor {
     'packages/component_library/fonts/PTSerif-Bold.ttf',
     'packages/component_library/fonts/PTSerif-BoldItalic.ttf',
     'packages/component_library/fonts/OpenSans-Variable.ttf',
+    'packages/component_library/fonts/NotoSansSymbols-Regular.ttf',
   ];
 
   /// Extracts all reader assets to [targetDirectory].

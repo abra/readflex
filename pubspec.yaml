@@ -112,6 +112,9 @@ flutter:
   # declared only in a package's pubspec.yaml — without this section reader/UI
   # font families silently fall back to platform defaults.
   fonts:
+    - family: Noto Sans Symbols
+      fonts:
+        - asset: packages/component_library/fonts/NotoSansSymbols-Regular.ttf
     - family: Noto Sans Phonetics
       fonts:
         - asset: packages/component_library/fonts/NotoSans-Phonetics.ttf

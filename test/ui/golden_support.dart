@@ -23,13 +23,15 @@ enum VisualProfile {
 }
 
 Future<void> loadUiFonts() async {
-  for (final entry in {
+  const bundledFonts = {
+    'Noto Sans Symbols': 'NotoSansSymbols-Regular.ttf',
     'Noto Sans Phonetics': 'NotoSans-Phonetics.ttf',
     'Geist': 'Geist-Variable.ttf',
     'Literata': 'Literata-Variable.ttf',
     'PT Serif': 'PTSerif-Regular.ttf',
     'Open Sans': 'OpenSans-Variable.ttf',
-  }.entries) {
+  };
+  for (final entry in bundledFonts.entries) {
     final family = entry.key;
     await (FontLoader(family)..addFont(
           rootBundle.load(
@@ -43,6 +45,7 @@ Future<void> loadUiFonts() async {
       ))
       .load();
   for (final family in AppTypography.fontFamilyFallback) {
+    if (bundledFonts.containsKey(family)) continue;
     final bytes = await File(
       'test/fonts/${family.replaceAll(' ', '')}.ttf',
     ).readAsBytes();

@@ -10,6 +10,8 @@ const CODE_CLASS_FRAGMENT_PATTERN =
   /(?:program|source|sample|example|syntax|highlight)?code(?:block|listing|sample|example|snippet|source|area|container|fragment|line|text)?/i
 const NON_CODE_CLASS_FRAGMENT_PATTERN =
   /(?:decode|encode|unicode|barcode|postcode|zipcode|classificationcode)/i
+const CODE_DESCRIPTION_CLASS_PATTERN =
+  /(?:^|[-_\s])(?:annotations?|captions?|callouts?|descriptions?|explanations?|titles?)(?:$|[-_\s])/i
 const MONOSPACE_FONT_PATTERN =
   /\b(?:mono|menlo|monaco|consolas|courier|source code|jetbrains|fira code|cascadia|ui-monospace)\b/i
 const CODE_TEXT_PATTERN =
@@ -238,6 +240,13 @@ const hasCodeLikeClass = element => {
     )
 }
 
+const hasCodeDescriptionClass = element => {
+  const classAndId = `${element.className || ''} ${element.id || ''}`
+  return CODE_DESCRIPTION_CLASS_PATTERN.test(
+    classAndId.replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+  )
+}
+
 export const normalizeCodeLikeBlocks = doc => {
   const win = doc.defaultView
   if (!win) return
@@ -245,6 +254,8 @@ export const normalizeCodeLikeBlocks = doc => {
   const candidates = doc.querySelectorAll('div, p, section, article, li')
   for (const element of candidates) {
     if (element.closest('pre, .readflex-code-block')) continue
+    // Code annotations/captions describe a listing; their length is not code evidence.
+    if (hasCodeDescriptionClass(element)) continue
 
     const text = element.textContent?.trim() ?? ''
     if (text.length < CODE_BLOCK_MIN_TEXT_LENGTH) continue
