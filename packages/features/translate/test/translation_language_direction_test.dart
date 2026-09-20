@@ -224,7 +224,6 @@ Future<void> _pumpDirection(
             detectedSourceLanguage: detectedSource,
             enabled: enabled,
             sourceMenu: MenuController(),
-            sourcePickerKey: GlobalKey(),
             onSourceChanged: onSourceChanged ?? (_) {},
             onTargetChanged: onTargetChanged ?? (_) {},
           ),

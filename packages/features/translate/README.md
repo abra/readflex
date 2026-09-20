@@ -84,8 +84,8 @@ typography with zero letter spacing, including short single-word answers.
 Neither surface uses reader-style headline typography. The sheet body has a bounded,
 scrollable viewport so long contexts and lexical results do not overflow.
 The shared `ScrollEdgeFadeStack` adds full-width shadows when content extends
-beyond the viewport: below the fixed header after scrolling, and at the bottom
-when more content remains below. Expanding details updates the bottom shadow
+beyond the viewport: below the fixed title and language controls after scrolling,
+and at the bottom when more content remains below. Expanding details updates the bottom shadow
 without requiring a scroll gesture. Reaching either edge hides its shadow;
 content that fits needs neither. The overlays ignore pointer input and do not
 update translation state or request the service.
@@ -107,6 +107,10 @@ A lemma equal to the already visible selection is omitted from the header.
 An unknown offline source language offers **Select language**, which opens the
 source picker without repeating the invalid request. The menu controller is
 local View state; choosing a language still goes through `TranslateCubit`.
+The language direction stays fixed below the Translation title; only the result,
+context and details scroll. The controls remain reachable after scrolling to the
+end of a long result, including when they stack on narrow/large-text screens.
+Opening a source-language recovery menu does not move the result viewport.
 The two language menus size to their labels, retain 48px minimum tap targets and
 adapt to system text scaling. They are unfilled text controls: primary in light
 mode, on-surface in dark mode so labels keep at least 4.5:1 contrast. They show
@@ -138,8 +142,9 @@ unknown grammatical tags, Japanese/Chinese words and non-spaced phrases,
 immediately visible word/expression scopes and independent copying,
 `rather` with and without a larger expression, duplicate/missing-value fallback,
 unchanged multi-word behavior, and expanded details at 200% text in all ten locales,
-language changes and recovery, copy feedback, details reset without extra
-requests, all ten locale labels, RTL content/control direction and 200% text on
+fixed language controls during scrolling, language changes and recovery, copy
+feedback, details reset without extra requests, all ten locale labels, RTL
+content/control direction and 200% text on
 a narrow viewport. Tests also keep the primary result and Copy reachable before
 a long context, check the source/result order for text translation, and prevent
 headline styling of long answers to short words. Quotation tests check the rule
@@ -157,7 +162,9 @@ It does not test live providers.
 `integration_test/translation_sheet_test.dart` is a focused native sheet check
 using the real device viewport, font rendering and clipboard, plus deterministic
 provider responses. It checks ordinary words and contextual expressions,
-immediately visible general meanings, both copy commands and a target-language
-change without extra requests from copying. Run it on either platform with the existing
+immediately visible general meanings, both copy commands, a fixed language header
+while dragging the expanded details, and a target-language change from that
+scrolled position without extra requests from copying or scrolling.
+Run it on either platform with the existing
 `test_driver/ui_driver.dart` and `READFLEX_NATIVE_DEVICE=<id>`; screenshots go to
 `.local/ui-device/`. It does not simulate reader selection or call DeepSeek.

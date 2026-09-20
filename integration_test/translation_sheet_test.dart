@@ -103,6 +103,12 @@ void main() {
           baseTranslation: example.base,
           expression: example.expression,
           sentenceTranslation: example.sentenceTranslation,
+          alternatives: List.generate(
+            20,
+            (index) => ContextualTranslationAlternative(
+              translation: 'Alternative ${index + 1}',
+            ),
+          ),
           analysis: ContextualTranslationAnalysis(
             surfaceForm: example.word,
             lemma: example.word,
@@ -152,7 +158,7 @@ void main() {
         }
         final base = find.byKey(const ValueKey('translation-base-result'));
         expect(base.hitTestable(), findsOneWidget);
-        expect(find.byType(ExpansionTile), findsNothing);
+        expect(find.byType(ExpansionTile), findsOneWidget);
         await tester.pump(const Duration(milliseconds: 350));
         if (Platform.isAndroid) {
           // The previous case's native clipboard overlay is outside Flutter.
@@ -176,10 +182,45 @@ void main() {
           );
         }
         expect(service.requests, hasLength(1));
+        await tester.ensureVisible(find.byType(ExpansionTile));
+        await tapUi(tester, find.byType(ExpansionTile));
+        final sourceLanguage = find.byKey(
+          const ValueKey('translation-source-language'),
+        );
         final language = find.byKey(
           const ValueKey('translation-target-language'),
         );
-        await tester.ensureVisible(language);
+        final titleRect = tester.getRect(find.text('Translation'));
+        final sourceRect = tester.getRect(sourceLanguage);
+        final targetRect = tester.getRect(language);
+        final viewport = find.byType(SingleChildScrollView).first;
+        final scroll = tester
+            .state<ScrollableState>(
+              find
+                  .descendant(of: viewport, matching: find.byType(Scrollable))
+                  .first,
+            )
+            .position;
+        final startOffset = scroll.pixels;
+        await tester.drag(
+          viewport,
+          Offset(0, -tester.getSize(viewport).height / 2),
+        );
+        await tester.pumpAndSettle();
+        expect(scroll.pixels, greaterThan(startOffset));
+        expect(tester.getRect(find.text('Translation')), titleRect);
+        expect(tester.getRect(sourceLanguage), sourceRect);
+        expect(tester.getRect(language), targetRect);
+        expect(sourceLanguage.hitTestable(), findsOneWidget);
+        expect(language.hitTestable(), findsOneWidget);
+        expect(service.requests, hasLength(1));
+        if (Platform.isAndroid) {
+          await captureAndroidScreenshot(
+            'translation-${example.name}-scrolled',
+          );
+        } else {
+          await binding.takeScreenshot('translation-${example.name}-scrolled');
+        }
         await tapUi(tester, language);
         await tapUi(tester, find.text('English').hitTestable().last);
         await waitForUi(

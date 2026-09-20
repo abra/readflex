@@ -69,13 +69,9 @@ class _TranslateSheetView extends StatefulWidget {
 
 class _TranslateSheetViewState extends State<_TranslateSheetView> {
   final _sourceMenu = MenuController();
-  final _sourcePickerKey = GlobalKey();
 
-  Future<void> _chooseSourceLanguage() async {
-    final pickerContext = _sourcePickerKey.currentContext;
-    if (pickerContext == null) return;
-    await Scrollable.ensureVisible(pickerContext);
-    if (!mounted || context.read<TranslateCubit>().state.isBusy) return;
+  void _chooseSourceLanguage() {
+    if (context.read<TranslateCubit>().state.isBusy) return;
     _sourceMenu.open();
   }
 
@@ -83,57 +79,71 @@ class _TranslateSheetViewState extends State<_TranslateSheetView> {
   Widget build(BuildContext context) {
     final selection = widget.selection;
     final maxBodyHeight = MediaQuery.sizeOf(context).height * 0.68;
-    return ActionBottomSheetLayout(
-      title: context.l10n.translationTitle,
-      headerSpacing: AppSpacing.sm,
-      constrainBody: true,
-      bodyPadding: const EdgeInsets.only(bottom: AppSpacing.lg),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: maxBodyHeight),
-        child: ScrollEdgeFadeStack(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-            child: BlocBuilder<TranslateCubit, TranslateSheetState>(
-              builder: (context, state) {
-                final cubit = context.read<TranslateCubit>();
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TranslationLanguageDirection(
-                      sourceLanguageCode: state.sourceLanguageCode,
-                      targetLanguageCode: state.targetLanguageCode,
-                      detectedSourceLanguage:
-                          state.result?.detectedSourceLanguage,
-                      enabled: !state.isBusy,
-                      sourceMenu: _sourceMenu,
-                      sourcePickerKey: _sourcePickerKey,
-                      onSourceChanged: (value) =>
-                          cubit.setSourceLanguage(selection, value),
-                      onTargetChanged: (value) =>
-                          cubit.setTargetLanguage(selection, value),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    if (state.status != TranslateSheetStatus.success) ...[
-                      TranslationSelectionPreview(
-                        selection: selection,
-                        showContext: false,
+    return BlocBuilder<TranslateCubit, TranslateSheetState>(
+      builder: (context, state) {
+        final cubit = context.read<TranslateCubit>();
+        return ActionBottomSheetLayout(
+          title: context.l10n.translationTitle,
+          headerSpacing: AppSpacing.sm,
+          constrainBody: true,
+          bodyPadding: const EdgeInsets.only(bottom: AppSpacing.lg),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxBodyHeight),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                  ),
+                  child: TranslationLanguageDirection(
+                    sourceLanguageCode: state.sourceLanguageCode,
+                    targetLanguageCode: state.targetLanguageCode,
+                    detectedSourceLanguage:
+                        state.result?.detectedSourceLanguage,
+                    enabled: !state.isBusy,
+                    sourceMenu: _sourceMenu,
+                    onSourceChanged: (value) =>
+                        cubit.setSourceLanguage(selection, value),
+                    onTargetChanged: (value) =>
+                        cubit.setTargetLanguage(selection, value),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Flexible(
+                  child: ScrollEdgeFadeStack(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xl,
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
-                    _TranslateBody(
-                      selection: selection,
-                      state: state,
-                      onChooseSourceLanguage: _chooseSourceLanguage,
-                      onCopy: widget.onCopy,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (state.status != TranslateSheetStatus.success) ...[
+                            TranslationSelectionPreview(
+                              selection: selection,
+                              showContext: false,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                          ],
+                          _TranslateBody(
+                            selection: selection,
+                            state: state,
+                            onChooseSourceLanguage: _chooseSourceLanguage,
+                            onCopy: widget.onCopy,
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
-                );
-              },
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

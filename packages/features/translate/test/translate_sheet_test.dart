@@ -962,6 +962,103 @@ void main() {
     );
   });
 
+  for (final profile in [
+    (
+      name: 'phone',
+      size: const Size(390, 600),
+      scale: 1.0,
+      locale: const Locale('en'),
+    ),
+    (
+      name: 'large text',
+      size: const Size(320, 568),
+      scale: 2.0,
+      locale: const Locale('ru'),
+    ),
+    (
+      name: 'RTL',
+      size: const Size(390, 844),
+      scale: 1.0,
+      locale: const Locale('ar'),
+    ),
+  ]) {
+    testWidgets(
+      'language direction remains fixed while scrolling: ${profile.name}',
+      (tester) async {
+        tester.view.physicalSize = profile.size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final service = _RecordingTranslationService(
+          includeLexicalDetails: true,
+          alternativeCount: 20,
+        );
+        await _pumpTranslateSheet(
+          tester,
+          selection: _selection,
+          service: service,
+          locale: profile.locale,
+          textScaler: TextScaler.linear(profile.scale),
+        );
+        await tester.ensureVisible(find.byType(ExpansionTile));
+        await tester.tap(find.byType(ExpansionTile));
+        await tester.pumpAndSettle();
+        final scrollView = find.byType(SingleChildScrollView);
+        final scroll = tester
+            .state<ScrollableState>(
+              find
+                  .descendant(of: scrollView, matching: find.byType(Scrollable))
+                  .first,
+            )
+            .position;
+        scroll.jumpTo(0);
+        await tester.pumpAndSettle();
+        final source = find.byKey(
+          const ValueKey('translation-source-language'),
+        );
+        final target = find.byKey(
+          const ValueKey('translation-target-language'),
+        );
+        final l10n = ReadflexLocalizations.of(tester.element(source))!;
+        final title = find.text(l10n.translationTitle);
+        final titleRect = tester.getRect(title);
+        final sourceRect = tester.getRect(source);
+        final targetRect = tester.getRect(target);
+        final primary = find.byKey(
+          const ValueKey('translation-primary-result'),
+        );
+        final answerTop = tester.getTopLeft(primary).dy;
+        expect(scroll.maxScrollExtent, greaterThan(0));
+        scroll.jumpTo(scroll.maxScrollExtent);
+        await tester.pumpAndSettle();
+
+        expect(tester.getTopLeft(primary).dy, lessThan(answerTop));
+        expect(tester.getRect(title), titleRect);
+        expect(tester.getRect(source), sourceRect);
+        expect(tester.getRect(target), targetRect);
+        expect(sourceRect.top, greaterThanOrEqualTo(titleRect.bottom));
+        expect(
+          targetRect.bottom,
+          lessThanOrEqualTo(tester.getRect(scrollView).top),
+        );
+        expect(source.hitTestable(), findsOneWidget);
+        expect(target.hitTestable(), findsOneWidget);
+        expect(service.calls, 1);
+
+        // No ensureVisible: changing direction must work from the scrolled body.
+        await tester.tap(target);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Deutsch').hitTestable().last);
+        await tester.pumpAndSettle();
+        expect(service.calls, 2);
+        expect(service.requests.last.targetLanguage, 'de');
+        expect(service.requests.last.selection.text, _selection.selectedText);
+        expect(find.text('Lexical explanation'), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   for (final brightness in Brightness.values) {
     testWidgets('edge shadows follow expanded details scroll: $brightness', (
       tester,
@@ -1005,6 +1102,16 @@ void main() {
       expect(scroll.maxScrollExtent, greaterThan(0));
       expect(tester.widget<ScrollEdgeFade>(bottomFade).visible, isTrue);
       final headerTop = tester.getTopLeft(find.text('Translation'));
+      expect(
+        tester.getTopLeft(topFade).dy,
+        greaterThanOrEqualTo(
+          tester
+              .getBottomLeft(
+                find.byKey(const ValueKey('translation-target-language')),
+              )
+              .dy,
+        ),
+      );
       scroll.jumpTo(scroll.maxScrollExtent / 2);
       await tester.pumpAndSettle();
       expect(tester.widget<ScrollEdgeFade>(topFade).visible, isTrue);

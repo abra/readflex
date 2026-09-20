@@ -15,7 +15,6 @@ class TranslationLanguageDirection extends StatelessWidget {
     required this.detectedSourceLanguage,
     required this.enabled,
     required this.sourceMenu,
-    required this.sourcePickerKey,
     required this.onSourceChanged,
     required this.onTargetChanged,
     super.key,
@@ -26,7 +25,6 @@ class TranslationLanguageDirection extends StatelessWidget {
   final String? detectedSourceLanguage;
   final bool enabled;
   final MenuController sourceMenu;
-  final GlobalKey sourcePickerKey;
   final ValueChanged<String> onSourceChanged;
   final ValueChanged<String> onTargetChanged;
 
@@ -51,7 +49,6 @@ class TranslationLanguageDirection extends StatelessWidget {
         final source = SizedBox(
           width: math.min(sourceWidth, constraints.maxWidth),
           child: _LanguageMenu(
-            key: sourcePickerKey,
             buttonKey: const ValueKey('translation-source-language'),
             controller: sourceMenu,
             semanticsLabel: l10n.translationSourceLanguage,
@@ -144,7 +141,6 @@ class _LanguageMenu extends StatelessWidget {
     required this.onChanged,
     this.controller,
     this.includeAuto = false,
-    super.key,
   });
 
   final Key buttonKey;
