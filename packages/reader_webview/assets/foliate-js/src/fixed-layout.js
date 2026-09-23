@@ -61,7 +61,10 @@ const writeCanvasImageDocument = (iframe, src) => {
 
 export class FixedLayout extends HTMLElement {
     #root = this.attachShadow({ mode: 'closed' })
-    #observer = new ResizeObserver(() => this.#render())
+    #observer = new ResizeObserver(() => {
+        this.#zoom?.reset()
+        this.#render()
+    })
     #spreads
     #index = -1
     #currentSpread
@@ -73,6 +76,7 @@ export class FixedLayout extends HTMLElement {
     #right
     #center
     #side
+    #zoom
     constructor() {
         super()
 
@@ -99,6 +103,13 @@ export class FixedLayout extends HTMLElement {
         }
         .spread.current {
             pointer-events: auto;
+        }
+        .comic-stage {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }`)
 
         this.#observer.observe(this)
@@ -225,6 +236,7 @@ export class FixedLayout extends HTMLElement {
                 const doc = iframe.contentDocument
                 doc.position = position
                 doc.readflexSectionIndex = index
+                this.#zoom?.attach(doc)
                 this.dispatchEvent(new CustomEvent('load', { detail: { doc, index } }))
                 // Image-backed fixed pages can fire iframe `load` before
                 // the image bitmap is decoded, leaving naturalWidth/Height
@@ -335,21 +347,34 @@ export class FixedLayout extends HTMLElement {
         }
     }
     async #showSpread({ left, right, center, side, direction = 0 }) {
+        this.#zoom?.destroy()
+        this.#zoom = null
         const previousSpread = this.#currentSpread
         const nextSpread = document.createElement('div')
         nextSpread.className = 'spread'
         nextSpread.style.visibility = 'hidden'
         this.#root.append(nextSpread)
+        let pageParent = nextSpread
+        if (this.book.rendition?.zoomable) {
+            const { createComicZoom } = await import('./readflex_comic_zoom.js')
+            pageParent = document.createElement('div')
+            pageParent.className = 'comic-stage'
+            nextSpread.append(pageParent)
+            this.#zoom = createComicZoom(pageParent, nextSpread, detail =>
+                this.dispatchEvent(new CustomEvent('tap', { detail })), {
+                    hostTaps: new URLSearchParams(location.search).get('comicHostTaps') === 'true',
+                })
+        }
         this.#left = null
         this.#right = null
         this.#center = null
         if (center) {
-            this.#center = await this.#createFrame('center', center, nextSpread)
+            this.#center = await this.#createFrame('center', center, pageParent)
             this.#side = 'center'
             this.#render()
         } else {
-            this.#left = await this.#createFrame('left', left, nextSpread)
-            this.#right = await this.#createFrame('right', right, nextSpread)
+            this.#left = await this.#createFrame('left', left, pageParent)
+            this.#right = await this.#createFrame('right', right, pageParent)
             this.#side = this.#left.blank ? 'right'
                 : this.#right.blank ? 'left' : side
             this.#render()
@@ -488,6 +513,7 @@ export class FixedLayout extends HTMLElement {
     }
     async goToSpread(index, side, reason, direction = 0) {
         if (index < 0 || index > this.#spreads.length - 1) return
+        this.#zoom?.reset()
         if (index === this.#index) {
             this.#render(side)
             return
@@ -526,6 +552,7 @@ export class FixedLayout extends HTMLElement {
     async next() {
         if (this.#locked) return
         this.#locked = true
+        this.#zoom?.reset()
         try {
             const s = await (this.rtl ? this.#goLeft() : this.#goRight())
             if (!s) {
@@ -543,6 +570,7 @@ export class FixedLayout extends HTMLElement {
     async prev() {
         if (this.#locked) return
         this.#locked = true
+        this.#zoom?.reset()
         try {
             const s = await (this.rtl ? this.#goRight() : this.#goLeft())
             if (!s) {
@@ -563,7 +591,18 @@ export class FixedLayout extends HTMLElement {
             index: frame.contentDocument?.readflexSectionIndex,
         }))
     }
+    get blocksPageSwipe() { return this.#zoom?.blocksPageSwipe ?? false }
+    handleHostTap(point) {
+        this.#zoom?.tapFromHost(point)
+    }
+    handleTap(point, singleTap) {
+        if (!this.#zoom) return false
+        this.#zoom.tap(point, singleTap)
+        return true
+    }
     destroy() {
+        this.#zoom?.destroy()
+        this.#zoom = null
         this.#observer.unobserve(this)
         this.#currentSpread = null
     }

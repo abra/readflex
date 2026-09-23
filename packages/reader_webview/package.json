@@ -5,7 +5,9 @@
     "test:browser": "node --test test_browser/*.test.mjs"
   },
   "devDependencies": {
+    "@panzoom/panzoom": "4.6.2",
     "dompurify": "3.4.14",
+    "fflate": "0.8.3",
     "playwright": "1.63.0"
   }
 }

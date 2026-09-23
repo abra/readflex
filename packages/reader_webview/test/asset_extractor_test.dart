@@ -39,6 +39,14 @@ void main() {
       final font = File('${directory.path}/fonts/NotoSansSymbols-Regular.ttf');
       expect(requested, contains(bundleKey));
       expect(await font.readAsBytes(), bytes);
+      for (final asset in [
+        'foliate-js/src/readflex_comic_zoom.js',
+        'foliate-js/src/vendor/panzoom.js',
+        'foliate-js/src/vendor/Panzoom-LICENSE',
+      ]) {
+        expect(requested, contains('packages/reader_webview/assets/$asset'));
+        expect(await File('${directory.path}/$asset').readAsBytes(), bytes);
+      }
 
       requested.clear();
       await extractor.extractAll(version: 'test');

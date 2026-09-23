@@ -436,3 +436,37 @@ when changing this setting or updating Flutter/WebView.
 
 DOMPurify is pinned and vendored without edits. See
 `assets/foliate-js/src/vendor/DOMPurify-README.md` for provenance and updates.
+
+### Comic Zoom
+
+Comic archives advertise `rendition.zoomable`; other fixed-layout EPUBs,
+PDFs, reflowable books and articles keep their existing gestures. Comic zoom
+loads the bundled Panzoom module lazily, without network requests.
+
+- A single tap waits 280 ms for a nearby second tap before invoking reader chrome
+  or a page-edge action. A double tap zooms to 2.5x at the tap point; repeating it
+  restores page fit. Pinch is bounded between page fit and 4x.
+- At page fit, swipes keep the configured page-turn axis and reading direction.
+  While zoomed, dragging pans instead of turning pages, and edge taps toggle
+  chrome. Return to page fit to resume gesture-based page navigation.
+- Long press still selects an image area. Editing an active area takes precedence
+  over pan. Selection popups use the effective iframe scale, including zoom.
+- Page changes and viewport resizing reset zoom. Blur, document hiding and
+  disposal cancel pending tap/gesture work. Zoom never changes the reading CFI
+  or persists temporary scale to reading progress.
+- Pointer moves are batched per animation frame in JS; no Flutter bridge calls,
+  image decoding, or repository writes are performed for each pan/zoom movement.
+- iOS comic taps use `ComicTouchTapForwarder`: the current Flutter/WKWebView
+  combination can omit the second rapid touch in the DOM. The listener observes
+  completed short touches without entering Flutter's gesture arena; JS ignores
+  their duplicate DOM taps. Long press, pinch and pan remain WebView-owned.
+  Android uses DOM pointer taps. Neither text readers nor native plugin settings
+  are changed by this workaround.
+
+Regression coverage: `test_browser/comic_zoom.test.mjs` (Chromium and WebKit)
+and `integration_test/comic_zoom_test.dart` (native WebView rendering with an
+offline generated CBZ). The integration test dispatches Flutter touches on iOS
+and DOM taps on Android; it does not replace checking OS-generated touch
+sequences on both platforms. Native artifacts
+belong under `.local/`. Panzoom provenance and update steps are documented in
+`assets/foliate-js/src/vendor/Panzoom-README.md`.

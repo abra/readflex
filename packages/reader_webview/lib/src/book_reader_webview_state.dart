@@ -32,6 +32,9 @@ class BookReaderWebViewState extends State<BookReaderWebView>
   bool get _effectiveArticle =>
       widget.isArticle || isGeneratedArticleReaderPath(widget.bookFilePath);
 
+  bool get _forwardComicTaps =>
+      widget.isComic && defaultTargetPlatform == TargetPlatform.iOS;
+
   @override
   void dispose() {
     _loadSession.dispose();
@@ -269,6 +272,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       'initialCfi': jsonEncode(initialLocation.cfi),
       'initialProgress': jsonEncode(initialLocation.progress),
       'sourceType': jsonEncode(_effectiveArticle ? 'article' : 'book'),
+      'comicHostTaps': jsonEncode(_forwardComicTaps),
       'pageProgressionDirection': jsonEncode(
         widget.pageProgressionRtl ? 'rtl' : null,
       ),
@@ -290,7 +294,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
   @override
   Widget build(BuildContext context) {
     _bootstrapStyle ??= widget.foliateStyle;
-    return InAppWebView(
+    final webView = InAppWebView(
       key: ValueKey(_loadSession.generation),
       initialUrlRequest: URLRequest(url: WebUri(_indexUrl)),
       initialSettings: baseReaderSettings(),
@@ -309,6 +313,19 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       },
       // TEMP — see _recoveringFromCrash field doc for context.
       onWebContentProcessDidTerminate: _onContentProcessTerminated,
+    );
+    if (!_forwardComicTaps) return webView;
+    return ComicTouchTapForwarder(
+      key: ValueKey(_loadSession.generation),
+      onTap: (position) {
+        if (!_isReady) return;
+        _evaluateReaderCommand(
+          label: 'comicTouchTap',
+          expression:
+              'window.handleComicTouchTap?.(${position.dx}, ${position.dy})',
+        );
+      },
+      child: webView,
     );
   }
 

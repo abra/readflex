@@ -179,8 +179,12 @@ export class View extends HTMLElement {
     this.renderer.setAttribute('exportparts', 'head,foot,filter')
     this.renderer.addEventListener('load', e => this.#onLoad(e.detail))
     this.renderer.addEventListener('relocate', e => this.#onRelocate(e.detail))
+    this.renderer.addEventListener('tap', e => this.#emit('click-view', e.detail))
     this.renderer.addEventListener('create-overlayer', e =>
       e.detail.attach(this.#createOverlayer(e.detail)))
+    this.renderer.addEventListener('click', ({ clientX, clientY }) => {
+      this.#emit('click-view', { x: clientX % window.innerWidth, y: clientY })
+    })
     this.renderer.open(book)
     this.#root.append(this.renderer)
 
@@ -315,6 +319,8 @@ export class View extends HTMLElement {
       img.draggable = false
       // also block contextmenu to be safe
       img.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); }, true);
+      // Comic long presses belong to image-area highlights, not image previews.
+      if (this.book.rendition?.zoomable) continue;
       // Check if device supports touch (mobile/tablet)
       const isTouchDevice = 'ontouchstart' in window;
  
@@ -410,13 +416,6 @@ export class View extends HTMLElement {
         clientY += rect.top
       }
 
-      this.#emit('click-view', { x: clientX, y: clientY })
-    })
-    this.renderer.addEventListener('click', e => {
-      const { clientX, clientY } = e
-      while (clientX > window.innerWidth) {
-        clientX -= window.innerWidth
-      }
       this.#emit('click-view', { x: clientX, y: clientY })
     })
   }

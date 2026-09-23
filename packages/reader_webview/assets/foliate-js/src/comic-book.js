@@ -43,7 +43,7 @@ export const makeComicBook = ({ entries, loadBlob, getSize }, file) => {
         size: 1,
     }))
     book.toc = files.map(name => ({ label: name, href: name }))
-    book.rendition = { layout: 'pre-paginated' }
+    book.rendition = { layout: 'pre-paginated', zoomable: true }
     book.resolveHref = href => ({ index: book.sections.findIndex(s => s.id === href) })
     book.splitTOCHref = href => [href, null]
     book.getTOCFragment = doc => doc.documentElement

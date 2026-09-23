@@ -82,6 +82,7 @@ dependency_overrides:
     path: third_party/flutter_inappwebview_ios
 
 dev_dependencies:
+  archive: ^3.6.1
   flutter_test:
     sdk: flutter
   integration_test:

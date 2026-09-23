@@ -1050,6 +1050,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       initialProgress: state.document?.readingProgress,
       foliateStyle: foliateStyle,
       isArticle: state.sourceType == SourceType.article,
+      isComic: state.document?.format == BookFormat.cbz,
       pageProgressionRtl: state.pageProgressionRtl,
       highlights: highlights,
       bookmarks: bookmarks,

@@ -150,11 +150,8 @@ const imageAreaEventViewportPoint = (doc, event) => {
   if (!point) return null;
   const frame = doc?.defaultView?.frameElement;
   const frameRect = frame?.getBoundingClientRect?.() ?? { left: 0, top: 0 };
-  const transform = frame ? getComputedStyle(frame).transform : '';
-  const match = transform.match(/matrix\((.+)\)/);
-  const values = match ? match[1].split(/\s*,\s*/).map(Number) : null;
-  const scaleX = Number.isFinite(values?.[0]) ? values[0] : 1;
-  const scaleY = Number.isFinite(values?.[3]) ? values[3] : scaleX;
+  const scaleX = frame?.clientWidth ? frameRect.width / frame.clientWidth : 1;
+  const scaleY = frame?.clientHeight ? frameRect.height / frame.clientHeight : 1;
   return {
     x: clamp01((frameRect.left + point.x * scaleX) / window.innerWidth),
     y: clamp01((frameRect.top + point.y * scaleY) / window.innerHeight),
@@ -195,11 +192,8 @@ const imageAreaViewportPosition = (doc, rect) => {
   if (!imgRect || imgRect.width <= 0 || imgRect.height <= 0) return null;
   const frame = doc.defaultView?.frameElement;
   const frameRect = frame?.getBoundingClientRect?.() ?? { left: 0, top: 0 };
-  const transform = frame ? getComputedStyle(frame).transform : '';
-  const match = transform.match(/matrix\((.+)\)/);
-  const values = match ? match[1].split(/\s*,\s*/).map(Number) : null;
-  const scaleX = Number.isFinite(values?.[0]) ? values[0] : 1;
-  const scaleY = Number.isFinite(values?.[3]) ? values[3] : scaleX;
+  const scaleX = frame?.clientWidth ? frameRect.width / frame.clientWidth : 1;
+  const scaleY = frame?.clientHeight ? frameRect.height / frame.clientHeight : 1;
   const left = frameRect.left + (imgRect.left + rect.x * imgRect.width) * scaleX;
   const top = frameRect.top + (imgRect.top + rect.y * imgRect.height) * scaleY;
   const right = left + rect.width * imgRect.width * scaleX;
@@ -467,6 +461,7 @@ const installImageAreaSelectionHandler = (reader, doc, index) => {
     clearTimer();
     press = null;
   };
+  doc.__readflexCancelImageAreaPress = resetPress;
   const suppressTap = ({
     touchMs = READFLEX_IMAGE_AREA_TOUCH_SUPPRESS_MS,
     debounceClick = true,
@@ -3053,9 +3048,8 @@ class Reader {
       return
     }
 
-    const coordinatesX = x / window.innerWidth
-    const coordinatesY = y / window.innerHeight
-    onClickView(coordinatesX, coordinatesY)
+    const singleTap = ({ x, y }) => onClickView(x / window.innerWidth, y / window.innerHeight)
+    if (!this.view.renderer.handleTap?.({ x, y }, singleTap)) singleTap({ x, y })
   }
 
   get index() {
@@ -3690,6 +3684,8 @@ window.pageLeft = () => reader.view.goLeft()
 
 window.pageRight = () => reader.view.goRight()
 
+window.handleComicTouchTap = (x, y) => reader.view.renderer.handleHostTap?.({ x, y })
+
 window.setScroll = () => {
   style.scroll = true
   style.animated = true
@@ -4034,7 +4030,7 @@ readflexRegisterGesture(
   detail => {
     const { deltaX, deltaY, deltaT } = detail
     const renderer = globalThis.reader?.view?.renderer
-    if (!renderer) return false
+    if (!renderer || renderer.blocksPageSwipe) return false
     const verticalTurn = renderer.pageTurnAxisVertical === true
     const primaryDelta = verticalTurn ? deltaY : deltaX
     const crossDelta = verticalTurn ? deltaX : deltaY

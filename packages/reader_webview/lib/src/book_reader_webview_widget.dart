@@ -21,6 +21,7 @@ class BookReaderWebView extends StatefulWidget {
     this.initialCfi,
     this.initialProgress,
     this.isArticle = false,
+    this.isComic = false,
     this.pageProgressionRtl = false,
     this.foliateStyle = const FoliateStyle(),
     this.highlights = const [],
@@ -59,6 +60,9 @@ class BookReaderWebView extends StatefulWidget {
 
   /// Whether the opened EPUB was generated from a saved web article.
   final bool isArticle;
+
+  /// Enables the iOS comic tap bridge without changing text-reader gestures.
+  final bool isComic;
 
   /// Initial page progression hint when source metadata is missing or wrong.
   final bool pageProgressionRtl;

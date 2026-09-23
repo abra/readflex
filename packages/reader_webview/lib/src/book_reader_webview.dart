@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import 'asset_extractor.dart';
+import 'comic_touch_tap_forwarder.dart';
 import 'reader_bridge.dart';
 import 'reader_common_handlers.dart';
 import 'reader_load_session.dart';
