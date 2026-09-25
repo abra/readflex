@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -82,13 +84,28 @@ class TranslateCubit extends Cubit<TranslateSheetState> {
   final ContextualTranslationService _translationService;
   final PreferencesService _preferencesService;
   int _operationGeneration = 0;
+  Completer<void>? _abort;
+
+  int _beginOperation() {
+    _abort?.complete();
+    _abort = Completer<void>();
+    return ++_operationGeneration;
+  }
+
+  @override
+  Future<void> close() {
+    ++_operationGeneration;
+    _abort?.complete();
+    _abort = null;
+    return super.close();
+  }
 
   Future<void> translate(
     TextSelectionContext selection, {
     bool allowOfflineModelDownload = false,
   }) async {
     if (isClosed || state.isBusy) return;
-    final operationGeneration = ++_operationGeneration;
+    final operationGeneration = _beginOperation();
     await _runTranslation(
       selection,
       operationGeneration: operationGeneration,
@@ -116,6 +133,7 @@ class TranslateCubit extends Cubit<TranslateSheetState> {
       final result = await _translationService.translate(
         _requestFor(selection),
         allowOfflineModelDownload: allowOfflineModelDownload,
+        abortTrigger: _abort!.future,
       );
       if (!_isCurrentOperation(operationGeneration)) return;
       emit(
@@ -151,7 +169,7 @@ class TranslateCubit extends Cubit<TranslateSheetState> {
     String code,
   ) async {
     if (isClosed || state.sourceLanguageCode == code) return;
-    final operationGeneration = ++_operationGeneration;
+    final operationGeneration = _beginOperation();
     emit(
       state.copyWith(
         sourceLanguageCode: code,
@@ -168,7 +186,7 @@ class TranslateCubit extends Cubit<TranslateSheetState> {
     String code,
   ) async {
     if (isClosed || state.targetLanguageCode == code) return;
-    final operationGeneration = ++_operationGeneration;
+    final operationGeneration = _beginOperation();
     emit(
       state.copyWith(
         targetLanguageCode: code,

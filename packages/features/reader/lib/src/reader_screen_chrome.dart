@@ -159,6 +159,7 @@ class _ReaderBookmarkGlyphPainter extends CustomPainter {
 /// sufficient: a swipe can still reach foliate-js before Flutter decides it is
 /// not a tap. This barrier sits above the page but below the chrome panels; any
 /// pointer on the page hides chrome and is not forwarded to the WebView.
+/// Comics keep page gestures available; their edge taps also hide chrome.
 class _ReaderChromeDismissBarrierDriver extends StatelessWidget {
   const _ReaderChromeDismissBarrierDriver();
 
@@ -175,6 +176,9 @@ class _ReaderChromeDismissBarrierDriver extends StatelessWidget {
       (c) => c.state.hasSelection,
     );
     final shouldBlockPage = shouldBlockReaderPageInput(
+      isComic: context.select<ReaderBloc, bool>(
+        (bloc) => bloc.state.document?.format == BookFormat.cbz,
+      ),
       chromeVisible: chromeOverlay.chromeVisible,
       overlayVisible: chromeOverlay.overlay != ReaderOverlay.none,
       hasSelection: _selectionActionsVisible(hasSelection),
@@ -324,6 +328,7 @@ class _ReaderBrightnessChromeState extends State<_ReaderBrightnessChrome> {
   }
 
   void _logWidgetBrightness(String event) {
+    if (!kDebugMode) return;
     debugPrint(
       '[reader-brightness] widget-$event '
       'mode=${widget.usesSystemBrightness ? 'system' : 'custom'} '
@@ -357,12 +362,14 @@ class _ReaderBrightnessChromeState extends State<_ReaderBrightnessChrome> {
     final value = _dragPreviewValue;
     if (value == null) return;
     _dragPreviewValue = null;
-    debugPrint(
-      '[reader-brightness] widget-drag-end '
-      'value=${_readerBrightnessDebugValue(value)} '
-      'system=${_readerBrightnessDebugValue(widget.systemValue)} '
-      'override=${_readerBrightnessDebugValue(widget.overrideValue)}',
-    );
+    if (kDebugMode) {
+      debugPrint(
+        '[reader-brightness] widget-drag-end '
+        'value=${_readerBrightnessDebugValue(value)} '
+        'system=${_readerBrightnessDebugValue(widget.systemValue)} '
+        'override=${_readerBrightnessDebugValue(widget.overrideValue)}',
+      );
+    }
     widget.onDragEnd(value);
   }
 

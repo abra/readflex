@@ -1,18 +1,39 @@
+const PREFETCH_BYTES = 8 * 1024 * 1024
+
 export const makeComicBook = ({ entries, loadBlob, getSize }, file) => {
     const cache = new Map()
-    const urls = new Map()
-    const load = async name => {
-        if (cache.has(name)) return cache.get(name)
-        const src = URL.createObjectURL(await loadBlob(name))
-        const page = URL.createObjectURL(
-            new Blob([`<img src="${src}">`], { type: 'text/html' }))
-        urls.set(name, [src, page])
-        cache.set(name, page)
-        return page
+    let destroyed = false
+    let windowRevision = 0
+    const load = (name, speculative = false) => {
+        if (destroyed) return Promise.reject(new DOMException('Comic closed', 'AbortError'))
+        const existing = cache.get(name)
+        if (existing) {
+            existing.demand ||= !speculative
+            return existing.promise
+        }
+        const entry = { urls: [], bytes: 0, demand: !speculative }
+        cache.set(name, entry)
+        entry.promise = (async () => {
+            try {
+                const blob = await loadBlob(name)
+                if (destroyed || cache.get(name) !== entry)
+                    throw new DOMException('Comic page released', 'AbortError')
+                entry.bytes = blob.size
+                const src = URL.createObjectURL(blob)
+                entry.urls.push(src)
+                const page = URL.createObjectURL(
+                    new Blob([`<img src="${src}">`], { type: 'text/html' }))
+                entry.urls.push(page)
+                return page
+            } catch (error) {
+                if (cache.get(name) === entry) unload(name)
+                throw error
+            }
+        })()
+        return entry.promise
     }
     const unload = name => {
-        urls.get(name)?.forEach?.(url => URL.revokeObjectURL(url))
-        urls.delete(name)
+        cache.get(name)?.urls.forEach(url => URL.revokeObjectURL(url))
         cache.delete(name)
     }
 
@@ -47,9 +68,42 @@ export const makeComicBook = ({ entries, loadBlob, getSize }, file) => {
     book.resolveHref = href => ({ index: book.sections.findIndex(s => s.id === href) })
     book.splitTOCHref = href => [href, null]
     book.getTOCFragment = doc => doc.documentElement
+    // Only encoded image blobs are prefetched, not offscreen iframe/bitmap
+    // trees. Visible pages are mandatory; speculative neighbours share 8 MiB.
+    book.prepareAdjacentPages = async (visibleIndices, { prefetch = true } = {}) => {
+        if (destroyed || !visibleIndices.length) return
+        const revision = ++windowRevision
+        const retained = new Set(visibleIndices.map(index => files[index]))
+        let budget = PREFETCH_BYTES
+        const neighbours = [Math.max(...visibleIndices) + 1, Math.min(...visibleIndices) - 1]
+            .map(index => files[index]).filter(Boolean)
+            .filter(name => {
+                const size = Number(getSize?.(name))
+                if (!Number.isFinite(size) || size <= 0 || size > budget) return false
+                budget -= size
+                retained.add(name)
+                return true
+            })
+        for (const name of cache.keys()) if (!retained.has(name)) unload(name)
+        if (!prefetch) return
+        let bytes = 0
+        for (const name of neighbours) {
+            if (destroyed || revision !== windowRevision) return
+            try {
+                await load(name, true)
+                if (destroyed || revision !== windowRevision) return
+                const entry = cache.get(name)
+                if (bytes + entry.bytes > PREFETCH_BYTES && !entry.demand) unload(name)
+                else bytes += entry.bytes
+            } catch {
+                // Speculative failures must not interrupt reading; demand retries.
+            }
+        }
+    }
     book.destroy = () => {
-        for (const arr of urls.values())
-            for (const url of arr) URL.revokeObjectURL(url)
+        destroyed = true
+        ++windowRevision
+        for (const name of cache.keys()) unload(name)
     }
     return book
 }

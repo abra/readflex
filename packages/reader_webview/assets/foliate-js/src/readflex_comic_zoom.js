@@ -16,7 +16,9 @@ const viewportPoint = (event, doc) => {
     }
 }
 
-export function createComicZoom(stage, host, onTap, { hostTaps = false } = {}) {
+export function createComicZoom(stage, host, onTap, {
+    hostTaps = false, pageTapZoneFraction = 0.3,
+} = {}) {
     const listeners = new AbortController()
     const pointers = new Map()
     const documents = new Set()
@@ -177,6 +179,14 @@ export function createComicZoom(stage, host, onTap, { hostTaps = false } = {}) {
         },
         tap(point, singleTap) {
             if (disposed || active || performance.now() < suppressClickUntil) return
+            // Edge navigation is never a zoom gesture. Only the centre waits
+            // for a second tap; zoomed pages keep all taps out of page zones.
+            const x = point.x / innerWidth
+            if (!isZoomed() && (x <= pageTapZoneFraction || x >= 1 - pageTapZoneFraction)) {
+                cancelTap()
+                singleTap(point)
+                return
+            }
             const previous = pendingTap
             if (previous && Math.hypot(point.x - previous.point.x, point.y - previous.point.y) <= TAP_DISTANCE) {
                 cancelTap()

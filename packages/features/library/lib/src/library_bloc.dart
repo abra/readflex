@@ -173,8 +173,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
       emit(
         state.copyWith(
           status: LibraryStatus.success,
-          books: snapshot.books,
-          articles: snapshot.articles,
+          sources: snapshot.sources,
           collectionScopes: snapshot.collectionScopes,
           selectedCollectionScope: _resolveSelectedCollectionScope(
             state.selectedCollectionScope,
@@ -215,25 +214,20 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
   }
 
   Future<_LibrarySnapshot> _loadLibrarySnapshot() async {
-    final (books, articles) = await _loadRawSources();
+    final (books, articles) = await (
+      _bookRepository.getBooks(),
+      _articleRepository?.getLibrarySources() ??
+          Future.value(const <LibrarySource>[]),
+    ).wait;
     final sources = [
       ...books.map(LibrarySource.fromBook),
-      ...articles.map(LibrarySource.fromArticle),
+      ...articles,
     ];
     final collectionScopes = await _loadCollectionScopes(sources);
     return _LibrarySnapshot(
-      books: books,
-      articles: articles,
+      sources: sources,
       collectionScopes: collectionScopes,
     );
-  }
-
-  Future<(List<Book>, List<Article>)> _loadRawSources() async {
-    final articleRepository = _articleRepository;
-    if (articleRepository == null) {
-      return (await _bookRepository.getBooks(), const <Article>[]);
-    }
-    return (_bookRepository.getBooks(), articleRepository.getArticles()).wait;
   }
 
   Future<List<LibraryCollectionScope>> _loadCollectionScopes(
@@ -423,13 +417,11 @@ class _LibraryDeletionDescriptor {
 /// Complete repository snapshot loaded in one BLoC operation.
 class _LibrarySnapshot {
   const _LibrarySnapshot({
-    required this.books,
-    required this.articles,
+    required this.sources,
     required this.collectionScopes,
   });
 
-  final List<Book> books;
-  final List<Article> articles;
+  final List<LibrarySource> sources;
   final List<LibraryCollectionScope> collectionScopes;
 }
 

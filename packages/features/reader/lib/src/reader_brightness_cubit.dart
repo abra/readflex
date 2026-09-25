@@ -312,6 +312,7 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
     double? targetBrightness,
     double? platformBrightness,
   }) {
+    if (!kDebugMode) return;
     debugPrint(
       '[reader-brightness] $event '
       'mode=${state.usesSystemBrightness ? 'system' : 'custom'} '

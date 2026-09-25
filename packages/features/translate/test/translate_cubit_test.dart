@@ -182,6 +182,8 @@ void main() {
     expect(cubit.state.status, TranslateSheetStatus.loading);
 
     await cubit.close();
+    await pumpEventQueue();
+    expect(service.cancelled, [0]);
     service.complete(0, translation: 'late');
 
     await expectLater(translation, completes);
@@ -203,6 +205,7 @@ void main() {
     await pumpEventQueue();
 
     expect(service.requests, hasLength(2));
+    expect(service.cancelled, [0]);
     expect(service.requests[0].targetLanguage, 'en');
     expect(service.requests[1].targetLanguage, 'ru');
 
@@ -244,6 +247,7 @@ class _FakeTranslationService implements ContextualTranslationService {
   Future<ContextualTranslationResult> translate(
     ContextualTranslationRequest request, {
     bool allowOfflineModelDownload = false,
+    Future<void>? abortTrigger,
   }) async {
     lastRequest = request;
     final error = this.error;
@@ -266,13 +270,17 @@ class _FakeTranslationService implements ContextualTranslationService {
 
 class _ControlledTranslationService implements ContextualTranslationService {
   final requests = <ContextualTranslationRequest>[];
+  final cancelled = <int>[];
   final _responses = <Completer<ContextualTranslationResult>>[];
 
   @override
   Future<ContextualTranslationResult> translate(
     ContextualTranslationRequest request, {
     bool allowOfflineModelDownload = false,
+    Future<void>? abortTrigger,
   }) {
+    final index = requests.length;
+    abortTrigger?.then((_) => cancelled.add(index));
     requests.add(request);
     final response = Completer<ContextualTranslationResult>();
     _responses.add(response);

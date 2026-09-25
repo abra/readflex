@@ -2086,7 +2086,9 @@ class Reader {
 
     setStyle()
     const progressRestore = cfi ? null : readflexInitialProgressRestore(progress)
-    if (!cfi && progressRestore == null)
+    // init() advances once itself. The legacy text bootstrap needs the early
+    // request; comic navigation queues it and would otherwise skip page one.
+    if (!cfi && progressRestore == null && !this.view.book.rendition?.zoomable)
       this.view.renderer.next()
     this.setView(this.view)
     if (progressRestore == null) await this.view.init({ lastLocation: cfi })

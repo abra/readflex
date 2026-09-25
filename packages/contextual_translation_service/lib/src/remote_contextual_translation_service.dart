@@ -30,16 +30,30 @@ class RemoteContextualTranslationService
   Future<ContextualTranslationResult> translate(
     ContextualTranslationRequest request, {
     bool allowOfflineModelDownload = false,
+    Future<void>? abortTrigger,
   }) async {
     final uri = _baseUri.resolve('/v1/contextual-translation/analyze');
+    final abort = Completer<void>();
+    void cancel() {
+      if (!abort.isCompleted) abort.complete();
+    }
+
+    abortTrigger?.then((_) => cancel());
     try {
+      final httpRequest =
+          http.AbortableRequest('POST', uri, abortTrigger: abort.future)
+            ..headers.addAll(_headers(_apiKey))
+            ..body = jsonEncode(request.toJson());
       final response = await _httpClient
-          .post(
-            uri,
-            headers: _headers(_apiKey),
-            body: jsonEncode(request.toJson()),
-          )
-          .timeout(_timeout);
+          .send(httpRequest)
+          .then(http.Response.fromStream)
+          .timeout(
+            _timeout,
+            onTimeout: () {
+              cancel();
+              throw TimeoutException('Translation request timed out', _timeout);
+            },
+          );
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw ContextualTranslationException(
           ContextualTranslationFailureReason.http,
@@ -71,6 +85,12 @@ class RemoteContextualTranslationService
       throw ContextualTranslationException(
         ContextualTranslationFailureReason.network,
         'Translation request timed out',
+        cause: error,
+      );
+    } on http.RequestAbortedException catch (error) {
+      throw ContextualTranslationException(
+        ContextualTranslationFailureReason.cancelled,
+        'Translation request cancelled',
         cause: error,
       );
     } on http.ClientException catch (error) {

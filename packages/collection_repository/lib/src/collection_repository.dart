@@ -52,10 +52,10 @@ class CollectionRepository {
 
   Future<Set<String>> getFavouriteSourceIds() async {
     try {
-      final sourceIdsByCollection = await getCollectionSourceIds();
-      return Set.unmodifiable(
-        sourceIdsByCollection[favouritesCollectionId] ?? const <String>{},
+      final sourceIds = await _dao.sourceIdsForCollection(
+        favouritesCollectionId,
       );
+      return Set.unmodifiable(sourceIds);
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }

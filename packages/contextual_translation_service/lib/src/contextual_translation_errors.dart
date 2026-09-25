@@ -1,4 +1,5 @@
 enum ContextualTranslationFailureReason {
+  cancelled,
   network,
   http,
   invalidResponse,

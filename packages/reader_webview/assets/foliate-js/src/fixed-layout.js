@@ -68,7 +68,11 @@ export class FixedLayout extends HTMLElement {
     #spreads
     #index = -1
     #currentSpread
-    #locked = false
+    #navigation = null
+    #pendingNavigation = null
+    #disposed = false
+    #prefetchTimer = 0
+    #frameLoads = new AbortController()
     defaultViewport
     spread
     #portrait = false
@@ -202,7 +206,7 @@ export class FixedLayout extends HTMLElement {
         }
         this.#render()
     }
-    async #createFrame(position, { index, src }, parent = this.#root) {
+    async #createFrame(position, { index, src }, parent = this.#root, zoom = null) {
         const element = document.createElement('div')
         const iframe = document.createElement('iframe')
         element.append(iframe)
@@ -231,17 +235,23 @@ export class FixedLayout extends HTMLElement {
             }
         }
         return new Promise(resolve => {
+            const aborted = () => {
+                iframe.removeEventListener('load', onload)
+                resolve({ blank: true, element, iframe })
+            }
             const onload = () => {
                 iframe.removeEventListener('load', onload)
+                if (this.#disposed) { aborted(); return }
                 const doc = iframe.contentDocument
                 doc.position = position
                 doc.readflexSectionIndex = index
-                this.#zoom?.attach(doc)
+                zoom?.attach(doc)
                 this.dispatchEvent(new CustomEvent('load', { detail: { doc, index } }))
                 // Image-backed fixed pages can fire iframe `load` before
                 // the image bitmap is decoded, leaving naturalWidth/Height
                 // at 0. Wait before measuring viewport so scaling is stable.
                 const finish = () => {
+                    this.#frameLoads.signal.removeEventListener('abort', aborted)
                     const { width, height } = getViewport(doc, this.defaultViewport)
                     resolve({
                         element, iframe,
@@ -256,13 +266,14 @@ export class FixedLayout extends HTMLElement {
                         img.removeEventListener('error', done)
                         finish()
                     }
-                    img.addEventListener('load', done)
-                    img.addEventListener('error', done)
+                    img.addEventListener('load', done, { signal: this.#frameLoads.signal })
+                    img.addEventListener('error', done, { signal: this.#frameLoads.signal })
                 } else {
                     finish()
                 }
             }
             iframe.addEventListener('load', onload)
+            this.#frameLoads.signal.addEventListener('abort', aborted, { once: true })
             iframe.src = src
         })
     }
@@ -347,38 +358,52 @@ export class FixedLayout extends HTMLElement {
         }
     }
     async #showSpread({ left, right, center, side, direction = 0 }) {
-        this.#zoom?.destroy()
-        this.#zoom = null
+        const previousZoom = this.#zoom
         const previousSpread = this.#currentSpread
         const nextSpread = document.createElement('div')
         nextSpread.className = 'spread'
         nextSpread.style.visibility = 'hidden'
         this.#root.append(nextSpread)
         let pageParent = nextSpread
+        let nextZoom = null
         if (this.book.rendition?.zoomable) {
             const { createComicZoom } = await import('./readflex_comic_zoom.js')
+            if (this.#disposed) { nextSpread.remove(); return }
             pageParent = document.createElement('div')
             pageParent.className = 'comic-stage'
             nextSpread.append(pageParent)
-            this.#zoom = createComicZoom(pageParent, nextSpread, detail =>
+            const params = new URLSearchParams(location.search)
+            const edge = Number(params.get('pageTapZoneFraction') ?? 0.3)
+            nextZoom = createComicZoom(pageParent, nextSpread, detail =>
                 this.dispatchEvent(new CustomEvent('tap', { detail })), {
-                    hostTaps: new URLSearchParams(location.search).get('comicHostTaps') === 'true',
+                    hostTaps: params.get('comicHostTaps') === 'true',
+                    pageTapZoneFraction: edge > 0 && edge < 0.5 ? edge : 0.3,
                 })
         }
-        this.#left = null
-        this.#right = null
-        this.#center = null
+        let nextLeft = null
+        let nextRight = null
+        let nextCenter = null
         if (center) {
-            this.#center = await this.#createFrame('center', center, pageParent)
-            this.#side = 'center'
-            this.#render()
+            nextCenter = await this.#createFrame('center', center, pageParent, nextZoom)
         } else {
-            this.#left = await this.#createFrame('left', left, pageParent)
-            this.#right = await this.#createFrame('right', right, pageParent)
-            this.#side = this.#left.blank ? 'right'
-                : this.#right.blank ? 'left' : side
-            this.#render()
+            ;[nextLeft, nextRight] = await Promise.all([
+                this.#createFrame('left', left, pageParent, nextZoom),
+                this.#createFrame('right', right, pageParent, nextZoom),
+            ])
         }
+        previousZoom?.destroy()
+        if (this.#disposed) {
+            nextZoom?.destroy()
+            nextSpread.remove()
+            return
+        }
+        this.#zoom = nextZoom
+        this.#left = nextLeft
+        this.#right = nextRight
+        this.#center = nextCenter
+        this.#side = center ? 'center' : nextLeft.blank ? 'right'
+            : nextRight.blank ? 'left' : side
+        this.#render()
         nextSpread.style.visibility = ''
         nextSpread.classList.add('current')
         this.#currentSpread = nextSpread
@@ -487,6 +512,7 @@ export class FixedLayout extends HTMLElement {
     }
     get index() {
         const spread = this.#spreads[this.#index]
+        if (!spread) return -1
         // Upstream foliate-js writes `this.side` here, but the property is
         // only ever assigned as `#side` (private) — so `this.side` is
         // always `undefined`, the `=== 'left'` check always fails, and the
@@ -512,17 +538,19 @@ export class FixedLayout extends HTMLElement {
         }
     }
     async goToSpread(index, side, reason, direction = 0) {
-        if (index < 0 || index > this.#spreads.length - 1) return
+        if (this.#disposed || index < 0 || index > this.#spreads.length - 1) return
         this.#zoom?.reset()
         if (index === this.#index) {
+            this.#side = side
             this.#render(side)
+            this.#reportLocation(reason)
             return
         }
-        this.#index = index
         const spread = this.#spreads[index]
         if (spread.center) {
             const index = this.book.sections.indexOf(spread.center)
             const src = await spread.center?.load?.()
+            if (this.#disposed) return
             await this.#showSpread({ center: { index, src }, direction })
         } else {
             const indexL = this.book.sections.indexOf(spread.left)
@@ -533,8 +561,11 @@ export class FixedLayout extends HTMLElement {
             ])
             const left = { index: indexL, src: srcL }
             const right = { index: indexR, src: srcR }
+            if (this.#disposed) return
             await this.#showSpread({ left, right, side, direction })
         }
+        if (this.#disposed) return
+        this.#index = index
         this.#reportLocation(reason)
     }
     async select(target) {
@@ -547,42 +578,65 @@ export class FixedLayout extends HTMLElement {
         const section = book.sections[resolved.index]
         if (!section) return
         const { index, side } = this.getSpreadOf(section)
-        await this.goToSpread(index, side)
+        if (this.book.rendition?.zoomable)
+            await this.#navigate(() => this.goToSpread(index, side))
+        else await this.goToSpread(index, side)
     }
-    async next() {
-        if (this.#locked) return
-        this.#locked = true
-        this.#zoom?.reset()
-        try {
-            const s = await (this.rtl ? this.#goLeft() : this.#goRight())
-            if (!s) {
-                await this.goToSpread(
-                    this.#index + 1,
-                    this.rtl ? 'right' : 'left',
-                    'page',
-                    this.#nextTurnDirection()
-                )
-            }
-        } finally {
-            this.#locked = false
+    #navigate(action) {
+        if (this.#disposed) return Promise.resolve()
+        if (this.#navigation) {
+            // One pending intent, not a backlog. Reversing or seeking replaces
+            // that intent; other fixed-layout formats keep their old input gate.
+            if (this.book.rendition?.zoomable) this.#pendingNavigation = action
+            return this.#navigation
         }
-    }
-    async prev() {
-        if (this.#locked) return
-        this.#locked = true
-        this.#zoom?.reset()
-        try {
-            const s = await (this.rtl ? this.#goRight() : this.#goLeft())
-            if (!s) {
-                await this.goToSpread(
-                    this.#index - 1,
-                    this.rtl ? 'left' : 'right',
-                    'page',
-                    this.#prevTurnDirection()
-                )
+        clearTimeout(this.#prefetchTimer)
+        this.#navigation = (async () => {
+            try {
+                do {
+                    this.#pendingNavigation = null
+                    this.#zoom?.reset()
+                    await action()
+                    this.#prepareAdjacentPages(false)
+                    action = this.#pendingNavigation
+                } while (action && !this.#disposed)
+                this.#prepareAdjacentPages()
+            } finally {
+                this.#navigation = null
+                this.#pendingNavigation = null
             }
-        } finally {
-            this.#locked = false
+        })()
+        return this.#navigation
+    }
+    #prepareAdjacentPages(prefetch = true) {
+        if (this.#disposed || !this.book.prepareAdjacentPages) return
+        const spread = this.#spreads[this.#index]
+        const indices = [spread?.left, spread?.right, spread?.center]
+            .filter(Boolean).map(section => this.book.sections.indexOf(section))
+        if (!prefetch) {
+            // Release distant blobs even when continuous input keeps the queue
+            // busy. Speculation itself waits until navigation settles.
+            void this.book.prepareAdjacentPages(indices, { prefetch: false })
+            return
+        }
+        // Keep speculative extraction outside navigation completion.
+        this.#prefetchTimer = setTimeout(() => {
+            if (!this.#disposed) void this.book.prepareAdjacentPages(indices)
+        }, 0)
+    }
+    next() { return this.#navigate(() => this.#turn(1)) }
+    prev() { return this.#navigate(() => this.#turn(-1)) }
+    async #turn(delta) {
+        this.#zoom?.reset()
+        const toRight = (delta > 0) !== this.rtl
+        const withinSpread = await (toRight ? this.#goRight() : this.#goLeft())
+        if (!withinSpread) {
+            await this.goToSpread(
+                this.#index + delta,
+                toRight ? 'left' : 'right',
+                'page',
+                delta > 0 ? this.#nextTurnDirection() : this.#prevTurnDirection(),
+            )
         }
     }
     getContents() {
@@ -601,6 +655,10 @@ export class FixedLayout extends HTMLElement {
         return true
     }
     destroy() {
+        this.#disposed = true
+        this.#pendingNavigation = null
+        clearTimeout(this.#prefetchTimer)
+        this.#frameLoads.abort()
         this.#zoom?.destroy()
         this.#zoom = null
         this.#observer.unobserve(this)

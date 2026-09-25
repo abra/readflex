@@ -309,7 +309,10 @@ class _EntryDictionaryService implements DictionaryLookupService {
   var calls = 0;
 
   @override
-  Future<DictionaryLookupResult> lookup(DictionaryLookupRequest request) async {
+  Future<DictionaryLookupResult> lookup(
+    DictionaryLookupRequest request, {
+    Future<void>? abortTrigger,
+  }) async {
     calls++;
     return DictionaryLookupResult(
       requestId: request.requestId,
@@ -335,7 +338,10 @@ class _LongDictionaryService implements DictionaryLookupService {
   const _LongDictionaryService();
 
   @override
-  Future<DictionaryLookupResult> lookup(DictionaryLookupRequest request) async {
+  Future<DictionaryLookupResult> lookup(
+    DictionaryLookupRequest request, {
+    Future<void>? abortTrigger,
+  }) async {
     return DictionaryLookupResult(
       requestId: request.requestId,
       status: DictionaryLookupStatus.found,
@@ -365,7 +371,10 @@ class _RecordingDictionaryService extends _LongDictionaryService {
   var calls = 0;
 
   @override
-  Future<DictionaryLookupResult> lookup(DictionaryLookupRequest request) {
+  Future<DictionaryLookupResult> lookup(
+    DictionaryLookupRequest request, {
+    Future<void>? abortTrigger,
+  }) {
     calls++;
     return super.lookup(request);
   }

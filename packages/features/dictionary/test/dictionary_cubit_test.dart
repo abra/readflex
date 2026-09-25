@@ -80,6 +80,8 @@ void main() {
     expect(cubit.state.status, DictionarySheetStatus.loading);
 
     await cubit.close();
+    await pumpEventQueue();
+    expect(service.cancelled, isTrue);
     service.complete();
 
     await expectLater(lookup, completes);
@@ -105,7 +107,10 @@ class _FakeDictionaryService implements DictionaryLookupService {
   DictionaryLookupRequest? lastRequest;
 
   @override
-  Future<DictionaryLookupResult> lookup(DictionaryLookupRequest request) async {
+  Future<DictionaryLookupResult> lookup(
+    DictionaryLookupRequest request, {
+    Future<void>? abortTrigger,
+  }) async {
     lastRequest = request;
     final failure = this.failure;
     if (failure != null) throw failure;
@@ -118,10 +123,15 @@ class _FakeDictionaryService implements DictionaryLookupService {
 
 class _ControlledDictionaryService implements DictionaryLookupService {
   final _response = Completer<DictionaryLookupResult>();
+  bool cancelled = false;
   DictionaryLookupRequest? request;
 
   @override
-  Future<DictionaryLookupResult> lookup(DictionaryLookupRequest request) {
+  Future<DictionaryLookupResult> lookup(
+    DictionaryLookupRequest request, {
+    Future<void>? abortTrigger,
+  }) {
+    abortTrigger?.then((_) => cancelled = true);
     this.request = request;
     return _response.future;
   }

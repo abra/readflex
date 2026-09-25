@@ -3,12 +3,13 @@ import assert from 'node:assert/strict'
 import { zipSync } from 'fflate'
 import { createHarness, openEpub } from './harness.mjs'
 
-async function openComic(t, { axis = 'slide', rtl = false, hostTaps = false } = {}) {
+async function openComic(t, { axis = 'slide', rtl = false, hostTaps = false, controlledClock = false } = {}) {
     const harness = await createHarness(t)
     const { page, origin } = harness
     const errors = []
     page.on('pageerror', error => errors.push(error.message))
     t.after(() => assert.deepEqual(errors, []))
+    if (controlledClock) await page.clock.install()
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto(origin + '/blank')
     const images = await page.evaluate(() => Array.from({ length: 5 }, (_, index) => {
@@ -65,6 +66,139 @@ const state = page => page.evaluate(() => {
         positions: window.bridgeCalls.filter(([name]) => name === 'onRelocated').length }
 })
 
+test('comic edge taps reach the host immediately and never become double-tap zoom', async t => {
+    const { page } = await openComic(t, { controlledClock: true })
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000))
+    const before = await state(page)
+    for (const x of [30, 360]) {
+        await page.mouse.click(x, 400)
+        assert.equal((await state(page)).clicks.length, x === 30 ? 1 : 3)
+        await page.clock.runFor(80)
+        await page.mouse.click(x, 400)
+    }
+    await page.clock.runFor(350)
+    const after = await state(page)
+    assert.equal(after.clicks.length, 4)
+    assert.equal(after.width, before.width)
+    assert.equal(after.index, before.index)
+})
+
+test('an edge tap cancels a pending centre tap without opening chrome', async t => {
+    const { page } = await openComic(t, { controlledClock: true })
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000))
+    await page.mouse.click(195, 400)
+    await page.clock.runFor(60)
+    await page.mouse.click(360, 400)
+    await page.clock.runFor(350)
+    const { clicks } = await state(page)
+    assert.equal(clicks.length, 1)
+    assert.ok(clicks[0].x > 0.7)
+})
+
+test('comic turns keep one pending intent and the latest direction wins', async t => {
+    const { page } = await openComic(t)
+    assert.equal((await state(page)).index, 0, 'opening must not queue two initial turns')
+    const indices = await page.evaluate(async () => {
+        const r = reader.view.renderer
+        await Promise.all([r.next(), r.next(), r.next(), r.next()])
+        const forward = r.index
+        await Promise.all([r.next(), r.next(), r.prev()])
+        const reversed = r.index
+        await Promise.all([r.prev(), r.prev(), r.prev(), r.prev()])
+        return { forward, reversed, back: r.index }
+    })
+    assert.deepEqual(indices, { forward: 2, reversed: 2, back: 0 })
+})
+
+test('failed comic navigation unlocks input and leaves the last page selected', async t => {
+    const { page } = await openComic(t)
+    const result = await page.evaluate(async () => {
+        const r = reader.view.renderer
+        await r.goTo({ index: 1 })
+        const section = r.book.sections[2]
+        const load = section.load
+        section.load = async () => { throw new Error('Unreadable image') }
+        const errors = await Promise.allSettled([r.next(), r.next()])
+        const failedIndex = r.index
+        section.load = load
+        await r.next()
+        return { failedIndex, index: r.index, rejected: errors.every(x => x.status === 'rejected') }
+    })
+    assert.deepEqual(result, { failedIndex: 1, index: 2, rejected: true })
+})
+
+test('closing a comic during a slow turn cancels queued navigation', async t => {
+    const { page } = await openComic(t)
+    const result = await page.evaluate(async () => {
+        const r = reader.view.renderer
+        await r.goTo({ index: 1 })
+        const section = r.book.sections[2]
+        const src = await section.load()
+        let finish
+        section.load = () => new Promise(resolve => { finish = resolve })
+        const first = r.next()
+        const second = r.next()
+        // Let the current-spread check reach the deferred archive load.
+        await Promise.resolve()
+        r.destroy()
+        finish(src)
+        await Promise.all([first, second])
+        return r.index
+    })
+    assert.equal(result, 1)
+})
+
+test('a comic chapter jump supersedes the pending page turn', async t => {
+    const { page } = await openComic(t)
+    const index = await page.evaluate(async () => {
+        const r = reader.view.renderer
+        await Promise.all([r.next(), r.next(), r.goTo({ index: 4 })])
+        return r.index
+    })
+    assert.equal(index, 4)
+})
+
+for (const rtl of [false, true]) {
+    test(`comic spread navigation remains bounded in landscape rtl=${rtl}`, async t => {
+        const { page } = await openComic(t, { rtl })
+        await page.setViewportSize({ width: 844, height: 390 })
+        await page.waitForTimeout(80)
+        const indices = await page.evaluate(async () => {
+            const r = reader.view.renderer
+            await Promise.all([r.next(), r.next(), r.next(), r.next()])
+            const forward = r.index
+            await Promise.all([r.prev(), r.prev(), r.prev(), r.prev()])
+            // Back navigation selects the last page of the previous spread;
+            // verify both displayed pages, not a portrait-only index contract.
+            const backPages = r.getContents()
+                .filter(({ doc }) => doc.defaultView.frameElement.parentElement.style.display !== 'none')
+                .map(({ index }) => index).filter(index => index >= 0).sort((a, b) => a - b)
+            return { forward, backPages }
+        })
+        assert.deepEqual(indices, { forward: 4, backPages: [0, 1] })
+    })
+}
+
+test('host-forwarded edge taps are still recognized while the next spread loads', async t => {
+    const { page } = await openComic(t, { hostTaps: true })
+    await page.evaluate(async () => {
+        const r = reader.view.renderer
+        await r.goTo({ index: 1 })
+        const section = r.book.sections[2]
+        const src = await section.load()
+        section.load = () => new Promise(resolve => { window.finishComicLoad = () => resolve(src) })
+        window.comicTurn = r.next()
+        await Promise.resolve()
+        window.handleComicTouchTap(360, 400)
+    })
+    const loading = await state(page)
+    assert.equal(loading.index, 1)
+    assert.equal(loading.clicks.length, 1)
+    assert.ok(loading.clicks[0].x > 0.7)
+    await page.evaluate(async () => { finishComicLoad(); await comicTurn })
+    assert.equal((await state(page)).index, 2)
+})
+
 async function pointer(page, type, x, y, id = 1) {
     return page.evaluate(({ type, x, y, id }) => {
         const renderer = window.reader.view.renderer
@@ -87,23 +221,50 @@ async function pointer(page, type, x, y, id = 1) {
 }
 
 test('comic double tap zooms at the tapped area without toggling chrome', async t => {
-    const { page } = await openComic(t)
+    const { page } = await openComic(t, { controlledClock: true })
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000))
     const before = await state(page)
-    await page.mouse.click(150, 330)
-    assert.equal((await state(page)).clicks.length, 0, 'first tap waits for a second tap')
-    await page.waitForTimeout(80)
-    await page.mouse.click(150, 330)
-    await page.waitForTimeout(350)
-    const zoomed = await state(page)
-    assert.ok(zoomed.width > before.width * 2)
-    assert.equal(zoomed.clicks.length, 0)
-    assert.equal(zoomed.index, before.index)
-    assert.equal(zoomed.positions, before.positions)
-    await page.mouse.dblclick(150, 330, { delay: 80 })
-    await page.waitForTimeout(350)
-    const reset = await state(page)
-    assert.ok(Math.abs(reset.width - before.width) < 1)
-    assert.equal(reset.clicks.length, 0)
+    await page.evaluate(() => {
+        window.comicInputTrace = []
+        const renderer = window.reader.view.renderer
+        const doc = renderer.getContents().find(({ index }) => index === renderer.index).doc
+        for (const target of [window, doc.defaultView]) {
+            for (const type of ['pointerdown', 'pointerup', 'click', 'dblclick', 'blur', 'focus']) {
+                target.addEventListener(type, event => window.comicInputTrace.push({
+                    type, time: performance.now(), detail: event.detail,
+                    target: event.target?.localName, iframe: target !== window,
+                    focused: document.hasFocus(), draft: window.__readflexImageAreaDraftActive,
+                }), { capture: true })
+            }
+        }
+    })
+    // Keep real hit-testing/input, but do not let protocol scheduling latency
+    // change the gesture interval. The other gesture tests use real time.
+    const doubleTap = async () => {
+        await page.mouse.click(150, 330)
+        await page.clock.runFor(80)
+        assert.equal((await state(page)).clicks.length, 0)
+        await page.mouse.click(150, 330)
+        await page.clock.runFor(350)
+    }
+    try {
+        await doubleTap()
+        const zoomed = await state(page)
+        assert.ok(zoomed.width > before.width * 2)
+        assert.equal(zoomed.clicks.length, 0)
+        assert.equal(zoomed.index, before.index)
+        assert.equal(zoomed.positions, before.positions)
+        await doubleTap()
+        const reset = await state(page)
+        assert.ok(Math.abs(reset.width - before.width) < 1)
+        assert.equal(reset.clicks.length, 0)
+    } catch (error) {
+        t.diagnostic(JSON.stringify(await page.evaluate(() => ({
+            events: window.comicInputTrace, bridge: window.bridgeCalls,
+            draft: window.__readflexImageAreaDraftActive,
+        }))))
+        throw error
+    }
 })
 
 test('a single comic tap still opens chrome, including while zoomed', async t => {
@@ -120,28 +281,31 @@ test('a single comic tap still opens chrome, including while zoomed', async t =>
 })
 
 test('touch taps zoom without compatibility clicks and suppress duplicate clicks', async t => {
-    const { page } = await openComic(t)
+    const { page } = await openComic(t, { controlledClock: true })
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000))
     const before = await state(page)
     for (let i = 0; i < 2; i++) {
         await pointer(page, 'pointerdown', 150, 330)
         await pointer(page, 'pointerup', 150, 330)
         // A compatibility click, when delivered, must not become another tap.
         await page.mouse.click(150, 330)
-        await page.waitForTimeout(70)
+        // Protocol round trips are not part of the user's inter-tap interval.
+        await page.clock.runFor(70)
     }
-    await page.waitForTimeout(350)
+    await page.clock.runFor(350)
     const zoomed = await state(page)
     assert.ok(zoomed.width > before.width * 2)
     assert.equal(zoomed.clicks.length, 0)
     assert.equal(zoomed.index, before.index)
     await pointer(page, 'pointerdown', 25, 400)
     await pointer(page, 'pointerup', 25, 400)
-    await page.waitForTimeout(350)
+    await page.clock.runFor(350)
     assert.deepEqual((await state(page)).clicks, [{ x: 0.5, y: 0.5 }])
 })
 
 test('host-forwarded taps tolerate missing WebKit touches without duplicate actions', async t => {
-    const { page } = await openComic(t, { hostTaps: true })
+    const { page } = await openComic(t, { hostTaps: true, controlledClock: true })
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000))
     const before = await state(page)
     const tap = () => page.evaluate(() => handleComicTouchTap(150, 330))
     // iOS can deliver the first touch and omit the entire second DOM sequence.
@@ -149,9 +313,9 @@ test('host-forwarded taps tolerate missing WebKit touches without duplicate acti
     await pointer(page, 'pointerup', 150, 330)
     await tap()
     await page.mouse.click(150, 330)
-    await page.waitForTimeout(80)
+    await page.clock.runFor(80)
     await tap()
-    await page.waitForTimeout(350)
+    await page.clock.runFor(350)
     assert.ok((await state(page)).width > before.width * 2)
     assert.equal((await state(page)).clicks.length, 0)
     // On WebKit versions delivering both touches, neither is counted twice.
@@ -159,14 +323,27 @@ test('host-forwarded taps tolerate missing WebKit touches without duplicate acti
         await pointer(page, 'pointerdown', 150, 330)
         await pointer(page, 'pointerup', 150, 330)
         await tap()
-        await page.waitForTimeout(80)
+        await page.clock.runFor(80)
     }
-    await page.waitForTimeout(350)
+    await page.clock.runFor(350)
     assert.ok(Math.abs((await state(page)).width - before.width) < 1)
     assert.equal((await state(page)).clicks.length, 0)
     await tap()
-    await page.waitForTimeout(350)
+    await page.clock.runFor(350)
     assert.equal((await state(page)).clicks.length, 1)
+})
+
+test('centre taps outside the double-tap window remain two single taps', async t => {
+    const { page } = await openComic(t, { controlledClock: true })
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000))
+    const before = await state(page)
+    for (let i = 0; i < 2; i++) {
+        await pointer(page, 'pointerdown', 150, 330)
+        await pointer(page, 'pointerup', 150, 330)
+        await page.clock.runFor(281)
+        assert.equal((await state(page)).clicks.length, i + 1)
+    }
+    assert.equal((await state(page)).width, before.width)
 })
 
 test('panning is bounded, does not click or change the comic location', async t => {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:contextual_translation_service/contextual_translation_service.dart';
@@ -5,7 +6,81 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+class _PendingClient extends http.BaseClient {
+  _PendingClient({required this.sendHeaders});
+  final bool sendHeaders;
+  final started = Completer<void>();
+  bool aborted = false;
+  bool closed = false;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    started.complete();
+    if (request is http.AbortableRequest) {
+      if (sendHeaders) {
+        final body = StreamController<List<int>>();
+        request.abortTrigger?.then((_) {
+          aborted = true;
+          body.addError(http.RequestAbortedException(request.url));
+          unawaited(body.close());
+        });
+        return http.StreamedResponse(body.stream, 200);
+      }
+      await request.abortTrigger;
+      aborted = true;
+      throw http.RequestAbortedException(request.url);
+    }
+    return Completer<http.StreamedResponse>().future;
+  }
+
+  @override
+  void close() => closed = true;
+}
+
 void main() {
+  for (final (cancelExplicitly, sendHeaders) in [
+    (true, false),
+    (false, false),
+    (true, true),
+    (false, true),
+  ]) {
+    test(
+      'aborts ${sendHeaders ? 'body' : 'connection'} on ${cancelExplicitly ? 'cancel' : 'timeout'}',
+      () async {
+        final client = _PendingClient(sendHeaders: sendHeaders);
+        final service = RemoteContextualTranslationService(
+          baseUri: Uri.parse('https://api.readflex.app'),
+          httpClient: client,
+          timeout: const Duration(milliseconds: 50),
+        );
+        final abort = Completer<void>();
+        final operation = service.translate(
+          _request,
+          abortTrigger: abort.future,
+        );
+        final assertion = expectLater(
+          operation,
+          throwsA(
+            isA<ContextualTranslationException>().having(
+              (error) => error.reason,
+              'reason',
+              cancelExplicitly
+                  ? ContextualTranslationFailureReason.cancelled
+                  : ContextualTranslationFailureReason.network,
+            ),
+          ),
+        );
+        await client.started.future;
+        if (cancelExplicitly) abort.complete();
+        await assertion;
+        await pumpEventQueue();
+        expect(client.aborted, isTrue);
+        service.dispose();
+        expect(client.closed, isFalse);
+      },
+    );
+  }
+
   test('posts the contract and accepts a correlated response', () async {
     late http.Request captured;
     final service = RemoteContextualTranslationService(

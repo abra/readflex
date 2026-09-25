@@ -1,6 +1,7 @@
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:domain_models/domain_models.dart';
 import 'package:library_feature/src/library_bloc.dart';
 import 'package:library_feature/src/library_grid_tile.dart';
 import 'package:library_feature/src/library_grid_view.dart';
@@ -20,7 +21,9 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      final state = LibraryState(books: libraryWorkload(20000));
+      final state = LibraryState(
+        sources: libraryWorkload(20000).map(LibrarySource.fromBook).toList(),
+      );
       final sources = state.visibleItems;
       expect(identical(state.visibleItems, sources), isTrue);
       final scroll = ScrollController();
@@ -80,14 +83,16 @@ void main() {
     'large library derives filters once per state and keeps source inputs',
     () {
       final books = libraryWorkload(20000);
-      final state = LibraryState(books: books);
+      final state = LibraryState(
+        sources: books.map(LibrarySource.fromBook).toList(),
+      );
       expect(state.visibleItems.first.id, 'workload-19999');
       for (var read = 0; read < 1000; read++) {
         expect(identical(state.visibleItems, state.visibleItems), isTrue);
       }
       final filtered = state.copyWith(searchQuery: 'BOOK 19999');
       expect(filtered.visibleItems.single.id, 'workload-19999');
-      expect(identical(filtered.books, state.books), isTrue);
+      expect(identical(filtered.sources, state.sources), isTrue);
       expect(state.visibleItems, hasLength(20000));
       expect(
         state.copyWith(filter: LibraryFilter.unread).visibleItems,

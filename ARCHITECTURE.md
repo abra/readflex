@@ -310,6 +310,19 @@ visible without expanding details; only explanations and alternatives collapse.
 Phrase/full-text selections are not expanded, and no second provider request or
 client-side expression search is introduced.
 
+Translate/Dictionary cubits own per-operation cancellation signals; services
+translate those into abortable HTTP requests and abort on their deadlines too.
+Shared clients remain alive. Cancellation never initiates offline fallback.
+Translation cache hits from the remote provider are immediate; cached offline
+results are reused only after a fresh, eligible remote failure. Native work
+already in progress may finish, but abandoned results are discarded.
+
+Library state holds `LibrarySource` projections rather than full article bodies.
+`ArticlesDao.libraryEntries` selects only metadata, and `ArticleRepository`
+maps it into domain values. Reader/detail paths keep their full article reads.
+Publisher EPUB/MOBI6/KF8 documents pass through the same sanitizer before Blob
+navigation; the reader's iframe sandbox remains compatible with WebKit.
+
 Dictionary lookup is deliberately distinct from translation:
 
 ```text
@@ -346,6 +359,15 @@ The WebView subtree is kept behind ready-state reader composition so routine
 UI changes do not recreate the reader runtime unnecessarily. Books and comics
 use the foliate WebView; articles use a separate vertical HTML WebView that
 loads `content.html` and restores position through stable sentence anchors.
+
+Comic gesture arbitration lives in `reader_webview` JS: edge taps are immediate,
+centre taps distinguish chrome from double-tap zoom, and zoomed drags only pan.
+Flutter owns chrome visibility and physical/logical page commands, with the
+same tap-zone fraction passed to JS. The fixed-layout renderer serializes comic
+navigation with one replaceable pending intent; other fixed-layout formats keep
+their existing busy-input gate. The comic loader owns deduplicated image-blob
+loads and bounded adjacent-page prefetch (8 MiB speculative encoded data), not
+feature state or Flutter pointer-move callbacks.
 
 Book selection navigation stays inside `reader_webview`'s JS runtime. A handle
 drag never turns a page. A subsequent swipe or edge tap advances exactly one
@@ -458,10 +480,11 @@ Library ignores completion after disposal. Cancellation/failure does not trigger
 a redundant list read, and no database-wide subscription reloads Library on
 every debounced reader-position write.
 
-Library still loads full Book/Article snapshots, then caches its visible-item
-projection per state. A SQL-level lightweight list projection and further
-Reader controller decomposition remain separate work; neither is necessary to
-fix these consistency bugs and both need their own behavioral/performance baseline.
+Library loads book metadata and a lightweight SQL projection of article metadata,
+then caches its filtered/sorted visible items per state. Article body text and
+reader anchors are not read for the list. SQL pagination and further Reader
+controller decomposition remain separate work requiring behavioral/performance
+baselines; the current projection keeps existing search/filter semantics.
 
 ## Data, Models, and Mapping
 

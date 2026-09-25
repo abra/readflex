@@ -12,6 +12,7 @@ files.
 Key methods:
 
 - `getArticles({limit, offset})`
+- `getLibrarySources()` - metadata-only `LibrarySource` list
 - `getArticleById(id)`
 - `addExtractedArticle(extracted)`
 - `updateArticle(article)`
@@ -57,6 +58,11 @@ The repository writes metadata to `local_storage` through `ArticlesDao` and wrap
 storage failures in `StorageException`. Deleting an article also removes related
 review items, highlights, flashcards, dictionary entries, bookmarks, and the
 article directory on disk.
+
+Library uses `ArticlesDao.libraryEntries`, an explicit SQL column projection
+that excludes `plainText`, reader anchors, and asset paths. It returns typed
+storage records mapped here to `LibrarySource`, never partially populated
+`Article` objects. Full reads by ID and `getArticles` retain the complete body.
 
 The reader opens saved articles from `Article.contentHtmlPath` and persists
 article progress by updating the original `Article` row. `article_repository`

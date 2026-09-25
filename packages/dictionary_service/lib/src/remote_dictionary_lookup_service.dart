@@ -26,16 +26,32 @@ class RemoteDictionaryLookupService implements DictionaryLookupService {
   final Duration _timeout;
 
   @override
-  Future<DictionaryLookupResult> lookup(DictionaryLookupRequest request) async {
+  Future<DictionaryLookupResult> lookup(
+    DictionaryLookupRequest request, {
+    Future<void>? abortTrigger,
+  }) async {
     final uri = _baseUri.resolve('/v1/dictionary/lookup');
+    final abort = Completer<void>();
+    void cancel() {
+      if (!abort.isCompleted) abort.complete();
+    }
+
+    abortTrigger?.then((_) => cancel());
     try {
+      final httpRequest =
+          http.AbortableRequest('POST', uri, abortTrigger: abort.future)
+            ..headers.addAll(_headers(_apiKey))
+            ..body = jsonEncode(request.toJson());
       final response = await _httpClient
-          .post(
-            uri,
-            headers: _headers(_apiKey),
-            body: jsonEncode(request.toJson()),
-          )
-          .timeout(_timeout);
+          .send(httpRequest)
+          .then(http.Response.fromStream)
+          .timeout(
+            _timeout,
+            onTimeout: () {
+              cancel();
+              throw TimeoutException('Dictionary request timed out', _timeout);
+            },
+          );
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw DictionaryLookupException(
           DictionaryLookupFailureReason.http,
@@ -66,6 +82,12 @@ class RemoteDictionaryLookupService implements DictionaryLookupService {
       throw DictionaryLookupException(
         DictionaryLookupFailureReason.network,
         'Dictionary request timed out',
+        cause: error,
+      );
+    } on http.RequestAbortedException catch (error) {
+      throw DictionaryLookupException(
+        DictionaryLookupFailureReason.cancelled,
+        'Dictionary request cancelled',
         cause: error,
       );
     } on http.ClientException catch (error) {

@@ -34,11 +34,15 @@ void main() {
   );
 
   test('favourites are persisted but hidden from manual collections', () async {
+    await repository.createCollectionWithSources(
+      name: 'Other',
+      sourceIds: const ['manual-only'],
+    );
     await repository.addSourcesToFavourites(
       sourceIds: const ['book-1', 'book-1', 'article-1'],
     );
 
-    expect(await repository.getCollections(), isEmpty);
+    expect((await repository.getCollections()).single.name, 'Other');
     expect(await repository.getFavouriteSourceIds(), {'book-1', 'article-1'});
 
     final sourceIds = await repository.getCollectionSourceIds();

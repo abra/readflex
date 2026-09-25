@@ -175,7 +175,7 @@ class WakelockScreenControlService implements ScreenControlService {
     Map<String, Object?>? info,
     _NativeBrightnessInfo? brightnessInfo,
   ) {
-    if (info == null) return;
+    if (!kDebugMode || info == null) return;
     debugPrint(
       '[reader-brightness-native] '
       'source=${info['source']} '

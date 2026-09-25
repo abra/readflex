@@ -42,7 +42,11 @@ selected term's canonical lemma remains first; a contextual expression such as
 
 The client verifies response shape/status and matching request ID, and maps
 HTTP/network/invalid-response failures to typed errors without displaying raw
-backend bodies. The default request timeout is 40 seconds. There is no mobile
+backend bodies. The default request timeout is 40 seconds and aborts transport,
+including response-body reads. Completing the optional `abortTrigger` future
+cancels only that lookup, not the shared client. DictionaryCubit triggers it on
+sheet closure; stale results never reach the closed sheet. This does not
+guarantee cancellation of work already started by the backend. There is no mobile
 dictionary cache or ML Kit definition fallback in this package: when native
 lookup is unavailable and the API fails, the sheet offers retry. Backend
 generation/caching is a separate service contract, not implemented in this repo.

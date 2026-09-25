@@ -103,6 +103,15 @@ class ArticleRepository {
     }
   }
 
+  Future<List<LibrarySource>> getLibrarySources() async {
+    try {
+      final rows = await _dao.libraryEntries();
+      return rows.map((row) => row.toLibrarySource()).toList(growable: false);
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
   Future<Article> addExtractedArticle(ExtractedArticle extracted) async {
     final id = _uuid.v4();
     final articleDir = Directory(p.join(_articlesDir.path, id));

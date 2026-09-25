@@ -55,6 +55,7 @@ class FixtureTranslation implements ContextualTranslationService {
   Future<ContextualTranslationResult> translate(
     ContextualTranslationRequest request, {
     bool allowOfflineModelDownload = false,
+    Future<void>? abortTrigger,
   }) async {
     requests.add(request);
     await pending?.future;
@@ -122,7 +123,10 @@ class FixtureDictionary implements DictionaryLookupService {
   List<DictionaryLexicalEntry> entries;
 
   @override
-  Future<DictionaryLookupResult> lookup(DictionaryLookupRequest request) async {
+  Future<DictionaryLookupResult> lookup(
+    DictionaryLookupRequest request, {
+    Future<void>? abortTrigger,
+  }) async {
     requests.add(request);
     return DictionaryLookupResult(
       requestId: request.requestId,

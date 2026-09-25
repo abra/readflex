@@ -292,13 +292,22 @@ the visible page image, and a viewport position for the floating highlight menu.
 
 ## Reader document normalization
 
-Before rendering, `readflex_content_security.js` sanitizes publisher EPUB
-documents with vendored DOMPurify when `allowScript` is false. This removes
+Before rendering, `readflex_content_security.js` sanitizes publisher documents
+with vendored DOMPurify: EPUB when `allowScript` is false (the app default),
+and all MOBI6/KF8 sections. This removes
 scripts, event attributes, unsafe URLs and active embeds before section Blob
 creation. A section CSP also disables script execution. The trusted parent
 reader retains DOM access for pagination, selection and CFI annotations.
 CSS, ordinary document structure and inline SVG remain supported. This is
 not a blanket offline/network policy for all EPUB resources.
+
+MOBI resource substitution happens before sanitization. Kindle `aid` anchors
+and validated `filepos:`/`kindle:pos:` links are preserved for fragment/TOC
+navigation. Same-origin Blob URLs are permitted only on media/SVG resources and
+stylesheet links, not arbitrary anchors or executable elements. The article
+sanitizer does not share these exceptions. Cleaning runs once per section load,
+before its Blob is cached, never on scroll or selection updates. The iframe's
+WebKit compatibility sandbox is unchanged; it is not the script-security boundary.
 
 The article shell sanitizes saved fragments before DOM insertion and permits
 only repository-generated `images/<filename>.<image-extension>` image paths.
@@ -353,10 +362,16 @@ npm run test:browser
 READER_BROWSER=webkit npm run test:browser
 ```
 
-Tests exercise actual EPUB fixed/reflow loaders and the article shell, including
-malicious markup, preserved styles/CFIs, image policy, load errors and fallback
+Tests exercise actual EPUB fixed/reflow and MOBI6 loaders and the article shell,
+including malicious markup, preserved styles/CFIs, image policy, load errors and fallback
 highlight geometry/pixel changes at desktop and mobile sizes. Flutter tests
 use the plugin platform interface to simulate renderer death and late callbacks.
+MOBI sanitizer tests also check KF8-style XHTML anchors and internal links;
+these do not replace a full binary KF8 fixture. The comic double-tap timing tests
+use Playwright's controlled clock for mouse/touch sequences so protocol scheduling
+cannot turn the gesture into two single taps; other gesture tests use real time.
+Symbol-font pixel tests wait for the font loaded by production code rather than
+forcing a load or assuming a fixed delay is sufficient.
 Book selection regressions load the actual `book.js` runtime and EPUB directory
 loader (with fixture transport) as well as the standalone paginator. They cover
 unwanted delayed page turns, iframe gesture ownership, cancelled gestures and
@@ -437,15 +452,23 @@ when changing this setting or updating Flutter/WebView.
 DOMPurify is pinned and vendored without edits. See
 `assets/foliate-js/src/vendor/DOMPurify-README.md` for provenance and updates.
 
-### Comic Zoom
+### Comic Gestures and Resources
 
 Comic archives advertise `rendition.zoomable`; other fixed-layout EPUBs,
 PDFs, reflowable books and articles keep their existing gestures. Comic zoom
 loads the bundled Panzoom module lazily, without network requests.
 
-- A single tap waits 280 ms for a nearby second tap before invoking reader chrome
-  or a page-edge action. A double tap zooms to 2.5x at the tap point; repeating it
-  restores page fit. Pinch is bounded between page fit and 4x.
+- At page fit, taps in the physical left/right 30% zones immediately invoke
+  page navigation, including with chrome visible (Flutter also hides chrome).
+  The shared Dart `readerPageTapZoneFraction` is passed to JS so arbitration
+  and Flutter navigation use the same boundaries. Centre taps wait 280 ms for
+  a nearby second tap: single toggles chrome, double zooms to 2.5x. Repeating
+  the double tap restores page fit. Pinch is bounded between page fit and 4x.
+- Animated turns still take 180 ms and respect reduced motion. During a comic
+  turn, one pending navigation intent is retained; later taps, reversals or
+  explicit seeks replace it rather than building an unbounded queue. A failed
+  archive load leaves the previous location selected and releases the input
+  gate. Closing the renderer discards pending navigation.
 - At page fit, swipes keep the configured page-turn axis and reading direction.
   While zoomed, dragging pans instead of turning pages, and edge taps toggle
   chrome. Return to page fit to resume gesture-based page navigation.
@@ -456,6 +479,14 @@ loads the bundled Panzoom module lazily, without network requests.
   or persists temporary scale to reading progress.
 - Pointer moves are batched per animation frame in JS; no Flutter bridge calls,
   image decoding, or repository writes are performed for each pan/zoom movement.
+- After each completed turn, even during continuous input, the comic loader
+  releases pages outside the current spread and its immediate neighbours.
+  Once navigation settles it prefetches up to one image in each direction.
+  Speculative encoded blobs share
+  an 8 MiB budget; oversized/unknown-size pages remain demand-loaded. This is
+  not a decoded-GPU-memory limit. Prefetch does not create offscreen iframes or
+  decode images. Concurrent demand/prefetch loads share extraction, obsolete
+  results cannot recreate revoked URLs, and closing releases all owned URLs.
 - iOS comic taps use `ComicTouchTapForwarder`: the current Flutter/WKWebView
   combination can omit the second rapid touch in the DOM. The listener observes
   completed short touches without entering Flutter's gesture arena; JS ignores
@@ -464,8 +495,10 @@ loads the bundled Panzoom module lazily, without network requests.
   are changed by this workaround.
 
 Regression coverage: `test_browser/comic_zoom.test.mjs` (Chromium and WebKit)
-and `integration_test/comic_zoom_test.dart` (native WebView rendering with an
-offline generated CBZ). The integration test dispatches Flutter touches on iOS
+and `test_js/comic_book.test.mjs` (resource lifetime/budget), plus
+`integration_test/comic_zoom_test.dart` (native WebView rendering, zoom, chrome
+dismissal and bidirectional edge turns with an offline generated CBZ).
+The integration test dispatches Flutter touches on iOS
 and DOM taps on Android; it does not replace checking OS-generated touch
 sequences on both platforms. Native artifacts
 belong under `.local/`. Panzoom provenance and update steps are documented in

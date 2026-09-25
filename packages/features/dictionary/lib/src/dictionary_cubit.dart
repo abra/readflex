@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dictionary_service/dictionary_service.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -50,10 +52,21 @@ class DictionaryCubit extends Cubit<DictionarySheetState> {
 
   final DictionaryLookupService _dictionaryService;
   int _lookupGeneration = 0;
+  Completer<void>? _abort;
+
+  @override
+  Future<void> close() {
+    ++_lookupGeneration;
+    _abort?.complete();
+    _abort = null;
+    return super.close();
+  }
 
   Future<void> lookup(TextSelectionContext selection) async {
     if (isClosed || state.status == DictionarySheetStatus.loading) return;
     final lookupGeneration = ++_lookupGeneration;
+    _abort?.complete();
+    _abort = Completer<void>();
     emit(
       state.copyWith(
         status: DictionarySheetStatus.loading,
@@ -69,6 +82,7 @@ class DictionaryCubit extends Cubit<DictionarySheetState> {
           contextText:
               selection.effectiveMarkedContextText ?? selection.contextText,
         ),
+        abortTrigger: _abort!.future,
       );
       if (!_isCurrentLookup(lookupGeneration)) return;
       emit(

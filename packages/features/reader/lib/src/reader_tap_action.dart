@@ -1,3 +1,5 @@
+import 'package:reader_webview/reader_webview.dart';
+
 enum ReaderTapAction {
   leftPage,
   rightPage,
@@ -17,16 +19,17 @@ enum ReaderTapAxis {
   vertical,
 }
 
-const readerLeftTapZoneEnd = 0.30;
-const readerRightTapZoneStart = 0.70;
+const readerLeftTapZoneEnd = readerPageTapZoneFraction;
+const readerRightTapZoneStart = 1 - readerPageTapZoneFraction;
 
 ReaderTapAction readerTapActionFor({
   required double x,
   required double y,
   required bool chromeVisible,
+  bool isComic = false,
   ReaderTapAxis axis = ReaderTapAxis.horizontal,
 }) {
-  if (chromeVisible) return ReaderTapAction.toggleChrome;
+  if (chromeVisible && !isComic) return ReaderTapAction.toggleChrome;
   if (x <= readerLeftTapZoneEnd) return ReaderTapAction.leftPage;
   if (x >= readerRightTapZoneStart) return ReaderTapAction.rightPage;
   return ReaderTapAction.toggleChrome;
@@ -36,12 +39,14 @@ ReaderTapCommand readerTapCommandFor({
   required double x,
   required double y,
   required bool chromeVisible,
+  bool isComic = false,
   ReaderTapAxis axis = ReaderTapAxis.horizontal,
 }) {
   final action = readerTapActionFor(
     x: x,
     y: y,
     chromeVisible: chromeVisible,
+    isComic: isComic,
     axis: axis,
   );
   return switch ((axis, action)) {
@@ -61,6 +66,7 @@ bool shouldBlockReaderPageInput({
   required bool chromeVisible,
   required bool overlayVisible,
   required bool hasSelection,
+  bool isComic = false,
 }) {
-  return chromeVisible && !overlayVisible && !hasSelection;
+  return !isComic && chromeVisible && !overlayVisible && !hasSelection;
 }

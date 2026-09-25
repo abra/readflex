@@ -89,6 +89,13 @@ for (const [fontName, fontFile] of presets) {
 
 test('missing glyphs use real bundled font pixels without changing prose or code', async t => {
     const { page, fontRequests } = await openBook(t)
+    // fonts.ready can resolve before WebKit lays out the newly styled chapter.
+    // Wait for real fallback use; calling fonts.load here would hide a CSS bug.
+    await page.waitForFunction(family => {
+        const doc = window.reader.view.renderer.getContents()[0].doc
+        return [...doc.fonts].some(face =>
+            face.family.replaceAll('"', '') === family && face.status === 'loaded')
+    }, symbolFamily)
     const result = await page.evaluate(async ({ symbolFamily, symbols }) => {
         const { doc } = window.reader.view.renderer.getContents()[0]
         const styleOf = id => doc.defaultView.getComputedStyle(doc.getElementById(id))

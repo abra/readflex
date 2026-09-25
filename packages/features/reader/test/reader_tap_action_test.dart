@@ -3,6 +3,50 @@ import 'package:reader/src/reader_tap_action.dart';
 
 void main() {
   group('readerTapActionFor', () {
+    test('comic edges turn pages even with visible chrome', () {
+      for (final axis in ReaderTapAxis.values) {
+        expect(
+          readerTapCommandFor(
+            x: 0.1,
+            y: 0.5,
+            chromeVisible: true,
+            isComic: true,
+            axis: axis,
+          ),
+          axis == ReaderTapAxis.vertical
+              ? ReaderTapCommand.previousPage
+              : ReaderTapCommand.physicalLeftPage,
+        );
+        expect(
+          readerTapActionFor(
+            x: 0.9,
+            y: 0.5,
+            chromeVisible: true,
+            isComic: true,
+          ),
+          ReaderTapAction.rightPage,
+        );
+        expect(
+          readerTapActionFor(
+            x: 0.5,
+            y: 0.5,
+            chromeVisible: true,
+            isComic: true,
+          ),
+          ReaderTapAction.toggleChrome,
+        );
+      }
+      expect(
+        shouldBlockReaderPageInput(
+          chromeVisible: true,
+          overlayVisible: false,
+          hasSelection: false,
+          isComic: true,
+        ),
+        isFalse,
+      );
+    });
+
     test('uses the same side tap zones for all page turn styles', () {
       expect(readerLeftTapZoneEnd, 0.30);
       expect(readerRightTapZoneStart, 0.70);

@@ -1,13 +1,41 @@
 import DOMPurify from './vendor/purify.js'
 
+// Only publisher documents contain loader-generated blob resources. Keep this
+// policy separate from the saved-article fragment sanitizer.
+const publisherPurify = DOMPurify(window)
+publisherPurify.addHook('uponSanitizeAttribute', (node, attribute) => {
+    const tag = node.localName?.toLowerCase()
+    const attr = attribute.attrName
+    // Parsed by MOBI/KF8 resolveHref, never an executable URL scheme.
+    if (tag === 'a' && attr === 'href' &&
+        /^(?:filepos:\d+|kindle:pos:fid:[0-9a-v]+:off:[0-9a-v]+)$/i.test(attribute.attrValue)) {
+        attribute.forceKeepAttr = true
+        return
+    }
+    if (!attribute.attrValue.startsWith('blob:')) return
+    const mediaSource = attr === 'src' &&
+        ['img', 'audio', 'video', 'source', 'track'].includes(tag)
+    const poster = tag === 'video' && attr === 'poster'
+    const svgResource = ['image', 'use'].includes(tag) &&
+        ['href', 'xlink:href'].includes(attr)
+    const stylesheet = tag === 'link' && attr === 'href' &&
+        node.getAttribute('rel')?.toLowerCase() === 'stylesheet'
+    if (!mediaSource && !poster && !svgResource && !stylesheet) return
+    try {
+        if (new URL(attribute.attrValue).origin === window.location.origin)
+            attribute.forceKeepAttr = true
+    } catch {}
+})
+
 // Publisher documents share a DOM with trusted reader code for selection and
 // pagination. Sanitize before creating a navigable Blob, never after iframe load.
 export function sanitizePublisherDocument(doc) {
-    DOMPurify.sanitize(doc.documentElement, {
+    publisherPurify.sanitize(doc.documentElement, {
         IN_PLACE: true,
         WHOLE_DOCUMENT: true,
         ADD_TAGS: ['link', 'meta'],
-        ADD_ATTR: ['epub:type'],
+        // KF8 navigation can target publisher anchors by aid instead of id.
+        ADD_ATTR: ['epub:type', 'aid'],
         FORBID_TAGS: ['base', 'form', 'input', 'button', 'textarea', 'select'],
         FORBID_ATTR: ['srcset'],
     })

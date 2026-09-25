@@ -1,4 +1,4 @@
-enum DictionaryLookupFailureReason { network, http, invalidResponse }
+enum DictionaryLookupFailureReason { cancelled, network, http, invalidResponse }
 
 class DictionaryLookupException implements Exception {
   const DictionaryLookupException(

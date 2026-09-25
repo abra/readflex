@@ -41,7 +41,7 @@ void main() {
         await repository.started.future;
         repository.seedBooks([_book]);
         final refreshed = bloc.stream.firstWhere(
-          (state) => state.books.isNotEmpty,
+          (state) => state.sources.isNotEmpty,
         );
         bloc.add(const LibraryRefreshRequested());
         await refreshed;
@@ -54,7 +54,7 @@ void main() {
           repository.pending.complete([]);
         }
         await feedback;
-        expect(bloc.state.books, [_book]);
+        expect(bloc.state.sources, [LibrarySource.fromBook(_book)]);
         expect(bloc.state.status, LibraryStatus.success);
         expect(bloc.state.deletionEffect?.success, !failOldLoad);
         expect(repository.reads, 2);
@@ -71,7 +71,7 @@ void main() {
         await repository.started.future;
         repository.seedBooks([_book]);
         final refreshed = bloc.stream.firstWhere(
-          (state) => state.books.isNotEmpty,
+          (state) => state.sources.isNotEmpty,
         );
         bloc.add(const LibraryRefreshRequested());
         await refreshed;
@@ -82,7 +82,7 @@ void main() {
         }
         await Future<void>.delayed(Duration.zero);
         expect(bloc.state.status, LibraryStatus.success);
-        expect(bloc.state.books, [_book]);
+        expect(bloc.state.sources, [LibrarySource.fromBook(_book)]);
         expect(
           repository.reads,
           2,
@@ -108,7 +108,7 @@ void main() {
         LibraryState(status: LibraryStatus.loading),
         LibraryState(
           status: LibraryStatus.success,
-          books: [_book],
+          sources: [_book].map(LibrarySource.fromBook).toList(),
           collectionScopes: [_favouritesScope],
         ),
       ],
@@ -143,7 +143,7 @@ void main() {
       build: () => LibraryBloc(bookRepository: repository),
       seed: () => LibraryState(
         status: LibraryStatus.success,
-        books: [_book],
+        sources: [_book].map(LibrarySource.fromBook).toList(),
       ),
       act: (bloc) {
         bloc
@@ -155,7 +155,7 @@ void main() {
       expect: () => [
         LibraryState(
           status: LibraryStatus.success,
-          books: [_book],
+          sources: [_book].map(LibrarySource.fromBook).toList(),
           searchQuery: 'test',
         ),
       ],
@@ -166,7 +166,7 @@ void main() {
       build: () => LibraryBloc(bookRepository: repository),
       seed: () => LibraryState(
         status: LibraryStatus.success,
-        books: [_book],
+        sources: [_book].map(LibrarySource.fromBook).toList(),
         filter: LibraryFilter.comics,
         selectedCollectionScope: _favouritesScope,
         searchQuery: 'old',
@@ -178,7 +178,10 @@ void main() {
       },
       wait: const Duration(milliseconds: 400),
       expect: () => [
-        LibraryState(status: LibraryStatus.success, books: [_book]),
+        LibraryState(
+          status: LibraryStatus.success,
+          sources: [_book].map(LibrarySource.fromBook).toList(),
+        ),
       ],
       verify: (_) => expect(repository.getBooksCallCount, 0),
     );
@@ -189,7 +192,7 @@ void main() {
       build: () => LibraryBloc(bookRepository: repository),
       seed: () => LibraryState(
         status: LibraryStatus.success,
-        books: [_book],
+        sources: [_book].map(LibrarySource.fromBook).toList(),
       ),
       act: (bloc) => bloc.add(
         LibrarySourceDeleted(
@@ -227,7 +230,7 @@ void main() {
       build: () => LibraryBloc(bookRepository: repository),
       seed: () => LibraryState(
         status: LibraryStatus.success,
-        books: [_book],
+        sources: [_book].map(LibrarySource.fromBook).toList(),
       ),
       act: (bloc) => bloc.add(
         const LibrarySourcesDeleted(
@@ -237,7 +240,7 @@ void main() {
       ),
       verify: (bloc) {
         expect(bloc.state.status, LibraryStatus.success);
-        expect(bloc.state.books, isEmpty);
+        expect(bloc.state.sources, isEmpty);
         expect(
           bloc.state.deletionEffect,
           const LibraryDeletionEffect(
@@ -255,7 +258,10 @@ void main() {
       'LibrarySourceDeleted emits a success deletion effect',
       setUp: () => repository.seedBooks([_book]),
       build: () => LibraryBloc(bookRepository: repository),
-      seed: () => LibraryState(status: LibraryStatus.success, books: [_book]),
+      seed: () => LibraryState(
+        status: LibraryStatus.success,
+        sources: [_book].map(LibrarySource.fromBook).toList(),
+      ),
       act: (bloc) => bloc.add(
         LibrarySourceDeleted(
           _book.id,
@@ -296,7 +302,7 @@ void main() {
       build: () => LibraryBloc(bookRepository: repository),
       seed: () => LibraryState(
         status: LibraryStatus.success,
-        books: [_book],
+        sources: [_book].map(LibrarySource.fromBook).toList(),
       ),
       act: (bloc) => bloc.add(
         const LibrarySourcesDeleted(
@@ -317,7 +323,7 @@ void main() {
           ),
         );
         // Id '2' was deleted even though id '1' failed.
-        expect(bloc.state.books.map((b) => b.id), isNot(contains('2')));
+        expect(bloc.state.sources.map((b) => b.id), isNot(contains('2')));
       },
     );
 
@@ -328,7 +334,10 @@ void main() {
         repository.shouldThrow = true;
       },
       build: () => LibraryBloc(bookRepository: repository),
-      seed: () => LibraryState(status: LibraryStatus.success, books: [_book]),
+      seed: () => LibraryState(
+        status: LibraryStatus.success,
+        sources: [_book].map(LibrarySource.fromBook).toList(),
+      ),
       act: (bloc) => bloc.add(
         LibrarySourceDeleted(
           _book.id,
@@ -338,7 +347,7 @@ void main() {
       errors: () => [isA<Object>()],
       verify: (bloc) {
         expect(bloc.state.status, LibraryStatus.success);
-        expect(bloc.state.books, [_book]);
+        expect(bloc.state.sources, [LibrarySource.fromBook(_book)]);
         expect(bloc.state.deletionVersion, 1);
         expect(
           bloc.state.deletionEffect,
@@ -376,7 +385,7 @@ void main() {
       build: () => LibraryBloc(bookRepository: repository),
       seed: () => LibraryState(
         status: LibraryStatus.success,
-        books: [_book],
+        sources: [_book].map(LibrarySource.fromBook).toList(),
       ),
       act: (bloc) {
         // Fire both in the same tick. Default BLoC transformer is sequential:
@@ -393,7 +402,7 @@ void main() {
       },
       verify: (bloc) {
         expect(bloc.state.status, LibraryStatus.success);
-        expect(bloc.state.books, isEmpty);
+        expect(bloc.state.sources, isEmpty);
       },
     );
   });
@@ -427,7 +436,11 @@ void main() {
 
         final state = LibraryState(
           status: LibraryStatus.success,
-          books: [neverOpenedOlder, neverOpenedNewest, recentlyOpened],
+          sources: [
+            neverOpenedOlder,
+            neverOpenedNewest,
+            recentlyOpened,
+          ].map(LibrarySource.fromBook).toList(),
         );
 
         expect(
@@ -456,7 +469,7 @@ void main() {
       );
       final state = LibraryState(
         status: LibraryStatus.success,
-        books: [book],
+        sources: [book].map(LibrarySource.fromBook).toList(),
       );
 
       final firstRead = state.visibleItems;
@@ -467,7 +480,7 @@ void main() {
     test('favourites scope is permanent and currently empty', () {
       final state = LibraryState(
         status: LibraryStatus.success,
-        books: [_book],
+        sources: [_book].map(LibrarySource.fromBook).toList(),
         collectionScopes: [_favouritesScope],
         selectedCollectionScope: _favouritesScope,
       );
@@ -482,7 +495,7 @@ void main() {
       final scope = LibraryCollectionScope.favourites(sourceIds: [_book.id]);
       final state = LibraryState(
         status: LibraryStatus.success,
-        books: [_book],
+        sources: [_book].map(LibrarySource.fromBook).toList(),
         collectionScopes: [scope],
         selectedCollectionScope: scope,
       );
@@ -519,7 +532,7 @@ void main() {
 
       final state = LibraryState(
         status: LibraryStatus.success,
-        books: [epub, comic],
+        sources: [epub, comic].map(LibrarySource.fromBook).toList(),
         filter: LibraryFilter.books,
         collectionScopes: [scope],
         selectedCollectionScope: scope,
@@ -554,7 +567,7 @@ void main() {
 
       final state = LibraryState(
         status: LibraryStatus.success,
-        articles: [tproger, other],
+        sources: [tproger, other].map(LibrarySource.fromArticle).toList(),
         collectionScopes: const [scope],
         selectedCollectionScope: scope,
       );
@@ -592,7 +605,7 @@ void main() {
 
         final state = LibraryState(
           status: LibraryStatus.success,
-          articles: [tproger, example],
+          sources: [tproger, example].map(LibrarySource.fromArticle).toList(),
           collectionScopes: const [scope],
           selectedCollectionScope: scope,
         );

@@ -28,7 +28,8 @@ and UI preference cubits internally.
 Independent state units keep domain loading, persisted display preferences,
 selection, and collection commands separate:
 
-- `LibraryBloc` — domain data. Loads books and articles and exposes
+- `LibraryBloc` — domain data. Loads books and article metadata into a single
+  `LibraryState.sources` list of `LibrarySource` values and exposes
   `visibleItems` sorted by `lastOpenedAt ?? addedAt` DESC, then
   `addedAt` DESC and title. Supports `filter`
   (`all / books / articles / comics / unread`) and
@@ -59,6 +60,11 @@ an older response/error cannot replace newer data. A superseded delete refresh
 still emits its completion effect without restoring stale list contents.
 The existing delayed refresh on reader-route return remains intact to avoid
 moving list tiles during a reverse route/Hero transition.
+
+Article metadata comes from a SQL projection via `getLibrarySources`, not a
+full-text article read. Search/filter state changes reuse the same source list.
+Favourite membership reads are scoped in SQLite rather than loading every
+manual collection's memberships a second time.
 
 The screen uses separate widgets (`LibraryListView`, `LibraryGridView`) for
 each layout and a local `TextEditingController` for the search field so

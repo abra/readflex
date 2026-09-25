@@ -65,14 +65,10 @@ class LibraryDeletionEffect extends Equatable {
 }
 
 class LibraryState extends Equatable {
-  // Non-const because [visibleItems] is a `late final` derived field —
-  // const objects can't have late initializers. The trade-off is the
-  // 8 `const LibraryState(...)` literals in tests/bloc-init lose their
-  // compile-time canonical form, which is irrelevant at runtime.
+  // Non-const because filtered/sorted lists are computed once per state.
   LibraryState({
     this.status = LibraryStatus.initial,
-    this.books = const [],
-    this.articles = const [],
+    this.sources = const [],
     this.filter = LibraryFilter.all,
     this.collectionScopes = const [],
     this.selectedCollectionScope,
@@ -84,13 +80,7 @@ class LibraryState extends Equatable {
   static const _absent = Object();
 
   final LibraryStatus status;
-  final List<Book> books;
-  final List<Article> articles;
-
-  late final List<LibrarySource> sources = [
-    ...books.map(LibrarySource.fromBook),
-    ...articles.map(LibrarySource.fromArticle),
-  ];
+  final List<LibrarySource> sources;
 
   final LibraryFilter filter;
   final List<LibraryCollectionScope> collectionScopes;
@@ -237,8 +227,7 @@ class LibraryState extends Equatable {
 
   LibraryState copyWith({
     LibraryStatus? status,
-    List<Book>? books,
-    List<Article>? articles,
+    List<LibrarySource>? sources,
     LibraryFilter? filter,
     List<LibraryCollectionScope>? collectionScopes,
     Object? selectedCollectionScope = _absent,
@@ -247,8 +236,7 @@ class LibraryState extends Equatable {
     LibraryDeletionEffect? deletionEffect,
   }) => LibraryState(
     status: status ?? this.status,
-    books: books ?? this.books,
-    articles: articles ?? this.articles,
+    sources: sources ?? this.sources,
     filter: filter ?? this.filter,
     collectionScopes: collectionScopes ?? this.collectionScopes,
     selectedCollectionScope: selectedCollectionScope == _absent
@@ -262,8 +250,7 @@ class LibraryState extends Equatable {
   @override
   List<Object?> get props => [
     status,
-    books,
-    articles,
+    sources,
     filter,
     collectionScopes,
     selectedCollectionScope,

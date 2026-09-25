@@ -67,9 +67,19 @@ not guaranteed on a fresh installation. The adapter currently exposes the ten
 app languages, not every language supported by ML Kit.
 
 The default in-memory LRU holds up to 128 results for 30 minutes from each
-write. Remote and offline results share this cache; a cached offline answer
-does not automatically refresh from the backend when connectivity returns.
+write. Remote cache hits return immediately. An offline hit retries the remote
+provider on the next request and is reused only after an eligible remote failure.
+This restores contextual results after connectivity returns without repeatedly
+running ML Kit while offline. It does not refresh an already displayed sheet.
 Cache hits are rebound to the current request ID. Nothing is persisted to disk.
+
+`translate` accepts an optional `abortTrigger` future. Completing it aborts that
+HTTP request; the deadline also aborts transport, including response-body reads.
+TranslateCubit cancels on language changes and sheet closure, without closing
+the shared client. Cancellation is distinct from network failure and cannot
+start offline fallback or model downloads. Already running native ML Kit work
+cannot be interrupted by its API; cancelled results are discarded, not cached.
+Disconnecting HTTP does not guarantee cancellation of a backend LLM job.
 
 The remote client treats the backend payload as an untrusted versioned
 contract. It requires the supported schema version and enums, verifies that the

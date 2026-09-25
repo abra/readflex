@@ -1681,8 +1681,8 @@ class _FakeArticleRepository implements ArticleRepository {
     ..addAll(articles);
 
   @override
-  Future<List<Article>> getArticles({int? limit, int? offset}) async =>
-      List.unmodifiable(_articles);
+  Future<List<LibrarySource>> getLibrarySources() async =>
+      _articles.map(LibrarySource.fromArticle).toList();
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

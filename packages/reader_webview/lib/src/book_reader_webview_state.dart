@@ -273,6 +273,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       'initialProgress': jsonEncode(initialLocation.progress),
       'sourceType': jsonEncode(_effectiveArticle ? 'article' : 'book'),
       'comicHostTaps': jsonEncode(_forwardComicTaps),
+      'pageTapZoneFraction': jsonEncode(readerPageTapZoneFraction),
       'pageProgressionDirection': jsonEncode(
         widget.pageProgressionRtl ? 'rtl' : null,
       ),

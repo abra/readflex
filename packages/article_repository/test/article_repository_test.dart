@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:article_repository/article_repository.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:drift/drift.dart'
+    show QueryInterceptor, QueryExecutor, ApplyInterceptor, Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -11,13 +13,30 @@ import 'package:local_storage/local_storage.dart';
 import 'package:path/path.dart' as p;
 import 'package:remote_content_policy/remote_content_policy.dart';
 
+class _SelectRecorder extends QueryInterceptor {
+  final columns = <Set<String>>[];
+
+  @override
+  Future<List<Map<String, Object?>>> runSelect(
+    QueryExecutor executor,
+    String statement,
+    List<Object?> args,
+  ) async {
+    final rows = await executor.runSelect(statement, args);
+    if (rows.isNotEmpty) columns.add(rows.first.keys.toSet());
+    return rows;
+  }
+}
+
 void main() {
   late AppDatabase db;
   late Directory tempDir;
   late ArticleRepository repository;
+  late _SelectRecorder selects;
 
   setUp(() async {
-    db = AppDatabase.forTesting(NativeDatabase.memory());
+    selects = _SelectRecorder();
+    db = AppDatabase.forTesting(NativeDatabase.memory().interceptWith(selects));
     tempDir = await Directory.systemTemp.createTemp('article_repo_test_');
     repository = ArticleRepository(
       database: db,
@@ -32,6 +51,37 @@ void main() {
       await tempDir.delete(recursive: true);
     }
   });
+
+  test(
+    'library reads only metadata and leaves full article content intact',
+    () async {
+      final article = await repository.addExtractedArticle(_extractedArticle());
+      final largeText = 'Large body. ' * 100000;
+      await db.articlesDao.updateArticle(
+        ArticlesTableCompanion(
+          id: Value(article.id),
+          plainText: Value(largeText),
+          author: const Value('Author'),
+          siteName: const Value('Site'),
+          language: const Value('ru'),
+          readingProgress: const Value(0.75),
+          lastOpenedAt: const Value('2026-09-25T10:00:00.000Z'),
+          isFinished: const Value(true),
+        ),
+      );
+      final full = (await repository.getArticleById(article.id))!;
+      selects.columns.clear();
+      final sources = await repository.getLibrarySources();
+      expect(sources, [LibrarySource.fromArticle(full)]);
+      expect(selects.columns, hasLength(1));
+      expect(selects.columns.single, isNot(contains('plain_text')));
+      expect(selects.columns.single, isNot(contains('current_cfi')));
+      expect(
+        (await repository.getArticleById(article.id))!.plainText,
+        largeText,
+      );
+    },
+  );
 
   test('addExtractedArticle stores JSON and reader HTML', () async {
     final article = await repository.addExtractedArticle(_extractedArticle());

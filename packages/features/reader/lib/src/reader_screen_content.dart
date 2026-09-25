@@ -1011,12 +1011,15 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
 
     void onTapped(double x, double y) {
       highlightFocusCubit.clear();
-      switch (readerTapCommandFor(
+      final command = readerTapCommandFor(
         x: x,
         y: y,
         chromeVisible: uiCubit.state.chromeVisible,
+        isComic: state.document?.format == BookFormat.cbz,
         axis: tapAxis,
-      )) {
+      );
+      if (command != ReaderTapCommand.toggleChrome) uiCubit.hideChrome();
+      switch (command) {
         case ReaderTapCommand.physicalLeftPage:
           widget.webViewKey?.currentState?.pageLeft();
         case ReaderTapCommand.physicalRightPage:

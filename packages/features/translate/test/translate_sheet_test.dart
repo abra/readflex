@@ -1481,6 +1481,7 @@ class _WordTranslationService implements ContextualTranslationService {
   Future<ContextualTranslationResult> translate(
     ContextualTranslationRequest request, {
     bool allowOfflineModelDownload = false,
+    Future<void>? abortTrigger,
   }) async {
     calls++;
     return ContextualTranslationResult(
@@ -1513,6 +1514,7 @@ class _FakeTranslationService implements ContextualTranslationService {
   Future<ContextualTranslationResult> translate(
     ContextualTranslationRequest request, {
     bool allowOfflineModelDownload = false,
+    Future<void>? abortTrigger,
   }) async {
     final isTextTranslation = request.mode == selectedTextTranslationMode;
     return ContextualTranslationResult(
@@ -1560,6 +1562,7 @@ class _FailingTranslationService implements ContextualTranslationService {
   Future<ContextualTranslationResult> translate(
     ContextualTranslationRequest request, {
     bool allowOfflineModelDownload = false,
+    Future<void>? abortTrigger,
   }) {
     throw const ContextualTranslationException(
       ContextualTranslationFailureReason.http,
@@ -1585,6 +1588,7 @@ class _RecordingTranslationService extends _FakeTranslationService {
   Future<ContextualTranslationResult> translate(
     ContextualTranslationRequest request, {
     bool allowOfflineModelDownload = false,
+    Future<void>? abortTrigger,
   }) {
     calls++;
     requests.add(request);
@@ -1602,6 +1606,7 @@ class _SourceRequiredService implements ContextualTranslationService {
   Future<ContextualTranslationResult> translate(
     ContextualTranslationRequest request, {
     bool allowOfflineModelDownload = false,
+    Future<void>? abortTrigger,
   }) async {
     sources.add(request.sourceLanguage);
     if (request.sourceLanguage == 'auto') {

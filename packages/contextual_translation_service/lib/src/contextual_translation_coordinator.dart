@@ -20,17 +20,43 @@ class ContextualTranslationCoordinator implements ContextualTranslationService {
   Future<ContextualTranslationResult> translate(
     ContextualTranslationRequest request, {
     bool allowOfflineModelDownload = false,
+    Future<void>? abortTrigger,
   }) async {
+    var cancelled = false;
+    abortTrigger?.then((_) => cancelled = true);
+    void checkCancellation() {
+      if (cancelled) {
+        throw const ContextualTranslationException(
+          ContextualTranslationFailureReason.cancelled,
+          'Translation request cancelled',
+        );
+      }
+    }
+
+    // Observe an already completed signal before reading cache or starting I/O.
+    await Future<void>.value();
+    checkCancellation();
     final cached = _cache.read(request);
-    if (cached != null) return _resultForRequest(cached, request.requestId);
+    if (cached != null &&
+        cached.reliability != ContextualTranslationReliability.offline) {
+      return _resultForRequest(cached, request.requestId);
+    }
 
     try {
-      final result = await _remoteService.translate(request);
+      final result = await _remoteService.translate(
+        request,
+        abortTrigger: abortTrigger,
+      );
+      checkCancellation();
       _cache.write(request, result);
       return result;
     } on ContextualTranslationException catch (error) {
+      checkCancellation();
       if (!_canFallbackOffline(error)) rethrow;
     }
+
+    // Retry the contextual provider even when an earlier offline result exists.
+    if (cached != null) return _resultForRequest(cached, request.requestId);
 
     final sourceLanguage = request.concreteSourceLanguage;
     if (sourceLanguage == null) {
@@ -57,6 +83,7 @@ class ContextualTranslationCoordinator implements ContextualTranslationService {
       sourceLanguage: sourceLanguage,
       targetLanguage: request.targetLanguage,
     );
+    checkCancellation();
     if (!downloaded) {
       if (!allowOfflineModelDownload) {
         throw ContextualTranslationException(
@@ -70,10 +97,12 @@ class ContextualTranslationCoordinator implements ContextualTranslationService {
         sourceLanguage: sourceLanguage,
         targetLanguage: request.targetLanguage,
       );
+      checkCancellation();
       final modelsReady = await _offlineService.areModelsDownloaded(
         sourceLanguage: sourceLanguage,
         targetLanguage: request.targetLanguage,
       );
+      checkCancellation();
       if (!modelsReady) {
         throw ContextualTranslationException(
           ContextualTranslationFailureReason.unavailable,
@@ -88,6 +117,7 @@ class ContextualTranslationCoordinator implements ContextualTranslationService {
       request,
       sourceLanguage: sourceLanguage,
     );
+    checkCancellation();
     _cache.write(request, result);
     return result;
   }
@@ -106,6 +136,7 @@ bool _canFallbackOffline(ContextualTranslationException error) {
       error.statusCode,
     ),
     ContextualTranslationFailureReason.invalidResponse ||
+    ContextualTranslationFailureReason.cancelled ||
     ContextualTranslationFailureReason.sourceLanguageRequired ||
     ContextualTranslationFailureReason.offlineModelRequired ||
     ContextualTranslationFailureReason.unsupportedLanguagePair => false,

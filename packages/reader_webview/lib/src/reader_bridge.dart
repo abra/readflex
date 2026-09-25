@@ -5,6 +5,10 @@
 
 import 'dart:convert';
 
+/// Fraction of the viewport reserved for each physical page-turn edge.
+/// Also passed to the comic gesture recognizer before double-tap arbitration.
+const readerPageTapZoneFraction = 0.30;
+
 /// Safely coerces a WebView bridge value into a string-keyed map.
 ///
 /// `flutter_inappwebview` can surface JavaScript payloads as generic maps, and

@@ -83,6 +83,14 @@ class CollectionsDao extends DatabaseAccessor<AppDatabase>
     ).get();
   }
 
+  Future<List<String>> sourceIdsForCollection(String collectionId) {
+    final t = collectionSourcesTable;
+    final query = selectOnly(t)
+      ..addColumns([t.sourceId])
+      ..where(t.collectionId.equals(collectionId));
+    return query.map((row) => row.read(t.sourceId)!).get();
+  }
+
   Future<void> addSources({
     required String collectionId,
     required Iterable<String> sourceIds,

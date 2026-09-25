@@ -216,7 +216,10 @@ class _FakeLookupService implements DictionaryLookupService {
   DictionaryLookupRequest? lastRequest;
 
   @override
-  Future<DictionaryLookupResult> lookup(DictionaryLookupRequest request) async {
+  Future<DictionaryLookupResult> lookup(
+    DictionaryLookupRequest request, {
+    Future<void>? abortTrigger,
+  }) async {
     lookupCount++;
     lastRequest = request;
     return result ??

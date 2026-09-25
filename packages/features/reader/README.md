@@ -112,6 +112,12 @@ so the burst benchmark is not a claim of constant work for every stream shape.
 `addError()` so widgets (e.g. the context panel) can route non-fatal errors
 through the bloc's error pipeline without emitting state themselves.
 
+Bookmark edits are serialized independently of page-position events. A completed
+write updates the saved list but changes the current-page badge only if the
+position has not changed meanwhile. Bookmark revisions also prevent an older
+source-load snapshot from overwriting edits made while it was pending.
+Brightness diagnostic formatting/logging runs only in debug builds.
+
 Position persistence keeps the 500ms trailing debounce and serializes writes,
 including the first immediate article position. Repository partial updates
 avoid overwriting metadata from an old snapshot. Source loading preserves live
@@ -166,6 +172,11 @@ load cannot erase a renderer failure.
   colors instead of replacing link/quote colors with primary text. The same
   semantic overlay is used by the article reader; book palette normalization
   and its contrast fallback remain owned by the book JS runtime.
+- Comic page-zone taps remain available with chrome open and hide chrome while
+  turning the page. Actual controls (brightness, toolbar buttons) keep their
+  own hit targets. Text books retain the dismiss-only page barrier. The zone
+  fraction comes from the `reader_webview` bridge contract so Flutter routing
+  and JS double-tap arbitration cannot drift independently.
 - Code typography retains the system monospace families and adds the bundled
   symbol fallback for missing callout numerals. The book normalizer excludes
   publisher annotations/captions from code detection, so a long explanation

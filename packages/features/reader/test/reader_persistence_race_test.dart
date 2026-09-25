@@ -90,6 +90,108 @@ void main() {
     addTearDown(() => Bloc.transformer = previous);
   });
 
+  test('bookmark write cannot mark a page visited while saving', () async {
+    final books = _DelayedBookmarkRepository()..seedBook(_book());
+    final bloc = ReaderBloc(
+      bookRepository: books,
+      highlightRepository: FakeHighlightRepository(),
+      initialSource: _book(),
+    );
+    addTearDown(bloc.close);
+    addTearDown(() {
+      if (!books.gate.isCompleted) books.gate.complete();
+    });
+    bloc.add(
+      const ReaderBookmarkChanged(
+        remove: false,
+        cfi: 'page-a',
+        content: 'Page A',
+        progress: .1,
+      ),
+    );
+    await books.writing.future;
+    final moved = bloc.stream.firstWhere(
+      (s) => s.document?.currentCfi == 'page-b',
+    );
+    bloc.add(const ReaderBookPositionUpdated(cfi: 'page-b', progress: .2));
+    await moved;
+    final saved = bloc.stream.firstWhere((s) => s.bookmarks.isNotEmpty);
+    books.gate.complete();
+    final state = await saved;
+    expect(state.document?.currentCfi, 'page-b');
+    expect(state.bookmarks.single.cfi, 'page-a');
+    expect(state.currentPageBookmarked, isFalse);
+    expect(state.currentPageBookmarkId, isNull);
+  });
+
+  test('source reload cannot overwrite a newly saved bookmark', () async {
+    final books = _DelayedLoadRepository()..seedBook(_book());
+    final bloc = ReaderBloc(
+      bookRepository: books,
+      highlightRepository: FakeHighlightRepository(),
+      initialSource: _book(),
+    );
+    addTearDown(bloc.close);
+    addTearDown(() {
+      if (!books.gate.isCompleted) books.gate.complete();
+    });
+    bloc.add(const ReaderSourceLoadRequested(sourceId: 'book'));
+    await books.loading.future;
+    final saved = bloc.stream.firstWhere((s) => s.bookmarks.isNotEmpty);
+    bloc.add(
+      const ReaderBookmarkChanged(
+        remove: false,
+        cfi: 'page-a',
+        content: 'Page A',
+        progress: .1,
+      ),
+    );
+    await saved;
+    final loaded = bloc.stream.firstWhere(
+      (s) => s.document?.lastOpenedAt != null,
+    );
+    books.gate.complete();
+    await loaded;
+    expect(bloc.state.bookmarks.single.cfi, 'page-a');
+  });
+
+  test('closing the reader drains queued bookmark writes', () async {
+    final books = _DelayedBookmarkRepository()..seedBook(_book());
+    final bloc = ReaderBloc(
+      bookRepository: books,
+      highlightRepository: FakeHighlightRepository(),
+      initialSource: _book(),
+    );
+    bloc.add(
+      const ReaderBookmarkChanged(
+        remove: false,
+        cfi: 'page-a',
+        content: 'A',
+        progress: .1,
+      ),
+    );
+    await books.writing.future;
+    bloc.add(
+      const ReaderBookmarkChanged(
+        remove: false,
+        cfi: 'page-b',
+        content: 'B',
+        progress: .2,
+      ),
+    );
+    var closed = false;
+    final closing = bloc.close().then((_) => closed = true);
+    await pumpEventQueue();
+    final closedBeforeWrite = closed;
+    books.gate.complete();
+    await closing;
+    expect(closedBeforeWrite, isFalse);
+    expect((await books.getBookmarksBySource('book')).map((b) => b.cfi), [
+      'page-a',
+      'page-b',
+    ]);
+  });
+
   for (final failFirstColor in [false, true]) {
     test(
       'highlight edits are ordered without blocking position (failure=$failFirstColor)',
@@ -388,4 +490,40 @@ void main() {
     expect(bloc.state.status, ReaderStatus.failure);
     expect(repo.updateCallCount, 0);
   });
+}
+
+class _DelayedBookmarkRepository extends FakeBookRepository {
+  final writing = Completer<void>();
+  final gate = Completer<void>();
+
+  @override
+  Future<SourceBookmark> addBookmark({
+    required String sourceId,
+    required SourceType sourceType,
+    required String cfi,
+    required String content,
+    required double progress,
+    String? chapterTitle,
+    String? anchorExact,
+    String? anchorPrefix,
+    String? anchorSuffix,
+    int? anchorSectionIndex,
+    int? anchorSectionPage,
+  }) async {
+    if (!writing.isCompleted) writing.complete();
+    await gate.future;
+    return super.addBookmark(
+      sourceId: sourceId,
+      sourceType: sourceType,
+      cfi: cfi,
+      content: content,
+      progress: progress,
+      chapterTitle: chapterTitle,
+      anchorExact: anchorExact,
+      anchorPrefix: anchorPrefix,
+      anchorSuffix: anchorSuffix,
+      anchorSectionIndex: anchorSectionIndex,
+      anchorSectionPage: anchorSectionPage,
+    );
+  }
 }

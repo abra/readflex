@@ -92,7 +92,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     );
     on<ReaderTocUpdated>(_onTocUpdated);
     on<ReaderDocumentFeaturesUpdated>(_onDocumentFeaturesUpdated);
-    on<ReaderBookmarkChanged>(_onBookmarkChanged);
+    on<ReaderBookmarkChanged>(
+      _onBookmarkChanged,
+      transformer: (events, mapper) => events.asyncExpand(mapper),
+    );
   }
 
   final BookRepository _bookRepository;
@@ -109,6 +112,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   Future<void>? _closeFuture;
   int _loadGeneration = 0;
   int _highlightRevision = 0;
+  int _bookmarkRevision = 0;
+  int _positionRevision = 0;
   int _highlightEffectVersion = 0;
   String? _livePositionSourceId;
   double? _pendingArticleSeekProgress;
@@ -163,6 +168,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   ) async {
     final generation = ++_loadGeneration;
     final highlightRevision = _highlightRevision;
+    final bookmarkRevision = _bookmarkRevision;
     final hasInitialSource = state.document?.id == event.sourceId;
     final hasUsableSource =
         hasInitialSource && state.status == ReaderStatus.ready;
@@ -203,7 +209,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
                 hasInitialSource && highlightRevision != _highlightRevision
                 ? state.highlights
                 : highlights,
-            bookmarks: bookmarks,
+            bookmarks: hasInitialSource && bookmarkRevision != _bookmarkRevision
+                ? state.bookmarks
+                : bookmarks,
             documentFeatures: hasInitialSource ? state.documentFeatures : null,
           ),
         );
@@ -240,7 +248,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
                 hasInitialSource && highlightRevision != _highlightRevision
                 ? state.highlights
                 : highlights,
-            bookmarks: bookmarks,
+            bookmarks: hasInitialSource && bookmarkRevision != _bookmarkRevision
+                ? state.bookmarks
+                : bookmarks,
             documentFeatures: hasInitialSource ? state.documentFeatures : null,
           ),
         );
@@ -359,6 +369,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         state.currentPageBookmarkCfi != event.currentPageBookmarkCfi ||
         state.currentPageBookmarkId != event.currentPageBookmarkId;
     if (!hasMeaningfulChange) return;
+    _positionRevision++;
     _livePositionSourceId = document.id;
 
     // Emit immediately so chrome stays in sync with the WebView.
@@ -581,6 +592,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   ) async {
     final document = state.document;
     if (document == null) return;
+    final positionRevision = _positionRevision;
 
     try {
       if (event.remove) {
@@ -597,6 +609,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
           );
         }
 
+        if (emit.isDone || state.sourceId != document.id) return;
+        _bookmarkRevision++;
         final removedCurrentBookmark = hasBookmarkId
             ? state.currentPageBookmarkId == bookmarkId
             : state.currentPageBookmarkCfi == event.cfi;
@@ -638,6 +652,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         anchorSectionIndex: event.anchorSectionIndex,
         anchorSectionPage: event.anchorSectionPage,
       );
+      if (emit.isDone || state.sourceId != document.id) return;
+      _bookmarkRevision++;
+      final stayedOnPage = positionRevision == _positionRevision;
       final next =
           [
             for (final existing in state.bookmarks)
@@ -651,9 +668,15 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       emit(
         state.copyWith(
           bookmarks: next,
-          currentPageBookmarked: true,
-          currentPageBookmarkCfi: bookmark.cfi,
-          currentPageBookmarkId: bookmark.id,
+          currentPageBookmarked: stayedOnPage
+              ? true
+              : state.currentPageBookmarked,
+          currentPageBookmarkCfi: stayedOnPage
+              ? bookmark.cfi
+              : state.currentPageBookmarkCfi,
+          currentPageBookmarkId: stayedOnPage
+              ? bookmark.id
+              : state.currentPageBookmarkId,
         ),
       );
     } catch (e, st) {

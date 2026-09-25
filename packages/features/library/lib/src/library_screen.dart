@@ -404,8 +404,7 @@ class _LibraryViewState extends State<_LibraryView> {
                 child: BlocBuilder<LibraryBloc, LibraryState>(
                   buildWhen: (prev, curr) =>
                       prev.status != curr.status ||
-                      prev.books != curr.books ||
-                      prev.articles != curr.articles ||
+                      prev.sources != curr.sources ||
                       prev.filter != curr.filter ||
                       prev.collectionScopes != curr.collectionScopes ||
                       prev.selectedCollectionScope !=
