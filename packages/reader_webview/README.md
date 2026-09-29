@@ -372,6 +372,12 @@ use Playwright's controlled clock for mouse/touch sequences so protocol scheduli
 cannot turn the gesture into two single taps; other gesture tests use real time.
 Symbol-font pixel tests wait for the font loaded by production code rather than
 forcing a load or assuming a fixed delay is sufficient.
+Book search regression tests cover final-character matches, empty text nodes,
+overlapping matches, UTF-16 offsets and complete excerpts across inline markup.
+The substring mapper advances separate start/end cursors without rescanning
+earlier nodes. `test_js/search.test.mjs` checks text-partition invariance;
+`test_browser/book_search.test.mjs` checks actual DOM ranges and EPUB search CFI
+round trips in both substring and whole-word modes.
 Book selection regressions load the actual `book.js` runtime and EPUB directory
 loader (with fixture transport) as well as the standalone paginator. They cover
 unwanted delayed page turns, iframe gesture ownership, cancelled gestures and
