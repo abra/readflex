@@ -291,6 +291,48 @@ abstract class ReadflexLocalizations {
   /// **'In this context'**
   String get translationInContext;
 
+  /// No description provided for @translationWordMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'Word meaning'**
+  String get translationWordMeaning;
+
+  /// No description provided for @readerBackToReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to reading'**
+  String get readerBackToReading;
+
+  /// No description provided for @readerPreviousMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous match'**
+  String get readerPreviousMatch;
+
+  /// No description provided for @readerNextMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Next match'**
+  String get readerNextMatch;
+
+  /// No description provided for @readerEndSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'End search'**
+  String get readerEndSearch;
+
+  /// No description provided for @readerSearchMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'Matches: {count}'**
+  String readerSearchMatches(int count);
+
+  /// No description provided for @readerSearchMatchPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'{current} of {total}'**
+  String readerSearchMatchPosition(int current, int total);
+
   /// No description provided for @translationDetails.
   ///
   /// In en, this message translates to:

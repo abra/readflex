@@ -64,8 +64,9 @@ void main() {
       );
       expect(
         tester.getTopLeft(generalMeaning).dy,
-        lessThan(tester.getTopLeft(find.text('In this context')).dy),
+        greaterThan(tester.getTopLeft(primary).dy),
       );
+      expect(find.text('Word meaning'), findsOneWidget);
       expect(
         find.byKey(const ValueKey('translation-sentence-result')),
         findsOneWidget,
@@ -150,7 +151,10 @@ void main() {
       final base = find.byKey(const ValueKey('translation-base-result'));
       expect(tester.widget<SelectableText>(base).data, example.base);
       expect(base.hitTestable(), findsOneWidget);
-      expect(tester.getTopLeft(base).dy, lessThan(tester.getTopLeft(scope).dy));
+      expect(
+        tester.getTopLeft(base).dy,
+        greaterThan(tester.getTopLeft(primary).dy),
+      );
       expect(
         find.byKey(const ValueKey('translation-sentence-result')),
         findsOneWidget,

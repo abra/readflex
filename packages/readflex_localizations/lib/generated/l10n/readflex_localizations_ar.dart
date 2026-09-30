@@ -100,6 +100,31 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get translationInContext => 'في هذا السياق';
 
   @override
+  String get translationWordMeaning => 'معنى الكلمة';
+
+  @override
+  String get readerBackToReading => 'العودة إلى القراءة';
+
+  @override
+  String get readerPreviousMatch => 'التطابق السابق';
+
+  @override
+  String get readerNextMatch => 'التطابق التالي';
+
+  @override
+  String get readerEndSearch => 'إنهاء البحث';
+
+  @override
+  String readerSearchMatches(int count) {
+    return 'التطابقات: $count';
+  }
+
+  @override
+  String readerSearchMatchPosition(int current, int total) {
+    return '$current من $total';
+  }
+
+  @override
   String get translationDetails => 'المعنى والبدائل';
 
   @override

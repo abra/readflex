@@ -91,7 +91,7 @@ abstract class TextAction {
 |-------------------------------|----------------------------------------------------------------------------|
 | `ReaderBloc`                  | Content: load source document + highlights/bookmarks, debounced position save (500ms) |
 | `ReaderUiCubit`               | Chrome, drawer, appearance-sheet and search-highlight UI state             |
-| `ReaderSearchCubit`           | Document-search debounce, streamed results, progress and recent queries    |
+| `ReaderSearchCubit`           | Search debounce, streamed results, recent queries, active match and return anchor |
 | `ReaderSelectionCubit`        | Current text selection (text + `cfiRange`) and adjustment phase             |
 | `ReaderImageSelectionCubit`   | Current image-page area selection for comics/fixed-layout pages            |
 | `ReaderImageHighlightCubit`   | Persists image-page highlights with optional notes, then `ReaderBloc` refreshes annotations |
@@ -107,6 +107,27 @@ Stress tests bound emissions and cumulative published entries for bursts; the
 benchmark under `benchmarks/` measures 1k/5k/20k-result workloads separately from
 device frame performance. Continuous streams still publish cumulative snapshots,
 so the burst benchmark is not a claim of constant work for every stream shape.
+
+Search keeps its full-height side-sliding panel with the input above the lazy
+results list. The list avoids the keyboard. Closing the panel preserves the
+query, result snapshot, list offset and in-progress search; reopening a populated
+query neither focuses the input nor repeats the document scan.
+
+Selecting a result starts a navigation session with previous/next match controls
+and a return-to-reading action. The return anchor is captured before opening the
+panel (before native keyboard resizing), retained across query changes, and
+cleared only when the session ends. Books restore their CFI; articles restore
+scroll progress rather than re-centering the nearest sentence. Controls reserve
+space below the existing WebView rather than obscuring text or remounting the
+renderer. Ending search,
+opening contents/appearance or seeking the progress slider clears the session.
+System Back closes the search panel first, then ends match navigation before
+leaving the reader. Widget tests cover keyboard/large-text layouts and preserved
+state; native tests exercise navigation and return in the actual renderer.
+Navigation buttons are unfilled with 48dp tap targets. Widget and golden tests
+cover icon/text spacing, both themes, RTL and large text, including held presses.
+Icon controls use circular feedback. The query and return actions dim their
+content instead of filling the row; a focus outline remains for keyboard use.
 
 `ReaderBloc.reportError(e, st)` is a public facade over the protected
 `addError()` so widgets (e.g. the context panel) can route non-fatal errors

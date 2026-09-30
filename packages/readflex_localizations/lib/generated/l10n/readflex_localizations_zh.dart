@@ -100,6 +100,31 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get translationInContext => '在此语境中';
 
   @override
+  String get translationWordMeaning => '单词释义';
+
+  @override
+  String get readerBackToReading => '返回阅读位置';
+
+  @override
+  String get readerPreviousMatch => '上一个匹配';
+
+  @override
+  String get readerNextMatch => '下一个匹配';
+
+  @override
+  String get readerEndSearch => '结束搜索';
+
+  @override
+  String readerSearchMatches(int count) {
+    return '匹配数：$count';
+  }
+
+  @override
+  String readerSearchMatchPosition(int current, int total) {
+    return '$current / $total';
+  }
+
+  @override
   String get translationDetails => '释义与其他译法';
 
   @override

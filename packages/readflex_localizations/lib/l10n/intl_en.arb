@@ -33,6 +33,30 @@
   "translationPosParticle": "Particle",
   "translationPosAuxiliary": "Auxiliary verb",
   "translationInContext": "In this context",
+  "translationWordMeaning": "Word meaning",
+  "readerBackToReading": "Back to reading",
+  "readerPreviousMatch": "Previous match",
+  "readerNextMatch": "Next match",
+  "readerEndSearch": "End search",
+  "readerSearchMatches": "Matches: {count}",
+  "readerSearchMatchPosition": "{current} of {total}",
+  "@readerSearchMatches": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@readerSearchMatchPosition": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "translationDetails": "Meaning & alternatives",
   "translationAlternatives": "Alternatives",
   "translationSourceRequiredTitle": "Choose the source language",

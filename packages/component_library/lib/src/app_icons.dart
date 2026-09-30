@@ -26,6 +26,8 @@ abstract final class AppIcons {
   static const IconData chevronLeft = LucideIcons.chevronLeft;
   static const IconData chevronRight = LucideIcons.chevronRight;
   static const IconData chevronDown = LucideIcons.chevronDown;
+  static const IconData chevronUp = LucideIcons.chevronUp;
+  static const IconData returnToReading = LucideIcons.undo2;
   static const IconData arrowRight = LucideIcons.arrowRight;
   static const IconData arrowDown = LucideIcons.arrowDown;
 

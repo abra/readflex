@@ -100,6 +100,31 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get translationInContext => 'इस संदर्भ में';
 
   @override
+  String get translationWordMeaning => 'शब्द का अर्थ';
+
+  @override
+  String get readerBackToReading => 'पढ़ने पर वापस जाएँ';
+
+  @override
+  String get readerPreviousMatch => 'पिछला मिलान';
+
+  @override
+  String get readerNextMatch => 'अगला मिलान';
+
+  @override
+  String get readerEndSearch => 'खोज समाप्त करें';
+
+  @override
+  String readerSearchMatches(int count) {
+    return 'मिलान: $count';
+  }
+
+  @override
+  String readerSearchMatchPosition(int current, int total) {
+    return '$total में से $current';
+  }
+
+  @override
   String get translationDetails => 'अर्थ और विकल्प';
 
   @override

@@ -212,8 +212,12 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   final GlobalKey<ArticleHtmlReaderWebViewState> _articleWebViewKey =
       GlobalKey<ArticleHtmlReaderWebViewState>();
   String? _webViewReadySourceId;
+  ReaderSearchLocation? _latestLocation;
+  ReaderSearchLocation? _searchStartLocation;
+  int _searchNavigationGeneration = 0;
 
   void _seekFraction(double fraction) {
+    _endSearch();
     context.read<ReaderUiCubit>().clearReaderSearch();
     final sourceType = context.read<ReaderBloc>().state.sourceType;
     if (sourceType == SourceType.article) {
@@ -224,6 +228,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   }
 
   void _openTocDrawer() {
+    _endSearch();
     context.read<ReaderUiCubit>().openTocDrawer();
   }
 
@@ -233,6 +238,10 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   }
 
   void _openSearchDrawer() {
+    // Capture before the software keyboard can resize the native viewport.
+    if (!context.read<ReaderSearchCubit>().state.isNavigating) {
+      _searchStartLocation = _latestLocation;
+    }
     context.read<ReaderUiCubit>().openSearchDrawer();
   }
 
@@ -245,6 +254,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   }
 
   Future<void> _openAppearanceSheet() async {
+    _endSearch();
     final uiCubit = context.read<ReaderUiCubit>();
     final appearanceCubit = context.read<ReaderAppearanceCubit>();
     final sourceType = context.read<ReaderBloc>().state.sourceType;
@@ -288,11 +298,13 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
 
   void _closeSearchDrawer({
     bool restoreChrome = true,
-    bool clearSearch = true,
+    bool clearSearch = false,
   }) {
     _dismissReaderKeyboard();
     context.read<ReaderUiCubit>().closeSearchDrawer(
-      restoreChrome: restoreChrome,
+      restoreChrome:
+          restoreChrome &&
+          !context.read<ReaderSearchCubit>().state.isNavigating,
       clearSearch: clearSearch,
     );
   }
@@ -302,6 +314,13 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   }
 
   void _handleReaderPositionChanged(BookPosition position) {
+    if (position.cfi.isNotEmpty && position.fraction.isFinite) {
+      _latestLocation = ReaderSearchLocation(
+        cfi: position.cfi,
+        fraction: position.fraction.clamp(0, 1),
+      );
+    }
+    if (context.read<ReaderSearchCubit>().state.isNavigating) return;
     context.read<ReaderUiCubit>().readerPositionChanged(
       relocationReason: position.relocationReason,
     );
@@ -366,17 +385,57 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     );
   }
 
-  void _goToSearchResult(ReaderSearchResult result) {
+  Future<void> _goToSearchResult(int index) async {
+    final search = context.read<ReaderSearchCubit>();
+    if (index < 0 || index >= search.state.results.length) return;
+    final result = search.state.results[index];
+    final query = search.state.query;
     if (result.cfi.isEmpty) return;
-    context.read<ReaderSearchCubit>().resultSelected();
+    search.resultSelected(
+      index: index,
+      returnLocation: _searchStartLocation ?? _latestLocation,
+    );
+    _closeSearchDrawer(restoreChrome: false, clearSearch: false);
+    final generation = ++_searchNavigationGeneration;
+    // Reserve the navigation bar before resolving the CFI in the new viewport.
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted ||
+        generation != _searchNavigationGeneration ||
+        search.state.query != query ||
+        search.state.activeResultIndex != index) {
+      return;
+    }
     context.read<ReaderUiCubit>().searchResultHighlightActivated();
     if (context.read<ReaderBloc>().state.sourceType == SourceType.article) {
       _articleWebViewKey.currentState?.goToSearchResult(result.cfi);
-      _closeSearchDrawer(restoreChrome: false, clearSearch: false);
       return;
     }
     _webViewKey.currentState?.goToSearchResult(result.cfi);
-    _closeSearchDrawer(restoreChrome: false, clearSearch: false);
+  }
+
+  void _endSearch() {
+    _searchNavigationGeneration++;
+    _searchStartLocation = null;
+    context.read<ReaderSearchCubit>().reset();
+  }
+
+  Future<void> _returnToReading() async {
+    final origin = context.read<ReaderSearchCubit>().state.returnLocation;
+    if (origin == null) return;
+    _endSearch();
+    final generation = _searchNavigationGeneration;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || generation != _searchNavigationGeneration) return;
+    if (context.read<ReaderBloc>().state.sourceType == SourceType.article) {
+      // Article CFIs center a sentence, which can shift the original viewport.
+      // The same scroll document is still mounted; restore its exact progress.
+      _articleWebViewKey.currentState?.restoreReadingProgress(origin.fraction);
+    } else {
+      _webViewKey.currentState?.goToBookmark(
+        cfi: origin.cfi,
+        progress: origin.fraction,
+      );
+    }
   }
 
   Stream<ReaderSearchEvent> _searchBook(String query) {
@@ -419,12 +478,24 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     return webView.searchBookStream(query);
   }
 
-  void _clearDrawerSearch() {
-    context.read<ReaderUiCubit>().clearReaderSearch();
-  }
-
   @override
   Widget build(BuildContext context) {
+    final searchNavigation = context
+        .select<ReaderSearchCubit, ({bool active, bool canReturn})>(
+          (cubit) => (
+            active: cubit.state.isNavigating,
+            canReturn: cubit.state.returnLocation != null,
+          ),
+        );
+    final searchPanelVisible = context.select<ReaderUiCubit, bool>(
+      (cubit) => cubit.state.searchDrawerVisible,
+    );
+    final navigationHeight = searchNavigation.active
+        ? readerSearchNavigationHeight(
+            context,
+            canReturn: searchNavigation.canReturn,
+          )
+        : 0.0;
     final appearance = context
         .select<ReaderAppearanceCubit, ReaderAppearancePreferences>(
           (c) => c.state.effectiveAppearance,
@@ -456,115 +527,169 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
       'layout=${appearance.layoutId}',
     );
 
-    return _ReaderSystemUiOverlayDriver(
-      readerTheme: readerTheme,
-      child: BlocListener<ReaderUiCubit, ReaderUiState>(
-        listenWhen: (previous, current) =>
-            previous.clearSearchToken != current.clearSearchToken,
-        listener: (_, _) {
-          _webViewKey.currentState?.clearSearch();
-          _articleWebViewKey.currentState?.clearSearch();
-        },
-        child: Stack(
-          children: [
-            // WebView body — subscribes to `state.highlights` via
-            // `context.select` so a TextAction such as Highlight fans changes
-            // through to the WebView without forcing a reader reopen.
-            ColoredBox(
-              color: readerTheme.backgroundColor,
-              child: sourceType == SourceType.article
-                  ? _ReaderArticleHtmlBody(
-                      sourceId: sourceId,
-                      serverBaseUri: widget.serverBaseUri,
-                      readerTheme: readerTheme,
-                      webViewKey: _articleWebViewKey,
-                      onLoading: () {
-                        if (!mounted) return;
-                        setState(() => _webViewReadySourceId = null);
-                        widget.onWebViewReady(null);
-                      },
-                      onPositionChanged: _handleReaderPositionChanged,
-                      onReady: () {
-                        if (!mounted) return;
-                        final sourceId = context
-                            .read<ReaderBloc>()
-                            .state
-                            .sourceId;
-                        if (_webViewReadySourceId == sourceId) return;
-                        setState(() => _webViewReadySourceId = sourceId);
-                        widget.onWebViewReady(sourceId);
-                      },
-                    )
-                  : _ReaderWebViewBody(
-                      sourceId: sourceId,
-                      serverBaseUri: widget.serverBaseUri,
-                      readerTheme: readerTheme,
-                      webViewKey: _webViewKey,
-                      onLoading: () {
-                        if (!mounted) return;
-                        setState(() => _webViewReadySourceId = null);
-                        widget.onWebViewReady(null);
-                      },
-                      onExternalLink: widget.onExternalLink,
-                      onPositionChanged: _handleReaderPositionChanged,
-                      onReady: () {
-                        if (!mounted) return;
-                        final sourceId = context
-                            .read<ReaderBloc>()
-                            .state
-                            .sourceId;
-                        if (_webViewReadySourceId == sourceId) return;
-                        setState(() => _webViewReadySourceId = sourceId);
-                        widget.onWebViewReady(sourceId);
-                      },
-                    ),
+    return PopScope(
+      canPop: !searchPanelVisible && !searchNavigation.active,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (searchPanelVisible) {
+          _closeSearchDrawer();
+        } else if (searchNavigation.active) {
+          _endSearch();
+        }
+      },
+      child: _ReaderSystemUiOverlayDriver(
+        readerTheme: readerTheme,
+        child: MultiBlocListener(
+          listeners: [
+            BlocListener<ReaderSearchCubit, ReaderSearchState>(
+              listenWhen: (previous, current) =>
+                  previous.clearSearchToken != current.clearSearchToken,
+              listener: (context, _) =>
+                  context.read<ReaderUiCubit>().clearReaderSearch(),
             ),
-            const _ReaderBrightnessDimmingOverlayDriver(),
-            ReaderTapZoneHintDriver(readerTheme: readerTheme),
-            const _ReaderChromeDismissBarrierDriver(),
-            _ReaderTapEdgeIndicatorDriver(
-              readerTheme: readerTheme,
-              appearance: appearance,
-              visible: webViewReady && sourceType != SourceType.article,
-            ),
-            _ReaderTopChromeDriver(
-              onArticleTitlePressed: widget.onArticleTitlePressed,
-            ),
-            const _ReaderPageBookmarkIndicatorDriver(),
-            const ReaderBrightnessChromeDriver(),
-            _ReaderBottomChromeDriver(
-              onTocPressed: _openTocDrawer,
-              onFontPressed: _openAppearanceSheet,
-              onPageTurnPressed: _togglePageTurnStyle,
-              onBookmarkPressed: _toggleBookmark,
-              onSearchPressed: _openSearchDrawer,
-              onSeekFraction: _seekFraction,
-            ),
-            const _ReaderImagePageProgressOverlayDriver(),
-            _ContextPanelDriver(
-              textActions: widget.textActions,
-              webViewKey: _webViewKey,
-              articleWebViewKey: _articleWebViewKey,
-            ),
-            _ReaderTocDrawerVisibilityDriver(
-              format: format,
-              pageProgressionRtl: pageProgressionRtl,
-              readerTheme: readerTheme,
-              onClose: _closeTocDrawer,
-              onItemSelected: _goToTocItem,
-              onBookmarkSelected: _goToBookmark,
-              onHighlightSelected: _goToHighlight,
-              onBookmarkDeleted: _deleteBookmark,
-            ),
-            _ReaderSearchDrawerVisibilityDriver(
-              format: format,
-              pageProgressionRtl: pageProgressionRtl,
-              onClose: _closeSearchDrawer,
-              onSearch: _searchBook,
-              onClearSearch: _clearDrawerSearch,
-              onResultSelected: _goToSearchResult,
+            BlocListener<ReaderUiCubit, ReaderUiState>(
+              listenWhen: (previous, current) =>
+                  previous.clearSearchToken != current.clearSearchToken,
+              listener: (_, _) {
+                _webViewKey.currentState?.clearSearch();
+                _articleWebViewKey.currentState?.clearSearch();
+              },
             ),
           ],
+          child: Stack(
+            children: [
+              Positioned.fill(
+                bottom: navigationHeight,
+                child: Stack(
+                  children: [
+                    // WebView body — subscribes to `state.highlights` via
+                    // `context.select` so a TextAction such as Highlight fans changes
+                    // through to the WebView without forcing a reader reopen.
+                    ColoredBox(
+                      color: readerTheme.backgroundColor,
+                      child: sourceType == SourceType.article
+                          ? _ReaderArticleHtmlBody(
+                              sourceId: sourceId,
+                              serverBaseUri: widget.serverBaseUri,
+                              readerTheme: readerTheme,
+                              webViewKey: _articleWebViewKey,
+                              onLoading: () {
+                                if (!mounted) return;
+                                _latestLocation = null;
+                                _endSearch();
+                                setState(() => _webViewReadySourceId = null);
+                                widget.onWebViewReady(null);
+                              },
+                              onPositionChanged: _handleReaderPositionChanged,
+                              onReady: () {
+                                if (!mounted) return;
+                                final sourceId = context
+                                    .read<ReaderBloc>()
+                                    .state
+                                    .sourceId;
+                                if (_webViewReadySourceId == sourceId) return;
+                                setState(
+                                  () => _webViewReadySourceId = sourceId,
+                                );
+                                widget.onWebViewReady(sourceId);
+                              },
+                            )
+                          : _ReaderWebViewBody(
+                              sourceId: sourceId,
+                              serverBaseUri: widget.serverBaseUri,
+                              readerTheme: readerTheme,
+                              webViewKey: _webViewKey,
+                              onLoading: () {
+                                if (!mounted) return;
+                                _latestLocation = null;
+                                _endSearch();
+                                setState(() => _webViewReadySourceId = null);
+                                widget.onWebViewReady(null);
+                              },
+                              onExternalLink: widget.onExternalLink,
+                              onPositionChanged: _handleReaderPositionChanged,
+                              onReady: () {
+                                if (!mounted) return;
+                                final sourceId = context
+                                    .read<ReaderBloc>()
+                                    .state
+                                    .sourceId;
+                                if (_webViewReadySourceId == sourceId) return;
+                                setState(
+                                  () => _webViewReadySourceId = sourceId,
+                                );
+                                widget.onWebViewReady(sourceId);
+                              },
+                            ),
+                    ),
+                    const _ReaderBrightnessDimmingOverlayDriver(),
+                    ReaderTapZoneHintDriver(readerTheme: readerTheme),
+                    const _ReaderChromeDismissBarrierDriver(),
+                    _ReaderTapEdgeIndicatorDriver(
+                      readerTheme: readerTheme,
+                      appearance: appearance,
+                      visible: webViewReady && sourceType != SourceType.article,
+                    ),
+                    _ReaderTopChromeDriver(
+                      onArticleTitlePressed: widget.onArticleTitlePressed,
+                    ),
+                    const _ReaderPageBookmarkIndicatorDriver(),
+                    const ReaderBrightnessChromeDriver(),
+                    if (!searchNavigation.active)
+                      _ReaderBottomChromeDriver(
+                        onTocPressed: _openTocDrawer,
+                        onFontPressed: _openAppearanceSheet,
+                        onPageTurnPressed: _togglePageTurnStyle,
+                        onBookmarkPressed: _toggleBookmark,
+                        onSearchPressed: _openSearchDrawer,
+                        onSeekFraction: _seekFraction,
+                      ),
+                    const _ReaderImagePageProgressOverlayDriver(),
+                    _ContextPanelDriver(
+                      textActions: widget.textActions,
+                      webViewKey: _webViewKey,
+                      articleWebViewKey: _articleWebViewKey,
+                    ),
+                  ],
+                ),
+              ),
+              if (searchNavigation.active)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: BlocBuilder<ReaderSearchCubit, ReaderSearchState>(
+                    builder: (_, state) => ReaderSearchNavigationBar(
+                      state: state,
+                      onOpenSearch: _openSearchDrawer,
+                      onPrevious: () =>
+                          _goToSearchResult((state.activeResultIndex ?? 0) - 1),
+                      onNext: () =>
+                          _goToSearchResult((state.activeResultIndex ?? 0) + 1),
+                      onEndSearch: _endSearch,
+                      onReturn: _returnToReading,
+                    ),
+                  ),
+                ),
+              _ReaderTocDrawerVisibilityDriver(
+                format: format,
+                pageProgressionRtl: pageProgressionRtl,
+                readerTheme: readerTheme,
+                onClose: _closeTocDrawer,
+                onItemSelected: _goToTocItem,
+                onBookmarkSelected: _goToBookmark,
+                onHighlightSelected: _goToHighlight,
+                onBookmarkDeleted: _deleteBookmark,
+              ),
+              _ReaderSearchDrawerVisibilityDriver(
+                format: format,
+                pageProgressionRtl: pageProgressionRtl,
+                onClose: _closeSearchDrawer,
+                onSearch: _searchBook,
+                onResultSelected: _goToSearchResult,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -683,7 +808,6 @@ class _ReaderSearchDrawerVisibilityDriver extends StatelessWidget {
     required this.pageProgressionRtl,
     required this.onClose,
     required this.onSearch,
-    required this.onClearSearch,
     required this.onResultSelected,
   });
 
@@ -691,8 +815,7 @@ class _ReaderSearchDrawerVisibilityDriver extends StatelessWidget {
   final bool pageProgressionRtl;
   final void Function({bool restoreChrome, bool clearSearch}) onClose;
   final Stream<ReaderSearchEvent> Function(String query) onSearch;
-  final VoidCallback onClearSearch;
-  final ValueChanged<ReaderSearchResult> onResultSelected;
+  final ValueChanged<int> onResultSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -700,14 +823,15 @@ class _ReaderSearchDrawerVisibilityDriver extends StatelessWidget {
       (c) => c.state.overlay == ReaderOverlay.search,
     );
 
-    return _ReaderSearchDrawer(
-      visible: visible,
-      format: format,
-      pageProgressionRtl: pageProgressionRtl,
-      onClose: onClose,
-      onSearch: onSearch,
-      onClearSearch: onClearSearch,
-      onResultSelected: onResultSelected,
+    return Positioned.fill(
+      child: ReaderSearchPanel(
+        visible: visible,
+        format: format,
+        pageProgressionRtl: pageProgressionRtl,
+        onClose: onClose,
+        onSearch: onSearch,
+        onResultSelected: onResultSelected,
+      ),
     );
   }
 }

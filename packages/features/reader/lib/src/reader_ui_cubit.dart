@@ -111,7 +111,7 @@ class ReaderUiCubit extends Cubit<ReaderUiState> {
 
   void closeSearchDrawer({
     bool restoreChrome = true,
-    bool clearSearch = true,
+    bool clearSearch = false,
   }) {
     if (!state.searchDrawerVisible) return;
     emit(
@@ -147,9 +147,6 @@ class ReaderUiCubit extends Cubit<ReaderUiState> {
       state.copyWith(
         chromeVisible: false,
         overlay: ReaderOverlay.search,
-        searchHighlightVisible: false,
-        ignoreNextSearchRelocation: false,
-        clearSearchToken: state.clearSearchToken + 1,
       ),
     );
   }

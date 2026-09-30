@@ -179,7 +179,12 @@ void main() {
     'search UI navigates, remembers and clears a query',
     (tester) async {
       await openBook(tester);
+      final originalWebView = bookState(tester);
+      final readerBloc = tester
+          .element(find.byType(BookReaderWebView))
+          .read<ReaderBloc>();
       await showChrome(tester);
+      final originalProgress = readerBloc.state.document!.readingProgress;
       await tapUi(tester, find.byTooltip('Search'));
       await tester.enterText(find.byType(TextField).hitTestable(), 'devices');
       await waitForUi(
@@ -213,30 +218,78 @@ void main() {
         () => find.byType(TextField).hitTestable().evaluate().isEmpty,
         description: 'search drawer closes on navigation',
       );
+      final origin = searchCubit.state.returnLocation;
+      final cachedResults = searchCubit.state.results;
+      expect(origin, isNotNull);
+      expect(origin!.fraction, closeTo(originalProgress, 0.02));
+      expect(searchCubit.state.activeResultIndex, 0);
+      await tapUi(tester, find.byTooltip('Next match'));
+      expect(searchCubit.state.activeResultIndex, 1);
+      await tapUi(tester, find.byTooltip('Previous match'));
+      expect(searchCubit.state.activeResultIndex, 0);
+      expect(searchCubit.state.returnLocation, origin);
+      expect(identical(bookState(tester), originalWebView), isTrue);
+      await capture(tester, 'book-search-navigation');
+      await tapUi(tester, find.byKey(const ValueKey('reader-search-reopen')));
+      expect(
+        tester
+            .widget<TextField>(find.byType(TextField).hitTestable())
+            .controller!
+            .text,
+        'devices',
+      );
+      expect(identical(searchCubit.state.results, cachedResults), isTrue);
+      expect(searchCubit.state.recentQueries, contains('devices'));
+      await tester.binding.handlePopRoute();
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(find.byType(TextField).hitTestable(), findsNothing);
+      expect(searchCubit.state.isNavigating, isTrue);
+      await tapUi(tester, find.byKey(const ValueKey('reader-search-return')));
+      await waitForUi(
+        tester,
+        () =>
+            !searchCubit.state.isNavigating &&
+            (readerBloc.state.document!.readingProgress - originalProgress)
+                    .abs() <
+                0.02,
+        description: 'return to the pre-search reading position',
+      );
+      expect(searchCubit.state.returnLocation, isNull);
+      expect(identical(bookState(tester), originalWebView), isTrue);
+      await capture(tester, 'book-search-returned');
       await showChrome(tester);
       await tapUi(tester, find.byTooltip('Search'));
-      expect(searchCubit.state.recentQueries, contains('devices'));
       await tapUi(tester, find.text('devices'));
       await waitForUi(
         tester,
         () => !searchCubit.state.isLoading,
-        description: 'recent query rerun',
+        description: 'new session from history',
       );
       await tapUi(tester, find.bySemanticsLabel('Clear search'));
       expect(searchCubit.state.results, isEmpty);
       expect(searchCubit.state.recentQueries, contains('devices'));
       await tapUi(tester, find.byTooltip('Remove from history'));
       expect(searchCubit.state.recentQueries, isEmpty);
+      // Re-focus the retained field through a real gesture; enterText alone
+      // reuses the test binding's old EditableText connection after unfocus.
+      await tapUi(tester, find.byType(TextField).hitTestable());
       await tester.enterText(
         find.byType(TextField).hitTestable(),
         'zzzznotinthebook',
       );
+      expect(searchCubit.state.query, 'zzzznotinthebook');
+      await waitForUi(
+        tester,
+        () => !searchCubit.state.isLoading,
+        description: 'empty query scan completed',
+      );
+      expect(searchCubit.state.errorMessage, isNull);
+      await capture(tester, 'book-search-empty');
       await waitForUi(
         tester,
         () => find.text('No results found').evaluate().isNotEmpty,
         description: 'empty search result',
       );
-      await capture(tester, 'book-search-empty');
       await unmountUi(tester);
     },
     timeout: const Timeout(Duration(minutes: 3)),
@@ -959,7 +1012,7 @@ void main() {
   );
 
   testWidgets(
-    'article imports locally and translates the complete selection',
+    'article searches, returns to reading and translates the complete selection',
     (tester) async {
       await app.articleRepository.addExtractedArticle(ReadingFixture.article);
       await tester.pumpWidget(app.widget);
@@ -975,12 +1028,84 @@ void main() {
         timeout: const Duration(seconds: 45),
       );
       await tester.pump(const Duration(milliseconds: 300));
+      final webView = find.byType(ArticleHtmlReaderWebView);
+      final originalWebView = tester.state<ArticleHtmlReaderWebViewState>(
+        webView,
+      );
+      final controller = originalWebView.debugController!;
+      final bloc = tester.element(webView).read<ReaderBloc>();
+      for (final startProgress in [0.35, 0.0]) {
+        originalWebView.goToFraction(startProgress);
+        await waitForUi(
+          tester,
+          () =>
+              (bloc.state.document!.readingProgress - startProgress).abs() <
+              0.001,
+          description: 'article positioned at $startProgress',
+        );
+        final originalProgress = bloc.state.document!.readingProgress;
+        await controller.evaluateJavascript(
+          source:
+              "void window.flutter_inappwebview.callHandler('onClick', {x: 0.5, y: 0.5})",
+        );
+        await tapUi(tester, find.byTooltip('Search'));
+        await tester.enterText(
+          find.byType(TextField).hitTestable(),
+          'Section 22',
+        );
+        final search = tester
+            .element(find.byType(TextField).hitTestable())
+            .read<ReaderSearchCubit>();
+        await waitForUi(
+          tester,
+          () => !search.state.isLoading && search.state.results.isNotEmpty,
+          description: 'article search results',
+        );
+        await tapUi(
+          tester,
+          find.byType(ReaderSearchResultTile).hitTestable().first,
+        );
+        await waitForUi(
+          tester,
+          () => bloc.state.document!.readingProgress > 0.5,
+          description: 'article result near the end of the document',
+        );
+        await capture(
+          tester,
+          'article-search-navigation-${(startProgress * 100).round()}',
+        );
+        expect(
+          search.state.returnLocation!.fraction,
+          closeTo(originalProgress, 0.001),
+          reason: 'Capture the article position before opening the keyboard',
+        );
+        await tapUi(tester, find.byKey(const ValueKey('reader-search-return')));
+        try {
+          await waitForUi(
+            tester,
+            () =>
+                !search.state.isNavigating &&
+                (bloc.state.document!.readingProgress - originalProgress)
+                        .abs() <
+                    0.001,
+            description: 'article returns to the original position',
+          );
+        } on TestFailure {
+          fail(
+            'Article return: expected $originalProgress, '
+            'actual ${bloc.state.document!.readingProgress}, '
+            'navigating ${search.state.isNavigating}',
+          );
+        }
+        expect(
+          identical(
+            tester.state<ArticleHtmlReaderWebViewState>(webView),
+            originalWebView,
+          ),
+          isTrue,
+        );
+      }
       await select(tester, 'power', article: true);
-      final controller = tester
-          .state<ArticleHtmlReaderWebViewState>(
-            find.byType(ArticleHtmlReaderWebView),
-          )
-          .debugController!;
       Future<void> expectNativeSelectionOnly(String text) async {
         final state = await controller.evaluateJavascript(
           source: '''(() => ({

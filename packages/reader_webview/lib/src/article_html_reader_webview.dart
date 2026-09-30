@@ -383,6 +383,18 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
     );
   }
 
+  /// Call after Flutter layout; the native viewport can resize a frame later.
+  void restoreReadingProgress(double fraction) {
+    final payload = jsonEncode({
+      'progress': fraction.clamp(0.0, 1.0),
+      'viewportHeight': context.size?.height,
+    });
+    _evaluateArticleCommand(
+      label: 'restoreReadingProgress',
+      expression: 'window.restoreReadingProgress($payload)',
+    );
+  }
+
   void goToHref(String href) {
     final escaped = jsonEncode(href);
     _evaluateArticleCommand(

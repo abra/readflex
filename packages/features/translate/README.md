@@ -42,13 +42,12 @@ pronunciation/reading and part of speech. Unknown grammatical tags are omitted.
 Reading is language-aware (e.g. Japanese kana or Chinese pinyin); identical
 reading/pronunciation is not repeated. Metadata aligns with the source word's
 writing direction, independently of the UI locale. IPA uses a bundled phonetic font subset.
-For a single-word selection, the selected word's general translation is visible
-directly below its lexical header. A separate **In this context** section shows
-the contextual answer when it differs or describes a larger expression. When
+For a single-word selection, **In this context** comes first when the contextual
+answer differs from the general meaning or describes a larger expression. When
 the backend returns a grounded `contextual_expression`, this section names the
 exact source excerpt (e.g. `rather than` for selected `rather`), followed by its
-translation. The source sentence and sentence translation sit below that answer
-inside the same section, without a redundant Sentence heading or extra divider.
+translation. The selected word's general translation follows under **Word meaning**.
+The source sentence and sentence translation follow in a separate **Sentence** section.
 Neither word nor contextual answers are hidden in the details disclosure; each
 has an independent Copy command. An expression-level answer is never relabeled
 as the word's independent meaning. All data comes from one response; there is no

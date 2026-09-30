@@ -100,6 +100,31 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
   String get translationInContext => 'Dans ce contexte';
 
   @override
+  String get translationWordMeaning => 'Sens du mot';
+
+  @override
+  String get readerBackToReading => 'Revenir à la lecture';
+
+  @override
+  String get readerPreviousMatch => 'Résultat précédent';
+
+  @override
+  String get readerNextMatch => 'Résultat suivant';
+
+  @override
+  String get readerEndSearch => 'Terminer la recherche';
+
+  @override
+  String readerSearchMatches(int count) {
+    return 'Résultats : $count';
+  }
+
+  @override
+  String readerSearchMatchPosition(int current, int total) {
+    return '$current sur $total';
+  }
+
+  @override
   String get translationDetails => 'Sens et variantes';
 
   @override

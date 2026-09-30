@@ -223,6 +223,11 @@ recent chunks. Neighbour probes and identical in-flight ranges still share
 bytes/requests. The limit excludes returned slice copies, in-flight buffers,
 decompressed content and decoded images; it is not a total reader memory limit.
 
+`ArticleHtmlReaderWebView.restoreReadingProgress` restores a search session's
+scroll position after Flutter layout. It waits for the native viewport height
+when necessary, with a bounded fallback; new navigation or user input cancels
+the pending restore. Ordinary bookmark navigation still uses sentence anchors.
+
 `ArticleHtmlReaderWebView` reports scroll progress through sentence anchors,
 table of contents from headings, document features, clicks, search batches,
 bookmark changes, text selections, and highlight taps. It also renders and
@@ -377,7 +382,13 @@ overlapping matches, UTF-16 offsets and complete excerpts across inline markup.
 The substring mapper advances separate start/end cursors without rescanning
 earlier nodes. `test_js/search.test.mjs` checks text-partition invariance;
 `test_browser/book_search.test.mjs` checks actual DOM ranges and EPUB search CFI
-round trips in both substring and whole-word modes.
+round trips in both substring and whole-word modes. The active result has an
+amber fill without an outline; other book matches retain a softer cyan tint.
+Arrow navigation repaints only the previous and current match, preserves saved
+highlights and does not create a native text selection. Tests cover repeated
+words, redraw after resizing, light/dark pages, paginated/scrolled layouts and
+stale navigation after a new result or search reset. Articles use the same
+amber fill on their single active search marker.
 Book selection regressions load the actual `book.js` runtime and EPUB directory
 loader (with fixture transport) as well as the standalone paginator. They cover
 unwanted delayed page turns, iframe gesture ownership, cancelled gestures and

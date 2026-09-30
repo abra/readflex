@@ -1034,7 +1034,7 @@ void main() {
       expect(html, contains('window.toggleBookmarkHere = () =>'));
       expect(html, contains('window.setArticleBookmarks = bookmarks =>'));
       expect(html, contains('mark.readflex-search-match'));
-      expect(html, contains('rgb(0 212 216 / 68%)'));
+      expect(html, contains('rgb(255 179 0 / 36%)'));
       expect(html, contains('--rf-search-highlight-radius: 3px'));
       expect(html, contains('function searchMatchAnchor('));
       expect(

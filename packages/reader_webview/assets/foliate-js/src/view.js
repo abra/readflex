@@ -7,12 +7,23 @@ const { TTS } = await import('./tts.js')
 
 const SEARCH_PREFIX = 'foliate-search:'
 const SEARCH_HIGHLIGHT_COLOR = '#00d4d8'
-const SEARCH_HIGHLIGHT_OPACITY = '.68'
+const ACTIVE_SEARCH_HIGHLIGHT_COLOR = '#ffb300'
 const SEARCH_HIGHLIGHT_PADDING = 1
 const SEARCH_HIGHLIGHT_RADIUS = 3
 const BOOK_DIRECTION_SAMPLE_SECTION_LIMIT = 12
 const SECTION_DIRECTION_SAMPLE_CHAR_LIMIT = 5000
 const SECTION_DIRECTION_SAMPLE_SLICE_LIMIT = 3
+
+const drawSearchHighlight = (rects, { active }) => {
+  const fill = Overlayer.highlight(rects, {
+    color: active ? ACTIVE_SEARCH_HIGHLIGHT_COLOR : SEARCH_HIGHLIGHT_COLOR,
+    opacity: active ? '.36' : '.16',
+    padding: SEARCH_HIGHLIGHT_PADDING,
+    radius: SEARCH_HIGHLIGHT_RADIUS,
+  })
+  fill.dataset.searchActive = String(active)
+  return fill
+}
 
 const directionSampleText = text => {
   const normalized = (text ?? '').replace(/\s+/g, ' ')
@@ -131,6 +142,9 @@ export class View extends HTMLElement {
   #tocProgress
   #pageProgress
   #searchResults = new Map()
+  #activeSearchResult = null
+  #searchGeneration = 0
+  #searchNavigationSequence = 0
   #index
   isFixedLayout = false
   lastLocation
@@ -217,6 +231,9 @@ export class View extends HTMLElement {
     this.#tocProgress = null
     this.#pageProgress = null
     this.#searchResults = new Map()
+    this.#activeSearchResult = null
+    this.#searchGeneration++
+    this.#searchNavigationSequence++
     this.lastLocation = null
     this.#lastRelocateKey = null
     this.history.clear()
@@ -423,8 +440,10 @@ export class View extends HTMLElement {
     const { value } = annotation
     const navigationValue = annotation.cfi ?? value
     if (value.startsWith(SEARCH_PREFIX)) {
+      const generation = this.#searchGeneration
       const cfi = value.replace(SEARCH_PREFIX, '')
       const { index, anchor } = await this.resolveNavigation(cfi)
+      if (generation !== this.#searchGeneration) return false
       const obj = this.#getOverlayer(index)
       if (obj) {
         const { overlayer, doc } = obj
@@ -433,12 +452,9 @@ export class View extends HTMLElement {
           return true
         }
         const range = doc ? anchor(doc) : anchor
-        overlayer.add(value, range, Overlayer.highlight, {
-          color: SEARCH_HIGHLIGHT_COLOR,
-          opacity: SEARCH_HIGHLIGHT_OPACITY,
-          padding: SEARCH_HIGHLIGHT_PADDING,
-          radius: SEARCH_HIGHLIGHT_RADIUS,
-        });
+        overlayer.add(value, range, drawSearchHighlight, {
+          active: this.#activeSearchResult?.value === value,
+        })
         return true
       }
       return false
@@ -543,16 +559,22 @@ export class View extends HTMLElement {
     }))
   }
   async goToSearchResult(cfi) {
+    const sequence = ++this.#searchNavigationSequence
     const resolved = await this.goTo(cfi)
-    if (!resolved) return false
+    if (!resolved || sequence !== this.#searchNavigationSequence) return false
 
     const item = { value: SEARCH_PREFIX + cfi }
+    const previous = this.#activeSearchResult
+    this.#activeSearchResult = item
     const list = this.#searchResults.get(resolved.index) ?? []
     if (!list.some(x => x?.value === item.value)) {
       list.push(item)
       this.#searchResults.set(resolved.index, list)
     }
+    // Only the previous and current match need repainting, not every result.
+    if (previous && previous.value !== item.value) await this.addAnnotation(previous)
     for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (sequence !== this.#searchNavigationSequence) return false
       if (await this.addAnnotation(item)) return true
       await this.#nextFrame()
     }
@@ -709,6 +731,9 @@ export class View extends HTMLElement {
     yield 'done'
   }
   clearSearch() {
+    this.#searchGeneration++
+    this.#searchNavigationSequence++
+    this.#activeSearchResult = null
     for (const list of this.#searchResults.values())
       for (const item of list) this.deleteAnnotation(item)
     this.#searchResults.clear()

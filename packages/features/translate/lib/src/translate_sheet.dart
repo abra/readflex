@@ -280,12 +280,8 @@ class _TranslationResultView extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
         ],
-        if (showWordAnswer)
-          _TranslationAnswer(id: 'base', text: base, onCopy: onCopy),
         if (showContextSection) ...[
-          const SizedBox(height: AppSpacing.md),
-          Divider(height: 1, color: context.colors.outlineVariant),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
           Semantics(
             header: true,
             child: Text(
@@ -306,22 +302,33 @@ class _TranslationResultView extends StatelessWidget {
           ),
         if (primary != null)
           _TranslationAnswer(id: 'primary', text: primary, onCopy: onCopy),
-        if (!showContextSection) ...[
-          const SizedBox(height: AppSpacing.md),
-          Divider(height: 1, color: context.colors.outlineVariant),
+        if (showWordAnswer) ...[
           const SizedBox(height: AppSpacing.md),
           Semantics(
             header: true,
             child: Text(
-              isTextTranslation
-                  ? context.l10n.translationOriginal
-                  : context.l10n.translationSentence,
+              context.l10n.translationWordMeaning,
               style: context.text.labelMedium.copyWith(
                 color: context.colors.onSurfaceVariant,
               ),
             ),
           ),
+          _TranslationAnswer(id: 'base', text: base, onCopy: onCopy),
         ],
+        const SizedBox(height: AppSpacing.md),
+        Divider(height: 1, color: context.colors.outlineVariant),
+        const SizedBox(height: AppSpacing.md),
+        Semantics(
+          header: true,
+          child: Text(
+            isTextTranslation
+                ? context.l10n.translationOriginal
+                : context.l10n.translationSentence,
+            style: context.text.labelMedium.copyWith(
+              color: context.colors.onSurfaceVariant,
+            ),
+          ),
+        ),
         const SizedBox(height: AppSpacing.sm),
         TranslationSelectionPreview(
           selection: selection,

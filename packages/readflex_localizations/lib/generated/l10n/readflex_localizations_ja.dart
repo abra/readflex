@@ -100,6 +100,31 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get translationInContext => 'この文脈での訳';
 
   @override
+  String get translationWordMeaning => '単語の意味';
+
+  @override
+  String get readerBackToReading => '読んでいた位置に戻る';
+
+  @override
+  String get readerPreviousMatch => '前の一致';
+
+  @override
+  String get readerNextMatch => '次の一致';
+
+  @override
+  String get readerEndSearch => '検索を終了';
+
+  @override
+  String readerSearchMatches(int count) {
+    return '一致件数: $count';
+  }
+
+  @override
+  String readerSearchMatchPosition(int current, int total) {
+    return '$current / $total';
+  }
+
+  @override
   String get translationDetails => '意味と別の訳';
 
   @override

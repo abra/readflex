@@ -212,15 +212,21 @@
     }
 
     .readflex-search-active {
-      background: rgb(0 212 216 / 28%);
+      background: rgb(255 179 0 / 28%);
       border-radius: var(--rf-search-highlight-radius);
     }
 
     mark.readflex-search-match {
-      background: rgb(0 212 216 / 68%);
+      background: rgb(255 179 0 / 36%);
       border-radius: var(--rf-search-highlight-radius);
       color: inherit;
       padding-inline: 0.05em;
+    }
+
+    .readflex-search-active,
+    mark.readflex-search-match {
+      -webkit-box-decoration-break: clone;
+      box-decoration-break: clone;
     }
   </style>
 </head>
@@ -314,6 +320,7 @@
       let lastEmitAt = 0
       let scheduled = false
       let restoringUntil = 0
+      let cancelProgressRestore = () => {}
       let userInteracted = false
       let restored = false
       let articleBookmarks = []
@@ -1647,19 +1654,54 @@
       }
 
       window.changeStyle = nextStyle => {
+        cancelProgressRestore()
         articleSelection.allowScroll()
         applyStyle(nextStyle)
         schedulePosition('style', true)
       }
 
       window.goToPercent = value => {
+        cancelProgressRestore()
         articleSelection.allowScroll()
         restoringUntil = performance.now() + scrollRestoreSuppressMs
         scrollToProgress(value)
         schedulePosition('anchor', true)
       }
 
+      // Flutter layout and the native WebView viewport can settle in different
+      // frames. Resolve progress only once the requested height is applied.
+      window.restoreReadingProgress = ({ progress: value, viewportHeight } = {}) => {
+        cancelProgressRestore()
+        if (!Number.isFinite(value)) return
+        const heightMatches = () => !Number.isFinite(viewportHeight)
+          || Math.abs(window.innerHeight - viewportHeight) <= 1
+        if (heightMatches()) {
+          window.goToPercent(value)
+          return
+        }
+        const restore = () => window.goToPercent(value)
+        const onResize = () => { if (heightMatches()) restore() }
+        const cancel = () => {
+          clearTimeout(timer)
+          window.removeEventListener('resize', onResize)
+          for (const name of ['pointerdown', 'touchstart', 'wheel', 'keydown']) {
+            document.removeEventListener(name, cancel, true)
+          }
+          window.removeEventListener('pagehide', cancel)
+          cancelProgressRestore = () => {}
+        }
+        // A lost resize must not leave navigation waiting indefinitely.
+        const timer = setTimeout(restore, 1000)
+        cancelProgressRestore = cancel
+        window.addEventListener('resize', onResize)
+        for (const name of ['pointerdown', 'touchstart', 'wheel', 'keydown']) {
+          document.addEventListener(name, cancel, { capture: true, passive: true })
+        }
+        window.addEventListener('pagehide', cancel)
+      }
+
       window.goToHref = href => {
+        cancelProgressRestore()
         articleSelection.allowScroll()
         const raw = String(href || '')
         const id = raw.startsWith('#') ? raw.slice(1) : raw.split('#')[1]
@@ -1671,6 +1713,7 @@
       }
 
       window.goToCfi = value => {
+        cancelProgressRestore()
         articleSelection.allowScroll()
         const decoded = decodePosition(value)
         const target = sentenceElementForAnchor(decoded)

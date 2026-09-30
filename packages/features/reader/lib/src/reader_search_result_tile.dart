@@ -10,12 +10,14 @@ class ReaderSearchResultTile extends StatelessWidget {
     required this.result,
     required this.pageProgressionRtl,
     required this.onTap,
+    this.selected = false,
     super.key,
   });
 
   final ReaderSearchResult result;
   final bool pageProgressionRtl;
   final VoidCallback onTap;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +25,8 @@ class ReaderSearchResultTile extends StatelessWidget {
     final chapterTitle = result.chapterTitle;
 
     return ListTile(
+      selected: selected,
+      selectedTileColor: colors.primary.withValues(alpha: 0.06),
       contentPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.xxs,

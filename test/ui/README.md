@@ -53,7 +53,8 @@ credentials to this deterministic test suite.
 | Collections | Create with selected book, rename, cancel/confirm deletion; preserve book and clean membership | `app_flows_test.dart` |
 | Article import | Extraction error, retry, actual repository/SQLite write, root remount; offline/online button availability | `app_flows_test.dart` |
 | Translate | Success, error, pending result; word/text answers before context, unfilled language menus and collapsed/expanded details in all profiles | `surfaces_golden_test.dart` |
-| Contextual translation | Selected word/IPA and its visible translation, separate contextual answer and expression scope, collapsed/expanded explanations in all visual profiles | `translation_word_golden_test.dart` |
+| Contextual translation | Selected word/IPA, context-first answer with expression scope, separate word meaning, collapsed/expanded explanations in all visual profiles | `translation_word_golden_test.dart` |
+| Reader search surfaces | Side-sliding panel, active result, previous/next controls and return action in all visual profiles | `reader_search_golden_test.dart` |
 | Native translation sheet | Real phone viewport, word/expression scopes including rather, IPA rendering, visible general meaning, native clipboard and target-language change with deterministic responses | `integration_test/translation_sheet_test.dart` |
 | Define | Single definition, inflected word plus contextual expression, and not-found surfaces in all profiles | `surfaces_golden_test.dart` |
 | Shared text tools | Search clear control and highlight palette in all profiles; import menu layout | `surfaces_golden_test.dart` |
@@ -62,8 +63,8 @@ credentials to this deterministic test suite.
 | Selected page continuation | Both endpoints in Slide/Vertical, one-page synthetic swipe, menu hides/reanchors, complete range reaches Translate | `integration_test/reader_flows_test.dart` |
 | Native persistence | Explicit highlight writes text/CFI to real repository and renders nonzero geometry after book reopen | `integration_test/reader_flows_test.dart` |
 | Native reader lifecycle | Search navigation and CFI survive synthetic pause/resume without replacing WebView state; DOM remains readable | `integration_test/reader_flows_test.dart` |
-| Native article actions | Store fixture article, keep one native tint when changing palette color, expand word to sentence, translate complete range, close menu | `integration_test/reader_flows_test.dart` |
-| Native search UI | Query actual book, navigate result, rerun history, clear field/remove history, empty results | `integration_test/reader_flows_test.dart` |
+| Native article actions | Store fixture article, search near its end and return without remounting, keep one native tint when changing palette color, expand word to sentence, translate complete range, close menu | `integration_test/reader_flows_test.dart` |
+| Native search UI | Query actual book, previous/next matches, reopen without rescan, system Back, return to initial reading position without remounting, clear field/remove history, empty results | `integration_test/reader_flows_test.dart` |
 | Native bookmarks | Create, reopen book, confirm storage, delete from Contents and reopen again | `integration_test/reader_flows_test.dart` |
 | Native appearance | Theme/font/size/page-turn reach preferences and DOM; persist per book, reset without replacing live WebView | `integration_test/reader_flows_test.dart` |
 | Native translation failure | Failed response, closed selection menu, retry same range successfully | `integration_test/reader_flows_test.dart` |

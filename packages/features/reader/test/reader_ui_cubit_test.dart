@@ -46,6 +46,17 @@ void main() {
       expect(cubit.state.overlay, ReaderOverlay.none);
     });
 
+    test('search panel visibility does not clear an active search session', () {
+      final cubit = buildCubit()..searchResultHighlightActivated();
+      cubit.openSearchDrawer();
+      expect(cubit.state.searchHighlightVisible, isTrue);
+      expect(cubit.state.clearSearchToken, 0);
+      cubit.closeSearchDrawer(restoreChrome: false);
+      expect(cubit.state.searchHighlightVisible, isTrue);
+      expect(cubit.state.clearSearchToken, 0);
+      expect(cubit.state.searchDrawerVisible, isFalse);
+    });
+
     test('search result highlight survives initial relocation only', () {
       final cubit = buildCubit()..searchResultHighlightActivated();
 

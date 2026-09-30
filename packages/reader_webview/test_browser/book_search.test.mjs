@@ -63,3 +63,151 @@ test('EPUB search finishes and its CFIs restore complete matches at chapter boun
     }
     assert.deepEqual(errors, [])
 })
+
+async function openRepeatedMatches(t, { dark = false, flow = 'paginated' } = {}) {
+    const { page, origin } = await createHarness(t)
+    await openEpub(page, origin, `<html xmlns="http://www.w3.org/1999/xhtml"><head>
+        <style>body { color: ${dark ? '#eee' : '#222'}; background: ${dark ? '#181818' : '#fff'}; }
+        p { font: 22px/1.6 serif; }</style></head><body>
+        <p>One vision, another <em>vision</em>, a third vision and the final vision.</p>
+        </body></html>`)
+    const cfis = await page.evaluate(async flow => {
+        const view = window.testView
+        view.renderer.setAttribute('flow', flow)
+        view.renderer.setAttribute('gap', '8%')
+        view.renderer.setAttribute('top-margin', '24px')
+        view.renderer.setAttribute('bottom-margin', '24px')
+        view.renderer.setAttribute('max-column-count', '1')
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+        const cfis = []
+        for await (const result of view.search({ query: 'vision' })) {
+            for (const item of result.subitems ?? []) cfis.push(item.cfi)
+        }
+        return cfis
+    }, flow)
+    assert.equal(cfis.length, 4)
+    return { page, cfis }
+}
+
+async function expectActiveMatch(page, cfi) {
+    const snapshot = await page.evaluate(cfi => {
+        const view = window.testView
+        const { index, anchor } = view.resolveCFI(cfi)
+        const { doc, overlayer } = view.renderer.getContents().find(item => item.index === index)
+        const active = [...overlayer.element.querySelectorAll('[data-search-active="true"]')]
+        const inactive = [...overlayer.element.querySelectorAll('[data-search-active="false"]')]
+        const rect = anchor(doc).getClientRects()[0]
+        const fill = active[0]?.querySelector('rect')
+        const bounds = active[0]?.getBoundingClientRect()
+        const viewport = view.getBoundingClientRect()
+        return {
+            active: active.length,
+            inactive: inactive.length,
+            text: anchor(doc).toString(),
+            offset: fill ? Math.abs(Number(fill.getAttribute('x')) - (rect.left - 1)) : null,
+            stroke: fill ? getComputedStyle(fill).stroke : null,
+            outlines: active[0]?.querySelectorAll('[stroke]').length ?? 0,
+            activeColor: fill ? getComputedStyle(fill).fill : null,
+            inactiveColor: inactive[0] ? getComputedStyle(inactive[0]).fill : null,
+            activeOpacity: Number(active[0]?.style.opacity),
+            inactiveOpacity: Number(inactive[0]?.style.opacity),
+            selected: doc.defaultView.getSelection().toString(),
+            visible: bounds && bounds.left < viewport.right && bounds.right > viewport.left
+                && bounds.top < viewport.bottom && bounds.bottom > viewport.top,
+        }
+    }, cfi)
+    assert.equal(snapshot.active, 1, 'Exactly one match must have active feedback')
+    assert.equal(snapshot.inactive, 3)
+    assert.equal(snapshot.text, 'vision')
+    assert.ok(snapshot.offset < 0.1, 'Active feedback must follow the exact occurrence, not the first word')
+    assert.equal(snapshot.stroke, 'none', 'Active feedback must be a fill, not an outline')
+    assert.equal(snapshot.outlines, 0)
+    assert.equal(snapshot.activeColor, 'rgb(255, 179, 0)')
+    assert.equal(snapshot.inactiveColor, 'rgb(0, 212, 216)')
+    assert.ok(snapshot.activeOpacity > snapshot.inactiveOpacity)
+    assert.equal(snapshot.selected, '', 'Search must not take ownership of native text selection')
+    assert.equal(snapshot.visible, true, 'The active marker must be visible in the reader viewport')
+}
+
+for (const dark of [false, true]) {
+    for (const flow of ['paginated', 'scrolled']) {
+        test(`EPUB active match moves between repeated words dark=${dark} flow=${flow}`, async t => {
+            const { page, cfis } = await openRepeatedMatches(t, { dark, flow })
+            for (const index of [0, 1, 2, 3, 2, 1, 0]) {
+                assert.equal(await page.evaluate(cfi => window.testView.goToSearchResult(cfi), cfis[index]), true)
+                await expectActiveMatch(page, cfis[index])
+            }
+            await page.evaluate(() => {
+                const view = window.testView
+                view.style.width = '390px'
+                for (const { overlayer } of view.renderer.getContents()) overlayer.redraw()
+            })
+            await page.waitForTimeout(150)
+            await expectActiveMatch(page, cfis[0])
+            await page.evaluate(() => window.testView.clearSearch())
+            assert.equal(await page.evaluate(() => window.testView.renderer.getContents()
+                .flatMap(({ overlayer }) => [...overlayer.element.querySelectorAll('[data-search-active]')]).length), 0)
+        })
+    }
+}
+
+test('EPUB stale navigation cannot restore the active match after a newer result or clear', async t => {
+    const { page, cfis } = await openRepeatedMatches(t)
+    await page.evaluate(async cfis => {
+        const view = window.testView
+        const goTo = view.goTo.bind(view)
+        let release
+        const pending = new Promise(resolve => { release = resolve })
+        view.goTo = async cfi => cfi === cfis[0] ? pending : goTo(cfi)
+        const older = view.goToSearchResult(cfis[0])
+        await view.goToSearchResult(cfis[2])
+        release(view.resolveCFI(cfis[0]))
+        await older
+        view.goTo = goTo
+    }, cfis)
+    await expectActiveMatch(page, cfis[2])
+    const activeAfterClear = await page.evaluate(async cfi => {
+        const view = window.testView
+        const goTo = view.goTo.bind(view)
+        let release
+        view.goTo = () => new Promise(resolve => { release = resolve })
+        const pending = view.goToSearchResult(cfi)
+        view.clearSearch()
+        release(view.resolveCFI(cfi))
+        await pending
+        view.goTo = goTo
+        return view.renderer.getContents().flatMap(({ overlayer }) =>
+            [...overlayer.element.querySelectorAll('[data-search-active]')]).length
+    }, cfis[1])
+    assert.equal(activeAfterClear, 0)
+})
+
+test('changing the active EPUB match repaints only two results and preserves saved highlights', async t => {
+    const { page, cfis } = await openRepeatedMatches(t)
+    const result = await page.evaluate(async cfis => {
+        const view = window.testView
+        const { Overlayer } = await import('/foliate-js/src/overlayer.js')
+        view.addEventListener('draw-annotation', ({ detail }) =>
+            detail.draw(Overlayer.highlight, { color: '#ffeb3b' }))
+        await view.addAnnotation({ value: 'saved-highlight', cfi: cfis[0] })
+        await view.goToSearchResult(cfis[0])
+        const { doc, overlayer } = view.renderer.getContents()[0]
+        const saved = overlayer.element.querySelector('g[fill="#ffeb3b"]')
+        const text = doc.body.textContent
+        const mutations = []
+        const observer = new MutationObserver(records => mutations.push(...records))
+        observer.observe(overlayer.element, { childList: true })
+        await view.goToSearchResult(cfis[1])
+        mutations.push(...observer.takeRecords())
+        observer.disconnect()
+        view.clearSearch()
+        await Promise.resolve()
+        return {
+            added: mutations.reduce((count, record) => count + record.addedNodes.length, 0),
+            removed: mutations.reduce((count, record) => count + record.removedNodes.length, 0),
+            savedIntact: saved === overlayer.element.firstElementChild && overlayer.element.children.length === 1,
+            textIntact: doc.body.textContent === text,
+        }
+    }, cfis)
+    assert.deepEqual(result, { added: 2, removed: 2, savedIntact: true, textIntact: true })
+})

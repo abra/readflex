@@ -10,6 +10,17 @@ typedef ReaderBookSearch = Stream<ReaderSearchEvent> Function(String query);
 
 enum ReaderSearchErrorCode { searchFailed }
 
+/// The reading position before opening the search that started this session.
+class ReaderSearchLocation extends Equatable {
+  const ReaderSearchLocation({required this.cfi, required this.fraction});
+
+  final String cfi;
+  final double fraction;
+
+  @override
+  List<Object?> get props => [cfi, fraction];
+}
+
 class ReaderSearchState extends Equatable {
   const ReaderSearchState({
     this.query = '',
@@ -20,6 +31,8 @@ class ReaderSearchState extends Equatable {
     this.errorMessage,
     this.errorCode,
     this.clearSearchToken = 0,
+    this.activeResultIndex,
+    this.returnLocation,
   });
 
   final String query;
@@ -32,6 +45,15 @@ class ReaderSearchState extends Equatable {
 
   /// Incremented when an already-rendered foliate-js search needs clearing.
   final int clearSearchToken;
+  final int? activeResultIndex;
+  final ReaderSearchLocation? returnLocation;
+
+  bool get isNavigating => activeResultIndex != null || returnLocation != null;
+  bool get canGoPrevious => (activeResultIndex ?? 0) > 0;
+  bool get canGoNext =>
+      activeResultIndex != null && activeResultIndex! + 1 < results.length;
+
+  static const _absent = Object();
 
   bool get hasSearchContent =>
       isLoading ||
@@ -49,6 +71,8 @@ class ReaderSearchState extends Equatable {
     ReaderSearchErrorCode? errorCode,
     bool clearError = false,
     int? clearSearchToken,
+    Object? activeResultIndex = _absent,
+    Object? returnLocation = _absent,
   }) {
     return ReaderSearchState(
       query: query ?? this.query,
@@ -59,6 +83,12 @@ class ReaderSearchState extends Equatable {
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
       errorCode: clearError ? null : errorCode ?? this.errorCode,
       clearSearchToken: clearSearchToken ?? this.clearSearchToken,
+      activeResultIndex: activeResultIndex == _absent
+          ? this.activeResultIndex
+          : activeResultIndex as int?,
+      returnLocation: returnLocation == _absent
+          ? this.returnLocation
+          : returnLocation as ReaderSearchLocation?,
     );
   }
 
@@ -72,6 +102,8 @@ class ReaderSearchState extends Equatable {
     errorMessage,
     errorCode,
     clearSearchToken,
+    activeResultIndex,
+    returnLocation,
   ];
 }
 
@@ -116,11 +148,21 @@ class ReaderSearchCubit extends Cubit<ReaderSearchState> {
     _queueSearch(query, debounce: false, searchBook: searchBook);
   }
 
-  void resultSelected() {
+  bool resultSelected({int? index, ReaderSearchLocation? returnLocation}) {
+    if (index != null && (index < 0 || index >= state.results.length)) {
+      return false;
+    }
     final recentQueries = _updatedRecentQueries(state.query);
-    if (listEquals(recentQueries, state.recentQueries)) return;
-    emit(state.copyWith(recentQueries: recentQueries));
-    _onRecentQueriesChanged?.call(recentQueries);
+    final historyChanged = !listEquals(recentQueries, state.recentQueries);
+    emit(
+      state.copyWith(
+        recentQueries: historyChanged ? recentQueries : state.recentQueries,
+        activeResultIndex: index ?? state.activeResultIndex,
+        returnLocation: state.returnLocation ?? returnLocation,
+      ),
+    );
+    if (historyChanged) _onRecentQueriesChanged?.call(recentQueries);
+    return true;
   }
 
   void recentQueryRemoved(String query) {
@@ -145,6 +187,11 @@ class ReaderSearchCubit extends Cubit<ReaderSearchState> {
         progress: 0,
         isLoading: false,
         clearError: true,
+        activeResultIndex: null,
+        returnLocation: null,
+        clearSearchToken: state.hasSearchContent
+            ? state.clearSearchToken + 1
+            : state.clearSearchToken,
       ),
     );
   }
@@ -175,6 +222,7 @@ class ReaderSearchCubit extends Cubit<ReaderSearchState> {
           isLoading: false,
           clearError: true,
           clearSearchToken: clearSearchToken,
+          activeResultIndex: null,
         ),
       );
       return;
@@ -188,6 +236,7 @@ class ReaderSearchCubit extends Cubit<ReaderSearchState> {
         isLoading: true,
         clearError: true,
         clearSearchToken: clearSearchToken,
+        activeResultIndex: null,
       ),
     );
 
@@ -229,6 +278,7 @@ class ReaderSearchCubit extends Cubit<ReaderSearchState> {
       emit(
         state.copyWith(
           results: const [],
+          activeResultIndex: null,
           isLoading: false,
           errorMessage: message,
           errorCode: message == null
