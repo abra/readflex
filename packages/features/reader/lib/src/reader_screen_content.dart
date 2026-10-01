@@ -397,7 +397,8 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     );
     _closeSearchDrawer(restoreChrome: false, clearSearch: false);
     final generation = ++_searchNavigationGeneration;
-    // Reserve the navigation bar before resolving the CFI in the new viewport.
+    // Let the drawer/keyboard close before navigating; the search bar itself
+    // overlays the unchanged viewport.
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted ||
         generation != _searchNavigationGeneration ||
@@ -559,98 +560,123 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
           child: Stack(
             children: [
               Positioned.fill(
-                bottom: navigationHeight,
-                child: Stack(
-                  children: [
-                    // WebView body — subscribes to `state.highlights` via
-                    // `context.select` so a TextAction such as Highlight fans changes
-                    // through to the WebView without forcing a reader reopen.
-                    ColoredBox(
-                      color: readerTheme.backgroundColor,
-                      child: sourceType == SourceType.article
-                          ? _ReaderArticleHtmlBody(
-                              sourceId: sourceId,
-                              serverBaseUri: widget.serverBaseUri,
-                              readerTheme: readerTheme,
-                              webViewKey: _articleWebViewKey,
-                              onLoading: () {
-                                if (!mounted) return;
-                                _latestLocation = null;
-                                _endSearch();
-                                setState(() => _webViewReadySourceId = null);
-                                widget.onWebViewReady(null);
-                              },
-                              onPositionChanged: _handleReaderPositionChanged,
-                              onReady: () {
-                                if (!mounted) return;
-                                final sourceId = context
-                                    .read<ReaderBloc>()
-                                    .state
-                                    .sourceId;
-                                if (_webViewReadySourceId == sourceId) return;
-                                setState(
-                                  () => _webViewReadySourceId = sourceId,
-                                );
-                                widget.onWebViewReady(sourceId);
-                              },
-                            )
-                          : _ReaderWebViewBody(
-                              sourceId: sourceId,
-                              serverBaseUri: widget.serverBaseUri,
-                              readerTheme: readerTheme,
-                              webViewKey: _webViewKey,
-                              onLoading: () {
-                                if (!mounted) return;
-                                _latestLocation = null;
-                                _endSearch();
-                                setState(() => _webViewReadySourceId = null);
-                                widget.onWebViewReady(null);
-                              },
-                              onExternalLink: widget.onExternalLink,
-                              onPositionChanged: _handleReaderPositionChanged,
-                              onReady: () {
-                                if (!mounted) return;
-                                final sourceId = context
-                                    .read<ReaderBloc>()
-                                    .state
-                                    .sourceId;
-                                if (_webViewReadySourceId == sourceId) return;
-                                setState(
-                                  () => _webViewReadySourceId = sourceId,
-                                );
-                                widget.onWebViewReady(sourceId);
-                              },
-                            ),
-                    ),
-                    const _ReaderBrightnessDimmingOverlayDriver(),
-                    ReaderTapZoneHintDriver(readerTheme: readerTheme),
-                    const _ReaderChromeDismissBarrierDriver(),
-                    _ReaderTapEdgeIndicatorDriver(
-                      readerTheme: readerTheme,
-                      appearance: appearance,
-                      visible: webViewReady && sourceType != SourceType.article,
-                    ),
-                    _ReaderTopChromeDriver(
-                      onArticleTitlePressed: widget.onArticleTitlePressed,
-                    ),
-                    const _ReaderPageBookmarkIndicatorDriver(),
-                    const ReaderBrightnessChromeDriver(),
-                    if (!searchNavigation.active)
-                      _ReaderBottomChromeDriver(
-                        onTocPressed: _openTocDrawer,
-                        onFontPressed: _openAppearanceSheet,
-                        onPageTurnPressed: _togglePageTurnStyle,
-                        onBookmarkPressed: _toggleBookmark,
-                        onSearchPressed: _openSearchDrawer,
-                        onSeekFraction: _seekFraction,
-                      ),
-                    const _ReaderImagePageProgressOverlayDriver(),
-                    _ContextPanelDriver(
-                      textActions: widget.textActions,
-                      webViewKey: _webViewKey,
-                      articleWebViewKey: _articleWebViewKey,
-                    ),
-                  ],
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final searchOverlayBottomFraction =
+                        searchPanelVisible || constraints.maxHeight <= 0
+                        ? 0.0
+                        : (navigationHeight / constraints.maxHeight).clamp(
+                            0.0,
+                            1.0,
+                          );
+                    return Stack(
+                      children: [
+                        // WebView body — subscribes to `state.highlights` via
+                        // `context.select` so a TextAction such as Highlight fans changes
+                        // through to the WebView without forcing a reader reopen.
+                        ColoredBox(
+                          color: readerTheme.backgroundColor,
+                          child: sourceType == SourceType.article
+                              ? _ReaderArticleHtmlBody(
+                                  searchOverlayBottomFraction:
+                                      searchOverlayBottomFraction,
+                                  sourceId: sourceId,
+                                  serverBaseUri: widget.serverBaseUri,
+                                  readerTheme: readerTheme,
+                                  webViewKey: _articleWebViewKey,
+                                  onLoading: () {
+                                    if (!mounted) return;
+                                    _latestLocation = null;
+                                    _endSearch();
+                                    setState(
+                                      () => _webViewReadySourceId = null,
+                                    );
+                                    widget.onWebViewReady(null);
+                                  },
+                                  onPositionChanged:
+                                      _handleReaderPositionChanged,
+                                  onReady: () {
+                                    if (!mounted) return;
+                                    final sourceId = context
+                                        .read<ReaderBloc>()
+                                        .state
+                                        .sourceId;
+                                    if (_webViewReadySourceId == sourceId) {
+                                      return;
+                                    }
+                                    setState(
+                                      () => _webViewReadySourceId = sourceId,
+                                    );
+                                    widget.onWebViewReady(sourceId);
+                                  },
+                                )
+                              : _ReaderWebViewBody(
+                                  searchOverlayBottomFraction:
+                                      searchOverlayBottomFraction,
+                                  sourceId: sourceId,
+                                  serverBaseUri: widget.serverBaseUri,
+                                  readerTheme: readerTheme,
+                                  webViewKey: _webViewKey,
+                                  onLoading: () {
+                                    if (!mounted) return;
+                                    _latestLocation = null;
+                                    _endSearch();
+                                    setState(
+                                      () => _webViewReadySourceId = null,
+                                    );
+                                    widget.onWebViewReady(null);
+                                  },
+                                  onExternalLink: widget.onExternalLink,
+                                  onPositionChanged:
+                                      _handleReaderPositionChanged,
+                                  onReady: () {
+                                    if (!mounted) return;
+                                    final sourceId = context
+                                        .read<ReaderBloc>()
+                                        .state
+                                        .sourceId;
+                                    if (_webViewReadySourceId == sourceId) {
+                                      return;
+                                    }
+                                    setState(
+                                      () => _webViewReadySourceId = sourceId,
+                                    );
+                                    widget.onWebViewReady(sourceId);
+                                  },
+                                ),
+                        ),
+                        const _ReaderBrightnessDimmingOverlayDriver(),
+                        ReaderTapZoneHintDriver(readerTheme: readerTheme),
+                        const _ReaderChromeDismissBarrierDriver(),
+                        _ReaderTapEdgeIndicatorDriver(
+                          readerTheme: readerTheme,
+                          appearance: appearance,
+                          visible:
+                              webViewReady && sourceType != SourceType.article,
+                        ),
+                        _ReaderTopChromeDriver(
+                          onArticleTitlePressed: widget.onArticleTitlePressed,
+                        ),
+                        const _ReaderPageBookmarkIndicatorDriver(),
+                        const ReaderBrightnessChromeDriver(),
+                        if (!searchNavigation.active)
+                          _ReaderBottomChromeDriver(
+                            onTocPressed: _openTocDrawer,
+                            onFontPressed: _openAppearanceSheet,
+                            onPageTurnPressed: _togglePageTurnStyle,
+                            onBookmarkPressed: _toggleBookmark,
+                            onSearchPressed: _openSearchDrawer,
+                            onSeekFraction: _seekFraction,
+                          ),
+                        const _ReaderImagePageProgressOverlayDriver(),
+                        _ContextPanelDriver(
+                          textActions: widget.textActions,
+                          webViewKey: _webViewKey,
+                          articleWebViewKey: _articleWebViewKey,
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
               if (searchNavigation.active)
@@ -939,6 +965,7 @@ FoliateStyle _readerWebViewStyle({
 /// and UI-cubit updates.
 class _ReaderWebViewBody extends StatefulWidget {
   const _ReaderWebViewBody({
+    required this.searchOverlayBottomFraction,
     required this.sourceId,
     required this.serverBaseUri,
     required this.readerTheme,
@@ -952,6 +979,7 @@ class _ReaderWebViewBody extends StatefulWidget {
   final String? sourceId;
   final Uri serverBaseUri;
   final ReaderThemeData readerTheme;
+  final double searchOverlayBottomFraction;
 
   /// Optional GlobalKey — the parent state holds it so progress chrome can
   /// reach into [BookReaderWebViewState] for `goToFraction`.
@@ -1167,6 +1195,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     );
 
     final readerSurface = BookReaderWebView(
+      searchOverlayBottomFraction: widget.searchOverlayBottomFraction,
       // Parent's GlobalKey when provided (lets progress chrome seek
       // imperatively). Falls back to source-id ValueKey for forced
       // remount on book change.
@@ -1335,6 +1364,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
 /// the same reader bloc position contract used by book formats.
 class _ReaderArticleHtmlBody extends StatefulWidget {
   const _ReaderArticleHtmlBody({
+    required this.searchOverlayBottomFraction,
     required this.sourceId,
     required this.serverBaseUri,
     required this.readerTheme,
@@ -1347,6 +1377,7 @@ class _ReaderArticleHtmlBody extends StatefulWidget {
   final String? sourceId;
   final Uri serverBaseUri;
   final ReaderThemeData readerTheme;
+  final double searchOverlayBottomFraction;
   final GlobalKey<ArticleHtmlReaderWebViewState> webViewKey;
   final ValueChanged<BookPosition>? onPositionChanged;
   final VoidCallback? onReady;
@@ -1454,6 +1485,7 @@ class _ReaderArticleHtmlBodyState extends State<_ReaderArticleHtmlBody> {
     );
 
     final readerSurface = ArticleHtmlReaderWebView(
+      searchOverlayBottomFraction: widget.searchOverlayBottomFraction,
       key: widget.webViewKey,
       serverBaseUri: widget.serverBaseUri,
       articleFilePath: state.document!.filePath,

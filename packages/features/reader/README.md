@@ -117,15 +117,24 @@ Selecting a result starts a navigation session with previous/next match controls
 and a return-to-reading action. The return anchor is captured before opening the
 panel (before native keyboard resizing), retained across query changes, and
 cleared only when the session ends. Books restore their CFI; articles restore
-scroll progress rather than re-centering the nearest sentence. Controls reserve
-space below the existing WebView rather than obscuring text or remounting the
-renderer. Ending search,
+scroll progress rather than re-centering the nearest sentence. Navigation controls
+overlay the existing WebView: opening/closing them never changes its height or
+repaginates the document. The reader sends only the covered height fraction to
+the renderer. If the active match lies behind the panel, an amber edge marker
+projects its horizontal position just above the panel; fully visible matches
+and matches on other pages have no marker. The search drawer hides this marker.
+Ending search,
 opening contents/appearance or seeking the progress slider clears the session.
 System Back closes the search panel first, then ends match navigation before
 leaving the reader. Widget tests cover keyboard/large-text layouts and preserved
 state; native tests exercise navigation and return in the actual renderer.
 Navigation buttons are unfilled with 48dp tap targets. Widget and golden tests
 cover icon/text spacing, both themes, RTL and large text, including held presses.
+Search content uses a 16 logical-pixel horizontal inset inside the safe area:
+the header, field, recent queries, result count and excerpts share this inset.
+Close and history-removal buttons retain 48dp targets on the same trailing axis.
+Geometry tests and search goldens cover narrow/wide layouts, large text, RTL,
+long queries and asymmetric landscape safe-area padding.
 Icon controls use circular feedback. The query and return actions dim their
 content instead of filling the row; a focus outline remains for keyboard use.
 

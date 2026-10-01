@@ -31,12 +31,22 @@ void main() {
           final context = tester.element(
             find.byType(TranslationLanguageDirection),
           );
-          final sourceLabel = context.l10n.translationAutoDetectedSource(
-            'English',
-          );
+          const sourceLabel = 'English';
           final targetLabel = translationLanguageName(locale.languageCode)!;
-          expect(find.text(sourceLabel), findsOneWidget);
-          expect(find.text(targetLabel), findsOneWidget);
+          expect(
+            find.descendant(
+              of: find.byKey(_sourceKey),
+              matching: find.text(sourceLabel),
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.descendant(
+              of: find.byKey(_targetKey),
+              matching: find.text(targetLabel),
+            ),
+            findsOneWidget,
+          );
           expect(
             find.bySemanticsLabel(context.l10n.translationSourceLanguage),
             findsOne,

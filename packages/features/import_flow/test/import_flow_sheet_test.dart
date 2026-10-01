@@ -8,22 +8,26 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:import_flow/import_flow.dart';
 import 'package:reader_webview/reader_webview.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   String? clipboardText;
   var clipboardReadCount = 0;
+  Future<Object?> Function()? readClipboard;
 
   setUp(() {
     clipboardText = null;
     clipboardReadCount = 0;
+    readClipboard = null;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(SystemChannels.platform, (call) async {
           switch (call.method) {
             case 'Clipboard.getData':
               clipboardReadCount += 1;
-              return {'text': clipboardText};
+              if (readClipboard != null) return readClipboard!();
+              return clipboardText == null ? null : {'text': clipboardText};
             case 'Clipboard.setData':
               clipboardText = (call.arguments as Map?)?['text'] as String?;
               return null;
@@ -104,7 +108,9 @@ void main() {
     expect(find.text(clipboardText!), findsOneWidget);
   });
 
-  testWidgets('menu state shows the Upload Book option', (tester) async {
+  testWidgets('menu shows flat book and link actions with a header close', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _TestHost(
         onOpen: (context) => showImportFlowSheet(
@@ -121,19 +127,314 @@ void main() {
 
     expect(find.text('Add to Library'), findsOneWidget);
     expect(find.text('Upload Book'), findsOneWidget);
-    expect(find.byIcon(AppIcons.global), findsOneWidget);
-    expect(find.text('Cancel'), findsOneWidget);
+    expect(find.byIcon(AppIcons.book), findsOneWidget);
+    expect(find.byIcon(AppIcons.link), findsOneWidget);
+    expect(find.byIcon(AppIcons.chevronRight), findsNWidgets(2));
+    expect(find.byType(AppActionCard), findsNothing);
+    expect(find.text('Cancel'), findsNothing);
+    expect(find.byTooltip('Close'), findsOneWidget);
+    expect(clipboardReadCount, 0);
+    final divider = tester.getRect(find.byType(Divider));
+    final row = tester.getRect(find.byKey(const ValueKey('importMenu-book')));
+    expect(divider.left, row.left);
+    expect(divider.right, row.right);
+    final dividerWidget = tester.widget<Divider>(find.byType(Divider));
+    expect(dividerWidget.color, isNull, reason: 'use the shared divider theme');
+    expect(dividerWidget.thickness, isNull);
   });
+
+  for (final locale in ReadflexSupportedLocales.locales) {
+    for (final scale in [1.0, 2.0]) {
+      testWidgets('URL feedback does not move the form: $locale $scale', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(320, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final semantics = tester.ensureSemantics();
+        try {
+          late ReadflexLocalizations l10n;
+          await tester.pumpWidget(
+            _TestHost(
+              locale: locale,
+              textScaler: TextScaler.linear(scale),
+              onOpen: (context) {
+                l10n = context.l10n;
+                return showImportFlowSheet(
+                  context,
+                  onPickBookFile: () async => null,
+                  onImportBook: (_, {onProgress}) async => null,
+                  onImportArticle: (_, {onStage}) async => null,
+                );
+              },
+            ),
+          );
+          await tester.tap(find.text('Open'));
+          await tester.pumpAndSettle();
+          await tester.ensureVisible(find.text(l10n.importSaveArticle));
+          await tester.tap(find.text(l10n.importSaveArticle));
+          await tester.pumpAndSettle();
+          final field = find.byType(TextField);
+          final paste = find.byKey(const ValueKey('articleUrlPasteButton'));
+          await tester.ensureVisible(paste);
+          await tester.pumpAndSettle();
+          List<Rect> geometry() {
+            // Focus can scroll a narrow form; compare its content coordinates.
+            final offset = Scrollable.of(tester.element(field)).position.pixels;
+            return [
+              tester.getRect(field),
+              tester.getRect(find.text(l10n.importArticleHintClean)),
+              tester.getRect(find.text(l10n.importArticleHintLibrary)),
+              tester.getRect(
+                find.widgetWithText(FilledButton, l10n.commonSave),
+              ),
+            ].map((rect) => rect.translate(0, offset)).toList();
+          }
+
+          final before = geometry();
+          var edits = 0;
+          for (final (clipboard, message) in [
+            ('invalid link', l10n.importInvalidArticleUrl),
+            ('', l10n.importArticleUrlRequired),
+            (null, l10n.importClipboardUnavailable),
+          ]) {
+            expect(find.bySemanticsLabel(message), findsNothing);
+            clipboardText = clipboard;
+            readClipboard = clipboard == null
+                ? () async => throw PlatformException(code: 'clipboard-denied')
+                : null;
+            if (clipboard == '') {
+              await tester.enterText(field, '');
+              tester.widget<TextField>(field).onSubmitted!('');
+            } else {
+              await tester.tap(paste);
+            }
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 50));
+            expect(geometry(), before, reason: 'during the error animation');
+            await tester.pumpAndSettle();
+            expect(find.text(message), findsOneWidget);
+            expect(find.bySemanticsLabel(message), findsOneWidget);
+            expect(geometry(), before, reason: 'after showing the error');
+            await tester.enterText(
+              field,
+              'https://example.com/article-${edits++}',
+            );
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 50));
+            expect(geometry(), before, reason: 'while clearing the error');
+            await tester.pumpAndSettle();
+            expect(find.text(message), findsNothing);
+            expect(find.bySemanticsLabel(message), findsNothing);
+            expect(geometry(), before, reason: 'after clearing the error');
+            expect(tester.takeException(), isNull);
+          }
+        } finally {
+          semantics.dispose();
+        }
+      });
+    }
+  }
+
+  for (final action in ['book', 'article']) {
+    testWidgets('$action menu row responds beyond its label', (tester) async {
+      var pickerCalls = 0;
+      await tester.pumpWidget(
+        _TestHost(
+          onOpen: (context) => showImportFlowSheet(
+            context,
+            onPickBookFile: () async {
+              pickerCalls++;
+              return null;
+            },
+            onImportBook: (_, {onProgress}) async => null,
+            onImportArticle: (_, {onStage}) async => null,
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      final row = find.byKey(ValueKey('importMenu-$action'));
+      final rect = tester.getRect(row);
+      expect(rect.height, greaterThanOrEqualTo(48));
+      expect(rect.width, greaterThan(250));
+      await tester.tapAt(rect.topRight + const Offset(-2, 2));
+      await tester.pumpAndSettle();
+      if (action == 'book') {
+        expect(pickerCalls, 1);
+        expect(find.text('Add to Library'), findsOneWidget);
+      } else {
+        expect(find.byType(TextField), findsOneWidget);
+        expect(pickerCalls, 0);
+      }
+    });
+  }
+
+  for (final locale in [
+    const Locale('en'),
+    const Locale('ru'),
+    const Locale('ar'),
+  ]) {
+    testWidgets(
+      'article hints account for validation space above and breathing room below: $locale',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        late ReadflexLocalizations l10n;
+        await tester.pumpWidget(
+          _TestHost(
+            locale: locale,
+            onOpen: (context) {
+              l10n = context.l10n;
+              return showImportFlowSheet(
+                context,
+                onPickBookFile: () async => null,
+                onImportBook: (_, {onProgress}) async => null,
+                onImportArticle: (_, {onStage}) async => null,
+              );
+            },
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        final sheet = tester.getRect(find.byType(BottomSheet));
+        await tester.tap(find.text(l10n.importSaveArticle));
+        await tester.pumpAndSettle();
+
+        final field = tester.getRect(find.byType(TextField));
+        final firstHint = tester.getRect(
+          find.text(l10n.importArticleHintClean),
+        );
+        final lastHint = tester.getRect(
+          find.text(l10n.importArticleHintLibrary),
+        );
+        final save = tester.getRect(
+          find.widgetWithText(FilledButton, l10n.commonSave),
+        );
+        final above = firstHint.top - field.bottom;
+        final below = save.top - lastHint.bottom;
+        // TextField includes the reserved validation area. Avoid adding that
+        // space twice above hints; the root goldens check the visible gaps.
+        expect(above, greaterThanOrEqualTo(0));
+        expect(below, closeTo(above + AppSpacing.xl, 1));
+        expect(tester.getRect(find.byType(BottomSheet)), sheet);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'menu balances its free space without resizing steps: $locale',
+      (tester) async {
+        late ReadflexLocalizations l10n;
+        await tester.pumpWidget(
+          _TestHost(
+            locale: locale,
+            onOpen: (context) {
+              l10n = context.l10n;
+              return showImportFlowSheet(
+                context,
+                onPickBookFile: () async => null,
+                onImportBook: (_, {onProgress}) async => null,
+                onImportArticle: (_, {onStage}) async => null,
+              );
+            },
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        final sheet = tester.getRect(find.byType(BottomSheet));
+        final layout = tester.getRect(find.byType(ActionBottomSheetLayout));
+        final header = tester.getRect(find.byType(BottomSheetHeader));
+        final book = tester.getRect(
+          find.byKey(const ValueKey('importMenu-book')),
+        );
+        final article = tester.getRect(
+          find.byKey(const ValueKey('importMenu-article')),
+        );
+        final above = book.top - header.bottom - AppSpacing.sm;
+        final below = layout.bottom - AppSpacing.lg - article.bottom;
+        expect(below, closeTo(above, 1));
+        expect(below, inInclusiveRange(0, AppSpacing.xl));
+        expect(book.height, greaterThanOrEqualTo(88));
+        expect(article.height, greaterThanOrEqualTo(88));
+        await tester.tap(find.text(l10n.importSaveArticle));
+        await tester.pumpAndSettle();
+        expect(tester.getRect(find.byType(BottomSheet)), sheet);
+        await tester.tap(find.text(l10n.commonBack));
+        await tester.pumpAndSettle();
+        expect(tester.getRect(find.byType(BottomSheet)), sheet);
+        expect(
+          tester.getRect(find.byKey(const ValueKey('importMenu-article'))),
+          article,
+        );
+      },
+    );
+  }
+
+  testWidgets(
+    'RTL menu mirrors arrows and keeps close reachable at large text',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      late ReadflexLocalizations l10n;
+      await tester.pumpWidget(
+        _TestHost(
+          locale: const Locale('ar'),
+          textScaler: const TextScaler.linear(2),
+          onOpen: (context) {
+            l10n = context.l10n;
+            return showImportFlowSheet(
+              context,
+              onPickBookFile: () async => null,
+              onImportBook: (_, {onProgress}) async => null,
+              onImportArticle: (_, {onStage}) async => null,
+            );
+          },
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(AppIcons.chevronLeft), findsNWidgets(2));
+      expect(find.byIcon(AppIcons.chevronRight), findsNothing);
+      final close = find.byTooltip(l10n.commonClose);
+      final closeRect = tester.getRect(close);
+      expect(closeRect.height, greaterThanOrEqualTo(48));
+      final article = find.byKey(const ValueKey('importMenu-article'));
+      await tester.ensureVisible(article);
+      await tester.pumpAndSettle();
+      expect(tester.getRect(close), closeRect);
+      expect(close.hitTestable(), findsOneWidget);
+      expect(
+        tester.getCenter(find.byIcon(AppIcons.book)).dx,
+        greaterThan(
+          tester.getCenter(find.byIcon(AppIcons.chevronLeft).first).dx,
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      await tester.tap(close);
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.importAddToLibraryTitle), findsNothing);
+    },
+  );
 
   testWidgets('offline menu disables article import action', (tester) async {
     var articleImportCalls = 0;
+    var pickerCalls = 0;
 
     await tester.pumpWidget(
       _TestHost(
         onOpen: (context) => showImportFlowSheet(
           context,
           isOffline: true,
-          onPickBookFile: () async => null,
+          onPickBookFile: () async {
+            pickerCalls++;
+            return null;
+          },
           onImportBook: (file, {onProgress}) async => null,
           onImportArticle: (_, {onStage}) async {
             articleImportCalls += 1;
@@ -148,7 +449,23 @@ void main() {
 
     final offlineIcon = tester.widget<Icon>(find.byIcon(AppIcons.offline));
     expect(offlineIcon.color, AppTheme.light().ext.warning);
-    expect(find.byIcon(AppIcons.global), findsNothing);
+    expect(find.byIcon(AppIcons.link), findsNothing);
+    expect(find.byIcon(AppIcons.chevronRight), findsOneWidget);
+    final semantics = tester.ensureSemantics();
+    try {
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('importMenu-article'))),
+        matchesSemantics(
+          label: 'Save Article',
+          value: 'Paste a web URL for offline reading',
+          isButton: true,
+          hasEnabledState: true,
+          isEnabled: false,
+        ),
+      );
+    } finally {
+      semantics.dispose();
+    }
 
     await tester.tap(find.text('Save Article'));
     await tester.pumpAndSettle();
@@ -159,6 +476,10 @@ void main() {
       findsNothing,
     );
     expect(articleImportCalls, 0);
+    await tester.tap(find.text('Upload Book'));
+    await tester.pumpAndSettle();
+    expect(pickerCalls, 1);
+    expect(find.text('Add to Library'), findsOneWidget);
   });
 
   testWidgets('open menu reacts when connectivity comes back online', (
@@ -184,13 +505,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byIcon(AppIcons.offline), findsOneWidget);
-    expect(find.byIcon(AppIcons.global), findsNothing);
+    expect(find.byIcon(AppIcons.link), findsNothing);
 
     isOfflineController.add(false);
     await tester.pump();
     await tester.pump();
 
-    expect(find.byIcon(AppIcons.global), findsOneWidget);
+    expect(find.byIcon(AppIcons.link), findsOneWidget);
     expect(find.byIcon(AppIcons.offline), findsNothing);
 
     await tester.tap(find.text('Save Article'));
@@ -303,7 +624,7 @@ void main() {
     expect(importedUrls, ['https://example.com/article']);
   });
 
-  testWidgets('cancel button dismisses the sheet', (tester) async {
+  testWidgets('header close dismisses the sheet', (tester) async {
     await tester.pumpWidget(
       _TestHost(
         onOpen: (context) => showImportFlowSheet(
@@ -317,7 +638,7 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.byTooltip('Close'));
     await tester.pumpAndSettle();
 
     expect(find.text('Add to Library'), findsNothing);
@@ -416,7 +737,7 @@ void main() {
     expect(field.controller!.text, 'https://example.com/article');
   });
 
-  testWidgets('article url entry ignores non-url clipboard text', (
+  testWidgets('invalid paste shows an error without replacing the URL', (
     tester,
   ) async {
     clipboardText = 'just words';
@@ -437,6 +758,10 @@ void main() {
     await tester.tap(find.text('Save Article'));
     await tester.pumpAndSettle();
 
+    expect(clipboardReadCount, 0);
+    await tester.enterText(find.byType(TextField), 'https://example.com/keep');
+    await tester.pump();
+
     final pasteIcon = tester.widget<Icon>(find.byIcon(AppIcons.paste));
     expect(find.widgetWithIcon(IconButton, AppIcons.paste), findsNothing);
     expect(
@@ -449,7 +774,243 @@ void main() {
 
     final field = tester.widget<TextField>(find.byType(TextField));
     expect(clipboardReadCount, 1);
-    expect(field.controller!.text, isEmpty);
+    expect(field.controller!.text, 'https://example.com/keep');
+    expect(field.decoration!.error, isNotNull);
+    expect(find.text('Enter a valid article URL'), findsOneWidget);
+
+    await tester.enterText(
+      find.byType(TextField),
+      'https://example.com/edited',
+    );
+    await tester.pump();
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).decoration!.error,
+      isNull,
+    );
+  });
+
+  testWidgets('Edit link restores the failed URL and saves only on request', (
+    tester,
+  ) async {
+    final urls = <String>[];
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => null,
+          onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (url, {onStage}) async {
+            urls.add(url);
+            return null;
+          },
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Article'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'example.com/article');
+    await tester.pump();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit link'));
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.controller!.text, 'https://example.com/article');
+    expect(field.decoration!.error, isNull);
+    expect(urls, ['https://example.com/article']);
+    await tester.enterText(
+      find.byType(TextField),
+      'https://example.com/edited',
+    );
+    await tester.pump();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(urls, ['https://example.com/article', 'https://example.com/edited']);
+  });
+
+  testWidgets(
+    'book progress label fits large text without shifting on progress',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final imported = Completer<Book?>();
+      late void Function(double) reportProgress;
+      await tester.pumpWidget(
+        _TestHost(
+          textScaler: const TextScaler.linear(2),
+          onOpen: (context) => showImportFlowSheet(
+            context,
+            onPickBookFile: () async => File('/tmp/Test.epub'),
+            onImportBook: (file, {onProgress}) {
+              reportProgress = onProgress!;
+              return imported.future;
+            },
+            onImportArticle: (_, {onStage}) async => null,
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Upload Book'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      final iconBefore = tester.getRect(
+        find.byKey(const ValueKey('importFlowStatusIcon')),
+      );
+      reportProgress(0.45);
+      await tester.pump();
+
+      final label = tester.widget<Text>(find.text('45%'));
+      final context = tester.element(find.text('45%'));
+      final painter = TextPainter(
+        text: TextSpan(text: label.data, style: label.style),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+      )..layout();
+      expect(
+        tester.getSize(find.text('45%')).height,
+        greaterThanOrEqualTo(painter.height),
+      );
+      painter.dispose();
+      expect(
+        tester.getRect(find.byKey(const ValueKey('importFlowStatusIcon'))),
+        iconBefore,
+      );
+      expect(tester.takeException(), isNull);
+      imported.complete(_fakeBook());
+      await tester.pumpAndSettle();
+    },
+  );
+
+  for (final invalidText in <String?>[null, '', 'words without a link']) {
+    testWidgets(
+      'empty or invalid clipboard reports an inline error: $invalidText',
+      (tester) async {
+        clipboardText = invalidText;
+        await _openArticleForm(tester);
+        await tester.tap(find.byIcon(AppIcons.paste));
+        await tester.pumpAndSettle();
+        final field = tester.widget<TextField>(find.byType(TextField));
+        expect(field.controller!.text, isEmpty);
+        expect(field.decoration!.error, isNotNull);
+        expect(find.text('Enter a valid article URL'), findsOneWidget);
+        expect(
+          tester
+              .widget<FilledButton>(find.widgetWithText(FilledButton, 'Save'))
+              .onPressed,
+          isNull,
+        );
+      },
+    );
+  }
+
+  testWidgets('clipboard failure is recoverable without clearing typed text', (
+    tester,
+  ) async {
+    await _openArticleForm(tester);
+    await tester.enterText(find.byType(TextField), 'https://example.com/keep');
+    await tester.pump();
+    readClipboard = () async => throw PlatformException(code: 'unavailable');
+    await tester.tap(find.byIcon(AppIcons.paste));
+    await tester.pumpAndSettle();
+    var field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.controller!.text, 'https://example.com/keep');
+    expect(field.decoration!.error, isNotNull);
+    expect(find.text('Could not read the clipboard'), findsOneWidget);
+    readClipboard = () async => {'text': 'example.com/new'};
+    await tester.tap(find.byIcon(AppIcons.paste));
+    await tester.pumpAndSettle();
+    field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.controller!.text, 'https://example.com/new');
+    expect(
+      field.controller!.selection,
+      TextSelection.collapsed(offset: field.controller!.text.length),
+    );
+    expect(field.decoration!.error, isNull);
+  });
+
+  for (final reply in ['example.com/stale', 'not a link']) {
+    testWidgets(
+      'late clipboard reply does not overwrite manual edits: $reply',
+      (tester) async {
+        final clipboard = Completer<Object?>();
+        readClipboard = () => clipboard.future;
+        await _openArticleForm(tester);
+        await tester.tap(find.byIcon(AppIcons.paste));
+        await tester.enterText(
+          find.byType(TextField),
+          'https://example.com/typed',
+        );
+        await tester.pump();
+        clipboard.complete({'text': reply});
+        await tester.pumpAndSettle();
+        final field = tester.widget<TextField>(find.byType(TextField));
+        expect(field.controller!.text, 'https://example.com/typed');
+        expect(field.decoration!.error, isNull);
+      },
+    );
+  }
+
+  testWidgets('newer paste wins when clipboard replies arrive out of order', (
+    tester,
+  ) async {
+    final first = Completer<Object?>();
+    final second = Completer<Object?>();
+    readClipboard = () =>
+        clipboardReadCount == 1 ? first.future : second.future;
+    await _openArticleForm(tester);
+    await tester.tap(find.byIcon(AppIcons.paste));
+    await tester.tap(find.byIcon(AppIcons.paste));
+    second.complete({'text': 'example.com/new'});
+    await tester.pumpAndSettle();
+    first.complete({'text': 'example.com/old'});
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      'https://example.com/new',
+    );
+  });
+
+  testWidgets(
+    'clipboard reply during Back transition does not reopen the form',
+    (tester) async {
+      final clipboard = Completer<Object?>();
+      readClipboard = () => clipboard.future;
+      await _openArticleForm(tester);
+      await tester.tap(find.byIcon(AppIcons.paste));
+      await tester.tap(find.text('Back'));
+      await tester.pump();
+      clipboard.complete({'text': 'example.com/stale'});
+      await tester.pumpAndSettle();
+      expect(find.byType(TextField), findsNothing);
+      await tester.tap(find.text('Save Article'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        isEmpty,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('clipboard failure after closing the sheet is ignored', (
+    tester,
+  ) async {
+    final clipboard = Completer<Object?>();
+    readClipboard = () => clipboard.future;
+    await _openArticleForm(tester);
+    await tester.tap(find.byIcon(AppIcons.paste));
+    Navigator.of(tester.element(find.byType(TextField))).pop();
+    await tester.pumpAndSettle();
+    clipboard.completeError(PlatformException(code: 'unavailable'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('article success fades between aligned status views', (
@@ -634,6 +1195,9 @@ void main() {
     expect(termsCalls, 1);
     expect(privacyCalls, 1);
 
+    await tester.ensureVisible(find.byType(Checkbox));
+    await tester.pumpAndSettle();
+    expect(find.byType(Checkbox).hitTestable(), findsOneWidget);
     await tester.tap(find.byType(Checkbox));
     await tester.pump();
 
@@ -789,12 +1353,16 @@ void main() {
     expect(find.text('Strip.cbz'), findsOneWidget);
   });
 
-  testWidgets('book import failure shows Try again button', (tester) async {
+  testWidgets('book import failure opens the picker with Choose file', (
+    tester,
+  ) async {
+    var picks = 0;
     await tester.pumpWidget(
       _TestHost(
         onOpen: (context) => showImportFlowSheet(
           context,
-          onPickBookFile: () async => File('/tmp/Bad.epub'),
+          onPickBookFile: () async =>
+              ++picks == 1 ? File('/tmp/Bad.epub') : null,
           onImportBook: (file, {onProgress}) async => null,
           onImportArticle: (_, {onStage}) async => null,
         ),
@@ -808,7 +1376,11 @@ void main() {
 
     expect(find.text('Failed to import the book'), findsOneWidget);
     expect(find.text('Bad.epub'), findsOneWidget);
-    expect(find.text('Try again'), findsOneWidget);
+    expect(find.text('Choose file'), findsOneWidget);
+    await tester.tap(find.text('Choose file'));
+    await tester.pumpAndSettle();
+    expect(picks, 2);
+    expect(find.text('Failed to import the book'), findsOneWidget);
   });
 
   testWidgets('book failure fades between aligned status views', (
@@ -850,8 +1422,25 @@ void main() {
 
     expect(find.text('File type not supported'), findsOneWidget);
     expect(find.text('Bad.epub'), findsOneWidget);
-    expect(find.text('Try again'), findsOneWidget);
+    expect(find.text('Choose file'), findsOneWidget);
   });
+}
+
+Future<void> _openArticleForm(WidgetTester tester) async {
+  await tester.pumpWidget(
+    _TestHost(
+      onOpen: (context) => showImportFlowSheet(
+        context,
+        onPickBookFile: () async => null,
+        onImportBook: (file, {onProgress}) async => null,
+        onImportArticle: (_, {onStage}) async => null,
+      ),
+    ),
+  );
+  await tester.tap(find.text('Open'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Save Article'));
+  await tester.pumpAndSettle();
 }
 
 Book _fakeBook({BookFormat format = BookFormat.epub}) => Book(
@@ -874,10 +1463,12 @@ class _TestHost extends StatefulWidget {
   const _TestHost({
     required this.onOpen,
     this.textScaler = TextScaler.noScaling,
+    this.locale = const Locale('en'),
   });
 
   final Future<void> Function(BuildContext context) onOpen;
   final TextScaler textScaler;
+  final Locale locale;
 
   @override
   State<_TestHost> createState() => _TestHostState();
@@ -888,6 +1479,9 @@ class _TestHostState extends State<_TestHost> {
   Widget build(BuildContext context) {
     return MaterialApp(
       theme: AppTheme.light(),
+      locale: widget.locale,
+      supportedLocales: ReadflexSupportedLocales.locales,
+      localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: widget.textScaler),
         child: child!,

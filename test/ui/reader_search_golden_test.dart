@@ -12,6 +12,35 @@ import 'golden_support.dart';
 void main() {
   setUpAll(loadUiFonts);
   for (final profile in VisualProfile.values) {
+    testWidgets('search history ${profile.name}', (tester) async {
+      final cubit = ReaderSearchCubit(
+        initialRecentQueries: const [
+          'power',
+          'devices',
+          'A long recent query that cannot fit on a single line',
+        ],
+      );
+      addTearDown(cubit.close);
+      await pumpGoldenSurface(
+        tester,
+        profile,
+        (_) => BlocProvider.value(
+          value: cubit,
+          child: Scaffold(
+            body: ReaderSearchPanel(
+              visible: true,
+              format: null,
+              pageProgressionRtl: false,
+              onClose: () {},
+              onResultSelected: (_) {},
+              onSearch: (_) => const Stream.empty(),
+            ),
+          ),
+        ),
+      );
+      await expectUiGolden(tester, profile, 'reader-search-history');
+    }, tags: ['golden']);
+
     testWidgets('search surfaces ${profile.name}', (tester) async {
       final cubit = ReaderSearchCubit();
       addTearDown(cubit.close);

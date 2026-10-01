@@ -9,6 +9,27 @@ class ReadflexLocalizationsDe extends ReadflexLocalizations {
   ReadflexLocalizationsDe([String locale = 'de']) : super(locale);
 
   @override
+  String librarySelectedCount(int count) {
+    return 'Ausgewählt: $count';
+  }
+
+  @override
+  String get libraryCancelSelection => 'Auswahl aufheben';
+
+  @override
+  String get libraryDiscardChangesTitle => 'Änderungen verwerfen?';
+
+  @override
+  String get libraryDiscardChangesBody =>
+      'Die Änderungen an dieser Sammlung wurden noch nicht gespeichert.';
+
+  @override
+  String get libraryDiscardChanges => 'Verwerfen';
+
+  @override
+  String get libraryKeepEditing => 'Weiter bearbeiten';
+
+  @override
   String get readerSelectionStart => 'Auswahlanfang';
 
   @override
@@ -647,6 +668,16 @@ class ReadflexLocalizationsDe extends ReadflexLocalizations {
 
   @override
   String get importTryAgain => 'Erneut versuchen';
+
+  @override
+  String get importChooseFile => 'Datei wählen';
+
+  @override
+  String get importEditLink => 'Link bearbeiten';
+
+  @override
+  String get importClipboardUnavailable =>
+      'Zwischenablage konnte nicht gelesen werden';
 
   @override
   String get importArticleUrlRequired => 'Artikel-URL eingeben';

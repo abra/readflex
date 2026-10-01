@@ -58,9 +58,11 @@ Future<void> loadUiFonts() async {
 Future<void> pumpGoldenSurface(
   WidgetTester tester,
   VisualProfile profile,
-  WidgetBuilder builder,
-) async {
-  tester.view.physicalSize = profile.size;
+  WidgetBuilder builder, {
+  Size? surfaceSize,
+  Locale? locale,
+}) async {
+  tester.view.physicalSize = surfaceSize ?? profile.size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -71,7 +73,7 @@ Future<void> pumpGoldenSurface(
       theme: profile.brightness == Brightness.light
           ? AppTheme.light()
           : AppTheme.dark(),
-      locale: profile.locale,
+      locale: locale ?? profile.locale,
       supportedLocales: ReadflexSupportedLocales.locales,
       localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
       builder: (context, child) => RepaintBoundary(

@@ -20,6 +20,7 @@ import 'library_theme_cubit.dart';
 import 'manage_collection_cubit.dart';
 import 'manage_collection_sheet.dart';
 import 'library_selection_cubit.dart';
+import 'library_selection_bar.dart';
 import 'select_collection_scope_sheet.dart';
 import 'confirm_book_deletion_sheet.dart';
 
@@ -239,6 +240,7 @@ class _LibraryViewState extends State<_LibraryView> {
   }
 
   void _handleSourceLongPress(BuildContext context, LibrarySource source) {
+    _dismissCurrentFocus();
     context.read<LibrarySelectionCubit>().toggle(source.id);
   }
 
@@ -387,6 +389,10 @@ class _LibraryViewState extends State<_LibraryView> {
       child: _LibrarySelectionPopScope(
         onCancelSelection: () => context.read<LibrarySelectionCubit>().clear(),
         child: Scaffold(
+          bottomNavigationBar: LibrarySelectionBar(
+            onAddToCollection: () => _handleAddSelectedToCollection(context),
+            onDelete: () => _handleDeleteSelected(context),
+          ),
           floatingActionButton: Padding(
             padding: const EdgeInsetsDirectional.only(
               bottom: _libraryFabBottomLift,
@@ -394,7 +400,6 @@ class _LibraryViewState extends State<_LibraryView> {
             child: _LibraryFabDriver(
               addInFlight: _addInFlight,
               onAddPressed: () => _handleAdd(context),
-              onDeletePressed: () => _handleDeleteSelected(context),
             ),
           ),
           body: Stack(
@@ -473,10 +478,6 @@ class _LibraryViewState extends State<_LibraryView> {
                   },
                 ),
               ),
-              _LibraryAddCollectionFabDriver(
-                onAddToCollectionPressed: () =>
-                    _handleAddSelectedToCollection(context),
-              ),
             ],
           ),
         ),
@@ -516,18 +517,15 @@ class _LibrarySelectionPopScope extends StatelessWidget {
   }
 }
 
-/// Selects the Library FAB mode from selection state: add when idle, delete
-/// when multi-select is active.
+/// Hide import while the contextual selection bar is active.
 class _LibraryFabDriver extends StatelessWidget {
   const _LibraryFabDriver({
     required this.addInFlight,
     required this.onAddPressed,
-    required this.onDeletePressed,
   });
 
   final bool addInFlight;
   final VoidCallback onAddPressed;
-  final VoidCallback onDeletePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -535,7 +533,7 @@ class _LibraryFabDriver extends StatelessWidget {
       selector: (state) => state.isActive,
       builder: (context, selectionActive) {
         if (selectionActive) {
-          return _LibraryDeleteFab(onDeletePressed: onDeletePressed);
+          return const SizedBox.shrink();
         }
 
         return _LibraryFab(
@@ -545,91 +543,6 @@ class _LibraryFabDriver extends StatelessWidget {
           onAddPressed: addInFlight ? null : onAddPressed,
         );
       },
-    );
-  }
-}
-
-/// Shows the secondary "add to collection" FAB only during multi-select.
-class _LibraryAddCollectionFabDriver extends StatelessWidget {
-  const _LibraryAddCollectionFabDriver({
-    required this.onAddToCollectionPressed,
-  });
-
-  final VoidCallback onAddToCollectionPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocSelector<LibrarySelectionCubit, LibrarySelectionState, bool>(
-      selector: (state) => state.isActive,
-      builder: (context, selectionActive) {
-        if (!selectionActive) return const SizedBox.shrink();
-
-        return PositionedDirectional(
-          start: AppSpacing.lg,
-          bottom:
-              MediaQuery.paddingOf(context).bottom +
-              AppSpacing.lg +
-              _libraryFabBottomLift,
-          child: _LibraryAddCollectionFab(
-            onAddToCollectionPressed: onAddToCollectionPressed,
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// Left-side selection action. The delete action intentionally remains the
-/// Scaffold FAB so the normal add FAB swaps in-place instead of moving.
-class _LibraryAddCollectionFab extends StatelessWidget {
-  const _LibraryAddCollectionFab({required this.onAddToCollectionPressed});
-
-  final VoidCallback onAddToCollectionPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final maxWidth = MediaQuery.sizeOf(context).width * 0.54;
-    final maxLabelWidth = (maxWidth - 76).clamp(48.0, maxWidth).toDouble();
-
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: maxWidth),
-      child: FloatingActionButton.extended(
-        onPressed: onAddToCollectionPressed,
-        backgroundColor: colors.primary.withValues(alpha: 0.9),
-        foregroundColor: colors.onPrimary,
-        elevation: 3,
-        heroTag: null,
-        icon: const Icon(AppIcons.collectionAdd, size: 20),
-        label: SizedBox(
-          width: maxLabelWidth,
-          child: AppButtonLabel(
-            context.l10n.libraryAddToCollection,
-            maxLines: 1,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LibraryDeleteFab extends StatelessWidget {
-  const _LibraryDeleteFab({required this.onDeletePressed});
-
-  final VoidCallback onDeletePressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-
-    return FloatingActionButton(
-      onPressed: onDeletePressed,
-      backgroundColor: colors.error,
-      foregroundColor: colors.onError,
-      shape: const CircleBorder(),
-      elevation: 3,
-      heroTag: null,
-      child: const Icon(AppIcons.delete, size: 24),
     );
   }
 }
@@ -648,6 +561,7 @@ class _LibraryFab extends StatelessWidget {
 
     return FloatingActionButton(
       onPressed: onAddPressed,
+      tooltip: context.l10n.importAddToLibraryTitle,
       backgroundColor: colors.primary.withValues(alpha: 0.9),
       foregroundColor: colors.onPrimary,
       shape: const CircleBorder(),

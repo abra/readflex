@@ -3668,6 +3668,7 @@ window.goToHref = href => reader.view.goTo(href)
 window.goToCfi = cfi => reader.view.goTo(cfi)
 
 window.goToSearchResult = cfi => reader.view.goToSearchResult(cfi)
+window.setSearchOverlayInset = fraction => reader.view.setSearchOverlayInset(fraction)
 
 window.goToSectionIndex = index => reader.view.goTo(Number(index))
 

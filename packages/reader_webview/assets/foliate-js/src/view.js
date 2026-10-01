@@ -1,13 +1,13 @@
 import * as CFI from './epubcfi.js'
 import { TOCProgress, SectionProgress } from './progress.js'
 import { Overlayer } from './overlayer.js'
+import { SearchOcclusionIndicator, ACTIVE_SEARCH_HIGHLIGHT_COLOR } from './readflex_search_occlusion.js'
 import { textWalker } from './text-walker.js'
 import { directionCountsFromText, languageInfo, normalizeDocumentLanguageAndDirection } from './readflex_document_normalizer.js'
 const { TTS } = await import('./tts.js')
 
 const SEARCH_PREFIX = 'foliate-search:'
 const SEARCH_HIGHLIGHT_COLOR = '#00d4d8'
-const ACTIVE_SEARCH_HIGHLIGHT_COLOR = '#ffb300'
 const SEARCH_HIGHLIGHT_PADDING = 1
 const SEARCH_HIGHLIGHT_RADIUS = 3
 const BOOK_DIRECTION_SAMPLE_SECTION_LIMIT = 12
@@ -145,6 +145,8 @@ export class View extends HTMLElement {
   #activeSearchResult = null
   #searchGeneration = 0
   #searchNavigationSequence = 0
+  #searchNavigationPending = false
+  #searchOcclusion = null
   #index
   isFixedLayout = false
   lastLocation
@@ -201,6 +203,16 @@ export class View extends HTMLElement {
     })
     this.renderer.open(book)
     this.#root.append(this.renderer)
+    this.#searchOcclusion = new SearchOcclusionIndicator({
+      scrollTarget: this.renderer.shadowRoot ?? this.renderer,
+      resizeTarget: this.renderer,
+      getRects: () => {
+        const value = this.#activeSearchResult?.value
+        if (!value || this.#searchNavigationPending) return []
+        return this.renderer.getContents().flatMap(({ overlayer }) =>
+          overlayer?.getClientRects(value) ?? [])
+      },
+    })
 
     if (book.sections.some(section => section.mediaOverlay)) {
       book.media.activeClass ||= '-epub-media-overlay-active'
@@ -224,6 +236,8 @@ export class View extends HTMLElement {
     }
   }
   close() {
+    this.#searchOcclusion?.destroy()
+    this.#searchOcclusion = null
     this.renderer?.destroy()
     this.renderer?.remove()
     this.book?.destroy?.()
@@ -261,6 +275,7 @@ export class View extends HTMLElement {
     return this.dispatchEvent(new CustomEvent(name, { detail, cancelable }))
   }
   #onRelocate({ reason, range, index, fraction, size }) {
+    this.#searchOcclusion?.invalidate()
     this.#index = index
     const progress = this.#sectionProgress?.getProgress(index, fraction, size) ?? {}
     const tocItem = this.#tocProgress?.getProgress(index, range)
@@ -455,6 +470,7 @@ export class View extends HTMLElement {
         overlayer.add(value, range, drawSearchHighlight, {
           active: this.#activeSearchResult?.value === value,
         })
+        if (this.#activeSearchResult?.value === value) this.#searchOcclusion?.invalidate()
         return true
       }
       return false
@@ -560,25 +576,37 @@ export class View extends HTMLElement {
   }
   async goToSearchResult(cfi) {
     const sequence = ++this.#searchNavigationSequence
-    const resolved = await this.goTo(cfi)
-    if (!resolved || sequence !== this.#searchNavigationSequence) return false
+    this.#searchNavigationPending = true
+    this.#searchOcclusion?.hide()
+    try {
+      const resolved = await this.goTo(cfi)
+      if (!resolved || sequence !== this.#searchNavigationSequence) return false
 
-    const item = { value: SEARCH_PREFIX + cfi }
-    const previous = this.#activeSearchResult
-    this.#activeSearchResult = item
-    const list = this.#searchResults.get(resolved.index) ?? []
-    if (!list.some(x => x?.value === item.value)) {
-      list.push(item)
-      this.#searchResults.set(resolved.index, list)
+      const item = { value: SEARCH_PREFIX + cfi }
+      const previous = this.#activeSearchResult
+      this.#activeSearchResult = item
+      const list = this.#searchResults.get(resolved.index) ?? []
+      if (!list.some(x => x?.value === item.value)) {
+        list.push(item)
+        this.#searchResults.set(resolved.index, list)
+      }
+      // Only the previous and current match need repainting, not every result.
+      if (previous && previous.value !== item.value) await this.addAnnotation(previous)
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        if (sequence !== this.#searchNavigationSequence) return false
+        if (await this.addAnnotation(item)) return true
+        await this.#nextFrame()
+      }
+      return false
+    } finally {
+      if (sequence === this.#searchNavigationSequence) {
+        this.#searchNavigationPending = false
+        this.#searchOcclusion?.invalidate()
+      }
     }
-    // Only the previous and current match need repainting, not every result.
-    if (previous && previous.value !== item.value) await this.addAnnotation(previous)
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      if (sequence !== this.#searchNavigationSequence) return false
-      if (await this.addAnnotation(item)) return true
-      await this.#nextFrame()
-    }
-    return false
+  }
+  setSearchOverlayInset(fraction) {
+    this.#searchOcclusion?.setBottomInset(fraction)
   }
   async goToFraction(frac) {
     const [index, anchor] = this.#sectionProgress.getSection(frac)
@@ -734,6 +762,8 @@ export class View extends HTMLElement {
     this.#searchGeneration++
     this.#searchNavigationSequence++
     this.#activeSearchResult = null
+    this.#searchNavigationPending = false
+    this.#searchOcclusion?.hide()
     for (const list of this.#searchResults.values())
       for (const item of list) this.deleteAnnotation(item)
     this.#searchResults.clear()

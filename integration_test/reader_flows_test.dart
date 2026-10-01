@@ -180,6 +180,9 @@ void main() {
     (tester) async {
       await openBook(tester);
       final originalWebView = bookState(tester);
+      final originalBounds = tester.getRect(find.byType(BookReaderWebView));
+      final originalViewportHeight = await originalWebView.debugController!
+          .evaluateJavascript(source: 'window.innerHeight');
       final readerBloc = tester
           .element(find.byType(BookReaderWebView))
           .read<ReaderBloc>();
@@ -229,6 +232,13 @@ void main() {
       expect(searchCubit.state.activeResultIndex, 0);
       expect(searchCubit.state.returnLocation, origin);
       expect(identical(bookState(tester), originalWebView), isTrue);
+      expect(tester.getRect(find.byType(BookReaderWebView)), originalBounds);
+      expect(
+        await originalWebView.debugController!.evaluateJavascript(
+          source: 'window.innerHeight',
+        ),
+        originalViewportHeight,
+      );
       await capture(tester, 'book-search-navigation');
       await tapUi(tester, find.byKey(const ValueKey('reader-search-reopen')));
       expect(
@@ -256,6 +266,7 @@ void main() {
       );
       expect(searchCubit.state.returnLocation, isNull);
       expect(identical(bookState(tester), originalWebView), isTrue);
+      expect(tester.getRect(find.byType(BookReaderWebView)), originalBounds);
       await capture(tester, 'book-search-returned');
       await showChrome(tester);
       await tapUi(tester, find.byTooltip('Search'));
@@ -785,7 +796,13 @@ void main() {
       expect(request.sourceLanguage, 'auto');
       expect(request.targetLanguage, 'fr');
       expect(find.text('Zusatzakku'), findsNothing);
-      expect(find.text('Auto: English'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('translation-source-language')),
+          matching: find.text('English'),
+        ),
+        findsOneWidget,
+      );
       expect(find.byType(ReaderHighlightControls), findsNothing);
       await capture(tester, 'book-translation-language-changed');
       await dismissSheet(tester);
@@ -1033,6 +1050,10 @@ void main() {
         webView,
       );
       final controller = originalWebView.debugController!;
+      final originalBounds = tester.getRect(webView);
+      final originalViewportHeight = await controller.evaluateJavascript(
+        source: 'window.innerHeight',
+      );
       final bloc = tester.element(webView).read<ReaderBloc>();
       for (final startProgress in [0.35, 0.0]) {
         originalWebView.goToFraction(startProgress);
@@ -1074,6 +1095,44 @@ void main() {
           tester,
           'article-search-navigation-${(startProgress * 100).round()}',
         );
+        expect(tester.getRect(webView), originalBounds);
+        expect(
+          await controller.evaluateJavascript(source: 'window.innerHeight'),
+          originalViewportHeight,
+        );
+        // Put the exact active match behind the overlay using native WebView
+        // scrolling, not a mock marker or a second copy of the article layout.
+        await controller.evaluateJavascript(
+          source: '''(() => {
+          const rect = document.querySelector('mark.readflex-search-match').getBoundingClientRect();
+          window.scrollBy(0, rect.top - (window.innerHeight - 40));
+        })()''',
+        );
+        await tester.pump(const Duration(milliseconds: 300));
+        final edge = await controller.evaluateJavascript(
+          source: '''(() => {
+          const marker = document.querySelector('[data-readflex-search-occlusion] > rect');
+          if (!marker) return null;
+          const bar = marker.getBoundingClientRect();
+          const word = document.querySelector('mark.readflex-search-match').getBoundingClientRect();
+          return {left: bar.left, width: bar.width, wordLeft: word.left, wordWidth: word.width};
+        })()''',
+        );
+        expect(edge, isA<Map>());
+        await capture(
+          tester,
+          'article-search-covered-${(startProgress * 100).round()}',
+        );
+        expect(
+          (edge as Map)['left'],
+          closeTo(edge['wordLeft'] as num, 1),
+          reason: jsonEncode(edge),
+        );
+        expect(
+          edge['width'],
+          closeTo(edge['wordWidth'] as num, 1),
+          reason: jsonEncode(edge),
+        );
         expect(
           search.state.returnLocation!.fraction,
           closeTo(originalProgress, 0.001),
@@ -1104,6 +1163,7 @@ void main() {
           ),
           isTrue,
         );
+        expect(tester.getRect(webView), originalBounds);
       }
       await select(tester, 'power', article: true);
       Future<void> expectNativeSelectionOnly(String text) async {

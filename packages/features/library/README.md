@@ -69,6 +69,8 @@ manual collection's memberships a second time.
 The screen uses separate widgets (`LibraryListView`, `LibraryGridView`) for
 each layout and a local `TextEditingController` for the search field so
 keystrokes don't churn bloc state.
+List separators use the shared `DividerTheme` for color and thickness, matching
+the import sheet. They are painted above cover shadows so the line stays visible.
 
 Empty-state is handled twice: truly empty library vs. all items filtered out.
 The filtered empty state offers **Reset filters**. It clears search text,
@@ -78,6 +80,29 @@ pending search text cannot restore an obsolete filter. Collection selection
 and clearing use separate labeled 48px targets; clearing never opens the picker.
 Load errors go through `addError` and a `LibraryStatus.failure` retry surface.
 Delete errors keep the list usable and report failure through a deletion effect.
+
+## Library Controls
+
+Selection replaces the import FAB with a bottom action bar: selected count,
+explicit cancel, add to collection, and secondary delete. Scaffold reserves its
+height, including the safe area. System Back still clears selection. Display and
+selection changes reuse loaded sources instead of querying storage again.
+
+Display uses compact layout/theme segments, falling back to full-width rows
+when localized labels at the current text scale do not fit. Groups are separated
+by spacing, without an extra divider above Language. The language row
+shows the current language beside the chevron, mirrored for RTL. When they do
+not fit alongside the label, the value and chevron move together onto the next
+line. It opens a separate picker and returns to Display; all supported languages
+remain available.
+
+Collection edits remain staged until Save. Cancel, Close and system Back prompt
+only when there are actual edits. Drag/scrim dismissal is disabled for this form
+so it cannot bypass the guard. Delete is secondary and has its own confirmation.
+Large text and keyboard-constrained layouts scroll the form in a single lazy
+sliver viewport while keeping Save/Cancel available. No collection/source is
+deleted by canceling the form. Footer actions stack when localized labels at
+the user's text scale cannot fit side by side.
 
 ## Dependencies
 

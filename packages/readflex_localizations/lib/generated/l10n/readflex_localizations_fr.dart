@@ -9,6 +9,27 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
   ReadflexLocalizationsFr([String locale = 'fr']) : super(locale);
 
   @override
+  String librarySelectedCount(int count) {
+    return 'Sélection : $count';
+  }
+
+  @override
+  String get libraryCancelSelection => 'Annuler la sélection';
+
+  @override
+  String get libraryDiscardChangesTitle => 'Abandonner les modifications ?';
+
+  @override
+  String get libraryDiscardChangesBody =>
+      'Les modifications de cette collection ne sont pas enregistrées.';
+
+  @override
+  String get libraryDiscardChanges => 'Abandonner';
+
+  @override
+  String get libraryKeepEditing => 'Continuer';
+
+  @override
   String get readerSelectionStart => 'Début de la sélection';
 
   @override
@@ -648,6 +669,16 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
 
   @override
   String get importTryAgain => 'Réessayer';
+
+  @override
+  String get importChooseFile => 'Choisir un fichier';
+
+  @override
+  String get importEditLink => 'Modifier le lien';
+
+  @override
+  String get importClipboardUnavailable =>
+      'Impossible de lire le presse-papiers';
 
   @override
   String get importArticleUrlRequired => 'Saisissez l\'URL de l\'article';

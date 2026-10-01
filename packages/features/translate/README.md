@@ -78,8 +78,11 @@ color without a background fill. Long context cannot push the answer
 below the initial viewport. Text-translation mode shows one complete translation
 followed by the exact selected source under Original, without lexical sections.
 Only the selected word uses the compact `titleLarge` Geist heading; contextual
-expressions use `titleMedium`. All translations use consistent `bodyLarge`
-typography with zero letter spacing, including short single-word answers.
+expressions use `titleMedium`. Short contextual answers to a single word receive
+22px semibold emphasis when they contain at most 48 graphemes and fit in two
+lines at the user's text scale. The length cap also applies on wide screens.
+Long answers, expression/text translations and the standalone meaning keep
+`bodyLarge` typography with zero letter spacing.
 Neither surface uses reader-style headline typography. The sheet body has a bounded,
 scrollable viewport so long contexts and lexical results do not overflow.
 The shared `ScrollEdgeFadeStack` adds full-width shadows when content extends
@@ -112,14 +115,17 @@ end of a long result, including when they stack on narrow/large-text screens.
 Opening a source-language recovery menu does not move the result viewport.
 The two language menus size to their labels, retain 48px minimum tap targets and
 adapt to system text scaling. They are unfilled text controls: primary in light
-mode, on-surface in dark mode so labels keep at least 4.5:1 contrast. They show
+mode, primary-fixed-dim in dark mode so labels keep at least 4.5:1 contrast. They show
 source, direction arrow and target;
 there is no duplicate direction caption or visible From/To label. Those roles
 remain available to assistive technologies. Controls stack with a downward
 arrow when the labels cannot fit side by side. The horizontal arrow and control
 order follow the UI writing direction. Menus are disabled while a request runs.
-An automatically detected language is shown as **Auto: English**, for example,
-without replacing the actual `auto` source preference or request value.
+An automatically detected language is shown compactly as **English**, for example.
+Its accessibility value still includes the localized auto-detection prefix, and
+Auto remains selected in the menu. Neither preference nor request changes from
+`auto`. The sheet has an explicit close action and a taller result viewport for
+large text; no backend or reader remount is needed for these layout changes.
 
 Action, sheet, recovery and detail labels use the shared ARB catalog in all ten
 supported locales. Language names retain the application's existing autonyms.

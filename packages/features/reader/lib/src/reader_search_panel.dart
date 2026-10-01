@@ -119,10 +119,10 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
       return Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
+            padding: const EdgeInsetsDirectional.fromSTEB(
+              AppSpacing.lg,
               AppSpacing.sm,
-              AppSpacing.xs,
+              AppSpacing.lg,
               AppSpacing.xs,
             ),
             child: Row(
@@ -145,7 +145,10 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: SearchField(
               controller: _field,
               focusNode: _focus,
@@ -159,9 +162,9 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
           if (state.results.isNotEmpty)
             Padding(
               padding: const EdgeInsetsDirectional.fromSTEB(
-                AppSpacing.md,
+                AppSpacing.lg,
                 0,
-                AppSpacing.md,
+                AppSpacing.lg,
                 AppSpacing.sm,
               ),
               child: Align(
@@ -219,7 +222,10 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
         itemBuilder: (_, index) {
           if (index == 0) {
             return Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.md,
+              ),
               child: Text(
                 l10n.readerRecentSearches,
                 style: context.text.labelMedium,
@@ -228,6 +234,10 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
           }
           final query = state.recentQueries[index - 1];
           return ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.xs,
+            ),
             leading: Icon(
               AppIcons.clock,
               size: AppIconSize.xs,

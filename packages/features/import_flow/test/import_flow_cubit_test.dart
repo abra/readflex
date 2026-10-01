@@ -322,7 +322,70 @@ void main() {
       ],
     );
 
-    // "Try again" on the failure screen wires straight to
+    test('paste validates in place and clears errors on valid input', () async {
+      final cubit = _buildCubit();
+      addTearDown(cubit.close);
+      cubit.showArticleUrlEntry();
+      cubit.articleUrlChanged('https://example.com/keep');
+      for (final text in ['', 'not a link', 'javascript:alert(1)']) {
+        cubit.articleUrlPasted(text);
+        expect(
+          cubit.state,
+          const ImportFlowArticleUrlEntry(
+            url: 'https://example.com/keep',
+            errorCode: ImportFlowErrorCode.invalidArticleUrl,
+          ),
+        );
+      }
+      cubit.articleClipboardUnavailable();
+      expect(
+        cubit.state,
+        const ImportFlowArticleUrlEntry(
+          url: 'https://example.com/keep',
+          errorCode: ImportFlowErrorCode.clipboardUnavailable,
+        ),
+      );
+      cubit.articleUrlPasted('example.com/new');
+      expect(
+        cubit.state,
+        const ImportFlowArticleUrlEntry(url: 'https://example.com/new'),
+      );
+      cubit.backToMenu();
+      cubit.articleUrlPasted('example.com/stale');
+      cubit.articleClipboardUnavailable();
+      expect(cubit.state, const ImportFlowMenu());
+    });
+
+    test(
+      'article failure returns to the URL without importing again',
+      () async {
+        final urls = <String>[];
+        final cubit = _buildCubit(
+          importArticle: (url, {onStage}) async {
+            urls.add(url);
+            return null;
+          },
+        );
+        addTearDown(cubit.close);
+
+        await cubit.importArticle('example.com/article');
+        cubit.retryAfterFailure();
+
+        expect(
+          cubit.state,
+          const ImportFlowArticleUrlEntry(url: 'https://example.com/article'),
+        );
+        expect(urls, ['https://example.com/article']);
+        cubit.articleUrlChanged('https://example.com/edited');
+        await cubit.submitArticleUrl();
+        expect(urls, [
+          'https://example.com/article',
+          'https://example.com/edited',
+        ]);
+      },
+    );
+
+    // "Choose file" on the failure screen wires straight to
     // pickAndImportBook (no detour through the menu). From an
     // ImportFlowFailure seed we expect the same uploading→done sequence
     // a fresh pick would produce.
@@ -421,7 +484,7 @@ void main() {
     });
 
     // Re-entry guard: double-tapping the menu's "Upload Book" tile
-    // (or the failure screen's "Try again" button) used to launch two
+    // (or the failure screen's "Choose file" button) used to launch two
     // platform pickers concurrently and race on cubit state when both
     // resolved. The flag in `pickAndImportBook` makes the second call
     // a no-op while the first picker is still open.

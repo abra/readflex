@@ -5,8 +5,8 @@ import 'package:contextual_translation_service/contextual_translation_service.da
 import 'package:flutter/material.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
-const _pickerPadding = AppSpacing.sm;
-const _pickerIconGap = AppSpacing.sm;
+const _pickerPadding = AppSpacing.xxs;
+const _pickerIconGap = AppSpacing.xs;
 
 class TranslationLanguageDirection extends StatelessWidget {
   const TranslationLanguageDirection({
@@ -33,9 +33,7 @@ class TranslationLanguageDirection extends StatelessWidget {
     final l10n = context.l10n;
     final detected = translationLanguageName(detectedSourceLanguage);
     final sourceLabel = sourceLanguageCode == autoSourceLanguageCode
-        ? detected == null
-              ? l10n.translationAutoSource
-              : l10n.translationAutoDetectedSource(detected)
+        ? detected ?? l10n.translationAutoSource
         : translationLanguageName(sourceLanguageCode)!;
     final targetLabel = translationLanguageName(targetLanguageCode)!;
 
@@ -44,7 +42,7 @@ class TranslationLanguageDirection extends StatelessWidget {
         final sourceWidth = _labelWidth(context, sourceLabel);
         final targetWidth = _labelWidth(context, targetLabel);
         final stacked =
-            sourceWidth + targetWidth + AppIconSize.sm + 2 * AppSpacing.sm >
+            sourceWidth + targetWidth + AppIconSize.sm + 2 * AppSpacing.xs >
             constraints.maxWidth;
         final source = SizedBox(
           width: math.min(sourceWidth, constraints.maxWidth),
@@ -53,6 +51,10 @@ class TranslationLanguageDirection extends StatelessWidget {
             controller: sourceMenu,
             semanticsLabel: l10n.translationSourceLanguage,
             label: sourceLabel,
+            semanticsValue:
+                sourceLanguageCode == autoSourceLanguageCode && detected != null
+                ? l10n.translationAutoDetectedSource(detected)
+                : sourceLabel,
             selectedCode: sourceLanguageCode,
             enabled: enabled,
             includeAuto: true,
@@ -101,7 +103,7 @@ class TranslationLanguageDirection extends StatelessWidget {
                   source,
                   Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
+                      horizontal: AppSpacing.xs,
                     ),
                     child: arrow,
                   ),
@@ -117,7 +119,7 @@ double _labelWidth(BuildContext context, String label) {
   // Measure only the two labels, including system scaling, to avoid clipped
   // language names or a stranded direction arrow when the controls wrap.
   final painter = TextPainter(
-    text: TextSpan(text: label, style: context.text.bodyMedium),
+    text: TextSpan(text: label, style: context.text.bodySmall),
     textDirection: Directionality.of(context),
     textScaler: MediaQuery.textScalerOf(context),
     maxLines: 1,
@@ -141,6 +143,7 @@ class _LanguageMenu extends StatelessWidget {
     required this.onChanged,
     this.controller,
     this.includeAuto = false,
+    this.semanticsValue,
   });
 
   final Key buttonKey;
@@ -151,6 +154,7 @@ class _LanguageMenu extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final MenuController? controller;
   final bool includeAuto;
+  final String? semanticsValue;
 
   @override
   Widget build(BuildContext context) {
@@ -184,7 +188,7 @@ class _LanguageMenu extends StatelessWidget {
         void toggle() => menu.isOpen ? menu.close() : menu.open();
         return Semantics(
           label: semanticsLabel,
-          value: label,
+          value: semanticsValue ?? label,
           button: true,
           enabled: enabled,
           excludeSemantics: true,
@@ -194,10 +198,10 @@ class _LanguageMenu extends StatelessWidget {
             onPressed: enabled ? toggle : null,
             style: TextButton.styleFrom(
               foregroundColor: context.colors.brightness == Brightness.dark
-                  ? context.colors.onSurface
+                  ? context.colors.primaryFixedDim
                   : context.colors.primary,
               backgroundColor: Colors.transparent,
-              textStyle: context.text.bodyMedium,
+              textStyle: context.text.bodySmall,
               minimumSize: const Size(0, AppSizes.buttonHeight),
               padding: const EdgeInsets.symmetric(
                 horizontal: _pickerPadding,

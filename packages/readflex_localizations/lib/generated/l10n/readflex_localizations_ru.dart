@@ -9,6 +9,27 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   ReadflexLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
+  String librarySelectedCount(int count) {
+    return 'Выбрано: $count';
+  }
+
+  @override
+  String get libraryCancelSelection => 'Отменить выбор';
+
+  @override
+  String get libraryDiscardChangesTitle => 'Отменить изменения?';
+
+  @override
+  String get libraryDiscardChangesBody =>
+      'Изменения этой коллекции ещё не сохранены.';
+
+  @override
+  String get libraryDiscardChanges => 'Отменить изменения';
+
+  @override
+  String get libraryKeepEditing => 'Продолжить';
+
+  @override
   String get readerSelectionStart => 'Начало выделения';
 
   @override
@@ -651,6 +672,15 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
 
   @override
   String get importTryAgain => 'Повторить';
+
+  @override
+  String get importChooseFile => 'Выбрать файл';
+
+  @override
+  String get importEditLink => 'Изменить ссылку';
+
+  @override
+  String get importClipboardUnavailable => 'Не удалось прочитать буфер обмена';
 
   @override
   String get importArticleUrlRequired => 'Введите URL статьи';

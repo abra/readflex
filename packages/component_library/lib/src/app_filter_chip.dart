@@ -52,6 +52,9 @@ class AppFilterChip extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
+      label: count == null ? label : '$label, $count',
+      excludeSemantics: true,
+      onTap: onTap,
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,

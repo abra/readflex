@@ -42,3 +42,4 @@ export 'src/theme/tokens/app_sizes.dart';
 export 'src/theme/tokens/app_spacing.dart';
 export 'src/scroll_edge_fade_stack.dart';
 export 'src/top_scroll_under_scrim.dart';
+export 'src/app_plain_icon_button.dart';

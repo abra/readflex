@@ -15,9 +15,8 @@ import 'theme/tokens/app_spacing.dart';
 ///
 /// By default the sheet is fully dismissible — the wrapper draws a
 /// drag handle at the top, and the user can also dismiss by dragging
-/// the sheet down or tapping the scrim. There's no per-feature
-/// close-X: closing is owned entirely by this wrapper, and feature
-/// content uses [BottomSheetHeader] only for the title.
+/// the sheet down or tapping the scrim. Feature content may additionally
+/// provide an explicit close action through [BottomSheetHeader].
 ///
 /// Pass `dismissible: false` to disable the drag handle, drag-down,
 /// and scrim tap at once. Note the system back gesture still pops

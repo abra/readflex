@@ -389,6 +389,16 @@ highlights and does not create a native text selection. Tests cover repeated
 words, redraw after resizing, light/dark pages, paginated/scrolled layouts and
 stale navigation after a new result or search reset. Articles use the same
 amber fill on their single active search marker.
+`searchOverlayBottomFraction` describes the Flutter search panel's occlusion,
+not padding. Both reader widgets synchronize it on readiness and when it changes,
+including renderer recovery. `readflex_search_occlusion.js` projects covered
+active-match fragments onto an inert amber line above that band without changing
+scroll position, pagination or native selection. Books reuse the active SVG
+annotation's viewport rectangles; articles use the exact match element. Scroll
+and resize work is coalesced into one animation frame, stays inside the WebView,
+and is detached when the overlay is disabled. Browser tests cover both engines,
+hidden/visible matches, pagination stability, coalescing and disposal; root
+widget and native reader tests check the unchanged WebView bounds.
 Book selection regressions load the actual `book.js` runtime and EPUB directory
 loader (with fixture transport) as well as the standalone paginator. They cover
 unwanted delayed page turns, iframe gesture ownership, cancelled gestures and

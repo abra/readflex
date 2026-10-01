@@ -690,7 +690,7 @@ void main() {
           AppSizes.buttonHeight,
         );
       }
-      expect(find.text('Auto: English'), findsOneWidget);
+      expect(find.text('English'), findsOneWidget);
       expect(find.text('English -> Русский'), findsNothing);
       expect(tester.getSize(selectors.last).width, lessThan(160));
       final preview = _previewText(tester);
@@ -712,9 +712,11 @@ void main() {
       expect(translationWidget.data, 'сила');
       expect(
         translationWidget.style,
-        Theme.of(
-          tester.element(translation),
-        ).textTheme.bodyLarge!.copyWith(letterSpacing: 0),
+        Theme.of(tester.element(translation)).textTheme.titleLarge!.copyWith(
+          fontSize: 22,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0,
+        ),
       );
       semantics.dispose();
     },
@@ -1209,7 +1211,7 @@ void main() {
     expect(service.requests.last.sourceLanguage, 'auto');
     expect(service.requests.last.selection.text, _selection.selectedText);
     expect(find.text('Lexical explanation'), findsNothing);
-    expect(find.text('Auto: English'), findsOneWidget);
+    expect(find.text('English'), findsOneWidget);
     expect(find.text('Deutsch'), findsOneWidget);
   });
 
@@ -1233,10 +1235,7 @@ void main() {
       expect(l10n.localeName, locale.toString());
       expect(find.text(l10n.translationTitle), findsOneWidget);
       expect(find.text(l10n.translationDetails), findsOneWidget);
-      expect(
-        find.text(l10n.translationAutoDetectedSource('English')),
-        findsOne,
-      );
+      expect(find.text('English'), findsOne);
       final sheet = tester.widget<TranslateSheet>(find.byType(TranslateSheet));
       final action = TranslateAction(
         translationService: sheet.translationService,

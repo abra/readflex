@@ -8,6 +8,13 @@ import 'reader_bridge.dart';
 const readerTextSelectionTracingEnabled =
     kDebugMode && bool.fromEnvironment('READFLEX_TRACE_TEXT_SELECTION');
 
+/// A ratio keeps the overlay edge aligned across CSS and Flutter pixel scales.
+String readerSearchOverlayExpression(double fraction) {
+  final inset = fraction.isFinite ? fraction.clamp(0.0, 1.0) : 0.0;
+  return "typeof window.setSearchOverlayInset === 'function' "
+      '? window.setSearchOverlayInset(${jsonEncode(inset)}) : null';
+}
+
 @visibleForTesting
 final class ReaderTapPayload {
   const ReaderTapPayload({required this.x, required this.y});

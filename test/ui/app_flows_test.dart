@@ -63,18 +63,21 @@ void main() {
       find.byType(TextField).last,
       ReadingFixture.articleUrl,
     );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Save'));
     await tapUi(tester, find.widgetWithText(FilledButton, 'Save'));
     await waitForUi(
       tester,
-      () => find.text('Try again').evaluate().isNotEmpty,
+      () => find.text('Edit link').evaluate().isNotEmpty,
       description: 'retry after import failure',
     );
     app.articleExtractionService.fail = false;
-    await tapUi(tester, find.text('Try again'));
-    await tester.enterText(
-      find.byType(TextField).last,
+    await tapUi(tester, find.text('Edit link'));
+    expect(
+      tester.widget<TextField>(find.byType(TextField).last).controller!.text,
       ReadingFixture.articleUrl,
     );
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Save'));
     await tapUi(tester, find.widgetWithText(FilledButton, 'Save'));
     await waitForUi(tester, () {
       expect(app.articleRepository.lastError, isNull);

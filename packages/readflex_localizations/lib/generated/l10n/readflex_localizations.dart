@@ -117,6 +117,42 @@ abstract class ReadflexLocalizations {
     Locale('ja'),
   ];
 
+  /// No description provided for @librarySelectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected: {count}'**
+  String librarySelectedCount(int count);
+
+  /// No description provided for @libraryCancelSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel selection'**
+  String get libraryCancelSelection;
+
+  /// No description provided for @libraryDiscardChangesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard changes?'**
+  String get libraryDiscardChangesTitle;
+
+  /// No description provided for @libraryDiscardChangesBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your changes to this collection have not been saved.'**
+  String get libraryDiscardChangesBody;
+
+  /// No description provided for @libraryDiscardChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get libraryDiscardChanges;
+
+  /// No description provided for @libraryKeepEditing.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep editing'**
+  String get libraryKeepEditing;
+
   /// No description provided for @readerSelectionStart.
   ///
   /// In en, this message translates to:
@@ -1172,6 +1208,24 @@ abstract class ReadflexLocalizations {
   /// In en, this message translates to:
   /// **'Try again'**
   String get importTryAgain;
+
+  /// No description provided for @importChooseFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose file'**
+  String get importChooseFile;
+
+  /// No description provided for @importEditLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit link'**
+  String get importEditLink;
+
+  /// No description provided for @importClipboardUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read the clipboard'**
+  String get importClipboardUnavailable;
 
   /// No description provided for @importArticleUrlRequired.
   ///

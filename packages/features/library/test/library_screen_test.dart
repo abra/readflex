@@ -53,6 +53,7 @@ void main() {
 
   Widget buildSubject({
     ArticleRepository? articleRepository,
+    ThemeData? theme,
     bool isOffline = false,
     LibraryImportLauncher? onAddPressed,
   }) => PreferencesScope(
@@ -62,7 +63,7 @@ void main() {
         locale: PreferencesScope.localeOf(context),
         supportedLocales: ReadflexSupportedLocales.locales,
         localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
-        theme: AppTheme.light(),
+        theme: theme ?? AppTheme.light(),
         home: LibraryScreen(
           bookRepository: bookRepository,
           articleRepository: articleRepository,
@@ -74,6 +75,133 @@ void main() {
         ),
       ),
     ),
+  );
+
+  testWidgets('selection count and explicit cancel do not reload storage', (
+    tester,
+  ) async {
+    bookRepository.seedBooks([_book, _secondBook]);
+    await tester.pumpWidget(buildSubject());
+    await tester.pumpAndSettle();
+    await tester.longPress(find.text(_book.title));
+    await tester.pumpAndSettle();
+    expect(find.text('Selected: 1'), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsNothing);
+    await tester.ensureVisible(find.text(_secondBook.title));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(_secondBook.title));
+    await tester.pumpAndSettle();
+    expect(find.text('Selected: 2'), findsOneWidget);
+    await tester.tap(find.byTooltip('Cancel selection'));
+    await tester.pumpAndSettle();
+    expect(find.text('Selected: 2'), findsNothing);
+    expect(find.byType(FloatingActionButton), findsOneWidget);
+    expect(bookRepository.getBooksCallCount, 1);
+  });
+
+  testWidgets('large dark display rows and language keep readable selection', (
+    tester,
+  ) async {
+    // Narrow 320px layouts are covered by the root goldens with real fonts.
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    final theme = AppTheme.dark();
+    await tester.pumpWidget(buildSubject(theme: theme));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Display options'));
+    await tester.pumpAndSettle();
+
+    void expectReadableSelection(int count) {
+      final tiles = tester
+          .widgetList<ListTile>(
+            find.descendant(
+              of: find.byType(ActionBottomSheetLayout).last,
+              matching: find.byType(ListTile),
+            ),
+          )
+          .where((tile) => tile.selected);
+      expect(tiles, hasLength(count));
+      for (final tile in tiles) {
+        final foreground = tile.selectedColor!.computeLuminance();
+        final background = theme.colorScheme.surface.computeLuminance();
+        expect(
+          (foreground + 0.05) / (background + 0.05),
+          greaterThanOrEqualTo(4.5),
+        );
+      }
+    }
+
+    expectReadableSelection(2);
+    final picker = find.byKey(const ValueKey('libraryLanguagePicker'));
+    await tester.ensureVisible(picker);
+    await tester.pumpAndSettle();
+    await tester.tap(picker);
+    await tester.pumpAndSettle();
+    expectReadableSelection(1);
+  });
+
+  testWidgets(
+    'display opens a separate language picker and returns to settings',
+    (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Display options'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('libraryLanguageOption-ru')),
+        findsNothing,
+      );
+      final languageRow = find.byKey(const ValueKey('libraryLanguagePicker'));
+      final label = find.descendant(
+        of: languageRow,
+        matching: find.text('Language'),
+      );
+      final value = find.descendant(
+        of: languageRow,
+        matching: find.text('English'),
+      );
+      final arrow = find.descendant(
+        of: languageRow,
+        matching: find.byIcon(AppIcons.chevronRight),
+      );
+      expect(
+        tester.getCenter(label).dy,
+        closeTo(tester.getCenter(value).dy, 1),
+      );
+      expect(tester.getRect(label).right, lessThan(tester.getRect(value).left));
+      expect(
+        tester.getRect(arrow).left - tester.getRect(value).right,
+        closeTo(AppSpacing.sm, 1),
+      );
+      await tester.tap(find.byKey(const ValueKey('libraryLanguagePicker')));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('libraryLanguageOption-ru')),
+        100,
+        scrollable: find.descendant(
+          of: find.byType(ListView).last,
+          matching: find.byType(Scrollable),
+        ),
+      );
+      await tester.tap(find.byKey(const ValueKey('libraryLanguageOption-ru')));
+      await tester.pumpAndSettle();
+      expect(preferencesService.current.locale.languageCode, 'ru');
+      expect(
+        find.byKey(const ValueKey('libraryLanguagePicker')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('libraryLanguageOption-ru')),
+        findsNothing,
+      );
+      expect(bookRepository.getBooksCallCount, 1);
+    },
   );
 
   testWidgets('import completion refreshes after the import UI has closed', (
@@ -223,6 +351,13 @@ void main() {
     expect(find.text('View'), findsOneWidget);
     expect(find.text('Appearance'), findsOneWidget);
     expect(find.text('Language'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(ActionBottomSheetLayout),
+        matching: find.byType(Divider),
+      ),
+      findsNothing,
+    );
     expect(find.text('List'), findsOneWidget);
     expect(find.text('Grid'), findsOneWidget);
     expect(find.text('System'), findsOneWidget);
@@ -249,7 +384,16 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('libraryHeaderDisplayButton')));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Русский'));
+    await tester.tap(find.byKey(const ValueKey('libraryLanguagePicker')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Русский'),
+      100,
+      scrollable: find.descendant(
+        of: find.byType(ListView).last,
+        matching: find.byType(Scrollable),
+      ),
+    );
     await tester.tap(find.text('Русский'));
     await tester.pumpAndSettle();
 
@@ -258,7 +402,7 @@ void main() {
     expect(find.text('Язык'), findsOneWidget);
   });
 
-  testWidgets('display sheet lays language options out in two columns', (
+  testWidgets('language picker uses full-width rows with checkmark', (
     tester,
   ) async {
     bookRepository.seedBooks([_book]);
@@ -267,6 +411,8 @@ void main() {
     await tester.pump();
 
     await tester.tap(find.byKey(const ValueKey('libraryHeaderDisplayButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('libraryLanguagePicker')));
     await tester.pumpAndSettle();
     await tester.ensureVisible(
       find.byKey(const ValueKey('libraryLanguageOption-en')),
@@ -282,8 +428,9 @@ void main() {
       find.byKey(const ValueKey('libraryLanguageOption-hi')),
     );
 
-    expect(chineseRect.top, closeTo(englishRect.top, 1));
-    expect(chineseRect.left, greaterThan(englishRect.right));
+    expect(chineseRect.top, greaterThanOrEqualTo(englishRect.bottom));
+    expect(chineseRect.left, englishRect.left);
+    expect(englishRect.height, greaterThanOrEqualTo(48));
     expect(hindiRect.top, greaterThan(englishRect.top));
   });
 
@@ -738,7 +885,7 @@ void main() {
     );
   });
 
-  testWidgets('selection mode shows collection and delete FABs', (
+  testWidgets('selection mode shows collection and delete actions in a bar', (
     tester,
   ) async {
     bookRepository.seedBooks([_book]);
@@ -746,29 +893,18 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    final addFabCenter = tester.getCenter(find.byIcon(AppIcons.add));
-
     await tester.longPress(find.text('Flutter in Action'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(FloatingActionButton), findsNWidgets(2));
+    expect(find.byType(FloatingActionButton), findsNothing);
     expect(find.text('Add to collection'), findsOneWidget);
     expect(find.byIcon(AppIcons.collectionAdd), findsOneWidget);
     expect(find.byIcon(AppIcons.delete), findsOneWidget);
     expect(find.byIcon(AppIcons.add), findsNothing);
-    expect(
-      tester.getCenter(find.byIcon(AppIcons.delete)).dx,
-      closeTo(addFabCenter.dx, 1),
-    );
-    expect(
-      tester.getCenter(find.byIcon(AppIcons.delete)).dy,
-      closeTo(addFabCenter.dy, 1),
-    );
-
     final screenWidth = tester.getSize(find.byType(Scaffold)).width;
     expect(
       tester.getCenter(find.text('Add to collection')).dx,
-      lessThan(screenWidth * 0.35),
+      lessThan(tester.getCenter(find.byIcon(AppIcons.delete)).dx),
     );
     expect(
       tester.getCenter(find.byIcon(AppIcons.delete)).dx,
@@ -796,12 +932,13 @@ void main() {
     final actionRect = tester.getRect(
       find.ancestor(
         of: find.text('Ajouter à une collection'),
-        matching: find.byType(FloatingActionButton),
+        matching: find.byType(FilledButton),
       ),
     );
     final scaffoldWidth = tester.getSize(find.byType(Scaffold)).width;
 
-    expect(actionRect.width, lessThanOrEqualTo(scaffoldWidth * 0.54));
+    expect(actionRect.left, greaterThanOrEqualTo(0));
+    expect(actionRect.right, lessThanOrEqualTo(scaffoldWidth - 48));
     expect(tester.takeException(), isNull);
   });
 
@@ -1157,6 +1294,71 @@ void main() {
     expect(visibleGapBelowAuthor, greaterThanOrEqualTo(AppSpacing.lg));
   });
 
+  for (final closeMethod in ['cancel', 'close', 'back']) {
+    testWidgets('collection $closeMethod guards staged edits without saving', (
+      tester,
+    ) async {
+      final collection = LibraryCollection(
+        id: 'collection-1',
+        name: 'Reading',
+        sourceCount: 1,
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      );
+      bookRepository.seedBooks([_book]);
+      collectionRepository.seedCollections([collection]);
+      collectionRepository.seedCollectionSourceIds({
+        collection.id: {_book.id},
+      });
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(AppIcons.collection));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('collectionScopeManage-manual-collection-1')),
+      );
+      await tester.pumpAndSettle();
+      final sheet = find.byKey(const ValueKey('manageCollectionContent'));
+      await tester.enterText(
+        find.descendant(of: sheet, matching: find.byType(TextField)),
+        'Changed',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('collectionSourceRemove-b-1')),
+      );
+      await tester.pumpAndSettle();
+      Future<void> close() async {
+        switch (closeMethod) {
+          case 'cancel':
+            await tester.tap(find.text('Cancel'));
+          case 'close':
+            await tester.tap(find.byTooltip('Close'));
+          case 'back':
+            await tester.binding.handlePopRoute();
+        }
+        await tester.pumpAndSettle();
+      }
+
+      await close();
+      expect(find.text('Discard changes?'), findsOneWidget);
+      await tester.tap(find.text('Keep editing'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TextField, 'Changed'), findsOneWidget);
+      await close();
+      await tester.tap(find.text('Discard'));
+      await tester.pumpAndSettle();
+      expect(sheet, findsNothing);
+      expect(
+        (await collectionRepository.getCollections()).single.name,
+        'Reading',
+      );
+      expect(collectionRepository.addedSourceIdsByCollection[collection.id], {
+        _book.id,
+      });
+      expect(bookRepository.getBooksCallCount, 1);
+    });
+  }
+
   testWidgets('manual collection management removes a source', (
     tester,
   ) async {
@@ -1332,16 +1534,16 @@ void main() {
       of: sheet,
       matching: find.text('No items in this collection'),
     );
-    final saveButton = find.descendant(
-      of: sheet,
-      matching: find.widgetWithText(FilledButton, 'Save'),
-    );
-
     expect(countLabel, findsOneWidget);
     expect(emptyLabel, findsOneWidget);
 
     final listAreaTop = tester.getBottomLeft(countLabel).dy + AppSpacing.md;
-    final listAreaBottom = tester.getTopLeft(saveButton).dy - AppSpacing.lg;
+    final deleteAction = find.descendant(
+      of: sheet,
+      matching: find.widgetWithText(TextButton, 'Delete collection'),
+    );
+    final listAreaBottom =
+        tester.getTopLeft(deleteAction).dy - 1 - AppSpacing.lg;
     final expectedCenter = (listAreaTop + listAreaBottom) / 2;
 
     expect(tester.getCenter(emptyLabel).dy, closeTo(expectedCenter, 1));
@@ -1528,7 +1730,10 @@ void main() {
     expect(find.text('Manage collection'), findsNothing);
     expect(find.text('Delete collection?'), findsOneWidget);
 
-    final deleteTitle = find.text('Delete collection?');
+    final deleteHeader = find.descendant(
+      of: deleteStep,
+      matching: find.byType(BottomSheetHeader),
+    );
     final deleteMessage = find.descendant(
       of: deleteStep,
       matching: find.text(
@@ -1539,7 +1744,8 @@ void main() {
       of: deleteStep,
       matching: find.widgetWithText(FilledButton, 'Delete'),
     );
-    final messageAreaTop = tester.getBottomLeft(deleteTitle).dy + AppSpacing.lg;
+    final messageAreaTop =
+        tester.getBottomLeft(deleteHeader).dy + AppSpacing.lg;
     final messageAreaBottom =
         tester.getTopLeft(deleteButton).dy - AppSpacing.lg;
     final expectedMessageCenter = (messageAreaTop + messageAreaBottom) / 2;

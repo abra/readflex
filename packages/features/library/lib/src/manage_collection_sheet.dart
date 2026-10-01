@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
@@ -61,6 +63,8 @@ Future<ManageCollectionSheetResult?> showManageCollectionSheet({
 }) {
   return showAppBottomSheet<ManageCollectionSheetResult>(
     context,
+    // Closing goes through the form guard; a swipe must not discard edits.
+    dismissible: false,
     builder: (_) => BlocProvider.value(
       value: cubit,
       child: _ManageCollectionSheet(
@@ -99,6 +103,46 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
   _RemovingCollectionSource? _removingSource;
   var _animateNextSizeChange = false;
   var _step = _ManageCollectionStep.manage;
+  var _confirmingClose = false;
+
+  bool get _hasChanges =>
+      (widget.scope.canRename && _nameController.text.trim() != _currentName) ||
+      _removedSourceIds.isNotEmpty;
+
+  Future<void> _requestClose() async {
+    if (_confirmingClose ||
+        context.read<ManageCollectionCubit>().state.isBusy) {
+      return;
+    }
+    if (_step == _ManageCollectionStep.confirmDelete) {
+      _cancelDeleteConfirmation();
+      return;
+    }
+    if (!_hasChanges) {
+      Navigator.of(context).pop();
+      return;
+    }
+    _confirmingClose = true;
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(context.l10n.libraryDiscardChangesTitle),
+        content: Text(context.l10n.libraryDiscardChangesBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(context.l10n.libraryKeepEditing),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(context.l10n.libraryDiscardChanges),
+          ),
+        ],
+      ),
+    );
+    _confirmingClose = false;
+    if (mounted && discard == true) Navigator.of(context).pop();
+  }
 
   @override
   void initState() {
@@ -214,37 +258,51 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
         AppSpacing.md +
         sourceListHeight +
         AppSpacing.lg +
-        _manageCollectionActionsHeightEstimate;
+        _manageCollectionActionsHeightEstimate +
+        (widget.scope.canDelete ? AppSizes.buttonHeight + AppSpacing.lg : 0);
     final deleteHeight =
         _manageCollectionHeaderHeightEstimate +
         AppSpacing.lg +
         _manageCollectionDeleteBodyHeightEstimate +
         AppSpacing.lg +
         _manageCollectionActionsHeightEstimate;
-    final viewportLimit =
-        MediaQuery.sizeOf(context).height - _manageCollectionViewportTopReserve;
+    final viewportLimit = math.max(
+      0.0,
+      MediaQuery.sizeOf(context).height -
+          MediaQuery.viewInsetsOf(context).bottom -
+          _manageCollectionViewportTopReserve,
+    );
     final minHeight = switch (step) {
       _ManageCollectionStep.manage => _manageCollectionManageMinStepHeight,
       _ManageCollectionStep.confirmDelete =>
         _manageCollectionDeleteMinStepHeight,
     };
-    final maxHeight = viewportLimit < minHeight ? minHeight : viewportLimit;
+    final maxHeight = viewportLimit;
     final preferredHeight = switch (step) {
       _ManageCollectionStep.manage => manageHeight,
       _ManageCollectionStep.confirmDelete => deleteHeight,
     };
-    return preferredHeight.clamp(minHeight, maxHeight).toDouble();
+    final textScale = MediaQuery.textScalerOf(context).scale(15) / 15;
+    return (preferredHeight * textScale)
+        .clamp(math.min(minHeight, maxHeight), maxHeight)
+        .toDouble();
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ManageCollectionCubit, ManageCollectionState>(
-      builder: (context, state) {
-        return AnimatedBuilder(
-          animation: _sourceRemovalController,
-          builder: (context, _) => _buildSheet(context, state),
-        );
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _requestClose();
       },
+      child: BlocBuilder<ManageCollectionCubit, ManageCollectionState>(
+        builder: (context, state) {
+          return AnimatedBuilder(
+            animation: _sourceRemovalController,
+            builder: (context, _) => _buildSheet(context, state),
+          );
+        },
+      ),
     );
   }
 
@@ -271,6 +329,7 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
       _ManageCollectionStep.manage => _ManageCollectionStepView(
         key: const ValueKey('manageCollectionContent'),
         title: context.l10n.libraryManageCollectionTitle,
+        onClose: state.isBusy ? null : _requestClose,
         child: _ManageCollectionContent(
           state: state,
           nameController: _nameController,
@@ -281,6 +340,7 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
           canDelete: widget.scope.canDelete,
           canSave: canSave,
           onSave: _saveChanges,
+          onCancel: _requestClose,
           onRemoveSource: _stageSourceRemoval,
           onDeletePressed: _showDeleteConfirmation,
         ),
@@ -288,6 +348,7 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
       _ManageCollectionStep.confirmDelete => _ManageCollectionStepView(
         key: const ValueKey('deleteCollectionContent'),
         title: context.l10n.libraryDeleteCollectionTitle,
+        onClose: state.isBusy ? null : _cancelDeleteConfirmation,
         child: _DeleteCollectionConfirmationContent(
           state: state,
           collectionName: _currentName,
@@ -485,11 +546,13 @@ class _ManageCollectionStepView extends StatelessWidget {
   const _ManageCollectionStepView({
     required this.title,
     required this.child,
+    this.onClose,
     super.key,
   });
 
   final String title;
   final Widget child;
+  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -499,7 +562,11 @@ class _ManageCollectionStepView extends StatelessWidget {
         children: [
           Padding(
             padding: _sheetHorizontalPadding,
-            child: BottomSheetHeader(title: title),
+            child: BottomSheetHeader(
+              title: title,
+              onClose: onClose,
+              closeLabel: context.l10n.commonClose,
+            ),
           ),
           const SizedBox(height: AppSpacing.lg),
           Expanded(child: child),
@@ -522,6 +589,7 @@ class _ManageCollectionContent extends StatelessWidget {
     required this.canDelete,
     required this.canSave,
     required this.onSave,
+    required this.onCancel,
     required this.onRemoveSource,
     required this.onDeletePressed,
   });
@@ -535,92 +603,158 @@ class _ManageCollectionContent extends StatelessWidget {
   final bool canDelete;
   final bool canSave;
   final Future<void> Function() onSave;
+  final VoidCallback onCancel;
   final ValueChanged<LibrarySource> onRemoveSource;
   final VoidCallback onDeletePressed;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.max,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (state.errorCode != null) ...[
-          Padding(
-            padding: _sheetHorizontalPadding,
-            child: Text(
-              _manageCollectionErrorMessage(context.l10n, state.errorCode!),
-              style: context.text.bodyMedium.copyWith(
-                color: context.colors.error,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-        ],
-        if (canRename) ...[
-          Padding(
-            padding: _sheetHorizontalPadding,
-            child: TextField(
-              controller: nameController,
-              enabled: !state.isBusy,
-              textInputAction: TextInputAction.done,
-              decoration: const InputDecoration(),
-              onSubmitted: (_) => canSave ? onSave() : null,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-        ],
+    final fields = <Widget>[
+      if (state.errorCode != null) ...[
         Padding(
           padding: _sheetHorizontalPadding,
           child: Text(
-            _sourceCountLabel(context, visibleSources),
-            style: context.text.labelSmall.copyWith(
-              color: context.colors.onSurfaceVariant,
+            _manageCollectionErrorMessage(context.l10n, state.errorCode!),
+            style: context.text.bodyMedium.copyWith(
+              color: context.colors.error,
             ),
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        Expanded(
-          child: _CollectionSourcesList(
-            visibleSources: visibleSources,
-            removingSourceId: removingSourceId,
-            removalProgress: removalProgress,
+      ],
+      if (canRename) ...[
+        Padding(
+          padding: _sheetHorizontalPadding,
+          child: TextField(
+            controller: nameController,
             enabled: !state.isBusy,
-            onRemoveSource: onRemoveSource,
+            textInputAction: TextInputAction.done,
+            decoration: InputDecoration(
+              hintText: context.l10n.libraryCollectionNameRequired,
+            ),
+            onSubmitted: (_) => canSave ? onSave() : null,
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        Padding(
-          padding: _sheetActionsPadding,
-          child: canDelete
-              ? Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: context.colors.error,
-                          foregroundColor: context.colors.onError,
-                        ),
-                        onPressed: state.isBusy ? null : onDeletePressed,
-                        child: AppButtonLabel(
-                          context.l10n.libraryDeleteCollectionButton,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: canSave ? onSave : null,
-                        child: AppButtonLabel(context.l10n.commonSave),
-                      ),
-                    ),
-                  ],
-                )
-              : FilledButton(
-                  onPressed: canSave ? onSave : null,
-                  child: AppButtonLabel(context.l10n.commonSave),
-                ),
-        ),
       ],
+      Padding(
+        padding: _sheetHorizontalPadding,
+        child: Text(
+          _sourceCountLabel(context, visibleSources),
+          style: context.text.labelSmall.copyWith(
+            color: context.colors.onSurfaceVariant,
+          ),
+        ),
+      ),
+      const SizedBox(height: AppSpacing.md),
+    ];
+    final deleteAction = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Divider(height: 1),
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: TextButton.icon(
+            onPressed: state.isBusy ? null : onDeletePressed,
+            style: TextButton.styleFrom(foregroundColor: context.colors.error),
+            icon: const Icon(AppIcons.delete, size: AppIconSize.sm),
+            label: Text(context.l10n.libraryDeleteCollectionButton),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+      ],
+    );
+    final actions = _CollectionFormActions(
+      onCancel: state.isBusy ? null : onCancel,
+      onSave: canSave ? onSave : null,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Keep the footer reachable with the keyboard or large accessibility
+        // text. A single sliver viewport avoids nested scrolling and eager rows.
+        final scrollForm =
+            constraints.maxHeight < 260 ||
+            MediaQuery.textScalerOf(context).scale(15) > 20;
+        if (scrollForm) {
+          return Column(
+            children: [
+              Expanded(
+                child: ScrollEdgeFadeStack(
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: fields,
+                        ),
+                      ),
+                      if (visibleSources.isEmpty)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.xl),
+                            child: Text(
+                              context.l10n.libraryNoItemsInCollection,
+                              style: context.text.bodyMedium,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        )
+                      else
+                        SliverList.builder(
+                          itemCount: visibleSources.length,
+                          itemBuilder: (context, index) {
+                            final source = visibleSources[index];
+                            final removing = source.id == removingSourceId;
+                            return _CollapsibleCollectionSourceRow(
+                              source: source,
+                              enabled:
+                                  !state.isBusy && removingSourceId == null,
+                              showDivider: index < visibleSources.length - 1,
+                              sizeFactor: removing ? 1 - removalProgress : 1,
+                              onRemovePressed: () => onRemoveSource(source),
+                            );
+                          },
+                        ),
+                      if (canDelete)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: _sheetHorizontalPadding,
+                            child: deleteAction,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(padding: _sheetActionsPadding, child: actions),
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ...fields,
+            Expanded(
+              child: _CollectionSourcesList(
+                visibleSources: visibleSources,
+                removingSourceId: removingSourceId,
+                removalProgress: removalProgress,
+                enabled: !state.isBusy,
+                onRemoveSource: onRemoveSource,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Padding(
+              padding: _sheetActionsPadding,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [if (canDelete) deleteAction, actions],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -646,6 +780,60 @@ class _ManageCollectionContent extends StatelessWidget {
         ? context.l10n.libraryEmptySourceCount
         : parts.join(', ');
   }
+}
+
+class _CollectionFormActions extends StatelessWidget {
+  const _CollectionFormActions({required this.onCancel, required this.onSave});
+
+  final VoidCallback? onCancel;
+  final VoidCallback? onSave;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final cancel = OutlinedButton(
+        onPressed: onCancel,
+        child: AppButtonLabel(context.l10n.commonCancel),
+      );
+      final save = FilledButton(
+        onPressed: onSave,
+        child: AppButtonLabel(context.l10n.commonSave),
+      );
+      final labelWidth =
+          (constraints.maxWidth - AppSpacing.md) / 2 - AppSpacing.lg * 2;
+      var stacked = false;
+      for (final label in [
+        context.l10n.commonCancel,
+        context.l10n.commonSave,
+      ]) {
+        final painter = TextPainter(
+          text: TextSpan(text: label, style: context.text.labelLarge),
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+        )..layout();
+        stacked |= painter.width > labelWidth;
+        painter.dispose();
+      }
+      if (stacked) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            save,
+            const SizedBox(height: AppSpacing.sm),
+            cancel,
+          ],
+        );
+      }
+      return Row(
+        children: [
+          Expanded(child: cancel),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(child: save),
+        ],
+      );
+    },
+  );
 }
 
 /// Scrollable list of sources currently displayed inside the collection.
@@ -863,21 +1051,12 @@ class _CollectionSourceRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.md),
-          IconButton(
+          AppPlainIconButton(
             key: ValueKey('collectionSourceRemove-${source.id}'),
             tooltip: context.l10n.libraryRemoveFromCollection(source.title),
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              foregroundColor: colors.onSurfaceVariant,
-              minimumSize: const Size.square(40),
-              padding: EdgeInsets.zero,
-            ),
-            visualDensity: VisualDensity.compact,
+            color: colors.onSurfaceVariant,
             onPressed: enabled ? onRemovePressed : null,
-            icon: const Icon(
-              AppIcons.close,
-              size: AppIconSize.sm,
-            ),
+            icon: AppIcons.close,
           ),
         ],
       ),

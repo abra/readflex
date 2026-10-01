@@ -199,40 +199,60 @@ void main() {
     );
   });
 
-  testWidgets('list separators span the cover column above shadows', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light(),
-        home: Scaffold(
-          body: LibraryListView(
-            sources: _books.map(LibrarySource.fromBook).toList(),
-            selection: const LibrarySelectionState(),
-            scrollController: ScrollController(),
-            onSourcePressed: (_) {},
-            onSourceLongPressed: (_) {},
-            onConfirmSwipeDelete: (_) async => false,
+  for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+    testWidgets(
+      'list separators use the shared theme above shadows: ${theme.brightness}',
+      (
+        tester,
+      ) async {
+        final controller = ScrollController();
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: theme,
+            home: Scaffold(
+              body: LibraryListView(
+                sources: _books.map(LibrarySource.fromBook).toList(),
+                selection: const LibrarySelectionState(),
+                scrollController: controller,
+                onSourcePressed: (_) {},
+                onSourceLongPressed: (_) {},
+                onConfirmSwipeDelete: (_) async => false,
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+
+        final dividerFinder = find.byKey(
+          const ValueKey('libraryListRowTopDivider'),
+        );
+        expect(dividerFinder, findsOneWidget);
+        final decoration =
+            tester
+                    .widget<DecoratedBox>(
+                      find.descendant(
+                        of: dividerFinder,
+                        matching: find.byType(DecoratedBox),
+                      ),
+                    )
+                    .decoration
+                as BoxDecoration;
+        final border = decoration.border! as Border;
+        expect(border.bottom.color, theme.dividerTheme.color);
+        expect(border.bottom.width, theme.dividerTheme.thickness);
+
+        final dividerTop = tester.getTopLeft(dividerFinder).dy;
+        final dividerLeft = tester.getTopLeft(dividerFinder).dx;
+        final firstTitleTop = tester.getTopLeft(find.text('First Book')).dy;
+        final secondTitleOffset = tester.getTopLeft(find.text('Second Book'));
+
+        expect(dividerTop, greaterThan(firstTitleTop));
+        expect(dividerTop, lessThan(secondTitleOffset.dy));
+        expect(dividerLeft, AppSpacing.lg);
+        expect(dividerLeft, lessThan(secondTitleOffset.dx));
+      },
     );
-
-    final dividerFinder = find.byKey(
-      const ValueKey('libraryListRowTopDivider'),
-    );
-    expect(dividerFinder, findsOneWidget);
-
-    final dividerTop = tester.getTopLeft(dividerFinder).dy;
-    final dividerLeft = tester.getTopLeft(dividerFinder).dx;
-    final firstTitleTop = tester.getTopLeft(find.text('First Book')).dy;
-    final secondTitleOffset = tester.getTopLeft(find.text('Second Book'));
-
-    expect(dividerTop, greaterThan(firstTitleTop));
-    expect(dividerTop, lessThan(secondTitleOffset.dy));
-    expect(dividerLeft, AppSpacing.lg);
-    expect(dividerLeft, lessThan(secondTitleOffset.dx));
-  });
+  }
 
   testWidgets('article list row uses readable type label', (tester) async {
     await tester.pumpWidget(

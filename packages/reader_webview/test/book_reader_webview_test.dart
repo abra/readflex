@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader_webview/reader_webview.dart';
 
@@ -1790,8 +1791,16 @@ void main() {
   });
 
   group('asset extraction', () {
+    test('bundles the shared search occlusion module for both readers', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      final source = await rootBundle.loadString(
+        'packages/reader_webview/assets/foliate-js/src/readflex_search_occlusion.js',
+      );
+      expect(source, contains('export class SearchOcclusionIndicator'));
+    });
+
     test('versions bundled reader assets independently of app version', () {
-      expect(AssetExtractor.assetRevision, 'reader_webview_assets_145');
+      expect(AssetExtractor.assetRevision, 'reader_webview_assets_146');
       expect(
         AssetExtractor.extractionVersionFor('1.0.0+1'),
         '1.0.0+1|${AssetExtractor.assetRevision}',

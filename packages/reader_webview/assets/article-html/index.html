@@ -238,6 +238,7 @@
     import { rangeContainsRange } from '../foliate-js/src/readflex_range.js'
     import { installArticleSelection } from '../foliate-js/src/readflex_article_selection.js'
     import { selectionViewportPosition } from '../foliate-js/src/readflex_selection_navigation.js'
+    import { SearchOcclusionIndicator } from '../foliate-js/src/readflex_search_occlusion.js'
     (() => {
       const positionPrefix = 'readflex-html-position:'
       const centerHysteresisPx = 24
@@ -329,6 +330,13 @@
       let activeSearch = null
       let activeSearchElement = null
       let activeSearchMarker = null
+      const searchOcclusion = new SearchOcclusionIndicator({
+        resizeTarget: content,
+        getRects: () => activeSearchMarker?.isConnected
+          ? Array.from(activeSearchMarker.getClientRects()) : [],
+      })
+      window.setSearchOverlayInset = fraction => searchOcclusion.setBottomInset(fraction)
+      window.addEventListener('pagehide', () => searchOcclusion.destroy(), { once: true })
       let selectionActive = false
       let suppressNextSelectionClear = false
       let selectionClickSuppressedUntil = 0
@@ -1255,6 +1263,7 @@
       }
 
       function clearActiveSearchElement() {
+        searchOcclusion.hide()
         activeSearchElement?.classList?.remove('readflex-search-active')
         activeSearchElement = null
         if (!activeSearchMarker) return
@@ -1526,7 +1535,10 @@
         clearActiveSearchElement()
         if (!element) return
         activeSearchElement = element
-        if (markSearchMatch(element, anchor)) return
+        if (markSearchMatch(element, anchor)) {
+          searchOcclusion.invalidate()
+          return
+        }
         element.classList.add('readflex-search-active')
       }
 

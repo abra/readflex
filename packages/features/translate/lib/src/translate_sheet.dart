@@ -78,12 +78,17 @@ class _TranslateSheetViewState extends State<_TranslateSheetView> {
   @override
   Widget build(BuildContext context) {
     final selection = widget.selection;
-    final maxBodyHeight = MediaQuery.sizeOf(context).height * 0.68;
+    // The title and direction remain fixed; the result owns the scroll area.
+    final largeText = MediaQuery.textScalerOf(context).scale(14) > 20;
+    final maxBodyHeight =
+        MediaQuery.sizeOf(context).height * (largeText ? 0.78 : 0.72);
     return BlocBuilder<TranslateCubit, TranslateSheetState>(
       builder: (context, state) {
         final cubit = context.read<TranslateCubit>();
         return ActionBottomSheetLayout(
           title: context.l10n.translationTitle,
+          onClose: () => Navigator.of(context).pop(),
+          closeLabel: context.l10n.commonClose,
           headerSpacing: AppSpacing.sm,
           constrainBody: true,
           bodyPadding: const EdgeInsets.only(bottom: AppSpacing.lg),
@@ -301,7 +306,12 @@ class _TranslationResultView extends StatelessWidget {
             style: context.text.titleMedium.copyWith(letterSpacing: 0),
           ),
         if (primary != null)
-          _TranslationAnswer(id: 'primary', text: primary, onCopy: onCopy),
+          _TranslationAnswer(
+            id: 'primary',
+            text: primary,
+            onCopy: onCopy,
+            emphasized: isSingleWord && expression == null,
+          ),
         if (showWordAnswer) ...[
           const SizedBox(height: AppSpacing.md),
           Semantics(
@@ -372,11 +382,13 @@ class _TranslationAnswer extends StatelessWidget {
     required this.id,
     required this.text,
     required this.onCopy,
+    this.emphasized = false,
   });
 
   final String id;
   final String text;
   final Future<void> Function(String) onCopy;
+  final bool emphasized;
 
   @override
   Widget build(BuildContext context) {
@@ -386,11 +398,13 @@ class _TranslationAnswer extends StatelessWidget {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.only(top: AppSpacing.sm),
-            child: SelectableText(
-              text,
-              key: ValueKey('translation-$id-result'),
-              textDirection: translationTextDirection(text),
-              style: context.text.bodyLarge.copyWith(letterSpacing: 0),
+            child: LayoutBuilder(
+              builder: (context, constraints) => SelectableText(
+                text,
+                key: ValueKey('translation-$id-result'),
+                textDirection: translationTextDirection(text),
+                style: _answerStyle(context, constraints.maxWidth),
+              ),
             ),
           ),
         ),
@@ -406,6 +420,26 @@ class _TranslationAnswer extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  TextStyle _answerStyle(BuildContext context, double width) {
+    final body = context.text.bodyLarge.copyWith(letterSpacing: 0);
+    // Wide screens must not turn a sentence-length answer into a heading.
+    if (!emphasized || text.characters.take(49).length > 48) return body;
+    final heading = context.text.titleLarge.copyWith(
+      fontSize: 22,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0,
+    );
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: heading),
+      textDirection: translationTextDirection(text),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 2,
+    )..layout(maxWidth: width);
+    final fits = !painter.didExceedMaxLines;
+    painter.dispose();
+    return fits ? heading : body;
   }
 }
 

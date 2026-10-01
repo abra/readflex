@@ -9,6 +9,27 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
   ReadflexLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String librarySelectedCount(int count) {
+    return 'Selected: $count';
+  }
+
+  @override
+  String get libraryCancelSelection => 'Cancel selection';
+
+  @override
+  String get libraryDiscardChangesTitle => 'Discard changes?';
+
+  @override
+  String get libraryDiscardChangesBody =>
+      'Your changes to this collection have not been saved.';
+
+  @override
+  String get libraryDiscardChanges => 'Discard';
+
+  @override
+  String get libraryKeepEditing => 'Keep editing';
+
+  @override
   String get readerSelectionStart => 'Selection start';
 
   @override
@@ -638,6 +659,15 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
 
   @override
   String get importTryAgain => 'Try again';
+
+  @override
+  String get importChooseFile => 'Choose file';
+
+  @override
+  String get importEditLink => 'Edit link';
+
+  @override
+  String get importClipboardUnavailable => 'Could not read the clipboard';
 
   @override
   String get importArticleUrlRequired => 'Enter an article URL';

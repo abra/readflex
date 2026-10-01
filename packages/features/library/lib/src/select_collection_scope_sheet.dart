@@ -347,24 +347,16 @@ class _CollectionScopeRow extends StatelessWidget {
                 ),
                 if (scope.canManage) ...[
                   const SizedBox(width: AppSpacing.md),
-                  Semantics(
-                    label: l10n.libraryManageCollection(label),
-                    button: true,
-                    onTapHint: l10n.libraryOpenCollectionActions,
-                    child: GestureDetector(
-                      key: ValueKey(
-                        'collectionScopeManage-${scope.type.name}-${scope.id}',
-                      ),
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => Navigator.of(
-                        context,
-                      ).pop(LibraryCollectionScopeManageRequested(scope)),
-                      child: Icon(
-                        AppIcons.moreVertical,
-                        size: AppIconSize.sm,
-                        color: foreground,
-                      ),
+                  AppPlainIconButton(
+                    tooltip: l10n.libraryManageCollection(label),
+                    color: foreground,
+                    icon: AppIcons.moreVertical,
+                    key: ValueKey(
+                      'collectionScopeManage-${scope.type.name}-${scope.id}',
                     ),
+                    onPressed: () => Navigator.of(
+                      context,
+                    ).pop(LibraryCollectionScopeManageRequested(scope)),
                   ),
                 ],
               ],

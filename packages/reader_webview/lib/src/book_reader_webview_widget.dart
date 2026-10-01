@@ -24,6 +24,7 @@ class BookReaderWebView extends StatefulWidget {
     this.isComic = false,
     this.pageProgressionRtl = false,
     this.foliateStyle = const FoliateStyle(),
+    this.searchOverlayBottomFraction = 0,
     this.highlights = const [],
     this.bookmarks = const [],
     this.onReady,
@@ -69,6 +70,10 @@ class BookReaderWebView extends StatefulWidget {
 
   /// Book reader appearance passed to foliate-js via URL params.
   final FoliateStyle foliateStyle;
+
+  /// Fraction of the full viewport covered by Flutter's search controls.
+  /// Only the search edge indicator uses it; pagination remains unchanged.
+  final double searchOverlayBottomFraction;
 
   /// Highlights to render as annotations on load.
   final List<ReaderHighlight> highlights;

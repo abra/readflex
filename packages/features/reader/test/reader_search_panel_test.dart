@@ -413,6 +413,193 @@ void main() {
     },
   );
 
+  for (final size in [
+    const Size(320, 568),
+    const Size(390, 844),
+    const Size(844, 390),
+  ]) {
+    for (final scale in [1.0, 2.0]) {
+      for (final rtl in [false, true]) {
+        testWidgets(
+          'search content keeps 16px insets at $size scale=$scale rtl=$rtl',
+          (tester) async {
+            viewport(tester, size);
+            final safePadding = size.width > size.height
+                ? const EdgeInsets.only(left: 44, right: 24)
+                : EdgeInsets.zero;
+            const queries = [
+              'devices',
+              'A long recent query that cannot fit on a single line',
+            ];
+            final cubit = ReaderSearchCubit(initialRecentQueries: queries);
+            addTearDown(cubit.close);
+            await tester.pumpWidget(
+              _app(
+                cubit: cubit,
+                scale: scale,
+                rtl: rtl,
+                safePadding: safePadding,
+                child: ReaderSearchPanel(
+                  visible: true,
+                  format: BookFormat.epub,
+                  pageProgressionRtl: false,
+                  onClose: () {},
+                  onResultSelected: (_) {},
+                  onSearch: (_) => Stream.fromIterable([
+                    const ReaderSearchResults(
+                      requestId: 1,
+                      results: [
+                        ReaderSearchResult(
+                          cfi: 'result-1',
+                          chapterTitle: 'Chapter',
+                          excerpt: ReaderSearchExcerpt(
+                            pre: 'The ',
+                            match: 'devices',
+                            post: ' keep running.',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const ReaderSearchDone(requestId: 1),
+                  ]),
+                ),
+              ),
+            );
+            await tester.pumpAndSettle();
+            final field = tester.getRect(find.byType(SearchField));
+            final heading = tester.getRect(find.text('Recent searches'));
+            final panelTitle = tester.getRect(find.text('Search'));
+            final close = tester.getRect(
+              find.byWidgetPredicate(
+                (widget) => widget is IconButton && widget.tooltip == 'Close',
+              ),
+            );
+            expect(field.left, safePadding.left + 16);
+            expect(field.right, size.width - safePadding.right - 16);
+            expect(heading.left, field.left);
+            expect(heading.right, field.right);
+            expect(
+              rtl ? panelTitle.right : panelTitle.left,
+              rtl ? field.right : field.left,
+            );
+            expect(
+              rtl ? close.left : close.right,
+              rtl ? field.left : field.right,
+            );
+            expect(close.size, const Size.square(48));
+            for (final query in queries) {
+              final row = find.ancestor(
+                of: find.text(query),
+                matching: find.byType(ListTile),
+              );
+              final clock = tester.getRect(
+                find.descendant(of: row, matching: find.byIcon(AppIcons.clock)),
+              );
+              final title = tester.getRect(find.text(query));
+              final remove = tester.getRect(
+                find.descendant(of: row, matching: find.byType(IconButton)),
+              );
+              expect(
+                rtl ? clock.right : clock.left,
+                rtl ? field.right : field.left,
+              );
+              expect(
+                rtl ? remove.left : remove.right,
+                rtl ? field.left : field.right,
+              );
+              expect(
+                rtl ? clock.left - title.right : title.left - clock.right,
+                greaterThanOrEqualTo(AppSpacing.sm),
+              );
+              expect(
+                rtl ? title.left - remove.right : remove.left - title.right,
+                greaterThanOrEqualTo(AppSpacing.sm),
+              );
+              expect(remove.width, greaterThanOrEqualTo(48));
+              expect(remove.height, greaterThanOrEqualTo(48));
+              expect(remove.center.dx, close.center.dx);
+            }
+            await tester.tap(find.text('devices'));
+            await tester.pumpAndSettle();
+            final l10n = tester.element(find.byType(SearchField)).l10n;
+            final matches = tester.getRect(
+              find.text(l10n.readerSearchMatches(1)),
+            );
+            final chapter = tester.getRect(find.text('Chapter'));
+            final excerpt = tester.getRect(
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget is RichText &&
+                    widget.text.toPlainText() == 'The devices keep running.',
+              ),
+            );
+            expect(
+              rtl ? matches.right : matches.left,
+              rtl ? field.right : field.left,
+            );
+            expect(chapter.left, field.left);
+            expect(chapter.right, field.right);
+            expect(excerpt.left, field.left);
+            expect(excerpt.right, field.right);
+            expect(tester.getRect(find.byType(SearchField)), field);
+
+            cubit.recentQuerySelected(
+              'unmatched',
+              searchBook: (_) =>
+                  Stream.value(const ReaderSearchDone(requestId: 2)),
+            );
+            await tester.pumpAndSettle();
+            final emptyMessage = tester.getRect(
+              find.text(l10n.readerNoResultsFound),
+            );
+            expect(emptyMessage.left, field.left);
+            expect(emptyMessage.right, field.right);
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
+    }
+  }
+
+  testWidgets('history removal does not search and the clock opens its query', (
+    tester,
+  ) async {
+    viewport(tester, const Size(390, 844));
+    final cubit = ReaderSearchCubit(initialRecentQueries: ['devices', 'power']);
+    addTearDown(cubit.close);
+    final searches = <String>[];
+    await tester.pumpWidget(
+      _app(
+        cubit: cubit,
+        child: ReaderSearchPanel(
+          visible: true,
+          format: BookFormat.epub,
+          pageProgressionRtl: false,
+          onClose: () {},
+          onResultSelected: (_) {},
+          onSearch: (query) {
+            searches.add(query);
+            return Stream.value(const ReaderSearchDone(requestId: 1));
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Remove from history').last);
+    await tester.pumpAndSettle();
+    expect(cubit.state.recentQueries, ['devices']);
+    expect(searches, isEmpty);
+    await tester.tap(find.byIcon(AppIcons.clock));
+    await tester.pumpAndSettle();
+    expect(searches, ['devices']);
+    expect(cubit.state.query, 'devices');
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).focusNode!.hasFocus,
+      isFalse,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'search panel close and history controls have circular feedback',
     (
@@ -455,6 +642,7 @@ Widget _app({
   required Widget child,
   double scale = 1,
   double inset = 0,
+  EdgeInsets safePadding = EdgeInsets.zero,
   bool dark = false,
   bool rtl = false,
 }) {
@@ -466,6 +654,8 @@ Widget _app({
       data: MediaQuery.of(context).copyWith(
         textScaler: TextScaler.linear(scale),
         viewInsets: EdgeInsets.only(bottom: inset),
+        padding: safePadding,
+        viewPadding: safePadding,
       ),
       child: Directionality(
         textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,

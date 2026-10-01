@@ -9,6 +9,26 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   ReadflexLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String librarySelectedCount(int count) {
+    return '選択中：$count';
+  }
+
+  @override
+  String get libraryCancelSelection => '選択を解除';
+
+  @override
+  String get libraryDiscardChangesTitle => '変更を破棄しますか？';
+
+  @override
+  String get libraryDiscardChangesBody => 'このコレクションの変更は保存されていません。';
+
+  @override
+  String get libraryDiscardChanges => '破棄';
+
+  @override
+  String get libraryKeepEditing => '編集を続ける';
+
+  @override
   String get readerSelectionStart => '選択範囲の始点';
 
   @override
@@ -620,6 +640,15 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
 
   @override
   String get importTryAgain => 'もう一度試す';
+
+  @override
+  String get importChooseFile => 'ファイルを選択';
+
+  @override
+  String get importEditLink => 'リンクを編集';
+
+  @override
+  String get importClipboardUnavailable => 'クリップボードを読み取れませんでした';
 
   @override
   String get importArticleUrlRequired => '記事のURLを入力してください';

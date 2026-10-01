@@ -28,7 +28,7 @@ class ReaderSearchResultTile extends StatelessWidget {
       selected: selected,
       selectedTileColor: colors.primary.withValues(alpha: 0.06),
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
+        horizontal: AppSpacing.lg,
         vertical: AppSpacing.xxs,
       ),
       minVerticalPadding: AppSpacing.xs,

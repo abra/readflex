@@ -10,7 +10,7 @@ sealed class ImportFlowState extends Equatable {
   List<Object?> get props => const [];
 }
 
-/// Initial picker — single "Upload Book" entry.
+/// Initial menu with book and article import actions.
 class ImportFlowMenu extends ImportFlowState {
   const ImportFlowMenu();
 }
@@ -103,12 +103,12 @@ enum ImportFlowRetryTarget { book, article }
 enum ImportFlowErrorCode {
   articleUrlRequired,
   invalidArticleUrl,
+  clipboardUnavailable,
   bookImportFailed,
   articleSaveFailed,
 }
 
-/// Terminal failure screen for the book path. Tap "Try again" re-opens
-/// the file picker.
+/// Import failure. Books reopen the picker; articles return to URL editing.
 class ImportFlowFailure extends ImportFlowState {
   const ImportFlowFailure({
     this.errorCode,
@@ -120,9 +120,8 @@ class ImportFlowFailure extends ImportFlowState {
   final ImportFlowErrorCode? errorCode;
   final String? customMessage;
 
-  /// Basename of the file the user picked, when known. Surfacing it on
-  /// the failure screen mirrors the success view's filename line so the
-  /// user can tell which item failed.
+  /// Book basename or normalized article URL, when known. Also retains the
+  /// article URL for editing after a failed import.
   final String? filename;
   final ImportFlowRetryTarget retryTarget;
 

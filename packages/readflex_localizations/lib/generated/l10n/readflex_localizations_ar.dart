@@ -9,6 +9,26 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   ReadflexLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
+  String librarySelectedCount(int count) {
+    return 'المحدد: $count';
+  }
+
+  @override
+  String get libraryCancelSelection => 'إلغاء التحديد';
+
+  @override
+  String get libraryDiscardChangesTitle => 'تجاهل التغييرات؟';
+
+  @override
+  String get libraryDiscardChangesBody => 'لم يتم حفظ تغييرات هذه المجموعة.';
+
+  @override
+  String get libraryDiscardChanges => 'تجاهل';
+
+  @override
+  String get libraryKeepEditing => 'متابعة التحرير';
+
+  @override
   String get readerSelectionStart => 'بداية التحديد';
 
   @override
@@ -654,6 +674,15 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
 
   @override
   String get importTryAgain => 'حاول مرة أخرى';
+
+  @override
+  String get importChooseFile => 'اختيار ملف';
+
+  @override
+  String get importEditLink => 'تعديل الرابط';
+
+  @override
+  String get importClipboardUnavailable => 'تعذرت قراءة الحافظة';
 
   @override
   String get importArticleUrlRequired => 'أدخل رابط المقالة';

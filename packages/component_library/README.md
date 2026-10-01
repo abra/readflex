@@ -145,6 +145,7 @@ Reusable presentation-only widgets used across features:
 | Widget                              | Purpose                                        |
 |-------------------------------------|------------------------------------------------|
 | `ActionBottomSheetLayout`           | Bottom sheet shell; optional constrained scroll body and wrapping header actions |
+| `AppPlainIconButton`                | Labeled 48dp utility action with transparent background and circular ink |
 | `AppActionCard`                     | Reusable command card for action pickers       |
 | `AppBottomSafeArea`                 | Bottom inset handling for app-owned surfaces   |
 | `AppButtonLabel`                    | Bounded label for localized button text        |

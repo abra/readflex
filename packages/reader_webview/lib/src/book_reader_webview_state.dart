@@ -52,6 +52,10 @@ class BookReaderWebViewState extends State<BookReaderWebView>
     }
     if (!_isReady) return;
 
+    if (oldWidget.searchOverlayBottomFraction !=
+        widget.searchOverlayBottomFraction) {
+      _syncSearchOverlay();
+    }
     // Value-compare via FoliateStyle's `==` instead of double-encoding
     // both sides through jsonEncode on every parent rebuild.
     if (oldWidget.foliateStyle != widget.foliateStyle) {
@@ -560,6 +564,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       return;
     }
     _renderAnnotations();
+    _syncSearchOverlay();
     if (_bootstrapStyle != widget.foliateStyle) {
       changeStyle(widget.foliateStyle);
     }
@@ -613,6 +618,15 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       label: 'goToSearchResult',
       expression:
           "typeof goToSearchResult === 'function' ? goToSearchResult($escaped) : goToCfi($escaped)",
+    );
+  }
+
+  void _syncSearchOverlay() {
+    _evaluateReaderCommand(
+      label: 'setSearchOverlayInset',
+      expression: readerSearchOverlayExpression(
+        widget.searchOverlayBottomFraction,
+      ),
     );
   }
 

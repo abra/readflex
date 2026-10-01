@@ -343,10 +343,8 @@ class _ListRowShell extends StatelessWidget {
                 left: 0,
                 right: 0,
                 top: 0,
-                child: Container(
-                  key: const ValueKey('libraryListRowTopDivider'),
-                  height: 1,
-                  color: _listDividerColor(context),
+                child: const Divider(
+                  key: ValueKey('libraryListRowTopDivider'),
                 ),
               ),
           ],
@@ -392,9 +390,6 @@ class _MetaDot extends StatelessWidget {
 
 TextStyle _metaStyle(BuildContext context, Color color) =>
     context.text.sourceMetadata.copyWith(color: color);
-
-Color _listDividerColor(BuildContext context) =>
-    Color.lerp(context.appColors.divider, context.colors.onSurface, 0.12)!;
 
 String? _subtitleFor(LibrarySource source) {
   final author = source.author?.trim();

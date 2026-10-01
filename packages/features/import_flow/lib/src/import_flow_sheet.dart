@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/services.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
-import 'article_url_utils.dart';
 import 'import_flow_cubit.dart';
 import 'import_flow_result.dart';
 
@@ -86,7 +85,7 @@ class _ImportFlowSheet extends StatelessWidget {
             // Each step scrolls when the keyboard or viewport limits height.
             return SizedBox(
               height:
-                  280 *
+                  264 *
                   (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(
                     1.0,
                     3.0,
@@ -288,8 +287,7 @@ int _navigationDepth(ImportFlowState state) {
   };
 }
 
-/// Initial picker — title + Upload Book tile at the top, Cancel
-/// anchored to the bottom of the fixed sheet body.
+/// Import choices with a persistent close action above the scrollable rows.
 class _MenuView extends StatelessWidget {
   const _MenuView({required this.isOffline});
 
@@ -301,32 +299,135 @@ class _MenuView extends StatelessWidget {
     final warning = context.appColors.warning;
     final l10n = context.l10n;
 
-    return _ImportFormLayout(
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          BottomSheetHeader(title: l10n.importAddToLibraryTitle),
-          const SizedBox(height: AppSpacing.lg),
-          AppActionCard(
-            icon: AppIcons.uploadFile,
-            title: l10n.importUploadBook,
-            subtitle: l10n.importUploadBookFormats,
-            onTap: cubit.requestBookImport,
+    return SizedBox.expand(
+      child: ActionBottomSheetLayout(
+        title: l10n.importAddToLibraryTitle,
+        onClose: () => Navigator.of(context).pop(),
+        closeLabel: l10n.commonClose,
+        headerSpacing: AppSpacing.sm,
+        constrainBody: true,
+        child: LayoutBuilder(
+          // Center short content in the shared step height; let longer
+          // translations scroll without intrinsic measurement or fixed rows.
+          builder: (context, constraints) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _ImportMenuAction(
+                    key: const ValueKey('importMenu-book'),
+                    icon: AppIcons.book,
+                    title: l10n.importUploadBook,
+                    subtitle: l10n.importUploadBookFormats,
+                    onTap: cubit.requestBookImport,
+                  ),
+                  const Divider(),
+                  _ImportMenuAction(
+                    key: const ValueKey('importMenu-article'),
+                    icon: isOffline ? AppIcons.offline : AppIcons.link,
+                    title: l10n.importSaveArticle,
+                    subtitle: l10n.importSaveArticleDescription,
+                    iconColor: isOffline ? warning : null,
+                    onTap: isOffline ? null : cubit.showArticleUrlEntry,
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          AppActionCard(
-            icon: isOffline ? AppIcons.offline : AppIcons.global,
-            title: l10n.importSaveArticle,
-            subtitle: l10n.importSaveArticleDescription,
-            iconColor: isOffline ? warning : null,
-            onTap: isOffline ? null : cubit.showArticleUrlEntry,
-          ),
-        ],
+        ),
       ),
-      actions: _PlainTextButton(
-        label: l10n.commonCancel,
-        onPressed: () => Navigator.of(context).pop(),
+    );
+  }
+}
+
+class _ImportMenuAction extends StatelessWidget {
+  const _ImportMenuAction({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.iconColor,
+    super.key,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback? onTap;
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final enabled = onTap != null;
+    final disabledColor = colors.onSurface.withValues(alpha: 0.38);
+
+    return Semantics(
+      container: true,
+      excludeSemantics: true,
+      button: true,
+      enabled: enabled,
+      label: title,
+      value: subtitle,
+      onTap: onTap,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+          child: Row(
+            children: [
+              SizedBox(
+                width: AppSizes.iconButtonSize,
+                child: Icon(
+                  icon,
+                  size: AppIconSize.md,
+                  color:
+                      iconColor ?? (enabled ? colors.primary : disabledColor),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: context.text.titleSmall.copyWith(
+                        color: enabled ? colors.onSurface : disabledColor,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      subtitle,
+                      style: context.text.bodySmall.copyWith(
+                        color: enabled
+                            ? colors.onSurfaceVariant
+                            : disabledColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              SizedBox(
+                width: AppIconSize.sm,
+                child: enabled
+                    ? Icon(
+                        Directionality.of(context) == TextDirection.rtl
+                            ? AppIcons.chevronLeft
+                            : AppIcons.chevronRight,
+                        size: AppIconSize.sm,
+                        color: colors.onSurfaceVariant,
+                      )
+                    : null,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -543,6 +644,7 @@ String _localizedErrorMessage(
   return switch (errorCode) {
     ImportFlowErrorCode.articleUrlRequired => l10n.importArticleUrlRequired,
     ImportFlowErrorCode.invalidArticleUrl => l10n.importInvalidArticleUrl,
+    ImportFlowErrorCode.clipboardUnavailable => l10n.importClipboardUnavailable,
     ImportFlowErrorCode.bookImportFailed => l10n.importBookImportFailed,
     ImportFlowErrorCode.articleSaveFailed => l10n.importArticleSaveFailed,
   };
@@ -578,7 +680,19 @@ class _ArticleUrlEntryView extends StatefulWidget {
 }
 
 class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
-  final _controller = TextEditingController();
+  late final _controller = TextEditingController(text: widget.state.url);
+  int _pasteRequest = 0;
+
+  @override
+  void didUpdateWidget(covariant _ArticleUrlEntryView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final url = widget.state.url;
+    if (_controller.text == url) return;
+    _controller.value = TextEditingValue(
+      text: url,
+      selection: TextSelection.collapsed(offset: url.length),
+    );
+  }
 
   @override
   void dispose() {
@@ -586,24 +700,27 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
     super.dispose();
   }
 
-  Future<String?> _readClipboardArticleUrl() async {
-    try {
-      final data = await Clipboard.getData(Clipboard.kTextPlain);
-      return normalizeArticleUrl(data?.text ?? '');
-    } catch (_) {
-      return null;
-    }
-  }
-
   Future<void> _pasteClipboardArticleUrl() async {
-    final url = await _readClipboardArticleUrl();
-    if (!mounted) return;
-    if (url == null) return;
-    _controller.value = TextEditingValue(
-      text: url,
-      selection: TextSelection.collapsed(offset: url.length),
-    );
-    context.read<ImportFlowCubit>().articleUrlChanged(url);
+    final cubit = context.read<ImportFlowCubit>();
+    final entryState = cubit.state;
+    final request = ++_pasteRequest;
+    final value = _controller.value;
+    // Ignore clipboard replies after editing, navigation, or a newer paste.
+    bool isCurrent() =>
+        mounted &&
+        !cubit.isClosed &&
+        request == _pasteRequest &&
+        identical(cubit.state, entryState) &&
+        _controller.value == value;
+
+    final ClipboardData? data;
+    try {
+      data = await Clipboard.getData(Clipboard.kTextPlain);
+    } on PlatformException {
+      if (isCurrent()) cubit.articleClipboardUnavailable();
+      return;
+    }
+    if (isCurrent()) cubit.articleUrlPasted(data?.text ?? '');
   }
 
   @override
@@ -612,6 +729,7 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
     final colors = context.colors;
     final muted = colors.onSurface.withValues(alpha: 0.55);
     final l10n = context.l10n;
+    final error = _errorMessageFor(context, widget.state.errorCode);
 
     return _ImportFormLayout(
       content: Column(
@@ -627,7 +745,8 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
             autocorrect: false,
             decoration: InputDecoration(
               hintText: l10n.importArticleUrlHint,
-              errorText: _errorMessageFor(context, widget.state.errorCode),
+              helper: const _ArticleUrlFeedback(),
+              error: error == null ? null : _ArticleUrlFeedback(message: error),
               suffixIcon: _PasteUrlButton(
                 onPressed: _pasteClipboardArticleUrl,
               ),
@@ -641,10 +760,9 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
                 : (_) => cubit.submitArticleUrl(),
             onChanged: cubit.articleUrlChanged,
           ),
-          const SizedBox(height: AppSpacing.md),
-          _ArticleUrlHints(color: muted),
         ],
       ),
+      hints: _ArticleUrlHints(color: muted),
       actions: Row(
         children: [
           Expanded(
@@ -664,6 +782,51 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Reserves the same space for every localized validation message, even when
+/// there is no error. Layout follows the actual font, text scale, and width.
+class _ArticleUrlFeedback extends StatelessWidget {
+  const _ArticleUrlFeedback({this.message});
+
+  final String? message;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final style = context.text.bodySmall.copyWith(color: context.colors.error);
+    return Stack(
+      alignment: AlignmentDirectional.topStart,
+      children: [
+        ExcludeSemantics(
+          child: Opacity(
+            opacity: 0,
+            child: Stack(
+              children: [
+                for (final text in [
+                  l10n.importArticleUrlRequired,
+                  l10n.importInvalidArticleUrl,
+                  l10n.importClipboardUnavailable,
+                ])
+                  RichText(
+                    text: TextSpan(text: text, style: style),
+                    textScaler: MediaQuery.textScalerOf(context),
+                    locale: Localizations.localeOf(context),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        if (message != null)
+          PositionedDirectional(
+            top: 0,
+            start: 0,
+            end: 0,
+            child: Text(message!, style: style),
+          ),
+      ],
     );
   }
 }
@@ -702,9 +865,14 @@ class _PasteUrlButton extends StatelessWidget {
 
 /// Uses the available height without intrinsic layout or unbounded flex.
 class _ImportFormLayout extends StatelessWidget {
-  const _ImportFormLayout({required this.content, required this.actions});
+  const _ImportFormLayout({
+    required this.content,
+    required this.hints,
+    required this.actions,
+  });
 
   final Widget content;
+  final Widget hints;
   final Widget actions;
 
   @override
@@ -722,9 +890,12 @@ class _ImportFormLayout extends StatelessWidget {
               children: [
                 content,
                 Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.md),
-                  child: actions,
+                  // The input already reserves validation space above hints.
+                  // Balance it below instead of adding a second upper gap.
+                  padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+                  child: hints,
                 ),
+                actions,
               ],
             ),
           ),
@@ -881,17 +1052,23 @@ class _BookUploadStatusContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
-        SizedBox(
-          height: _kBookUploadProgressLabelHeight,
-          child: progress == null
-              ? null
-              : Text(
-                  '${(progress! * 100).clamp(0, 100).toInt()}%',
-                  textAlign: TextAlign.center,
-                  style: detailStyle.copyWith(
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
+        ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: _kBookUploadProgressLabelHeight,
+          ),
+          child: Visibility(
+            visible: progress != null,
+            maintainSize: true,
+            maintainAnimation: true,
+            maintainState: true,
+            child: Text(
+              '${((progress ?? 0) * 100).clamp(0, 100).toInt()}%',
+              textAlign: TextAlign.center,
+              style: detailStyle.copyWith(
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -963,7 +1140,7 @@ class _StatusLayout extends StatelessWidget {
           Expanded(
             child: Center(child: SingleChildScrollView(child: content)),
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
           if (action case final action?)
             action
           else if (reserveActionSpace)
@@ -1076,7 +1253,7 @@ class _ArticleDoneView extends StatelessWidget {
   }
 }
 
-/// Terminal failure screen. "Try again" returns to the right failed flow.
+/// Import failure with an explicit picker or URL-editing action.
 class _FailureView extends StatelessWidget {
   const _FailureView({required this.state});
 
@@ -1108,25 +1285,95 @@ class _FailureView extends StatelessWidget {
           color: cs.onSurface.withValues(alpha: 0.55),
         ),
       ),
-      // Side-by-side buttons keep the failure state close to the menu height.
-      action: Row(
-        children: [
-          Expanded(
-            child: _PlainTextButton(
-              label: context.l10n.commonCancel,
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: FilledButton(
-              onPressed: cubit.retryAfterFailure,
-              child: AppButtonLabel(context.l10n.importTryAgain),
-            ),
-          ),
-        ],
+      action: _FailureActions(
+        primaryLabel: state.retryTarget == ImportFlowRetryTarget.article
+            ? context.l10n.importEditLink
+            : context.l10n.importChooseFile,
+        onRetry: cubit.retryAfterFailure,
       ),
     );
+  }
+}
+
+class _FailureActions extends StatelessWidget {
+  const _FailureActions({required this.primaryLabel, required this.onRetry});
+
+  final String primaryLabel;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final cancelLabel = context.l10n.commonCancel;
+    final cancel = _PlainTextButton(
+      label: cancelLabel,
+      onPressed: () => Navigator.of(context).pop(),
+    );
+    final retry = FilledButton(
+      onPressed: onRetry,
+      child: AppButtonLabel(primaryLabel),
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final buttonWidth = (constraints.maxWidth - AppSpacing.md) / 2;
+        final theme = Theme.of(context);
+        final fitsRow =
+            _labelFits(
+              context,
+              cancelLabel,
+              theme.outlinedButtonTheme.style,
+              buttonWidth,
+            ) &&
+            _labelFits(
+              context,
+              primaryLabel,
+              theme.filledButtonTheme.style,
+              buttonWidth,
+            );
+        if (fitsRow) {
+          return Row(
+            children: [
+              Expanded(child: cancel),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(child: retry),
+            ],
+          );
+        }
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            cancel,
+            const SizedBox(height: AppSpacing.sm),
+            retry,
+          ],
+        );
+      },
+    );
+  }
+
+  // Measure two labels only on failure, not on progress updates.
+  bool _labelFits(
+    BuildContext context,
+    String label,
+    ButtonStyle? style,
+    double width,
+  ) {
+    final padding = style?.padding
+        ?.resolve({})
+        ?.resolve(Directionality.of(context));
+    final painter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: style?.textStyle?.resolve({}) ?? context.text.labelLarge,
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      locale: Localizations.maybeLocaleOf(context),
+    )..layout();
+    final fits =
+        painter.width + (padding?.horizontal ?? AppSpacing.lg * 2) <= width;
+    painter.dispose();
+    return fits;
   }
 }
 

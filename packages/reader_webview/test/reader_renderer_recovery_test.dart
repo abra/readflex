@@ -51,6 +51,7 @@ void main() {
                 serverBaseUri: base,
                 articleFilePath: '/articles/a/content.html',
                 initialPosition: 'initial',
+                searchOverlayBottomFraction: 0.2,
                 onReady: () => ready++,
                 onLoading: () => loading++,
                 onLoadFailed: failures.add,
@@ -63,6 +64,7 @@ void main() {
                 serverBaseUri: base,
                 bookFilePath: '/books/a.epub',
                 initialCfi: 'initial',
+                searchOverlayBottomFraction: 0.2,
                 onReady: () => ready++,
                 onLoading: () => loading++,
                 onLoadFailed: failures.add,
@@ -85,6 +87,10 @@ void main() {
         expect(adjustments, [true, false]);
         expect(first.params.initialSettings!.useOnRenderProcessGone, isTrue);
         first.emit('onLoadEnd', []);
+        expect(
+          first.nativeController.scripts,
+          contains(contains('setSearchOverlayInset(0.2)')),
+        );
         expect(
           first.nativeController.scripts.where(
             (s) => s.contains('changeStyle('),
@@ -120,6 +126,10 @@ void main() {
         expect(failures, isEmpty);
         second.emit('onLoadEnd', []);
         expect(ready, 2);
+        expect(
+          second.nativeController.scripts,
+          contains(contains('setSearchOverlayInset(0.2)')),
+        );
         second.crash();
         await tester.pump();
         expect(platform.views, hasLength(2));

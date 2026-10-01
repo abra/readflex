@@ -9,6 +9,27 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   ReadflexLocalizationsHi([String locale = 'hi']) : super(locale);
 
   @override
+  String librarySelectedCount(int count) {
+    return 'चुने गए: $count';
+  }
+
+  @override
+  String get libraryCancelSelection => 'चयन रद्द करें';
+
+  @override
+  String get libraryDiscardChangesTitle => 'बदलाव छोड़ें?';
+
+  @override
+  String get libraryDiscardChangesBody =>
+      'इस संग्रह के बदलाव अभी सहेजे नहीं गए हैं।';
+
+  @override
+  String get libraryDiscardChanges => 'छोड़ें';
+
+  @override
+  String get libraryKeepEditing => 'संपादन जारी रखें';
+
+  @override
   String get readerSelectionStart => 'चयन की शुरुआत';
 
   @override
@@ -636,6 +657,15 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
 
   @override
   String get importTryAgain => 'फिर कोशिश करें';
+
+  @override
+  String get importChooseFile => 'फ़ाइल चुनें';
+
+  @override
+  String get importEditLink => 'लिंक बदलें';
+
+  @override
+  String get importClipboardUnavailable => 'क्लिपबोर्ड नहीं पढ़ा जा सका';
 
   @override
   String get importArticleUrlRequired => 'लेख URL दर्ज करें';

@@ -2,6 +2,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:reader_webview/src/reader_common_handlers.dart';
 
 void main() {
+  test('search overlay sends only a finite, normalized covered extent', () {
+    for (final value in [double.nan, double.infinity, -0.1, 0.0]) {
+      expect(
+        readerSearchOverlayExpression(value),
+        contains('setSearchOverlayInset(0.0)'),
+      );
+    }
+    expect(
+      readerSearchOverlayExpression(0.25),
+      contains('setSearchOverlayInset(0.25)'),
+    );
+    expect(
+      readerSearchOverlayExpression(1.5),
+      contains('setSearchOverlayInset(1.0)'),
+    );
+  });
+
   group('parseReaderSelectionPayload', () {
     test('parses map payload', () {
       final selection = parseReaderSelectionPayload({

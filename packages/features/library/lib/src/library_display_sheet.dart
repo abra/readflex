@@ -12,19 +12,17 @@ Future<void> showLibraryDisplaySheet({
   required LibraryLayoutCubit layoutCubit,
   required LibraryLocaleCubit localeCubit,
   required LibraryThemeCubit themeCubit,
-}) {
-  return showAppBottomSheet<void>(
-    context,
-    builder: (_) => MultiBlocProvider(
-      providers: [
-        BlocProvider.value(value: layoutCubit),
-        BlocProvider.value(value: localeCubit),
-        BlocProvider.value(value: themeCubit),
-      ],
-      child: const _LibraryDisplaySheet(),
-    ),
-  );
-}
+}) => showAppBottomSheet<void>(
+  context,
+  builder: (_) => MultiBlocProvider(
+    providers: [
+      BlocProvider.value(value: layoutCubit),
+      BlocProvider.value(value: localeCubit),
+      BlocProvider.value(value: themeCubit),
+    ],
+    child: const _LibraryDisplaySheet(),
+  ),
+);
 
 class _LibraryDisplaySheet extends StatelessWidget {
   const _LibraryDisplaySheet();
@@ -34,6 +32,10 @@ class _LibraryDisplaySheet extends StatelessWidget {
     final l10n = context.l10n;
     return ActionBottomSheetLayout(
       title: l10n.libraryDisplayTitle,
+      onClose: () => Navigator.of(context).pop(),
+      closeLabel: l10n.commonClose,
+      constrainBody: true,
+      headerSpacing: AppSpacing.sm,
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxHeight: MediaQuery.sizeOf(context).height * 0.64,
@@ -44,256 +46,278 @@ class _LibraryDisplaySheet extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _SheetSectionLabel(l10n.libraryDisplayView),
-              const SizedBox(height: AppSpacing.xs),
-              const _LayoutModeSelector(),
-              const SizedBox(height: AppSpacing.lg),
-              _SheetSectionLabel(l10n.libraryDisplayAppearance),
-              const SizedBox(height: AppSpacing.xs),
-              const _ThemeModeSelector(),
-              const SizedBox(height: AppSpacing.lg),
-              _SheetSectionLabel(l10n.libraryDisplayLanguage),
-              const SizedBox(height: AppSpacing.xs),
-              const _LanguageSelector(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LayoutModeSelector extends StatelessWidget {
-  const _LayoutModeSelector();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<LibraryLayoutCubit, LibraryLayoutMode>(
-      builder: (context, mode) {
-        final cubit = context.read<LibraryLayoutCubit>();
-        return Row(
-          children: [
-            Expanded(
-              child: _DisplayOption(
-                icon: AppIcons.viewList,
-                title: context.l10n.libraryDisplayList,
-                selected: mode == LibraryLayoutMode.list,
-                onTap: () => cubit.setLayoutMode(LibraryLayoutMode.list),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            Expanded(
-              child: _DisplayOption(
-                icon: AppIcons.viewGrid,
-                title: context.l10n.libraryDisplayGrid,
-                selected: mode == LibraryLayoutMode.grid,
-                onTap: () => cubit.setLayoutMode(LibraryLayoutMode.grid),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _ThemeModeSelector extends StatelessWidget {
-  const _ThemeModeSelector();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<LibraryThemeCubit, ThemeMode>(
-      builder: (context, mode) {
-        final cubit = context.read<LibraryThemeCubit>();
-        final l10n = context.l10n;
-        return Column(
-          children: [
-            _DisplayOption(
-              icon: AppIcons.deviceMode,
-              title: l10n.libraryThemeSystem,
-              subtitle: l10n.libraryThemeSystemDescription,
-              selected: mode == ThemeMode.system,
-              onTap: () => cubit.setThemeMode(ThemeMode.system),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            _DisplayOption(
-              icon: AppIcons.lightMode,
-              title: l10n.libraryThemeLight,
-              subtitle: l10n.libraryThemeLightDescription,
-              selected: mode == ThemeMode.light,
-              onTap: () => cubit.setThemeMode(ThemeMode.light),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            _DisplayOption(
-              icon: AppIcons.darkMode,
-              title: l10n.libraryThemeDark,
-              subtitle: l10n.libraryThemeDarkDescription,
-              selected: mode == ThemeMode.dark,
-              onTap: () => cubit.setThemeMode(ThemeMode.dark),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _LanguageSelector extends StatelessWidget {
-  const _LanguageSelector();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<LibraryLocaleCubit, Locale>(
-      builder: (context, locale) {
-        final cubit = context.read<LibraryLocaleCubit>();
-        final languages = ReadflexSupportedLocales.languages;
-        return Column(
-          children: [
-            for (var index = 0; index < languages.length; index += 2) ...[
-              if (index > 0) const SizedBox(height: AppSpacing.xs),
-              Row(
-                children: [
-                  Expanded(
-                    child: _LanguageOption(
-                      language: languages[index],
-                      selected: locale.languageCode == languages[index].code,
-                      onTap: cubit.setLocale,
+              const SizedBox(height: AppSpacing.sm),
+              BlocBuilder<LibraryLayoutCubit, LibraryLayoutMode>(
+                builder: (context, mode) => _DisplaySelector(
+                  selected: mode,
+                  onChanged: context.read<LibraryLayoutCubit>().setLayoutMode,
+                  options: [
+                    (
+                      value: LibraryLayoutMode.list,
+                      label: l10n.libraryDisplayList,
+                      icon: AppIcons.viewList,
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Expanded(
-                    child: index + 1 < languages.length
-                        ? _LanguageOption(
-                            language: languages[index + 1],
-                            selected:
-                                locale.languageCode ==
-                                languages[index + 1].code,
-                            onTap: cubit.setLocale,
-                          )
-                        : const SizedBox.shrink(),
-                  ),
-                ],
-              ),
-            ],
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _LanguageOption extends StatelessWidget {
-  const _LanguageOption({
-    required this.language,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final ReadflexSupportedLanguage language;
-  final bool selected;
-  final ValueChanged<Locale> onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return KeyedSubtree(
-      key: ValueKey('libraryLanguageOption-${language.code}'),
-      child: _DisplayOption(
-        icon: AppIcons.language,
-        title: language.name,
-        selected: selected,
-        onTap: () => onTap(Locale(language.code)),
-      ),
-    );
-  }
-}
-
-class _SheetSectionLabel extends StatelessWidget {
-  const _SheetSectionLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: context.text.labelSmall.copyWith(
-        color: context.colors.onSurface.withValues(alpha: 0.55),
-        fontWeight: FontWeight.w700,
-      ),
-    );
-  }
-}
-
-class _DisplayOption extends StatelessWidget {
-  const _DisplayOption({
-    required this.icon,
-    required this.title,
-    required this.selected,
-    required this.onTap,
-    this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String? subtitle;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final foreground = selected ? colors.primary : colors.onSurface;
-    final background = selected
-        ? colors.primary.withValues(alpha: 0.08)
-        : colors.surfaceContainerHighest.withValues(alpha: 0.4);
-
-    return Material(
-      color: background,
-      borderRadius: BorderRadius.circular(AppRadius.sm),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          child: Row(
-            children: [
-              Icon(icon, size: AppIconSize.md, color: foreground),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.text.titleSmall.copyWith(
-                        color: colors.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    (
+                      value: LibraryLayoutMode.grid,
+                      label: l10n.libraryDisplayGrid,
+                      icon: AppIcons.viewGrid,
                     ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: AppSpacing.xxs),
-                      Text(
-                        subtitle!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.text.bodySmall.copyWith(
-                          color: colors.onSurface.withValues(alpha: 0.65),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
-              if (selected)
-                Icon(AppIcons.check, size: AppIconSize.sm, color: foreground),
+              const SizedBox(height: AppSpacing.lg),
+              _SheetSectionLabel(l10n.libraryDisplayAppearance),
+              const SizedBox(height: AppSpacing.sm),
+              BlocBuilder<LibraryThemeCubit, ThemeMode>(
+                builder: (context, mode) => _DisplaySelector(
+                  selected: mode,
+                  onChanged: context.read<LibraryThemeCubit>().setThemeMode,
+                  options: [
+                    (
+                      value: ThemeMode.system,
+                      label: l10n.libraryThemeSystem,
+                      icon: null,
+                    ),
+                    (
+                      value: ThemeMode.light,
+                      label: l10n.libraryThemeLight,
+                      icon: null,
+                    ),
+                    (
+                      value: ThemeMode.dark,
+                      label: l10n.libraryThemeDark,
+                      icon: null,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              const _LanguagePickerRow(),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+/// Measure only the option labels. Stack rather than truncate localized
+/// options or reduce the user's text scale.
+class _DisplaySelector<T> extends StatelessWidget {
+  const _DisplaySelector({
+    required this.selected,
+    required this.onChanged,
+    required this.options,
+  });
+
+  final T selected;
+  final ValueChanged<T> onChanged;
+  final List<({T value, String label, IconData? icon})> options;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final style = context.text.bodyMedium;
+      var widest = 0.0;
+      for (final option in options) {
+        final painter = TextPainter(
+          text: TextSpan(text: option.label, style: style),
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+        )..layout();
+        final width =
+            painter.width +
+            AppSpacing.lg * 2 +
+            (option.icon == null ? 0 : AppIconSize.sm + AppSpacing.sm);
+        if (width > widest) widest = width;
+        painter.dispose();
+      }
+      if (widest * options.length > constraints.maxWidth) {
+        return Column(
+          children: [
+            for (final option in options)
+              ListTile(
+                selected: selected == option.value,
+                selectedColor: _selectedForeground(context),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                ),
+                leading: option.icon == null
+                    ? null
+                    : Icon(option.icon, size: AppIconSize.sm),
+                title: Text(option.label),
+                trailing: selected == option.value
+                    ? const Icon(AppIcons.check, size: AppIconSize.sm)
+                    : null,
+                onTap: () => onChanged(option.value),
+              ),
+          ],
+        );
+      }
+      return SegmentedButton<T>(
+        segments: [
+          for (final option in options)
+            ButtonSegment(
+              value: option.value,
+              label: Text(option.label),
+              icon: option.icon == null
+                  ? null
+                  : Icon(option.icon, size: AppIconSize.sm),
+            ),
+        ],
+        selected: {selected},
+        onSelectionChanged: (values) => onChanged(values.single),
+        showSelectedIcon: false,
+        style: ButtonStyle(
+          textStyle: WidgetStatePropertyAll(style),
+          minimumSize: const WidgetStatePropertyAll(
+            Size(0, AppSizes.buttonHeight),
+          ),
+          shape: const WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(AppRadius.sm)),
+            ),
+          ),
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected)
+                ? _selectedForeground(context)
+                : context.colors.onSurfaceVariant,
+          ),
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected)
+                ? context.colors.primary.withValues(alpha: 0.08)
+                : context.colors.surface,
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _LanguagePickerRow extends StatelessWidget {
+  const _LanguagePickerRow();
+
+  @override
+  Widget build(BuildContext context) => BlocBuilder<LibraryLocaleCubit, Locale>(
+    builder: (context, locale) {
+      final language = ReadflexSupportedLocales.languages.firstWhere(
+        (item) => item.code == locale.languageCode,
+      );
+      return ListTile(
+        key: const ValueKey('libraryLanguagePicker'),
+        contentPadding: EdgeInsets.zero,
+        title: LayoutBuilder(
+          builder: (context, constraints) {
+            final direction = Directionality.of(context);
+            final labelStyle = DefaultTextStyle.of(context).style;
+            final valueStyle = context.text.bodyMedium.copyWith(
+              color: context.colors.onSurfaceVariant,
+            );
+            var width = AppSpacing.md + AppSpacing.sm + AppIconSize.sm;
+            for (final (text, style) in [
+              (context.l10n.libraryDisplayLanguage, labelStyle),
+              (language.name, valueStyle),
+            ]) {
+              final painter = TextPainter(
+                text: TextSpan(text: text, style: style),
+                textDirection: direction,
+                textScaler: MediaQuery.textScalerOf(context),
+              )..layout();
+              width += painter.width;
+              painter.dispose();
+            }
+            final label = Text(context.l10n.libraryDisplayLanguage);
+            final value = Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(child: Text(language.name, style: valueStyle)),
+                const SizedBox(width: AppSpacing.sm),
+                Icon(
+                  direction == TextDirection.rtl
+                      ? AppIcons.chevronLeft
+                      : AppIcons.chevronRight,
+                  size: AppIconSize.sm,
+                ),
+              ],
+            );
+            if (width > constraints.maxWidth) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  label,
+                  const SizedBox(height: AppSpacing.sm),
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: value,
+                  ),
+                ],
+              );
+            }
+            return Row(
+              children: [
+                Expanded(child: label),
+                const SizedBox(width: AppSpacing.md),
+                value,
+              ],
+            );
+          },
+        ),
+        onTap: () async {
+          final cubit = context.read<LibraryLocaleCubit>();
+          final selected = await showAppBottomSheet<Locale>(
+            context,
+            builder: (context) => ActionBottomSheetLayout(
+              title: context.l10n.libraryDisplayLanguage,
+              onClose: () => Navigator.of(context).pop(),
+              closeLabel: context.l10n.commonClose,
+              constrainBody: true,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).height * 0.64,
+                ),
+                child: ScrollEdgeFadeStack(
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      for (final item in ReadflexSupportedLocales.languages)
+                        ListTile(
+                          key: ValueKey('libraryLanguageOption-${item.code}'),
+                          title: Text(item.name),
+                          selected: item.code == locale.languageCode,
+                          selectedColor: _selectedForeground(context),
+                          trailing: item.code == locale.languageCode
+                              ? const Icon(AppIcons.check)
+                              : null,
+                          onTap: () =>
+                              Navigator.of(context).pop(Locale(item.code)),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+          if (selected != null && context.mounted) cubit.setLocale(selected);
+        },
+      );
+    },
+  );
+}
+
+Color _selectedForeground(BuildContext context) =>
+    context.colors.brightness == Brightness.dark
+    ? context.colors.primaryFixedDim
+    : context.colors.primary;
+
+class _SheetSectionLabel extends StatelessWidget {
+  const _SheetSectionLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    style: context.text.labelLarge.copyWith(
+      color: context.colors.onSurfaceVariant,
+    ),
+  );
 }

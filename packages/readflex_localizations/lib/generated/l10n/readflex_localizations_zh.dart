@@ -9,6 +9,26 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   ReadflexLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String librarySelectedCount(int count) {
+    return '已选：$count';
+  }
+
+  @override
+  String get libraryCancelSelection => '取消选择';
+
+  @override
+  String get libraryDiscardChangesTitle => '放弃更改？';
+
+  @override
+  String get libraryDiscardChangesBody => '对此收藏的更改尚未保存。';
+
+  @override
+  String get libraryDiscardChanges => '放弃';
+
+  @override
+  String get libraryKeepEditing => '继续编辑';
+
+  @override
   String get readerSelectionStart => '选择起点';
 
   @override
@@ -616,6 +636,15 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
 
   @override
   String get importTryAgain => '重试';
+
+  @override
+  String get importChooseFile => '选择文件';
+
+  @override
+  String get importEditLink => '编辑链接';
+
+  @override
+  String get importClipboardUnavailable => '无法读取剪贴板';
 
   @override
   String get importArticleUrlRequired => '请输入文章 URL';

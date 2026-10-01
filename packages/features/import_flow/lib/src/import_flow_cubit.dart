@@ -83,8 +83,8 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
   final AcceptBookImportTerms _acceptBookImportTerms;
 
   /// Re-entry guard for [pickAndImportBook]. Without it a double-tap
-  /// on the menu's "Upload Book" tile (or the failure screen's "Try
-  /// again" button) opens two platform pickers concurrently. The
+  /// on the menu's "Upload Book" tile (or the failure screen's "Choose
+  /// file" button) opens two platform pickers concurrently. The
   /// second resolves into a second `ImportFlowBookUploading` while the
   /// first is still running, racing on cubit state.
   ///
@@ -103,6 +103,23 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
     final current = state;
     if (current is! ImportFlowArticleUrlEntry) return;
     emit(current.withUrl(rawUrl));
+  }
+
+  void articleUrlPasted(String rawText) {
+    final current = state;
+    if (current is! ImportFlowArticleUrlEntry) return;
+    final url = normalizeArticleUrl(rawText);
+    emit(
+      url == null
+          ? current.withError(ImportFlowErrorCode.invalidArticleUrl)
+          : current.withUrl(url),
+    );
+  }
+
+  void articleClipboardUnavailable() {
+    final current = state;
+    if (current is! ImportFlowArticleUrlEntry) return;
+    emit(current.withError(ImportFlowErrorCode.clipboardUnavailable));
   }
 
   Future<void> submitArticleUrl() async {
@@ -299,7 +316,7 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
     }
   }
 
-  /// Reset to the menu — used by the failure-screen "Try again" button.
+  /// Leave the URL form and return to the import menu.
   void backToMenu() {
     emit(const ImportFlowMenu());
   }
@@ -308,7 +325,7 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
     final current = state;
     if (current is ImportFlowFailure &&
         current.retryTarget == ImportFlowRetryTarget.article) {
-      emit(const ImportFlowArticleUrlEntry());
+      emit(ImportFlowArticleUrlEntry(url: current.filename ?? ''));
       return;
     }
     pickAndImportBook();

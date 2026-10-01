@@ -16,6 +16,12 @@ export class Overlayer {
     get element() {
         return this.#svg
     }
+    // Read only one annotation, in the outer viewport's coordinates. The SVG
+    // already includes iframe offsets, zoom and paginator transforms.
+    getClientRects(key) {
+        const element = this.#map.get(key)?.element
+        return element ? Array.from(element.children, child => child.getBoundingClientRect()) : []
+    }
     get #zoom() {
         // Safari does not zoom the client rects, while Chrome, Edge and Firefox does
         if (/^((?!chrome|android).)*AppleWebKit/i.test(navigator.userAgent) && !window.chrome) {

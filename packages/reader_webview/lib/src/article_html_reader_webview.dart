@@ -26,6 +26,7 @@ class ArticleHtmlReaderWebView extends StatefulWidget {
     this.initialPosition,
     this.initialProgress,
     this.foliateStyle = const FoliateStyle(),
+    this.searchOverlayBottomFraction = 0,
     this.bookmarks = const [],
     this.highlights = const [],
     this.onReady,
@@ -53,6 +54,10 @@ class ArticleHtmlReaderWebView extends StatefulWidget {
   final String? initialPosition;
   final double? initialProgress;
   final FoliateStyle foliateStyle;
+
+  /// Fraction of the full viewport covered by Flutter's search controls.
+  /// Changes the edge indicator only, not article layout or scroll position.
+  final double searchOverlayBottomFraction;
   final List<ReaderBookmark> bookmarks;
   final List<ReaderHighlight> highlights;
   final VoidCallback? onReady;
@@ -147,6 +152,10 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
       _cancelActiveSearch();
     }
     if (!_isReady) return;
+    if (oldWidget.searchOverlayBottomFraction !=
+        widget.searchOverlayBottomFraction) {
+      _syncSearchOverlay();
+    }
     if (oldWidget.foliateStyle != widget.foliateStyle) {
       changeStyle(widget.foliateStyle);
     }
@@ -331,6 +340,7 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
     }
     _syncBookmarks();
     _syncHighlights();
+    _syncSearchOverlay();
     widget.onReady?.call();
   }
 
@@ -524,6 +534,15 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
       label: 'clearSearch',
       expression:
           "typeof window.clearSearch === 'function' ? window.clearSearch() : null",
+    );
+  }
+
+  void _syncSearchOverlay() {
+    _evaluateArticleCommand(
+      label: 'setSearchOverlayInset',
+      expression: readerSearchOverlayExpression(
+        widget.searchOverlayBottomFraction,
+      ),
     );
   }
 

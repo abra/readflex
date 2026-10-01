@@ -42,6 +42,11 @@ and signing prerequisites still apply to physical iOS devices. No API keys,
 `run.sh`, live backend, or monitoring DSN are needed. Do not pass production
 credentials to this deterministic test suite.
 
+Native tests unmount their root widget during cleanup to dispose subscriptions
+and routes. Do not use `--keep-app-running` for normal verification: it leaves
+the test process showing an empty surface, not the production Library. Relaunch
+the regular app with `run.sh` after device testing.
+
 ## Coverage
 
 | Surface or contract | Automated checks | Where |
@@ -51,10 +56,14 @@ credentials to this deterministic test suite.
 | Library appearance | Grid, display sheet, empty search results in all profiles | `library_golden_test.dart` |
 | Library scaling | Grid/list remain virtualized with 20k books, callbacks address the right item, cached projections are reused | `library_scaling_test.dart` |
 | Collections | Create with selected book, rename, cancel/confirm deletion; preserve book and clean membership | `app_flows_test.dart` |
+| Collection layout | Light/dark, 200%, landscape, RTL; edit form and unsaved changes confirmation | `collection_management_golden_test.dart` |
+| Selection and languages | Bottom selection bar, explicit cancel, separate language picker in all visual profiles | `library_golden_test.dart` |
+| Native library controls | Selection, display/languages, keyboard, cancel/keep/discard edits on an isolated fixture library | `integration_test/library_controls_test.dart` |
 | Article import | Extraction error, retry, actual repository/SQLite write, root remount; offline/online button availability | `app_flows_test.dart` |
+| Import recovery | Book progress/failure, invalid Paste, article failure and retained URL; readable actions in EN/RU/AR phone, dark, 200% DE and landscape | `import_flow_golden_test.dart` |
 | Translate | Success, error, pending result; word/text answers before context, unfilled language menus and collapsed/expanded details in all profiles | `surfaces_golden_test.dart` |
 | Contextual translation | Selected word/IPA, context-first answer with expression scope, separate word meaning, collapsed/expanded explanations in all visual profiles | `translation_word_golden_test.dart` |
-| Reader search surfaces | Side-sliding panel, active result, previous/next controls and return action in all visual profiles | `reader_search_golden_test.dart` |
+| Reader search surfaces | Side-sliding panel with shared 16px content insets, recent queries with long text, active result, previous/next controls and return action in all visual profiles | `reader_search_golden_test.dart` |
 | Native translation sheet | Real phone viewport, word/expression scopes including rather, IPA rendering, visible general meaning, native clipboard and target-language change with deterministic responses | `integration_test/translation_sheet_test.dart` |
 | Define | Single definition, inflected word plus contextual expression, and not-found surfaces in all profiles | `surfaces_golden_test.dart` |
 | Shared text tools | Search clear control and highlight palette in all profiles; import menu layout | `surfaces_golden_test.dart` |
@@ -85,10 +94,11 @@ and highlight geometry/pixels. See
 
 ## Visual Baselines
 
-There are 26 captures per profile (130 PNGs), including appearance before/after
+Each profile includes captures of search results, recent queries, appearance before/after
 scrolling to the last control, translation language menus and collapsed/expanded
 translation details, single-word/text translations and contextual dictionary
-expressions and separate word/contextual translations. Expanded-detail captures scroll to the final alternative
+expressions and separate word/contextual translations, selection/language
+controls, and collection edit/discard surfaces. Expanded-detail captures scroll to the final alternative
 when the viewport cannot display the complete result:
 
 | Profile | Logical viewport | Theme | Locale | Text scale |
@@ -98,6 +108,10 @@ when the viewport cannot display the complete result:
 | `largeText` | 320 x 568 | Light | German | 2 |
 | `landscape` | 844 x 390 | Light | English | 1 |
 | `tabletRtl` | 768 x 1024 | Dark | Arabic | 1 |
+
+Import recovery also has `phoneRu` (390 x 844, light, Russian, 1x) and
+`phoneRtl` (390 x 844, dark, Arabic, 1x) captures. The import RTL suite explicitly
+overrides the tablet profile's viewport so RTL is verified on a phone too.
 
 Only widget goldens use these dimensions. The native suite keeps the device's
 real viewport and records it in its results. Large-text onboarding content is
