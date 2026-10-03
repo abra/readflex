@@ -12,7 +12,15 @@ class BookReaderWebViewState extends State<BookReaderWebView>
   bool _isReady = false;
   BookPosition? _lastPosition;
   FoliateStyle? _bootstrapStyle;
-  late final _loadSession = ReaderLoadSession(onFailed: _failLoad);
+  late final ReaderLoadSession _loadSession = ReaderLoadSession(
+    onFailed: _failLoad,
+    onTiming: readerStartupTracingEnabled
+        ? (stage, elapsed) => debugPrint(
+            '[reader-startup-native] generation=${_loadSession.generation} '
+            'stage=$stage elapsedMs=${elapsed.inMicroseconds / 1000}',
+          )
+        : null,
+  );
   StreamController<ReaderSearchEvent>? _searchEvents;
   int _searchRequestSerial = 0;
   int? _activeSearchRequestId;
@@ -285,6 +293,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       'readingRules': jsonEncode(_defaultReadingRules),
       'assetRevision': jsonEncode(AssetExtractor.assetRevision),
       'traceTextSelection': jsonEncode(readerTextSelectionTracingEnabled),
+      'traceStartup': jsonEncode(readerStartupTracingEnabled),
       'selectionHandleLabels': jsonEncode({
         'start': widget.selectionStartLabel,
         'end': widget.selectionEndLabel,
@@ -338,6 +347,11 @@ class BookReaderWebViewState extends State<BookReaderWebView>
     InAppWebViewController controller,
     ConsoleMessage message,
   ) {
+    if (readerStartupTracingEnabled &&
+        message.message.startsWith('[reader-startup] ')) {
+      debugPrint(message.message);
+      return;
+    }
     final level = message.messageLevel.toString();
     if (!shouldLogReaderConsoleMessage(debugMode: kDebugMode, level: level)) {
       return;
@@ -539,7 +553,10 @@ class BookReaderWebViewState extends State<BookReaderWebView>
   }
 
   void _markReady(String source) {
-    if (!mounted || !_loadSession.markReady()) return;
+    if (!mounted ||
+        !_loadSession.markReady(loadComplete: source == 'onLoadEnd')) {
+      return;
+    }
     final wasReady = _isReady;
     _isReady = true;
 

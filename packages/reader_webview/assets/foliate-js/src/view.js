@@ -4,6 +4,7 @@ import { Overlayer } from './overlayer.js'
 import { SearchOcclusionIndicator, ACTIVE_SEARCH_HIGHLIGHT_COLOR } from './readflex_search_occlusion.js'
 import { textWalker } from './text-walker.js'
 import { directionCountsFromText, languageInfo, normalizeDocumentLanguageAndDirection } from './readflex_document_normalizer.js'
+import { markReaderStartup } from './readflex_startup.js'
 const { TTS } = await import('./tts.js')
 
 const SEARCH_PREFIX = 'foliate-search:'
@@ -11,6 +12,7 @@ const SEARCH_HIGHLIGHT_COLOR = '#00d4d8'
 const SEARCH_HIGHLIGHT_PADDING = 1
 const SEARCH_HIGHLIGHT_RADIUS = 3
 const BOOK_DIRECTION_SAMPLE_SECTION_LIMIT = 12
+const BOOK_DIRECTION_READ_CONCURRENCY = 2
 const SECTION_DIRECTION_SAMPLE_CHAR_LIMIT = 5000
 const SECTION_DIRECTION_SAMPLE_SLICE_LIMIT = 3
 
@@ -75,17 +77,30 @@ const inferBookPageProgressionDirection = async (book, language = {}) => {
   let rtlCount = 0
   let ltrCount = 0
 
-  for (const section of directionSampleSections(book?.sections)) {
-    try {
-      const doc = await section.createDocument()
-      const sample = directionSampleText(doc.body?.textContent)
-      const counts = directionCountsFromText(sample)
-      rtlCount += counts.rtl
-      ltrCount += counts.ltr
-    } catch (e) {
-      console.warn('[readflex-direction] Could not sample section direction', e)
+  const sections = directionSampleSections(book?.sections)
+  // Stateful formats such as KF8 share a read cursor and must stay sequential.
+  const concurrency = book?.supportsConcurrentDocumentReads === true
+    ? BOOK_DIRECTION_READ_CONCURRENCY : 1
+  let nextSection = 0
+  // Overlap archive reads without retaining all sampled chapter DOMs at once.
+  const sampleSections = async () => {
+    while (nextSection < sections.length) {
+      const section = sections[nextSection++]
+      try {
+        const doc = await section.createDocument()
+        const sample = directionSampleText(doc.body?.textContent)
+        const counts = directionCountsFromText(sample)
+        rtlCount += counts.rtl
+        ltrCount += counts.ltr
+      } catch (e) {
+        console.warn('[readflex-direction] Could not sample section direction', e)
+      }
     }
   }
+  await Promise.all(Array.from(
+    { length: Math.min(concurrency, sections.length) },
+    sampleSections,
+  ))
 
   if (rtlCount === 0 && ltrCount === 0) {
     return book?.dir === 'ltr' ? 'ltr' : ''
@@ -164,6 +179,7 @@ export class View extends HTMLElement {
     this.language = languageInfo(book.metadata?.language)
     const inferredPageProgressionDirection =
       await inferBookPageProgressionDirection(book, this.language)
+    markReaderStartup('direction-ready')
     if (inferredPageProgressionDirection) {
       this.book.dir = inferredPageProgressionDirection
       globalThis.readflexPageProgressionDirection ||= inferredPageProgressionDirection
@@ -185,6 +201,7 @@ export class View extends HTMLElement {
     }
 
     this.isFixedLayout = this.book.rendition?.layout === 'pre-paginated'
+    markReaderStartup('navigation-ready')
     if (this.isFixedLayout) {
       await import('./fixed-layout.js')
       this.renderer = document.createElement('foliate-fxl')
@@ -203,6 +220,7 @@ export class View extends HTMLElement {
     })
     this.renderer.open(book)
     this.#root.append(this.renderer)
+    markReaderStartup('renderer-ready')
     this.#searchOcclusion = new SearchOcclusionIndicator({
       scrollTarget: this.renderer.shadowRoot ?? this.renderer,
       resizeTarget: this.renderer,

@@ -7,6 +7,8 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:path/path.dart' as p;
 
+import 'reader_load_session.dart' show readerStartupTracingEnabled;
+
 /// Thrown when foliate-js rejects a book during import (e.g. unsupported
 /// format, corrupted archive). Carries the JS-side error message so logs
 /// and the failure UI can show it.
@@ -134,12 +136,11 @@ class BookMetadataExtractor {
           );
         },
         onConsoleMessage: (controller, message) {
-          // foliate-js fires console.log routinely during import
-          // (loader bring-up, pdf.js, zip.js). Pipe to debugPrint
-          // gated on kDebugMode so the noise stays out of release
-          // builds; release-time errors come back through
-          // onImportError instead.
-          if (kDebugMode) {
+          // Routine loader output is debug-only. Startup timings are explicitly
+          // opt-in in profile/release; import errors use onImportError.
+          if (kDebugMode ||
+              (readerStartupTracingEnabled &&
+                  message.message.startsWith('[reader-startup] '))) {
             debugPrint('BookMetadataExtractor JS: ${message.message}');
           }
         },
@@ -173,6 +174,7 @@ class BookMetadataExtractor {
     final fileName = p.basename(filePath);
     final params = {
       'importing': 'true',
+      'traceStartup': jsonEncode(readerStartupTracingEnabled),
       'url': Uri.encodeComponent(
         jsonEncode(
           resolvedBookUrl.toString(),

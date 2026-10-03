@@ -77,20 +77,87 @@ URL relative to the module. EPUB/CBZ reading and metadata extraction do not fetc
 or execute the PDF engine (about 555 KiB). PDF assets remain bundled and extracted;
 this reduces WebView startup work, not the application download size.
 
+ZIP is loaded only for archives and EPUB only for EPUB input (including directory
+input). CBZ does not fetch the EPUB parser; PDF does not fetch ZIP. For archives,
+the format module and ZIP directory are prepared concurrently. Direction
+inference still samples up to 12 linear chapters with the same three text slices
+and mixed-language rules, but overlaps at most two EPUB chapter reads. This
+overlaps I/O/decompression waits, not synchronous DOM parsing on separate CPU threads.
+Only EPUB opts into `supportsConcurrentDocumentReads` for `createDocument`;
+other formats remain sequential. In particular, KF8 uses a shared raw-text buffer
+and read cursor, so overlapping its reads could reorder or skip text records.
+The capability does not apply to resource/blob loading.
+Sample failures remain isolated. Explicit reader direction and RTL metadata
+retain their early-return behavior; LTR metadata alone is not trusted because
+some RTL books have incorrect publisher metadata.
+
+Add `--dart-define=READFLEX_TRACE_READER_STARTUP=true` to a profile/release run to
+enable opt-in diagnostics (also available in debug). By default there is no
+startup stopwatch, stage buffer, clock sampling or diagnostic output.
+
+- `[reader-startup-native]` measures from load-session creation in the first
+  WebView build. `webview-created` is the platform-view callback;
+  `first-content-ready` is the first usable-content signal (usually
+  `onRelocated`); `initial-location-ready` is `onLoadEnd`, after initial
+  navigation completes. Early relocation still releases the loading scrim;
+  later relocation/load callbacks do not fire `onReady` again. Recovery starts
+  a fresh timing generation. Source loading in the feature bloc is excluded.
+- `[reader-startup]` reports one JSON record on successful reading or metadata
+  completion, with cumulative `elapsedMs`, per-stage `durationMs` and `totalMs`.
+  Its clock starts at HTML navigation, independent of Flutter's clock. Stages
+  cover shared modules, file probing, ZIP directory (archives only), format
+  parsing, direction, navigation indexes, renderer setup and initial location
+  or metadata/cover completion. The first stage includes HTML/module loading.
+- Reflowable chapters add `chapter-load-start`, `chapter-resources-ready`
+  (text, resource rewriting and blob creation), `chapter-document-loaded`
+  (iframe load event), `chapter-prepared` (load hooks, styles and normalization),
+  `chapter-layout-ready` (initial layout) and `chapter-anchor-ready` (anchor
+  resolution and navigation). `durationMs` is the interval since the previous
+  stage, not exclusive CPU time. `location-ready` includes navigation completion;
+  a new book also joins the existing first-advance operation and its debounce.
+  These chapter stages do not apply to the fixed-layout renderer or metadata-only
+  imports. Timing hooks do not add waits, per-frame sampling or bridge messages.
+- Neither clock measures final frame presentation or guarantees that late font
+  or image loading cannot cause another layout. Native first-content time and JS
+  completion have different endpoints: do not subtract one from the other to
+  estimate WebView creation overhead.
+- Timings contain no source paths, titles, text or API credentials. Diagnostics
+  do not send extra per-stage bridge messages. Compare cold and repeat opens
+  separately on the same device, book and saved position; browser-test timing
+  is not a substitute for real-device profile/release measurements.
+
+Direction-result persistence, EPUB resource concurrency, decoded comic-image
+caching and keeping WebViews warm are not enabled. Persistence needs a versioned
+file-identity/invalidation contract; resource concurrency needs in-flight
+deduplication that preserves cyclic CSS references and blob lifetimes. The
+existing range cache and bounded encoded comic-neighbour prefetch remain intact.
+
 `test_browser/book_startup.test.mjs` checks the production bootstrap, first-page
-content and metadata completion, and verifies PDF engine/worker requests in
-Chromium/WebKit. It does not measure native WebView creation or device opening
-latency; those still require profile/release measurements on physical devices.
+content and metadata completion, lazy format requests, scoped font preloading
+and opt-in timing in Chromium/WebKit. It also checks that load completion follows
+the first rendered position, saved progress skips the start page, and saved CFI
+takes precedence over progress. `book_direction.test.mjs` verifies mixed-language decisions,
+sampling coverage, failed reads, sequential fallback and bounded concurrency
+rather than asserting a machine-dependent wall-clock threshold.
 
 ### Book Fonts
+
+For reflowable reading only, `book.js` preloads the selected bundled font after
+format detection, overlapping direction/index preparation. It reuses
+`FoliateStyle.fontPath`, including the local server's `/r/<token>/` scope, and
+accepts only URLs under that reader's font asset directory. No hard-coded
+root-relative font requests remain in the HTML shell. System/publisher fonts,
+`overrideFont: false`, fixed-layout books and metadata extraction skip this hint.
+The hint is not awaited; failure falls back to the normal CSS font stack.
+It reduces late font fetching but cannot guarantee a reflow-free first page.
 
 Reading presets use the selected family first, then the bundled Noto Sans
 Symbols for missing glyphs such as U+267E (permanent paper sign). `AssetExtractor`
 copies the same font used by Flutter into the local reader-server assets;
 Flutter's font registry is not visible to the WebView. Each reflowable chapter
 declares the fallback with an absolute local URL, because chapter documents use
-blob URLs. The browser fetches it only when needed; there is no remote font
-service, eager preload, text-node rewrite or per-character scan.
+blob URLs. The browser fetches the symbol fallback only when needed; it is not
+preloaded. There is no remote font service, text-node rewrite or per-character scan.
 
 `overrideFont: false` and the `book` preset retain publisher families. The reader
 feature's code overlay retains its monospace families first and adds the same

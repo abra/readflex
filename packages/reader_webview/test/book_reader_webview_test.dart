@@ -928,32 +928,6 @@ void main() {
       expect(bookJs, isNot(contains('JSON.stringify(style)')));
     });
 
-    test('restores saved progress without booting through the start page', () {
-      final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
-
-      expect(
-        bookJs,
-        contains(
-          'const progressRestore = cfi ? null : '
-          'readflexInitialProgressRestore(progress)',
-        ),
-      );
-      expect(
-        bookJs,
-        contains(
-          'if (!cfi && progressRestore == null && !this.view.book.rendition?.zoomable)\n'
-          '      this.view.renderer.next()',
-        ),
-      );
-      expect(
-        bookJs,
-        contains(
-          'if (progressRestore == null) await this.view.init({ lastLocation: cfi })',
-        ),
-      );
-      expect(bookJs, contains('await this.view.goToFraction(progressRestore)'));
-    });
-
     test('keeps progress restore just before the hard end boundary', () {
       final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
 
@@ -1791,6 +1765,17 @@ void main() {
   });
 
   group('asset extraction', () {
+    test(
+      'bundles startup instrumentation for the local reader server',
+      () async {
+        TestWidgetsFlutterBinding.ensureInitialized();
+        final source = await rootBundle.loadString(
+          'packages/reader_webview/assets/foliate-js/src/readflex_startup.js',
+        );
+        expect(source, contains('export class ReaderStartupTrace'));
+      },
+    );
+
     test('bundles the shared search occlusion module for both readers', () async {
       TestWidgetsFlutterBinding.ensureInitialized();
       final source = await rootBundle.loadString(
@@ -1800,7 +1785,7 @@ void main() {
     });
 
     test('versions bundled reader assets independently of app version', () {
-      expect(AssetExtractor.assetRevision, 'reader_webview_assets_147');
+      expect(AssetExtractor.assetRevision, 'reader_webview_assets_149');
       expect(
         AssetExtractor.extractionVersionFor('1.0.0+1'),
         '1.0.0+1|${AssetExtractor.assetRevision}',

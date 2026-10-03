@@ -27,6 +27,7 @@ flutter:
     - assets/article-html/index.html
     - assets/foliate-js/index.html
     - assets/foliate-js/src/book.js
+    - assets/foliate-js/src/readflex_startup.js
     - assets/foliate-js/src/view.js
     - assets/foliate-js/src/epub.js
     - assets/foliate-js/src/epubcfi.js

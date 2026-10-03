@@ -40,6 +40,7 @@ void main() {
       expect(requested, contains(bundleKey));
       expect(await font.readAsBytes(), bytes);
       for (final asset in [
+        'foliate-js/src/readflex_startup.js',
         'foliate-js/src/readflex_comic_zoom.js',
         'foliate-js/src/vendor/panzoom.js',
         'foliate-js/src/vendor/Panzoom-LICENSE',

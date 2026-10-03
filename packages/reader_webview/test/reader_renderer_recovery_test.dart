@@ -4,8 +4,80 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader_webview/reader_webview.dart';
+import 'package:reader_webview/src/reader_load_session.dart'
+    show readerStartupTracingEnabled;
 
 void main() {
+  testWidgets(
+    'book exposes first content once before reporting completed initial location',
+    (tester) async {
+      final previousPlatform = InAppWebViewPlatform.instance;
+      final previousPrint = debugPrint;
+      final platform = _Platform();
+      final timings = <String>[];
+      InAppWebViewPlatform.instance = platform;
+      debugPrint = (message, {wrapWidth}) {
+        if (message?.startsWith('[reader-startup-native]') ?? false) {
+          timings.add(message!);
+        }
+      };
+      addTearDown(() {
+        debugPrint = previousPrint;
+        if (previousPlatform != null) {
+          InAppWebViewPlatform.instance = previousPlatform;
+        }
+      });
+      try {
+        var ready = 0;
+        final positions = <BookPosition>[];
+        await tester.pumpWidget(
+          MaterialApp(
+            home: BookReaderWebView(
+              serverBaseUri: Uri.parse('http://127.0.0.1:1234/r/token/'),
+              bookFilePath: '/books/a.epub',
+              onReady: () => ready++,
+              onPositionChanged: positions.add,
+            ),
+          ),
+        );
+        final view = platform.views.single;
+        view.emit('onRelocated', [
+          {'cfi': 'first', 'fraction': 0.1},
+        ]);
+        expect(ready, 1);
+        expect(
+          timings.where((line) => line.contains('initial-location-ready')),
+          isEmpty,
+        );
+        view.emit('onRelocated', [
+          {'cfi': 'restored', 'fraction': 0.6},
+        ]);
+        view.emit('onLoadEnd', []);
+        view.emit('onLoadEnd', []);
+        expect(ready, 1);
+        expect(positions.map((position) => position.cfi), [
+          'first',
+          'restored',
+        ]);
+        if (readerStartupTracingEnabled) {
+          expect(timings, hasLength(3));
+          expect(timings[0], contains('stage=webview-created'));
+          expect(timings[1], contains('stage=first-content-ready'));
+          expect(timings[2], contains('stage=initial-location-ready'));
+        } else {
+          expect(timings, isEmpty);
+        }
+        await tester.pumpWidget(const SizedBox());
+      } finally {
+        debugPrint = previousPrint;
+      }
+    },
+    variant: TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.iOS,
+    }),
+  );
+
   test(
     'metadata extraction reports renderer death during native startup and disposes it',
     () async {

@@ -55,9 +55,8 @@ import {
 } from './readflex_selection_normalizer.js'
 import { buildSelectionContext } from './readflex_selection_context.js'
 import { installSelectionNavigation, selectionPageEndpoint, selectionViewportPosition } from './readflex_selection_navigation.js'
-const { configure, ZipReader, BlobReader, TextWriter, BlobWriter } =
-  await import('./vendor/zip.js')
-const { EPUB } = await import('./epub.js')
+import { markReaderStartup, finishReaderStartup } from './readflex_startup.js'
+markReaderStartup('modules-ready')
 
 var isPdf = false;
 
@@ -1441,9 +1440,12 @@ const isPDF = async file => {
 }
 
 const makeZipLoader = async file => {
+  const { configure, ZipReader, BlobReader, TextWriter, BlobWriter } =
+    await import('./vendor/zip.js')
   configure({ useWebWorkers: false })
   const reader = new ZipReader(new BlobReader(file))
   const entries = await reader.getEntries()
+  markReaderStartup('archive-ready')
   const map = new Map(entries.map(entry => [entry.filename, entry]))
   const load = f => (name, ...args) =>
     map.has(name) ? f(map.get(name), ...args) : null
@@ -1486,6 +1488,27 @@ const isFBZ = ({ name, type }) =>
   type === 'application/x-zip-compressed-fb2'
   || name.endsWith('.fb2.zip') || name.endsWith('.fbz')
 
+const preloadReaderFont = book => {
+  if (importing || book.rendition?.layout === 'pre-paginated') return
+  const { fontName, fontPath, overrideFont = true } = style ?? {}
+  if (!overrideFont || !fontName || fontName === 'book' || fontName === 'system'
+    || typeof fontPath !== 'string' || !fontPath) return
+
+  let url
+  try { url = new URL(fontPath, document.baseURI) } catch { return }
+  const fontBase = new URL('../../fonts/', import.meta.url)
+  if (url.origin !== fontBase.origin || !url.pathname.startsWith(fontBase.pathname)) return
+
+  // Reuse the exact @font-face URL, including the reader server's access scope.
+  // This is a non-blocking hint; font failure must not prevent opening the book.
+  const link = document.createElement('link')
+  link.rel = 'preload'
+  link.as = 'font'
+  link.crossOrigin = 'anonymous'
+  link.href = url.href
+  document.head.append(link)
+}
+
 const getView = async file => {
   let book
   if (file.isDirectory) {
@@ -1495,18 +1518,19 @@ const getView = async file => {
   }
   else if (!file.size) throw new Error('File not found')
   else if (await isZip(file)) {
-    const loader = await makeZipLoader(file)
-    if (isCBZ(file)) {
-      const { makeComicBook } = await import('./comic-book.js')
-      book = makeComicBook(loader, file)
-    } else if (isFBZ(file)) {
-      const { makeFB2 } = await import('./fb2.js')
+    const comic = isCBZ(file)
+    const zippedFB2 = isFBZ(file)
+    const modulePath = comic ? './comic-book.js' : zippedFB2 ? './fb2.js' : './epub.js'
+    const [loader, format] = await Promise.all([makeZipLoader(file), import(modulePath)])
+    if (comic) {
+      book = format.makeComicBook(loader, file)
+    } else if (zippedFB2) {
       const { entries } = loader
       const entry = entries.find(entry => entry.filename.endsWith('.fb2'))
       const blob = await loader.loadBlob((entry ?? entries[0]).filename)
-      book = await makeFB2(blob)
+      book = await format.makeFB2(blob)
     } else {
-      book = await new EPUB(loader).init()
+      book = await new format.EPUB(loader).init()
     }
   }
   else if (await isPDF(file)) {
@@ -1525,6 +1549,8 @@ const getView = async file => {
     }
   }
   if (!book) throw new Error('File type not supported')
+  markReaderStartup('format-ready')
+  preloadReaderFont(book)
   const view = document.createElement('foliate-view')
   document.body.append(view)
   await view.open(book)
@@ -2088,10 +2114,14 @@ class Reader {
     const progressRestore = cfi ? null : readflexInitialProgressRestore(progress)
     // init() advances once itself. The legacy text bootstrap needs the early
     // request; comic navigation queues it and would otherwise skip page one.
-    if (!cfi && progressRestore == null && !this.view.book.rendition?.zoomable)
-      this.view.renderer.next()
+    const initialAdvance = !cfi && progressRestore == null && !this.view.book.rendition?.zoomable
+      ? this.view.renderer.next() : null
     this.setView(this.view)
-    if (progressRestore == null) await this.view.init({ lastLocation: cfi })
+    if (progressRestore == null) {
+      // init may return early while the legacy first advance holds the renderer
+      // lock. Join that same operation; never start a second page turn.
+      await Promise.all([this.view.init({ lastLocation: cfi }), initialAdvance])
+    }
     // Progress restore is used by the iOS deep-CFI crash fallback and by
     // generated articles saved at the end. Skip the normal no-CFI boot page
     // advance; routing through the start first can make foliate-js expose blank
@@ -3357,12 +3387,15 @@ const open = async (file, cfi, progress) => {
   globalThis.reader = reader
   await reader.open(file, cfi, progress)
   if (!importing) {
+    finishReaderStartup('location-ready')
     callFlutter('onLoadEnd')
     onSetToc()
     scheduleDocumentFeatureDetection()
     callFlutter('renderAnnotations')
   }
-  else { getMetadata() }
+  else {
+    await getMetadata()
+  }
 }
 
 
@@ -3639,12 +3672,14 @@ const getMetadata = async () => {
     const fileReader = new FileReader()
     fileReader.readAsDataURL(cover)
     fileReader.onloadend = () => {
+      finishReaderStartup('metadata-ready')
       callFlutter('onMetadata', {
         ...reader.view.book.metadata,
         cover: fileReader.result
       })
     }
   } else {
+    finishReaderStartup('metadata-ready')
     callFlutter('onMetadata', {
       ...reader.view.book.metadata,
       cover: null
@@ -4079,7 +4114,10 @@ import('./remote_file.js')
   .then(({ RemoteFile }) =>
     new RemoteFile(url, { name }).open(),
   )
-  .then(file => open(file, initialCfi, initialProgress))
+  .then(file => {
+    markReaderStartup('file-opened')
+    return open(file, initialCfi, initialProgress)
+  })
   .catch(e => {
     console.error(e)
     // Surface import errors back to Dart immediately. Without this the

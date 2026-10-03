@@ -838,6 +838,8 @@ const getDisplayOptions = doc => {
 
 export class EPUB {
     parser = new DOMParser()
+    // createDocument reads independent chapter text, not the resource/blob loader.
+    supportsConcurrentDocumentReads = true
     #loader
     #encryption
     constructor({ loadText, loadBlob, getSize, sha1 }) {

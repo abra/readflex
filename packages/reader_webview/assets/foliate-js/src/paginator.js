@@ -1,3 +1,5 @@
+import { markReaderStartup } from './readflex_startup.js'
+
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 const lerp = (min, max, x) => x * (max - min) + min
@@ -346,7 +348,9 @@ class View {
     return new Promise(resolve => {
       this.#iframe.addEventListener('load', () => {
         const doc = this.document
+        markReaderStartup('chapter-document-loaded')
         afterLoad?.(doc)
+        markReaderStartup('chapter-prepared')
 
         // it needs to be visible for Firefox to get computed style
         this.#iframe.style.display = 'block'
@@ -362,6 +366,7 @@ class View {
         this.#iframe.style.display = 'block'
         this.render(layout)
         this.#observer.observe(doc.body)
+        markReaderStartup('chapter-layout-ready')
 
         // the resize observer above doesn't work in Firefox
         // (see https://bugzilla.mozilla.org/show_bug.cgi?id=1832939)
@@ -1785,6 +1790,7 @@ export class Paginator extends HTMLElement {
     const { index, src, anchor, onLoad, select } = await promise
     this.#index = index
     if (src) {
+      markReaderStartup('chapter-resources-ready')
       const view = this.#createView()
       const afterLoad = doc => {
         if (doc.head) {
@@ -1808,6 +1814,7 @@ export class Paginator extends HTMLElement {
     }
     await this.scrollToAnchor((typeof anchor === 'function'
       ? anchor(this.#view.document) : anchor) ?? 0, select)
+    markReaderStartup('chapter-anchor-ready')
   }
   #canGoToIndex(index) {
     return index >= 0 && index <= this.sections.length - 1
@@ -1827,6 +1834,7 @@ export class Paginator extends HTMLElement {
         this.setStyles(this.#styles)
         this.dispatchEvent(new CustomEvent('load', { detail }))
       }
+      markReaderStartup('chapter-load-start')
       await this.#display(Promise.resolve(this.sections[index].load())
         .then(src => ({ index, src, anchor, onLoad, select }))
         .catch(e => {

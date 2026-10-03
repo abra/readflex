@@ -6,7 +6,7 @@ import { chromium, webkit } from 'playwright'
 
 const assets = fileURLToPath(new URL('../assets/', import.meta.url))
 
-export async function createHarness(t) {
+export async function createHarness(t, { assetPrefix = '' } = {}) {
     const requests = []
     const routes = new Map([
         ['/blank', '<!doctype html><html><body></body></html>'],
@@ -20,7 +20,9 @@ export async function createHarness(t) {
             return
         }
         try {
-            const file = path.resolve(assets, `.${pathname}`)
+            if (assetPrefix && !pathname.startsWith(assetPrefix + '/')) throw new Error('Outside asset scope')
+            const assetPath = pathname.slice(assetPrefix.length)
+            const file = path.resolve(assets, `.${assetPath}`)
             if (!file.startsWith(assets)) throw new Error('Outside assets')
             const data = await readFile(file)
             res.setHeader('content-type', file.endsWith('.js') ? 'text/javascript' : 'text/html')
