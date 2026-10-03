@@ -144,7 +144,58 @@ void main() {
         await expectUiGolden(tester, profile, 'library-display-language');
       }
       await tapUi(tester, picker);
+      final sheet = find.byType(BottomSheet).last;
+      final options = ReadflexSupportedLocales.languages
+          .map(
+            (item) =>
+                find.byKey(ValueKey('libraryLanguageOption-${item.code}')),
+          )
+          .toList();
+      final first = tester.getRect(options[0]);
+      final second = tester.getRect(options[1]);
+      if (profile.scale == 1) {
+        expect(
+          second.top,
+          first.top,
+          reason: 'two columns at normal text size',
+        );
+        expect(
+          isRtl ? second.right < first.left : second.left > first.right,
+          isTrue,
+        );
+      } else {
+        expect(second.top, greaterThanOrEqualTo(first.bottom + AppSpacing.sm));
+      }
+      for (final option in options) {
+        final rect = tester.getRect(option);
+        expect(rect.width, greaterThanOrEqualTo(AppSizes.buttonHeight));
+        expect(rect.height, greaterThanOrEqualTo(AppSizes.buttonHeight));
+        final text = find.descendant(of: option, matching: find.byType(Text));
+        expect(tester.getRect(text).left, greaterThanOrEqualTo(rect.left));
+        expect(tester.getRect(text).right, lessThanOrEqualTo(rect.right));
+      }
       await expectUiGolden(tester, profile, 'library-language-picker');
+      final position = tester
+          .state<ScrollableState>(
+            find.descendant(of: sheet, matching: find.byType(Scrollable)),
+          )
+          .position;
+      if (profile == VisualProfile.phone || profile == VisualProfile.dark) {
+        expect(position.maxScrollExtent, 0);
+        expect(tester.getRect(sheet).height, lessThan(420));
+        for (final option in options) {
+          expect(option.hitTestable(), findsOneWidget);
+        }
+      }
+      if (position.maxScrollExtent > 0) {
+        position.jumpTo(position.maxScrollExtent / 2);
+        await tester.pumpAndSettle();
+        await expectUiGolden(
+          tester,
+          profile,
+          'library-language-picker-scrolled',
+        );
+      }
       await dismissSheet(tester);
       await dismissSheet(tester);
       await tester.enterText(find.byType(TextField), 'no matching title');

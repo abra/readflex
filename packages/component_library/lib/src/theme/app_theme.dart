@@ -276,7 +276,13 @@ ThemeData _assembleTheme({
     dialogTheme: AppNavigationThemes.dialog(palette),
     filledButtonTheme: AppButtonThemes.filled(palette, textTheme),
     outlinedButtonTheme: AppButtonThemes.outlined(palette, textTheme),
-    textButtonTheme: AppButtonThemes.text(palette, textTheme),
+    textButtonTheme: AppButtonThemes.text(
+      palette,
+      textTheme,
+      foreground: brightness == Brightness.dark
+          ? colorScheme.primaryFixedDim
+          : colorScheme.primary,
+    ),
     iconButtonTheme: AppButtonThemes.icon(palette),
     inputDecorationTheme: AppInputThemes.theme(palette, textTheme),
     segmentedButtonTheme: AppSelectionThemes.segmentedButton(
@@ -287,7 +293,9 @@ ThemeData _assembleTheme({
 
     // --- Progress ---
     progressIndicatorTheme: ProgressIndicatorThemeData(
-      color: palette.primary,
+      color: brightness == Brightness.dark
+          ? colorScheme.primaryFixedDim
+          : colorScheme.primary,
       linearTrackColor: palette.muted,
       circularTrackColor: palette.muted,
     ),

@@ -11,7 +11,7 @@ import 'manage_collection_cubit.dart';
 
 enum ManageCollectionSheetResult { deleted }
 
-enum _ManageCollectionStep { manage, confirmDelete }
+enum _ManageCollectionStep { manage, confirmDelete, confirmDiscard }
 
 /// Source currently being animated out of the collection list.
 ///
@@ -27,12 +27,12 @@ class _RemovingCollectionSource {
 }
 
 const double _collectionSourcesMaxHeight = 260;
-const double _collectionSourceRowHeightEstimate = 57;
+const double _collectionSourceRowHeight =
+    AppSizes.buttonHeight + AppSpacing.sm * 2;
+const double _collectionSourceDividerHeight = 1;
 const double _emptyCollectionListHeightEstimate = 56;
-const double _manageCollectionHeaderHeightEstimate = 48;
 const double _manageCollectionTextFieldHeightEstimate = 56;
 const double _manageCollectionCountLabelHeightEstimate = 18;
-const double _manageCollectionActionsHeightEstimate = 56;
 const double _manageCollectionDeleteBodyHeightEstimate = 88;
 const double _manageCollectionManageMinStepHeight = 336;
 const double _manageCollectionDeleteMinStepHeight = 224;
@@ -103,45 +103,28 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
   _RemovingCollectionSource? _removingSource;
   var _animateNextSizeChange = false;
   var _step = _ManageCollectionStep.manage;
-  var _confirmingClose = false;
 
   bool get _hasChanges =>
       (widget.scope.canRename && _nameController.text.trim() != _currentName) ||
       _removedSourceIds.isNotEmpty;
 
-  Future<void> _requestClose() async {
-    if (_confirmingClose ||
-        context.read<ManageCollectionCubit>().state.isBusy) {
+  void _requestClose() {
+    if (context.read<ManageCollectionCubit>().state.isBusy) {
       return;
     }
-    if (_step == _ManageCollectionStep.confirmDelete) {
-      _cancelDeleteConfirmation();
+    if (_step != _ManageCollectionStep.manage) {
+      _returnToEditing();
       return;
     }
     if (!_hasChanges) {
       Navigator.of(context).pop();
       return;
     }
-    _confirmingClose = true;
-    final discard = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.libraryDiscardChangesTitle),
-        content: Text(context.l10n.libraryDiscardChangesBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(context.l10n.libraryKeepEditing),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(context.l10n.libraryDiscardChanges),
-          ),
-        ],
-      ),
-    );
-    _confirmingClose = false;
-    if (mounted && discard == true) Navigator.of(context).pop();
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _animateNextSizeChange = true;
+      _step = _ManageCollectionStep.confirmDiscard;
+    });
   }
 
   @override
@@ -175,7 +158,7 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
     });
   }
 
-  void _cancelDeleteConfirmation() {
+  void _returnToEditing() {
     setState(() {
       _animateNextSizeChange = true;
       _step = _ManageCollectionStep.manage;
@@ -244,28 +227,36 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
   ) {
     final sourceListHeight = sourceCount == 0
         ? _emptyCollectionListHeightEstimate
-        : (sourceCount * _collectionSourceRowHeightEstimate)
+        : (sourceCount * _collectionSourceRowHeight +
+                  (sourceCount - 1) * _collectionSourceDividerHeight +
+                  _collectionSourcesListPadding.vertical)
               .clamp(0.0, _collectionSourcesMaxHeight)
               .toDouble();
     final renameHeight = widget.scope.canRename
         ? _manageCollectionTextFieldHeightEstimate + AppSpacing.lg
         : 0.0;
     final manageHeight =
-        _manageCollectionHeaderHeightEstimate +
-        AppSpacing.lg +
+        AppSizes.buttonHeight +
+        AppSpacing.sm +
         renameHeight +
         _manageCollectionCountLabelHeightEstimate +
         AppSpacing.md +
         sourceListHeight +
         AppSpacing.lg +
-        _manageCollectionActionsHeightEstimate +
-        (widget.scope.canDelete ? AppSizes.buttonHeight + AppSpacing.lg : 0);
+        AppSizes.buttonHeight +
+        _sheetActionsPadding.vertical +
+        (widget.scope.canDelete
+            ? _collectionSourceDividerHeight +
+                  AppSizes.buttonHeight +
+                  AppSpacing.lg
+            : 0);
     final deleteHeight =
-        _manageCollectionHeaderHeightEstimate +
-        AppSpacing.lg +
+        AppSizes.buttonHeight +
+        AppSpacing.sm +
         _manageCollectionDeleteBodyHeightEstimate +
         AppSpacing.lg +
-        _manageCollectionActionsHeightEstimate;
+        AppSizes.buttonHeight +
+        _sheetActionsPadding.vertical;
     final viewportLimit = math.max(
       0.0,
       MediaQuery.sizeOf(context).height -
@@ -274,13 +265,15 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
     );
     final minHeight = switch (step) {
       _ManageCollectionStep.manage => _manageCollectionManageMinStepHeight,
-      _ManageCollectionStep.confirmDelete =>
+      _ManageCollectionStep.confirmDelete ||
+      _ManageCollectionStep.confirmDiscard =>
         _manageCollectionDeleteMinStepHeight,
     };
     final maxHeight = viewportLimit;
     final preferredHeight = switch (step) {
       _ManageCollectionStep.manage => manageHeight,
-      _ManageCollectionStep.confirmDelete => deleteHeight,
+      _ManageCollectionStep.confirmDelete ||
+      _ManageCollectionStep.confirmDiscard => deleteHeight,
     };
     final textScale = MediaQuery.textScalerOf(context).scale(15) / 15;
     return (preferredHeight * textScale)
@@ -348,12 +341,40 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
       _ManageCollectionStep.confirmDelete => _ManageCollectionStepView(
         key: const ValueKey('deleteCollectionContent'),
         title: context.l10n.libraryDeleteCollectionTitle,
-        onClose: state.isBusy ? null : _cancelDeleteConfirmation,
+        onClose: state.isBusy ? null : _returnToEditing,
         child: _DeleteCollectionConfirmationContent(
           state: state,
           collectionName: _currentName,
-          onCancel: _cancelDeleteConfirmation,
+          onCancel: _returnToEditing,
           onDelete: _deleteCollection,
+        ),
+      ),
+      _ManageCollectionStep.confirmDiscard => _ManageCollectionStepView(
+        key: const ValueKey('discardCollectionContent'),
+        title: context.l10n.libraryDiscardChangesTitle,
+        onClose: _returnToEditing,
+        child: Padding(
+          padding: _sheetActionsPadding,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Text(
+                    context.l10n.libraryDiscardChangesBody,
+                    style: context.text.bodyMedium,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              AppSheetActions(
+                primaryLabel: context.l10n.libraryKeepEditing,
+                onPrimary: _returnToEditing,
+                secondaryLabel: context.l10n.libraryDiscardChanges,
+                onSecondary: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
         ),
       ),
     };
@@ -537,7 +558,8 @@ int _transitionDirection(
 int _navigationDepth(_ManageCollectionStep step) {
   return switch (step) {
     _ManageCollectionStep.manage => 0,
-    _ManageCollectionStep.confirmDelete => 1,
+    _ManageCollectionStep.confirmDelete ||
+    _ManageCollectionStep.confirmDiscard => 1,
   };
 }
 
@@ -560,15 +582,13 @@ class _ManageCollectionStepView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
+          BottomSheetHeader(
             padding: _sheetHorizontalPadding,
-            child: BottomSheetHeader(
-              title: title,
-              onClose: onClose,
-              closeLabel: context.l10n.commonClose,
-            ),
+            title: title,
+            onClose: onClose,
+            closeLabel: context.l10n.commonClose,
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.sm),
           Expanded(child: child),
         ],
       ),
@@ -651,7 +671,7 @@ class _ManageCollectionContent extends StatelessWidget {
     final deleteAction = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Divider(height: 1),
+        const Divider(height: _collectionSourceDividerHeight),
         Align(
           alignment: AlignmentDirectional.centerStart,
           child: TextButton.icon(
@@ -789,50 +809,11 @@ class _CollectionFormActions extends StatelessWidget {
   final VoidCallback? onSave;
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final cancel = OutlinedButton(
-        onPressed: onCancel,
-        child: AppButtonLabel(context.l10n.commonCancel),
-      );
-      final save = FilledButton(
-        onPressed: onSave,
-        child: AppButtonLabel(context.l10n.commonSave),
-      );
-      final labelWidth =
-          (constraints.maxWidth - AppSpacing.md) / 2 - AppSpacing.lg * 2;
-      var stacked = false;
-      for (final label in [
-        context.l10n.commonCancel,
-        context.l10n.commonSave,
-      ]) {
-        final painter = TextPainter(
-          text: TextSpan(text: label, style: context.text.labelLarge),
-          textDirection: Directionality.of(context),
-          textScaler: MediaQuery.textScalerOf(context),
-        )..layout();
-        stacked |= painter.width > labelWidth;
-        painter.dispose();
-      }
-      if (stacked) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            save,
-            const SizedBox(height: AppSpacing.sm),
-            cancel,
-          ],
-        );
-      }
-      return Row(
-        children: [
-          Expanded(child: cancel),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(child: save),
-        ],
-      );
-    },
+  Widget build(BuildContext context) => AppSheetActions(
+    primaryLabel: context.l10n.commonSave,
+    onPrimary: onSave,
+    secondaryLabel: context.l10n.commonCancel,
+    onSecondary: onCancel,
   );
 }
 
@@ -939,26 +920,13 @@ class _DeleteCollectionConfirmationContent extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: state.isBusy ? null : onCancel,
-                  child: AppButtonLabel(context.l10n.commonCancel),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: context.colors.error,
-                    foregroundColor: context.colors.onError,
-                  ),
-                  onPressed: state.isBusy ? null : onDelete,
-                  child: AppButtonLabel(context.l10n.commonDelete),
-                ),
-              ),
-            ],
+          AppSheetActions(
+            primaryLabel: context.l10n.commonDelete,
+            onPrimary: onDelete,
+            destructive: true,
+            busy: state.isBusy,
+            secondaryLabel: context.l10n.commonCancel,
+            onSecondary: onCancel,
           ),
         ],
       ),
@@ -1001,7 +969,7 @@ class _CollapsibleCollectionSourceRow extends StatelessWidget {
               ),
               if (showDivider)
                 Divider(
-                  height: 1,
+                  height: _collectionSourceDividerHeight,
                   color: context.appColors.divider,
                 ),
             ],

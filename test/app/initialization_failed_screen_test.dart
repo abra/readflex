@@ -1,10 +1,36 @@
 import 'dart:async';
 
+import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex/app/screens/initialization_failed_screen.dart';
 
 void main() {
+  testWidgets('recovery keeps app theme and hides diagnostics initially', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      InitializationFailedScreen(
+        error: StateError('private debug detail'),
+        stackTrace: StackTrace.fromString('stack detail'),
+        onRetryInitialization: () async {},
+      ),
+    );
+    final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(app.theme, AppTheme.light());
+    expect(app.darkTheme, AppTheme.dark());
+    expect(
+      find.textContaining('private debug detail').hitTestable(),
+      findsNothing,
+    );
+    expect(find.textContaining('stack detail').hitTestable(), findsNothing);
+    await tester.tap(find.text('Technical details'));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('private debug detail').hitTestable(),
+      findsOneWidget,
+    );
+  });
   Widget screen(Future<void> Function() retry) => InitializationFailedScreen(
     error: StateError('Initialization failed'),
     stackTrace: StackTrace.empty,

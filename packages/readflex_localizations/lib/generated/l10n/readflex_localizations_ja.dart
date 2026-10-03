@@ -207,6 +207,12 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get appInitializationFailed => '初期化に失敗しました';
 
   @override
+  String get appInitializationFailedBody => 'Readflexを起動できませんでした。もう一度お試しください。';
+
+  @override
+  String get appTechnicalDetails => '技術的な詳細';
+
+  @override
   String get appRetry => '再試行';
 
   @override
@@ -451,7 +457,7 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'ライブラリ項目とハイライトが削除されます。アーカイブ済みの学習データは保持されます。',
+      other: 'ライブラリの項目、ハイライト、ブックマークが削除されます。',
     );
     return '$_temp0';
   }
@@ -648,7 +654,7 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get importEditLink => 'リンクを編集';
 
   @override
-  String get importClipboardUnavailable => 'クリップボードを読み取れませんでした';
+  String get importClipboardUnavailable => 'リンクを貼り付けられません';
 
   @override
   String get importArticleUrlRequired => '記事のURLを入力してください';

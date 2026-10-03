@@ -42,7 +42,8 @@ forms wrap within the available width instead of truncating. Further lexical
 entries remain separate below an **In this context** label; definitions and
 examples retain their existing ordering and per-entry Copy action.
 
-The title stays outside a height-constrained scrolling body. Short entries fit
+The shared title row includes Close and stays outside a height-constrained
+scrolling body. Top/bottom scroll fades match Translation. Short entries fit
 their content; long results, landscape screens and large system text remain
 scrollable. `intl` bidi detection gives lexical content its own writing direction,
 independent of the interface locale. Clipboard feedback and scrolling do not

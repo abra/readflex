@@ -193,7 +193,7 @@ void main() {
     expect(contextPanelSource, contains('readerHighlightNoteTitle'));
     expect(contextPanelSource, contains('readerEditNoteTitle'));
     expect(contextPanelSource, contains('readerCommentHint'));
-    expect(contextPanelSource, contains('child: OutlinedButton('));
+    expect(contextPanelSource, contains('AppSheetActions('));
     expect(contextPanelSource, isNot(contains('FilledButton.icon(')));
     expect(contextPanelSource, contains('note: result.note'));
     expect(

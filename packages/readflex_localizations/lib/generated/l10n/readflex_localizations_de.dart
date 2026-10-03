@@ -212,6 +212,13 @@ class ReadflexLocalizationsDe extends ReadflexLocalizations {
   String get appInitializationFailed => 'Initialisierung fehlgeschlagen';
 
   @override
+  String get appInitializationFailedBody =>
+      'Readflex konnte nicht gestartet werden. Versuche es erneut.';
+
+  @override
+  String get appTechnicalDetails => 'Technische Details';
+
+  @override
   String get appRetry => 'Erneut versuchen';
 
   @override
@@ -472,9 +479,7 @@ class ReadflexLocalizationsDe extends ReadflexLocalizations {
       count,
       locale: localeName,
       other:
-          'Dies entfernt die Bibliothekselemente und deine Markierungen. Archivierte Lerndaten bleiben erhalten.',
-      one:
-          'Dies entfernt das Bibliothekselement und deine Markierungen. Archivierte Lerndaten bleiben erhalten.',
+          'Die Bibliothekseinträge, Markierungen und Lesezeichen werden gelöscht.',
     );
     return '$_temp0';
   }
@@ -676,8 +681,7 @@ class ReadflexLocalizationsDe extends ReadflexLocalizations {
   String get importEditLink => 'Link bearbeiten';
 
   @override
-  String get importClipboardUnavailable =>
-      'Zwischenablage konnte nicht gelesen werden';
+  String get importClipboardUnavailable => 'Einfügen fehlgeschlagen';
 
   @override
   String get importArticleUrlRequired => 'Artikel-URL eingeben';

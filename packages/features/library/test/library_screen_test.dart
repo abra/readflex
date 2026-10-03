@@ -141,7 +141,21 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(picker);
     await tester.pumpAndSettle();
-    expectReadableSelection(1);
+    final option = find.byKey(const ValueKey('libraryLanguageOption-en'));
+    final label = tester.widget<Text>(
+      find.descendant(of: option, matching: find.byType(Text)),
+    );
+    final material = tester.widget<Material>(
+      find.descendant(of: option, matching: find.byType(Material)),
+    );
+    final background = Color.alphaBlend(
+      material.color!,
+      theme.colorScheme.surface,
+    ).computeLuminance();
+    expect(
+      (label.style!.color!.computeLuminance() + 0.05) / (background + 0.05),
+      greaterThanOrEqualTo(4.5),
+    );
   });
 
   testWidgets(
@@ -185,7 +199,7 @@ void main() {
         find.byKey(const ValueKey('libraryLanguageOption-ru')),
         100,
         scrollable: find.descendant(
-          of: find.byType(ListView).last,
+          of: find.byType(BottomSheet).last,
           matching: find.byType(Scrollable),
         ),
       );
@@ -390,7 +404,7 @@ void main() {
       find.text('Русский'),
       100,
       scrollable: find.descendant(
-        of: find.byType(ListView).last,
+        of: find.byType(BottomSheet).last,
         matching: find.byType(Scrollable),
       ),
     );
@@ -402,9 +416,13 @@ void main() {
     expect(find.text('Язык'), findsOneWidget);
   });
 
-  testWidgets('language picker uses full-width rows with checkmark', (
+  testWidgets('language picker uses two columns with checkmark', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     bookRepository.seedBooks([_book]);
 
     await tester.pumpWidget(buildSubject());
@@ -428,11 +446,114 @@ void main() {
       find.byKey(const ValueKey('libraryLanguageOption-hi')),
     );
 
-    expect(chineseRect.top, greaterThanOrEqualTo(englishRect.bottom));
-    expect(chineseRect.left, englishRect.left);
+    expect(chineseRect.top, englishRect.top);
+    expect(chineseRect.left - englishRect.right, AppSpacing.sm);
     expect(englishRect.height, greaterThanOrEqualTo(48));
     expect(hindiRect.top, greaterThan(englishRect.top));
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('libraryLanguageOption-en')),
+        matching: find.byIcon(AppIcons.check),
+      ),
+      findsOneWidget,
+    );
   });
+
+  for (final profile in [
+    (name: 'phone', size: const Size(390, 844), locale: 'en', scale: 1.0),
+    (name: 'RTL phone', size: const Size(390, 844), locale: 'ar', scale: 1.0),
+    (name: 'large text', size: const Size(390, 844), locale: 'en', scale: 2.0),
+    (
+      name: 'tall tablet',
+      size: const Size(800, 1400),
+      locale: 'en',
+      scale: 1.0,
+    ),
+  ]) {
+    testWidgets('language fades span the sheet: ${profile.name}', (
+      tester,
+    ) async {
+      tester.view.physicalSize = profile.size;
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = profile.scale;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await preferencesService.update(
+        (p) => p.copyWith(locale: Locale(profile.locale)),
+      );
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('libraryHeaderDisplayButton')),
+      );
+      await tester.pumpAndSettle();
+      final picker = find.byKey(const ValueKey('libraryLanguagePicker'));
+      await tester.ensureVisible(picker);
+      await tester.pumpAndSettle();
+      await tester.tap(picker);
+      await tester.pumpAndSettle();
+
+      final sheet = find.byType(BottomSheet).last;
+      final sheetRect = tester.getRect(
+        find.descendant(
+          of: sheet,
+          matching: find.byType(ActionBottomSheetLayout),
+        ),
+      );
+      final list = find.descendant(
+        of: sheet,
+        matching: find.byType(SingleChildScrollView),
+      );
+      final listRect = tester.getRect(list);
+      expect(listRect.left - sheetRect.left, AppSpacing.xl);
+      expect(sheetRect.right - listRect.right, AppSpacing.xl);
+      final fades = find.descendant(
+        of: sheet,
+        matching: find.byType(ScrollEdgeFade),
+      );
+      expect(fades, findsNWidgets(2));
+      for (final element in fades.evaluate()) {
+        final rect = tester.getRect(find.byWidget(element.widget));
+        expect(rect.left, sheetRect.left);
+        expect(rect.right, sheetRect.right);
+      }
+      void expectFades({required bool top, required bool bottom}) {
+        final widgets = tester.widgetList<ScrollEdgeFade>(fades);
+        expect(
+          widgets.singleWhere((w) => w.edge == ScrollFadeEdge.top).visible,
+          top,
+        );
+        expect(
+          widgets.singleWhere((w) => w.edge == ScrollFadeEdge.bottom).visible,
+          bottom,
+        );
+      }
+
+      final scrollable = find.descendant(
+        of: list,
+        matching: find.byType(Scrollable),
+      );
+      final position = tester.state<ScrollableState>(scrollable).position;
+      if (profile.name == 'tall tablet') {
+        expect(position.maxScrollExtent, 0);
+        expectFades(top: false, bottom: false);
+      } else {
+        expect(position.maxScrollExtent, greaterThan(0));
+        expectFades(top: false, bottom: true);
+        position.jumpTo(position.maxScrollExtent / 2);
+        await tester.pumpAndSettle();
+        expectFades(top: true, bottom: true);
+        position.jumpTo(position.maxScrollExtent);
+        await tester.pumpAndSettle();
+        expectFades(top: true, bottom: false);
+        position.jumpTo(0);
+        await tester.pumpAndSettle();
+        expectFades(top: false, bottom: true);
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('switches layout without mounting both scroll views', (
     tester,
@@ -1136,7 +1257,7 @@ void main() {
     await tester.tap(
       find.descendant(
         of: find.byType(ActionBottomSheetLayout),
-        matching: find.byIcon(AppIcons.close),
+        matching: find.bySemanticsLabel('Clear search'),
       ),
     );
     await tester.pumpAndSettle();
@@ -1341,6 +1462,11 @@ void main() {
 
       await close();
       expect(find.text('Discard changes?'), findsOneWidget);
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(
+        find.byKey(const ValueKey('discardCollectionContent')),
+        findsOneWidget,
+      );
       await tester.tap(find.text('Keep editing'));
       await tester.pumpAndSettle();
       expect(find.widgetWithText(TextField, 'Changed'), findsOneWidget);
@@ -1549,6 +1675,87 @@ void main() {
     expect(tester.getCenter(emptyLabel).dy, closeTo(expectedCenter, 1));
   });
 
+  for (final sourceType in SourceType.values) {
+    for (final keyboard in [0.0, 320.0]) {
+      testWidgets(
+        'one $sourceType in collection needs no scrolling with inset $keyboard',
+        (
+          tester,
+        ) async {
+          tester.view.physicalSize = const Size(390, 844);
+          tester.view.devicePixelRatio = 1;
+          tester.view.viewInsets = FakeViewPadding(bottom: keyboard);
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          addTearDown(tester.view.resetViewInsets);
+          final collection = LibraryCollection(
+            id: 'collection-1',
+            name: 'Small collection',
+            sourceCount: 1,
+            createdAt: DateTime(2026),
+            updatedAt: DateTime(2026),
+          );
+          final articleRepository = _FakeArticleRepository();
+          final isBook = sourceType == SourceType.book;
+          if (isBook) {
+            bookRepository.seedBooks([_book]);
+          } else {
+            articleRepository.seedArticles([
+              Article(
+                id: 'article-1',
+                title: 'Saved article',
+                url: 'https://example.com/article',
+                contentPath: '/articles/article-1/article.json',
+                addedAt: DateTime(2026),
+              ),
+            ]);
+          }
+          final sourceId = isBook ? _book.id : 'article-1';
+          collectionRepository.seedCollections([collection]);
+          collectionRepository.seedCollectionSourceIds({
+            collection.id: {sourceId},
+          });
+          await tester.pumpWidget(
+            buildSubject(articleRepository: articleRepository),
+          );
+          await tester.pump();
+          await tester.tap(find.byIcon(AppIcons.collection));
+          await tester.pumpAndSettle();
+          await tester.tap(
+            find.byKey(
+              const ValueKey('collectionScopeManage-manual-collection-1'),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final sheet = find.byKey(const ValueKey('manageCollectionContent'));
+          final viewport = find.descendant(
+            of: sheet,
+            matching: find.byType(ListView),
+          );
+          expect(viewport, findsOneWidget);
+          final scroll = tester.state<ScrollableState>(
+            find.descendant(
+              of: viewport,
+              matching: find.byType(Scrollable),
+            ),
+          );
+          expect(scroll.position.maxScrollExtent, 0);
+          final fades = tester.widgetList<ScrollEdgeFade>(
+            find.descendant(of: sheet, matching: find.byType(ScrollEdgeFade)),
+          );
+          expect(fades.every((fade) => !fade.visible), isTrue);
+          expect(
+            find
+                .byKey(ValueKey('collectionSourceRemove-$sourceId'))
+                .hitTestable(),
+            findsOneWidget,
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
   testWidgets('manage collection item list uses scroll edge fades', (
     tester,
   ) async {
@@ -1616,6 +1823,22 @@ void main() {
       tester.getSize(fadeStack).height,
       lessThanOrEqualTo(_collectionSourcesMaxHeightForTest),
     );
+    final scrollable = find.descendant(
+      of: fadeStack,
+      matching: find.byType(Scrollable),
+    );
+    final position = tester.state<ScrollableState>(scrollable).position;
+    expect(position.maxScrollExtent, greaterThan(0));
+    List<bool> visibleEdges() => tester
+        .widgetList<ScrollEdgeFade>(
+          find.descendant(of: fadeStack, matching: find.byType(ScrollEdgeFade)),
+        )
+        .map((fade) => fade.visible)
+        .toList();
+    expect(visibleEdges(), [false, true]);
+    position.jumpTo(position.maxScrollExtent);
+    await tester.pumpAndSettle();
+    expect(visibleEdges(), [true, false]);
   });
 
   testWidgets(
@@ -1745,7 +1968,7 @@ void main() {
       matching: find.widgetWithText(FilledButton, 'Delete'),
     );
     final messageAreaTop =
-        tester.getBottomLeft(deleteHeader).dy + AppSpacing.lg;
+        tester.getBottomLeft(deleteHeader).dy + AppSpacing.sm;
     final messageAreaBottom =
         tester.getTopLeft(deleteButton).dy - AppSpacing.lg;
     final expectedMessageCenter = (messageAreaTop + messageAreaBottom) / 2;

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
+import 'library_language_sheet.dart';
 import 'library_layout_cubit.dart';
 import 'library_locale_cubit.dart';
 import 'library_theme_cubit.dart';
@@ -266,35 +267,10 @@ class _LanguagePickerRow extends StatelessWidget {
           final cubit = context.read<LibraryLocaleCubit>();
           final selected = await showAppBottomSheet<Locale>(
             context,
-            builder: (context) => ActionBottomSheetLayout(
-              title: context.l10n.libraryDisplayLanguage,
+            builder: (context) => LibraryLanguageSheet(
+              selectedLocale: locale,
+              onSelected: (value) => Navigator.of(context).pop(value),
               onClose: () => Navigator.of(context).pop(),
-              closeLabel: context.l10n.commonClose,
-              constrainBody: true,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.sizeOf(context).height * 0.64,
-                ),
-                child: ScrollEdgeFadeStack(
-                  child: ListView(
-                    shrinkWrap: true,
-                    children: [
-                      for (final item in ReadflexSupportedLocales.languages)
-                        ListTile(
-                          key: ValueKey('libraryLanguageOption-${item.code}'),
-                          title: Text(item.name),
-                          selected: item.code == locale.languageCode,
-                          selectedColor: _selectedForeground(context),
-                          trailing: item.code == locale.languageCode
-                              ? const Icon(AppIcons.check)
-                              : null,
-                          onTap: () =>
-                              Navigator.of(context).pop(Locale(item.code)),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
             ),
           );
           if (selected != null && context.mounted) cubit.setLocale(selected);
@@ -304,10 +280,7 @@ class _LanguagePickerRow extends StatelessWidget {
   );
 }
 
-Color _selectedForeground(BuildContext context) =>
-    context.colors.brightness == Brightness.dark
-    ? context.colors.primaryFixedDim
-    : context.colors.primary;
+Color _selectedForeground(BuildContext context) => context.actionForeground;
 
 class _SheetSectionLabel extends StatelessWidget {
   const _SheetSectionLabel(this.text);

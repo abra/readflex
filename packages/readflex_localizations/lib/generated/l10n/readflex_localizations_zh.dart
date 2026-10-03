@@ -207,6 +207,12 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get appInitializationFailed => '初始化失败';
 
   @override
+  String get appInitializationFailedBody => '无法启动 Readflex。请重试。';
+
+  @override
+  String get appTechnicalDetails => '技术详情';
+
+  @override
   String get appRetry => '重试';
 
   @override
@@ -448,7 +454,7 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '这会删除书库项目和你的高亮。已归档的学习数据会保留。',
+      other: '这将删除书库项目、高亮和书签。',
     );
     return '$_temp0';
   }
@@ -644,7 +650,7 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get importEditLink => '编辑链接';
 
   @override
-  String get importClipboardUnavailable => '无法读取剪贴板';
+  String get importClipboardUnavailable => '无法粘贴链接';
 
   @override
   String get importArticleUrlRequired => '请输入文章 URL';

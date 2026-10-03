@@ -211,6 +211,13 @@ class ReadflexLocalizationsPt extends ReadflexLocalizations {
   String get appInitializationFailed => 'Falha ao iniciar';
 
   @override
+  String get appInitializationFailedBody =>
+      'Não foi possível iniciar o Readflex. Tente novamente.';
+
+  @override
+  String get appTechnicalDetails => 'Detalhes técnicos';
+
+  @override
   String get appRetry => 'Tentar novamente';
 
   @override
@@ -468,9 +475,7 @@ class ReadflexLocalizationsPt extends ReadflexLocalizations {
       count,
       locale: localeName,
       other:
-          'Isso remove os itens da biblioteca e seus destaques. Dados de aprendizado arquivados são mantidos.',
-      one:
-          'Isso remove o item da biblioteca e seus destaques. Dados de aprendizado arquivados são mantidos.',
+          'Os itens da biblioteca, os destaques e os marcadores serão removidos.',
     );
     return '$_temp0';
   }
@@ -671,8 +676,7 @@ class ReadflexLocalizationsPt extends ReadflexLocalizations {
   String get importEditLink => 'Editar link';
 
   @override
-  String get importClipboardUnavailable =>
-      'Não foi possível ler a área de transferência';
+  String get importClipboardUnavailable => 'Não foi possível colar o link';
 
   @override
   String get importArticleUrlRequired => 'Insira a URL do artigo';

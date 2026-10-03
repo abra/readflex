@@ -3,6 +3,7 @@
 // The bootstrap callback owns recovery and replacement of the app tree.
 
 import 'package:component_library/component_library.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
@@ -60,6 +61,9 @@ class _InitializationFailedScreenState
     debugLogScreenBuild('InitializationFailedScreen');
 
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
       supportedLocales: ReadflexSupportedLocales.locales,
       localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
       home: Scaffold(
@@ -69,45 +73,53 @@ class _InitializationFailedScreenState
             final colors = context.colors;
             final l10n = context.l10n;
 
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    l10n.appInitializationFailed,
-                    style: text.headlineMedium,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Text(
-                    '${widget.error}',
-                    style: text.bodyLarge.copyWith(
-                      color: colors.error,
+            return SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      l10n.appInitializationFailed,
+                      style: text.titleLarge,
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  if (widget.onRetryInitialization != null)
-                    ValueListenableBuilder<bool>(
-                      valueListenable: _inProgress,
-                      builder: (context, inProgress, _) => FilledButton.icon(
-                        onPressed: inProgress ? null : _retryInitialization,
-                        icon: inProgress
-                            ? const ButtonLoadingIndicator(size: AppIconSize.sm)
-                            : const Icon(AppIcons.refresh),
-                        label: AppButtonLabel(
-                          inProgress ? l10n.appRetrying : l10n.appRetry,
-                        ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Text(
+                      l10n.appInitializationFailedBody,
+                      textAlign: TextAlign.center,
+                      style: text.bodyMedium.copyWith(
+                        color: colors.onSurfaceVariant,
                       ),
                     ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Padding(
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    child: Text(
-                      '${widget.stackTrace}',
-                      style: text.bodySmall,
-                    ),
-                  ),
-                ],
+                    const SizedBox(height: AppSpacing.xl),
+                    if (widget.onRetryInitialization != null)
+                      ValueListenableBuilder<bool>(
+                        valueListenable: _inProgress,
+                        builder: (context, inProgress, _) => FilledButton.icon(
+                          onPressed: inProgress ? null : _retryInitialization,
+                          icon: inProgress
+                              ? const ButtonLoadingIndicator(
+                                  size: AppIconSize.sm,
+                                )
+                              : const Icon(AppIcons.refresh),
+                          label: AppButtonLabel(
+                            inProgress ? l10n.appRetrying : l10n.appRetry,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: AppSpacing.lg),
+                    if (kDebugMode)
+                      ExpansionTile(
+                        title: Text(l10n.appTechnicalDetails),
+                        children: [
+                          SelectableText(
+                            '${widget.error}\n${widget.stackTrace}',
+                            style: text.bodySmall,
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
               ),
             );
           },

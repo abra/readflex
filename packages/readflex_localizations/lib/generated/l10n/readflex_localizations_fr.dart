@@ -212,6 +212,13 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
   String get appInitializationFailed => 'Échec de l\'initialisation';
 
   @override
+  String get appInitializationFailedBody =>
+      'Impossible de démarrer Readflex. Réessayez.';
+
+  @override
+  String get appTechnicalDetails => 'Détails techniques';
+
+  @override
   String get appRetry => 'Réessayer';
 
   @override
@@ -472,9 +479,7 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
       count,
       locale: localeName,
       other:
-          'Cela supprime les éléments de la bibliothèque et vos surlignages. Les données d\'apprentissage archivées sont conservées.',
-      one:
-          'Cela supprime l\'élément de la bibliothèque et vos surlignages. Les données d\'apprentissage archivées sont conservées.',
+          'Les éléments de la bibliothèque, les passages surlignés et les signets seront supprimés.',
     );
     return '$_temp0';
   }
@@ -677,8 +682,7 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
   String get importEditLink => 'Modifier le lien';
 
   @override
-  String get importClipboardUnavailable =>
-      'Impossible de lire le presse-papiers';
+  String get importClipboardUnavailable => 'Impossible de coller le lien';
 
   @override
   String get importArticleUrlRequired => 'Saisissez l\'URL de l\'article';

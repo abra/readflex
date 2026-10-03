@@ -101,6 +101,9 @@ class _CollectionScopeSheetState extends State<_CollectionScopeSheet> {
 
     return ActionBottomSheetLayout(
       title: l10n.libraryCollectionsTitle,
+      closeLabel: l10n.commonClose,
+      onClose: () => Navigator.of(context).pop(),
+      constrainBody: true,
       bodyPadding: EdgeInsets.zero,
       child: hasScopes
           ? Column(
@@ -119,11 +122,13 @@ class _CollectionScopeSheetState extends State<_CollectionScopeSheet> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                SizedBox(
-                  height: _resultsHeight,
-                  child: _CollectionScopeSections(
-                    state: widget.state,
-                    query: _query,
+                Flexible(
+                  child: SizedBox(
+                    height: _resultsHeight,
+                    child: _CollectionScopeSections(
+                      state: widget.state,
+                      query: _query,
+                    ),
                   ),
                 ),
               ],
@@ -297,7 +302,9 @@ class _CollectionScopeRow extends StatelessWidget {
     final colors = context.colors;
     final l10n = context.l10n;
     final label = libraryCollectionScopeLabel(l10n, scope);
-    final foreground = selected ? colors.primary : colors.onSurfaceVariant;
+    final foreground = selected
+        ? context.actionForeground
+        : colors.onSurfaceVariant;
 
     return Material(
       color: selected
@@ -336,7 +343,9 @@ class _CollectionScopeRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.text.bodyLarge.copyWith(
-                      color: selected ? colors.primary : colors.onSurface,
+                      color: selected
+                          ? context.actionForeground
+                          : colors.onSurface,
                     ),
                   ),
                 ),

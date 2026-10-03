@@ -212,6 +212,13 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get appInitializationFailed => 'Не удалось запустить приложение';
 
   @override
+  String get appInitializationFailedBody =>
+      'Не удалось запустить Readflex. Повторите попытку.';
+
+  @override
+  String get appTechnicalDetails => 'Технические сведения';
+
+  @override
   String get appRetry => 'Повторить';
 
   @override
@@ -472,10 +479,7 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other:
-          'Элементы библиотеки и ваши выделения будут удалены. Архивные учебные данные сохранятся.',
-      one:
-          'Элемент библиотеки и ваши выделения будут удалены. Архивные учебные данные сохранятся.',
+      other: 'Элементы библиотеки, выделения и закладки будут удалены.',
     );
     return '$_temp0';
   }
@@ -680,7 +684,7 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get importEditLink => 'Изменить ссылку';
 
   @override
-  String get importClipboardUnavailable => 'Не удалось прочитать буфер обмена';
+  String get importClipboardUnavailable => 'Не удалось вставить ссылку';
 
   @override
   String get importArticleUrlRequired => 'Введите URL статьи';

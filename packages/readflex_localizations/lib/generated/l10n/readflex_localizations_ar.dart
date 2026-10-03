@@ -211,6 +211,13 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get appInitializationFailed => 'فشل التهيئة';
 
   @override
+  String get appInitializationFailedBody =>
+      'تعذّر تشغيل Readflex. حاول مرة أخرى.';
+
+  @override
+  String get appTechnicalDetails => 'التفاصيل التقنية';
+
+  @override
   String get appRetry => 'إعادة المحاولة';
 
   @override
@@ -474,10 +481,7 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other:
-          'سيؤدي هذا إلى إزالة عناصر المكتبة وتظليلاتك. سيتم الاحتفاظ ببيانات التعلم المؤرشفة.',
-      one:
-          'سيؤدي هذا إلى إزالة عنصر المكتبة وتظليلاتك. سيتم الاحتفاظ ببيانات التعلم المؤرشفة.',
+      other: 'سيؤدي هذا إلى حذف عناصر المكتبة والتظليلات والإشارات المرجعية.',
     );
     return '$_temp0';
   }
@@ -682,7 +686,7 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get importEditLink => 'تعديل الرابط';
 
   @override
-  String get importClipboardUnavailable => 'تعذرت قراءة الحافظة';
+  String get importClipboardUnavailable => 'تعذر لصق الرابط';
 
   @override
   String get importArticleUrlRequired => 'أدخل رابط المقالة';

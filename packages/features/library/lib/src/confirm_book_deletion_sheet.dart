@@ -28,50 +28,33 @@ class _ConfirmBookDeletionSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     final l10n = context.l10n;
 
     return ActionBottomSheetLayout(
       title: l10n.libraryDeleteItemsTitle(count),
-      bodyPadding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        AppSpacing.md,
-        AppSpacing.xl,
-        AppSpacing.lg,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            l10n.libraryDeleteItemsBody(count),
-            style: context.text.bodyMedium,
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: AppButtonLabel(l10n.commonCancel),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: colors.error,
-                    foregroundColor: colors.onError,
-                  ),
-                  onPressed: () => Navigator.of(
-                    context,
-                  ).pop(BookDeletionScope.keepLearningData),
-                  child: AppButtonLabel(l10n.commonDelete),
-                ),
-              ),
-            ],
-          ),
-        ],
+      closeLabel: l10n.commonClose,
+      onClose: () => Navigator.of(context).pop(),
+      constrainBody: true,
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              l10n.libraryDeleteItemsBody(count),
+              style: context.text.bodyMedium,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            AppSheetActions(
+              primaryLabel: l10n.commonDelete,
+              destructive: true,
+              onPrimary: () =>
+                  Navigator.of(context).pop(BookDeletionScope.keepLearningData),
+              secondaryLabel: l10n.commonCancel,
+              onSecondary: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
       ),
     );
   }

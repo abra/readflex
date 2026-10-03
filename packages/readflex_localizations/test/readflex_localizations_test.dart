@@ -50,10 +50,10 @@ void main() {
       'Сохраняйте выделенные фрагменты текста и добавляйте заметки.',
     );
     for (final count in [1, 2, 5, 21]) {
-      expect(l10n.libraryDeleteItemsBody(count), contains('ваши выделения'));
+      expect(l10n.libraryDeleteItemsBody(count), contains('выделения'));
       expect(
         l10n.libraryDeleteItemsBody(count),
-        contains('Архивные учебные данные сохранятся.'),
+        isNot(contains('Архивные учебные данные сохранятся.')),
       );
     }
   });

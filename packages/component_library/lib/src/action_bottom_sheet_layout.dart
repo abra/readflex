@@ -31,10 +31,17 @@ class ActionBottomSheetLayout extends StatelessWidget {
       AppSpacing.xl,
       AppSpacing.lg,
     ),
-    this.headerSpacing = AppSpacing.lg,
+    this.headerSpacing = AppSpacing.sm,
     this.constrainBody = false,
+    this.footer,
+    this.footerPadding = const EdgeInsets.fromLTRB(
+      AppSpacing.xl,
+      AppSpacing.sm,
+      AppSpacing.xl,
+      AppSpacing.lg,
+    ),
     super.key,
-  });
+  }) : assert(footer == null || constrainBody);
 
   final String title;
   final Widget child;
@@ -42,7 +49,7 @@ class ActionBottomSheetLayout extends StatelessWidget {
   final VoidCallback? onClose;
   final String? closeLabel;
 
-  /// Insets around the title row. Default: 24 dp on each side, 0 on
+  /// Visual gutters for the title and close icon. Default: 24 dp on each side, 0 on
   /// the top (the wrapper's drag handle already provides spacing
   /// above) and 0 on the bottom (the gap to the body comes from
   /// [headerSpacing]).
@@ -53,40 +60,35 @@ class ActionBottomSheetLayout extends StatelessWidget {
   /// safe area.
   final EdgeInsetsGeometry bodyPadding;
 
-  /// Vertical gap between the title row and the body. Default 16 dp.
+  /// Vertical gap between the title row and the body. Default 8 dp.
   final double headerSpacing;
 
   /// Keep the header visible and give the body the remaining height.
   /// Requires bounded vertical constraints and a scrollable body.
   final bool constrainBody;
 
+  /// Pinned actions below the header/body group. Requires [constrainBody].
+  /// With a minimum sheet height, spare space stays above these actions.
+  final Widget? footer;
+
+  /// Insets around [footer], independent of [bodyPadding].
+  final EdgeInsetsGeometry footerPadding;
+
   @override
   Widget build(BuildContext context) {
-    final header = headerTrailing == null
-        ? BottomSheetHeader(
-            title: title,
-            onClose: onClose,
-            closeLabel: closeLabel,
-          )
-        : OverflowBar(
-            alignment: MainAxisAlignment.spaceBetween,
-            overflowAlignment: OverflowBarAlignment.start,
-            spacing: AppSpacing.md,
-            overflowSpacing: AppSpacing.xs,
-            children: [
-              BottomSheetHeader(title: title),
-              headerTrailing!,
-            ],
-          );
+    final header = BottomSheetHeader(
+      title: title,
+      onClose: onClose,
+      closeLabel: closeLabel,
+      trailing: headerTrailing,
+      padding: headerPadding,
+    );
 
-    return Column(
+    final content = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: headerPadding,
-          child: header,
-        ),
+        header,
         if (headerSpacing > 0) SizedBox(height: headerSpacing),
         if (constrainBody)
           Flexible(
@@ -94,6 +96,18 @@ class ActionBottomSheetLayout extends StatelessWidget {
           )
         else
           Padding(padding: bodyPadding, child: child),
+      ],
+    );
+
+    if (footer == null) return content;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Flexible(child: content),
+        Padding(padding: footerPadding, child: footer),
       ],
     );
   }

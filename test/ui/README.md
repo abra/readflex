@@ -46,6 +46,9 @@ Native tests unmount their root widget during cleanup to dispose subscriptions
 and routes. Do not use `--keep-app-running` for normal verification: it leaves
 the test process showing an empty surface, not the production Library. Relaunch
 the regular app with `run.sh` after device testing.
+On iOS Simulator, disable I/O > Keyboard > Connect Hardware Keyboard for the
+native keyboard scenario. The iOS binding captures the Flutter surface, not the
+OS keyboard overlay; the test additionally asserts real nonzero keyboard insets.
 
 ## Coverage
 
@@ -57,10 +60,11 @@ the regular app with `run.sh` after device testing.
 | Library scaling | Grid/list remain virtualized with 20k books, callbacks address the right item, cached projections are reused | `library_scaling_test.dart` |
 | Collections | Create with selected book, rename, cancel/confirm deletion; preserve book and clean membership | `app_flows_test.dart` |
 | Collection layout | Light/dark, 200%, landscape, RTL; edit form and unsaved changes confirmation | `collection_management_golden_test.dart` |
-| Selection and languages | Bottom selection bar, explicit cancel, separate language picker in all visual profiles | `library_golden_test.dart` |
-| Native library controls | Selection, display/languages, keyboard, cancel/keep/discard edits on an isolated fixture library | `integration_test/library_controls_test.dart` |
+| Selection and languages | Bottom selection bar, explicit cancel, compact two-column language picker, one-column large-text fallback and full-width scroll fades in all visual profiles | `library_golden_test.dart` |
+| Native library controls | Selection, compact language grid without scrolling, import header alignment, close-icon gutters and 48dp targets across import/Display/Language/Manage collection, keyboard, short collection without false overflow/fades, inline keep/discard edits on an isolated fixture library | `integration_test/library_controls_test.dart` |
 | Article import | Extraction error, retry, actual repository/SQLite write, root remount; offline/online button availability | `app_flows_test.dart` |
 | Import recovery | Book progress/failure, invalid Paste, article failure and retained URL; readable actions in EN/RU/AR phone, dark, 200% DE and landscape | `import_flow_golden_test.dart` |
+| Book import consent | Stable compact step height throughout forward/back animations at four phone widths; content grows without false overflow/fades; all locales at 1x/2x text, normal legal-paragraph line height, inline-link taps/semantics, explicit acceptance, rotation, reachable actions and return height | `import_book_terms_test.dart`, `import_flow_golden_test.dart` |
 | Translate | Success, error, pending result; word/text answers before context, unfilled language menus and collapsed/expanded details in all profiles | `surfaces_golden_test.dart` |
 | Contextual translation | Selected word/IPA, context-first answer with expression scope, separate word meaning, collapsed/expanded explanations in all visual profiles | `translation_word_golden_test.dart` |
 | Reader search surfaces | Side-sliding panel with shared 16px content insets, recent queries with long text, active result, previous/next controls and return action in all visual profiles | `reader_search_golden_test.dart` |
@@ -86,6 +90,13 @@ language selection and retries, definition copying, reader chrome/drawers,
 search, bookmarks, appearance, accessibility semantics, and lifecycle races.
 They remain part of `make verify`; root tests target composition across these
 boundaries instead of duplicating every widget assertion.
+
+`component_library/test/sheet_contract_test.dart` checks shared header geometry,
+heading semantics, adaptive footer actions, stable busy-button size, and action
+foreground contrast. Library tests cover a single book/article with and without
+keyboard insets (no vertical overflow or fades), real overflow at both ends of a
+long collection, failed collection loading/retry, and lazy collection rows.
+Definition tests keep the header and Close action fixed while long entries scroll.
 
 The reader browser suites load actual bundled assets in Chromium/WebKit and
 cover selection gestures, CFI round trips, document security, image policies,

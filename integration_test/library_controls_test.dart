@@ -32,6 +32,25 @@ void main() {
     }
   }
 
+  void expectSheetCloseAlignment(WidgetTester tester) {
+    final sheet = find.byType(BottomSheet).last;
+    final header = find.descendant(
+      of: sheet,
+      matching: find.byType(BottomSheetHeader),
+    );
+    final icon = tester.getRect(
+      find.descendant(of: header, matching: find.byIcon(AppIcons.close)),
+    );
+    final button = tester.getRect(
+      find.descendant(of: header, matching: find.byType(AppPlainIconButton)),
+    );
+    expect(
+      tester.getRect(sheet).right - icon.right,
+      closeTo(AppSpacing.xl, .01),
+    );
+    expect(button.size, const Size(48, 48));
+  }
+
   testWidgets('native import menu closes and opens both import paths', (
     tester,
   ) async {
@@ -43,8 +62,11 @@ void main() {
     final add = find.byType(FloatingActionButton);
     await tapUi(tester, add);
     await capture(tester, 'import-menu');
+    expectSheetCloseAlignment(tester);
     final sheetRect = tester.getRect(find.byType(BottomSheet));
     final menuRect = tester.getRect(find.byType(ActionBottomSheetLayout));
+    final menuTitleTop =
+        tester.getTopLeft(find.text('Add to Library')).dy - sheetRect.top;
     final articleRect = tester.getRect(
       find.byKey(const ValueKey('importMenu-article')),
     );
@@ -79,11 +101,59 @@ void main() {
     await tapUi(tester, find.byKey(const ValueKey('importMenu-article')));
     expect(find.byKey(const ValueKey('articleUrlPasteButton')), findsOneWidget);
     expect(tester.getRect(find.byType(BottomSheet)), sheetRect);
+    expect(
+      tester.getTopLeft(find.text('Save Article')).dy - sheetRect.top,
+      closeTo(menuTitleTop, .5),
+    );
+    expect(
+      tester
+              .getTopLeft(
+                find.text('Creates a clean article for offline reading.'),
+              )
+              .dy -
+          tester.getRect(find.byType(TextField).last).bottom,
+      greaterThanOrEqualTo(AppSpacing.sm),
+      reason: 'hints stay separated from the reserved validation area',
+    );
+    expect(
+      tester.getTopLeft(find.widgetWithText(FilledButton, 'Save')).dy -
+          tester.getRect(find.text('Adds it to your Library.')).bottom,
+      closeTo(AppSpacing.sm, .5),
+      reason: 'the hint group sits next to the action buttons',
+    );
     await capture(tester, 'import-article-entry');
+    expectSheetCloseAlignment(tester);
     await tapUi(tester, find.text('Back'));
     await tapUi(tester, find.byKey(const ValueKey('importMenu-book')));
     expect(find.text('Before uploading'), findsOneWidget);
+    expect(
+      tester.getRect(find.byType(BottomSheet)),
+      sheetRect,
+      reason: 'compact consent must keep the import menu height',
+    );
+    expect(
+      Scrollable.of(
+        tester.element(find.byType(Checkbox)),
+      ).position.maxScrollExtent,
+      0,
+      reason: 'consent must fit without scrolling on the native phone viewport',
+    );
+    expect(find.byType(Checkbox).hitTestable(), findsOneWidget);
+    expect(
+      tester
+          .getRect(find.text('I confirm I have the right to upload this file.'))
+          .bottom,
+      lessThan(tester.getTopLeft(find.text('Continue')).dy),
+    );
+    expect(
+      tester.getTopLeft(find.text('Before uploading')).dy -
+          tester.getRect(find.byType(BottomSheet)).top,
+      closeTo(menuTitleTop, .5),
+    );
+    await capture(tester, 'import-book-terms');
+    expectSheetCloseAlignment(tester);
     await tapUi(tester, find.text('Cancel'));
+    expect(tester.getRect(find.byType(BottomSheet)), sheetRect);
     await tapUi(tester, find.byTooltip('Close'));
     expect(find.text('Add to Library'), findsNothing);
     await tapUi(tester, add);
@@ -115,8 +185,29 @@ void main() {
     expect(find.byType(FloatingActionButton), findsOneWidget);
     await tapUi(tester, find.byTooltip('Display options'));
     await capture(tester, 'library-display');
+    expectSheetCloseAlignment(tester);
     await tapUi(tester, find.byKey(const ValueKey('libraryLanguagePicker')));
+    final languageSheet = find.byType(BottomSheet).last;
+    final english = find.byKey(const ValueKey('libraryLanguageOption-en'));
+    final chinese = find.byKey(const ValueKey('libraryLanguageOption-zh'));
+    expect(tester.getTopLeft(english).dy, tester.getTopLeft(chinese).dy);
+    expect(
+      tester.getRect(chinese).left,
+      greaterThan(tester.getRect(english).right),
+    );
+    final languageScroll = tester
+        .state<ScrollableState>(
+          find.descendant(of: languageSheet, matching: find.byType(Scrollable)),
+        )
+        .position;
+    expect(languageScroll.maxScrollExtent, 0);
+    expect(tester.getRect(languageSheet).height, lessThan(450));
+    expect(
+      find.byKey(const ValueKey('libraryLanguageOption-ja')).hitTestable(),
+      findsOneWidget,
+    );
     await capture(tester, 'library-language-picker');
+    expectSheetCloseAlignment(tester);
     await tapUi(tester, find.byKey(const ValueKey('libraryLanguageOption-en')));
     await tapUi(tester, find.byTooltip('Close'));
     await tester.longPress(tile);
@@ -139,19 +230,52 @@ void main() {
       find.byKey(ValueKey('collectionScopeManage-manual-${collection.id}')),
     );
     await capture(tester, 'collection-manage');
+    expectSheetCloseAlignment(tester);
+    void expectShortCollectionFits() {
+      final sheet = find.byKey(const ValueKey('manageCollectionContent'));
+      final viewport = find.descendant(
+        of: sheet,
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Scrollable &&
+              axisDirectionToAxis(widget.axisDirection) == Axis.vertical,
+        ),
+      );
+      expect(viewport, findsOneWidget);
+      expect(
+        tester.state<ScrollableState>(viewport).position.maxScrollExtent,
+        0,
+      );
+      final fades = tester.widgetList<ScrollEdgeFade>(
+        find.descendant(of: sheet, matching: find.byType(ScrollEdgeFade)),
+      );
+      expect(fades.every((fade) => !fade.visible), isTrue);
+    }
+
+    expectShortCollectionFits();
     final field = find.descendant(
       of: find.byKey(const ValueKey('manageCollectionContent')),
       matching: find.byType(TextField),
     );
     await tapUi(tester, field);
     await tester.enterText(field, 'Unsaved');
+    // Reopen the native input connection after the test harness sets text.
+    await tapUi(tester, field);
+    final editable = tester.state<EditableTextState>(
+      find.descendant(of: field, matching: find.byType(EditableText)),
+    );
+    expect(editable.widget.focusNode.hasFocus, isTrue);
+    await capture(tester, 'collection-focused');
     await waitForUi(
       tester,
       () => tester.view.viewInsets.bottom > 0,
       description: 'native keyboard',
     );
     await capture(tester, 'collection-keyboard');
+    expectShortCollectionFits();
     await tapUi(tester, find.byTooltip('Close'));
+    await capture(tester, 'collection-discard');
+    expect(find.byType(AlertDialog), findsNothing);
     await tapUi(tester, find.text('Keep editing'));
     expect(find.widgetWithText(TextField, 'Unsaved'), findsOneWidget);
     await tapUi(tester, find.byTooltip('Close'));

@@ -102,6 +102,8 @@
   "appNext": "Next",
   "appGetStarted": "Get Started",
   "appInitializationFailed": "Initialization failed",
+  "appInitializationFailedBody": "Readflex could not start. Try again.",
+  "appTechnicalDetails": "Technical details",
   "appRetry": "Retry",
   "appRetrying": "Retrying...",
   "onboardingReadAnythingTitle": "Read anything",
@@ -209,7 +211,7 @@
       }
     }
   },
-  "libraryDeleteItemsBody": "{count, plural, one{This removes the library item and your highlights. Archived learning data is kept.} other{This removes the library items and your highlights. Archived learning data is kept.}}",
+  "libraryDeleteItemsBody": "{count, plural, other{This removes the library items, highlights and bookmarks.}}",
   "@libraryDeleteItemsBody": {
     "placeholders": {
       "count": {
@@ -315,7 +317,7 @@
   "importTryAgain": "Try again",
   "importChooseFile": "Choose file",
   "importEditLink": "Edit link",
-  "importClipboardUnavailable": "Could not read the clipboard",
+  "importClipboardUnavailable": "Couldn't paste link",
   "importArticleUrlRequired": "Enter an article URL",
   "importInvalidArticleUrl": "Enter a valid article URL",
   "importBookImportFailed": "Failed to import the book",

@@ -66,12 +66,17 @@ Future<T?> showAppBottomSheet<T>(
     isScrollControlled: true,
     isDismissible: dismissible,
     enableDrag: dismissible,
+    useSafeArea: true,
     transitionAnimationController: controller,
     builder: (ctx) {
       final sheetContent = Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (dismissible) const _SheetDragHandle(),
+          if (dismissible)
+            const _SheetDragHandle()
+          else
+            // Keep the title position without suggesting a disabled drag.
+            const SizedBox(height: AppSpacing.sm * 2 + 4),
           Flexible(child: builder(ctx)),
         ],
       );

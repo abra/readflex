@@ -112,6 +112,8 @@ Search keeps its full-height side-sliding panel with the input above the lazy
 results list. The list avoids the keyboard. Closing the panel preserves the
 query, result snapshot, list offset and in-progress search; reopening a populated
 query neither focuses the input nor repeats the document scan.
+Search failures offer an explicit Retry for the same query without adding a
+duplicate history entry; retry is ignored while a search is already loading.
 
 Selecting a result starts a navigation session with previous/next match controls
 and a return-to-reading action. The return anchor is captured before opening the

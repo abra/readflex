@@ -285,6 +285,16 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Text(message, textAlign: TextAlign.center),
         ),
+        if (state.errorCode != null || state.errorMessage != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: FilledButton(
+              onPressed: () => context.read<ReaderSearchCubit>().retry(
+                searchBook: widget.onSearch,
+              ),
+              child: AppButtonLabel(l10n.commonRetry),
+            ),
+          ),
       ],
     );
   }

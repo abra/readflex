@@ -53,6 +53,17 @@ to the feature package unless it is genuinely reusable UI code.
 
 ## Tests
 
+Sheet headings use a shared heading semantics node and a minimum 48dp title
+row. Close and trailing actions must remain reachable with enlarged text.
+`AppSheetActions` stacks long localized labels rather than shrinking the font;
+busy states keep geometry and disable both commands. Reserved URL error space
+is excluded from semantics until a real error is present. Accent foregrounds
+use `context.actionForeground`, not the dark theme's primary button fill.
+Consent links inside a sentence are inline text links, not 48dp button widgets:
+they preserve normal paragraph line spacing, underline, and independent link/tap
+semantics. This follows the [inline exception for text links](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html#exceptions);
+it does not reduce the touch targets of standalone buttons or the checkbox row.
+
 When behavior changes accessibility output, add focused tests:
 
 - Use `tester.ensureSemantics()` and dispose the handle before the widget test

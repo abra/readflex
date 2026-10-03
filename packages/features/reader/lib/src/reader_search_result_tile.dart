@@ -67,7 +67,7 @@ class ReaderSearchResultTile extends StatelessWidget {
               TextSpan(
                 text: result.excerpt.match,
                 style: context.text.bodyMedium.copyWith(
-                  color: colors.primary,
+                  color: context.actionForeground,
                   fontWeight: FontWeight.w700,
                 ),
               ),

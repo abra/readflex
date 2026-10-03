@@ -182,14 +182,19 @@ void main() {
           List<Rect> geometry() {
             // Focus can scroll a narrow form; compare its content coordinates.
             final offset = Scrollable.of(tester.element(field)).position.pixels;
-            return [
+            final content = [
               tester.getRect(field),
               tester.getRect(find.text(l10n.importArticleHintClean)),
               tester.getRect(find.text(l10n.importArticleHintLibrary)),
-              tester.getRect(
-                find.widgetWithText(FilledButton, l10n.commonSave),
-              ),
             ].map((rect) => rect.translate(0, offset)).toList();
+            final save = find.widgetWithText(FilledButton, l10n.commonSave);
+            final footerScroll = Scrollable.maybeOf(tester.element(save));
+            return [
+              ...content,
+              tester
+                  .getRect(save)
+                  .translate(0, footerScroll?.position.pixels ?? 0),
+            ];
           }
 
           final before = geometry();
@@ -308,6 +313,10 @@ void main() {
         final firstHint = tester.getRect(
           find.text(l10n.importArticleHintClean),
         );
+        // The test font wraps more than the app font. Hints may scroll while
+        // the footer stays fixed, but the last hint must remain reachable.
+        await tester.ensureVisible(find.text(l10n.importArticleHintLibrary));
+        await tester.pumpAndSettle();
         final lastHint = tester.getRect(
           find.text(l10n.importArticleHintLibrary),
         );
@@ -316,10 +325,9 @@ void main() {
         );
         final above = firstHint.top - field.bottom;
         final below = save.top - lastHint.bottom;
-        // TextField includes the reserved validation area. Avoid adding that
-        // space twice above hints; the root goldens check the visible gaps.
-        expect(above, greaterThanOrEqualTo(0));
-        expect(below, closeTo(above + AppSpacing.xl, 1));
+        // TextField includes validation space; separate feedback from hints.
+        expect(above, greaterThanOrEqualTo(AppSpacing.sm));
+        expect(below, greaterThanOrEqualTo(AppSpacing.sm));
         expect(tester.getRect(find.byType(BottomSheet)), sheet);
         expect(tester.takeException(), isNull);
       },
@@ -921,7 +929,7 @@ void main() {
     var field = tester.widget<TextField>(find.byType(TextField));
     expect(field.controller!.text, 'https://example.com/keep');
     expect(field.decoration!.error, isNotNull);
-    expect(find.text('Could not read the clipboard'), findsOneWidget);
+    expect(find.text("Couldn't paste link"), findsOneWidget);
     readClipboard = () async => {'text': 'example.com/new'};
     await tester.tap(find.byIcon(AppIcons.paste));
     await tester.pumpAndSettle();
@@ -1179,8 +1187,8 @@ void main() {
       find.text('I confirm I have the right to upload this file.'),
       findsOneWidget,
     );
-    expect(find.text('Terms'), findsOneWidget);
-    expect(find.text('Privacy Policy'), findsOneWidget);
+    expect(find.textRange.ofSubstring('Terms'), findsOne);
+    expect(find.textRange.ofSubstring('Privacy Policy'), findsOne);
     expect(pickerCalls, 0);
 
     var continueButton = tester.widget<FilledButton>(
@@ -1188,10 +1196,13 @@ void main() {
     );
     expect(continueButton.onPressed, isNull);
 
-    await tester.tap(find.byKey(const ValueKey('importFlowLegalLink-Terms')));
-    await tester.tap(
-      find.byKey(const ValueKey('importFlowLegalLink-Privacy Policy')),
-    );
+    final legalText = find.byKey(const ValueKey('importFlowLegalText'));
+    await tester.ensureVisible(legalText);
+    await tester.pumpAndSettle();
+    await tester.tapOnText(find.textRange.ofSubstring('Terms'));
+    await Scrollable.ensureVisible(tester.element(legalText), alignment: 1);
+    await tester.pumpAndSettle();
+    await tester.tapOnText(find.textRange.ofSubstring('Privacy Policy'));
     expect(termsCalls, 1);
     expect(privacyCalls, 1);
 

@@ -57,9 +57,7 @@ class ReaderSearchNavigationBar extends StatelessWidget {
   );
 
   ButtonStyle _textActionStyle(BuildContext context, EdgeInsets padding) {
-    final focusColor = context.colors.brightness == Brightness.dark
-        ? context.colors.primaryFixedDim
-        : context.colors.primary;
+    final focusColor = context.actionForeground;
     return ButtonStyle(
       padding: WidgetStatePropertyAll(padding),
       overlayColor: const WidgetStatePropertyAll(Colors.transparent),
@@ -183,7 +181,7 @@ class ReaderSearchNavigationBar extends StatelessWidget {
                         l10n.readerBackToReading,
                         maxLines: 2,
                         style: context.text.labelLarge.copyWith(
-                          color: context.colors.primary,
+                          color: context.actionForeground,
                         ),
                       ),
                     ),

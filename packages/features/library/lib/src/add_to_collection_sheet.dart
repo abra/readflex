@@ -72,32 +72,53 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet> {
   Widget build(BuildContext context) {
     return ActionBottomSheetLayout(
       title: context.l10n.libraryAddToCollectionTitle,
-      child: BlocBuilder<AddToCollectionCubit, AddToCollectionState>(
-        builder: (context, state) {
-          final content = switch (state.status) {
-            AddToCollectionStatus.initial ||
-            AddToCollectionStatus.loading => const Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
-              child: CenteredCircularProgressIndicator(),
-            ),
-            _ => _CollectionContent(
-              state: state,
-              nameController: _nameController,
-              sourceCount: widget.sourceIds.length,
-              onCollectionPressed: _addToCollection,
-              onFavouritesPressed: state.isBusy ? null : _addToFavourites,
-              onCreatePressed: state.isBusy ? null : _createAndAdd,
-              onCancelPressed: state.isBusy
-                  ? null
-                  : () => Navigator.of(context).pop(false),
-            ),
-          };
+      closeLabel: context.l10n.commonClose,
+      onClose: () => Navigator.of(context).pop(false),
+      constrainBody: true,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+        ),
+        child: BlocBuilder<AddToCollectionCubit, AddToCollectionState>(
+          builder: (context, state) {
+            final content = switch (state.status) {
+              AddToCollectionStatus.initial ||
+              AddToCollectionStatus.loading => const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
+                child: CenteredCircularProgressIndicator(),
+              ),
+              AddToCollectionStatus.failure
+                  when state.errorCode ==
+                      AddToCollectionErrorCode.loadCollectionsFailed =>
+                SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(context.l10n.libraryLoadCollectionsFailed),
+                      const SizedBox(height: AppSpacing.lg),
+                      FilledButton(
+                        onPressed: context.read<AddToCollectionCubit>().load,
+                        child: AppButtonLabel(context.l10n.commonRetry),
+                      ),
+                    ],
+                  ),
+                ),
+              _ => _CollectionContent(
+                state: state,
+                nameController: _nameController,
+                sourceCount: widget.sourceIds.length,
+                onCollectionPressed: _addToCollection,
+                onFavouritesPressed: state.isBusy ? null : _addToFavourites,
+                onCreatePressed: state.isBusy ? null : _createAndAdd,
+                onCancelPressed: state.isBusy
+                    ? null
+                    : () => Navigator.of(context).pop(false),
+              ),
+            };
 
-          return AnimatedSwitcher(
-            duration: const Duration(milliseconds: 180),
-            child: content,
-          );
-        },
+            return content;
+          },
+        ),
       ),
     );
   }
@@ -129,89 +150,94 @@ class _CollectionContent extends StatelessWidget {
     final text = context.text;
     final l10n = context.l10n;
 
+    final field = TextField(
+      controller: nameController,
+      enabled: !state.isBusy,
+      textInputAction: TextInputAction.done,
+      decoration: InputDecoration(hintText: l10n.libraryNewCollectionName),
+      onSubmitted: (_) => onCreatePressed?.call(),
+    );
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (state.errorCode != null) ...[
-          Text(
-            _addToCollectionErrorMessage(l10n, state.errorCode!),
-            style: text.bodyMedium.copyWith(color: colors.error),
-          ),
-          const SizedBox(height: AppSpacing.md),
-        ],
-        _CollectionRow(
-          icon: AppIcons.collectionFavourites,
-          label: l10n.libraryFavourites,
-          sourceCount: state.favouritesSourceCount,
-          enabled: !state.isBusy,
-          onPressed: onFavouritesPressed,
+        SizedBox(
+          height: 2,
+          child: state.status == AddToCollectionStatus.submitting
+              ? const LinearProgressIndicator()
+              : null,
         ),
-        Divider(height: 1, color: context.appColors.divider),
-        if (state.collections.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(
-              top: AppSpacing.lg,
-              bottom: AppSpacing.lg,
-            ),
-            child: Text(
-              l10n.libraryCreateCollectionPrompt(sourceCount),
-              style: text.bodyMedium.copyWith(
-                color: colors.onSurfaceVariant,
-              ),
-            ),
-          )
-        else ...[
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 280),
-            child: ListView.separated(
+        Flexible(
+          child: ScrollEdgeFadeStack(
+            child: CustomScrollView(
               shrinkWrap: true,
-              itemCount: state.collections.length,
-              separatorBuilder: (_, _) => Divider(
-                height: 1,
-                color: context.appColors.divider,
-              ),
-              itemBuilder: (context, index) {
-                final collection = state.collections[index];
-                return _CollectionRow(
-                  icon: AppIcons.collection,
-                  label: collection.name,
-                  sourceCount: collection.sourceCount,
-                  enabled: !state.isBusy,
-                  onPressed: () => onCollectionPressed(collection),
-                );
-              },
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (state.errorCode != null) ...[
+                        Text(
+                          _addToCollectionErrorMessage(l10n, state.errorCode!),
+                          style: text.bodyMedium.copyWith(color: colors.error),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                      _CollectionRow(
+                        icon: AppIcons.collectionFavourites,
+                        label: l10n.libraryFavourites,
+                        sourceCount: state.favouritesSourceCount,
+                        enabled: !state.isBusy,
+                        onPressed: onFavouritesPressed,
+                      ),
+                      const Divider(),
+                      if (state.collections.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            top: AppSpacing.lg,
+                            bottom: AppSpacing.lg,
+                          ),
+                          child: Text(
+                            l10n.libraryCreateCollectionPrompt(sourceCount),
+                            style: text.bodyMedium.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (state.collections.isNotEmpty)
+                  SliverList.separated(
+                    itemCount: state.collections.length,
+                    separatorBuilder: (_, _) => const Divider(),
+                    itemBuilder: (context, index) {
+                      final collection = state.collections[index];
+                      return _CollectionRow(
+                        icon: AppIcons.collection,
+                        label: collection.name,
+                        sourceCount: collection.sourceCount,
+                        enabled: !state.isBusy,
+                        onPressed: () => onCollectionPressed(collection),
+                      );
+                    },
+                  ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.lg),
+                    child: field,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: AppSpacing.lg),
-        ],
-        TextField(
-          controller: nameController,
-          enabled: !state.isBusy,
-          textInputAction: TextInputAction.done,
-          decoration: InputDecoration(
-            hintText: l10n.libraryNewCollectionName,
-          ),
-          onSubmitted: (_) => onCreatePressed?.call(),
         ),
         const SizedBox(height: AppSpacing.md),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: onCancelPressed,
-                child: AppButtonLabel(l10n.commonCancel),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: FilledButton.icon(
-                onPressed: onCreatePressed,
-                icon: const Icon(AppIcons.add, size: AppIconSize.sm),
-                label: AppButtonLabel(l10n.commonCreate),
-              ),
-            ),
-          ],
+        AppSheetActions(
+          primaryLabel: l10n.commonCreate,
+          onPrimary: onCreatePressed,
+          secondaryLabel: l10n.commonCancel,
+          onSecondary: onCancelPressed,
         ),
       ],
     );

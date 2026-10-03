@@ -197,9 +197,7 @@ class _LanguageMenu extends StatelessWidget {
             key: buttonKey,
             onPressed: enabled ? toggle : null,
             style: TextButton.styleFrom(
-              foregroundColor: context.colors.brightness == Brightness.dark
-                  ? context.colors.primaryFixedDim
-                  : context.colors.primary,
+              foregroundColor: context.actionForeground,
               backgroundColor: Colors.transparent,
               textStyle: context.text.bodySmall,
               minimumSize: const Size(0, AppSizes.buttonHeight),

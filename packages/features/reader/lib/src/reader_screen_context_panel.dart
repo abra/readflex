@@ -799,52 +799,44 @@ class _ImageHighlightNoteSheetState extends State<_ImageHighlightNoteSheet> {
       title: _isEditing
           ? context.l10n.readerEditNoteTitle
           : context.l10n.readerHighlightNoteTitle,
+      closeLabel: context.l10n.commonClose,
+      onClose: () => Navigator.of(context).pop(),
       headerSpacing: AppSpacing.sm,
+      constrainBody: true,
       bodyPadding: const EdgeInsets.fromLTRB(
         AppSpacing.xl,
         0,
         AppSpacing.xl,
         AppSpacing.lg,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: _controller,
-            minLines: 3,
-            maxLines: 4,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: InputDecoration(
-              hintText: context.l10n.readerCommentHint,
-              isDense: true,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _controller,
+              minLines: 3,
+              maxLines: 4,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                hintText: context.l10n.readerCommentHint,
+                isDense: true,
+              ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _isEditing
-                      ? () => Navigator.of(context).pop()
-                      : () => _complete(null),
-                  child: Text(
-                    _isEditing
-                        ? context.l10n.commonCancel
-                        : context.l10n.readerSkip,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: FilledButton(
-                  onPressed: canSave ? () => _complete(note) : null,
-                  child: AppButtonLabel(context.l10n.commonSave),
-                ),
-              ),
-            ],
-          ),
-        ],
+            const SizedBox(height: AppSpacing.md),
+            AppSheetActions(
+              primaryLabel: context.l10n.commonSave,
+              onPrimary: canSave ? () => _complete(note) : null,
+              secondaryLabel: _isEditing
+                  ? context.l10n.commonCancel
+                  : context.l10n.readerSkip,
+              onSecondary: _isEditing
+                  ? () => Navigator.of(context).pop()
+                  : () => _complete(null),
+            ),
+          ],
+        ),
       ),
     );
   }

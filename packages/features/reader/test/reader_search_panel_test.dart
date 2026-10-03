@@ -11,6 +11,42 @@ import 'package:reader/src/reader_search_result_tile.dart';
 import 'package:reader_webview/reader_webview.dart';
 
 void main() {
+  testWidgets('retry repeats the failed query without discarding history', (
+    tester,
+  ) async {
+    final cubit = ReaderSearchCubit(initialRecentQueries: const ['earlier']);
+    addTearDown(cubit.close);
+    var requests = 0;
+    Stream<ReaderSearchEvent> search(String query) {
+      expect(query, 'devices');
+      requests++;
+      return requests == 1
+          ? Stream.error(StateError('offline'))
+          : Stream.value(const ReaderSearchDone(requestId: 2));
+    }
+
+    cubit.recentQuerySelected('devices', searchBook: search);
+    await tester.pumpWidget(
+      _app(
+        cubit: cubit,
+        child: ReaderSearchPanel(
+          visible: true,
+          format: BookFormat.epub,
+          pageProgressionRtl: false,
+          onClose: () {},
+          onSearch: search,
+          onResultSelected: (_) {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(requests, 2);
+    expect(cubit.state.query, 'devices');
+    expect(cubit.state.recentQueries, ['earlier']);
+    expect(cubit.state.errorCode, isNull);
+  });
   void viewport(WidgetTester tester, Size size) {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;

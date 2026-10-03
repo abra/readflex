@@ -59,8 +59,24 @@ Helpers exported from `import_flow.dart`:
 ## Architecture
 
 Multi-step animated sheet driven by `ImportFlowCubit` — menu → uploading →
-done / failure. Steps share a stable preferred body height (264dp at normal text
-scale), with more space for larger system text. Menu and URL forms scroll when
+done / failure. Menu, URL entry, and status steps share a stable preferred body
+height (272dp at normal text scale), with more space for larger system text.
+The **Before uploading** consent step uses that height as its minimum and grows
+only when its content needs more room, up to the available viewport. Compact
+consent and the menu keep the same top edge throughout forward/back transitions,
+including wider phones where the legal paragraph wraps to fewer lines.
+Legal links and the full confirmation stay visible without scrolling on a
+normal phone. Its header and actions stay fixed when the body
+needs to scroll; on very short viewports the complete form scrolls so all controls
+remain reachable. Necessary height changes for longer localized text animate.
+The shared form footer stays at the bottom without adding padding below buttons.
+The confirmation row retains a 48dp checkbox target without extra vertical padding.
+The drag handle dismisses the sheet downward; there is no collapsed consent
+state that the user must expand to read. The legal sentence uses a single rich
+text paragraph with independently tappable, underlined links and link semantics.
+Links wrap with the surrounding text at the shared `bodySmall` line height;
+button-sized widgets must not inflate the paragraph's line boxes. Recognizers
+are owned and disposed by the consent widget. Menu and URL forms scroll when
 content exceeds the viewport or the keyboard leaves less room. The menu uses
 two full-width flat action rows with book/link icons and directional chevrons;
 their divider spans the full row width within the sheet padding. The close
@@ -70,12 +86,18 @@ The rows use 24dp vertical padding and share any unused body space equally
 above and below the group. Long content scrolls instead of stretching the sheet;
 the menu and URL form retain the same height on forward/back navigation.
 Offline article import remains disabled, with a warning icon and no navigation
-chevron, while local books remain available. The URL form uses its validation
-area as the gap above hints, balanced by 24dp below them before the actions.
+chevron, while local books remain available. The URL form uses the shared 48dp
+header with Close and shared primary/secondary actions. The input and hints
+scroll between them. Hints sit 8dp above the footer; remaining body space stays
+between the reserved validation area and the hints, with a minimum 8dp gap.
+When a keyboard or large text leaves too little height for that layout, the
+complete form scrolls instead.
 The input reserves space for its localized validation messages so showing or
 clearing an error does not move the hints or buttons. The reserved area follows
 the available width and text scale and is excluded from accessibility until
 an error is shown.
+Clipboard errors use compact localized copy to avoid reserving a paragraph of
+empty space at large text sizes. No validation message is clipped or ellipsized.
 It uses finite minimum height without intrinsic measurement or unbounded flex
 children. Status content also scrolls
 when necessary. Clipboard access is still explicit: Paste has a full 52x48px
@@ -97,19 +119,26 @@ coalesced to visible one-percent changes.
 
 ## Verification
 
-Package tests cover balanced menu/hint spacing and stable step height in English,
+Package tests cover menu spacing, reachable hints and stable step height in English,
 Russian, and Arabic, menu hit targets and disabled semantics, RTL/large-text
 header access, validation, clipboard races/failures, retry state, picker
 cancellation, progress layout, and keyboard access with enlarged text.
-Real-font goldens check spacing from the visible input border, not the field's
-invisible validation area. Validation geometry and error semantics are checked
+Real-font goldens check spacing after the reserved validation area and before
+the footer. Validation geometry and error semantics are checked
 in all supported languages at normal and 200% text scale.
 `test/ui/import_flow_golden_test.dart` exercises the production sheet over an
 isolated Library: online/offline menu, book progress/failure, invalid Paste,
-article failure, and URL restoration. Its profiles include Russian and Arabic
+article failure, consent, and URL restoration. `test/ui/import_book_terms_test.dart`
+checks all supported languages with real fonts at normal and 200% text scale:
+no unnecessary scrolling/fades, natural legal-paragraph line height, inline-link
+taps/semantics, acceptance gating, picker callbacks, and return geometry.
+Separate real-font tests inspect every animation frame in both directions at
+360, 390, 402, and 430dp widths to catch even temporary top-edge jumps.
+The golden profiles include Russian and Arabic
 **phone-sized** layouts, dark mode, 200% German text, and landscape. Native
 library-controls tests cover menu dismissal, connectivity changes, and
-navigation to both import paths. Native pickers, real clipboard permissions,
+navigation to both import paths, including fully visible consent before scrolling
+and consistent header placement and compact step height. Native pickers, real clipboard permissions,
 and live extraction require separate device checks.
 
 ## Dependencies

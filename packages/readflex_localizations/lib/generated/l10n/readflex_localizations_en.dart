@@ -211,6 +211,13 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
   String get appInitializationFailed => 'Initialization failed';
 
   @override
+  String get appInitializationFailedBody =>
+      'Readflex could not start. Try again.';
+
+  @override
+  String get appTechnicalDetails => 'Technical details';
+
+  @override
   String get appRetry => 'Retry';
 
   @override
@@ -462,10 +469,7 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other:
-          'This removes the library items and your highlights. Archived learning data is kept.',
-      one:
-          'This removes the library item and your highlights. Archived learning data is kept.',
+      other: 'This removes the library items, highlights and bookmarks.',
     );
     return '$_temp0';
   }
@@ -667,7 +671,7 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
   String get importEditLink => 'Edit link';
 
   @override
-  String get importClipboardUnavailable => 'Could not read the clipboard';
+  String get importClipboardUnavailable => 'Couldn\'t paste link';
 
   @override
   String get importArticleUrlRequired => 'Enter an article URL';

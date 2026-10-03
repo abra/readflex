@@ -489,6 +489,18 @@ abstract class ReadflexLocalizations {
   /// **'Initialization failed'**
   String get appInitializationFailed;
 
+  /// No description provided for @appInitializationFailedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Readflex could not start. Try again.'**
+  String get appInitializationFailedBody;
+
+  /// No description provided for @appTechnicalDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Technical details'**
+  String get appTechnicalDetails;
+
   /// No description provided for @appRetry.
   ///
   /// In en, this message translates to:
@@ -882,7 +894,7 @@ abstract class ReadflexLocalizations {
   /// No description provided for @libraryDeleteItemsBody.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, one{This removes the library item and your highlights. Archived learning data is kept.} other{This removes the library items and your highlights. Archived learning data is kept.}}'**
+  /// **'{count, plural, other{This removes the library items, highlights and bookmarks.}}'**
   String libraryDeleteItemsBody(int count);
 
   /// No description provided for @libraryCollectionsTitle.
@@ -1224,7 +1236,7 @@ abstract class ReadflexLocalizations {
   /// No description provided for @importClipboardUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'Could not read the clipboard'**
+  /// **'Couldn\'t paste link'**
   String get importClipboardUnavailable;
 
   /// No description provided for @importArticleUrlRequired.

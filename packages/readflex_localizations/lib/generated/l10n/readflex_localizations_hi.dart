@@ -211,6 +211,13 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get appInitializationFailed => 'आरंभ करने में विफल';
 
   @override
+  String get appInitializationFailedBody =>
+      'Readflex शुरू नहीं हो सका। फिर से कोशिश करें।';
+
+  @override
+  String get appTechnicalDetails => 'तकनीकी विवरण';
+
+  @override
   String get appRetry => 'फिर कोशिश करें';
 
   @override
@@ -461,10 +468,7 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other:
-          'यह लाइब्रेरी आइटम और आपके हाइलाइट हटाता है। संग्रहित सीखने का डेटा रखा जाता है।',
-      one:
-          'यह लाइब्रेरी आइटम और आपके हाइलाइट हटाता है। संग्रहित सीखने का डेटा रखा जाता है।',
+      other: 'इससे लाइब्रेरी के आइटम, हाइलाइट और बुकमार्क हट जाएंगे।',
     );
     return '$_temp0';
   }
@@ -665,7 +669,7 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get importEditLink => 'लिंक बदलें';
 
   @override
-  String get importClipboardUnavailable => 'क्लिपबोर्ड नहीं पढ़ा जा सका';
+  String get importClipboardUnavailable => 'लिंक पेस्ट नहीं हो सका';
 
   @override
   String get importArticleUrlRequired => 'लेख URL दर्ज करें';

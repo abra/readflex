@@ -1,5 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/services.dart';
@@ -81,39 +82,48 @@ class _ImportFlowSheet extends StatelessWidget {
         final isOffline = snapshot.data ?? this.isOffline;
         return BlocBuilder<ImportFlowCubit, ImportFlowState>(
           builder: (context, state) {
-            // Keep steps stable, but give larger system text more room.
-            // Each step scrolls when the keyboard or viewport limits height.
-            return SizedBox(
-              height:
-                  264 *
-                  (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(
-                    1.0,
-                    3.0,
-                  ),
+            // Keep compact steps level; consent can grow for longer text.
+            // The viewport still bounds every step.
+            final stepHeight =
+                272 *
+                (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(
+                  1.0,
+                  3.0,
+                );
+            return AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOutCubic,
+              alignment: Alignment.bottomCenter,
               child: _ImportFlowStepSwitcher(
                 state: state,
-                child: KeyedSubtree(
+                child: ConstrainedBox(
                   key: ValueKey(state.runtimeType),
-                  child: switch (state) {
-                    ImportFlowMenu() => _MenuView(isOffline: isOffline),
-                    ImportFlowBookTermsRequired() => _BookTermsView(
-                      onOpenTerms: onOpenTerms,
-                      onOpenPrivacy: onOpenPrivacy,
-                    ),
-                    ImportFlowArticleUrlEntry() => _ArticleUrlEntryView(
-                      state: state,
-                      isOffline: isOffline,
-                    ),
-                    ImportFlowBookUploading() => _BookUploadingView(
-                      state: state,
-                    ),
-                    ImportFlowArticleUploading() => _ArticleUploadingView(
-                      state: state,
-                    ),
-                    ImportFlowBookDone() => _BookDoneView(state: state),
-                    ImportFlowArticleDone() => _ArticleDoneView(state: state),
-                    ImportFlowFailure() => _FailureView(state: state),
-                  },
+                  constraints: BoxConstraints(minHeight: stepHeight),
+                  child: SizedBox(
+                    height: state is ImportFlowBookTermsRequired
+                        ? null
+                        : stepHeight,
+                    child: switch (state) {
+                      ImportFlowMenu() => _MenuView(isOffline: isOffline),
+                      ImportFlowBookTermsRequired() => _BookTermsView(
+                        onOpenTerms: onOpenTerms,
+                        onOpenPrivacy: onOpenPrivacy,
+                      ),
+                      ImportFlowArticleUrlEntry() => _ArticleUrlEntryView(
+                        state: state,
+                        isOffline: isOffline,
+                      ),
+                      ImportFlowBookUploading() => _BookUploadingView(
+                        state: state,
+                      ),
+                      ImportFlowArticleUploading() => _ArticleUploadingView(
+                        state: state,
+                      ),
+                      ImportFlowBookDone() => _BookDoneView(state: state),
+                      ImportFlowArticleDone() => _ArticleDoneView(state: state),
+                      ImportFlowFailure() => _FailureView(state: state),
+                    },
+                  ),
                 ),
               ),
             );
@@ -166,7 +176,9 @@ class _ImportFlowStepSwitcherState extends State<_ImportFlowStepSwitcher> {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            ...previousChildren,
+            // Outgoing steps animate within the current step's bounds; they
+            // must not hold the sheet at the height of the previous form.
+            for (final child in previousChildren) Positioned.fill(child: child),
             ?currentChild,
           ],
         ),
@@ -386,7 +398,8 @@ class _ImportMenuAction extends StatelessWidget {
                   icon,
                   size: AppIconSize.md,
                   color:
-                      iconColor ?? (enabled ? colors.primary : disabledColor),
+                      iconColor ??
+                      (enabled ? context.actionForeground : disabledColor),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
@@ -457,57 +470,33 @@ class _BookTermsViewState extends State<_BookTermsView> {
     final text = context.text;
     final l10n = context.l10n;
 
-    return Padding(
-      padding: _kStatusViewPadding,
-      child: Column(
+    return _ImportFormLayout(
+      title: l10n.importBeforeUploadingTitle,
+      fitContent: true,
+      content: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          BottomSheetHeader(title: l10n.importBeforeUploadingTitle),
-          const SizedBox(height: AppSpacing.md),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    l10n.importBookTermsBody,
-                    style: text.bodyMedium.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  _BookTermsLinks(
-                    onOpenTerms: widget.onOpenTerms,
-                    onOpenPrivacy: widget.onOpenPrivacy,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  _BookTermsCheckbox(
-                    accepted: _accepted,
-                    onChanged: (value) => setState(() => _accepted = value),
-                  ),
-                ],
-              ),
-            ),
+          Text(
+            l10n.importBookTermsBody,
+            style: text.bodyMedium.copyWith(color: colors.onSurfaceVariant),
           ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: _PlainTextButton(
-                  label: l10n.commonCancel,
-                  onPressed: cubit.cancelBookImportTerms,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: FilledButton(
-                  onPressed: _accepted ? cubit.acceptTermsAndPickBook : null,
-                  child: AppButtonLabel(l10n.commonContinue),
-                ),
-              ),
-            ],
+          const SizedBox(height: AppSpacing.sm),
+          _BookTermsLinks(
+            onOpenTerms: widget.onOpenTerms,
+            onOpenPrivacy: widget.onOpenPrivacy,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _BookTermsCheckbox(
+            accepted: _accepted,
+            onChanged: (value) => setState(() => _accepted = value),
           ),
         ],
+      ),
+      actions: AppSheetActions(
+        primaryLabel: l10n.commonContinue,
+        onPrimary: _accepted ? cubit.acceptTermsAndPickBook : null,
+        secondaryLabel: l10n.commonCancel,
+        onSecondary: cubit.cancelBookImportTerms,
       ),
     );
   }
@@ -524,27 +513,22 @@ class _BookTermsCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: () => onChanged(!accepted),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+    return MergeSemantics(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => onChanged(!accepted),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Checkbox(
               value: accepted,
               onChanged: (value) => onChanged(value ?? false),
-              visualDensity: VisualDensity.compact,
+              visualDensity: VisualDensity.standard,
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  context.l10n.importBookTermsConfirm,
-                  style: context.text.bodyMedium,
-                ),
+              child: Text(
+                context.l10n.importBookTermsConfirm,
+                style: context.text.bodyMedium,
               ),
             ),
           ],
@@ -554,7 +538,7 @@ class _BookTermsCheckbox extends StatelessWidget {
   }
 }
 
-class _BookTermsLinks extends StatelessWidget {
+class _BookTermsLinks extends StatefulWidget {
   const _BookTermsLinks({
     required this.onOpenTerms,
     required this.onOpenPrivacy,
@@ -564,57 +548,52 @@ class _BookTermsLinks extends StatelessWidget {
   final Future<void> Function() onOpenPrivacy;
 
   @override
-  Widget build(BuildContext context) {
-    final textStyle = context.text.bodySmall.copyWith(
-      color: context.colors.onSurfaceVariant,
-    );
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        Text(context.l10n.importLegalPrefix, style: textStyle),
-        _InlineLinkButton(
-          label: context.l10n.importTerms,
-          onPressed: onOpenTerms,
-        ),
-        Text(context.l10n.importLegalAnd, style: textStyle),
-        _InlineLinkButton(
-          label: context.l10n.importPrivacyPolicy,
-          onPressed: onOpenPrivacy,
-        ),
-        Text(context.l10n.importLegalSuffix, style: textStyle),
-      ],
-    );
-  }
+  State<_BookTermsLinks> createState() => _BookTermsLinksState();
 }
 
-class _InlineLinkButton extends StatelessWidget {
-  const _InlineLinkButton({required this.label, required this.onPressed});
+class _BookTermsLinksState extends State<_BookTermsLinks> {
+  late final _termsRecognizer = TapGestureRecognizer()
+    ..onTap = () => widget.onOpenTerms();
+  late final _privacyRecognizer = TapGestureRecognizer()
+    ..onTap = () => widget.onOpenPrivacy();
 
-  final String label;
-  final Future<void> Function() onPressed;
+  @override
+  void dispose() {
+    _termsRecognizer.dispose();
+    _privacyRecognizer.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 24),
-      child: InkWell(
-        key: ValueKey('importFlowLegalLink-$label'),
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(4),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-          child: Center(
-            widthFactor: 1,
-            child: Text(
-              label,
-              style: context.text.bodySmall.copyWith(
-                color: context.colors.primary,
-                decoration: TextDecoration.underline,
-                decorationColor: context.colors.primary,
-              ),
-            ),
+    final l10n = context.l10n;
+    final linkStyle = TextStyle(
+      color: context.actionForeground,
+      decoration: TextDecoration.underline,
+      decorationColor: context.actionForeground,
+    );
+    // Inline links share the paragraph's line boxes, not button-sized rows.
+    return Text.rich(
+      key: const ValueKey('importFlowLegalText'),
+      TextSpan(
+        children: [
+          TextSpan(text: l10n.importLegalPrefix),
+          TextSpan(
+            text: l10n.importTerms,
+            style: linkStyle,
+            recognizer: _termsRecognizer,
           ),
-        ),
+          TextSpan(text: l10n.importLegalAnd),
+          TextSpan(
+            text: l10n.importPrivacyPolicy,
+            style: linkStyle,
+            recognizer: _privacyRecognizer,
+          ),
+          TextSpan(text: l10n.importLegalSuffix),
+        ],
+      ),
+      style: context.text.bodySmall.copyWith(
+        color: context.colors.onSurfaceVariant,
       ),
     );
   }
@@ -648,21 +627,6 @@ String _localizedErrorMessage(
     ImportFlowErrorCode.bookImportFailed => l10n.importBookImportFailed,
     ImportFlowErrorCode.articleSaveFailed => l10n.importArticleSaveFailed,
   };
-}
-
-/// Full-width outlined button for Cancel and other secondary actions
-/// inside the sheet. Matches the Cancel in the delete-confirmation
-/// sheet so the two destructive entry points feel like one app.
-class _PlainTextButton extends StatelessWidget {
-  const _PlainTextButton({required this.label, required this.onPressed});
-
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton(onPressed: onPressed, child: AppButtonLabel(label));
-  }
 }
 
 /// URL entry step for article import.
@@ -732,12 +696,11 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
     final error = _errorMessageFor(context, widget.state.errorCode);
 
     return _ImportFormLayout(
+      title: l10n.importSaveArticle,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          BottomSheetHeader(title: l10n.importSaveArticle),
-          const SizedBox(height: AppSpacing.lg),
           TextField(
             controller: _controller,
             keyboardType: TextInputType.url,
@@ -763,24 +726,13 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
         ],
       ),
       hints: _ArticleUrlHints(color: muted),
-      actions: Row(
-        children: [
-          Expanded(
-            child: _PlainTextButton(
-              label: l10n.commonBack,
-              onPressed: cubit.backToMenu,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: FilledButton(
-              onPressed: widget.isOffline || !widget.state.canSubmit
-                  ? null
-                  : cubit.submitArticleUrl,
-              child: AppButtonLabel(l10n.commonSave),
-            ),
-          ),
-        ],
+      actions: AppSheetActions(
+        primaryLabel: l10n.commonSave,
+        onPrimary: widget.isOffline || !widget.state.canSubmit
+            ? null
+            : cubit.submitArticleUrl,
+        secondaryLabel: l10n.commonBack,
+        onSecondary: cubit.backToMenu,
       ),
     );
   }
@@ -838,8 +790,6 @@ class _PasteUrlButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-
     return Semantics(
       label: context.l10n.importPasteUrl,
       button: true,
@@ -854,7 +804,7 @@ class _PasteUrlButton extends StatelessWidget {
             child: Icon(
               AppIcons.paste,
               size: AppIconSize.sm,
-              color: colors.primary,
+              color: context.actionForeground,
             ),
           ),
         ),
@@ -866,41 +816,90 @@ class _PasteUrlButton extends StatelessWidget {
 /// Uses the available height without intrinsic layout or unbounded flex.
 class _ImportFormLayout extends StatelessWidget {
   const _ImportFormLayout({
+    required this.title,
     required this.content,
-    required this.hints,
+    this.hints,
     required this.actions,
+    this.fitContent = false,
   });
 
+  final String title;
   final Widget content;
-  final Widget hints;
+  final Widget? hints;
   final Widget actions;
+  final bool fitContent;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: constraints.maxHeight),
-          child: Padding(
-            padding: _kStatusViewPadding,
+      builder: (context, constraints) {
+        final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final hintGroup = hints == null
+            ? null
+            : Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: hints,
+              );
+        // On very short viewports, even header + actions can exceed the height.
+        // Keep every control reachable by scrolling the complete form instead.
+        if (constraints.maxHeight < 240 * scale) {
+          return SingleChildScrollView(
             child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                content,
-                Padding(
-                  // The input already reserves validation space above hints.
-                  // Balance it below instead of adding a second upper gap.
-                  padding: const EdgeInsets.only(bottom: AppSpacing.xl),
-                  child: hints,
+                BottomSheetHeader(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                  ),
+                  title: title,
+                  closeLabel: context.l10n.commonClose,
+                  onClose: () => Navigator.of(context).pop(),
                 ),
-                actions,
+                const SizedBox(height: AppSpacing.sm),
+                Padding(
+                  padding: _kStatusViewPadding,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      content,
+                      ?hintGroup,
+                      const SizedBox(height: AppSpacing.sm),
+                      actions,
+                    ],
+                  ),
+                ),
               ],
             ),
+          );
+        }
+        return ActionBottomSheetLayout(
+          title: title,
+          closeLabel: context.l10n.commonClose,
+          onClose: () => Navigator.of(context).pop(),
+          constrainBody: true,
+          bodyPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+          footer: actions,
+          child: LayoutBuilder(
+            builder: (context, bodyConstraints) => ScrollEdgeFadeStack(
+              child: SingleChildScrollView(
+                child: ConstrainedBox(
+                  // Give free space to the field/hints gap, while long
+                  // forms still scroll without intrinsic measurement.
+                  constraints: BoxConstraints(
+                    minHeight: fitContent ? 0 : bodyConstraints.maxHeight,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [content, ?hintGroup],
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -990,7 +989,7 @@ class _BookUploadingView extends StatelessWidget {
         ),
         detailStyle: text.labelSmall.copyWith(color: muted),
         progressBackgroundColor: cs.surfaceContainerHighest,
-        progressColor: cs.primary,
+        progressColor: context.actionForeground,
       ),
     );
   }
@@ -1302,79 +1301,12 @@ class _FailureActions extends StatelessWidget {
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) {
-    final cancelLabel = context.l10n.commonCancel;
-    final cancel = _PlainTextButton(
-      label: cancelLabel,
-      onPressed: () => Navigator.of(context).pop(),
-    );
-    final retry = FilledButton(
-      onPressed: onRetry,
-      child: AppButtonLabel(primaryLabel),
-    );
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final buttonWidth = (constraints.maxWidth - AppSpacing.md) / 2;
-        final theme = Theme.of(context);
-        final fitsRow =
-            _labelFits(
-              context,
-              cancelLabel,
-              theme.outlinedButtonTheme.style,
-              buttonWidth,
-            ) &&
-            _labelFits(
-              context,
-              primaryLabel,
-              theme.filledButtonTheme.style,
-              buttonWidth,
-            );
-        if (fitsRow) {
-          return Row(
-            children: [
-              Expanded(child: cancel),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(child: retry),
-            ],
-          );
-        }
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            cancel,
-            const SizedBox(height: AppSpacing.sm),
-            retry,
-          ],
-        );
-      },
-    );
-  }
-
-  // Measure two labels only on failure, not on progress updates.
-  bool _labelFits(
-    BuildContext context,
-    String label,
-    ButtonStyle? style,
-    double width,
-  ) {
-    final padding = style?.padding
-        ?.resolve({})
-        ?.resolve(Directionality.of(context));
-    final painter = TextPainter(
-      text: TextSpan(
-        text: label,
-        style: style?.textStyle?.resolve({}) ?? context.text.labelLarge,
-      ),
-      textDirection: Directionality.of(context),
-      textScaler: MediaQuery.textScalerOf(context),
-      locale: Localizations.maybeLocaleOf(context),
-    )..layout();
-    final fits =
-        painter.width + (padding?.horizontal ?? AppSpacing.lg * 2) <= width;
-    painter.dispose();
-    return fits;
-  }
+  Widget build(BuildContext context) => AppSheetActions(
+    primaryLabel: primaryLabel,
+    onPrimary: onRetry,
+    secondaryLabel: context.l10n.commonCancel,
+    onSecondary: () => Navigator.of(context).pop(),
+  );
 }
 
 /// Spring-animated checkmark, title, detail line, optional subtitle,
@@ -1403,7 +1335,11 @@ class _SuccessLayout extends StatelessWidget {
         icon: _StatusIconSlot(
           child: _IconDisc(
             key: const ValueKey('importFlowStatusIcon'),
-            child: Icon(AppIcons.check, color: cs.primary, size: 24),
+            child: Icon(
+              AppIcons.check,
+              color: context.actionForeground,
+              size: 24,
+            ),
           ),
         ),
         title: title,

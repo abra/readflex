@@ -121,7 +121,7 @@ class _ReaderBodyState extends State<_ReaderBody> {
                     child: AppButtonLabel(context.l10n.commonRetry),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  FilledButton(
+                  OutlinedButton(
                     onPressed: () => Navigator.of(context).pop(),
                     child: AppButtonLabel(context.l10n.readerGoBack),
                   ),

@@ -102,6 +102,7 @@ void main() {
 
       final imported = Completer<Book?>();
       var pickerCalls = 0;
+      var termsAccepted = false;
       final offline = StreamController<bool>();
       addTearDown(offline.close);
       unawaited(
@@ -115,12 +116,15 @@ void main() {
             return imported.future;
           },
           onImportArticle: (_, {onStage}) async => null,
+          isBookImportTermsAccepted: () => termsAccepted,
+          acceptBookImportTerms: () async => termsAccepted = true,
         ),
       );
       await tester.pumpAndSettle();
       final menuRect = tester.getRect(find.byType(BottomSheet));
       if (profile.scale == 1) {
-        expect(menuRect.height, lessThanOrEqualTo(300));
+        // 272dp body + 20dp handle + 16dp bottom inset.
+        expect(menuRect.height, lessThanOrEqualTo(308));
       }
       await snapshot('menu');
       offline.add(true);
@@ -130,6 +134,26 @@ void main() {
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text(l10n.importUploadBook));
       await tester.tap(find.text(l10n.importUploadBook));
+      await tester.pumpAndSettle();
+      await snapshot('book-terms');
+      if (profile.scale == 1) {
+        expect(
+          Scrollable.of(
+            tester.element(find.byType(Checkbox)),
+          ).position.maxScrollExtent,
+          0,
+          reason: 'consent may grow beyond the menu height to avoid scrolling',
+        );
+        expect(find.byType(Checkbox).hitTestable(), findsOneWidget);
+      }
+      await tester.ensureVisible(find.byType(Checkbox));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(Checkbox));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text(l10n.commonContinue));
+      await tester.pumpAndSettle();
+      if (profile.scale > 1) await snapshot('book-terms-confirm');
+      await tester.tap(find.text(l10n.commonContinue));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
       await snapshot('book-progress');
@@ -147,7 +171,7 @@ void main() {
         find.widgetWithText(OutlinedButton, l10n.commonCancel),
       );
       if (name == 'largeText') {
-        expect(choose.top, greaterThan(cancel.bottom));
+        expect(cancel.top, greaterThan(choose.bottom));
       } else if (name == 'phone') {
         expect(choose.top, cancel.top);
       }
@@ -180,25 +204,18 @@ void main() {
           0,
           reason: 'the normal-sized URL form fits without scrolling',
         );
-        // TextField also includes invisible validation space. Compare the
-        // visible input container, not that larger widget, to the hint group.
-        final input = InputDecorator.containerOf(
-          tester.element(find.byType(EditableText).last),
-        )!;
-        final inputBottom = input
-            .localToGlobal(Offset(0, input.size.height))
-            .dy;
+        // Include the reserved validation area: hints must not touch the error.
+        final fieldBottom = tester.getRect(find.byType(TextField).last).bottom;
         final above =
             tester.getRect(find.text(l10n.importArticleHintClean)).top -
-            inputBottom;
+            fieldBottom;
         final below =
             tester
                 .getRect(find.widgetWithText(FilledButton, l10n.commonSave))
                 .top -
             tester.getRect(find.text(l10n.importArticleHintLibrary)).bottom;
-        expect(above, inInclusiveRange(16, 32));
-        expect(below, inInclusiveRange(16, 32));
-        expect(above, closeTo(below, 8));
+        expect(above, greaterThanOrEqualTo(8));
+        expect(below, closeTo(8, .01));
       }
       await snapshot('article-entry');
       await tester.ensureVisible(
@@ -219,6 +236,11 @@ void main() {
       );
       expect(find.text(l10n.importInvalidArticleUrl), findsOneWidget);
       expect(formGeometry(), beforeError);
+      expect(
+        tester.getRect(find.text(l10n.importArticleHintClean)).top -
+            tester.getRect(find.text(l10n.importInvalidArticleUrl)).bottom,
+        greaterThanOrEqualTo(8),
+      );
       await snapshot('invalid-paste');
       await tester.enterText(find.byType(TextField).last, _url);
       await tester.pump();

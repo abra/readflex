@@ -141,6 +141,11 @@ class ReaderSearchCubit extends Cubit<ReaderSearchState> {
     _queueSearch(value, debounce: true, searchBook: searchBook);
   }
 
+  void retry({required ReaderBookSearch searchBook}) {
+    if (state.isLoading) return;
+    _queueSearch(state.query, debounce: false, searchBook: searchBook);
+  }
+
   void recentQuerySelected(
     String query, {
     required ReaderBookSearch searchBook,

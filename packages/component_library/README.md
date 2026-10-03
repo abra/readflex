@@ -47,6 +47,7 @@ Access everything through `BuildContext` extensions:
 ```dart
 // Colors
 context.colors.primary            // ColorScheme
+context.actionForeground          // readable accent text/icons on surfaces
 context.appColors.warning         // AppColorsExt (ThemeExtension)
 context.appColors.highlightYellow // highlight/rating/status colors
 
@@ -149,6 +150,7 @@ Reusable presentation-only widgets used across features:
 | `AppActionCard`                     | Reusable command card for action pickers       |
 | `AppBottomSafeArea`                 | Bottom inset handling for app-owned surfaces   |
 | `AppButtonLabel`                    | Bounded label for localized button text        |
+| `AppSheetActions`                   | Primary/secondary sheet commands with adaptive stacking and stable busy geometry |
 | `AppCopyButton`                     | 48px copy command with local success/error feedback |
 | `AppFilterChip`                     | App-styled filter chip with stable tap target  |
 | `BottomSheetHeader`                 | Bottom sheet title row                         |
@@ -165,6 +167,39 @@ Reusable presentation-only widgets used across features:
 | `showAppBottomSheet`                | Shared modal bottom-sheet presentation helper  |
 
 ## What Belongs Here
+
+### Bottom Sheet Contract
+
+- `showAppBottomSheet` owns the 20dp handle area, keyboard lift and safe areas.
+  A guarded form keeps the same top space without displaying a draggable handle.
+- `BottomSheetHeader` uses `titleMedium`, a minimum 48dp row and a heading
+  semantics node. Adding Close does not change the title baseline. Long titles
+  wrap; trailing actions wrap independently when needed.
+  Pass gutters through its `padding`, not an outer `Padding`: the 20dp close
+  icon aligns with the content edge while its 48dp hit target extends into the
+  trailing gutter. With the standard 24dp gutter, the target ends 10dp from the
+  sheet edge. This mirrors in RTL without changing title wrapping or moving
+  other header actions. Small custom gutters keep the entire target inside the
+  header. No translated painting or hit testing outside a parent is required.
+- `ActionBottomSheetLayout` supplies 24dp horizontal gutters and an 8dp
+  header/body gap. Constrained sheets keep the header outside the scrolling body.
+  Its optional `footer` pins actions below that group; a minimum-height form
+  puts spare space above the footer, not below its buttons. Footer padding is
+  independent of body padding; forms without a bottom body inset use the
+  footer's default 8dp top and 16dp bottom spacing.
+- `AppSheetActions` places a secondary outlined command beside a filled primary
+  command. When localized labels do not fit, the primary command comes first
+  in a vertical stack. Busy state preserves size and blocks duplicate actions.
+- Heights follow content, not one global fixed height. Multi-step import retains
+  its own stable height; very short keyboard layouts may scroll the whole form
+  so the header and actions cannot make content unreachable.
+- Use `context.actionForeground` for accent text/icons on surfaces, especially
+  in dark mode. Keep `primary`/`onPrimary` for filled controls and background tints.
+
+`test/sheet_contract_test.dart` covers header geometry, close-icon alignment in
+LTR/RTL, taps at all four edges of the 48dp target, directional padding, label
+scaling, action layout and foreground contrast. Feature tests own persistence
+and dismiss guards.
 
 `AppCopyButton` receives a clipboard callback and localized labels from its
 feature. It performs no service lookup, blocks duplicate in-flight taps, and

@@ -75,11 +75,12 @@ class AppButtonThemes {
 
   static TextButtonThemeData text(
     AppColorPalette palette,
-    TextTheme textTheme,
-  ) {
+    TextTheme textTheme, {
+    required Color foreground,
+  }) {
     return TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: palette.primary,
+        foregroundColor: foreground,
         textStyle: textTheme.labelLarge?.copyWith(
           fontFamily: AppTypography.fontFamilySans,
           fontFamilyFallback: AppTypography.fontFamilyFallback,

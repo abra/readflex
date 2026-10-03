@@ -232,8 +232,13 @@ void main() {
 
     final scrollView = find.byType(SingleChildScrollView);
     expect(scrollView, findsOneWidget);
-    expect(tester.getSize(scrollView).height, closeTo(408, 0.001));
-    expect(find.text('Definition 20'), findsOneWidget);
+    expect(tester.getSize(scrollView).height, closeTo(600 * .72, 0.001));
+    final header = tester.getRect(find.byType(BottomSheetHeader));
+    await tester.ensureVisible(find.text('Definition 20'));
+    await tester.pumpAndSettle();
+    expect(find.text('Definition 20').hitTestable(), findsOneWidget);
+    expect(tester.getRect(find.byType(BottomSheetHeader)), header);
+    expect(find.byTooltip('Close').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

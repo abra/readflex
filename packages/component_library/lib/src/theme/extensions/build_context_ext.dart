@@ -22,4 +22,9 @@ extension BuildContextThemeX on BuildContext {
   AppTextTheme get text => AppTextTheme(theme.textTheme);
 
   AppColorsExt get appColors => theme.ext;
+
+  /// Accent on app surfaces, not the fill of primary buttons or reader pages.
+  Color get actionForeground => colors.brightness == Brightness.dark
+      ? colors.primaryFixedDim
+      : colors.primary;
 }

@@ -44,11 +44,14 @@ class _ReaderAppearanceSheet extends StatelessWidget {
     return ActionBottomSheetLayout(
       title: context.l10n.readerAppearanceTitle,
       headerTrailing: const _ResetAppearanceButton(),
-      headerSpacing: AppSpacing.md,
+      closeLabel: context.l10n.commonClose,
+      onClose: () => Navigator.of(context).pop(),
       constrainBody: true,
-      child: SingleChildScrollView(
-        child: _LayeredAppearanceControls(
-          showPageTurnControls: showPageTurnControls,
+      child: ScrollEdgeFadeStack(
+        child: SingleChildScrollView(
+          child: _LayeredAppearanceControls(
+            showPageTurnControls: showPageTurnControls,
+          ),
         ),
       ),
     );
@@ -66,7 +69,7 @@ class _ResetAppearanceButton extends StatelessWidget {
     return TextButton.icon(
       onPressed: canReset ? context.read<ReaderAppearanceCubit>().reset : null,
       icon: const Icon(AppIcons.refresh, size: AppIconSize.sm),
-      label: AppButtonLabel(context.l10n.readerReset, maxLines: 1),
+      label: AppButtonLabel(context.l10n.readerReset),
     );
   }
 }
@@ -187,7 +190,9 @@ class _ThemeSwatchButton extends StatelessWidget {
                 color: theme.backgroundColor,
                 borderRadius: BorderRadius.circular(AppRadius.sm),
                 border: Border.all(
-                  color: active ? cs.primary : context.appColors.divider,
+                  color: active
+                      ? context.actionForeground
+                      : context.appColors.divider,
                   width: active ? 2 : 1,
                 ),
               ),
@@ -207,7 +212,7 @@ class _ThemeSwatchButton extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: text.labelSmall.copyWith(
                 color: active
-                    ? cs.primary
+                    ? context.actionForeground
                     : cs.onSurface.withValues(alpha: 0.62),
                 fontWeight: active ? FontWeight.w600 : FontWeight.w400,
               ),
@@ -310,7 +315,7 @@ class _FontPresetButton extends StatelessWidget {
                     maxLines: 1,
                     style: context.text.labelMedium.copyWith(
                       color: active
-                          ? cs.primary
+                          ? context.actionForeground
                           : cs.onSurface.withValues(alpha: 0.72),
                       fontFamily: preset.fontFamily,
                       fontWeight: active ? FontWeight.w700 : FontWeight.w600,
@@ -825,7 +830,7 @@ class _StepperValueButton extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: context.text.labelLarge.copyWith(
                   color: highlighted
-                      ? cs.primary
+                      ? context.actionForeground
                       : cs.onSurface.withValues(alpha: 0.78),
                   fontWeight: FontWeight.w700,
                 ),
@@ -897,7 +902,7 @@ class _AppearanceIconSegmentButton<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = context.colors;
     final foreground = active
-        ? cs.primary
+        ? context.actionForeground
         : cs.onSurface.withValues(alpha: 0.68);
     final radius = BorderRadius.circular(
       AppRadius.sm - _segmentedControlPadding,
