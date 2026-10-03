@@ -151,6 +151,8 @@ Reusable presentation-only widgets used across features:
 | `AppBottomSafeArea`                 | Bottom inset handling for app-owned surfaces   |
 | `AppButtonLabel`                    | Bounded label for localized button text        |
 | `AppSheetActions`                   | Primary/secondary sheet commands with adaptive stacking and stable busy geometry |
+| `AppSettingsSection`                | Shared settings heading and label/control spacing |
+| `AppChoiceControl` / `AppChoiceOption` | Single-choice settings, with the same themed states for text, icons and font previews |
 | `AppCopyButton`                     | 48px copy command with local success/error feedback |
 | `AppFilterChip`                     | App-styled filter chip with stable tap target  |
 | `BottomSheetHeader`                 | Bottom sheet title row                         |
@@ -187,6 +189,28 @@ Reusable presentation-only widgets used across features:
   puts spare space above the footer, not below its buttons. Footer padding is
   independent of body padding; forms without a bottom body inset use the
   footer's default 8dp top and 16dp bottom spacing.
+- Use `ActionBottomSheetLayout.scrollable` for finite content: Display,
+  Appearance, Language, Definition and Translation share this composition.
+  Pass content, not another scroll view. It owns one viewport, 24dp content
+  gutters, 16dp bottom padding and full-width edge fades. The body grows with
+  content up to 72% of screen height (78% with large text), including any pinned
+  context row and further bounded by the modal's available space. The title
+  never scrolls. Optional `headerBottom`
+  keeps contextual controls such as translation direction fixed below it.
+  Short content does not gain an empty fixed-height area or a scroll shadow.
+- Settings use `AppSettingsSection`: `labelMedium` (13sp) in
+  `onSurfaceVariant`, an 8dp label/control gap and 16dp between groups. Setting
+  rows use `bodyMedium` (15sp), aligned to the same 24dp gutters. There is no
+  additional inset for the lower half of Appearance.
+- `AppChoiceControl` uses the shared segmented-button theme, 8dp corners,
+  48dp minimum controls and the same selected/disabled states. Font previews
+  retain their typefaces; theme swatches retain their sample colors. When
+  labels do not fit, text choices become two equal columns or a vertical list;
+  they do not shrink or ellipsize. Icon-only choices have localized tooltips.
+- Forms and lazy collection lists keep the default shell constructor: their
+  Save/Cancel, staged edits, discard guards and import step sizing are separate
+  interaction contracts, not reasons to fork header styling. Put horizontal
+  padding inside their viewport so overflow fades span the whole sheet.
 - `AppSheetActions` places a secondary outlined command beside a filled primary
   command. When localized labels do not fit, the primary command comes first
   in a vertical stack. Busy state preserves size and blocks duplicate actions.
@@ -200,6 +224,12 @@ Reusable presentation-only widgets used across features:
 LTR/RTL, taps at all four edges of the 48dp target, directional padding, label
 scaling, action layout and foreground contrast. Feature tests own persistence
 and dismiss guards.
+`test/app_choice_control_test.dart` and `test/action_bottom_sheet_layout_test.dart`
+check adaptive choices, disabled states, viewport gutters and fixed context.
+Root `test/ui/settings_consistency_test.dart` compares Display and Appearance
+directly; goldens cover the resulting compositions in light/dark, large text,
+landscape and RTL. Native Library/Reader flows verify persistence and WebView
+identity, rather than treating a matching screenshot as functional proof.
 
 `AppCopyButton` receives a clipboard callback and localized labels from its
 feature. It performs no service lookup, blocks duplicate in-flight taps, and

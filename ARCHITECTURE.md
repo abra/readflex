@@ -150,6 +150,20 @@ UI callbacks.
 
 Keep the detailed rules in `ACCESSIBILITY.md` aligned with real code and tests.
 
+## Shared Sheet Design
+
+Sheet presentation belongs to `component_library`, not individual feature Views.
+`showAppBottomSheet` owns modal presentation, handle, safe area and keyboard lift;
+`ActionBottomSheetLayout` owns header geometry, gutters and pinned actions.
+Its `.scrollable` constructor owns the single viewport for finite-content sheets
+(Display, Appearance, Language, Translation and Definition). Forms and lazy lists
+retain the default constructor, without duplicating headers or nesting viewports.
+`AppSettingsSection` and `AppChoiceControl` supply common settings roles; features
+provide localized options, state and callbacks. Appearance still commits through
+its Cubit; collection drafts still require Save. Unifying visual roles must not
+unify away these different persistence contracts. See the component-library
+README for dimensions and cross-sheet regression tests.
+
 ## Localization
 
 `readflex_localizations` is the single source of truth for supported locales,

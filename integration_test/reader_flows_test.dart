@@ -632,7 +632,11 @@ void main() {
             text.trim(),
           );
           expect(find.byType(ReaderHighlightControls), findsNothing);
-          await tester.pumpWidget(const SizedBox.shrink());
+          // A fixture reply may arrive before the sheet's entrance finishes.
+          // Close the route before disposing its animation's overlay owner.
+          await tester.pumpAndSettle();
+          await dismissSheet(tester);
+          await unmountUi(tester);
         },
       );
     }

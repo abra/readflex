@@ -6,9 +6,6 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'reader_appearance_cubit.dart';
 
-const double _compactControlHeight = AppSizes.iconButtonSize;
-const double _compactControlSurfaceHeight = _compactControlHeight + 6;
-const double _segmentedControlPadding = 3;
 const double _marginsControlWidth = 152;
 const double _pageTurnControlWidth = 116;
 const double _textSizeControlWidth = _marginsControlWidth;
@@ -41,18 +38,13 @@ class _ReaderAppearanceSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ActionBottomSheetLayout(
+    return ActionBottomSheetLayout.scrollable(
       title: context.l10n.readerAppearanceTitle,
       headerTrailing: const _ResetAppearanceButton(),
       closeLabel: context.l10n.commonClose,
       onClose: () => Navigator.of(context).pop(),
-      constrainBody: true,
-      child: ScrollEdgeFadeStack(
-        child: SingleChildScrollView(
-          child: _LayeredAppearanceControls(
-            showPageTurnControls: showPageTurnControls,
-          ),
-        ),
+      child: _LayeredAppearanceControls(
+        showPageTurnControls: showPageTurnControls,
       ),
     );
   }
@@ -66,6 +58,15 @@ class _ResetAppearanceButton extends StatelessWidget {
     final canReset = context.select<ReaderAppearanceCubit, bool>(
       (c) => c.state.hasOverride,
     );
+    if (MediaQuery.textScalerOf(context).scale(15) > 20) {
+      return AppPlainIconButton(
+        icon: AppIcons.refresh,
+        tooltip: context.l10n.readerReset,
+        onPressed: canReset
+            ? context.read<ReaderAppearanceCubit>().reset
+            : null,
+      );
+    }
     return TextButton.icon(
       onPressed: canReset ? context.read<ReaderAppearanceCubit>().reset : null,
       icon: const Icon(AppIcons.refresh, size: AppIconSize.sm),
@@ -86,41 +87,18 @@ class _LayeredAppearanceControls extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _PanelHeader(title: context.l10n.readerTheme),
-        const SizedBox(height: AppSpacing.xs),
-        const _ThemeSwatchLevel(),
-        const SizedBox(height: AppSpacing.sm),
-        _PanelHeader(title: context.l10n.readerFont),
-        const SizedBox(height: AppSpacing.xs),
-        const _FontLevel(),
-        const SizedBox(height: AppSpacing.sm),
+        AppSettingsSection(
+          title: context.l10n.readerTheme,
+          child: const _ThemeSwatchLevel(),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        AppSettingsSection(
+          title: context.l10n.readerFont,
+          child: const _FontPresetControl(),
+        ),
+        const SizedBox(height: AppSpacing.lg),
         _ReaderLayoutSettingsPanel(
           showPageTurnControls: showPageTurnControls,
-        ),
-      ],
-    );
-  }
-}
-
-class _PanelHeader extends StatelessWidget {
-  const _PanelHeader({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Flexible(
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: context.text.labelSmall.copyWith(
-              color: context.colors.onSurface.withValues(alpha: 0.55),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
         ),
       ],
     );
@@ -137,21 +115,50 @@ class _ThemeSwatchLevel extends StatelessWidget {
     );
     final cubit = context.read<ReaderAppearanceCubit>();
     final activePreset = ReaderThemePreset.fromId(themeId);
-    return Row(
-      key: const ValueKey('reader-theme-presets'),
-      children: [
-        for (var i = 0; i < ReaderThemePreset.values.length; i++) ...[
-          Expanded(
-            child: _ThemeSwatchButton(
-              preset: ReaderThemePreset.values[i],
-              active: ReaderThemePreset.values[i] == activePreset,
-              onTap: () => cubit.setTheme(ReaderThemePreset.values[i].id),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final painter = TextPainter(
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+          locale: Localizations.localeOf(context),
+        );
+        var minimumWidth = AppSizes.buttonHeight;
+        for (final preset in ReaderThemePreset.values) {
+          painter.text = TextSpan(
+            text: _themePresetLabel(context, preset),
+            style: context.text.labelSmall.copyWith(
+              fontWeight: FontWeight.w600,
             ),
-          ),
-          if (i != ReaderThemePreset.values.length - 1)
-            const SizedBox(width: AppSpacing.xs),
-        ],
-      ],
+          );
+          painter.layout();
+          if (painter.width > minimumWidth) minimumWidth = painter.width;
+        }
+        painter.dispose();
+        final count = ReaderThemePreset.values.length;
+        final columns =
+            minimumWidth * count + AppSpacing.xs * (count - 1) <=
+                constraints.maxWidth
+            ? count
+            : 2;
+        final width =
+            (constraints.maxWidth - AppSpacing.xs * (columns - 1)) / columns;
+        return Wrap(
+          key: const ValueKey('reader-theme-presets'),
+          spacing: AppSpacing.xs,
+          runSpacing: AppSpacing.sm,
+          children: [
+            for (final preset in ReaderThemePreset.values)
+              SizedBox(
+                width: width,
+                child: _ThemeSwatchButton(
+                  preset: preset,
+                  active: preset == activePreset,
+                  onTap: () => cubit.setTheme(preset.id),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -185,7 +192,10 @@ class _ThemeSwatchButton extends StatelessWidget {
           children: [
             Container(
               width: double.infinity,
-              height: _themeSwatchHeight,
+              height:
+                  (MediaQuery.textScalerOf(context).scale(15) * 1.28 +
+                          AppSpacing.sm)
+                      .clamp(_themeSwatchHeight, double.infinity),
               decoration: BoxDecoration(
                 color: theme.backgroundColor,
                 borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -201,15 +211,15 @@ class _ThemeSwatchButton extends StatelessWidget {
                 'Aa',
                 style: text.titleSmall.copyWith(
                   color: theme.primaryTextColor,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0,
                 ),
               ),
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
               label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: text.labelSmall.copyWith(
                 color: active
                     ? context.actionForeground
@@ -235,18 +245,6 @@ String _themePresetLabel(BuildContext context, ReaderThemePreset preset) {
   };
 }
 
-class _FontLevel extends StatelessWidget {
-  const _FontLevel();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: AppSpacing.xs),
-      child: _FontPresetControl(),
-    );
-  }
-}
-
 class _FontPresetControl extends StatelessWidget {
   const _FontPresetControl();
 
@@ -255,78 +253,25 @@ class _FontPresetControl extends StatelessWidget {
     final fontId = context.select<ReaderAppearanceCubit, String>(
       (c) => c.state.effectiveAppearance.fontId,
     );
-    final cubit = context.read<ReaderAppearanceCubit>();
-    final activePreset = ReaderFontPreset.fromId(fontId);
-    return Row(
+    return AppChoiceControl<ReaderFontPreset>(
       key: const ValueKey('reader-font-presets'),
-      children: [
-        for (var i = 0; i < ReaderFontPreset.values.length; i++) ...[
-          Expanded(
-            child: _FontPresetButton(
-              preset: ReaderFontPreset.values[i],
-              active: ReaderFontPreset.values[i] == activePreset,
-              onTap: () => cubit.setFont(ReaderFontPreset.values[i].id),
+      selected: ReaderFontPreset.fromId(fontId),
+      onChanged: (preset) =>
+          context.read<ReaderAppearanceCubit>().setFont(preset.id),
+      options: [
+        for (final preset in ReaderFontPreset.values)
+          AppChoiceOption(
+            value: preset,
+            label: preset.label,
+            labelKey: ValueKey('reader-font-${preset.id}'),
+            labelStyle: TextStyle(
+              fontSize: context.text.labelMedium.fontSize,
+              fontWeight: FontWeight.w600,
+              fontFamily: preset.fontFamily,
+              letterSpacing: 0,
             ),
           ),
-          if (i != ReaderFontPreset.values.length - 1)
-            const SizedBox(width: AppSpacing.xs),
-        ],
       ],
-    );
-  }
-}
-
-class _FontPresetButton extends StatelessWidget {
-  const _FontPresetButton({
-    required this.preset,
-    required this.active,
-    required this.onTap,
-  });
-
-  final ReaderFontPreset preset;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.colors;
-    return Semantics(
-      button: true,
-      selected: active,
-      label: preset.label,
-      child: Material(
-        color: active
-            ? cs.primary.withValues(alpha: 0.08)
-            : cs.surfaceContainerHighest.withValues(alpha: 0.38),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          child: SizedBox(
-            height: _compactControlSurfaceHeight,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    preset.label,
-                    key: ValueKey('reader-font-${preset.id}'),
-                    maxLines: 1,
-                    style: context.text.labelMedium.copyWith(
-                      color: active
-                          ? context.actionForeground
-                          : cs.onSurface.withValues(alpha: 0.72),
-                      fontFamily: preset.fontFamily,
-                      fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -387,23 +332,6 @@ VoidCallback? _textScaleChange(BuildContext context, double delta) {
   };
 }
 
-class _AppearancePanel extends StatelessWidget {
-  const _AppearancePanel({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      child: child,
-    );
-  }
-}
-
 class _ReaderLayoutSettingsPanel extends StatelessWidget {
   const _ReaderLayoutSettingsPanel({required this.showPageTurnControls});
 
@@ -411,38 +339,36 @@ class _ReaderLayoutSettingsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _AppearancePanel(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _AppearanceSettingRow(
-            label: context.l10n.readerFontSize,
-            control: const _FontSizeControl(),
-          ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _AppearanceSettingRow(
+          label: context.l10n.readerFontSize,
+          control: const _FontSizeControl(),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        _AppearanceSettingRow(
+          label: context.l10n.readerLineSpacing,
+          control: const _LineSpacingControl(),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        _AppearanceSettingRow(
+          label: context.l10n.readerTextAlignment,
+          control: const _AlignmentControl(),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        _AppearanceSettingRow(
+          label: context.l10n.readerPageMargins,
+          control: const _MarginControl(),
+        ),
+        if (showPageTurnControls) ...[
           const SizedBox(height: AppSpacing.xs),
           _AppearanceSettingRow(
-            label: context.l10n.readerLineSpacing,
-            control: const _LineSpacingControl(),
+            label: context.l10n.readerPageTurn,
+            control: const _PageTurnControl(),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          _AppearanceSettingRow(
-            label: context.l10n.readerTextAlignment,
-            control: const _AlignmentControl(),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          _AppearanceSettingRow(
-            label: context.l10n.readerPageMargins,
-            control: const _MarginControl(),
-          ),
-          if (showPageTurnControls) ...[
-            const SizedBox(height: AppSpacing.xs),
-            _AppearanceSettingRow(
-              label: context.l10n.readerPageTurn,
-              control: const _PageTurnControl(),
-            ),
-          ],
         ],
-      ),
+      ],
     );
   }
 }
@@ -466,15 +392,12 @@ class _AppearanceSettingRow extends StatelessWidget {
         final title = Text(
           label,
           maxLines: stacked ? null : 2,
-          overflow: stacked ? TextOverflow.visible : TextOverflow.ellipsis,
-          style: context.text.labelLarge.copyWith(
-            color: context.colors.onSurface.withValues(alpha: 0.74),
-            fontWeight: FontWeight.w600,
-          ),
+          overflow: TextOverflow.visible,
+          style: context.text.bodyMedium,
         );
         return ConstrainedBox(
           constraints: const BoxConstraints(
-            minHeight: _compactControlSurfaceHeight,
+            minHeight: AppSizes.buttonHeight,
           ),
           child: stacked
               ? Column(
@@ -511,27 +434,30 @@ class _AlignmentControl extends StatelessWidget {
           (c) => c.state.effectiveAppearance.textAlignment,
         );
     final cubit = context.read<ReaderAppearanceCubit>();
-    return _AppearanceIconSegmentedControl<ReaderTextAlignment>(
+    return SizedBox(
       width: _marginsControlWidth,
-      selectedValue: alignment,
-      onSelected: (value) => cubit.setTextAlignment(value),
-      segments: [
-        _AppearanceIconSegment(
-          value: ReaderTextAlignment.start,
-          icon: AppIcons.alignStart,
-          tooltip: context.l10n.readerAlignStart,
-        ),
-        _AppearanceIconSegment(
-          value: ReaderTextAlignment.justify,
-          icon: AppIcons.alignJustify,
-          tooltip: context.l10n.readerJustifyText,
-        ),
-        _AppearanceIconSegment(
-          value: ReaderTextAlignment.end,
-          icon: AppIcons.alignEnd,
-          tooltip: context.l10n.readerAlignEnd,
-        ),
-      ],
+      child: AppChoiceControl<ReaderTextAlignment>(
+        iconOnly: true,
+        selected: alignment,
+        onChanged: (value) => cubit.setTextAlignment(value),
+        options: [
+          AppChoiceOption(
+            value: ReaderTextAlignment.start,
+            icon: AppIcons.alignStart,
+            label: context.l10n.readerAlignStart,
+          ),
+          AppChoiceOption(
+            value: ReaderTextAlignment.justify,
+            icon: AppIcons.alignJustify,
+            label: context.l10n.readerJustifyText,
+          ),
+          AppChoiceOption(
+            value: ReaderTextAlignment.end,
+            icon: AppIcons.alignEnd,
+            label: context.l10n.readerAlignEnd,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -545,22 +471,25 @@ class _PageTurnControl extends StatelessWidget {
       (c) => c.state.effectiveAppearance.pageTurnStyle,
     );
     final cubit = context.read<ReaderAppearanceCubit>();
-    return _AppearanceIconSegmentedControl<ReaderPageTurnStyle>(
+    return SizedBox(
       width: _pageTurnControlWidth,
-      selectedValue: style,
-      onSelected: (value) => cubit.setPageTurnStyle(value),
-      segments: [
-        _AppearanceIconSegment(
-          value: ReaderPageTurnStyle.horizontal,
-          icon: AppIcons.pageTurnHorizontal,
-          tooltip: context.l10n.readerHorizontalPageTurn,
-        ),
-        _AppearanceIconSegment(
-          value: ReaderPageTurnStyle.vertical,
-          icon: AppIcons.pageTurnVertical,
-          tooltip: context.l10n.readerVerticalPageTurn,
-        ),
-      ],
+      child: AppChoiceControl<ReaderPageTurnStyle>(
+        iconOnly: true,
+        selected: style,
+        onChanged: (value) => cubit.setPageTurnStyle(value),
+        options: [
+          AppChoiceOption(
+            value: ReaderPageTurnStyle.horizontal,
+            icon: AppIcons.pageTurnHorizontal,
+            label: context.l10n.readerHorizontalPageTurn,
+          ),
+          AppChoiceOption(
+            value: ReaderPageTurnStyle.vertical,
+            icon: AppIcons.pageTurnVertical,
+            label: context.l10n.readerVerticalPageTurn,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -707,43 +636,44 @@ class _AppearanceStepper extends StatelessWidget {
     return SizedBox(
       key: stepperKey,
       width:
-          width *
-          (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(
-            1,
-            double.infinity,
-          ),
-      height: _compactControlSurfaceHeight,
+          AppSizes.buttonHeight * 2 +
+          (width - AppSizes.buttonHeight * 2) *
+              (MediaQuery.textScalerOf(context).scale(15) / 15).clamp(
+                1,
+                double.infinity,
+              ),
+      height: AppSizes.buttonHeight,
       child: Material(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.38),
-        borderRadius: radius,
-        child: Padding(
-          padding: const EdgeInsets.all(_segmentedControlPadding),
-          child: Row(
-            children: [
-              _StepperIconButton(
-                key: decreaseKey,
-                icon: decreaseIcon,
-                tooltip: decreaseTooltip,
-                onTap: onDecrease,
+        color: cs.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: BorderSide(color: context.colors.outlineVariant),
+        ),
+        child: Row(
+          children: [
+            _StepperIconButton(
+              key: decreaseKey,
+              icon: decreaseIcon,
+              tooltip: decreaseTooltip,
+              onTap: onDecrease,
+            ),
+            Expanded(
+              child: _StepperValueButton(
+                key: valueKey,
+                label: valueLabel,
+                tooltip: valueTooltip,
+                semanticLabel: valueSemanticLabel,
+                highlighted: highlightValue,
+                onTap: onValueTap,
               ),
-              Expanded(
-                child: _StepperValueButton(
-                  key: valueKey,
-                  label: valueLabel,
-                  tooltip: valueTooltip,
-                  semanticLabel: valueSemanticLabel,
-                  highlighted: highlightValue,
-                  onTap: onValueTap,
-                ),
-              ),
-              _StepperIconButton(
-                key: increaseKey,
-                icon: increaseIcon,
-                tooltip: increaseTooltip,
-                onTap: onIncrease,
-              ),
-            ],
-          ),
+            ),
+            _StepperIconButton(
+              key: increaseKey,
+              icon: increaseIcon,
+              tooltip: increaseTooltip,
+              onTap: onIncrease,
+            ),
+          ],
         ),
       ),
     );
@@ -766,10 +696,10 @@ class _StepperIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = context.colors;
     final enabled = onTap != null;
-    final foreground = cs.onSurface.withValues(alpha: enabled ? 0.76 : 0.28);
-    final radius = BorderRadius.circular(
-      AppRadius.sm - _segmentedControlPadding,
-    );
+    final foreground = enabled
+        ? cs.onSurfaceVariant
+        : cs.onSurface.withValues(alpha: .38);
+    final radius = BorderRadius.circular(AppRadius.sm);
     return Tooltip(
       message: tooltip,
       child: Semantics(
@@ -780,8 +710,8 @@ class _StepperIconButton extends StatelessWidget {
           onTap: onTap,
           borderRadius: radius,
           child: SizedBox(
-            width: _compactControlHeight,
-            height: _compactControlHeight,
+            width: AppSizes.buttonHeight,
+            height: AppSizes.buttonHeight,
             child: Icon(icon, size: AppIconSize.sm, color: foreground),
           ),
         ),
@@ -809,9 +739,7 @@ class _StepperValueButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.colors;
-    final radius = BorderRadius.circular(
-      AppRadius.sm - _segmentedControlPadding,
-    );
+    final radius = BorderRadius.circular(AppRadius.sm);
     return Tooltip(
       message: tooltip,
       child: Semantics(
@@ -822,16 +750,14 @@ class _StepperValueButton extends StatelessWidget {
           onTap: onTap,
           borderRadius: radius,
           child: SizedBox(
-            height: _compactControlHeight,
+            height: AppSizes.buttonHeight,
             child: Center(
               child: Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: context.text.labelLarge.copyWith(
-                  color: highlighted
-                      ? context.actionForeground
-                      : cs.onSurface.withValues(alpha: 0.78),
+                  color: highlighted ? context.actionForeground : cs.onSurface,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -841,111 +767,6 @@ class _StepperValueButton extends StatelessWidget {
       ),
     );
   }
-}
-
-class _AppearanceIconSegmentedControl<T> extends StatelessWidget {
-  const _AppearanceIconSegmentedControl({
-    required this.width,
-    required this.selectedValue,
-    required this.segments,
-    required this.onSelected,
-  });
-
-  final double width;
-  final T selectedValue;
-  final List<_AppearanceIconSegment<T>> segments;
-  final ValueChanged<T> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.colors;
-    return SizedBox(
-      width: width,
-      height: _compactControlSurfaceHeight,
-      child: Material(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.38),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        child: Padding(
-          padding: const EdgeInsets.all(_segmentedControlPadding),
-          child: Row(
-            children: [
-              for (var i = 0; i < segments.length; i++) ...[
-                Expanded(
-                  child: _AppearanceIconSegmentButton<T>(
-                    segment: segments[i],
-                    active: segments[i].value == selectedValue,
-                    onSelected: onSelected,
-                  ),
-                ),
-                if (i != segments.length - 1) const SizedBox(width: 3),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AppearanceIconSegmentButton<T> extends StatelessWidget {
-  const _AppearanceIconSegmentButton({
-    required this.segment,
-    required this.active,
-    required this.onSelected,
-  });
-
-  final _AppearanceIconSegment<T> segment;
-  final bool active;
-  final ValueChanged<T> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.colors;
-    final foreground = active
-        ? context.actionForeground
-        : cs.onSurface.withValues(alpha: 0.68);
-    final radius = BorderRadius.circular(
-      AppRadius.sm - _segmentedControlPadding,
-    );
-    return Tooltip(
-      message: segment.tooltip,
-      child: Semantics(
-        button: true,
-        selected: active,
-        label: segment.tooltip,
-        child: Material(
-          color: active
-              ? cs.primary.withValues(alpha: 0.10)
-              : Colors.transparent,
-          borderRadius: radius,
-          child: InkWell(
-            onTap: () => onSelected(segment.value),
-            borderRadius: radius,
-            child: SizedBox(
-              height: _compactControlHeight,
-              child: Icon(
-                segment.icon,
-                size: AppIconSize.sm,
-                color: foreground,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AppearanceIconSegment<T> {
-  const _AppearanceIconSegment({
-    required this.value,
-    required this.icon,
-    required this.tooltip,
-  });
-
-  final T value;
-  final IconData icon;
-  final String tooltip;
 }
 
 double? _lineHeightStepValue(double lineHeight, int direction) {

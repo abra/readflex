@@ -75,6 +75,7 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet> {
       closeLabel: context.l10n.commonClose,
       onClose: () => Navigator.of(context).pop(false),
       constrainBody: true,
+      bodyPadding: const EdgeInsets.only(bottom: AppSpacing.lg),
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxHeight: MediaQuery.sizeOf(context).height * 0.7,
@@ -91,6 +92,9 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet> {
                   when state.errorCode ==
                       AddToCollectionErrorCode.loadCollectionsFailed =>
                 SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -172,60 +176,76 @@ class _CollectionContent extends StatelessWidget {
             child: CustomScrollView(
               shrinkWrap: true,
               slivers: [
-                SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (state.errorCode != null) ...[
-                        Text(
-                          _addToCollectionErrorMessage(l10n, state.errorCode!),
-                          style: text.bodyMedium.copyWith(color: colors.error),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                      ],
-                      _CollectionRow(
-                        icon: AppIcons.collectionFavourites,
-                        label: l10n.libraryFavourites,
-                        sourceCount: state.favouritesSourceCount,
-                        enabled: !state.isBusy,
-                        onPressed: onFavouritesPressed,
-                      ),
-                      const Divider(),
-                      if (state.collections.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            top: AppSpacing.lg,
-                            bottom: AppSpacing.lg,
-                          ),
-                          child: Text(
-                            l10n.libraryCreateCollectionPrompt(sourceCount),
-                            style: text.bodyMedium.copyWith(
-                              color: colors.onSurfaceVariant,
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                  ),
+                  sliver: SliverMainAxisGroup(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (state.errorCode != null) ...[
+                              Text(
+                                _addToCollectionErrorMessage(
+                                  l10n,
+                                  state.errorCode!,
+                                ),
+                                style: text.bodyMedium.copyWith(
+                                  color: colors.error,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                            ],
+                            _CollectionRow(
+                              icon: AppIcons.collectionFavourites,
+                              label: l10n.libraryFavourites,
+                              sourceCount: state.favouritesSourceCount,
+                              enabled: !state.isBusy,
+                              onPressed: onFavouritesPressed,
                             ),
-                          ),
+                            const Divider(),
+                            if (state.collections.isEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: AppSpacing.lg,
+                                  bottom: AppSpacing.lg,
+                                ),
+                                child: Text(
+                                  l10n.libraryCreateCollectionPrompt(
+                                    sourceCount,
+                                  ),
+                                  style: text.bodyMedium.copyWith(
+                                    color: colors.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
+                      ),
+                      if (state.collections.isNotEmpty)
+                        SliverList.separated(
+                          itemCount: state.collections.length,
+                          separatorBuilder: (_, _) => const Divider(),
+                          itemBuilder: (context, index) {
+                            final collection = state.collections[index];
+                            return _CollectionRow(
+                              icon: AppIcons.collection,
+                              label: collection.name,
+                              sourceCount: collection.sourceCount,
+                              enabled: !state.isBusy,
+                              onPressed: () => onCollectionPressed(collection),
+                            );
+                          },
+                        ),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: AppSpacing.lg),
+                          child: field,
+                        ),
+                      ),
                     ],
-                  ),
-                ),
-                if (state.collections.isNotEmpty)
-                  SliverList.separated(
-                    itemCount: state.collections.length,
-                    separatorBuilder: (_, _) => const Divider(),
-                    itemBuilder: (context, index) {
-                      final collection = state.collections[index];
-                      return _CollectionRow(
-                        icon: AppIcons.collection,
-                        label: collection.name,
-                        sourceCount: collection.sourceCount,
-                        enabled: !state.isBusy,
-                        onPressed: () => onCollectionPressed(collection),
-                      );
-                    },
-                  ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: AppSpacing.lg),
-                    child: field,
                   ),
                 ),
               ],
@@ -233,11 +253,14 @@ class _CollectionContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        AppSheetActions(
-          primaryLabel: l10n.commonCreate,
-          onPrimary: onCreatePressed,
-          secondaryLabel: l10n.commonCancel,
-          onSecondary: onCancelPressed,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+          child: AppSheetActions(
+            primaryLabel: l10n.commonCreate,
+            onPrimary: onCreatePressed,
+            secondaryLabel: l10n.commonCancel,
+            onSecondary: onCancelPressed,
+          ),
         ),
       ],
     );

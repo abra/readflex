@@ -78,74 +78,42 @@ class _TranslateSheetViewState extends State<_TranslateSheetView> {
   @override
   Widget build(BuildContext context) {
     final selection = widget.selection;
-    // The title and direction remain fixed; the result owns the scroll area.
-    final largeText = MediaQuery.textScalerOf(context).scale(14) > 20;
-    final maxBodyHeight =
-        MediaQuery.sizeOf(context).height * (largeText ? 0.78 : 0.72);
     return BlocBuilder<TranslateCubit, TranslateSheetState>(
       builder: (context, state) {
         final cubit = context.read<TranslateCubit>();
-        return ActionBottomSheetLayout(
+        return ActionBottomSheetLayout.scrollable(
           title: context.l10n.translationTitle,
           onClose: () => Navigator.of(context).pop(),
           closeLabel: context.l10n.commonClose,
-          headerSpacing: AppSpacing.sm,
-          constrainBody: true,
-          bodyPadding: const EdgeInsets.only(bottom: AppSpacing.lg),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxBodyHeight),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
-                  ),
-                  child: TranslationLanguageDirection(
-                    sourceLanguageCode: state.sourceLanguageCode,
-                    targetLanguageCode: state.targetLanguageCode,
-                    detectedSourceLanguage:
-                        state.result?.detectedSourceLanguage,
-                    enabled: !state.isBusy,
-                    sourceMenu: _sourceMenu,
-                    onSourceChanged: (value) =>
-                        cubit.setSourceLanguage(selection, value),
-                    onTargetChanged: (value) =>
-                        cubit.setTargetLanguage(selection, value),
-                  ),
+          headerBottom: TranslationLanguageDirection(
+            sourceLanguageCode: state.sourceLanguageCode,
+            targetLanguageCode: state.targetLanguageCode,
+            detectedSourceLanguage: state.result?.detectedSourceLanguage,
+            enabled: !state.isBusy,
+            sourceMenu: _sourceMenu,
+            onSourceChanged: (value) =>
+                cubit.setSourceLanguage(selection, value),
+            onTargetChanged: (value) =>
+                cubit.setTargetLanguage(selection, value),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (state.status != TranslateSheetStatus.success) ...[
+                TranslationSelectionPreview(
+                  selection: selection,
+                  showContext: false,
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                Flexible(
-                  child: ScrollEdgeFadeStack(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.xl,
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (state.status != TranslateSheetStatus.success) ...[
-                            TranslationSelectionPreview(
-                              selection: selection,
-                              showContext: false,
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                          ],
-                          _TranslateBody(
-                            selection: selection,
-                            state: state,
-                            onChooseSourceLanguage: _chooseSourceLanguage,
-                            onCopy: widget.onCopy,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                const SizedBox(height: AppSpacing.md),
               ],
-            ),
+              _TranslateBody(
+                selection: selection,
+                state: state,
+                onChooseSourceLanguage: _chooseSourceLanguage,
+                onCopy: widget.onCopy,
+              ),
+            ],
           ),
         );
       },

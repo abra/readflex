@@ -122,8 +122,12 @@ void main() {
       final labelRect = tester.getRect(label);
       final valueRect = tester.getRect(value);
       final arrowRect = tester.getRect(arrow);
-      if (profile.scale > 1) {
-        expect(valueRect.top, greaterThanOrEqualTo(labelRect.bottom));
+      // Wrapping follows the measured labels, not a text-scale breakpoint.
+      if (valueRect.top >= labelRect.bottom) {
+        expect(
+          valueRect.top - labelRect.bottom,
+          greaterThanOrEqualTo(AppSpacing.sm),
+        );
       } else {
         expect(labelRect.center.dy, closeTo(valueRect.center.dy, 1));
         expect(

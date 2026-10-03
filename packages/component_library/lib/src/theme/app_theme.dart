@@ -288,6 +288,7 @@ ThemeData _assembleTheme({
     segmentedButtonTheme: AppSelectionThemes.segmentedButton(
       palette,
       textTheme,
+      colorScheme,
     ),
     chipTheme: AppSelectionThemes.chip(palette, textTheme),
 

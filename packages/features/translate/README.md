@@ -109,7 +109,9 @@ A lemma equal to the already visible selection is omitted from the header.
 An unknown offline source language offers **Select language**, which opens the
 source picker without repeating the invalid request. The menu controller is
 local View state; choosing a language still goes through `TranslateCubit`.
-The language direction stays fixed below the Translation title; only the result,
+`ActionBottomSheetLayout.scrollable` supplies the shared header, gutters, bounded
+viewport and full-width fades. Its `headerBottom` slot keeps language direction
+fixed below the Translation title; only the result,
 context and details scroll. The controls remain reachable after scrolling to the
 end of a long result, including when they stack on narrow/large-text screens.
 Opening a source-language recovery menu does not move the result viewport.

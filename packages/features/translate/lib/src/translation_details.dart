@@ -24,7 +24,10 @@ class _TranslationDetailsState extends State<TranslationDetails> {
   @override
   Widget build(BuildContext context) {
     final border = Border(
-      top: BorderSide(color: context.colors.outlineVariant),
+      top: Divider.createBorderSide(
+        context,
+        width: DividerTheme.of(context).thickness,
+      ),
     );
     final duration = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero

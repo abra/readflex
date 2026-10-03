@@ -115,27 +115,20 @@ void main() {
     await tester.tap(find.byTooltip('Display options'));
     await tester.pumpAndSettle();
 
-    void expectReadableSelection(int count) {
-      final tiles = tester
-          .widgetList<ListTile>(
-            find.descendant(
-              of: find.byType(ActionBottomSheetLayout).last,
-              matching: find.byType(ListTile),
-            ),
-          )
-          .where((tile) => tile.selected);
-      expect(tiles, hasLength(count));
-      for (final tile in tiles) {
-        final foreground = tile.selectedColor!.computeLuminance();
-        final background = theme.colorScheme.surface.computeLuminance();
-        expect(
-          (foreground + 0.05) / (background + 0.05),
-          greaterThanOrEqualTo(4.5),
-        );
-      }
+    for (final label in ['Grid', 'System']) {
+      final element = tester.element(find.text(label));
+      final foreground = DefaultTextStyle.of(element).style.color!;
+      final material = element.findAncestorWidgetOfExactType<Material>()!;
+      final background = Color.alphaBlend(
+        material.color!,
+        theme.colorScheme.surface,
+      );
+      expect(
+        (foreground.computeLuminance() + 0.05) /
+            (background.computeLuminance() + 0.05),
+        greaterThanOrEqualTo(4.5),
+      );
     }
-
-    expectReadableSelection(2);
     final picker = find.byKey(const ValueKey('libraryLanguagePicker'));
     await tester.ensureVisible(picker);
     await tester.pumpAndSettle();
@@ -460,14 +453,47 @@ void main() {
   });
 
   for (final profile in [
-    (name: 'phone', size: const Size(390, 844), locale: 'en', scale: 1.0),
-    (name: 'RTL phone', size: const Size(390, 844), locale: 'ar', scale: 1.0),
-    (name: 'large text', size: const Size(390, 844), locale: 'en', scale: 2.0),
+    (
+      name: 'phone',
+      size: const Size(390, 844),
+      locale: 'en',
+      scale: 1.0,
+      scrolls: false,
+    ),
+    (
+      name: 'RTL phone',
+      size: const Size(390, 844),
+      locale: 'ar',
+      scale: 1.0,
+      scrolls: false,
+    ),
+    (
+      name: 'short phone',
+      size: const Size(390, 600),
+      locale: 'en',
+      scale: 1.0,
+      scrolls: true,
+    ),
+    (
+      name: 'short RTL phone',
+      size: const Size(390, 600),
+      locale: 'ar',
+      scale: 1.0,
+      scrolls: true,
+    ),
+    (
+      name: 'large text',
+      size: const Size(390, 844),
+      locale: 'en',
+      scale: 2.0,
+      scrolls: true,
+    ),
     (
       name: 'tall tablet',
       size: const Size(800, 1400),
       locale: 'en',
       scale: 1.0,
+      scrolls: false,
     ),
   ]) {
     testWidgets('language fades span the sheet: ${profile.name}', (
@@ -506,8 +532,14 @@ void main() {
         matching: find.byType(SingleChildScrollView),
       );
       final listRect = tester.getRect(list);
-      expect(listRect.left - sheetRect.left, AppSpacing.xl);
-      expect(sheetRect.right - listRect.right, AppSpacing.xl);
+      expect(listRect.left, sheetRect.left);
+      expect(listRect.right, sheetRect.right);
+      final listPadding = tester
+          .widget<SingleChildScrollView>(list)
+          .padding!
+          .resolve(Directionality.of(tester.element(list)));
+      expect(listPadding.left, AppSpacing.xl);
+      expect(listPadding.right, AppSpacing.xl);
       final fades = find.descendant(
         of: sheet,
         matching: find.byType(ScrollEdgeFade),
@@ -535,7 +567,7 @@ void main() {
         matching: find.byType(Scrollable),
       );
       final position = tester.state<ScrollableState>(scrollable).position;
-      if (profile.name == 'tall tablet') {
+      if (!profile.scrolls) {
         expect(position.maxScrollExtent, 0);
         expectFades(top: false, bottom: false);
       } else {

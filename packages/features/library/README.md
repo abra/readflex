@@ -88,7 +88,8 @@ explicit cancel, add to collection, and secondary delete. Scaffold reserves its
 height, including the safe area. System Back still clears selection. Display and
 selection changes reuse loaded sources instead of querying storage again.
 
-Display uses compact layout/theme segments, falling back to full-width rows
+Display shares `ActionBottomSheetLayout.scrollable`, `AppSettingsSection` and
+`AppChoiceControl` with reader Appearance. Layout/theme segments adapt to rows
 when localized labels at the current text scale do not fit. Groups are separated
 by spacing, without an extra divider above Language. The language row
 shows the current language beside the chevron, mirrored for RTL. When they do
@@ -99,7 +100,7 @@ columns when every native language name fits with its checkmark slot, and one
 column otherwise. It measures the actual font and text scale instead of using
 a device breakpoint or shrinking text. Options have natural heights with a
 48dp minimum tap target; the selected option has a checkmark, subtle fill, and
-single-selection semantics. The sheet fits its content and uses one scroll
+single-selection semantics. Display and Language fit their content and use one scroll
 viewport only when needed. Full-width edge fades appear only where content
 continues offscreen. This eagerly lays out the fixed set of ten languages,
 without intrinsic sizing or per-scroll text measurement.

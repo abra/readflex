@@ -15,26 +15,13 @@ class LibraryLanguageSheet extends StatelessWidget {
   final VoidCallback onClose;
 
   @override
-  Widget build(BuildContext context) => ActionBottomSheetLayout(
+  Widget build(BuildContext context) => ActionBottomSheetLayout.scrollable(
     title: context.l10n.libraryDisplayLanguage,
     onClose: onClose,
     closeLabel: context.l10n.commonClose,
-    constrainBody: true,
-    bodyPadding: const EdgeInsets.only(bottom: AppSpacing.lg),
-    child: ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * 0.64,
-      ),
-      child: ScrollEdgeFadeStack(
-        child: Padding(
-          // Inset the options, not the full-width scroll fades.
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: _LanguageOptions(
-            selectedLocale: selectedLocale,
-            onSelected: onSelected,
-          ),
-        ),
-      ),
+    child: _LanguageOptions(
+      selectedLocale: selectedLocale,
+      onSelected: onSelected,
     ),
   );
 }
@@ -75,23 +62,21 @@ class _LanguageOptions extends StatelessWidget {
 
       // Ten fixed options can use natural heights without intrinsic layout or
       // aspect-ratio tiles that clip large text. Only one viewport scrolls.
-      return SingleChildScrollView(
-        child: Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
-          children: [
-            for (final language in ReadflexSupportedLocales.languages)
-              SizedBox(
-                width: width,
-                child: _LanguageOption(
-                  key: ValueKey('libraryLanguageOption-${language.code}'),
-                  language: language,
-                  selected: language.code == selectedLocale.languageCode,
-                  onPressed: () => onSelected(Locale(language.code)),
-                ),
+      return Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
+        children: [
+          for (final language in ReadflexSupportedLocales.languages)
+            SizedBox(
+              width: width,
+              child: _LanguageOption(
+                key: ValueKey('libraryLanguageOption-${language.code}'),
+                language: language,
+                selected: language.code == selectedLocale.languageCode,
+                onPressed: () => onSelected(Locale(language.code)),
               ),
-          ],
-        ),
+            ),
+        ],
       );
     },
   );

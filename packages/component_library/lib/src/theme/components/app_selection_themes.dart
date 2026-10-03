@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../app_typography.dart';
 import '../tokens/app_colors.dart';
 import '../tokens/app_radius.dart';
 import '../tokens/app_spacing.dart';
+import '../tokens/app_sizes.dart';
 
 /// SegmentedButton, Chip, and related selection component themes.
 class AppSelectionThemes {
@@ -11,26 +13,49 @@ class AppSelectionThemes {
   static SegmentedButtonThemeData segmentedButton(
     AppColorPalette palette,
     TextTheme textTheme,
+    ColorScheme colors,
   ) {
     return SegmentedButtonThemeData(
       style: ButtonStyle(
         backgroundColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return palette.surfaceElevated;
+            return colors.primary.withValues(alpha: .08);
           }
-          return palette.muted;
+          return colors.surface;
         }),
         foregroundColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return palette.foreground;
+          if (states.contains(WidgetState.disabled)) {
+            return colors.onSurface.withValues(alpha: .38);
           }
-          return palette.mutedForeground;
+          if (states.contains(WidgetState.selected)) {
+            return colors.brightness == Brightness.dark
+                ? colors.primaryFixedDim
+                : colors.primary;
+          }
+          return colors.onSurfaceVariant;
         }),
-        textStyle: WidgetStatePropertyAll(textTheme.labelMedium),
+        textStyle: WidgetStatePropertyAll(
+          textTheme.bodyMedium!.copyWith(
+            letterSpacing: 0,
+            fontFamily: AppTypography.fontFamilySans,
+            fontFamilyFallback: AppTypography.fontFamilyFallback,
+          ),
+        ),
+        visualDensity: VisualDensity.standard,
+        tapTargetSize: MaterialTapTargetSize.padded,
+        minimumSize: const WidgetStatePropertyAll(
+          Size(AppSizes.buttonHeight, AppSizes.buttonHeight),
+        ),
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+        ),
         side: WidgetStatePropertyAll(BorderSide(color: palette.border)),
         shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
         ),
       ),

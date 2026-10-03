@@ -71,11 +71,18 @@ existing preview/explicit-save contract and pointer-down selection capture.
 label and highlighted excerpt, while retaining document direction and the
 three-line excerpt limit. Neither leaf owns repositories or WebView lifecycle.
 
-The appearance sheet constrains its scrollable body to the remaining modal
-height while keeping the header visible. Narrow large-text layouts stack the
-title/reset and setting label/control pairs; numeric fields grow with the text
-scaler. Root goldens check portrait, landscape, 2x text, and RTL layouts, including
-untruncated setting labels/values and access to the final page-turn control.
+Appearance uses `ActionBottomSheetLayout.scrollable`, the same shell as Display,
+Language and the text-action result sheets. `AppSettingsSection` and
+`AppChoiceControl` share settings typography, spacing and selection states.
+Theme swatches retain book colors and font options retain preview typefaces.
+Labels wrap/reflow without scaling down; all numeric stepper targets are at
+least 48dp. Large text uses a tooltip-labeled Reset icon and stacks setting
+label/control pairs. Numeric value areas grow with text scale. Controls keep
+their narrow `context.select` subscriptions and existing preview/commit/reset
+callbacks; scrolling the sheet does not recreate the reading WebView.
+Root goldens cover portrait, landscape, 2x text and RTL, including access to
+the final page-turn control. Native reader flows check DOM style updates,
+persistence across reopening and reset to inherited settings.
 
 ```dart
 abstract class TextAction {

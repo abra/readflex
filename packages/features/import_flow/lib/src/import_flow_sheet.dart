@@ -877,11 +877,12 @@ class _ImportFormLayout extends StatelessWidget {
           closeLabel: context.l10n.commonClose,
           onClose: () => Navigator.of(context).pop(),
           constrainBody: true,
-          bodyPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+          bodyPadding: EdgeInsets.zero,
           footer: actions,
           child: LayoutBuilder(
             builder: (context, bodyConstraints) => ScrollEdgeFadeStack(
               child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
                 child: ConstrainedBox(
                   // Give free space to the field/hints gap, while long
                   // forms still scroll without intrinsic measurement.

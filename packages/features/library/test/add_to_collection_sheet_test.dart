@@ -74,7 +74,14 @@ void main() {
       expect(find.text('Create').hitTestable(), findsOneWidget);
       expect(find.text('Cancel').hitTestable(), findsOneWidget);
       expect(tester.getBottomLeft(find.text('Create')).dy, lessThan(844 - 320));
-      await tester.ensureVisible(find.byType(TextField));
+      await tester.scrollUntilVisible(
+        find.byType(TextField),
+        150,
+        scrollable: find.descendant(
+          of: find.byType(CustomScrollView),
+          matching: find.byType(Scrollable),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(find.byType(TextField).hitTestable(), findsOneWidget);
       expect(tester.takeException(), isNull);

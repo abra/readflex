@@ -57,6 +57,7 @@ OS keyboard overlay; the test additionally asserts real nonzero keyboard insets.
 | Onboarding | Skip/complete, routing, saved preference after remount; all three pages in five visual profiles | `onboarding_test.dart` |
 | Library | Search/clear, empty results, layout preference; UI changes do not issue new storage reads | `app_flows_test.dart` |
 | Library appearance | Grid, display sheet, empty search results in all profiles | `library_golden_test.dart` |
+| Settings consistency | Display and Appearance share header geometry, section typography/gaps, content gutters, 48dp stepper targets and full-width fades in light/dark themes | `settings_consistency_test.dart` |
 | Library scaling | Grid/list remain virtualized with 20k books, callbacks address the right item, cached projections are reused | `library_scaling_test.dart` |
 | Collections | Create with selected book, rename, cancel/confirm deletion; preserve book and clean membership | `app_flows_test.dart` |
 | Collection layout | Light/dark, 200%, landscape, RTL; edit form and unsaved changes confirmation | `collection_management_golden_test.dart` |

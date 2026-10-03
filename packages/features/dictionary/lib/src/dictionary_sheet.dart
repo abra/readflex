@@ -55,52 +55,34 @@ class _DictionarySheetView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final largeText = MediaQuery.textScalerOf(context).scale(14) > 20;
-    final maxBodyHeight =
-        MediaQuery.sizeOf(context).height * (largeText ? 0.78 : 0.72);
-    return ActionBottomSheetLayout(
+    return ActionBottomSheetLayout.scrollable(
       title: context.l10n.dictionaryTitle,
       closeLabel: context.l10n.commonClose,
       onClose: () => Navigator.of(context).pop(),
-      headerSpacing: AppSpacing.sm,
-      constrainBody: true,
-      bodyPadding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        AppSpacing.sm,
-        AppSpacing.xl,
-        AppSpacing.lg,
-      ),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: maxBodyHeight),
-        child: ScrollEdgeFadeStack(
-          child: SingleChildScrollView(
-            child: BlocBuilder<DictionaryCubit, DictionarySheetState>(
-              builder: (context, state) {
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (state.status != DictionarySheetStatus.success) ...[
-                      Text(
-                        selection.effectiveSelectedText,
-                        textDirection: _contentDirection(
-                          selection.effectiveSelectedText,
-                        ),
-                        style: context.text.titleLarge,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
-                    _DictionaryBody(
-                      selection: selection,
-                      state: state,
-                      onCopy: onCopy,
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ),
+      child: BlocBuilder<DictionaryCubit, DictionarySheetState>(
+        builder: (context, state) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (state.status != DictionarySheetStatus.success) ...[
+                Text(
+                  selection.effectiveSelectedText,
+                  textDirection: _contentDirection(
+                    selection.effectiveSelectedText,
+                  ),
+                  style: context.text.titleLarge,
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
+              _DictionaryBody(
+                selection: selection,
+                state: state,
+                onCopy: onCopy,
+              ),
+            ],
+          );
+        },
       ),
     );
   }

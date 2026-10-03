@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'bottom_sheet_header.dart';
+import 'scroll_edge_fade_stack.dart';
 import 'theme/tokens/app_spacing.dart';
 
 /// Canonical title-and-body shell for bottom sheets.
@@ -41,7 +42,38 @@ class ActionBottomSheetLayout extends StatelessWidget {
       AppSpacing.lg,
     ),
     super.key,
-  }) : assert(footer == null || constrainBody);
+  }) : _scrollable = false,
+       headerBottom = null,
+       assert(footer == null || constrainBody);
+
+  /// Content-sized sheet with a pinned header and one full-width viewport.
+  /// Pass non-scrolling content as [child]. Lazy lists and staged forms use the
+  /// default constructor to retain their own viewport and footer contracts.
+  const ActionBottomSheetLayout.scrollable({
+    required this.title,
+    required this.child,
+    this.headerTrailing,
+    this.onClose,
+    this.closeLabel,
+    this.headerBottom,
+    super.key,
+  }) : _scrollable = true,
+       constrainBody = true,
+       headerPadding = const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+       bodyPadding = const EdgeInsets.fromLTRB(
+         AppSpacing.xl,
+         0,
+         AppSpacing.xl,
+         AppSpacing.lg,
+       ),
+       headerSpacing = AppSpacing.sm,
+       footer = null,
+       footerPadding = EdgeInsets.zero;
+
+  final bool _scrollable;
+
+  /// Persistent context, such as translation direction, below the title.
+  final Widget? headerBottom;
 
   final String title;
   final Widget child;
@@ -84,18 +116,46 @@ class ActionBottomSheetLayout extends StatelessWidget {
       padding: headerPadding,
     );
 
+    final body = _scrollable
+        ? ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight:
+                  MediaQuery.sizeOf(context).height *
+                  (MediaQuery.textScalerOf(context).scale(14) > 20 ? .78 : .72),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (headerBottom != null) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
+                    ),
+                    child: headerBottom,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
+                Flexible(
+                  child: ScrollEdgeFadeStack(
+                    child: SingleChildScrollView(
+                      padding: bodyPadding,
+                      child: SizedBox(width: double.infinity, child: child),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        : Padding(padding: bodyPadding, child: child);
+
     final content = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         header,
         if (headerSpacing > 0) SizedBox(height: headerSpacing),
-        if (constrainBody)
-          Flexible(
-            child: Padding(padding: bodyPadding, child: child),
-          )
-        else
-          Padding(padding: bodyPadding, child: child),
+        if (constrainBody) Flexible(child: body) else body,
       ],
     );
 

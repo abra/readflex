@@ -192,8 +192,16 @@ void main() {
     );
 
     expect(openSansLabel.data, 'Open Sans');
-    expect(openSansLabel.maxLines, 1);
+    // Labels may wrap, but must never shrink or ellipsize the chosen font.
+    expect(openSansLabel.maxLines, isNull);
     expect(openSansLabel.overflow, isNull);
+    expect(
+      find.ancestor(
+        of: find.byKey(const ValueKey('reader-font-sans')),
+        matching: find.byType(FittedBox),
+      ),
+      findsNothing,
+    );
     expect(
       openSansLabel.style?.fontSize,
       tester
@@ -319,7 +327,13 @@ void main() {
     final horizontalIcon = tester.widget<Icon>(
       find.byIcon(AppIcons.pageTurnHorizontal),
     );
-    expect(horizontalIcon.color, primary);
+    expect(
+      horizontalIcon.color ??
+          IconTheme.of(
+            tester.element(find.byIcon(AppIcons.pageTurnHorizontal)),
+          ).color,
+      primary,
+    );
 
     await tester.tap(find.byIcon(AppIcons.pageTurnVertical));
     await tester.pumpAndSettle();
@@ -327,7 +341,13 @@ void main() {
     final verticalIcon = tester.widget<Icon>(
       find.byIcon(AppIcons.pageTurnVertical),
     );
-    expect(verticalIcon.color, primary);
+    expect(
+      verticalIcon.color ??
+          IconTheme.of(
+            tester.element(find.byIcon(AppIcons.pageTurnVertical)),
+          ).color,
+      primary,
+    );
     expect(
       cubit.state.effectiveAppearance.pageTurnStyle,
       ReaderPageTurnStyle.vertical,

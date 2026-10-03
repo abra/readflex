@@ -579,18 +579,13 @@ class _ManageCollectionStepView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox.expand(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          BottomSheetHeader(
-            padding: _sheetHorizontalPadding,
-            title: title,
-            onClose: onClose,
-            closeLabel: context.l10n.commonClose,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Expanded(child: child),
-        ],
+      child: ActionBottomSheetLayout(
+        title: title,
+        onClose: onClose,
+        closeLabel: context.l10n.commonClose,
+        constrainBody: true,
+        bodyPadding: EdgeInsets.zero,
+        child: SizedBox.expand(child: child),
       ),
     );
   }
