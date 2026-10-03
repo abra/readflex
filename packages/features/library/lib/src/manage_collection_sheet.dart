@@ -112,19 +112,26 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
     if (context.read<ManageCollectionCubit>().state.isBusy) {
       return;
     }
-    if (_step != _ManageCollectionStep.manage) {
-      _returnToEditing();
-      return;
-    }
     if (!_hasChanges) {
       Navigator.of(context).pop();
       return;
     }
+    // Closing must not dismiss the discard decision or silently lose a draft.
+    if (_step == _ManageCollectionStep.confirmDiscard) return;
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       _animateNextSizeChange = true;
       _step = _ManageCollectionStep.confirmDiscard;
     });
+  }
+
+  void _goBack() {
+    if (context.read<ManageCollectionCubit>().state.isBusy) return;
+    if (_step == _ManageCollectionStep.manage) {
+      _requestClose();
+    } else {
+      _returnToEditing();
+    }
   }
 
   @override
@@ -286,7 +293,7 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _requestClose();
+        if (!didPop) _goBack();
       },
       child: BlocBuilder<ManageCollectionCubit, ManageCollectionState>(
         builder: (context, state) {
@@ -309,7 +316,8 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
         ((canRename && name != _currentName) || _removedSourceIds.isNotEmpty);
 
     final stepHeight = _currentStepHeight(context, visibleSources.length);
-    final sizeDuration = _animateNextSizeChange
+    final sizeDuration =
+        _animateNextSizeChange && !MediaQuery.disableAnimationsOf(context)
         ? _manageCollectionTransitionDuration
         : Duration.zero;
     if (_animateNextSizeChange) {
@@ -341,7 +349,9 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
       _ManageCollectionStep.confirmDelete => _ManageCollectionStepView(
         key: const ValueKey('deleteCollectionContent'),
         title: context.l10n.libraryDeleteCollectionTitle,
-        onClose: state.isBusy ? null : _returnToEditing,
+        hasPreviousStep: true,
+        onBack: state.isBusy ? null : _goBack,
+        onClose: state.isBusy ? null : _requestClose,
         child: _DeleteCollectionConfirmationContent(
           state: state,
           collectionName: _currentName,
@@ -352,7 +362,9 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
       _ManageCollectionStep.confirmDiscard => _ManageCollectionStepView(
         key: const ValueKey('discardCollectionContent'),
         title: context.l10n.libraryDiscardChangesTitle,
-        onClose: _returnToEditing,
+        hasPreviousStep: true,
+        onBack: _goBack,
+        onClose: _requestClose,
         child: Padding(
           padding: _sheetActionsPadding,
           child: Column(
@@ -462,9 +474,12 @@ class _ManageCollectionStepSwitcherState
 
   @override
   Widget build(BuildContext context) {
+    final duration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : _manageCollectionTransitionDuration;
     return AnimatedSwitcher(
-      duration: _manageCollectionTransitionDuration,
-      reverseDuration: _manageCollectionTransitionDuration,
+      duration: duration,
+      reverseDuration: duration,
       switchInCurve: Curves.easeInOutCubic,
       switchOutCurve: Curves.easeInOutCubic,
       layoutBuilder: (currentChild, previousChildren) {
@@ -538,7 +553,12 @@ class _ManageCollectionSlideTransition extends StatelessWidget {
         final isExiting = animation.status == AnimationStatus.reverse;
         final sign = isExiting ? -direction : direction;
         return FractionalTranslation(
-          translation: Offset(sign * (1 - value), 0),
+          translation: Offset(
+            sign *
+                (Directionality.of(context) == TextDirection.rtl ? -1 : 1) *
+                (1 - value),
+            0,
+          ),
           child: child,
         );
       },
@@ -568,12 +588,16 @@ class _ManageCollectionStepView extends StatelessWidget {
   const _ManageCollectionStepView({
     required this.title,
     required this.child,
+    this.hasPreviousStep = false,
+    this.onBack,
     this.onClose,
     super.key,
   });
 
   final String title;
   final Widget child;
+  final bool hasPreviousStep;
+  final VoidCallback? onBack;
   final VoidCallback? onClose;
 
   @override
@@ -581,6 +605,8 @@ class _ManageCollectionStepView extends StatelessWidget {
     return SizedBox.expand(
       child: ActionBottomSheetLayout(
         title: title,
+        onBack: onBack,
+        backLabel: hasPreviousStep ? context.l10n.commonBack : null,
         onClose: onClose,
         closeLabel: context.l10n.commonClose,
         constrainBody: true,

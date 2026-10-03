@@ -819,6 +819,9 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get readerFont => '字体';
 
   @override
+  String get readerFontSample => '与书相伴，静享片刻。\n一页接着一页。';
+
+  @override
   String get readerFontSize => '文字大小';
 
   @override

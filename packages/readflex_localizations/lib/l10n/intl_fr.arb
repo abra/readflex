@@ -241,6 +241,7 @@
   "readerReset": "Réinitialiser",
   "readerTheme": "Thème",
   "readerFont": "Police",
+  "readerFontSample": "Un moment calme avec un livre.\nUne page en appelle une autre.",
   "readerFontSize": "Taille du texte",
   "readerLineSpacing": "Interligne",
   "readerTextAlignment": "Alignement du texte",

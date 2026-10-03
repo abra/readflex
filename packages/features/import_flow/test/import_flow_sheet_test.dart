@@ -41,6 +41,99 @@ void main() {
         .setMockMethodCallHandler(SystemChannels.platform, null);
   });
 
+  for (final systemBack in [false, true]) {
+    testWidgets('form back preserves URL, systemBack=$systemBack', (
+      tester,
+    ) async {
+      await _openArticleForm(tester);
+      expect(find.text('Back'), findsNothing);
+      expect(find.byTooltip('Back'), findsOneWidget);
+      await tester.enterText(
+        find.byType(TextField),
+        'https://example.com/draft',
+      );
+      tester.testTextInput.hide();
+      if (systemBack) {
+        await tester.binding.handlePopRoute();
+      } else {
+        await tester.tap(find.byTooltip('Back'));
+      }
+      await tester.pumpAndSettle();
+      expect(find.text('Add to Library'), findsOneWidget);
+      expect(find.byTooltip('Back'), findsNothing);
+      await tester.tap(find.text('Save Article'));
+      await tester.pumpAndSettle();
+      expect(
+        find.widgetWithText(TextField, 'https://example.com/draft'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final method in ['close', 'scrim', 'drag']) {
+    testWidgets('article $method dismisses the entire flow', (tester) async {
+      await _openArticleForm(tester);
+      switch (method) {
+        case 'close':
+          await tester.tap(find.byTooltip('Close'));
+        case 'scrim':
+          await tester.tapAt(const Offset(10, 20));
+        case 'drag':
+          final sheet = tester.getRect(find.byType(BottomSheet));
+          await tester.dragFrom(
+            Offset(sheet.center.dx, sheet.top + 10),
+            const Offset(0, 450),
+          );
+      }
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('terms back returns without accepting or opening the picker', (
+    tester,
+  ) async {
+    var accepted = 0;
+    var picked = 0;
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          isBookImportTermsAccepted: () => false,
+          acceptBookImportTerms: () async {
+            accepted++;
+          },
+          onPickBookFile: () async {
+            picked++;
+            return null;
+          },
+          onImportBook: (_, {onProgress}) async => null,
+          onImportArticle: (_, {onStage}) async => null,
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    for (final systemBack in [false, true]) {
+      await tester.tap(find.text('Upload Book'));
+      await tester.pumpAndSettle();
+      expect(find.text('Cancel'), findsNothing);
+      expect(find.byTooltip('Back'), findsOneWidget);
+      await tester.tap(find.byType(Checkbox));
+      if (systemBack) {
+        await tester.binding.handlePopRoute();
+      } else {
+        await tester.tap(find.byTooltip('Back'));
+      }
+      await tester.pumpAndSettle();
+      expect(find.text('Add to Library'), findsOneWidget);
+    }
+    expect(accepted, 0);
+    expect(picked, 0);
+  });
+
   testWidgets('large text and keyboard keep the import form usable', (
     tester,
   ) async {
@@ -82,6 +175,56 @@ void main() {
     expect(urls, ['https://example.com/a']);
     expect(tester.takeException(), isNull);
   });
+
+  for (final reducedMotion in [false, true]) {
+    testWidgets('RTL navigation respects reduced motion=$reducedMotion', (
+      tester,
+    ) async {
+      late ReadflexLocalizations l10n;
+      await tester.pumpWidget(
+        _TestHost(
+          locale: const Locale('ar'),
+          reducedMotion: reducedMotion,
+          onOpen: (context) {
+            l10n = context.l10n;
+            return showImportFlowSheet(
+              context,
+              onPickBookFile: () async => null,
+              onImportBook: (_, {onProgress}) async => null,
+              onImportArticle: (_, {onStage}) async => null,
+            );
+          },
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      final sheet = tester.getRect(find.byType(BottomSheet));
+      await tester.tap(find.text(l10n.importSaveArticle));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      if (reducedMotion) {
+        expect(find.text(l10n.importAddToLibraryTitle), findsNothing);
+      } else {
+        final form = find.ancestor(
+          of: find.byType(TextField),
+          matching: find.byType(ActionBottomSheetLayout),
+        );
+        expect(tester.getRect(form).left, lessThan(sheet.left));
+      }
+      await tester.pumpAndSettle();
+      final back = find.byTooltip(l10n.commonBack);
+      final close = find.byTooltip(l10n.commonClose);
+      expect(
+        tester.getCenter(back).dx,
+        greaterThan(tester.getCenter(close).dx),
+      );
+      expect(tester.getSize(back), const Size(48, 48));
+      await tester.tap(back);
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.importAddToLibraryTitle), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('paste responds at the edge of a 48px target', (tester) async {
     await tester.pumpWidget(
@@ -371,7 +514,7 @@ void main() {
         await tester.tap(find.text(l10n.importSaveArticle));
         await tester.pumpAndSettle();
         expect(tester.getRect(find.byType(BottomSheet)), sheet);
-        await tester.tap(find.text(l10n.commonBack));
+        await tester.tap(find.byTooltip(l10n.commonBack));
         await tester.pumpAndSettle();
         expect(tester.getRect(find.byType(BottomSheet)), sheet);
         expect(
@@ -991,7 +1134,7 @@ void main() {
       readClipboard = () => clipboard.future;
       await _openArticleForm(tester);
       await tester.tap(find.byIcon(AppIcons.paste));
-      await tester.tap(find.text('Back'));
+      await tester.tap(find.byTooltip('Back'));
       await tester.pump();
       clipboard.complete({'text': 'example.com/stale'});
       await tester.pumpAndSettle();
@@ -1475,11 +1618,13 @@ class _TestHost extends StatefulWidget {
     required this.onOpen,
     this.textScaler = TextScaler.noScaling,
     this.locale = const Locale('en'),
+    this.reducedMotion = false,
   });
 
   final Future<void> Function(BuildContext context) onOpen;
   final TextScaler textScaler;
   final Locale locale;
+  final bool reducedMotion;
 
   @override
   State<_TestHost> createState() => _TestHostState();
@@ -1494,7 +1639,10 @@ class _TestHostState extends State<_TestHost> {
       supportedLocales: ReadflexSupportedLocales.locales,
       localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
       builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(textScaler: widget.textScaler),
+        data: MediaQuery.of(context).copyWith(
+          textScaler: widget.textScaler,
+          disableAnimations: widget.reducedMotion,
+        ),
         child: child!,
       ),
       home: Scaffold(

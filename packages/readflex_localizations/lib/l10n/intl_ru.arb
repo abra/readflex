@@ -241,6 +241,7 @@
   "readerReset": "Сбросить",
   "readerTheme": "Тема",
   "readerFont": "Шрифт",
+  "readerFontSample": "Тихий вечер с книгой.\nСтраница за страницей.",
   "readerFontSize": "Размер текста",
   "readerLineSpacing": "Межстрочный интервал",
   "readerTextAlignment": "Выравнивание",

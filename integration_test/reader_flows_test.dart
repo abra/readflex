@@ -376,7 +376,14 @@ void main() {
       await showChrome(tester);
       await tapUi(tester, find.byTooltip('Font'));
       await tapUi(tester, find.text('Night'));
-      await tapUi(tester, find.text('Open Sans'));
+      final appearanceBounds = tester.getRect(find.byType(BottomSheet));
+      await tapUi(tester, find.byKey(const ValueKey('reader-font-picker')));
+      expect(tester.getRect(find.byType(BottomSheet)), appearanceBounds);
+      await tapUi(tester, find.byKey(const ValueKey('reader-font-sans')));
+      expect(find.byTooltip('Back').hitTestable(), findsOneWidget);
+      await capture(tester, 'book-font');
+      await tapUi(tester, find.byTooltip('Back'));
+      expect(tester.getRect(find.byType(BottomSheet)), appearanceBounds);
       await tapUi(tester, find.byTooltip('Increase text size'));
       final vertical = find.byTooltip('Vertical page turn');
       await tester.ensureVisible(vertical);

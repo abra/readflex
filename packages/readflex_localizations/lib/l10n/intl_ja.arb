@@ -241,6 +241,7 @@
   "readerReset": "リセット",
   "readerTheme": "テーマ",
   "readerFont": "フォント",
+  "readerFontSample": "本と過ごす静かなひととき。\nページからページへ。",
   "readerFontSize": "文字サイズ",
   "readerLineSpacing": "行間",
   "readerTextAlignment": "テキスト配置",

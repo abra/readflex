@@ -127,6 +127,23 @@ class AppChoiceControl<T> extends StatelessWidget {
           : 1;
       final width =
           (constraints.maxWidth - (columns - 1) * AppSpacing.sm) / columns;
+      final choiceStyle =
+          Theme.of(context).segmentedButtonTheme.style ?? const ButtonStyle();
+      ButtonStyle optionStyle(T value) {
+        final states = <WidgetState>{
+          if (selected == value) WidgetState.selected,
+          if (onChanged == null) WidgetState.disabled,
+        };
+        return choiceStyle.copyWith(
+          foregroundColor: WidgetStatePropertyAll(
+            choiceStyle.foregroundColor?.resolve(states),
+          ),
+          backgroundColor: WidgetStatePropertyAll(
+            choiceStyle.backgroundColor?.resolve(states),
+          ),
+        );
+      }
+
       return Wrap(
         spacing: AppSpacing.sm,
         runSpacing: AppSpacing.sm,
@@ -141,27 +158,7 @@ class AppChoiceControl<T> extends StatelessWidget {
                   onPressed: onChanged == null
                       ? null
                       : () => onChanged!(option.value),
-                  style:
-                      (Theme.of(context).segmentedButtonTheme.style ??
-                              const ButtonStyle())
-                          .copyWith(
-                            foregroundColor: WidgetStatePropertyAll(
-                              onChanged == null
-                                  ? context.colors.onSurface.withValues(
-                                      alpha: .38,
-                                    )
-                                  : selected == option.value
-                                  ? context.actionForeground
-                                  : context.colors.onSurfaceVariant,
-                            ),
-                            backgroundColor: WidgetStatePropertyAll(
-                              selected == option.value
-                                  ? context.colors.primary.withValues(
-                                      alpha: .08,
-                                    )
-                                  : context.colors.surface,
-                            ),
-                          ),
+                  style: optionStyle(option.value),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

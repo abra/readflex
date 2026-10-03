@@ -106,7 +106,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.getTopLeft(second).dy,
-      greaterThan(tester.getBottomLeft(first).dy),
+      tester.getBottomLeft(first).dy,
     );
     for (final language in ReadflexSupportedLocales.languages) {
       final option = find.byKey(

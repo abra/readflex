@@ -23,12 +23,17 @@ import 'theme/tokens/app_spacing.dart';
 /// the sheet — wrap the body in `PopScope(canPop: false, ...)` if
 /// you want a truly must-complete flow.
 ///
+/// For unguarded multi-step flows, [scrimClosesFlow] makes a scrim tap close
+/// the route instead of invoking the step's system-Back handler. Do not enable
+/// it for forms whose [PopScope] protects unsaved changes.
+///
 /// [bottomSafeAreaMinimum] defaults to the app's standard bottom gap. Pass
 /// null only when the sheet content owns its own bottom scrolling boundary.
 Future<T?> showAppBottomSheet<T>(
   BuildContext context, {
   required WidgetBuilder builder,
   bool dismissible = true,
+  bool scrimClosesFlow = false,
   VoidCallback? onFullyHidden,
   double? bottomSafeAreaMinimum = AppSpacing.lg,
 }) {
@@ -60,9 +65,18 @@ Future<T?> showAppBottomSheet<T>(
 
   controller.addStatusListener(statusListener);
 
-  final sheetFuture = showModalBottomSheet<T>(
-    context: context,
-    useRootNavigator: true,
+  final localizations = MaterialLocalizations.of(context);
+  final route = _AppBottomSheetRoute<T>(
+    scrimClosesFlow: scrimClosesFlow,
+    capturedThemes: InheritedTheme.capture(
+      from: context,
+      to: navigator.context,
+    ),
+    barrierLabel: localizations.scrimLabel,
+    barrierOnTapHint: localizations.scrimOnTapHint(
+      localizations.bottomSheetLabel,
+    ),
+    modalBarrierColor: Theme.of(context).bottomSheetTheme.modalBarrierColor,
     isScrollControlled: true,
     isDismissible: dismissible,
     enableDrag: dismissible,
@@ -96,6 +110,7 @@ Future<T?> showAppBottomSheet<T>(
       );
     },
   );
+  final sheetFuture = navigator.push(route);
 
   unawaited(
     sheetFuture.whenComplete(() async {
@@ -113,6 +128,57 @@ Future<T?> showAppBottomSheet<T>(
   );
 
   return sheetFuture;
+}
+
+class _AppBottomSheetRoute<T> extends ModalBottomSheetRoute<T> {
+  _AppBottomSheetRoute({
+    required this.scrimClosesFlow,
+    required super.builder,
+    required super.isScrollControlled,
+    required super.capturedThemes,
+    required super.barrierLabel,
+    required super.barrierOnTapHint,
+    required super.modalBarrierColor,
+    required super.isDismissible,
+    required super.enableDrag,
+    required super.useSafeArea,
+    required super.transitionAnimationController,
+  });
+
+  final bool scrimClosesFlow;
+
+  void _closeFlow() {
+    if (isCurrent) navigator?.pop();
+  }
+
+  @override
+  Widget buildModalBarrier() {
+    final barrier = super.buildModalBarrier();
+    if (!scrimClosesFlow) return barrier;
+    // Preserve Flutter's animation and accessibility clipping. Only separate
+    // explicit scrim dismissal from maybePop's nested step navigation.
+    return switch (barrier) {
+      AnimatedModalBarrier() => AnimatedModalBarrier(
+        color: barrier.color,
+        dismissible: barrier.dismissible,
+        onDismiss: _closeFlow,
+        semanticsLabel: barrier.semanticsLabel,
+        barrierSemanticsDismissible: barrier.barrierSemanticsDismissible,
+        clipDetailsNotifier: barrier.clipDetailsNotifier,
+        semanticsOnTapHint: barrier.semanticsOnTapHint,
+      ),
+      ModalBarrier() => ModalBarrier(
+        color: barrier.color,
+        dismissible: barrier.dismissible,
+        onDismiss: _closeFlow,
+        semanticsLabel: barrier.semanticsLabel,
+        barrierSemanticsDismissible: barrier.barrierSemanticsDismissible,
+        clipDetailsNotifier: barrier.clipDetailsNotifier,
+        semanticsOnTapHint: barrier.semanticsOnTapHint,
+      ),
+      _ => barrier,
+    };
+  }
 }
 
 /// 32×4 grab handle pill rendered at the very top of a dismissible

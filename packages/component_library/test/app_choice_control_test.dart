@@ -4,6 +4,60 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  for (final width in [190.0, 400.0]) {
+    testWidgets('dark selected choices stand out at width $width', (
+      tester,
+    ) async {
+      final theme = AppTheme.dark();
+      var enabled = true;
+      late StateSetter update;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: theme,
+          home: Scaffold(
+            body: SizedBox(
+              width: width,
+              child: StatefulBuilder(
+                builder: (context, setState) {
+                  update = setState;
+                  return AppChoiceControl<int>(
+                    selected: 0,
+                    onChanged: enabled ? (_) {} : null,
+                    options: const [
+                      AppChoiceOption(value: 0, label: 'System'),
+                      AppChoiceOption(value: 1, label: 'Light'),
+                      AppChoiceOption(value: 2, label: 'Dark'),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      Color background(String label) => Color.alphaBlend(
+        tester
+            .element(find.text(label))
+            .findAncestorWidgetOfExactType<Material>()!
+            .color!,
+        theme.colorScheme.surface,
+      );
+      final selectedFill = background('System');
+      final foreground = DefaultTextStyle.of(
+        tester.element(find.text('System')),
+      ).style.color!;
+      expect(
+        _contrast(selectedFill, background('Light')),
+        greaterThanOrEqualTo(3),
+      );
+      expect(_contrast(foreground, selectedFill), greaterThanOrEqualTo(4.5));
+      update(() => enabled = false);
+      await tester.pumpAndSettle();
+      expect(background('System'), isNot(selectedFill));
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   for (final direction in TextDirection.values) {
     for (final scale in [1.0, 2.0]) {
       testWidgets('choices stay readable and selectable $direction/$scale', (
@@ -100,4 +154,10 @@ void main() {
       {0},
     );
   });
+}
+
+double _contrast(Color a, Color b) {
+  final first = a.computeLuminance() + .05;
+  final second = b.computeLuminance() + .05;
+  return first > second ? first / second : second / first;
 }

@@ -4,6 +4,7 @@ import 'package:article_repository/article_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:library_feature/library_feature.dart';
 import 'package:library_feature/src/library_grid_view.dart';
+import 'package:library_feature/src/library_language_sheet.dart';
 import 'package:library_feature/src/library_list_view.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
@@ -124,9 +125,12 @@ void main() {
         theme.colorScheme.surface,
       );
       expect(
-        (foreground.computeLuminance() + 0.05) /
-            (background.computeLuminance() + 0.05),
+        _contrast(foreground, background),
         greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        _contrast(background, theme.colorScheme.surface),
+        greaterThanOrEqualTo(3),
       );
     }
     final picker = find.byKey(const ValueKey('libraryLanguagePicker'));
@@ -144,15 +148,19 @@ void main() {
     final background = Color.alphaBlend(
       material.color!,
       theme.colorScheme.surface,
-    ).computeLuminance();
+    );
     expect(
-      (label.style!.color!.computeLuminance() + 0.05) / (background + 0.05),
+      _contrast(label.style!.color!, background),
       greaterThanOrEqualTo(4.5),
+    );
+    expect(
+      _contrast(background, theme.colorScheme.surface),
+      greaterThanOrEqualTo(3),
     );
   });
 
   testWidgets(
-    'display opens a separate language picker and returns to settings',
+    'display opens the language step and returns to settings',
     (
       tester,
     ) async {
@@ -192,13 +200,18 @@ void main() {
         find.byKey(const ValueKey('libraryLanguageOption-ru')),
         100,
         scrollable: find.descendant(
-          of: find.byType(BottomSheet).last,
+          of: find.byType(LibraryLanguageSheet),
           matching: find.byType(Scrollable),
         ),
       );
       await tester.tap(find.byKey(const ValueKey('libraryLanguageOption-ru')));
       await tester.pumpAndSettle();
       expect(preferencesService.current.locale.languageCode, 'ru');
+      expect(languageRow.hitTestable(), findsNothing);
+      final russian = find.byKey(const ValueKey('libraryLanguageOption-ru'));
+      expect(russian.hitTestable(), findsOneWidget);
+      await tester.tap(find.byTooltip(tester.element(russian).l10n.commonBack));
+      await tester.pumpAndSettle();
       expect(
         find.byKey(const ValueKey('libraryLanguagePicker')),
         findsOneWidget,
@@ -397,7 +410,7 @@ void main() {
       find.text('Русский'),
       100,
       scrollable: find.descendant(
-        of: find.byType(BottomSheet).last,
+        of: find.byType(LibraryLanguageSheet),
         matching: find.byType(Scrollable),
       ),
     );
@@ -406,7 +419,17 @@ void main() {
 
     expect(preferencesService.current.locale, const Locale('ru'));
     expect(find.text('Библиотека'), findsOneWidget);
-    expect(find.text('Язык'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(LibraryLanguageSheet),
+        matching: find.text('Язык'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('libraryLanguagePicker')).hitTestable(),
+      findsNothing,
+    );
   });
 
   testWidgets('language picker uses two columns with checkmark', (
@@ -442,7 +465,7 @@ void main() {
     expect(chineseRect.top, englishRect.top);
     expect(chineseRect.left - englishRect.right, AppSpacing.sm);
     expect(englishRect.height, greaterThanOrEqualTo(48));
-    expect(hindiRect.top, greaterThan(englishRect.top));
+    expect(hindiRect.top, englishRect.bottom);
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('libraryLanguageOption-en')),
@@ -453,19 +476,21 @@ void main() {
   });
 
   for (final profile in [
+    // Ahem's wide glyphs force a single language column on these phones.
+    // Root goldens check real-font column layout and scroll reachability.
     (
       name: 'phone',
       size: const Size(390, 844),
       locale: 'en',
       scale: 1.0,
-      scrolls: false,
+      scrolls: true,
     ),
     (
       name: 'RTL phone',
       size: const Size(390, 844),
       locale: 'ar',
       scale: 1.0,
-      scrolls: false,
+      scrolls: true,
     ),
     (
       name: 'short phone',
@@ -520,7 +545,7 @@ void main() {
       await tester.tap(picker);
       await tester.pumpAndSettle();
 
-      final sheet = find.byType(BottomSheet).last;
+      final sheet = find.byType(LibraryLanguageSheet);
       final sheetRect = tester.getRect(
         find.descendant(
           of: sheet,
@@ -2132,6 +2157,12 @@ void main() {
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
   });
+}
+
+double _contrast(Color a, Color b) {
+  final first = a.computeLuminance() + .05;
+  final second = b.computeLuminance() + .05;
+  return first > second ? first / second : second / first;
 }
 
 class _FakeArticleRepository implements ArticleRepository {

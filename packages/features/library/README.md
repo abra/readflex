@@ -94,22 +94,49 @@ when localized labels at the current text scale do not fit. Groups are separated
 by spacing, without an extra divider above Language. The language row
 shows the current language beside the chevron, mirrored for RTL. When they do
 not fit alongside the label, the value and chevron move together onto the next
-line. It opens `LibraryLanguageSheet` and returns to Display after choosing a
-language; persistence remains in `LibraryLocaleCubit`. The picker uses two
+line. Display and `LibraryLanguageSheet` are horizontal steps in one modal, not
+stacked bottom sheets. Display's content determines the common height, bounded
+by available space, with only the standard 16dp content padding below Language
+and the modal's system safe area. The language grid fills that height rather than
+stretching Display.
+Language's five rows have no extra vertical gaps. Options retain their 48dp
+minimum tap targets and vertical inner padding; the grid ends with 8dp body
+padding. Column gaps and horizontal option padding are 8dp, with 4dp before
+the checkmark. At standard text size all ten options fit without scrolling on
+320dp and wider portrait phones, without enlarging Display. Oversized text or
+insufficient viewport space retains scrolling rather than clipping choices or
+shrinking targets. Step navigation preserves the height. Changing the locale, text
+scale or available viewport can resize Display when its controls wrap.
+Choosing a language applies and persists it immediately through
+`LibraryLocaleCubit`, keeping Language open for further choices. Reselecting the
+current language also stays on this step. Header Back and system Back return to
+Display; neither rolls back the selected language. No Save action is needed.
+Close, a scrim tap and dragging the handle dismiss the whole flow from either step.
+The 300ms slide uses the current locale's direction and retains it throughout the
+transition. Reduced motion switches immediately.
+Only the active step accepts input or exposes semantics. Hidden Display retains
+its layout size and scroll position without painting or accepting focus.
+Animation updates translations rather than rebuilding settings. No post-frame
+measurement or intrinsic layout is needed to match the two steps' heights.
+The picker uses two
 columns when every native language name fits with its checkmark slot, and one
 column otherwise. It measures the actual font and text scale instead of using
 a device breakpoint or shrinking text. Options have natural heights with a
-48dp minimum tap target; the selected option has a checkmark, subtle fill, and
-single-selection semantics. Display and Language fit their content and use one scroll
-viewport only when needed. Full-width edge fades appear only where content
+48dp minimum tap target; the selected option has a checkmark, themed fill, and
+single-selection semantics. Each step uses one scroll viewport only when needed
+within the common height. Full-width edge fades appear only where content
 continues offscreen. This eagerly lays out the fixed set of ten languages,
 without intrinsic sizing or per-scroll text measurement.
 
-Collection edits remain staged until Save. Cancel, Close and system Back prompt
-only when there are actual edits. Drag/scrim dismissal is disabled for this form
+Collection edits remain staged until Save. At the root, Cancel, Close and system
+Back prompt only when there are actual edits. Drag/scrim dismissal is disabled for this form
 so it cannot bypass the guard. Delete is secondary and has its own confirmation.
 Discard and delete confirmations are steps in the same sheet, not nested dialogs.
-Back from a confirmation returns to the draft without writing it.
+Header/system Back from a confirmation returns to the draft without writing it.
+Cancel on delete also returns to editing without deleting anything. Close on
+delete exits the flow or requests the discard decision when there are edits;
+it never acts as Back. Repeated Close on the discard decision leaves that guard
+visible until the user chooses Discard or returns to editing.
 Large text and keyboard-constrained layouts scroll the form in a single lazy
 sliver viewport while keeping Save/Cancel available. No collection/source is
 deleted by canceling the form. Footer actions stack when localized labels at

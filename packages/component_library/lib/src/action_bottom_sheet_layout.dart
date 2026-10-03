@@ -20,6 +20,8 @@ class ActionBottomSheetLayout extends StatelessWidget {
     this.headerTrailing,
     this.onClose,
     this.closeLabel,
+    this.onBack,
+    this.backLabel,
     this.headerPadding = const EdgeInsets.fromLTRB(
       AppSpacing.xl,
       0,
@@ -55,17 +57,19 @@ class ActionBottomSheetLayout extends StatelessWidget {
     this.headerTrailing,
     this.onClose,
     this.closeLabel,
+    this.onBack,
+    this.backLabel,
     this.headerBottom,
+    this.bodyPadding = const EdgeInsets.fromLTRB(
+      AppSpacing.xl,
+      0,
+      AppSpacing.xl,
+      AppSpacing.lg,
+    ),
     super.key,
   }) : _scrollable = true,
        constrainBody = true,
        headerPadding = const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-       bodyPadding = const EdgeInsets.fromLTRB(
-         AppSpacing.xl,
-         0,
-         AppSpacing.xl,
-         AppSpacing.lg,
-       ),
        headerSpacing = AppSpacing.sm,
        footer = null,
        footerPadding = EdgeInsets.zero;
@@ -80,6 +84,8 @@ class ActionBottomSheetLayout extends StatelessWidget {
   final Widget? headerTrailing;
   final VoidCallback? onClose;
   final String? closeLabel;
+  final VoidCallback? onBack;
+  final String? backLabel;
 
   /// Visual gutters for the title and close icon. Default: 24 dp on each side, 0 on
   /// the top (the wrapper's drag handle already provides spacing
@@ -112,6 +118,8 @@ class ActionBottomSheetLayout extends StatelessWidget {
       title: title,
       onClose: onClose,
       closeLabel: closeLabel,
+      onBack: onBack,
+      backLabel: backLabel,
       trailing: headerTrailing,
       padding: headerPadding,
     );

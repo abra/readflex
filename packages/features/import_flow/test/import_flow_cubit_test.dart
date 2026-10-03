@@ -17,6 +17,24 @@ void main() {
   });
 
   group('ImportFlowCubit', () {
+    test(
+      'URL draft survives menu and terms navigation within a flow',
+      () async {
+        final cubit = _buildCubit(isBookImportTermsAccepted: () => false);
+        addTearDown(cubit.close);
+        cubit.showArticleUrlEntry();
+        cubit.articleUrlChanged('https://example.com/draft');
+        cubit.backToMenu();
+        cubit.requestBookImport();
+        cubit.cancelBookImportTerms();
+        cubit.showArticleUrlEntry();
+        expect(
+          (cubit.state as ImportFlowArticleUrlEntry).url,
+          'https://example.com/draft',
+        );
+      },
+    );
+
     blocTest<ImportFlowCubit, ImportFlowState>(
       'starts in menu',
       build: _buildCubit,

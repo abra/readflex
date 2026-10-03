@@ -853,6 +853,10 @@ class ReadflexLocalizationsDe extends ReadflexLocalizations {
   String get readerFont => 'Schrift';
 
   @override
+  String get readerFontSample =>
+      'Ein ruhiger Moment mit einem Buch.\nEine Seite folgt der anderen.';
+
+  @override
   String get readerFontSize => 'Textgröße';
 
   @override

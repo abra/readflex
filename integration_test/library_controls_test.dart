@@ -5,6 +5,7 @@ import 'package:connectivity_service/connectivity_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 import '../test/support/native_screenshots.dart';
 import '../test/support/ui_test_app.dart';
@@ -34,15 +35,18 @@ void main() {
 
   void expectSheetCloseAlignment(WidgetTester tester) {
     final sheet = find.byType(BottomSheet).last;
-    final header = find.descendant(
-      of: sheet,
+    final header = find.ancestor(
+      of: find.widgetWithIcon(AppPlainIconButton, AppIcons.close).hitTestable(),
       matching: find.byType(BottomSheetHeader),
     );
     final icon = tester.getRect(
       find.descendant(of: header, matching: find.byIcon(AppIcons.close)),
     );
     final button = tester.getRect(
-      find.descendant(of: header, matching: find.byType(AppPlainIconButton)),
+      find.descendant(
+        of: header,
+        matching: find.widgetWithIcon(AppPlainIconButton, AppIcons.close),
+      ),
     );
     expect(
       tester.getRect(sheet).right - icon.right,
@@ -123,7 +127,8 @@ void main() {
     );
     await capture(tester, 'import-article-entry');
     expectSheetCloseAlignment(tester);
-    await tapUi(tester, find.text('Back'));
+    expect(find.text('Back'), findsNothing);
+    await tapUi(tester, find.byTooltip('Back'));
     await tapUi(tester, find.byKey(const ValueKey('importMenu-book')));
     expect(find.text('Before uploading'), findsOneWidget);
     expect(
@@ -152,7 +157,8 @@ void main() {
     );
     await capture(tester, 'import-book-terms');
     expectSheetCloseAlignment(tester);
-    await tapUi(tester, find.text('Cancel'));
+    expect(find.text('Cancel'), findsNothing);
+    await tapUi(tester, find.byTooltip('Back'));
     expect(tester.getRect(find.byType(BottomSheet)), sheetRect);
     await tapUi(tester, find.byTooltip('Close'));
     expect(find.text('Add to Library'), findsNothing);
@@ -185,30 +191,115 @@ void main() {
     expect(find.byType(FloatingActionButton), findsOneWidget);
     await tapUi(tester, find.byTooltip('Display options'));
     await capture(tester, 'library-display');
+    final displayRect = tester.getRect(find.byType(BottomSheet));
+    expect(
+      tester.getBottomLeft(find.byType(ActionBottomSheetLayout)).dy -
+          tester
+              .getBottomLeft(
+                find.byKey(const ValueKey('libraryLanguagePicker')),
+              )
+              .dy,
+      closeTo(AppSpacing.lg, .01),
+    );
     expectSheetCloseAlignment(tester);
+    await tapUi(tester, find.byKey(const ValueKey('libraryLanguagePicker')));
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(tester.getRect(find.byType(BottomSheet)), displayRect);
+    await tapUi(tester, find.byTooltip('Back'));
+    expect(tester.getRect(find.byType(BottomSheet)), displayRect);
     await tapUi(tester, find.byKey(const ValueKey('libraryLanguagePicker')));
     final languageSheet = find.byType(BottomSheet).last;
     final english = find.byKey(const ValueKey('libraryLanguageOption-en'));
     final chinese = find.byKey(const ValueKey('libraryLanguageOption-zh'));
+    final hindi = find.byKey(const ValueKey('libraryLanguageOption-hi'));
     expect(tester.getTopLeft(english).dy, tester.getTopLeft(chinese).dy);
+    expect(tester.getSize(english).height, greaterThanOrEqualTo(48));
+    expect(
+      tester.getTopLeft(hindi).dy - tester.getBottomLeft(english).dy,
+      closeTo(0, .01),
+    );
     expect(
       tester.getRect(chinese).left,
       greaterThan(tester.getRect(english).right),
     );
     final languageScroll = tester
         .state<ScrollableState>(
-          find.descendant(of: languageSheet, matching: find.byType(Scrollable)),
+          find.ancestor(of: english, matching: find.byType(Scrollable)),
         )
         .position;
     expect(languageScroll.maxScrollExtent, 0);
-    expect(tester.getRect(languageSheet).height, lessThan(450));
+    await capture(tester, 'library-language-picker');
+    final japanese = find.byKey(const ValueKey('libraryLanguageOption-ja'));
     expect(
-      find.byKey(const ValueKey('libraryLanguageOption-ja')).hitTestable(),
+      japanese.hitTestable(),
       findsOneWidget,
     );
-    await capture(tester, 'library-language-picker');
+    expect(
+      tester.getRect(japanese).bottom,
+      lessThanOrEqualTo(
+        tester
+            .getRect(
+              find.ancestor(
+                of: japanese,
+                matching: find.byType(SingleChildScrollView),
+              ),
+            )
+            .bottom,
+      ),
+    );
+    expect(tester.getRect(languageSheet), displayRect);
+    await tester.drag(english, const Offset(0, -80));
+    await tester.pumpAndSettle();
+    expect(languageScroll.pixels, 0);
+    expect(tester.getRect(languageSheet), displayRect);
     expectSheetCloseAlignment(tester);
+    final russian = find.byKey(const ValueKey('libraryLanguageOption-ru'));
+    await tapUi(tester, russian);
+    expect(tester.getRect(find.byType(BottomSheet)), displayRect);
+    expect(russian.hitTestable(), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('libraryLanguagePicker')).hitTestable(),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: russian, matching: find.byIcon(AppIcons.check)),
+      findsOneWidget,
+    );
+    expect(languageScroll.maxScrollExtent, 0);
+    await capture(tester, 'library-language-picker-ru');
+    await tapUi(
+      tester,
+      find.byTooltip(tester.element(russian).l10n.commonBack),
+    );
+    expect(find.text('Русский'), findsOneWidget);
+    await capture(tester, 'library-display-language-return');
+    await tapUi(tester, find.byKey(const ValueKey('libraryLanguagePicker')));
+    final arabic = find.byKey(const ValueKey('libraryLanguageOption-ar'));
+    await tapUi(tester, arabic);
+    expect(arabic.hitTestable(), findsOneWidget);
+    expect(Directionality.of(tester.element(arabic)), TextDirection.rtl);
+    expect(languageScroll.maxScrollExtent, 0);
+    await capture(tester, 'library-language-picker-rtl');
+    await tapUi(tester, english);
+    expect(english.hitTestable(), findsOneWidget);
+    expect(Directionality.of(tester.element(english)), TextDirection.ltr);
+    expect(
+      find.descendant(of: english, matching: find.byIcon(AppIcons.check)),
+      findsOneWidget,
+    );
+    await tapUi(tester, find.byTooltip('Back'));
+    await tapUi(tester, find.text('Dark'));
+    expect(
+      Theme.of(tester.element(find.byType(ActionBottomSheetLayout))).brightness,
+      Brightness.dark,
+    );
+    await capture(tester, 'library-display-dark');
+    await tapUi(tester, find.byKey(const ValueKey('libraryLanguagePicker')));
+    await capture(tester, 'library-language-picker-dark');
     await tapUi(tester, find.byKey(const ValueKey('libraryLanguageOption-en')));
+    expect(english.hitTestable(), findsOneWidget);
+    await tapUi(tester, find.byTooltip('Back'));
+    await tapUi(tester, find.text('Light'));
     await tapUi(tester, find.byTooltip('Close'));
     await tester.longPress(tile);
     await tester.pumpAndSettle();
@@ -253,6 +344,11 @@ void main() {
     }
 
     expectShortCollectionFits();
+    await tapUi(tester, find.text('Delete collection'));
+    await capture(tester, 'collection-delete');
+    expectSheetCloseAlignment(tester);
+    await tapUi(tester, find.byTooltip('Back'));
+    expect(find.text('Manage collection'), findsOneWidget);
     final field = find.descendant(
       of: find.byKey(const ValueKey('manageCollectionContent')),
       matching: find.byType(TextField),
@@ -276,8 +372,12 @@ void main() {
     await tapUi(tester, find.byTooltip('Close'));
     await capture(tester, 'collection-discard');
     expect(find.byType(AlertDialog), findsNothing);
-    await tapUi(tester, find.text('Keep editing'));
+    await tapUi(tester, find.byTooltip('Back'));
     expect(find.widgetWithText(TextField, 'Unsaved'), findsOneWidget);
+    await tapUi(tester, find.text('Delete collection'));
+    await tapUi(tester, find.byTooltip('Close'));
+    expect(find.text('Discard changes?'), findsOneWidget);
+    await tapUi(tester, find.text('Keep editing'));
     await tapUi(tester, find.byTooltip('Close'));
     await tapUi(tester, find.text('Discard'));
     expect(

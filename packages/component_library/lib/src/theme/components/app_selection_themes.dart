@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app_typography.dart';
+import '../extensions/app_selection_colors.dart';
 import '../tokens/app_colors.dart';
 import '../tokens/app_radius.dart';
 import '../tokens/app_spacing.dart';
@@ -19,7 +20,11 @@ class AppSelectionThemes {
       style: ButtonStyle(
         backgroundColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return colors.primary.withValues(alpha: .08);
+            if (states.contains(WidgetState.disabled) &&
+                colors.brightness == Brightness.dark) {
+              return colors.onSurface.withValues(alpha: .12);
+            }
+            return colors.selectedControlBackground;
           }
           return colors.surface;
         }),
@@ -28,9 +33,7 @@ class AppSelectionThemes {
             return colors.onSurface.withValues(alpha: .38);
           }
           if (states.contains(WidgetState.selected)) {
-            return colors.brightness == Brightness.dark
-                ? colors.primaryFixedDim
-                : colors.primary;
+            return colors.selectedControlForeground;
           }
           return colors.onSurfaceVariant;
         }),

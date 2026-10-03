@@ -41,6 +41,7 @@ Future<ImportFlowResult?> showImportFlowSheet(
 }) {
   return showAppBottomSheet<ImportFlowResult>(
     context,
+    scrimClosesFlow: true,
     builder: (_) => BlocProvider(
       create: (_) => ImportFlowCubit(
         onPickBookFile: onPickBookFile,
@@ -90,42 +91,57 @@ class _ImportFlowSheet extends StatelessWidget {
                   1.0,
                   3.0,
                 );
-            return AnimatedSize(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOutCubic,
-              alignment: Alignment.bottomCenter,
-              child: _ImportFlowStepSwitcher(
-                state: state,
-                child: ConstrainedBox(
-                  key: ValueKey(state.runtimeType),
-                  constraints: BoxConstraints(minHeight: stepHeight),
-                  child: SizedBox(
-                    height: state is ImportFlowBookTermsRequired
-                        ? null
-                        : stepHeight,
-                    child: switch (state) {
-                      ImportFlowMenu() => _MenuView(isOffline: isOffline),
-                      ImportFlowBookTermsRequired() => _BookTermsView(
-                        onOpenTerms: onOpenTerms,
-                        onOpenPrivacy: onOpenPrivacy,
-                      ),
-                      ImportFlowArticleUrlEntry() => _ArticleUrlEntryView(
-                        state: state,
-                        isOffline: isOffline,
-                      ),
-                      ImportFlowBookUploading() => _BookUploadingView(
-                        state: state,
-                      ),
-                      ImportFlowArticleUploading() => _ArticleUploadingView(
-                        state: state,
-                      ),
-                      ImportFlowBookDone() => _BookDoneView(state: state),
-                      ImportFlowArticleDone() => _ArticleDoneView(state: state),
-                      ImportFlowFailure() => _FailureView(state: state),
-                    },
-                  ),
+            final hasPreviousStep =
+                state is ImportFlowArticleUrlEntry ||
+                state is ImportFlowBookTermsRequired;
+            final step = _ImportFlowStepSwitcher(
+              state: state,
+              child: ConstrainedBox(
+                key: ValueKey(state.runtimeType),
+                constraints: BoxConstraints(minHeight: stepHeight),
+                child: SizedBox(
+                  height: state is ImportFlowBookTermsRequired
+                      ? null
+                      : stepHeight,
+                  child: switch (state) {
+                    ImportFlowMenu() => _MenuView(isOffline: isOffline),
+                    ImportFlowBookTermsRequired() => _BookTermsView(
+                      onOpenTerms: onOpenTerms,
+                      onOpenPrivacy: onOpenPrivacy,
+                    ),
+                    ImportFlowArticleUrlEntry() => _ArticleUrlEntryView(
+                      state: state,
+                      isOffline: isOffline,
+                    ),
+                    ImportFlowBookUploading() => _BookUploadingView(
+                      state: state,
+                    ),
+                    ImportFlowArticleUploading() => _ArticleUploadingView(
+                      state: state,
+                    ),
+                    ImportFlowBookDone() => _BookDoneView(state: state),
+                    ImportFlowArticleDone() => _ArticleDoneView(state: state),
+                    ImportFlowFailure() => _FailureView(state: state),
+                  },
                 ),
               ),
+            );
+            return PopScope(
+              canPop: !hasPreviousStep,
+              onPopInvokedWithResult: (didPop, _) {
+                if (!didPop && hasPreviousStep) {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  context.read<ImportFlowCubit>().backToMenu();
+                }
+              },
+              child: MediaQuery.disableAnimationsOf(context)
+                  ? step
+                  : AnimatedSize(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOutCubic,
+                      alignment: Alignment.bottomCenter,
+                      child: step,
+                    ),
             );
           },
         );
@@ -167,9 +183,12 @@ class _ImportFlowStepSwitcherState extends State<_ImportFlowStepSwitcher> {
 
   @override
   Widget build(BuildContext context) {
+    final duration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 300);
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
-      reverseDuration: const Duration(milliseconds: 300),
+      duration: duration,
+      reverseDuration: duration,
       switchInCurve: Curves.easeInOutCubic,
       switchOutCurve: Curves.easeInOutCubic,
       layoutBuilder: (currentChild, previousChildren) => ClipRect(
@@ -244,7 +263,12 @@ class _ImportFlowSlideTransition extends StatelessWidget {
         final isExiting = animation.status == AnimationStatus.reverse;
         final sign = isExiting ? -direction : direction;
         return FractionalTranslation(
-          translation: Offset(sign * (1 - value), 0),
+          translation: Offset(
+            sign *
+                (Directionality.of(context) == TextDirection.rtl ? -1 : 1) *
+                (1 - value),
+            0,
+          ),
           child: child,
         );
       },
@@ -472,6 +496,7 @@ class _BookTermsViewState extends State<_BookTermsView> {
 
     return _ImportFormLayout(
       title: l10n.importBeforeUploadingTitle,
+      onBack: cubit.cancelBookImportTerms,
       fitContent: true,
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -492,11 +517,9 @@ class _BookTermsViewState extends State<_BookTermsView> {
           ),
         ],
       ),
-      actions: AppSheetActions(
-        primaryLabel: l10n.commonContinue,
-        onPrimary: _accepted ? cubit.acceptTermsAndPickBook : null,
-        secondaryLabel: l10n.commonCancel,
-        onSecondary: cubit.cancelBookImportTerms,
+      actions: FilledButton(
+        onPressed: _accepted ? cubit.acceptTermsAndPickBook : null,
+        child: AppButtonLabel(l10n.commonContinue),
       ),
     );
   }
@@ -697,6 +720,10 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
 
     return _ImportFormLayout(
       title: l10n.importSaveArticle,
+      onBack: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+        cubit.backToMenu();
+      },
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -726,13 +753,11 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
         ],
       ),
       hints: _ArticleUrlHints(color: muted),
-      actions: AppSheetActions(
-        primaryLabel: l10n.commonSave,
-        onPrimary: widget.isOffline || !widget.state.canSubmit
+      actions: FilledButton(
+        onPressed: widget.isOffline || !widget.state.canSubmit
             ? null
             : cubit.submitArticleUrl,
-        secondaryLabel: l10n.commonBack,
-        onSecondary: cubit.backToMenu,
+        child: AppButtonLabel(l10n.commonSave),
       ),
     );
   }
@@ -817,6 +842,7 @@ class _PasteUrlButton extends StatelessWidget {
 class _ImportFormLayout extends StatelessWidget {
   const _ImportFormLayout({
     required this.title,
+    required this.onBack,
     required this.content,
     this.hints,
     required this.actions,
@@ -824,6 +850,7 @@ class _ImportFormLayout extends StatelessWidget {
   });
 
   final String title;
+  final VoidCallback onBack;
   final Widget content;
   final Widget? hints;
   final Widget actions;
@@ -852,6 +879,8 @@ class _ImportFormLayout extends StatelessWidget {
                     horizontal: AppSpacing.xl,
                   ),
                   title: title,
+                  onBack: onBack,
+                  backLabel: context.l10n.commonBack,
                   closeLabel: context.l10n.commonClose,
                   onClose: () => Navigator.of(context).pop(),
                 ),
@@ -874,6 +903,8 @@ class _ImportFormLayout extends StatelessWidget {
         }
         return ActionBottomSheetLayout(
           title: title,
+          onBack: onBack,
+          backLabel: context.l10n.commonBack,
           closeLabel: context.l10n.commonClose,
           onClose: () => Navigator.of(context).pop(),
           constrainBody: true,

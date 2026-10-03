@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,6 +17,7 @@ Future<void> showLibraryDisplaySheet({
   required LibraryThemeCubit themeCubit,
 }) => showAppBottomSheet<void>(
   context,
+  scrimClosesFlow: true,
   builder: (_) => MultiBlocProvider(
     providers: [
       BlocProvider.value(value: layoutCubit),
@@ -25,8 +28,145 @@ Future<void> showLibraryDisplaySheet({
   ),
 );
 
-class _LibraryDisplaySheet extends StatelessWidget {
+class _LibraryDisplaySheet extends StatefulWidget {
   const _LibraryDisplaySheet();
+
+  @override
+  State<_LibraryDisplaySheet> createState() => _LibraryDisplaySheetState();
+}
+
+class _LibraryDisplaySheetState extends State<_LibraryDisplaySheet>
+    with SingleTickerProviderStateMixin {
+  late final _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 300),
+  )..addStatusListener(_onTransitionStatus);
+  late final _curve = CurvedAnimation(
+    parent: _controller,
+    curve: Curves.easeInOutCubic,
+  );
+  late final _displayOffset = Tween(
+    begin: Offset.zero,
+    end: const Offset(-1, 0),
+  ).animate(_curve);
+  late final _languageOffset = Tween(
+    begin: const Offset(1, 0),
+    end: Offset.zero,
+  ).animate(_curve);
+  var _languageVisible = false;
+  var _transitionDirection = TextDirection.ltr;
+
+  void _onTransitionStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed ||
+        status == AnimationStatus.dismissed) {
+      setState(() {});
+    }
+  }
+
+  void _showLanguage(bool visible) {
+    if (_languageVisible == visible) return;
+    setState(() {
+      _languageVisible = visible;
+      // A locale change must not flip the in-flight return animation.
+      _transitionDirection = Directionality.of(context);
+    });
+    final target = visible ? 1.0 : 0.0;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.value = target;
+    } else {
+      _controller.animateTo(target);
+    }
+  }
+
+  void _selectLanguage(Locale locale) {
+    unawaited(context.read<LibraryLocaleCubit>().setLocale(locale));
+  }
+
+  @override
+  void dispose() {
+    _curve.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Widget _step({
+    required bool active,
+    required Animation<Offset> position,
+    required Widget child,
+    bool maintainSize = false,
+  }) {
+    final content = TickerMode(
+      enabled: active,
+      child: ExcludeSemantics(
+        excluding: !active,
+        child: ExcludeFocus(
+          excluding: !active,
+          child: IgnorePointer(
+            ignoring: !active,
+            child: SlideTransition(
+              position: position,
+              textDirection: _transitionDirection,
+              child: child,
+            ),
+          ),
+        ),
+      ),
+    );
+    final visible = active || _controller.isAnimating;
+    return maintainSize
+        ? Visibility(
+            visible: visible,
+            maintainState: true,
+            maintainAnimation: true,
+            maintainSize: true,
+            child: content,
+          )
+        : Offstage(offstage: !visible, child: content);
+  }
+
+  @override
+  Widget build(BuildContext context) => PopScope(
+    canPop: !_languageVisible,
+    onPopInvokedWithResult: (didPop, _) {
+      if (!didPop) _showLanguage(false);
+    },
+    child: ClipRect(
+      child: Stack(
+        children: [
+          // Only Display determines the height, even while hidden. Language
+          // fills that space and scrolls without enlarging the parent sheet.
+          _step(
+            active: !_languageVisible,
+            position: _displayOffset,
+            maintainSize: true,
+            child: _DisplaySettings(
+              onLanguage: () => _showLanguage(true),
+            ),
+          ),
+          Positioned.fill(
+            child: _step(
+              active: _languageVisible,
+              position: _languageOffset,
+              child: BlocBuilder<LibraryLocaleCubit, Locale>(
+                builder: (context, locale) => LibraryLanguageSheet(
+                  selectedLocale: locale,
+                  onSelected: _selectLanguage,
+                  onBack: () => _showLanguage(false),
+                  onClose: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _DisplaySettings extends StatelessWidget {
+  const _DisplaySettings({required this.onLanguage});
+
+  final VoidCallback onLanguage;
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +225,7 @@ class _LibraryDisplaySheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          const _LanguagePickerRow(),
+          _LanguagePickerRow(onPressed: onLanguage),
         ],
       ),
     );
@@ -93,7 +233,9 @@ class _LibraryDisplaySheet extends StatelessWidget {
 }
 
 class _LanguagePickerRow extends StatelessWidget {
-  const _LanguagePickerRow();
+  const _LanguagePickerRow({required this.onPressed});
+
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) => BlocBuilder<LibraryLocaleCubit, Locale>(
@@ -163,18 +305,7 @@ class _LanguagePickerRow extends StatelessWidget {
             );
           },
         ),
-        onTap: () async {
-          final cubit = context.read<LibraryLocaleCubit>();
-          final selected = await showAppBottomSheet<Locale>(
-            context,
-            builder: (context) => LibraryLanguageSheet(
-              selectedLocale: locale,
-              onSelected: (value) => Navigator.of(context).pop(value),
-              onClose: () => Navigator.of(context).pop(),
-            ),
-          );
-          if (selected != null && context.mounted) cubit.setLocale(selected);
-        },
+        onTap: onPressed,
       );
     },
   );

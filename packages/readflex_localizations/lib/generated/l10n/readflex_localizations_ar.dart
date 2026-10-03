@@ -855,6 +855,9 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get readerFont => 'الخط';
 
   @override
+  String get readerFontSample => 'لحظة هادئة مع كتاب.\nصفحة تقود إلى أخرى.';
+
+  @override
   String get readerFontSize => 'حجم النص';
 
   @override

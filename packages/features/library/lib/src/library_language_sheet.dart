@@ -7,18 +7,29 @@ class LibraryLanguageSheet extends StatelessWidget {
     required this.selectedLocale,
     required this.onSelected,
     required this.onClose,
+    this.onBack,
     super.key,
   });
 
   final Locale selectedLocale;
   final ValueChanged<Locale> onSelected;
   final VoidCallback onClose;
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) => ActionBottomSheetLayout.scrollable(
     title: context.l10n.libraryDisplayLanguage,
     onClose: onClose,
     closeLabel: context.l10n.commonClose,
+    onBack: onBack,
+    backLabel: onBack == null ? null : context.l10n.commonBack,
+    // Options already include vertical padding inside their 48dp tap targets.
+    bodyPadding: const EdgeInsets.fromLTRB(
+      AppSpacing.xl,
+      0,
+      AppSpacing.xl,
+      AppSpacing.sm,
+    ),
     child: _LanguageOptions(
       selectedLocale: selectedLocale,
       onSelected: onSelected,
@@ -26,8 +37,12 @@ class LibraryLanguageSheet extends StatelessWidget {
   );
 }
 
-const _optionPadding = EdgeInsets.all(AppSpacing.md);
-const _checkmarkSpace = AppSpacing.sm + AppIconSize.sm;
+const _optionPadding = EdgeInsets.symmetric(
+  horizontal: AppSpacing.sm,
+  vertical: AppSpacing.md,
+);
+const _checkmarkGap = AppSpacing.xs;
+const _checkmarkSpace = _checkmarkGap + AppIconSize.sm;
 
 class _LanguageOptions extends StatelessWidget {
   const _LanguageOptions({
@@ -64,7 +79,6 @@ class _LanguageOptions extends StatelessWidget {
       // aspect-ratio tiles that clip large text. Only one viewport scrolls.
       return Wrap(
         spacing: AppSpacing.sm,
-        runSpacing: AppSpacing.sm,
         children: [
           for (final language in ReadflexSupportedLocales.languages)
             SizedBox(
@@ -97,7 +111,7 @@ class _LanguageOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = selected
-        ? context.actionForeground
+        ? context.colors.selectedControlForeground
         : context.colors.onSurface;
     const radius = BorderRadius.all(Radius.circular(AppRadius.sm));
     return Semantics(
@@ -106,7 +120,7 @@ class _LanguageOption extends StatelessWidget {
       button: true,
       child: Material(
         color: selected
-            ? context.colors.primary.withValues(alpha: 0.08)
+            ? context.colors.selectedControlBackground
             : Colors.transparent,
         borderRadius: radius,
         child: InkWell(
@@ -126,7 +140,7 @@ class _LanguageOption extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
+                  const SizedBox(width: _checkmarkGap),
                   SizedBox.square(
                     dimension: AppIconSize.sm,
                     child: selected

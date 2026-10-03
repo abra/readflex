@@ -87,7 +87,7 @@ above and below the group. Long content scrolls instead of stretching the sheet;
 the menu and URL form retain the same height on forward/back navigation.
 Offline article import remains disabled, with a warning icon and no navigation
 chevron, while local books remain available. The URL form uses the shared 48dp
-header with Close and shared primary/secondary actions. The input and hints
+header with Back and Close, and a single filled Save action. The input and hints
 scroll between them. Hints sit 8dp above the footer; remaining body space stays
 between the reserved validation area and the hints, with a minimum 8dp gap.
 When a keyboard or large text leaves too little height for that layout, the
@@ -102,6 +102,14 @@ It uses finite minimum height without intrinsic measurement or unbounded flex
 children. Status content also scrolls
 when necessary. Clipboard access is still explicit: Paste has a full 52x48px
 target and never reads on sheet open.
+
+URL entry and Before uploading use the shared leading header Back action,
+not a footer Back/Cancel button. Header/system Back returns to Add to Library;
+the consent footer contains only Continue. Close, scrim and handle dismissal
+close the entire flow from either step. Returning to the menu retains the URL
+draft in the cubit until the sheet closes; it does not submit, open a picker or
+accept consent. Import progress/result screens are not editable navigation steps:
+system Back closes them and does not cancel already-started storage work.
 
 Invalid or empty clipboard text produces an inline URL error without replacing
 the current input. Clipboard access failures have a separate inline message.
@@ -122,7 +130,8 @@ coalesced to visible one-percent changes.
 Package tests cover menu spacing, reachable hints and stable step height in English,
 Russian, and Arabic, menu hit targets and disabled semantics, RTL/large-text
 header access, validation, clipboard races/failures, retry state, picker
-cancellation, progress layout, and keyboard access with enlarged text.
+cancellation, progress layout, and keyboard access with enlarged text. Regression
+tests distinguish header/system Back from Close/scrim/drag and check draft retention.
 Real-font goldens check spacing after the reserved validation area and before
 the footer. Validation geometry and error semantics are checked
 in all supported languages at normal and 200% text scale.

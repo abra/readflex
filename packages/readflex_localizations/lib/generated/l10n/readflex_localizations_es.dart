@@ -847,6 +847,10 @@ class ReadflexLocalizationsEs extends ReadflexLocalizations {
   String get readerFont => 'Fuente';
 
   @override
+  String get readerFontSample =>
+      'Un momento tranquilo con un libro.\nUna página lleva a otra.';
+
+  @override
   String get readerFontSize => 'Tamaño de texto';
 
   @override

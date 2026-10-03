@@ -6,6 +6,7 @@ import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/src/reader_appearance_cubit.dart';
 import 'package:reader/src/reader_appearance_sheet.dart';
+import 'package:reader/src/reader_font_sheet.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
@@ -48,19 +49,19 @@ void main() {
     expect(find.text('Night'), findsOneWidget);
     expect(find.text('Font'), findsOneWidget);
 
-    expect(find.byKey(const ValueKey('reader-font-presets')), findsOneWidget);
+    expect(find.byKey(const ValueKey('reader-font-picker')), findsOneWidget);
     expect(
-      tester.getTopLeft(find.byKey(const ValueKey('reader-font-presets'))).dx,
+      tester.getTopLeft(find.byKey(const ValueKey('reader-font-picker'))).dx,
       tester.getTopLeft(find.byKey(const ValueKey('reader-theme-presets'))).dx,
     );
     expect(
-      tester.getTopRight(find.byKey(const ValueKey('reader-font-presets'))).dx,
+      tester.getTopRight(find.byKey(const ValueKey('reader-font-picker'))).dx,
       tester.getTopRight(find.byKey(const ValueKey('reader-theme-presets'))).dx,
     );
     expect(find.text('Literata'), findsOneWidget);
-    expect(find.text('PT Serif'), findsOneWidget);
-    expect(find.text('Open Sans'), findsOneWidget);
-    expect(find.text('Geist'), findsOneWidget);
+    expect(find.text('PT Serif'), findsNothing);
+    expect(find.text('Open Sans'), findsNothing);
+    expect(find.text('Geist'), findsNothing);
     expect(find.byKey(const ValueKey('reader-font-page-dots')), findsNothing);
     expect(find.text('A-'), findsNothing);
     expect(find.text('A+'), findsNothing);
@@ -170,12 +171,15 @@ void main() {
     tester,
   ) async {
     await tester.openAppearanceSheet(cubit);
+    await tester.openFontStep();
 
     await tester.tap(find.text('PT Serif'));
     await tester.pumpAndSettle();
 
     expect(cubit.state.effectiveAppearance.fontId, 'ptSerif');
-    expect(find.text('PT Serif'), findsOneWidget);
+    expect(find.text('PT Serif').hitTestable(), findsOneWidget);
+    expect(find.byTooltip('Back').hitTestable(), findsOneWidget);
+    expect(find.text('Appearance').hitTestable(), findsNothing);
     expect(
       preferencesService.readerAppearanceOverrideFor(_sourceId)?.fontId,
       'ptSerif',
@@ -186,6 +190,7 @@ void main() {
     tester,
   ) async {
     await tester.openAppearanceSheet(cubit);
+    await tester.openFontStep();
 
     final openSansLabel = tester.widget<Text>(
       find.byKey(const ValueKey('reader-font-sans')),
@@ -207,7 +212,7 @@ void main() {
       tester
           .element(find.byKey(const ValueKey('reader-font-sans')))
           .text
-          .labelMedium
+          .labelLarge
           .fontSize,
     );
     expect(find.byKey(const ValueKey('reader-font-page-dots')), findsNothing);
@@ -417,6 +422,7 @@ void main() {
     tester,
   ) async {
     await tester.openAppearanceSheet(cubit);
+    await tester.openFontStep();
 
     await tester.tap(find.text('PT Serif'));
     await tester.pumpAndSettle();
@@ -426,7 +432,9 @@ void main() {
       'ptSerif',
     );
 
-    await tester.tap(find.text('Reset'));
+    await tester.tap(find.byTooltip('Back').hitTestable());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reset').hitTestable());
     await tester.pumpAndSettle();
 
     expect(preferencesService.readerAppearanceOverrideFor(_sourceId), isNull);
@@ -613,6 +621,13 @@ void main() {
     expect(uiCubit.state.chromeVisible, isFalse);
     expect(uiCubit.state.appearanceSheetVisible, isTrue);
 
+    await tester.openFontStep();
+    await tester.tap(find.byTooltip('Back').hitTestable());
+    await tester.pumpAndSettle();
+    expect(uiCubit.state.chromeVisible, isFalse);
+    expect(uiCubit.state.appearanceSheetVisible, isTrue);
+    await tester.openFontStep();
+
     await tester.tapAt(const Offset(10, 10));
     await tester.pump();
 
@@ -623,6 +638,120 @@ void main() {
 
     expect(uiCubit.state.chromeVisible, isTrue);
     expect(uiCubit.state.overlay, ReaderOverlay.none);
+  });
+
+  for (final book in [true, false]) {
+    testWidgets('font flow keeps the content-sized height (book=$book)', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final semantics = tester.ensureSemantics();
+      await tester.openAppearanceSheet(cubit, showPageTurnControls: book);
+      final bounds = tester.getRect(find.byType(BottomSheet));
+      await tester.openFontStep();
+      expect(tester.getRect(find.byType(BottomSheet)), bounds);
+      expect(find.text('Appearance').hitTestable(), findsNothing);
+      expect(find.semantics.byLabel('Reset'), findsNothing);
+      for (final preset in ReaderFontPreset.values) {
+        final sample = find.byKey(ValueKey('reader-font-sample-${preset.id}'));
+        expect(sample.hitTestable(), findsOneWidget);
+        expect(
+          tester.widget<Text>(sample).style?.fontFamily,
+          preset.fontFamily,
+        );
+        expect(
+          tester
+              .getSize(find.byKey(ValueKey('reader-font-option-${preset.id}')))
+              .height,
+          greaterThanOrEqualTo(48),
+        );
+      }
+      final scroll = tester.state<ScrollableState>(
+        find.descendant(
+          of: find.byType(ReaderFontSheet),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      expect(scroll.position.maxScrollExtent, 0);
+      for (final preset in [ReaderFontPreset.sans, ReaderFontPreset.geist]) {
+        await tester.tap(find.byKey(ValueKey('reader-font-${preset.id}')));
+        await tester.pumpAndSettle();
+        expect(tester.getRect(find.byType(BottomSheet)), bounds);
+        expect(cubit.state.effectiveAppearance.fontId, preset.id);
+        expect(
+          tester.getSemantics(
+            find.byKey(ValueKey('reader-font-option-${preset.id}')),
+          ),
+          matchesSemantics(
+            label: preset.label,
+            isButton: true,
+            isSelected: true,
+            hasSelectedState: true,
+            isInMutuallyExclusiveGroup: true,
+            hasTapAction: true,
+            isFocusable: true,
+          ),
+        );
+      }
+      await tester.tap(find.byTooltip('Back').hitTestable());
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(BottomSheet)), bounds);
+      expect(find.text('Geist').hitTestable(), findsOneWidget);
+      expect(find.text('Page turn'), book ? findsOneWidget : findsNothing);
+      expect(tester.takeException(), isNull);
+      semantics.dispose();
+    });
+  }
+
+  testWidgets('system Back returns from Font before closing the flow', (
+    tester,
+  ) async {
+    await tester.openAppearanceSheet(cubit);
+    await tester.openFontStep();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Appearance').hitTestable(), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+  });
+
+  testWidgets('Close on Font dismisses the entire flow', (tester) async {
+    await tester.openAppearanceSheet(cubit);
+    await tester.openFontStep();
+    await tester.tap(find.byTooltip('Close').hitTestable());
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+  });
+
+  testWidgets('font navigation supports RTL and reduced motion', (
+    tester,
+  ) async {
+    await tester.openAppearanceSheet(
+      cubit,
+      locale: const Locale('ar'),
+      disableAnimations: true,
+    );
+    expect(find.byIcon(AppIcons.chevronLeft), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('reader-font-picker')));
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('reader-font-sans')).hitTestable(),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('reader-font-sans')));
+    await tester.pumpAndSettle();
+    final back = tester.element(find.byType(ReaderFontSheet)).l10n.commonBack;
+    await tester.tap(find.byTooltip(back).hitTestable());
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('reader-font-picker')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
   });
 }
 
@@ -643,13 +772,25 @@ Text _stepperValueText(WidgetTester tester, Key key) {
 }
 
 extension on WidgetTester {
+  Future<void> openFontStep() async {
+    await tap(find.byKey(const ValueKey('reader-font-picker')).hitTestable());
+    await pumpAndSettle();
+  }
+
   Future<void> openAppearanceSheet(
     ReaderAppearanceCubit cubit, {
     bool showPageTurnControls = true,
     Locale locale = const Locale('en'),
+    bool disableAnimations = false,
   }) async {
     await pumpWidget(
       MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(disableAnimations: disableAnimations),
+          child: child!,
+        ),
         locale: locale,
         supportedLocales: ReadflexSupportedLocales.locales,
         localizationsDelegates: ReadflexLocalizations.localizationsDelegates,

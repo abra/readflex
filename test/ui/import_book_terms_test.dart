@@ -31,11 +31,11 @@ void main() {
       );
       await tester.pumpAndSettle();
       final menuRect = tester.getRect(find.byType(BottomSheet));
-      for (final label in [
-        host.l10n.importUploadBook,
-        host.l10n.commonCancel,
+      for (final action in [
+        find.text(host.l10n.importUploadBook),
+        find.byTooltip(host.l10n.commonBack),
       ]) {
-        await tester.tap(find.text(label));
+        await tester.tap(action);
         await tester.pump();
         // Inspect intermediate frames too: equal final sizes can hide a jump.
         for (var frame = 0; frame < 22; frame++) {

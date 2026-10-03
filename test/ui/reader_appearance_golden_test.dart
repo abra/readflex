@@ -66,6 +66,29 @@ void main() {
       await tester.pumpAndSettle();
       expect(pageTurn.hitTestable(), findsOneWidget);
       await expectUiGolden(tester, profile, 'reader-appearance-scrolled');
+      final fontPicker = find.byKey(const ValueKey('reader-font-picker'));
+      await tester.ensureVisible(fontPicker);
+      await tester.pumpAndSettle();
+      final sheetBounds = tester.getRect(find.byType(BottomSheet));
+      await tester.tap(fontPicker);
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(BottomSheet)), sheetBounds);
+      await expectUiGolden(tester, profile, 'reader-font');
+      final lastFont = find.byKey(const ValueKey('reader-font-geist'));
+      await tester.ensureVisible(lastFont);
+      await tester.pumpAndSettle();
+      expect(lastFont.hitTestable(), findsOneWidget);
+      await tester.tap(lastFont);
+      await tester.pumpAndSettle();
+      expect(cubit.state.effectiveAppearance.fontId, 'geist');
+      await expectUiGolden(tester, profile, 'reader-font-scrolled');
+      await tester.tap(
+        find.byTooltip(sheetContext.l10n.commonBack).hitTestable(),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(BottomSheet)), sheetBounds);
+      expect(fontPicker.hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
     }, tags: ['golden']);

@@ -31,6 +31,7 @@ export 'src/theme/app_theme.dart';
 export 'src/theme/app_typography.dart';
 export 'src/theme/book_layout.dart';
 export 'src/theme/extensions/app_colors_ext.dart';
+export 'src/theme/extensions/app_selection_colors.dart';
 export 'src/theme/extensions/build_context_ext.dart';
 export 'src/theme/reader_appearance.dart';
 // Tokens (semantic only — primitive_colors / primitive_spacing are

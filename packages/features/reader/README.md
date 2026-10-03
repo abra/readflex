@@ -74,14 +74,22 @@ three-line excerpt limit. Neither leaf owns repositories or WebView lifecycle.
 Appearance uses `ActionBottomSheetLayout.scrollable`, the same shell as Display,
 Language and the text-action result sheets. `AppSettingsSection` and
 `AppChoiceControl` share settings typography, spacing and selection states.
-Theme swatches retain book colors and font options retain preview typefaces.
+Theme swatches retain book colors. The Font row shows the active typeface and
+opens a sample picker inside the same route. Appearance's content determines
+both steps' height; the picker scrolls only when its samples need more space.
+Selection applies immediately through `ReaderAppearanceCubit` and stays in the
+picker. Back returns to Appearance; Close or a scrim tap dismisses the whole
+flow. The hidden step cannot receive input, focus or accessibility actions.
+Font samples are localized and use their actual bundled typefaces. Page turn
+remains the existing row with horizontal/vertical icon choices (books only).
 Labels wrap/reflow without scaling down; all numeric stepper targets are at
 least 48dp. Large text uses a tooltip-labeled Reset icon and stacks setting
 label/control pairs. Numeric value areas grow with text scale. Controls keep
 their narrow `context.select` subscriptions and existing preview/commit/reset
 callbacks; scrolling the sheet does not recreate the reading WebView.
 Root goldens cover portrait, landscape, 2x text and RTL, including access to
-the final page-turn control. Native reader flows check DOM style updates,
+the final page-turn control and font sample. Native reader flows check equal
+step heights, manual return, DOM style updates,
 persistence across reopening and reset to inherited settings.
 
 ```dart

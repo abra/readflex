@@ -5,6 +5,7 @@ import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'reader_appearance_cubit.dart';
+import 'reader_font_sheet.dart';
 
 const double _marginsControlWidth = 152;
 const double _pageTurnControlWidth = 116;
@@ -20,6 +21,7 @@ Future<void> showReaderAppearanceSheet(
   final cubit = context.read<ReaderAppearanceCubit>();
   return showAppBottomSheet<void>(
     context,
+    scrimClosesFlow: true,
     onFullyHidden: onFullyHidden,
     builder: (_) => BlocProvider.value(
       value: cubit,
@@ -31,10 +33,142 @@ Future<void> showReaderAppearanceSheet(
 }
 
 /// Bottom sheet shell for per-source reader appearance overrides.
-class _ReaderAppearanceSheet extends StatelessWidget {
+class _ReaderAppearanceSheet extends StatefulWidget {
   const _ReaderAppearanceSheet({required this.showPageTurnControls});
 
   final bool showPageTurnControls;
+
+  @override
+  State<_ReaderAppearanceSheet> createState() => _ReaderAppearanceSheetState();
+}
+
+class _ReaderAppearanceSheetState extends State<_ReaderAppearanceSheet>
+    with SingleTickerProviderStateMixin {
+  late final _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 300),
+  )..addStatusListener(_onTransitionStatus);
+  late final _curve = CurvedAnimation(
+    parent: _controller,
+    curve: Curves.easeInOutCubic,
+  );
+  late final _appearanceOffset = Tween(
+    begin: Offset.zero,
+    end: const Offset(-1, 0),
+  ).animate(_curve);
+  late final _fontOffset = Tween(
+    begin: const Offset(1, 0),
+    end: Offset.zero,
+  ).animate(_curve);
+  var _fontVisible = false;
+  var _transitionDirection = TextDirection.ltr;
+
+  void _onTransitionStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed ||
+        status == AnimationStatus.dismissed) {
+      setState(() {});
+    }
+  }
+
+  void _showFont(bool visible) {
+    if (_fontVisible == visible) return;
+    setState(() {
+      _fontVisible = visible;
+      _transitionDirection = Directionality.of(context);
+    });
+    final target = visible ? 1.0 : 0.0;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.value = target;
+    } else {
+      _controller.animateTo(target);
+    }
+  }
+
+  @override
+  void dispose() {
+    _curve.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Widget _step({
+    required bool active,
+    required Animation<Offset> position,
+    required Widget child,
+    bool maintainSize = false,
+  }) {
+    final content = TickerMode(
+      enabled: active,
+      child: ExcludeSemantics(
+        excluding: !active,
+        child: ExcludeFocus(
+          excluding: !active,
+          child: IgnorePointer(
+            ignoring: !active,
+            child: SlideTransition(
+              position: position,
+              textDirection: _transitionDirection,
+              child: child,
+            ),
+          ),
+        ),
+      ),
+    );
+    final visible = active || _controller.isAnimating;
+    return maintainSize
+        ? Visibility(
+            visible: visible,
+            maintainState: true,
+            maintainAnimation: true,
+            maintainSize: true,
+            child: content,
+          )
+        : Offstage(offstage: !visible, child: content);
+  }
+
+  @override
+  Widget build(BuildContext context) => PopScope(
+    canPop: !_fontVisible,
+    onPopInvokedWithResult: (didPop, _) {
+      if (!didPop) _showFont(false);
+    },
+    child: ClipRect(
+      child: Stack(
+        children: [
+          // Appearance alone sizes the flow; font samples cannot enlarge it.
+          _step(
+            active: !_fontVisible,
+            position: _appearanceOffset,
+            maintainSize: true,
+            child: _AppearanceSettings(
+              showPageTurnControls: widget.showPageTurnControls,
+              onFont: () => _showFont(true),
+            ),
+          ),
+          Positioned.fill(
+            child: _step(
+              active: _fontVisible,
+              position: _fontOffset,
+              child: ReaderFontSheet(
+                onBack: () => _showFont(false),
+                onClose: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _AppearanceSettings extends StatelessWidget {
+  const _AppearanceSettings({
+    required this.showPageTurnControls,
+    required this.onFont,
+  });
+
+  final bool showPageTurnControls;
+  final VoidCallback onFont;
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +179,7 @@ class _ReaderAppearanceSheet extends StatelessWidget {
       onClose: () => Navigator.of(context).pop(),
       child: _LayeredAppearanceControls(
         showPageTurnControls: showPageTurnControls,
+        onFont: onFont,
       ),
     );
   }
@@ -77,9 +212,13 @@ class _ResetAppearanceButton extends StatelessWidget {
 
 /// Vertical stack of compact appearance control rows.
 class _LayeredAppearanceControls extends StatelessWidget {
-  const _LayeredAppearanceControls({required this.showPageTurnControls});
+  const _LayeredAppearanceControls({
+    required this.showPageTurnControls,
+    required this.onFont,
+  });
 
   final bool showPageTurnControls;
+  final VoidCallback onFont;
 
   @override
   Widget build(BuildContext context) {
@@ -92,11 +231,8 @@ class _LayeredAppearanceControls extends StatelessWidget {
           child: const _ThemeSwatchLevel(),
         ),
         const SizedBox(height: AppSpacing.lg),
-        AppSettingsSection(
-          title: context.l10n.readerFont,
-          child: const _FontPresetControl(),
-        ),
-        const SizedBox(height: AppSpacing.lg),
+        _FontPickerRow(onPressed: onFont),
+        const SizedBox(height: AppSpacing.sm),
         _ReaderLayoutSettingsPanel(
           showPageTurnControls: showPageTurnControls,
         ),
@@ -245,33 +381,48 @@ String _themePresetLabel(BuildContext context, ReaderThemePreset preset) {
   };
 }
 
-class _FontPresetControl extends StatelessWidget {
-  const _FontPresetControl();
+class _FontPickerRow extends StatelessWidget {
+  const _FontPickerRow({required this.onPressed});
+
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     final fontId = context.select<ReaderAppearanceCubit, String>(
       (c) => c.state.effectiveAppearance.fontId,
     );
-    return AppChoiceControl<ReaderFontPreset>(
-      key: const ValueKey('reader-font-presets'),
-      selected: ReaderFontPreset.fromId(fontId),
-      onChanged: (preset) =>
-          context.read<ReaderAppearanceCubit>().setFont(preset.id),
-      options: [
-        for (final preset in ReaderFontPreset.values)
-          AppChoiceOption(
-            value: preset,
-            label: preset.label,
-            labelKey: ValueKey('reader-font-${preset.id}'),
-            labelStyle: TextStyle(
-              fontSize: context.text.labelMedium.fontSize,
-              fontWeight: FontWeight.w600,
-              fontFamily: preset.fontFamily,
-              letterSpacing: 0,
+    final preset = ReaderFontPreset.fromId(fontId);
+    return ListTile(
+      key: const ValueKey('reader-font-picker'),
+      contentPadding: EdgeInsets.zero,
+      minVerticalPadding: 0,
+      minTileHeight: AppSizes.buttonHeight,
+      onTap: onPressed,
+      title: _AppearanceSettingRow(
+        label: context.l10n.readerFont,
+        control: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                preset.label,
+                style: context.text.bodyMedium.copyWith(
+                  fontFamily: preset.fontFamily,
+                  fontWeight: FontWeight.w600,
+                  color: context.colors.onSurfaceVariant,
+                ),
+              ),
             ),
-          ),
-      ],
+            const SizedBox(width: AppSpacing.sm),
+            Icon(
+              Directionality.of(context) == TextDirection.rtl
+                  ? AppIcons.chevronLeft
+                  : AppIcons.chevronRight,
+              size: AppIconSize.sm,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

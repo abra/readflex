@@ -853,6 +853,10 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get readerFont => 'Шрифт';
 
   @override
+  String get readerFontSample =>
+      'Тихий вечер с книгой.\nСтраница за страницей.';
+
+  @override
   String get readerFontSize => 'Размер текста';
 
   @override

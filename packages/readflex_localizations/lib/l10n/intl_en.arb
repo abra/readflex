@@ -386,6 +386,7 @@
   "readerReset": "Reset",
   "readerTheme": "Theme",
   "readerFont": "Font",
+  "readerFontSample": "A quiet moment with a book.\nOne page leads to another.",
   "readerFontSize": "Font size",
   "readerLineSpacing": "Line spacing",
   "readerTextAlignment": "Text alignment",

@@ -1563,6 +1563,12 @@ abstract class ReadflexLocalizations {
   /// **'Font'**
   String get readerFont;
 
+  /// No description provided for @readerFontSample.
+  ///
+  /// In en, this message translates to:
+  /// **'A quiet moment with a book.\nOne page leads to another.'**
+  String get readerFontSample;
+
   /// No description provided for @readerFontSize.
   ///
   /// In en, this message translates to:

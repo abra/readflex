@@ -2,6 +2,7 @@ import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/library_feature.dart';
+import 'package:library_feature/src/library_language_sheet.dart';
 import 'package:local_storage/local_storage.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
@@ -12,6 +13,65 @@ import 'golden_support.dart';
 
 void main() {
   setUpAll(loadUiFonts);
+  for (final width in [320.0, 390.0, 448.0]) {
+    for (final locale in ReadflexSupportedLocales.locales) {
+      testWidgets('compact language grid fits $width / $locale', (
+        tester,
+      ) async {
+        final app = await tester.runAsync(() => UiTestApp.create());
+        addTearDown(app!.dispose);
+        tester.view.physicalSize = Size(width, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await app.preferencesService.update((p) => p.copyWith(locale: locale));
+        await tester.pumpWidget(app.widget);
+        final display = find.byKey(
+          const ValueKey('libraryHeaderDisplayButton'),
+        );
+        await tapUi(tester, display);
+        final picker = find.byKey(const ValueKey('libraryLanguagePicker'));
+        expect(
+          tester.getBottomLeft(find.byType(ActionBottomSheetLayout)).dy -
+              tester.getBottomLeft(picker).dy,
+          closeTo(AppSpacing.lg, .01),
+        );
+        final sheetRect = tester.getRect(find.byType(BottomSheet));
+        await tapUi(tester, picker);
+        final viewport = find.descendant(
+          of: find.byType(LibraryLanguageSheet),
+          matching: find.byType(SingleChildScrollView),
+        );
+        final position = tester
+            .state<ScrollableState>(
+              find.descendant(of: viewport, matching: find.byType(Scrollable)),
+            )
+            .position;
+        expect(position.maxScrollExtent, 0);
+        final viewportRect = tester.getRect(viewport);
+        for (final language in ReadflexSupportedLocales.languages) {
+          final option = find.byKey(
+            ValueKey('libraryLanguageOption-${language.code}'),
+          );
+          final rect = tester.getRect(option);
+          expect(rect.height, greaterThanOrEqualTo(48));
+          expect(rect.top, greaterThanOrEqualTo(viewportRect.top));
+          expect(rect.bottom, lessThanOrEqualTo(viewportRect.bottom));
+          expect(option.hitTestable(), findsOneWidget);
+        }
+        expect(tester.getRect(find.byType(BottomSheet)), sheetRect);
+        final fades = tester.widgetList<ScrollEdgeFade>(
+          find.descendant(
+            of: find.byType(LibraryLanguageSheet),
+            matching: find.byType(ScrollEdgeFade),
+          ),
+        );
+        expect(fades.every((fade) => !fade.visible), isTrue);
+        expect(tester.takeException(), isNull);
+        await unmountUi(tester);
+      });
+    }
+  }
   for (final profile in [VisualProfile.phone, VisualProfile.dark]) {
     testWidgets('library list dividers ${profile.name}', (tester) async {
       final app = await tester.runAsync(() => UiTestApp.create());
@@ -96,10 +156,17 @@ void main() {
       await tapUi(tester, find.byTooltip(strings.libraryDisplayOptions));
       await tester.pumpAndSettle();
       await expectUiGolden(tester, profile, 'library-display');
+      final displayRect = tester.getRect(find.byType(BottomSheet));
       final picker = find.byKey(const ValueKey('libraryLanguagePicker'));
       await tester.ensureVisible(picker);
       await tester.pumpAndSettle();
       expect(picker.hitTestable(), findsOneWidget);
+      expect(
+        tester.getBottomLeft(find.byType(ActionBottomSheetLayout)).dy -
+            tester.getBottomLeft(picker).dy,
+        closeTo(AppSpacing.lg, .01),
+        reason: 'Display has only its standard bottom content padding',
+      );
       final label = find.descendant(
         of: picker,
         matching: find.text(strings.libraryDisplayLanguage),
@@ -148,7 +215,9 @@ void main() {
         await expectUiGolden(tester, profile, 'library-display-language');
       }
       await tapUi(tester, picker);
-      final sheet = find.byType(BottomSheet).last;
+      expect(find.byType(BottomSheet), findsOneWidget);
+      expect(tester.getRect(find.byType(BottomSheet)), displayRect);
+      final sheet = find.byType(LibraryLanguageSheet);
       final options = ReadflexSupportedLocales.languages
           .map(
             (item) =>
@@ -167,8 +236,10 @@ void main() {
           isRtl ? second.right < first.left : second.left > first.right,
           isTrue,
         );
+        final third = tester.getRect(options[2]);
+        expect(third.top, closeTo(first.bottom, .01));
       } else {
-        expect(second.top, greaterThanOrEqualTo(first.bottom + AppSpacing.sm));
+        expect(second.top, closeTo(first.bottom, .01));
       }
       for (final option in options) {
         final rect = tester.getRect(option);
@@ -186,10 +257,6 @@ void main() {
           .position;
       if (profile == VisualProfile.phone || profile == VisualProfile.dark) {
         expect(position.maxScrollExtent, 0);
-        expect(tester.getRect(sheet).height, lessThan(420));
-        for (final option in options) {
-          expect(option.hitTestable(), findsOneWidget);
-        }
       }
       if (position.maxScrollExtent > 0) {
         position.jumpTo(position.maxScrollExtent / 2);
@@ -200,8 +267,16 @@ void main() {
           'library-language-picker-scrolled',
         );
       }
-      await dismissSheet(tester);
-      await dismissSheet(tester);
+      for (final option in options) {
+        await tester.ensureVisible(option);
+        await tester.pumpAndSettle();
+        expect(option.hitTestable(), findsOneWidget);
+        expect(tester.getRect(find.byType(BottomSheet)), displayRect);
+      }
+      await tapUi(tester, find.byTooltip(strings.commonBack));
+      expect(tester.getRect(find.byType(BottomSheet)), displayRect);
+      await tapUi(tester, find.byTooltip(strings.commonClose));
+      expect(find.byType(BottomSheet), findsNothing);
       await tester.enterText(find.byType(TextField), 'no matching title');
       await tester.pumpAndSettle(const Duration(milliseconds: 400));
       await expectUiGolden(tester, profile, 'library-no-results');

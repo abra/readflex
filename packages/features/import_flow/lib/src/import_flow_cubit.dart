@@ -94,9 +94,10 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
   /// belongs in the cubit's private fields.
   bool _isPickingFile = false;
   bool _isImportingArticle = false;
+  ImportFlowArticleUrlEntry _articleDraft = const ImportFlowArticleUrlEntry();
 
   void showArticleUrlEntry() {
-    emit(const ImportFlowArticleUrlEntry());
+    emit(_articleDraft);
   }
 
   void articleUrlChanged(String rawUrl) {
@@ -316,8 +317,11 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
     }
   }
 
-  /// Leave the URL form and return to the import menu.
+  /// Return to the menu, retaining the URL draft until this flow is closed.
   void backToMenu() {
+    if (state case final ImportFlowArticleUrlEntry draft) {
+      _articleDraft = draft;
+    }
     emit(const ImportFlowMenu());
   }
 

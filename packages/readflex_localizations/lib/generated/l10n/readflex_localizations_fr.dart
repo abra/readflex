@@ -853,6 +853,10 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
   String get readerFont => 'Police';
 
   @override
+  String get readerFontSample =>
+      'Un moment calme avec un livre.\nUne page en appelle une autre.';
+
+  @override
   String get readerFontSize => 'Taille du texte';
 
   @override

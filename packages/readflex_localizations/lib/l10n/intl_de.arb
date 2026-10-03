@@ -241,6 +241,7 @@
   "readerReset": "Zurücksetzen",
   "readerTheme": "Design",
   "readerFont": "Schrift",
+  "readerFontSample": "Ein ruhiger Moment mit einem Buch.\nEine Seite folgt der anderen.",
   "readerFontSize": "Textgröße",
   "readerLineSpacing": "Zeilenabstand",
   "readerTextAlignment": "Textausrichtung",

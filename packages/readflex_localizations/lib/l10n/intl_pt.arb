@@ -241,6 +241,7 @@
   "readerReset": "Redefinir",
   "readerTheme": "Tema",
   "readerFont": "Fonte",
+  "readerFontSample": "Um momento tranquilo com um livro.\nUma página leva a outra.",
   "readerFontSize": "Tamanho do texto",
   "readerLineSpacing": "Espaçamento de linha",
   "readerTextAlignment": "Alinhamento do texto",

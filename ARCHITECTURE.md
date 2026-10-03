@@ -164,6 +164,29 @@ its Cubit; collection drafts still require Save. Unifying visual roles must not
 unify away these different persistence contracts. See the component-library
 README for dimensions and cross-sheet regression tests.
 
+Library Display and Language share one modal route and a common bounded height.
+Display sizes to its content; Language's compact grid fits that space without
+scrolling at standard phone text sizes. Scrolling remains a fallback for large
+text or constrained viewports, without enlarging Display. The hidden parent
+retains layout size, not input or semantics, so navigation needs no post-frame
+measurement or intrinsic sizing.
+Their slide/navigation state is local UI state; language persistence stays in
+`LibraryLocaleCubit`. Language selection applies immediately without navigating;
+Back returns to Display and Close dismisses the flow, retaining the selection.
+The shared header supplies separate Back and Close actions.
+Reader Appearance follows the same in-sheet navigation contract for its Font
+sample picker: the parent determines height, selection stays on the child step,
+and persistence remains in `ReaderAppearanceCubit`. Page-turn controls keep
+their existing compact row and are absent for vertically scrolling articles.
+Import forms and collection confirmations use the same header navigation:
+Back unwinds a step, Close exits the flow subject to its draft guard. Footer
+commands are not navigation controls. `showAppBottomSheet` keeps dismissal at
+the presentation boundary; unguarded flows opt into `scrimClosesFlow` to separate
+scrim dismissal from their `PopScope` system-Back handler. Guarded collection
+forms retain explicit dismissal and never bypass their discard decision.
+The import cubit retains URL drafts across menu navigation, not across closing
+the sheet; closing still does not cancel an already-started import.
+
 ## Localization
 
 `readflex_localizations` is the single source of truth for supported locales,

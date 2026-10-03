@@ -15,14 +15,19 @@ class BottomSheetHeader extends StatelessWidget {
     required this.title,
     this.onClose,
     this.closeLabel,
+    this.onBack,
+    this.backLabel,
     this.trailing,
     this.padding = EdgeInsets.zero,
     super.key,
-  }) : assert(onClose == null || closeLabel != null);
+  }) : assert(onClose == null || closeLabel != null),
+       assert(onBack == null || backLabel != null);
 
   final String title;
   final VoidCallback? onClose;
   final String? closeLabel;
+  final VoidCallback? onBack;
+  final String? backLabel;
   final Widget? trailing;
 
   /// Gutters for the title and close icon, not the close button's hit target.
@@ -40,42 +45,112 @@ class BottomSheetHeader extends StatelessWidget {
             iconInset,
             direction == TextDirection.ltr ? insets.right : insets.left,
           );
+    final backOutset = backLabel == null
+        ? 0.0
+        : math.min(
+            iconInset,
+            direction == TextDirection.ltr ? insets.left : insets.right,
+          );
     final effectivePadding = switch (direction) {
-      TextDirection.ltr => insets.copyWith(right: insets.right - closeOutset),
-      TextDirection.rtl => insets.copyWith(left: insets.left - closeOutset),
+      TextDirection.ltr => insets.copyWith(
+        left: insets.left - backOutset,
+        right: insets.right - closeOutset,
+      ),
+      TextDirection.rtl => insets.copyWith(
+        left: insets.left - closeOutset,
+        right: insets.right - backOutset,
+      ),
     };
     final heading = Semantics(
       header: true,
       child: Text(title, style: context.text.titleMedium),
     );
+    final back = AppPlainIconButton(
+      icon: direction == TextDirection.rtl
+          ? AppIcons.chevronRight
+          : AppIcons.chevronLeft,
+      tooltip: backLabel ?? '',
+      onPressed: onBack,
+    );
+    final close = AppPlainIconButton(
+      icon: AppIcons.close,
+      tooltip: closeLabel ?? '',
+      onPressed: onClose,
+    );
+    final row = Row(
+      children: [
+        if (backLabel != null) ...[
+          back,
+          const SizedBox(width: AppSpacing.sm),
+        ],
+        Expanded(
+          child: trailing == null
+              ? heading
+              : OverflowBar(
+                  alignment: MainAxisAlignment.spaceBetween,
+                  overflowAlignment: OverflowBarAlignment.start,
+                  spacing: AppSpacing.md,
+                  overflowSpacing: AppSpacing.xs,
+                  children: [heading, trailing!],
+                ),
+        ),
+        if (closeLabel != null) ...[
+          SizedBox(width: closeOutset),
+          close,
+        ],
+      ],
+    );
     return Padding(
       padding: effectivePadding,
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: AppSizes.buttonHeight),
-        child: Row(
-          children: [
-            Expanded(
-              child: trailing == null
-                  ? heading
-                  : OverflowBar(
-                      alignment: MainAxisAlignment.spaceBetween,
-                      overflowAlignment: OverflowBarAlignment.start,
-                      spacing: AppSpacing.md,
-                      overflowSpacing: AppSpacing.xs,
-                      children: [heading, trailing!],
+        child: backLabel == null || trailing != null
+            ? row
+            : LayoutBuilder(
+                builder: (context, constraints) {
+                  final painter = TextPainter(
+                    text: TextSpan(
+                      text: title,
+                      style: context.text.titleMedium,
                     ),
-            ),
-            if (closeLabel != null) ...[
-              // Preserve title wrapping and trailing-action placement.
-              SizedBox(width: closeOutset),
-              AppPlainIconButton(
-                icon: AppIcons.close,
-                tooltip: closeLabel!,
-                onPressed: onClose,
+                    textDirection: direction,
+                    textScaler: MediaQuery.textScalerOf(context),
+                    locale: Localizations.maybeLocaleOf(context),
+                  )..layout();
+                  final wordWidth = painter.minIntrinsicWidth;
+                  painter.dispose();
+                  final titleWidth =
+                      constraints.maxWidth -
+                      AppSizes.buttonHeight -
+                      AppSpacing.sm -
+                      (closeLabel == null
+                          ? 0
+                          : AppSizes.buttonHeight + closeOutset);
+                  if (wordWidth <= titleWidth) return row;
+                  // Keep large localized words intact without reducing text scale.
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          back,
+                          const Spacer(),
+                          if (closeLabel != null) close,
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Padding(
+                        padding: EdgeInsetsDirectional.only(
+                          start: backOutset,
+                          end: closeOutset,
+                        ),
+                        child: heading,
+                      ),
+                    ],
+                  );
+                },
               ),
-            ],
-          ],
-        ),
       ),
     );
   }

@@ -183,6 +183,22 @@ Reusable presentation-only widgets used across features:
   sheet edge. This mirrors in RTL without changing title wrapping or moving
   other header actions. Small custom gutters keep the entire target inside the
   header. No translated painting or hit testing outside a parent is required.
+  Optional `onBack`/`backLabel` add a leading, RTL-aware 48dp back button using
+  the same icon gutters. Back navigates within a flow; Close dismisses it.
+  If a localized word cannot fit between Back and Close at the current text
+  scale, a header without trailing actions moves its title below the navigation
+  row, retaining the full content width. Text scale and hit targets stay intact.
+- Nested steps use header Back, mirrored in RTL; root steps have no Back button.
+  System Back follows the same step navigation, then exits at the root. Footers
+  contain commands, not a second navigation Back. Cancel on a destructive
+  confirmation cancels that operation; it does not mean close the entire flow.
+  Unguarded multi-step sheets opt into `scrimClosesFlow` so scrim dismissal
+  closes the route just like Close/drag, rather than triggering step Back.
+  The helper preserves Flutter's barrier animation, labels and accessibility
+  clipping. The default still respects `PopScope` guards. Guarded collection
+  forms disable drag/scrim; their explicit Close requests a discard decision.
+  Step transitions follow reading direction and respect reduced motion; import
+  height changes bypass `AnimatedSize` when animations are disabled.
 - `ActionBottomSheetLayout` supplies 24dp horizontal gutters and an 8dp
   header/body gap. Constrained sheets keep the header outside the scrolling body.
   Its optional `footer` pins actions below that group; a minimum-height form
@@ -192,7 +208,10 @@ Reusable presentation-only widgets used across features:
 - Use `ActionBottomSheetLayout.scrollable` for finite content: Display,
   Appearance, Language, Definition and Translation share this composition.
   Pass content, not another scroll view. It owns one viewport, 24dp content
-  gutters, 16dp bottom padding and full-width edge fades. The body grows with
+  gutters, default 16dp bottom padding and full-width edge fades. Its
+  `bodyPadding` override supports grids whose padded tap targets already
+  provide internal spacing: Language uses 8dp at the bottom, retaining the
+  same header and horizontal gutters. The body grows with
   content up to 72% of screen height (78% with large text), including any pinned
   context row and further bounded by the modal's available space. The title
   never scrolls. Optional `headerBottom`
@@ -207,6 +226,11 @@ Reusable presentation-only widgets used across features:
   retain their typefaces; theme swatches retain their sample colors. When
   labels do not fit, text choices become two equal columns or a vertical list;
   they do not shrink or ellipsize. Icon-only choices have localized tooltips.
+- Selected settings and language options share the `AppSelectionColors` pair.
+  Dark mode uses an opaque tonal accent with dark text/icons, not a nearly
+  invisible translucent brand fill. Disabled choices remain muted; light-mode
+  fills and reader theme previews stay unchanged. Tests check selected/background
+  contrast of at least 3:1 and text/fill contrast of at least 4.5:1 in dark mode.
 - Forms and lazy collection lists keep the default shell constructor: their
   Save/Cancel, staged edits, discard guards and import step sizing are separate
   interaction contracts, not reasons to fork header styling. Put horizontal
@@ -214,9 +238,10 @@ Reusable presentation-only widgets used across features:
 - `AppSheetActions` places a secondary outlined command beside a filled primary
   command. When localized labels do not fit, the primary command comes first
   in a vertical stack. Busy state preserves size and blocks duplicate actions.
-- Heights follow content, not one global fixed height. Multi-step import retains
-  its own stable height; very short keyboard layouts may scroll the whole form
-  so the header and actions cannot make content unreachable.
+- Heights follow content, not one global fixed height. Multi-step import and
+  Display/Language retain flow-specific stable heights; very short keyboard
+  layouts may scroll the whole form so the header and actions cannot make
+  content unreachable.
 - Use `context.actionForeground` for accent text/icons on surfaces, especially
   in dark mode. Keep `primary`/`onPrimary` for filled controls and background tints.
 
@@ -224,6 +249,8 @@ Reusable presentation-only widgets used across features:
 LTR/RTL, taps at all four edges of the 48dp target, directional padding, label
 scaling, action layout and foreground contrast. Feature tests own persistence
 and dismiss guards.
+`test/show_app_bottom_sheet_test.dart` checks default pop guards, opt-in scrim
+dismissal, system Back, exit completion, and both transparent/animated barriers.
 `test/app_choice_control_test.dart` and `test/action_bottom_sheet_layout_test.dart`
 check adaptive choices, disabled states, viewport gutters and fixed context.
 Root `test/ui/settings_consistency_test.dart` compares Display and Appearance

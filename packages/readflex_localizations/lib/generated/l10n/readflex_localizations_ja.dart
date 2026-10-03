@@ -823,6 +823,9 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get readerFont => 'フォント';
 
   @override
+  String get readerFontSample => '本と過ごす静かなひととき。\nページからページへ。';
+
+  @override
   String get readerFontSize => '文字サイズ';
 
   @override

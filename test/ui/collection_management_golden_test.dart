@@ -65,6 +65,12 @@ void main() {
         of: sheet,
         matching: find.byType(TextField),
       );
+      final delete = find.text(strings.libraryDeleteCollectionButton);
+      await tester.ensureVisible(delete);
+      await tapUi(tester, delete);
+      await expectUiGolden(tester, profile, 'collection-delete');
+      await tapUi(tester, find.byTooltip(strings.commonBack));
+      await tester.ensureVisible(field);
       await tester.enterText(field, 'Changed');
       await tapUi(tester, find.byTooltip(strings.commonClose));
       await expectUiGolden(tester, profile, 'collection-discard');

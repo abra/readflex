@@ -3,6 +3,147 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('compact body inset preserves the shared header and gutters', (
+    tester,
+  ) async {
+    const bodyKey = ValueKey('body');
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              width: 320,
+              child: ActionBottomSheetLayout.scrollable(
+                title: 'Language',
+                onClose: () {},
+                closeLabel: 'Close',
+                bodyPadding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                child: const SizedBox(key: bodyKey, height: 96),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    final sheet = tester.getRect(find.byType(ActionBottomSheetLayout));
+    final body = tester.getRect(find.byKey(bodyKey));
+    final header = tester.getRect(find.byType(BottomSheetHeader));
+    expect(sheet.bottom - body.bottom, 8);
+    expect(body.left - sheet.left, 24);
+    expect(sheet.right - body.right, 24);
+    expect(body.top - header.bottom, 8);
+    expect(tester.getRect(find.byIcon(AppIcons.close)).right, body.right);
+    expect(tester.getSize(find.byType(AppPlainIconButton)), const Size(48, 48));
+    expect(
+      tester
+          .state<ScrollableState>(find.byType(Scrollable))
+          .position
+          .maxScrollExtent,
+      0,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final direction in TextDirection.values) {
+    testWidgets(
+      'large sheet title gets full width below navigation $direction',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light(),
+            home: Scaffold(
+              body: Directionality(
+                textDirection: direction,
+                child: MediaQuery(
+                  data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+                  child: SizedBox(
+                    width: 280,
+                    child: BottomSheetHeader(
+                      title: 'Title words',
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      onBack: () {},
+                      backLabel: 'Back',
+                      onClose: () {},
+                      closeLabel: 'Close',
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        final title = tester.getRect(find.text('Title words'));
+        final header = tester.getRect(find.byType(BottomSheetHeader));
+        final back = tester.getRect(find.byTooltip('Back'));
+        final close = tester.getRect(find.byTooltip('Close'));
+        expect(title.left - header.left, 24);
+        expect(header.right - title.right, 24);
+        expect(title.top, greaterThan(back.bottom));
+        expect(back.top, close.top);
+        expect(back.size, const Size(48, 48));
+        expect(close.size, back.size);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final direction in TextDirection.values) {
+    testWidgets('sheet back and close share aligned 48dp targets $direction', (
+      tester,
+    ) async {
+      var backs = 0;
+      var closes = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: Directionality(
+              textDirection: direction,
+              child: SizedBox(
+                width: 320,
+                child: ActionBottomSheetLayout.scrollable(
+                  title: 'Language',
+                  onBack: () => backs++,
+                  backLabel: 'Back',
+                  onClose: () => closes++,
+                  closeLabel: 'Close',
+                  child: const SizedBox(height: 100),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final ltr = direction == TextDirection.ltr;
+      final sheet = tester.getRect(find.byType(ActionBottomSheetLayout));
+      final back = tester.getRect(find.byTooltip('Back'));
+      final close = tester.getRect(find.byTooltip('Close'));
+      final backIcon = tester.getRect(
+        find.byIcon(ltr ? AppIcons.chevronLeft : AppIcons.chevronRight),
+      );
+      final closeIcon = tester.getRect(find.byIcon(AppIcons.close));
+      expect(back.size, const Size(48, 48));
+      expect(close.size, back.size);
+      expect(back.center.dy, close.center.dy);
+      expect(
+        ltr ? backIcon.left - sheet.left : sheet.right - backIcon.right,
+        24,
+      );
+      expect(
+        ltr ? sheet.right - closeIcon.right : closeIcon.left - sheet.left,
+        24,
+      );
+      await tester.tapAt(back.topLeft + const Offset(2, 2));
+      expect(backs, 1);
+      expect(closes, 0);
+      await tester.tapAt(close.topLeft + const Offset(2, 2));
+      expect(closes, 1);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   for (final direction in TextDirection.values) {
     for (final scale in [1.0, 2.0]) {
       testWidgets('close icon aligns with content in $direction at $scale', (
