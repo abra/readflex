@@ -1,4 +1,8 @@
-/* global pdfjsLib */
+import './vendor/pdfjs/pdf.js'
+
+const { pdfjsLib } = globalThis
+// Module scripts have no document.currentScript for PDF.js to infer this path.
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('./vendor/pdfjs/pdf.worker.js', import.meta.url).href
 
 // https://github.com/mozilla/pdf.js/blob/f04967017f22e46d70d11468dd928b4cdc2f6ea1/web/text_layer_builder.css
 const textLayerBuilderCSS = `

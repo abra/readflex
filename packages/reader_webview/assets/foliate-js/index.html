@@ -145,7 +145,6 @@
       });
 
       (async () => {
-        await loadScript('./src/vendor/pdfjs/pdf.js', { async: false, defer: false });
         await loadScript('./src/book.js', { type: 'module' });
       })();
     })();

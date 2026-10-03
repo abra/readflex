@@ -69,6 +69,19 @@ EPUB link events cross the bridge as the destination URL only. The reader
 feature forwards that value through its callback boundary, and app routing
 opens only validated HTTP(S) links with the platform URL launcher.
 
+### Book Startup
+
+The shared HTML shell loads `book.js` without PDF.js. Only PDF detection imports
+`pdf.js`, which loads the bundled PDF engine and explicitly resolves its worker
+URL relative to the module. EPUB/CBZ reading and metadata extraction do not fetch
+or execute the PDF engine (about 555 KiB). PDF assets remain bundled and extracted;
+this reduces WebView startup work, not the application download size.
+
+`test_browser/book_startup.test.mjs` checks the production bootstrap, first-page
+content and metadata completion, and verifies PDF engine/worker requests in
+Chromium/WebKit. It does not measure native WebView creation or device opening
+latency; those still require profile/release measurements on physical devices.
+
 ### Book Fonts
 
 Reading presets use the selected family first, then the bundled Noto Sans
