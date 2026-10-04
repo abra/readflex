@@ -200,6 +200,63 @@ void main() {
   });
 
   for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+    for (final selected in [false, true]) {
+      testWidgets(
+        'list metadata contrast: ${theme.brightness}, selected=$selected',
+        (tester) async {
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: theme,
+              home: Scaffold(
+                body: Column(
+                  children: [
+                    for (final source in [
+                      LibrarySource.fromBook(_books.first),
+                      LibrarySource.fromArticle(_article),
+                    ])
+                      BookLibraryListTile(
+                        source: source,
+                        showTopDivider: false,
+                        isSelected: selected,
+                        onTap: () {},
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          );
+          var background = theme.scaffoldBackgroundColor;
+          if (selected) {
+            final decoration =
+                tester
+                        .widget<DecoratedBox>(
+                          find
+                              .byKey(
+                                const ValueKey(
+                                  'libraryListSelectionBackground',
+                                ),
+                              )
+                              .first,
+                        )
+                        .decoration
+                    as BoxDecoration;
+            background = Color.alphaBlend(decoration.color!, background);
+          }
+          final metadata = find.descendant(
+            of: find.byKey(const ValueKey('libraryListRowMeta')),
+            matching: find.byType(Text),
+          );
+          expect(metadata, findsWidgets);
+          for (final text in tester.widgetList<Text>(metadata)) {
+            final foreground = Color.alphaBlend(text.style!.color!, background);
+            final a = foreground.computeLuminance();
+            final b = background.computeLuminance();
+            final ratio = a > b ? (a + .05) / (b + .05) : (b + .05) / (a + .05);
+            expect(ratio, greaterThanOrEqualTo(4.5), reason: text.data);
+          }
+        },
+      );
+    }
     testWidgets(
       'list separators use the shared theme above shadows: ${theme.brightness}',
       (

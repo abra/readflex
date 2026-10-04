@@ -5,8 +5,6 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'library_source_semantics.dart';
 
-/// Alpha applied to muted metadata (secondary text, icons) in list rows.
-const double _kMutedAlpha = 0.55;
 const double _kArticleIconAlpha = 0.4;
 const double _kListCoverWidth = 60;
 const double _kListCoverHeight = 90;
@@ -200,7 +198,7 @@ class _ListRowShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final selectionColor = colors.error;
-    final mutedColor = colors.onSurface.withValues(alpha: _kMutedAlpha);
+    final mutedColor = colors.onSurfaceVariant;
 
     final metaSegments = metaBuilder(context, mutedColor);
     final hasSubtitle = subtitle != null && subtitle!.isNotEmpty;

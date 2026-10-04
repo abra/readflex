@@ -364,6 +364,17 @@ void main() {
     expect(find.byIcon(AppIcons.viewGrid), findsNothing);
     expect(find.byIcon(AppIcons.deviceMode), findsNothing);
 
+    final displayAction = find.byKey(
+      const ValueKey('libraryHeaderDisplayButton'),
+    );
+    expect(tester.widget(displayAction), isA<AppPlainIconButton>());
+    expect(tester.getSize(displayAction), const Size.square(48));
+    final ink = tester.widget<InkWell>(
+      find.descendant(of: displayAction, matching: find.byType(InkWell)),
+    );
+    expect(ink.customBorder, isA<CircleBorder>());
+    expect(ink.overlayColor!.resolve({WidgetState.pressed})!.a, greaterThan(0));
+
     await tester.tap(find.byKey(const ValueKey('libraryHeaderDisplayButton')));
     await tester.pumpAndSettle();
 
@@ -1314,7 +1325,7 @@ void main() {
     await tester.tap(
       find.descendant(
         of: find.byType(ActionBottomSheetLayout),
-        matching: find.bySemanticsLabel('Clear search'),
+        matching: find.byTooltip('Clear search'),
       ),
     );
     await tester.pumpAndSettle();

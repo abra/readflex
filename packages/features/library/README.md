@@ -83,6 +83,15 @@ Delete errors keep the list usable and report failure through a deletion effect.
 
 ## Library Controls
 
+List metadata and the item count use `ColorScheme.onSurfaceVariant`, without
+reducing text opacity. Widget tests check at least 4.5:1 contrast on the actual
+list, selected-row and count-badge backgrounds in both themes. Title styles,
+row geometry and cover badges are unchanged.
+
+The header's Display action uses the shared `AppPlainIconButton`: a transparent
+resting surface, circular pressed feedback and a 48dp target. Search uses the
+same utility-action behavior for its smaller clear glyph.
+
 Selection replaces the import FAB with a bottom action bar: selected count,
 explicit cancel, add to collection, and secondary delete. Scaffold reserves its
 height, including the safe area. System Back still clears selection. Display and

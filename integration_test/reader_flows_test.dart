@@ -276,7 +276,7 @@ void main() {
         () => !searchCubit.state.isLoading,
         description: 'new session from history',
       );
-      await tapUi(tester, find.bySemanticsLabel('Clear search'));
+      await tapUi(tester, find.byTooltip('Clear search'));
       expect(searchCubit.state.results, isEmpty);
       expect(searchCubit.state.recentQueries, contains('devices'));
       await tapUi(tester, find.byTooltip('Remove from history'));

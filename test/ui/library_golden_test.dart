@@ -153,7 +153,13 @@ void main() {
       await tester.pumpAndSettle();
       await expectUiGolden(tester, profile, 'library-selection');
       await tapUi(tester, find.byTooltip(strings.libraryCancelSelection));
-      await tapUi(tester, find.byTooltip(strings.libraryDisplayOptions));
+      final displayPress = await tester.startGesture(
+        tester.getCenter(find.byTooltip(strings.libraryDisplayOptions)),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      await expectUiGolden(tester, profile, 'library-display-pressed');
+      await displayPress.up();
       await tester.pumpAndSettle();
       await expectUiGolden(tester, profile, 'library-display');
       final displayRect = tester.getRect(find.byType(BottomSheet));
@@ -280,7 +286,64 @@ void main() {
       await tester.enterText(find.byType(TextField), 'no matching title');
       await tester.pumpAndSettle(const Duration(milliseconds: 400));
       await expectUiGolden(tester, profile, 'library-no-results');
+      final clearPress = await tester.startGesture(
+        tester.getCenter(find.byTooltip(strings.commonClearSearch)),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      await expectUiGolden(tester, profile, 'library-search-clear-pressed');
+      await clearPress.up();
+      await tester.pumpAndSettle(const Duration(milliseconds: 400));
+      expect(find.text(ReadingFixture.bookTitle), findsOneWidget);
       await unmountUi(tester);
     }, tags: ['golden']);
   }
+
+  testWidgets('library list and search clear on RTL phone', (tester) async {
+    final app = await tester.runAsync(() => UiTestApp.create());
+    addTearDown(app!.dispose);
+    await app.preferencesService.update(
+      (p) => p.copyWith(libraryLayoutMode: 'list'),
+    );
+    await pumpGoldenSurface(
+      tester,
+      VisualProfile.dark,
+      (_) => LibraryScreen(
+        bookRepository: app.bookRepository,
+        articleRepository: app.articleRepository,
+        collectionRepository: app.collectionRepository,
+        preferencesService: app.preferencesService,
+        onSourcePressed: (_, {onSourceOpened}) async {},
+        onAddPressed: ({required onImported}) async {},
+      ),
+      locale: const Locale('ar'),
+    );
+    await waitForUi(
+      tester,
+      () => find.text(ReadingFixture.bookTitle).evaluate().isNotEmpty,
+      description: 'RTL phone library ready',
+    );
+    await tester.pumpAndSettle();
+    await expectUiGolden(tester, VisualProfile.dark, 'library-list-phone-rtl');
+    await tester.enterText(find.byType(TextField), 'missing');
+    await tester.pumpAndSettle(const Duration(milliseconds: 400));
+    final strings = ReadflexLocalizations.of(
+      tester.element(find.byType(LibraryScreen)),
+    )!;
+    final clear = find.byTooltip(strings.commonClearSearch);
+    final prefix = find.byIcon(AppIcons.search);
+    expect(tester.getCenter(clear).dx, lessThan(tester.getCenter(prefix).dx));
+    final gesture = await tester.startGesture(tester.getCenter(clear));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
+    await expectUiGolden(
+      tester,
+      VisualProfile.dark,
+      'library-search-clear-pressed-phone-rtl',
+    );
+    await gesture.up();
+    await tester.pumpAndSettle(const Duration(milliseconds: 400));
+    expect(find.text(ReadingFixture.bookTitle), findsOneWidget);
+    await unmountUi(tester);
+  }, tags: ['golden']);
 }

@@ -682,14 +682,17 @@ void main() {
       await tester.pumpAndSettle();
 
       final clear = tester.widget<Icon>(find.byIcon(AppIcons.close));
+      final clearColor = IconTheme.of(
+        tester.element(find.byIcon(AppIcons.close)),
+      ).color!;
       final colors = theme.colorScheme;
       expect(
-        clear.color,
+        clearColor,
         theme.brightness == Brightness.dark
             ? colors.primaryFixedDim
             : colors.primary,
       );
-      final iconLuminance = clear.color!.computeLuminance();
+      final iconLuminance = clearColor.computeLuminance();
       final fillLuminance = colors.surfaceContainerHighest.computeLuminance();
       final contrast = iconLuminance > fillLuminance
           ? (iconLuminance + 0.05) / (fillLuminance + 0.05)
@@ -936,7 +939,7 @@ void main() {
     final clearIcon = find.byIcon(AppIcons.close);
     expect(clearIcon, findsOneWidget);
     final hitArea = tester.getSize(
-      find.ancestor(of: clearIcon, matching: find.byType(GestureDetector)),
+      find.ancestor(of: clearIcon, matching: find.byType(IconButton)),
     );
     expect(hitArea.width, greaterThanOrEqualTo(AppSizes.buttonHeight));
     expect(hitArea.height, greaterThanOrEqualTo(AppSizes.buttonHeight));

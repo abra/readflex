@@ -108,7 +108,7 @@ OS keyboard overlay; the test additionally asserts real nonzero keyboard insets.
 | Theme text roles | Primary/secondary text on surface, sheet and input backgrounds; foreground/fill contrast for primary, secondary and destructive controls in light/dark | `packages/component_library/test/app_theme_test.dart` |
 | Onboarding | Skip/complete, routing, saved preference after remount; all three pages in five visual profiles | `onboarding_test.dart` |
 | Library | Search/clear, empty results, layout preference; UI changes do not issue new storage reads | `app_flows_test.dart` |
-| Library appearance | Grid, display sheet, empty search results in all profiles | `library_golden_test.dart` |
+| Library appearance | Grid, display sheet, empty search results and pressed Display/search-clear actions in all profiles; list in light/dark and on an Arabic phone | `library_golden_test.dart` |
 | Settings consistency | Display and Appearance share header geometry, section typography/gaps, content gutters, 48dp stepper targets and full-width fades in light/dark themes | `settings_consistency_test.dart` |
 | Library scaling | Grid/list remain virtualized with 20k books, callbacks address the right item, cached projections are reused | `library_scaling_test.dart` |
 | Collections | Create with selected book, rename, cancel/confirm deletion; preserve book and clean membership | `app_flows_test.dart` |
@@ -178,6 +178,11 @@ when the viewport cannot display the complete result:
 Import recovery also has `phoneRu` (390 x 844, light, Russian, 1x) and
 `phoneRtl` (390 x 844, dark, Arabic, 1x) captures. The import RTL suite explicitly
 overrides the tablet profile's viewport so RTL is verified on a phone too.
+Library also captures its list and pressed search-clear action at 390 x 844
+in dark Arabic under `goldens/dark/*-phone-rtl.png`; this does not use the
+tablet RTL viewport. Library press snapshots allow one 100ms frame for gesture
+recognition and another for the highlight to paint before release, then assert
+that the action opens Display or clears the search.
 
 Only widget goldens use these dimensions. The native suite keeps the device's
 real viewport and records it in its results. Large-text onboarding content is
@@ -270,6 +275,11 @@ The FB2 book is seeded with a stable ID, not imported through a native file
 picker. Native article rendering uses the actual article repository; the root
 article flow separately tests import UI through that repository. Fixtures are
 original text, with no third-party books or live network content.
+
+`integration_test/library_controls_test.dart` also checks Library search/clear
+with native text input: the field retains focus and bounds, the source returns,
+and storage read counts stay unchanged. Its `library-search-clear.png` records
+the populated field; iOS captures omit the operating system keyboard overlay.
 
 These tests do not open the user's application database, but installing any
 test build can replace an app with the same bundle ID. Prefer a dedicated

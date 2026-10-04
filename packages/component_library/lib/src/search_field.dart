@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_icons.dart';
+import 'app_plain_icon_button.dart';
 import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_icon_size.dart';
 import 'theme/tokens/app_radius.dart';
@@ -51,30 +52,15 @@ class SearchField extends StatelessWidget {
                 valueListenable: controller!,
                 builder: (context, value, _) {
                   if (value.text.isEmpty) return const SizedBox.shrink();
-                  // Plain GestureDetector instead of IconButton:
-                  // the app's IconButtonTheme paints a filled
-                  // secondary background that visually overlaps
-                  // the input fill here.
-                  return Semantics(
-                    label: clearButtonSemanticsLabel,
-                    button: true,
-                    child: GestureDetector(
-                      onTap: () {
-                        controller!.clear();
-                        onChanged?.call('');
-                      },
-                      behavior: HitTestBehavior.opaque,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md,
-                        ),
-                        child: Icon(
-                          AppIcons.close,
-                          size: AppIconSize.xs,
-                          color: clearIconColor,
-                        ),
-                      ),
-                    ),
+                  return AppPlainIconButton(
+                    icon: AppIcons.close,
+                    iconSize: AppIconSize.xs,
+                    color: clearIconColor,
+                    tooltip: clearButtonSemanticsLabel,
+                    onPressed: () {
+                      controller!.clear();
+                      onChanged?.call('');
+                    },
                   );
                 },
               )

@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import 'theme/tokens/app_icon_size.dart';
 import 'theme/tokens/app_sizes.dart';
 
-/// Unfilled utility action with a circular splash and a full-size hit target.
+/// Unfilled utility action with circular press feedback and a full-size target.
 class AppPlainIconButton extends StatelessWidget {
   const AppPlainIconButton({
     required this.icon,
     required this.tooltip,
     required this.onPressed,
     this.color,
+    this.iconSize = AppIconSize.sm,
     super.key,
   });
 
@@ -17,6 +18,7 @@ class AppPlainIconButton extends StatelessWidget {
   final String tooltip;
   final VoidCallback? onPressed;
   final Color? color;
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) => IconButton(
@@ -29,6 +31,6 @@ class AppPlainIconButton extends StatelessWidget {
       shape: const CircleBorder(),
       visualDensity: VisualDensity.standard,
     ),
-    icon: Icon(icon, size: AppIconSize.sm),
+    icon: Icon(icon, size: iconSize),
   );
 }

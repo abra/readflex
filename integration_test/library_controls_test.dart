@@ -183,6 +183,28 @@ void main() {
       () => tile.evaluate().isNotEmpty,
       description: 'library',
     );
+    final search = find.byType(TextField);
+    final initialReads = app.bookRepository.reads;
+    await tester.enterText(search, 'no matching title');
+    await tester.pumpAndSettle(const Duration(milliseconds: 400));
+    expect(tile, findsNothing);
+    final fieldRect = tester.getRect(search);
+    await capture(tester, 'library-search-clear');
+    await tapUi(tester, find.byTooltip('Clear search'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 400));
+    expect(tile, findsOneWidget);
+    expect(tester.getRect(search), fieldRect);
+    expect(
+      tester
+          .state<EditableTextState>(find.byType(EditableText))
+          .widget
+          .focusNode
+          .hasFocus,
+      isTrue,
+    );
+    expect(app.bookRepository.reads, initialReads);
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
     await tester.longPress(tile);
     await tester.pumpAndSettle();
     expect(find.text('Selected: 1'), findsOneWidget);

@@ -220,7 +220,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.bySemanticsLabel('Clear search'));
+    await tester.tap(find.byTooltip('Clear search'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Remove from history'));
     await tester.pumpAndSettle();

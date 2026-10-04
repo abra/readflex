@@ -146,7 +146,7 @@ Reusable presentation-only widgets used across features:
 | Widget                              | Purpose                                        |
 |-------------------------------------|------------------------------------------------|
 | `ActionBottomSheetLayout`           | Bottom sheet shell; optional constrained scroll body and wrapping header actions |
-| `AppPlainIconButton`                | Labeled 48dp utility action with transparent background and circular ink |
+| `AppPlainIconButton`                | Labeled 48dp utility action with transparent background and circular press feedback |
 | `AppActionCard`                     | Reusable command card for action pickers       |
 | `AppBottomSafeArea`                 | Bottom inset handling for app-owned surfaces   |
 | `AppButtonLabel`                    | Bounded label for localized button text        |
@@ -162,13 +162,28 @@ Reusable presentation-only widgets used across features:
 | `ErrorState`                        | Error message with retry button                |
 | `AppSourceCover` / `AppSourceCoverFrame` | Shared source cover rendering and frame |
 | `appSourceCoverImageFromPath`       | Resolves an optional local cover image path    |
-| `SearchField`                       | App search field with an adaptive primary-tone clear icon |
+| `SearchField`                       | App search field with an adaptive primary-tone clear action and circular press feedback |
 | `ScrollEdgeFadeStack`               | Scroll-edge fade/scrim wrapper                 |
 | `ScrollEdgeFade`                    | Individual top/bottom scroll-edge fade         |
 | `SelectionPreviewCard`              | Compact preview of selected text               |
 | `showAppBottomSheet`                | Shared modal bottom-sheet presentation helper  |
 
 ## What Belongs Here
+
+### Search and Utility Actions
+
+`AppPlainIconButton` keeps a minimum 48dp target independently of `iconSize`; the default
+glyph is 20dp, while `SearchField` uses 16dp. Its resting background is
+transparent and pressed/focus feedback follows the circular shape, not the
+filled rectangular global icon-button theme. The localized `tooltip` supplies
+the accessible name through Flutter's `IconButton` semantics.
+
+`SearchField` rebuilds only its suffix when the controller changes. Clearing
+invokes `onChanged('')` once, retains field focus and keeps the suffix space
+reserved so the text area and field bounds do not jump. Tests in
+`test/search_field_test.dart` cover focus, keyboard visibility, geometry and
+pressed states under iOS/Android widget policies, both themes and phone LTR/RTL
+with large text. Root Library goldens check the painted press feedback.
 
 ### Bottom Sheet Contract
 

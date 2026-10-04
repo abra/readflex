@@ -10,10 +10,6 @@ import 'library_display_sheet.dart';
 import 'library_locale_cubit.dart';
 import 'library_theme_cubit.dart';
 
-/// Alpha applied to muted meta text on the header ("N items" counter,
-/// inactive segment label colours). Matches `_kMutedAlpha` in the tile files.
-const double _kMutedAlpha = 0.55;
-
 /// Top-of-screen sticky header for the library: serif title + item counter,
 /// display menu, search field, and filter-segment pills.
 ///
@@ -137,7 +133,7 @@ class _LibraryItemCountBadge extends StatelessWidget {
             overflow: TextOverflow.fade,
             softWrap: false,
             style: context.text.screenCounter.copyWith(
-              color: colors.onSurface.withValues(alpha: _kMutedAlpha),
+              color: colors.onSurfaceVariant,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -237,7 +233,7 @@ class _CollectionScopeButton extends StatelessWidget {
         : null;
     final foreground = selected
         ? colors.onPrimary
-        : colors.onSurface.withValues(alpha: _kMutedAlpha);
+        : colors.onSurface.withValues(alpha: 0.55);
     final background = selected
         ? colors.primary
         : colors.surfaceContainerHighest.withValues(alpha: 0.5);
@@ -397,55 +393,16 @@ class _DisplayMenuButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: context.l10n.libraryDisplayOptions,
-      child: _HeaderIconButton(
-        key: const ValueKey('libraryHeaderDisplayButton'),
-        icon: AppIcons.moreVertical,
-        iconColor: context.colors.onSurface.withValues(alpha: 0.78),
-        onTap: () => showLibraryDisplaySheet(
-          context: context,
-          layoutCubit: context.read<LibraryLayoutCubit>(),
-          localeCubit: context.read<LibraryLocaleCubit>(),
-          themeCubit: context.read<LibraryThemeCubit>(),
-        ),
-      ),
-    );
-  }
-}
-
-class _HeaderIconButton extends StatelessWidget {
-  const _HeaderIconButton({
-    super.key,
-    required this.icon,
-    required this.iconColor,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: Ink(
-        decoration: BoxDecoration(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-        ),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          child: SizedBox(
-            width: AppSizes.chipTapTarget,
-            height: AppSizes.chipTapTarget,
-            child: Center(
-              child: Icon(icon, size: AppIconSize.sm, color: iconColor),
-            ),
-          ),
-        ),
+    return AppPlainIconButton(
+      key: const ValueKey('libraryHeaderDisplayButton'),
+      tooltip: context.l10n.libraryDisplayOptions,
+      icon: AppIcons.moreVertical,
+      color: context.colors.onSurface.withValues(alpha: 0.78),
+      onPressed: () => showLibraryDisplaySheet(
+        context: context,
+        layoutCubit: context.read<LibraryLayoutCubit>(),
+        localeCubit: context.read<LibraryLocaleCubit>(),
+        themeCubit: context.read<LibraryThemeCubit>(),
       ),
     );
   }

@@ -6,6 +6,50 @@ import 'package:library_feature/src/library_header.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 void main() {
+  for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+    testWidgets('item count contrast: ${theme.brightness}', (tester) async {
+      final controller = TextEditingController();
+      final focus = FocusNode();
+      addTearDown(controller.dispose);
+      addTearDown(focus.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: theme,
+          home: Scaffold(
+            body: LibraryHeader(
+              state: LibraryState(),
+              isOffline: false,
+              searchController: controller,
+              searchFocusNode: focus,
+              onSearchChanged: (_) {},
+              onFilterChanged: (_) {},
+              onCollectionScopePressed: () {},
+              onCollectionScopeCleared: () {},
+            ),
+          ),
+        ),
+      );
+      final counter = find.text('0');
+      final badge = tester.widget<Container>(
+        find.ancestor(of: counter, matching: find.byType(Container)).first,
+      );
+      final background = Color.alphaBlend(
+        (badge.decoration! as BoxDecoration).color!,
+        theme.scaffoldBackgroundColor,
+      );
+      final foreground = Color.alphaBlend(
+        tester.widget<Text>(counter).style!.color!,
+        background,
+      );
+      final a = foreground.computeLuminance();
+      final b = background.computeLuminance();
+      expect(
+        a > b ? (a + .05) / (b + .05) : (b + .05) / (a + .05),
+        greaterThanOrEqualTo(4.5),
+      );
+    });
+  }
+
   testWidgets('collection and clear have separate labeled 48px targets', (
     tester,
   ) async {
