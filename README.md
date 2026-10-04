@@ -85,6 +85,7 @@ make test
 UI flows and committed visual comparisons run without API keys:
 
 ```sh
+make test-ui-contracts
 make test-ui
 make test-device DEVICE=<device-id>
 make coverage

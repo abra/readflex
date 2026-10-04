@@ -77,3 +77,12 @@ When behavior changes accessibility output, add focused tests:
 Manual checks should still be done for major flows with VoiceOver on iOS,
 TalkBack on Android, Xcode Accessibility Inspector, or Android Accessibility
 Scanner.
+
+`make test-ui-contracts` includes shared choice/action accessibility tests for
+both mobile platform policies, LTR/RTL and normal/large text. Selection is
+asserted in semantics, not inferred from color. Loading actions retain their
+name but expose no tap action; disabling a choice retains its selected state.
+Theme tests check named foreground/background pairs in light and dark mode;
+they do not establish contrast over arbitrary images, overlays or book styles.
+The [UI review checklist](test/ui/README.md#review-checklist) links these checks
+to layout, navigation and performance contracts.

@@ -609,6 +609,13 @@ make test
 rewriting files, analyzes the root app and every active package, then runs all
 Dart, Flutter, and reader JavaScript tests.
 
+`make test-ui-contracts` is a focused subset for shared components, accessibility,
+theme contrast, import/Display navigation and representative root layouts. It
+does not modify goldens or replace feature, native or performance checks. These
+tests remain in the normal package/root suites. The review checklist lives in
+[`test/ui/README.md`](test/ui/README.md#review-checklist); component specifications
+remain in `component_library`, not in a parallel generated design system.
+
 Root UI flows in `test/ui/` mount the production root and router with real
 repositories, isolated SQLite/preferences, and deterministic external services.
 The same test-only composition serves `integration_test/`; it never invokes

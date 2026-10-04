@@ -151,23 +151,26 @@ class AppChoiceControl<T> extends StatelessWidget {
           for (final option in options)
             SizedBox(
               width: width,
-              child: Semantics(
-                selected: selected == option.value,
-                inMutuallyExclusiveGroup: true,
-                child: OutlinedButton(
-                  onPressed: onChanged == null
-                      ? null
-                      : () => onChanged!(option.value),
-                  style: optionStyle(option.value),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (option.icon != null) ...[
-                        Icon(option.icon, size: AppIconSize.sm),
-                        const SizedBox(width: AppSpacing.sm),
+              // Keep selection on the named button node, as SegmentedButton does.
+              child: MergeSemantics(
+                child: Semantics(
+                  selected: selected == option.value,
+                  inMutuallyExclusiveGroup: true,
+                  child: OutlinedButton(
+                    onPressed: onChanged == null
+                        ? null
+                        : () => onChanged!(option.value),
+                    style: optionStyle(option.value),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (option.icon != null) ...[
+                          Icon(option.icon, size: AppIconSize.sm),
+                          const SizedBox(width: AppSpacing.sm),
+                        ],
+                        Flexible(child: label(option)),
                       ],
-                      Flexible(child: label(option)),
-                    ],
+                    ),
                   ),
                 ),
               ),

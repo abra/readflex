@@ -226,6 +226,8 @@ Reusable presentation-only widgets used across features:
   retain their typefaces; theme swatches retain their sample colors. When
   labels do not fit, text choices become two equal columns or a vertical list;
   they do not shrink or ellipsize. Icon-only choices have localized tooltips.
+  Fallback buttons merge their selected/group semantics with the named action,
+  preserving one accessible control per option like the segmented variant.
 - Selected settings and language options share the `AppSelectionColors` pair.
   Dark mode uses an opaque tonal accent with dark text/icons, not a nearly
   invisible translucent brand fill. Disabled choices remain muted; light-mode
@@ -257,6 +259,17 @@ Root `test/ui/settings_consistency_test.dart` compares Display and Appearance
 directly; goldens cover the resulting compositions in light/dark, large text,
 landscape and RTL. Native Library/Reader flows verify persistence and WebView
 identity, rather than treating a matching screenshot as functional proof.
+
+`test/control_accessibility_contract_test.dart` checks named tap targets against
+the iOS/Android policies, selected/disabled choice semantics and busy-action
+labels with stable geometry in LTR/RTL at regular/large text sizes.
+`test/app_theme_test.dart` checks normal-text contrast for the named surface,
+sheet, input and filled-control pairs in both themes. These are bounded
+component contracts, not a complete screen-reader or rendered-pixel audit.
+From the repository root, `make test-ui-contracts` runs these and the existing
+shared/layout/representative-flow tests without updating visual baselines.
+See [`test/ui/README.md`](../../test/ui/README.md) for the review checklist and
+the separate golden, native and performance checks.
 
 `AppCopyButton` receives a clipboard callback and localized labels from its
 feature. It performs no service lookup, blocks duplicate in-flight taps, and

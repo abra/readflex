@@ -5,6 +5,36 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('AppTheme', () {
+    for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+      test('text roles retain contrast in ${theme.brightness.name}', () {
+        final colors = theme.colorScheme;
+        final surfaces = {
+          'surface': colors.surface,
+          'sheet': colors.surfaceContainerLow,
+          'input': colors.surfaceContainerHighest,
+        };
+        for (final foreground in {
+          'onSurface': colors.onSurface,
+          'onSurfaceVariant': colors.onSurfaceVariant,
+        }.entries) {
+          for (final background in surfaces.entries) {
+            _expectTextContrast(
+              foreground.value,
+              background.value,
+              '${foreground.key} on ${background.key}',
+            );
+          }
+        }
+        for (final pair in [
+          (colors.onPrimary, colors.primary, 'primary button'),
+          (colors.onSecondary, colors.secondary, 'secondary control'),
+          (colors.onError, colors.error, 'destructive button'),
+        ]) {
+          _expectTextContrast(pair.$1, pair.$2, pair.$3);
+        }
+      });
+    }
+
     test('light() returns ThemeData with light brightness', () {
       final theme = AppTheme.light();
       expect(theme.brightness, Brightness.light);
@@ -133,4 +163,13 @@ void main() {
       expect(text.statusGlyph.fontSize, 22);
     });
   });
+}
+
+void _expectTextContrast(Color foreground, Color background, String role) {
+  final text = Color.alphaBlend(foreground, background).computeLuminance();
+  final surface = background.computeLuminance();
+  final ratio = text > surface
+      ? (text + .05) / (surface + .05)
+      : (surface + .05) / (text + .05);
+  expect(ratio, greaterThanOrEqualTo(4.5), reason: role);
 }

@@ -4,6 +4,51 @@ This suite complements feature widget/cubit tests and the reader's Chromium and
 WebKit regressions. It is not a claim that every OS interaction or every possible
 combination of settings is automated.
 
+## Review Checklist
+
+Use this checklist for the affected component and its consumers, not as a
+reason to redesign working screens. It adapts the relevant UI/UX Pro Max rules
+on stable layout, component states, semantic tokens and accessibility to
+Readflex. Its web styles, generated palettes, framework preferences and numeric
+presets are not project requirements. No external skill installation, Python
+CLI, network lookup or generated design-system files are needed to run tests.
+
+Before implementation, identify the actual user problem and inspect the existing
+component, feature state and regression tests. For visual proposals, compare
+full screens using the same viewport, locale, theme, text scale and content;
+label crops as details, not as replacement screenshots. Obtain approval when
+the task asks for proposals. Preserve unrelated UI and intentional differences
+such as immediate settings versus explicitly saved collection drafts.
+
+| Check | Readflex contract and evidence |
+| --- | --- |
+| Consistency | Reuse semantic tokens, header, choice, input and action components from `component_library`; compare settings via `settings_consistency_test.dart`. Do not invent per-screen colors, typography or icon geometry. |
+| Stable layout | Errors and busy states must not unexpectedly displace controls. Verify geometry during transitions as well as after settling; import form and shared sheet tests cover these paths. Do not solve this with arbitrary empty fixed-height space. |
+| Navigation | Back unwinds a step; Close exits the flow subject to draft guards. Check system Back, scrim/drag, interrupted transitions and reduced motion in the owning feature tests. |
+| Scrolling | Short content has no false overflow/fades; long content has reachable last actions and a fixed header where the component promises one. Test both ends, keyboard insets and rotation. |
+| Controls | Check enabled, selected, disabled and loading semantics, localized labels, hit targets and duplicate-command prevention, not just the visible icon or color. Shared accessibility tests exercise both mobile platform policies. |
+| Text and themes | Check real long translations, phone RTL, 200% text, light/dark themes and essential text visibility. Contrast tests cover named text/background pairs, not every possible rendering. |
+| State and recovery | Check empty, loading, success, error/retry and offline states where supported. UI-only changes must not add network/storage work. Keep unfinished product flows explicitly out of scope. |
+| Performance | Prefer existing bounded-work tests and profile real interactions when changing layout, lists or gestures. Do not add intrinsic layout, broad rebuilds, repeated text measurements or eager loading merely to satisfy a screenshot. |
+
+The component specifications and dimensions remain in
+[`component_library/README.md`](../../packages/component_library/README.md);
+semantics ownership and inline-link exceptions remain in
+[`ACCESSIBILITY.md`](../../ACCESSIBILITY.md). Keep this checklist focused on
+verification instead of maintaining another set of design tokens.
+
+Reader content is a separate surface from app controls. Wide tables/code may
+need horizontal scrolling; do not clip or squeeze them to obey a generic web
+rule. Font/layout changes can affect pagination and saved anchors. Gesture
+changes need reader JS/browser tests plus native iOS and Android checks; DOM
+selection alone is not native handle dragging. Brightness and unrelated reader
+behavior are not part of a general UI consistency pass.
+
+Close out with the commands actually run, the profiles/devices inspected and
+unverified cases. Put temporary screenshots/logs under `.local/`, and generated
+review reports under `.local/reports/`. A passing checklist is not a claim of
+complete accessibility, visual correctness or performance on all devices.
+
 ## Commands
 
 Run from the repository root with the FVM-pinned Flutter SDK:
@@ -11,6 +56,7 @@ Run from the repository root with the FVM-pinned Flutter SDK:
 ```sh
 make get
 make reader-browser-setup
+make test-ui-contracts
 make test-ui
 make test-goldens
 make verify
@@ -18,6 +64,10 @@ make coverage
 make test-performance
 ```
 
+- `test-ui-contracts`: component-library tests, import form/navigation, Display
+  step navigation and representative root layout contracts. No goldens, devices
+  or API keys; a focused subset, not a replacement for feature tests or `verify`.
+  These tests also run in the existing full suite, without a second invocation.
 - `test-ui`: production-root flows and golden comparisons, no device needed.
 - `test-goldens`: only visual comparisons, without modifying baselines.
 - `verify`: formatting, analysis, all active package tests, root UI/goldens,
@@ -54,6 +104,8 @@ OS keyboard overlay; the test additionally asserts real nonzero keyboard insets.
 
 | Surface or contract | Automated checks | Where |
 | --- | --- | --- |
+| Shared control accessibility | Named tap targets under iOS/Android policies, selected/disabled choice semantics, stable control geometry and named/noninteractive busy actions in LTR/RTL at normal/large text | `packages/component_library/test/control_accessibility_contract_test.dart` |
+| Theme text roles | Primary/secondary text on surface, sheet and input backgrounds; foreground/fill contrast for primary, secondary and destructive controls in light/dark | `packages/component_library/test/app_theme_test.dart` |
 | Onboarding | Skip/complete, routing, saved preference after remount; all three pages in five visual profiles | `onboarding_test.dart` |
 | Library | Search/clear, empty results, layout preference; UI changes do not issue new storage reads | `app_flows_test.dart` |
 | Library appearance | Grid, display sheet, empty search results in all profiles | `library_golden_test.dart` |
