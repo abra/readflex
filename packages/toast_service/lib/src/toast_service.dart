@@ -4,60 +4,30 @@ import 'package:toastification/toastification.dart';
 
 enum NotificationType { success, error }
 
-/// Shows a top-anchored toast that slides down from the status bar and
-/// auto-dismisses after 1 second. Type-driven coloring/icon comes from
-/// `ToastificationStyle.fillColored` so a feature package only chooses success
-/// vs error and never touches presentation.
+/// Shows top-anchored feedback using app tokens and a 48dp Close action.
+/// Success lasts 1 second; errors last 6 seconds or require explicit dismissal
+/// with accessible navigation. The overlay owns safe areas and width constraints.
 ///
-/// Corner radius matches `AppRadius.lg` (the rounded-card scale used in
-/// elevated UI). The horizontal inset is set on [ToastWrapper] via
-/// `ToastificationConfig.itemWidth` so it lines up with the rest of the
-/// app's body padding regardless of screen size.
-///
-/// Pass [messageSuffix] when the message has a fixed verb at the end
-/// that must always remain visible (e.g. `"long title" deleted`): the
-/// [message] then ellipsises within the available width while the
-/// suffix is rendered intact.
+/// [messageSuffix] keeps a fixed verb/tail visible after an ellipsized title.
+/// It moves to another line when necessary, without reducing the text scale.
 void showToast(
   BuildContext context, {
   required NotificationType type,
   required String message,
   String? messageSuffix,
 }) {
-  toastification.show(
+  final reduceMotion = MediaQuery.disableAnimationsOf(context);
+  toastification.showCustom(
     context: context,
-    type: switch (type) {
-      NotificationType.success => ToastificationType.success,
-      NotificationType.error => ToastificationType.error,
-    },
-    // `fillColored` paints the whole pill in the type's accent (green
-    // for success, red for error) instead of the flat-style off-white
-    // with a thin colored stripe — reads more decisively as feedback
-    // on top of varied library content.
-    style: ToastificationStyle.fillColored,
-    title: messageSuffix == null
-        ? Text(message)
-        : _SplitToastTitle(message: message, suffix: messageSuffix),
-    autoCloseDuration: const Duration(seconds: 1),
+    autoCloseDuration: type == NotificationType.error
+        ? (MediaQuery.accessibleNavigationOf(context)
+              ? null
+              : const Duration(seconds: 6))
+        : const Duration(seconds: 1),
     alignment: Alignment.topCenter,
-    borderRadius: BorderRadius.circular(AppRadius.lg),
-    margin: EdgeInsets.zero,
-    // Soft Material 3-ish elevation: small ambient layer + a longer
-    // directional layer below. Alpha is kept conservative so it reads
-    // as "lifted" in light mode without painting a black halo on dark.
-    boxShadow: const [
-      BoxShadow(
-        color: Color(0x14000000),
-        blurRadius: 4,
-        offset: Offset(0, 2),
-      ),
-      BoxShadow(
-        color: Color(0x1F000000),
-        blurRadius: 16,
-        offset: Offset(0, 8),
-      ),
-    ],
+    animationDuration: reduceMotion ? Duration.zero : null,
     animationBuilder: (context, animation, alignment, child) {
+      if (MediaQuery.disableAnimationsOf(context)) return child;
       return SlideTransition(
         position: Tween<Offset>(
           begin: const Offset(0, -1),
@@ -66,13 +36,116 @@ void showToast(
         child: child,
       );
     },
+    // Keep the library's timer, swipe and hover behavior, not its 30dp Close slot.
+    builder: (context, item) => BuiltInContainer(
+      item: item,
+      margin: EdgeInsets.zero,
+      closeOnClick: false,
+      pauseOnHover: true,
+      dragToClose: true,
+      callbacks: const ToastificationCallbacks(),
+      child: _ToastContent(
+        type: type,
+        message: message,
+        suffix: messageSuffix,
+        onClose: () => toastification.dismiss(item),
+      ),
+    ),
   );
+  // showCustom queues insertion after a frame but does not request one when
+  // its overlay already exists (for example after an idle, persistent error).
+  WidgetsBinding.instance.ensureVisualUpdate();
 }
 
-/// Title widget for toasts whose message has a fixed verb tail. The
-/// flexible body ellipsises within the toast width while the suffix is
-/// rendered as-is, so phrases like `"<long title>" deleted` never lose
-/// the verb to a mid-sentence ellipsis.
+class _ToastContent extends StatelessWidget {
+  const _ToastContent({
+    required this.type,
+    required this.message,
+    required this.suffix,
+    required this.onClose,
+  });
+
+  final NotificationType type;
+  final String message;
+  final String? suffix;
+  final VoidCallback onClose;
+
+  // Align the glyph with the 16dp content inset without shrinking its target.
+  static const _actionEndInset =
+      AppSpacing.lg - (AppSizes.buttonHeight - AppIconSize.sm) / 2;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final appColors =
+        theme.extension<AppColorsExt>() ??
+        (theme.brightness == Brightness.dark
+            ? AppTheme.dark().ext
+            : AppTheme.light().ext);
+    final (background, foreground, icon) = switch (type) {
+      NotificationType.success => (
+        appColors.successContainer,
+        appColors.onSuccessContainer,
+        AppIcons.check,
+      ),
+      NotificationType.error => (colors.error, colors.onError, AppIcons.error),
+    };
+    final radius = BorderRadius.circular(AppRadius.lg);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        boxShadow: AppShadows.popover,
+      ),
+      child: Material(
+        color: background,
+        borderRadius: radius,
+        child: Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(
+            AppSpacing.lg,
+            AppSpacing.sm,
+            _actionEndInset,
+            AppSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: AppIconSize.md, color: foreground),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Semantics(
+                  container: true,
+                  liveRegion: true,
+                  label: '$message${suffix ?? ''}',
+                  excludeSemantics: true,
+                  child: DefaultTextStyle(
+                    style: theme.textTheme.bodyMedium!.copyWith(
+                      color: foreground,
+                    ),
+                    child: suffix == null
+                        ? Text(
+                            message,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          )
+                        : _SplitToastTitle(message: message, suffix: suffix!),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              AppPlainIconButton(
+                icon: AppIcons.close,
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                color: foreground,
+                onPressed: onClose,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SplitToastTitle extends StatelessWidget {
   const _SplitToastTitle({required this.message, required this.suffix});
 
@@ -81,20 +154,18 @@ class _SplitToastTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
+    final tail = suffix.trimLeft();
+    return Wrap(
+      spacing: tail == suffix ? 0 : AppSpacing.xs,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Flexible(
-          child: Text(
-            message,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            softWrap: false,
-          ),
+        Text(
+          message,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          softWrap: false,
         ),
-        Text(suffix, maxLines: 1, softWrap: false),
+        Text(tail),
       ],
     );
   }

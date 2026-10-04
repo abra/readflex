@@ -1765,6 +1765,16 @@ void main() {
   });
 
   group('asset extraction', () {
+    test('bundles the demand-loaded comic thumbnail module', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      final source = await rootBundle.loadString(
+        'packages/reader_webview/assets/foliate-js/src/readflex_comic_thumbnail.js',
+      );
+      expect(source, contains('export const createComicThumbnail'));
+      final extractor = _readPackageSource('lib/src/asset_extractor.dart');
+      expect(extractor, contains('readflex_comic_thumbnail.js'));
+    });
+
     test(
       'bundles startup instrumentation for the local reader server',
       () async {
@@ -1785,7 +1795,7 @@ void main() {
     });
 
     test('versions bundled reader assets independently of app version', () {
-      expect(AssetExtractor.assetRevision, 'reader_webview_assets_149');
+      expect(AssetExtractor.assetRevision, 'reader_webview_assets_152');
       expect(
         AssetExtractor.extractionVersionFor('1.0.0+1'),
         '1.0.0+1|${AssetExtractor.assetRevision}',

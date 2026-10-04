@@ -10,7 +10,40 @@ class BookReaderWebViewState extends State<BookReaderWebView>
   @visibleForTesting
   bool get debugIsReady => _isReady;
   bool _isReady = false;
+
+  /// Returns a bounded preview from the already open archive, not the full page.
+  Future<Uint8List?> comicThumbnail(int index) async {
+    final controller = _controller;
+    final generation = _loadSession.generation;
+    if (!_isReady || !widget.isComic || controller == null || index < 0) {
+      return null;
+    }
+    try {
+      final result = await controller.callAsyncJavaScript(
+        functionBody: 'return await window.readflexComicThumbnail?.(index);',
+        arguments: {'index': index},
+      );
+      if (!mounted ||
+          !identical(controller, _controller) ||
+          generation != _loadSession.generation) {
+        return null;
+      }
+      final value = result?.value;
+      const prefix = 'data:image/jpeg;base64,';
+      if (value is! String ||
+          value.length > 128 * 1024 ||
+          !value.startsWith(prefix)) {
+        return null;
+      }
+      return base64Decode(value.substring(prefix.length));
+    } catch (_) {
+      // A failed preview must not interrupt reading or page navigation.
+      return null;
+    }
+  }
+
   BookPosition? _lastPosition;
+  BookPosition? _pendingInitialPosition;
   FoliateStyle? _bootstrapStyle;
   late final ReaderLoadSession _loadSession = ReaderLoadSession(
     onFailed: _failLoad,
@@ -285,6 +318,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       'initialProgress': jsonEncode(initialLocation.progress),
       'sourceType': jsonEncode(_effectiveArticle ? 'article' : 'book'),
       'comicHostTaps': jsonEncode(_forwardComicTaps),
+      'comicPageOrderVersion': jsonEncode(widget.comicPageOrderVersion),
       'pageTapZoneFraction': jsonEncode(readerPageTapZoneFraction),
       'pageProgressionDirection': jsonEncode(
         widget.pageProgressionRtl ? 'rtl' : null,
@@ -361,6 +395,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
 
   void _failLoad(ReaderLoadFailure failure) {
     if (!mounted) return;
+    _pendingInitialPosition = null;
     _isReady = false;
     _controller = null;
     detachReaderWebViewLifecycle();
@@ -373,7 +408,9 @@ class BookReaderWebViewState extends State<BookReaderWebView>
     // Keep the existing iOS startup workaround, but restore the last live CFI
     // after a renderer death during reading (including Android).
     _recoveringFromCrash =
-        defaultTargetPlatform == TargetPlatform.iOS && !_isReady;
+        defaultTargetPlatform == TargetPlatform.iOS &&
+        !_loadSession.isLoadComplete;
+    _pendingInitialPosition = null;
     _isReady = false;
     _controller = null;
     detachReaderWebViewLifecycle();
@@ -445,8 +482,12 @@ class BookReaderWebViewState extends State<BookReaderWebView>
         final data = readerBridgeMap(args.first);
         if (data == null) return;
         final position = BookPosition.fromMap(data);
-        _lastPosition = position;
-        widget.onPositionChanged?.call(position);
+        if (_loadSession.isLoadComplete) {
+          _publishPosition(position);
+        } else {
+          // Chapter-start relocations are not a replacement for the saved CFI.
+          _pendingInitialPosition = position;
+        }
         _markReady('onRelocated');
       },
     );
@@ -552,6 +593,11 @@ class BookReaderWebViewState extends State<BookReaderWebView>
     );
   }
 
+  void _publishPosition(BookPosition position) {
+    _lastPosition = position;
+    widget.onPositionChanged?.call(position);
+  }
+
   void _markReady(String source) {
     if (!mounted ||
         !_loadSession.markReady(loadComplete: source == 'onLoadEnd')) {
@@ -559,12 +605,15 @@ class BookReaderWebViewState extends State<BookReaderWebView>
     }
     final wasReady = _isReady;
     _isReady = true;
+    if (_loadSession.isLoadComplete) {
+      final position = _pendingInitialPosition;
+      _pendingInitialPosition = null;
+      if (position != null) _publishPosition(position);
+    }
 
     // TEMP — clear the crash-recovery flag once the post-crash reload produces
-    // either the normal load callback or a first relocation event. Some heavy
-    // formats can relocate before `onLoadEnd`; at that point the page is usable
-    // and keeping the loading scrim would be worse than showing the content.
-    if (_recoveringFromCrash) {
+    // a settled location. First content remains visible while restore finishes.
+    if (_recoveringFromCrash && _loadSession.isLoadComplete) {
       final progress = widget.initialProgress;
       final recoveredAt = progress != null && progress > 0
           ? ' at progress=${progress.toStringAsFixed(4)}'

@@ -302,6 +302,9 @@ void main() {
   testWidgets('library list and search clear on RTL phone', (tester) async {
     final app = await tester.runAsync(() => UiTestApp.create());
     addTearDown(app!.dispose);
+    await app.collectionRepository.addSourcesToFavourites(
+      sourceIds: [app.book!.id],
+    );
     await app.preferencesService.update(
       (p) => p.copyWith(libraryLayoutMode: 'list'),
     );
@@ -344,6 +347,23 @@ void main() {
     await gesture.up();
     await tester.pumpAndSettle(const Duration(milliseconds: 400));
     expect(find.text(ReadingFixture.bookTitle), findsOneWidget);
+    await tapUi(tester, find.byIcon(AppIcons.collection));
+    await expectUiGolden(
+      tester,
+      VisualProfile.dark,
+      'collection-picker-phone-rtl',
+    );
+    await tapUi(
+      tester,
+      find.byKey(
+        const ValueKey('collectionScopeRow-favourites-readflex:favourites'),
+      ),
+    );
+    await expectUiGolden(
+      tester,
+      VisualProfile.dark,
+      'library-favourites-badge-phone-rtl',
+    );
     await unmountUi(tester);
   }, tags: ['golden']);
 }

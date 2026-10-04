@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:import_flow/import_flow.dart';
 import 'package:reader_webview/reader_webview.dart';
@@ -17,6 +18,32 @@ void main() {
   });
 
   group('ImportFlowCubit', () {
+    blocTest<ImportFlowCubit, ImportFlowState>(
+      'picker failure is recoverable and does not escape the import future',
+      build: () => _buildCubit(
+        pickBookFile: () async => throw PlatformException(code: 'unavailable'),
+      ),
+      act: (cubit) => cubit.pickAndImportBook(),
+      expect: () => [
+        const ImportFlowFailure(
+          errorCode: ImportFlowErrorCode.bookImportFailed,
+        ),
+      ],
+      errors: () => [isA<PlatformException>()],
+    );
+
+    test(
+      'picker failure after dismissal does not emit into a closed cubit',
+      () async {
+        final pick = Completer<File?>();
+        final cubit = _buildCubit(pickBookFile: () => pick.future);
+        final pending = cubit.pickAndImportBook();
+        await cubit.close();
+        pick.completeError(PlatformException(code: 'unavailable'));
+        await expectLater(pending, completes);
+      },
+    );
+
     test(
       'URL draft survives menu and terms navigation within a flow',
       () async {

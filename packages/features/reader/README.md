@@ -112,6 +112,78 @@ abstract class TextAction {
 | `ReaderImageHighlightCubit`   | Persists image-page highlights with optional notes, then `ReaderBloc` refreshes annotations |
 | `ReaderAppearanceCubit`       | Per-source reader appearance overrides over global preferences             |
 | `ReaderBrightnessCubit`       | System/custom reader brightness state and active window override lifecycle |
+| `ReaderComicThumbnailCubit`   | UI-only bounded preview queue/cache, owned by the visible Pages or Highlights tab |
+
+### Contents and Saved Passages
+
+Highlights combine the existing text query with an optional color filter. The
+list caches that projection until its inputs change; reading-position updates
+do not refilter it. Quotes/notes expand in place without re-extracting content.
+Text and image rows share one interaction: tap the entry to navigate by its
+stored anchor. Neither has standalone copy/arrow buttons or a reserved action
+footer. Text rows keep the colored quote rule, optional note and location;
+text copying remains available in the reader's selection menu. A missing
+anchor disables navigation, not reading or expansion. Text rows retain
+document direction, and row semantics announce the navigation action.
+The quote rule/padding follows the document direction as one block; note text
+uses its own bidi direction, independent of the UI and book. Legacy page-only
+labels are localized in presentation; filtering accepts both the displayed
+page label and the legacy English term. Locale changes invalidate the filtered
+projection, while unrelated reading-position updates do not.
+
+`ReaderHighlightNoteSheet` owns only the draft and discard confirmation. Saved
+image-area highlights can add a previously skipped note, edit it, or save an
+empty value to clear it. A null result cancels; a result containing a null note
+explicitly clears/skips. `ReaderBloc` persists the patch through the existing
+repository method. Close/Cancel/system Back protect dirty text; scrim/drag
+dismissal is disabled. Confirmation retains the draft field and its geometry.
+
+Image-area rows instead show a cropped preview, the original page title, a
+localized page number, and an optional expandable note. Tapping the row opens
+the saved page with its existing area annotations; it does not automatically
+zoom or change the selection. Image rows have no clipboard or arrow action and
+do not expose the stored `Page highlight` placeholder. Missing preview data does
+not disable page navigation. CBZ thumbnails reuse the page preview pipeline;
+other image-page formats keep a static placeholder without retrying an
+unsupported thumbnail request. Note expansion and color filters survive tab
+switches, independently of the shorter-lived thumbnail cache.
+Titles/notes use their own text direction; page labels and row layout follow
+the app locale, so Latin filenames/notes remain readable in an RTL interface.
+
+Deleting a bookmark persists immediately and atomically replaces its row with
+an Undo state. Undo restores the original ID, date and complete anchor. It is
+available per row until Contents closes, not on an expiring toast. Multiple
+deletions can be restored independently; errors retain a retryable row. Delete,
+restore, normal bookmark toggles and dismissal share the existing serialized
+bookmark event bucket. Closing during deletion clears Undo after that write.
+The trailing trash changes to `AppIcons.undo`, never a text button or refresh
+icon. Both use the same 48dp target and 24dp glyph in every locale/text scale,
+with a localized tooltip/accessibility name. No label measurement is needed,
+and adjacent rows stay in place. Oversized Contents tab labels scroll
+horizontally rather than overlapping.
+
+CBZ Contents replaces Chapters with a Pages grid, initially revealing the saved
+page. Page order follows the book's progression direction independently of the
+app locale. Captions and controls still use the app locale. Only the visible
+Pages or Highlights tab owns `ReaderComicThumbnailCubit`; its callback is supplied by the reader
+host, and the View receives no repository or WebView controller. One preview is
+decoded at a time. Offscreen queued requests are discarded; a 24-entry LRU retains
+at most 96 KiB encoded bytes per preview. Per-tile selectors avoid rebuilding the
+grid/list for each response. Multiple highlights on one page share the encoded
+bytes and Flutter image-cache key; their normalized crops are painted without
+allocating separate cropped bitmaps or decoding the archive again. Per-page
+consumer counts prevent a disappearing row from cancelling another visible
+area's request. Visible comic lists/grids use zero cache extent, so offscreen
+rows do not start preview work; text lists keep their normal prefetch.
+Closing/changing tabs evicts owned Flutter image-cache
+entries and ignores late responses. Failure keeps page navigation available and
+offers Retry. There is no startup thumbnail generation or whole-archive decode.
+The JS/WebView side's limits are documented in `reader_webview/README.md`.
+Tests cover shared-page leases, cancellation/retry, crop pixels/aspect ratio,
+long notes and missing anchors. `test/ui/comic_highlights_golden_test.dart` checks
+the real drawer with 100 saved areas across phone themes, large text, landscape
+and phone RTL; `integration_test/comic_highlights_test.dart` checks native CBZ
+thumbnails and row navigation on iOS/Android. These are not device FPS tests.
 
 `ReaderSearchCubit` debounces typing by 300ms and batches incoming results and
 progress at 16ms intervals. A done event or stream close flushes immediately;
@@ -149,7 +221,11 @@ Navigation buttons are unfilled with 48dp tap targets. Widget and golden tests
 cover icon/text spacing, both themes, RTL and large text, including held presses.
 Search content uses a 16 logical-pixel horizontal inset inside the safe area:
 the header, field, recent queries, result count and excerpts share this inset.
-Close and history-removal buttons retain 48dp targets on the same trailing axis.
+Close and history-removal buttons use equal 24dp glyphs on the same trailing
+axis, with glyph edges aligned to the field. Their 48dp targets extend into the
+gutter and stay inside the safe area, including RTL.
+History removal uses the shared trash icon; Close and field clearing keep the
+cross. Removing a history entry does not run a search or close the panel.
 Geometry tests and search goldens cover narrow/wide layouts, large text, RTL,
 long queries and asymmetric landscape safe-area padding.
 Icon controls use circular feedback. The query and return actions dim their
@@ -163,6 +239,18 @@ Bookmark edits are serialized independently of page-position events. A completed
 write updates the saved list but changes the current-page badge only if the
 position has not changed meanwhile. Bookmark revisions also prevent an older
 source-load snapshot from overwriting edits made while it was pending.
+Bookmark rows use the shared trash icon for deletion and retain the existing
+in-place icon-only Undo action; the cross in the header only closes the drawer.
+All three glyphs are 24dp, aligned to the Contents field's 16dp gutter with full
+48dp targets. Geometry tests compare the visible icon boxes, not only button
+bounds; native flows also exercise deletion and Undo.
+The reader's bottom toolbar keeps equal 48dp targets and circular pressed
+feedback for all commands, including its custom filled/outline bookmark glyph.
+Changing chrome visibility must not resize or recreate the WebView; the root
+search-overlay regression verifies both contracts under iOS/Android policies.
+Active bookmark/Undo icons and the tab indicator use the accessible action
+foreground. Active search results use the same selected color pair as Contents
+and settings controls; text and emphasized matches remain readable on that fill.
 Brightness diagnostic formatting/logging runs only in debug builds.
 
 Position persistence keeps the 500ms trailing debounce and serializes writes,

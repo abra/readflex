@@ -16,6 +16,9 @@ void main() {
       addTearDown(app.dispose);
       final collection = await tester.runAsync(() async {
         final books = await app.bookRepository.getBooks();
+        await app.collectionRepository.addSourcesToFavourites(
+          sourceIds: books.map((book) => book.id),
+        );
         return app.collectionRepository.createCollectionWithSources(
           name: 'Weekend reading',
           sourceIds: books.map((book) => book.id),
@@ -44,6 +47,25 @@ void main() {
         description: 'library',
       );
       await tapUi(tester, find.byIcon(AppIcons.collection));
+      await expectUiGolden(tester, profile, 'collection-picker');
+      final pickerStrings = ReadflexLocalizations.of(
+        tester.element(find.byType(BottomSheet)),
+      )!;
+      await tapUi(
+        tester,
+        find.byKey(
+          const ValueKey('collectionScopeRow-favourites-readflex:favourites'),
+        ),
+      );
+      await expectUiGolden(tester, profile, 'library-favourites-badge');
+      await tapUi(tester, find.byTooltip(pickerStrings.libraryFavourites));
+      await expectUiGolden(tester, profile, 'collection-picker-selected');
+      await tapUi(tester, find.byTooltip(pickerStrings.commonClose));
+      await tapUi(
+        tester,
+        find.byTooltip(pickerStrings.libraryClearCollectionFilter),
+      );
+      await tapUi(tester, find.byIcon(AppIcons.collection));
       await tapUi(
         tester,
         find.byKey(ValueKey('collectionScopeManage-manual-${collection!.id}')),
@@ -51,6 +73,20 @@ void main() {
       await expectUiGolden(tester, profile, 'collection-manage');
       final sheet = find.byKey(const ValueKey('manageCollectionContent'));
       final strings = ReadflexLocalizations.of(tester.element(sheet))!;
+      final remove = find.byKey(
+        ValueKey('collectionSourceRemove-${app.book!.id}'),
+      );
+      await tester.ensureVisible(remove);
+      await tester.pumpAndSettle();
+      final removeBounds = tester.getRect(remove);
+      await tapUi(tester, remove);
+      final undo = find.byKey(ValueKey('collectionSourceUndo-${app.book!.id}'));
+      expect(tester.getRect(undo), removeBounds);
+      expect(find.text(strings.commonUndo), findsNothing);
+      expect(find.byIcon(AppIcons.undo), findsOneWidget);
+      await expectUiGolden(tester, profile, 'collection-undo');
+      await tapUi(tester, undo);
+      expect(find.byIcon(AppIcons.undo), findsNothing);
       if (profile == VisualProfile.largeText) {
         final save = tester.getRect(
           find.widgetWithText(FilledButton, strings.commonSave),

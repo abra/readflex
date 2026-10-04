@@ -146,7 +146,7 @@ class _GridTileShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final selectionColor = colors.error;
+    final selectionColor = colors.selectionMarkerBackground;
 
     return Semantics(
       container: true,
@@ -310,7 +310,11 @@ class _SelectionCheck extends StatelessWidget {
       width: 20,
       height: 20,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      child: const Icon(AppIcons.check, size: 11, color: Colors.white),
+      child: Icon(
+        AppIcons.check,
+        size: 11,
+        color: context.colors.selectionMarkerForeground,
+      ),
     );
   }
 }

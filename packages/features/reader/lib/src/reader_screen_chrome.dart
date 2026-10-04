@@ -33,8 +33,10 @@ class _ReaderChromeIconButton extends StatelessWidget {
           foregroundColor: disabled
               ? foregroundColor.withValues(alpha: 0.35)
               : foregroundColor,
-          minimumSize: const Size.square(AppSizes.iconButtonSize),
+          minimumSize: const Size.square(AppSizes.buttonHeight),
           padding: const EdgeInsets.all(AppSpacing.sm),
+          shape: const CircleBorder(),
+          visualDensity: VisualDensity.standard,
         ),
       ),
     );
@@ -71,6 +73,9 @@ class _ReaderBookmarkIconButton extends StatelessWidget {
       style: IconButton.styleFrom(
         backgroundColor: Colors.transparent,
         foregroundColor: disabled ? color.withValues(alpha: 0.35) : color,
+        minimumSize: const Size.square(AppSizes.buttonHeight),
+        shape: const CircleBorder(),
+        visualDensity: VisualDensity.standard,
       ),
     );
   }

@@ -145,4 +145,15 @@ class FakeBookRepository implements BookRepository {
       ifAbsent: () => const [],
     );
   }
+
+  @override
+  Future<SourceBookmark> restoreBookmark(SourceBookmark bookmark) async {
+    if (shouldThrow) throw Exception('restoreBookmark failed');
+    bookmarksBySourceId.update(
+      bookmark.sourceId,
+      (items) => [...items, bookmark],
+      ifAbsent: () => [bookmark],
+    );
+    return bookmark;
+  }
 }

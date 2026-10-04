@@ -15,6 +15,12 @@ construction. The DB row stores only filenames (`book.epub`, `cover.jpeg`);
 this repo resolves them against the per-book directory on every read, so the
 data survives iOS Documents-UUID changes.
 
+New CBZ imports store `comicPageOrderVersion: 1`: the reader ignores macOS
+metadata entries, accepts image extensions case-insensitively and sorts numeric
+filename parts naturally. Existing rows retain version 0 and their original
+page indices so CFI, bookmarks and image highlights do not silently move.
+Reading an old comic does not migrate or repair its page order.
+
 ```
 books/<uuid>/
   book.<ext>    — the source file (epub, fb2, mobi, pdf, azw3, cbz)
@@ -38,17 +44,28 @@ filenames before being written to the DB.
 | `getBookmarksBySource(sourceId)`    | List saved positions for a source in reading order |
 | `addBookmark({sourceId, cfi, content, progress, anchorExact, anchorSectionPage, ...})` | Save a source position, idempotent by visual/text anchor when present |
 | `deleteBookmarkById(sourceId, bookmarkId)` | Remove one saved bookmark precisely |
+| `restoreBookmark(bookmark)` | Restore the original identity/date/full anchor, or return an existing bookmark at that anchor |
 | `deleteBookmarkBySourceAndCfi(sourceId, cfi)` | Legacy fallback removal by CFI |
 | `deleteBook(id, {scope})`           | Delete row + remove per-book directory; optionally preserve learning data |
 
 Cover bytes (`coverData`) are typically produced upstream by
 `reader_webview`'s `BookMetadataExtractor`.
 
+Bookmark restoration checks source existence, detects an already recreated
+anchor and inserts in one transaction. It never recreates a deleted book/article
+or replaces a newer bookmark at the same location. The reader owns the temporary
+Undo state; no schema migration or persistent deletion queue is required.
+
 Reader writes use partial Drift companions, not a previously read `Book`
 snapshot. Concurrent metadata/finished-state edits survive position saves.
 Both partial updates are no-ops if the row has already been deleted; they do
 not recreate a source. Callers retain responsibility for ordering position
 writes and awaiting them on close.
+
+Deletion removes collection memberships inside the source transaction, including
+the `keepLearningData` mode. Filesystem cleanup runs only after commit.
+Progress-reporting imports use `IOSink.addStream` to propagate backpressure;
+imports without a progress callback retain the native `File.copy` path.
 
 ## Dependencies
 

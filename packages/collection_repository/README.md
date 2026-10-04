@@ -10,6 +10,7 @@ memberships.
 | `getCollections()` | Returns user-created collections with source counts |
 | `getCollectionSourceIds()` | Returns source ids grouped by collection id |
 | `getFavouriteSourceIds()` | Returns source ids in the protected favourites collection |
+| `collectionsContainingAll(sourceIds)` | Returns collection IDs containing every distinct selected source |
 | `createCollection(name)` | Creates an empty manual collection |
 | `renameCollection(...)` | Renames a manual collection |
 | `deleteCollection(id)` | Deletes a manual collection and its memberships |
@@ -29,6 +30,11 @@ computed by the Library feature from source metadata and are not stored here.
 
 `favouritesCollectionId` is protected: manual collection APIs reject it so the
 built-in collection cannot be renamed or deleted accidentally.
+
+Membership checks for Add to collection use a grouped SQL count over only the
+selected IDs, including Favourites. Inputs are deduplicated and split into
+500-parameter batches; counts are combined by collection. Empty input returns
+an empty set. This avoids loading every membership or querying once per row.
 
 ## Dependencies
 

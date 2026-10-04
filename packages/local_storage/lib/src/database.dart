@@ -71,7 +71,7 @@ class AppDatabase extends _$AppDatabase {
   final Future<Directory> Function() _documentsDirectoryProvider;
 
   @override
-  int get schemaVersion => 22;
+  int get schemaVersion => 23;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -353,6 +353,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 22) {
         await _addHighlightImageAreaMetadata();
+      }
+      if (from < 23) {
+        await migrator.addColumn(booksTable, booksTable.comicPageOrderVersion);
       }
     },
   );

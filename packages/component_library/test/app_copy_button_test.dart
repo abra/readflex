@@ -34,6 +34,12 @@ void main() {
         );
         final button = find.byType(IconButton);
         expect(tester.getSize(button), const Size(48, 48));
+        expect(
+          tester.widget<IconButton>(button).style?.shape?.resolve({
+            WidgetState.pressed,
+          }),
+          isA<CircleBorder>(),
+        );
         await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
         await tester.tapAt(tester.getTopLeft(button) + const Offset(1, 1));
         await tester.pump();

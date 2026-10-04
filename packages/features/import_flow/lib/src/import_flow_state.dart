@@ -40,10 +40,9 @@ class ImportFlowBookTermsRequired extends ImportFlowState {
 
 /// Book file is being parsed and copied to disk.
 ///
-/// `progress == null` means the byte-copy hasn't started yet — the
-/// cubit shows an indeterminate spinner while metadata extraction
-/// runs. The first progress callback from the repository switches the
-/// bar to determinate.
+/// A null progress means preparation; values below 1 represent byte copying.
+/// At 1 the copy has finished, but persistence may still be pending. The UI
+/// uses one bar and never treats a percentage as import success.
 class ImportFlowBookUploading extends ImportFlowState {
   const ImportFlowBookUploading({required this.filename, this.progress});
 

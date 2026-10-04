@@ -10,12 +10,10 @@ import 'theme/tokens/app_radius.dart';
 /// Stylised cover placeholder used when a book has no real cover image of
 /// its own.
 ///
-/// Ported from `readwell_demo`'s `ReadwellCoverArt` — every clamp,
-/// reserve, stripe, and font ratio is kept 1:1 so a library grid here
-/// reads the same as the demo. The only semantic deviation is how the
-/// gradient is picked: the demo stores a curated `(color1, color2)` pair
-/// per item in its data layer, whereas we pick deterministically from a
-/// shared palette keyed by [seed] (usually the book id).
+/// Base proportions follow `readwell_demo`'s `ReadwellCoverArt`. Text reserves
+/// also account for system text scaling and reader overlays. The gradient is
+/// picked deterministically from a shared palette keyed by [seed], usually
+/// the book id, rather than stored as a curated pair with each item.
 ///
 /// The [isArticle] / [source] inputs render saved web articles with a
 /// distinct newspaper-style treatment instead of making them look like
@@ -139,9 +137,7 @@ class AppCoverArt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Numbers come straight from readwell_demo's ReadwellCoverArt — do
-    // not "clean up" these magic values; they were tuned together and
-    // the visual falls apart quickly if you round them.
+    // Keep the original cover proportions; scaled text is budgeted below.
     final contentPadding = (height * 0.075).clamp(6.0, 12.0).toDouble();
     final effectiveTextDirection =
         textDirection ?? Directionality.maybeOf(context) ?? TextDirection.ltr;
@@ -185,10 +181,11 @@ class AppCoverArt extends StatelessWidget {
         ? (externalReservedSpace > 0 ? externalReservedSpace : contentPadding)
         : contentPadding + textReservedSpace;
 
+    final textScaler = MediaQuery.textScalerOf(context);
     final titleMaxLines = _computeTitleMaxLines(
-      titleFontSize: titleFontSize,
-      authorFontSize: authorFontSize,
-      sourceFontSize: sourceFontSize,
+      titleFontSize: textScaler.scale(titleFontSize),
+      authorFontSize: textScaler.scale(authorFontSize),
+      sourceFontSize: textScaler.scale(sourceFontSize),
       topInset: topInset,
       bottomReserve: effectiveBottomReserve,
       showAuthor: effectiveShowAuthor,
@@ -289,7 +286,7 @@ class AppCoverArt extends StatelessWidget {
         : 0.0;
     final sourceReserve =
         showTitle && isArticle && source != null && showExtendedMeta
-        ? sourceFontSize * 1.2 * 2 + 4
+        ? sourceFontSize * 1.2 * 2 + 8
         : 0.0;
     final availableTitleHeight =
         height - topInset - bottomReserve - authorReserve - sourceReserve;

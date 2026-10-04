@@ -982,6 +982,48 @@ void main() {
     expect(urls, ['https://example.com/article', 'https://example.com/edited']);
   });
 
+  testWidgets('book import has one indicator and reports real phases', (
+    tester,
+  ) async {
+    final imported = Completer<Book?>();
+    late void Function(double) reportProgress;
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => File('/tmp/Test.epub'),
+          onImportBook: (file, {onProgress}) {
+            reportProgress = onProgress!;
+            return imported.future;
+          },
+          onImportArticle: (_, {onStage}) async => null,
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Upload Book'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    expect(find.text('Preparing book'), findsOneWidget);
+    final bounds = tester.getRect(find.byType(BottomSheet));
+    reportProgress(.45);
+    await tester.pump();
+    expect(find.text('Copying file'), findsOneWidget);
+    expect(find.text('45%'), findsOneWidget);
+    reportProgress(1);
+    await tester.pump();
+    expect(find.text('Finishing import'), findsOneWidget);
+    expect(find.text('Done'), findsNothing);
+    expect(tester.getRect(find.byType(BottomSheet)), bounds);
+    imported.complete(_fakeBook());
+    await tester.pumpAndSettle();
+    expect(find.text('Done'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'book progress label fits large text without shifting on progress',
     (tester) async {
@@ -1444,17 +1486,14 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
 
-    expect(find.text('Uploading book...'), findsOneWidget);
+    expect(find.text('Adding book'), findsOneWidget);
     expect(find.text('Test.epub'), findsOneWidget);
     final uploadingIconRect = tester.getRect(
       find.byKey(const ValueKey('importFlowStatusIcon')),
     );
     expect(uploadingIconRect.size, equals(const Size(56, 56)));
-    final progressIndicatorRect = tester.getRect(
-      find.byType(CircularProgressIndicator),
-    );
-    expect(progressIndicatorRect.width, lessThan(uploadingIconRect.width));
-    expect(progressIndicatorRect.height, lessThan(uploadingIconRect.height));
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
 
     importCompleter.complete(_fakeBook());
     await tester.pump();
@@ -1561,7 +1600,7 @@ void main() {
     await tester.tap(find.text('Upload Book'));
     await tester.pump();
 
-    expect(find.text('Uploading book...'), findsOneWidget);
+    expect(find.text('Adding book'), findsOneWidget);
     expect(find.text('Bad.epub'), findsOneWidget);
 
     failureCompleter.complete();

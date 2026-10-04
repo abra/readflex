@@ -36,6 +36,8 @@ final class ReaderLoadSession {
 
   int get generation => _generation;
 
+  bool get isLoadComplete => _loadComplete && !_failed && !_disposed;
+
   void start() {
     if (_disposed || _failed) return;
     _reportTiming('webview-created');

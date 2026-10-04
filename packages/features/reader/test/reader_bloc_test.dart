@@ -1357,7 +1357,7 @@ void main() {
       );
 
       blocTest<ReaderBloc, ReaderState>(
-        'emits nothing when note is blank',
+        'clears an existing note without changing the highlight',
         setUp: () {
           highlightRepository.seedHighlights('book-1', [notedHighlight]);
         },
@@ -1373,9 +1373,14 @@ void main() {
             note: '   ',
           ),
         ),
-        expect: () => <ReaderState>[],
+        expect: () => [
+          isA<ReaderState>()
+              .having((s) => s.highlights.single.note, 'cleared note', isNull)
+              .having((s) => s.highlights.single.id, 'same highlight', 'h-1'),
+        ],
         verify: (_) {
-          expect(highlightRepository.updatedHighlights, isEmpty);
+          expect(highlightRepository.updatedHighlights, hasLength(1));
+          expect(highlightRepository.updatedHighlights.single.note, isNull);
         },
       );
 

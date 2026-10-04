@@ -61,6 +61,16 @@ class CollectionRepository {
     }
   }
 
+  Future<Set<String>> collectionsContainingAll(
+    Iterable<String> sourceIds,
+  ) async {
+    try {
+      return await _dao.collectionsContainingAll(sourceIds);
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
   Future<LibraryCollection> createCollection(String name) async {
     final normalizedName = name.trim();
     if (normalizedName.isEmpty) {

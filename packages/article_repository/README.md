@@ -38,6 +38,11 @@ images retain their alt/caption but have no active `src`, so article import can
 still succeed without a later unguarded WebView retry. Downloads are keyed by
 the exact structured block source; HTML is serialized once after download.
 Query variants and shared URL prefixes cannot overwrite each other's paths.
+Two workers download distinct resolved URLs within the shared deadline/byte
+budget; aliases reuse the same local file. A cover already attempted as a body
+image is not requested again. Otherwise the cover retains its separate bounded
+download and `cover.*` filename. Response-header timeouts abort the HTTP request
+without closing the shared client; late non-abortable responses are canceled.
 
 Remote assets are untrusted input. The repository validates the initial URL and
 every redirect target, rejects private/local or ambiguously resolved hosts,
@@ -56,8 +61,8 @@ position without depending on paginated EPUB layout.
 
 The repository writes metadata to `local_storage` through `ArticlesDao` and wraps
 storage failures in `StorageException`. Deleting an article also removes related
-review items, highlights, flashcards, dictionary entries, bookmarks, and the
-article directory on disk.
+review items, highlights, flashcards, dictionary entries, bookmarks and collection
+memberships in one transaction. The article directory is cleaned after commit.
 
 Library uses `ArticlesDao.libraryEntries`, an explicit SQL column projection
 that excludes `plainText`, reader anchors, and asset paths. It returns typed

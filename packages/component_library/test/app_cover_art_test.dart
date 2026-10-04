@@ -4,6 +4,47 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   for (final isArticle in [false, true]) {
+    for (final scale in [1.0, 2.0]) {
+      testWidgets('cover text stays inside its frame: $isArticle/$scale', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light(),
+            home: MediaQuery(
+              data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+              child: Scaffold(
+                body: Center(
+                  child: AppCoverArt(
+                    title:
+                        'A long title about portable batteries and charging devices ' *
+                        8,
+                    author: 'Author',
+                    source: 'A publication with a longer name',
+                    height: 195,
+                    width: 130,
+                    isArticle: isArticle,
+                    topAlignText: true,
+                    bottomReserve: 16,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        final cover = tester.getRect(find.byType(AppCoverArt));
+        final texts = find.descendant(
+          of: find.byType(AppCoverArt),
+          matching: find.byType(Text),
+        );
+        for (final text in texts.evaluate()) {
+          final bounds = tester.getRect(find.byWidget(text.widget));
+          expect(bounds.top, greaterThanOrEqualTo(cover.top));
+          expect(bounds.bottom, lessThanOrEqualTo(cover.bottom - 16));
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
     testWidgets('cover text keeps explicit fonts (article=$isArticle)', (
       tester,
     ) async {

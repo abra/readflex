@@ -2,6 +2,20 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { makeComicBook } from '../assets/foliate-js/src/comic-book.js'
 
+test('new CBZ indexing filters metadata, accepts uppercase extensions and sorts numbers', () => {
+    const entries = ['page10.jpg', 'page2.JPG', '__MACOSX/._page1.jpg', 'page1.jpg',
+        'chapter/._page3.png', 'readme.txt'].map(filename => ({ filename }))
+    const make = pageOrderVersion => makeComicBook({ entries, loadBlob: () => null },
+        { name: 'comic.cbz' }, { pageOrderVersion })
+    const current = make(1)
+    assert.deepEqual(current.sections.map(page => page.id), ['page1.jpg', 'page2.JPG', 'page10.jpg'])
+    const legacy = make(0)
+    assert.deepEqual(legacy.sections.map(page => page.id),
+        ['__MACOSX/._page1.jpg', 'chapter/._page3.png', 'page1.jpg', 'page10.jpg'])
+    current.destroy()
+    legacy.destroy()
+})
+
 function fixture(t, { count = 20, size = 1024, load } = {}) {
     const live = new Set()
     const requests = []
@@ -30,6 +44,15 @@ test('concurrent comic page loads share extraction and object URLs', async t => 
     assert.equal(urls[0], urls[1])
     assert.equal(requests.length, 1)
     assert.equal(live.size, 2)
+})
+
+test('thumbnail setup does no archive reads; oversized, closed and invalid requests are rejected', async t => {
+    const { book, requests } = fixture(t, { size: 17 * 1024 * 1024 })
+    assert.deepEqual(requests, [])
+    for (const index of [-1, 1000, 0.5, 0]) assert.equal(await book.getThumbnail(index), null)
+    book.destroy()
+    assert.equal(await book.getThumbnail(1), null)
+    assert.deepEqual(requests, [])
 })
 
 test('comic prefetch retains only the visible spread and adjacent pages', async t => {

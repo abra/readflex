@@ -14,6 +14,7 @@ part 'reader_event.dart';
 part 'reader_document.dart';
 
 part 'reader_state.dart';
+part 'reader_bookmark_operations.dart';
 
 // Shares the reader trace flag with the screen so bloc events align with UI logs.
 const _traceReaderBuilds = bool.fromEnvironment(
@@ -92,8 +93,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     );
     on<ReaderTocUpdated>(_onTocUpdated);
     on<ReaderDocumentFeaturesUpdated>(_onDocumentFeaturesUpdated);
-    on<ReaderBookmarkChanged>(
-      _onBookmarkChanged,
+    on<ReaderBookmarkEvent>(
+      _onBookmarkEvent,
       transformer: (events, mapper) => events.asyncExpand(mapper),
     );
   }
@@ -212,6 +213,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             bookmarks: hasInitialSource && bookmarkRevision != _bookmarkRevision
                 ? state.bookmarks
                 : bookmarks,
+            bookmarkEdits: hasInitialSource
+                ? state.bookmarkEdits
+                : const ReaderBookmarkEdits(),
             documentFeatures: hasInitialSource ? state.documentFeatures : null,
           ),
         );
@@ -240,6 +244,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
               ReaderDocument.fromArticle(updatedArticle),
             ),
             sourceType: SourceType.article,
+            bookmarkEdits: hasInitialSource
+                ? state.bookmarkEdits
+                : const ReaderBookmarkEdits(),
             articleUrl: updatedArticle.url,
             pageProgressionRtl: _inferredArticlePageProgressionRtl(
               updatedArticle,
@@ -533,8 +540,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       case ReaderHighlightNoteChangeRequested(:final highlightId, :final note):
         final normalized = _normalizedHighlightNote(note);
         final highlight = _highlightById(state.highlights, highlightId);
-        if (normalized == null ||
-            highlight == null ||
+        if (highlight == null ||
             _normalizedHighlightNote(highlight.note) == normalized) {
           return;
         }
@@ -588,8 +594,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
 
   Future<void> _onBookmarkChanged(
     ReaderBookmarkChanged event,
-    Emitter<ReaderState> emit,
-  ) async {
+    Emitter<ReaderState> emit, {
+    SourceBookmark? undoBookmark,
+  }) async {
     final document = state.document;
     if (document == null) return;
     final positionRevision = _positionRevision;
@@ -616,6 +623,11 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             : state.currentPageBookmarkCfi == event.cfi;
         emit(
           state.copyWith(
+            bookmarkEdits: undoBookmark == null
+                ? state.bookmarkEdits
+                : ReaderBookmarkEdits(
+                    removed: [...state.bookmarkEdits.removed, undoBookmark],
+                  ),
             bookmarks: [
               for (final bookmark in state.bookmarks)
                 if (hasBookmarkId

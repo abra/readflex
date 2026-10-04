@@ -197,7 +197,7 @@ class _ListRowShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final selectionColor = colors.error;
+    final selectionColor = colors.selectionMarkerBackground;
     final mutedColor = colors.onSurfaceVariant;
 
     final metaSegments = metaBuilder(context, mutedColor);
@@ -352,7 +352,7 @@ class _ListRowShell extends StatelessWidget {
   }
 }
 
-/// Filled semantic delete-colored circle with a white check icon, sitting in the
+/// Filled selection marker with a contrasting check icon, sitting in the
 /// top-right corner of the cover when the row is selected. Same visual
 /// vocabulary as the grid tile's selection check so list/grid selection
 /// reads identically.
@@ -368,7 +368,11 @@ class _SelectionCheck extends StatelessWidget {
       width: 18,
       height: 18,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      child: const Icon(AppIcons.check, size: 10, color: Colors.white),
+      child: Icon(
+        AppIcons.check,
+        size: 10,
+        color: context.colors.selectionMarkerForeground,
+      ),
     );
   }
 }

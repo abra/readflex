@@ -69,6 +69,7 @@ test-ui:
 ## Check shared UI contracts and representative flows without devices or goldens
 test-ui-contracts:
 	cd packages/component_library && $(FLUTTER) test test/
+	cd packages/toast_service && $(FLUTTER) test test/
 	cd packages/features/import_flow && $(FLUTTER) test test/import_flow_sheet_test.dart
 	cd packages/features/library && $(FLUTTER) test test/library_display_sheet_test.dart
 	$(FLUTTER) test test/ui/settings_consistency_test.dart test/ui/import_book_terms_test.dart test/ui/reader_search_overlay_test.dart

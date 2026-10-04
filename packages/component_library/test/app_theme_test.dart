@@ -26,9 +26,19 @@ void main() {
           }
         }
         for (final pair in [
+          (
+            theme.inputDecorationTheme.hintStyle!.color!,
+            theme.inputDecorationTheme.fillColor!,
+            'input hint',
+          ),
           (colors.onPrimary, colors.primary, 'primary button'),
           (colors.onSecondary, colors.secondary, 'secondary control'),
           (colors.onError, colors.error, 'destructive button'),
+          (
+            theme.ext.onSuccessContainer,
+            theme.ext.successContainer,
+            'success notification',
+          ),
         ]) {
           _expectTextContrast(pair.$1, pair.$2, pair.$3);
         }
@@ -38,6 +48,31 @@ void main() {
     test('light() returns ThemeData with light brightness', () {
       final theme = AppTheme.light();
       expect(theme.brightness, Brightness.light);
+    });
+
+    test('success color pair survives theme copying and interpolation', () {
+      final light = AppTheme.light().ext;
+      final dark = AppTheme.dark().ext;
+      final copied = light.copyWith() as AppColorsExt;
+      expect(copied.successContainer, light.successContainer);
+      expect(copied.onSuccessContainer, light.onSuccessContainer);
+      final overridden =
+          light.copyWith(
+                successContainer: dark.successContainer,
+                onSuccessContainer: dark.onSuccessContainer,
+              )
+              as AppColorsExt;
+      expect(overridden.successContainer, dark.successContainer);
+      expect(overridden.onSuccessContainer, dark.onSuccessContainer);
+      final interpolated = light.lerp(dark, .5) as AppColorsExt;
+      expect(
+        interpolated.successContainer,
+        Color.lerp(light.successContainer, dark.successContainer, .5),
+      );
+      expect(
+        interpolated.onSuccessContainer,
+        Color.lerp(light.onSuccessContainer, dark.onSuccessContainer, .5),
+      );
     });
 
     test('dark() returns ThemeData with dark brightness', () {

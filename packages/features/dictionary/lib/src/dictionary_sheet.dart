@@ -59,28 +59,34 @@ class _DictionarySheetView extends StatelessWidget {
       title: context.l10n.dictionaryTitle,
       closeLabel: context.l10n.commonClose,
       onClose: () => Navigator.of(context).pop(),
+      bodyPadding: const EdgeInsets.only(bottom: AppSpacing.lg),
       child: BlocBuilder<DictionaryCubit, DictionarySheetState>(
         builder: (context, state) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (state.status != DictionarySheetStatus.success) ...[
-                Text(
-                  selection.effectiveSelectedText,
-                  textDirection: _contentDirection(
+          final body = _DictionaryBody(
+            selection: selection,
+            state: state,
+            onCopy: onCopy,
+          );
+          if (state.status == DictionarySheetStatus.success) return body;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (state.status != DictionarySheetStatus.success) ...[
+                  Text(
                     selection.effectiveSelectedText,
+                    textDirection: _contentDirection(
+                      selection.effectiveSelectedText,
+                    ),
+                    style: context.text.titleLarge,
                   ),
-                  style: context.text.titleLarge,
-                ),
-                const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+                body,
               ],
-              _DictionaryBody(
-                selection: selection,
-                state: state,
-                onCopy: onCopy,
-              ),
-            ],
+            ),
           );
         },
       ),
@@ -150,23 +156,30 @@ class _DictionaryResultView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (var index = 0; index < result.entries.length; index++) ...[
-          if (index > 0) ...[
-            const SizedBox(height: AppSpacing.md),
-            Divider(height: 1, color: context.colors.outlineVariant),
-            const SizedBox(height: AppSpacing.md),
-            if (index == 1) ...[
-              Semantics(
-                header: true,
-                child: Text(
-                  context.l10n.dictionaryInContext,
-                  style: context.text.labelMedium.copyWith(
-                    color: context.colors.onSurfaceVariant,
-                  ),
-                ),
+          if (index > 0)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: AppSpacing.md),
+                  Divider(height: 1, color: context.colors.outlineVariant),
+                  const SizedBox(height: AppSpacing.md),
+                  if (index == 1) ...[
+                    Semantics(
+                      header: true,
+                      child: Text(
+                        context.l10n.dictionaryInContext,
+                        style: context.text.labelMedium.copyWith(
+                          color: context.colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
+                ],
               ),
-              const SizedBox(height: AppSpacing.sm),
-            ],
-          ],
+            ),
           _DictionaryEntryView(
             entry: result.entries[index],
             selectedText: index == 0 ? selectedText : null,
@@ -199,52 +212,55 @@ class _DictionaryEntryView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.sm),
-                child: _DictionaryLemma(
-                  lemma: entry.lemma,
-                  selectedText: selectedText,
-                ),
-              ),
+        AppSheetActionRow(
+          action: AppCopyButton(
+            key: ValueKey(entry),
+            onCopy: () => onCopy(
+              [
+                entry.lemma,
+                for (var i = 0; i < entry.definitions.length; i++)
+                  '${i + 1}. ${entry.definitions[i].text}',
+              ].join('\n'),
             ),
-            AppCopyButton(
-              key: ValueKey(entry),
-              onCopy: () => onCopy(
-                [
-                  entry.lemma,
-                  for (var i = 0; i < entry.definitions.length; i++)
-                    '${i + 1}. ${entry.definitions[i].text}',
-                ].join('\n'),
-              ),
-              copyLabel: context.l10n.commonCopy,
-              copiedLabel: context.l10n.commonCopied,
-              failureLabel: context.l10n.commonCopyFailed,
+            copyLabel: context.l10n.commonCopy,
+            copiedLabel: context.l10n.commonCopied,
+            failureLabel: context.l10n.commonCopyFailed,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
+            child: _DictionaryLemma(
+              lemma: entry.lemma,
+              selectedText: selectedText,
             ),
-          ],
+          ),
         ),
-        if (metadata.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            metadata.join(' · '),
-            textDirection: _contentDirection(metadata.join(' ')),
-            style: context.text.bodyMedium.copyWith(
-              color: context.colors.onSurfaceVariant,
-            ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (metadata.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  metadata.join(' · '),
+                  textDirection: _contentDirection(metadata.join(' ')),
+                  style: context.text.bodyMedium.copyWith(
+                    color: context.colors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+              const SizedBox(height: AppSpacing.md),
+              for (var index = 0; index < entry.definitions.length; index++)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  child: _DefinitionView(
+                    number: index + 1,
+                    definition: entry.definitions[index],
+                  ),
+                ),
+            ],
           ),
-        ],
-        const SizedBox(height: AppSpacing.md),
-        for (var index = 0; index < entry.definitions.length; index++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: _DefinitionView(
-              number: index + 1,
-              definition: entry.definitions[index],
-            ),
-          ),
+        ),
       ],
     );
   }

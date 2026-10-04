@@ -9,6 +9,9 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
   ReadflexLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get libraryRemovalPending => 'Removed after Save';
+
+  @override
   String librarySelectedCount(int count) {
     return 'Selected: $count';
   }
@@ -18,6 +21,15 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
 
   @override
   String get libraryDiscardChangesTitle => 'Discard changes?';
+
+  @override
+  String get commonDiscardChangesTitle => 'Discard changes?';
+
+  @override
+  String get commonDiscardChanges => 'Discard';
+
+  @override
+  String get commonKeepEditing => 'Keep editing';
 
   @override
   String get libraryDiscardChangesBody =>
@@ -440,6 +452,9 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
   String get libraryFavourites => 'Favourites';
 
   @override
+  String get libraryFavouritesBadge => 'Favs';
+
+  @override
   String libraryCreateCollectionPrompt(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -644,7 +659,46 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
   String get importArticleHintLibrary => 'Adds it to your Library.';
 
   @override
-  String get importUploadingBook => 'Uploading book...';
+  String get importUploadingBook => 'Adding book';
+
+  @override
+  String get importPreparingBook => 'Preparing book';
+
+  @override
+  String get importCopyingBook => 'Copying file';
+
+  @override
+  String get importFinishingBook => 'Finishing import';
+
+  @override
+  String get commonUndo => 'Undo';
+
+  @override
+  String get readerExpandHighlight => 'Read more';
+
+  @override
+  String get readerCollapseHighlight => 'Show less';
+
+  @override
+  String get readerGoToPassage => 'Go to passage';
+
+  @override
+  String get readerBookmarkRemoved => 'Bookmark removed';
+
+  @override
+  String get readerBookmarkUpdateFailed => 'Could not update bookmark';
+
+  @override
+  String get readerPages => 'Pages';
+
+  @override
+  String get readerThumbnailUnavailable => 'Preview unavailable';
+
+  @override
+  String get libraryNewCollection => 'New collection';
+
+  @override
+  String get libraryCreateAndAdd => 'Create and add';
 
   @override
   String get importFetchingArticle => 'Fetching article...';

@@ -5,6 +5,9 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'library_selection_cubit.dart';
 
+const _actionInset =
+    AppSpacing.lg - (AppSizes.buttonHeight - AppIconSize.sm) / 2;
+
 /// Scaffold reserves this bar's height so bulk actions never cover sources.
 class LibrarySelectionBar extends StatelessWidget {
   const LibrarySelectionBar({
@@ -26,14 +29,16 @@ class LibrarySelectionBar extends StatelessWidget {
       final l10n = context.l10n;
       return Material(
         color: context.colors.surface,
-        child: SafeArea(
-          top: false,
+        child: AppBottomSafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Divider(height: 1),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                padding: const EdgeInsetsDirectional.only(
+                  start: _actionInset,
+                  end: AppSpacing.lg,
+                ),
                 child: Row(
                   children: [
                     AppPlainIconButton(
@@ -55,10 +60,10 @@ class LibrarySelectionBar extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.xl,
+                padding: const EdgeInsetsDirectional.fromSTEB(
+                  AppSpacing.lg,
                   0,
-                  AppSpacing.xl,
+                  _actionInset,
                   AppSpacing.lg,
                 ),
                 child: Row(

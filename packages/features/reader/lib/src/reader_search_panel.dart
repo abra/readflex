@@ -36,10 +36,9 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
   final _focus = FocusNode();
   final _scroll = ScrollController();
 
-  static const _closeButtonStyle = ButtonStyle(
-    backgroundColor: WidgetStatePropertyAll(Colors.transparent),
-    shape: WidgetStatePropertyAll(CircleBorder()),
-  );
+  // Content gutters align glyphs, not the outer edges of 48dp targets.
+  static const _actionEndPadding =
+      AppSpacing.lg - (AppSizes.buttonHeight - AppIconSize.md) / 2;
 
   @override
   void initState() {
@@ -122,7 +121,7 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
             padding: const EdgeInsetsDirectional.fromSTEB(
               AppSpacing.lg,
               AppSpacing.sm,
-              AppSpacing.lg,
+              _actionEndPadding,
               AppSpacing.xs,
             ),
             child: Row(
@@ -135,11 +134,11 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
                     style: context.text.titleLarge,
                   ),
                 ),
-                IconButton(
+                AppPlainIconButton(
                   tooltip: l10n.commonClose,
-                  style: _closeButtonStyle,
                   onPressed: widget.onClose,
-                  icon: const Icon(AppIcons.close, size: AppIconSize.md),
+                  icon: AppIcons.close,
+                  iconSize: AppIconSize.md,
                 ),
               ],
             ),
@@ -234,9 +233,11 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
           }
           final query = state.recentQueries[index - 1];
           return ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.xs,
+            contentPadding: const EdgeInsetsDirectional.fromSTEB(
+              AppSpacing.lg,
+              AppSpacing.xs,
+              _actionEndPadding,
+              AppSpacing.xs,
             ),
             leading: Icon(
               AppIcons.clock,
@@ -252,10 +253,10 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
                   : TextDirection.ltr,
               style: context.text.bodyMedium,
             ),
-            trailing: IconButton(
+            trailing: AppPlainIconButton(
               tooltip: l10n.readerRemoveFromHistory,
-              style: _closeButtonStyle,
-              icon: const Icon(AppIcons.close, size: AppIconSize.xs),
+              icon: AppIcons.delete,
+              iconSize: AppIconSize.md,
               onPressed: () =>
                   context.read<ReaderSearchCubit>().recentQueryRemoved(query),
             ),

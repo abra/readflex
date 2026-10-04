@@ -391,6 +391,11 @@ Reader-specific UI state is split by responsibility:
 - `ReaderAppearanceCubit` owns reader appearance preferences.
 - `ReaderBrightnessCubit` coordinates widget brightness, system brightness, and
   platform override behavior.
+- `ReaderComicThumbnailCubit` owns a Pages-tab-local queue and bounded preview
+  cache. The reader host injects an async callback to its existing WebView;
+  view widgets never receive a repository, archive parser or WebView controller.
+  Only visible tiles request previews, one at a time, independently of book
+  startup and reading-position state. Closing the tab releases its cache.
 
 The WebView subtree is kept behind ready-state reader composition so routine
 UI changes do not recreate the reader runtime unnecessarily. Books and comics
@@ -452,6 +457,15 @@ Reader position writes are serialized and retain the 500ms trailing debounce.
 Repositories update only CFI/progress; `markOpened` updates only the opened
 timestamp. A delayed source refresh preserves live position and document
 capabilities, and closing the bloc drains both queued and active writes.
+The book WebView publishes positions only after initial-location completion;
+early content readiness does not authorize a position save. Pending initial
+positions are discarded on failure or renderer replacement. CBZ page ordering
+is versioned in the Book/ReaderDocument contract: existing rows keep legacy
+indices, while new imports use filtered, natural filename order.
+
+Source deletion and collection membership cleanup share one repository-owned
+transaction. Library collection read errors preserve the last valid scopes and
+selection, separately from successfully refreshed source metadata.
 
 Saved highlight edits use field-specific repository updates for color/note,
 not full-object replacements from UI snapshots. Their event queue is separate

@@ -130,14 +130,15 @@ void main() {
     await tester.longPress(find.text(ReadingFixture.bookTitle));
     await tester.pumpAndSettle();
     await tapUi(tester, find.byIcon(AppIcons.collectionAdd));
+    await tapUi(tester, find.text('New collection'));
     await tester.enterText(
       find.widgetWithText(TextField, 'New collection name'),
       'Reading list',
     );
-    await tapUi(tester, find.text('Create'));
+    await tapUi(tester, find.text('Create and add'));
     await waitForUi(
       tester,
-      () => find.text('Create').evaluate().isEmpty,
+      () => find.text('Create and add').evaluate().isEmpty,
       description: 'collection created',
     );
     final collections = await tester.runAsync(
@@ -168,7 +169,7 @@ void main() {
       ))!.single.name,
       'Weekend reading',
     );
-    await tapUi(tester, find.byIcon(AppIcons.collection));
+    expect(find.text('Collections'), findsOneWidget);
     await tapUi(tester, manage);
     await tapUi(tester, find.text('Delete collection'));
     await tapUi(tester, find.text('Cancel'));

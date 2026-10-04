@@ -1,9 +1,80 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { search } from '../assets/foliate-js/src/search.js'
+import { search, searchMatcher } from '../assets/foliate-js/src/search.js'
 
 const find = (parts, query, options = {}) => [...search(parts, query, options)]
+
+test('matcher uses the default locale unless the document declares one', () => {
+    const walker = (doc, visit) => visit(['I'], (...bounds) => bounds)
+    const matcher = searchMatcher(walker, { defaultLocale: 'tr' })
+    assert.equal([...matcher({ body: {}, documentElement: {} }, '\u0131')].length, 1)
+    assert.equal([...matcher({ body: { lang: 'en' }, documentElement: {} }, '\u0131')].length, 0)
+})
+
+test('normalization reuses repeated Unicode spans without losing matches', () => {
+    const original = String.prototype.toLocaleLowerCase
+    let calls = 0
+    String.prototype.toLocaleLowerCase = function (...args) {
+        calls++
+        return original.apply(this, args)
+    }
+    try {
+        const text = '\u041a\u041d\u0418\u0413\u0410 '.repeat(5000)
+        const results = find([text], '\u043a\u043d\u0438\u0433\u0430')
+        assert.equal(results.length, 5000)
+        assert.equal(results.at(-1).range.endOffset, text.length - 1)
+        assert.ok(calls < 100, `Repeated letters must reuse normalization, got ${calls} calls`)
+    } finally {
+        String.prototype.toLocaleLowerCase = original
+    }
+})
+
+test('bounded excerpts preserve the original whitespace and truncation contract', () => {
+    const contexts = ['', ' ', 'x'.repeat(49), 'x'.repeat(50), 'x'.repeat(51),
+        ' \n\t'.repeat(200), ' word \n\t'.repeat(200)]
+    for (const before of contexts) for (const after of contexts) {
+        const [result] = find([`${before}needle${after}`], 'needle')
+        const pre = before.replace(/\s+/g, ' ').trimStart()
+        const post = after.replace(/\s+/g, ' ').trimEnd()
+        assert.deepEqual(result.excerpt, {
+            pre: `${pre.length < 50 ? '' : '…'}${pre.slice(-50)}`,
+            match: 'needle',
+            post: `${post.slice(0, 50)}${post.length < 50 ? '' : '…'}`,
+        })
+    }
+})
+
+test('Unicode normalization preserves original positions for every inline split', () => {
+    const cases = [
+        ['\u0130stanbul power', 'power', 'base', 9, 14],
+        ['\u0130stanbul power', 'power', 'accent', 9, 14],
+        ['pre cafe\u0301 end', 'caf\u00e9', 'accent', 4, 9],
+        ['pre caf\u00e9', 'cafe', 'base', 4, 8],
+        ['pre cafe\u0301', 'cafe', 'base', 4, 9],
+        ['\u0130', 'i', 'base', 0, 1],
+    ]
+    for (const [text, query, sensitivity, start, end] of cases) {
+        for (let split = 0; split <= text.length; split++) {
+            assertMatches([text.slice(0, split), '', text.slice(split)], query,
+                [{ start, end, text: text.slice(start, end) }], { sensitivity })
+        }
+    }
+})
+
+test('substring options distinguish case and accents independently', () => {
+    assertMatches(['Power power'], 'power', [{ start: 6, end: 11, text: 'power' }],
+        { sensitivity: 'case' })
+    assertMatches(['Caf\u00e9 cafe'], 'cafe', [{ start: 5, end: 9, text: 'cafe' }],
+        { sensitivity: 'case' })
+    assertMatches(['caf\u00e9 cafe'], 'cafe', [{ start: 5, end: 9, text: 'cafe' }],
+        { sensitivity: 'accent' })
+    assertMatches(['\u039f\u03a3'], '\u03bf\u03c2',
+        [{ start: 0, end: 2, text: '\u039f\u03a3' }])
+    assertMatches(['I\u0130'], '\u0131', [{ start: 0, end: 1, text: 'I' }],
+        { locales: 'tr' })
+    assertMatches(['word'], '\u0301', [], { sensitivity: 'base' })
+})
 
 function assertMatches(parts, query, expected, options = {}) {
     const results = find(parts, query, options)
@@ -99,7 +170,7 @@ test('substring offsets use UTF-16 positions and excerpts preserve original case
     ])
     assertMatches(['pre ', 'e\u0301'], 'e\u0301', [
         { start: 4, end: 6, text: 'e\u0301' },
-    ])
+    ], { sensitivity: 'accent' })
     assertMatches(['WORD ', 'word'], 'word', [
         { start: 5, end: 9, text: 'word' },
     ], { sensitivity: 'variant' })

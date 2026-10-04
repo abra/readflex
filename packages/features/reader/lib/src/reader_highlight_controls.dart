@@ -52,7 +52,7 @@ class ReaderHighlightControls extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 for (final color in HighlightColor.values)
-                  _HighlightColorButton(
+                  ReaderHighlightColorButton(
                     color: color,
                     readerTheme: readerTheme,
                     selected: selectedColor == color,
@@ -80,6 +80,7 @@ class ReaderHighlightControls extends StatelessWidget {
                 ReaderHighlightControls.tapTargetSize,
               ),
               backgroundColor: Colors.transparent,
+              shape: const CircleBorder(),
             ),
             icon: action.loading
                 ? const ButtonLoadingIndicator(size: AppIconSize.sm)
@@ -94,13 +95,15 @@ class ReaderHighlightControls extends StatelessWidget {
   }
 }
 
-class _HighlightColorButton extends StatelessWidget {
-  const _HighlightColorButton({
+/// Shared swatch semantics and hit target for selection tools and filters.
+class ReaderHighlightColorButton extends StatelessWidget {
+  const ReaderHighlightColorButton({
     required this.color,
     required this.readerTheme,
     required this.selected,
     required this.enabled,
     required this.onPressed,
+    super.key,
   });
 
   final HighlightColor color;

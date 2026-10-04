@@ -152,25 +152,15 @@ class _LibraryOfflineStatus extends StatelessWidget {
   Widget build(BuildContext context) {
     final warning = context.appColors.warning;
 
-    return Opacity(
-      opacity: visible ? 1 : 0,
-      child: IgnorePointer(
-        ignoring: true,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(AppIcons.offline, size: AppIconSize.xs, color: warning),
-            const SizedBox(width: AppSpacing.xxs),
-            Text(
-              context.l10n.libraryOffline,
-              maxLines: 1,
-              style: context.text.labelSmall.copyWith(
-                color: warning,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
+    // Reserve only the icon, not a hidden localized label beside the title.
+    return Visibility(
+      visible: visible,
+      maintainSize: true,
+      maintainState: true,
+      maintainAnimation: true,
+      child: Tooltip(
+        message: context.l10n.libraryOffline,
+        child: Icon(AppIcons.offline, size: AppIconSize.xs, color: warning),
       ),
     );
   }
@@ -231,6 +221,9 @@ class _CollectionScopeButton extends StatelessWidget {
     final label = selected
         ? libraryCollectionScopeLabel(context.l10n, scope!)
         : null;
+    final badgeLabel = scope?.isFavourites == true
+        ? context.l10n.libraryFavouritesBadge
+        : label;
     final foreground = selected
         ? colors.onPrimary
         : colors.onSurface.withValues(alpha: 0.55);
@@ -247,11 +240,13 @@ class _CollectionScopeButton extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: Stack(
-            alignment: Alignment.center,
             children: [
               Positioned.fill(
-                child: Center(
+                child: Align(
+                  alignment: AlignmentDirectional.centerEnd,
                   child: Container(
+                    key: const ValueKey('library-collection-fill'),
+                    width: selected ? double.infinity : AppSizes.chipHeight,
                     height: AppSizes.chipHeight,
                     decoration: BoxDecoration(
                       color: background,
@@ -261,8 +256,9 @@ class _CollectionScopeButton extends StatelessWidget {
                 ),
               ),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
+                  Flexible(
                     child: Semantics(
                       container: true,
                       label: context.l10n.libraryCollectionsTitle,
@@ -278,14 +274,23 @@ class _CollectionScopeButton extends StatelessWidget {
                         child: InkWell(
                           onTap: onPressed,
                           borderRadius: BorderRadius.circular(AppRadius.sm),
-                          child: SizedBox(
-                            height: AppSizes.chipTapTarget,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              minWidth: AppSizes.chipTapTarget,
+                              minHeight: AppSizes.chipTapTarget,
+                            ),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.sm,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: selected
+                                    ? AppSpacing.sm
+                                    : (AppSizes.chipHeight - AppIconSize.sm) /
+                                          2,
                               ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: selected
+                                    ? MainAxisAlignment.center
+                                    : MainAxisAlignment.end,
                                 children: [
                                   Icon(
                                     selected
@@ -296,9 +301,9 @@ class _CollectionScopeButton extends StatelessWidget {
                                   ),
                                   if (label != null) ...[
                                     const SizedBox(width: AppSpacing.xs),
-                                    Expanded(
+                                    Flexible(
                                       child: Text(
-                                        label,
+                                        badgeLabel!,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: context.text.labelSmall.copyWith(

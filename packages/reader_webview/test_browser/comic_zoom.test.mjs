@@ -3,6 +3,39 @@ import assert from 'node:assert/strict'
 import { zipSync } from 'fflate'
 import { createHarness, openEpub } from './harness.mjs'
 
+test('thumbnail decoding and export failures release temporary object URLs', async t => {
+    const { page, origin } = await createHarness(t)
+    await page.goto(origin + '/blank')
+    const results = await page.evaluate(async () => {
+        const { createComicThumbnail } = await import('/foliate-js/src/readflex_comic_thumbnail.js')
+        const live = new Set()
+        const create = URL.createObjectURL
+        const revoke = URL.revokeObjectURL
+        const exportImage = HTMLCanvasElement.prototype.toDataURL
+        URL.createObjectURL = blob => { const url = create(blob); live.add(url); return url }
+        URL.revokeObjectURL = url => { live.delete(url); revoke(url) }
+        try {
+            let decodeFailed = false
+            try { await createComicThumbnail(new Blob(['corrupt image'])) }
+            catch { decodeFailed = true }
+            const afterDecode = live.size
+            const canvas = document.createElement('canvas')
+            canvas.width = canvas.height = 10
+            const blob = await new Promise(resolve => canvas.toBlob(resolve))
+            HTMLCanvasElement.prototype.toDataURL = () => { throw new Error('export failure') }
+            let exportFailed = false
+            try { await createComicThumbnail(blob) }
+            catch { exportFailed = true }
+            return { decodeFailed, exportFailed, afterDecode, afterExport: live.size }
+        } finally {
+            URL.createObjectURL = create
+            URL.revokeObjectURL = revoke
+            HTMLCanvasElement.prototype.toDataURL = exportImage
+        }
+    })
+    assert.deepEqual(results, { decodeFailed: true, exportFailed: true, afterDecode: 0, afterExport: 0 })
+})
+
 async function openComic(t, { axis = 'slide', rtl = false, hostTaps = false, controlledClock = false } = {}) {
     const harness = await createHarness(t)
     const { page, origin } = harness
@@ -64,6 +97,32 @@ const state = page => page.evaluate(() => {
     return { index: renderer.index, width: rect.width, left: rect.left, top: rect.top,
         clicks: window.bridgeCalls.filter(([name]) => name === 'onClick').map(([, value]) => value),
         positions: window.bridgeCalls.filter(([name]) => name === 'onRelocated').length }
+})
+
+test('comic thumbnails load on demand, are bounded and leave navigation unchanged', async t => {
+    const { page, requests } = await openComic(t)
+    assert.equal(requests.some(url => url.endsWith('readflex_comic_thumbnail.js')), false)
+    const before = await state(page)
+    const preview = await page.evaluate(async () => {
+        const data = await window.readflexComicThumbnail(3)
+        const image = new Image()
+        image.src = data
+        await image.decode()
+        const canvas = document.createElement('canvas')
+        canvas.width = image.width; canvas.height = image.height
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(image, 0, 0)
+        const pixel = [...ctx.getImageData(20, 20, 1, 1).data]
+        return { width: image.width, height: image.height, length: data.length, pixel }
+    })
+    assert.equal(preview.width, 240)
+    assert.equal(preview.height, 360)
+    assert.ok(preview.length < 128 * 1024)
+    assert.ok(preview.pixel[3] === 255 && preview.pixel.slice(0, 3).some(value => value > 50))
+    assert.equal((await state(page)).index, before.index)
+    assert.equal((await state(page)).width, before.width)
+    await page.evaluate(() => window.reader.view.book.destroy())
+    assert.equal(await page.evaluate(() => window.readflexComicThumbnail(0)), null)
 })
 
 test('comic edge taps reach the host immediately and never become double-tap zoom', async t => {

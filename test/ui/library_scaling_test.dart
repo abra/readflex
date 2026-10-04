@@ -13,6 +13,48 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import '../support/library_workload.dart';
 
 void main() {
+  for (final width in [320.0, 390.0]) {
+    for (final scale in [1.0, 2.0]) {
+      testWidgets('grid keeps readable cover bounds at $width / $scale', (
+        tester,
+      ) async {
+        tester.view.physicalSize = Size(width, 844);
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final scroll = ScrollController();
+        addTearDown(scroll.dispose);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light(),
+            home: Scaffold(
+              body: LibraryGridView(
+                sources: libraryWorkload(
+                  20,
+                ).map(LibrarySource.fromBook).toList(),
+                selection: const LibrarySelectionState(),
+                scrollController: scroll,
+                onSourcePressed: (_) {},
+                onSourceLongPressed: (_) {},
+              ),
+            ),
+          ),
+        );
+        final grid = tester.widget<GridView>(find.byType(GridView));
+        final delegate =
+            grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+        expect(delegate.crossAxisCount, scale == 1 ? 3 : 2);
+        final tile = tester.getSize(find.byType(BookLibraryGridTile).first);
+        expect(tile.width, greaterThanOrEqualTo(scale == 1 ? 88 : 132));
+        expect(tile.aspectRatio, closeTo(2 / 3, .001));
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      });
+    }
+  }
+
   for (final list in [false, true]) {
     testWidgets('20000 sources stay virtualized in ${list ? 'list' : 'grid'}', (
       tester,

@@ -79,6 +79,18 @@ class FakeCollectionRepository implements CollectionRepository {
   }
 
   @override
+  Future<Set<String>> collectionsContainingAll(
+    Iterable<String> sourceIds,
+  ) async {
+    if (shouldThrow) throw StorageException(cause: 'fake error');
+    final ids = sourceIds.toSet();
+    return {
+      for (final entry in addedSourceIdsByCollection.entries)
+        if (ids.isNotEmpty && entry.value.containsAll(ids)) entry.key,
+    };
+  }
+
+  @override
   Future<Map<String, Set<String>>> getCollectionSourceIds() async {
     if (shouldThrow) throw StorageException(cause: 'fake error');
     return addedSourceIdsByCollection.map(

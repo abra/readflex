@@ -188,13 +188,8 @@ void main() {
       isNot(contains('GestureDetector(')),
     );
     expect(contextPanelSource, contains('_ImageHighlightSelectionPopup'));
-    expect(contextPanelSource, contains('_ImageHighlightNoteSheet'));
-    expect(contextPanelSource, contains('showAppBottomSheet'));
-    expect(contextPanelSource, contains('readerHighlightNoteTitle'));
-    expect(contextPanelSource, contains('readerEditNoteTitle'));
-    expect(contextPanelSource, contains('readerCommentHint'));
-    expect(contextPanelSource, contains('AppSheetActions('));
-    expect(contextPanelSource, isNot(contains('FilledButton.icon(')));
+    expect(contextPanelSource, contains('showReaderHighlightNoteSheet'));
+    // The editor's UI/lifecycle is exercised by reader_highlight_note_sheet_test.
     expect(contextPanelSource, contains('note: result.note'));
     expect(
       contextPanelSource,

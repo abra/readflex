@@ -32,6 +32,9 @@ and its numbered definitions, without another lookup. `DictionarySheet`
 supplies the clipboard callback; the shared `AppCopyButton` owns only temporary
 success/error feedback. Both the primary word and a contextual expression can
 be copied independently. Native system dictionary presentation is unchanged.
+`AppSheetActionRow` aligns each Copy glyph with the header Close at the 24dp
+content edge while preserving a 48dp target. `AppCopyButton` shares circular
+press/focus feedback with other standalone utility actions.
 
 ## Presentation
 

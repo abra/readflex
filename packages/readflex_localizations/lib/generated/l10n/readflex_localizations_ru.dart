@@ -9,6 +9,9 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   ReadflexLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
+  String get libraryRemovalPending => 'Удалится после сохранения';
+
+  @override
   String librarySelectedCount(int count) {
     return 'Выбрано: $count';
   }
@@ -18,6 +21,15 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
 
   @override
   String get libraryDiscardChangesTitle => 'Отменить изменения?';
+
+  @override
+  String get commonDiscardChangesTitle => 'Отменить изменения?';
+
+  @override
+  String get commonDiscardChanges => 'Отменить изменения';
+
+  @override
+  String get commonKeepEditing => 'Продолжить';
 
   @override
   String get libraryDiscardChangesBody =>
@@ -446,6 +458,9 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get libraryFavourites => 'Избранное';
 
   @override
+  String get libraryFavouritesBadge => 'Избранное';
+
+  @override
   String libraryCreateCollectionPrompt(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -657,7 +672,46 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get importArticleHintLibrary => 'Добавляет статью в библиотеку.';
 
   @override
-  String get importUploadingBook => 'Загружаем книгу...';
+  String get importUploadingBook => 'Добавляем книгу';
+
+  @override
+  String get importPreparingBook => 'Подготовка книги';
+
+  @override
+  String get importCopyingBook => 'Копирование файла';
+
+  @override
+  String get importFinishingBook => 'Завершение импорта';
+
+  @override
+  String get commonUndo => 'Отменить';
+
+  @override
+  String get readerExpandHighlight => 'Читать полностью';
+
+  @override
+  String get readerCollapseHighlight => 'Свернуть';
+
+  @override
+  String get readerGoToPassage => 'Перейти к фрагменту';
+
+  @override
+  String get readerBookmarkRemoved => 'Закладка удалена';
+
+  @override
+  String get readerBookmarkUpdateFailed => 'Не удалось изменить закладку';
+
+  @override
+  String get readerPages => 'Страницы';
+
+  @override
+  String get readerThumbnailUnavailable => 'Миниатюра недоступна';
+
+  @override
+  String get libraryNewCollection => 'Новая коллекция';
+
+  @override
+  String get libraryCreateAndAdd => 'Создать и добавить';
 
   @override
   String get importFetchingArticle => 'Получаем статью...';

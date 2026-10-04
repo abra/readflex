@@ -30,6 +30,7 @@ extension BookToDomain on BooksTableData {
           ? DateTime.tryParse(lastOpenedAt!)
           : null,
       isFinished: isFinished,
+      comicPageOrderVersion: comicPageOrderVersion,
     );
   }
 }

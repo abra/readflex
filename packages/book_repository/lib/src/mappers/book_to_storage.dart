@@ -17,5 +17,6 @@ extension BookToStorage on Book {
     addedAt: Value(addedAt.toIso8601String()),
     lastOpenedAt: Value(lastOpenedAt?.toIso8601String()),
     isFinished: Value(isFinished),
+    comicPageOrderVersion: Value(comicPageOrderVersion),
   );
 }

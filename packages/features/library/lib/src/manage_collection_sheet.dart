@@ -13,23 +13,13 @@ enum ManageCollectionSheetResult { deleted }
 
 enum _ManageCollectionStep { manage, confirmDelete, confirmDiscard }
 
-/// Source currently being animated out of the collection list.
-///
-/// Keeps the original list count stable while the removal animation runs.
-class _RemovingCollectionSource {
-  const _RemovingCollectionSource({
-    required this.id,
-    required this.initialSourceCount,
-  });
-
-  final String id;
-  final int initialSourceCount;
-}
-
 const double _collectionSourcesMaxHeight = 260;
 const double _collectionSourceRowHeight =
     AppSizes.buttonHeight + AppSpacing.sm * 2;
 const double _collectionSourceDividerHeight = 1;
+// Align the glyph with the header; keep the full hit target in the gutter.
+const double _collectionSourceActionOutset =
+    (AppSizes.buttonHeight - AppIconSize.sm) / 2;
 const double _emptyCollectionListHeightEstimate = 56;
 const double _manageCollectionTextFieldHeightEstimate = 56;
 const double _manageCollectionCountLabelHeightEstimate = 18;
@@ -40,7 +30,6 @@ const double _manageCollectionViewportTopReserve = 96;
 const Duration _manageCollectionTransitionDuration = Duration(
   milliseconds: 300,
 );
-const Duration _collectionSourceRemovalDuration = Duration(milliseconds: 260);
 const EdgeInsets _sheetHorizontalPadding = EdgeInsets.symmetric(
   horizontal: AppSpacing.xl,
 );
@@ -67,7 +56,7 @@ Future<ManageCollectionSheetResult?> showManageCollectionSheet({
     dismissible: false,
     builder: (_) => BlocProvider.value(
       value: cubit,
-      child: _ManageCollectionSheet(
+      child: ManageCollectionSheet(
         scope: scope,
         sources: sources,
         onCollectionChanged: onCollectionChanged,
@@ -78,48 +67,72 @@ Future<ManageCollectionSheetResult?> showManageCollectionSheet({
 
 /// Stateful collection-management sheet. Owns staged source removals and
 /// rename/delete step transitions before saving to [ManageCollectionCubit].
-class _ManageCollectionSheet extends StatefulWidget {
-  const _ManageCollectionSheet({
+class ManageCollectionSheet extends StatefulWidget {
+  const ManageCollectionSheet({
     required this.scope,
     required this.sources,
     required this.onCollectionChanged,
+    this.onFinished,
+    this.onCloseFlow,
+    super.key,
   });
 
   final LibraryCollectionScope scope;
   final List<LibrarySource> sources;
   final VoidCallback onCollectionChanged;
+  final ValueChanged<ManageCollectionSheetResult?>? onFinished;
+  final VoidCallback? onCloseFlow;
 
   @override
-  State<_ManageCollectionSheet> createState() => _ManageCollectionSheetState();
+  State<ManageCollectionSheet> createState() => _ManageCollectionSheetState();
 }
 
-class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
-    with SingleTickerProviderStateMixin {
+class _ManageCollectionSheetState extends State<ManageCollectionSheet> {
   late final TextEditingController _nameController;
-  late final AnimationController _sourceRemovalController;
   late final List<LibrarySource> _displayedSources;
+  late int _bookCount;
+  late int _articleCount;
   late String _currentName;
   final _removedSourceIds = <String>{};
-  _RemovingCollectionSource? _removingSource;
   var _animateNextSizeChange = false;
   var _step = _ManageCollectionStep.manage;
+  var _discardClosesFlow = false;
+
+  void _finish([ManageCollectionSheetResult? result]) {
+    if (widget.onFinished case final onFinished?) {
+      onFinished(result);
+    } else {
+      Navigator.of(context).pop(result);
+    }
+  }
+
+  void _closeFlow() {
+    if (widget.onCloseFlow case final onClose?) {
+      onClose();
+    } else {
+      _finish();
+    }
+  }
+
+  void _discard() => _discardClosesFlow ? _closeFlow() : _finish();
 
   bool get _hasChanges =>
       (widget.scope.canRename && _nameController.text.trim() != _currentName) ||
       _removedSourceIds.isNotEmpty;
 
-  void _requestClose() {
+  void _requestClose({bool closeFlow = false}) {
     if (context.read<ManageCollectionCubit>().state.isBusy) {
       return;
     }
     if (!_hasChanges) {
-      Navigator.of(context).pop();
+      closeFlow ? _closeFlow() : _finish();
       return;
     }
     // Closing must not dismiss the discard decision or silently lose a draft.
     if (_step == _ManageCollectionStep.confirmDiscard) return;
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
+      _discardClosesFlow = closeFlow;
       _animateNextSizeChange = true;
       _step = _ManageCollectionStep.confirmDiscard;
     });
@@ -138,18 +151,17 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
   void initState() {
     super.initState();
     _currentName = widget.scope.label;
-    _displayedSources = widget.sources.toList(growable: true);
-    _sourceRemovalController = AnimationController(
-      vsync: this,
-      duration: _collectionSourceRemovalDuration,
-    );
+    _displayedSources = List.unmodifiable(widget.sources);
+    _bookCount = _displayedSources
+        .where((source) => source.sourceType == SourceType.book)
+        .length;
+    _articleCount = _displayedSources.length - _bookCount;
     _nameController = TextEditingController(text: _currentName)
       ..addListener(_onNameChanged);
   }
 
   @override
   void dispose() {
-    _sourceRemovalController.dispose();
     _nameController
       ..removeListener(_onNameChanged)
       ..dispose();
@@ -190,31 +202,21 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
     if (!mounted || !saved) return;
     setState(() => _currentName = name);
     widget.onCollectionChanged();
-    Navigator.of(context).pop();
+    _finish();
   }
 
-  void _stageSourceRemoval(LibrarySource source) {
-    if (_removedSourceIds.contains(source.id) || _removingSource != null) {
-      return;
-    }
-    final index = _displayedSources.indexWhere((item) => item.id == source.id);
-    if (index == -1) return;
-
-    _removedSourceIds.add(source.id);
+  void _toggleSourceRemoval(LibrarySource source) {
+    if (context.read<ManageCollectionCubit>().state.isBusy) return;
+    // Keep rows in place until Save: undo has no timeout and never writes storage.
     setState(() {
-      _removingSource = _RemovingCollectionSource(
-        id: source.id,
-        initialSourceCount: _displayedSources.length,
-      );
-    });
-
-    _sourceRemovalController.forward(from: 0).whenCompleteOrCancel(() {
-      if (!mounted || _removingSource?.id != source.id) return;
-      setState(() {
-        _displayedSources.removeWhere((item) => item.id == source.id);
-        _removingSource = null;
-        _sourceRemovalController.reset();
-      });
+      final removing = _removedSourceIds.add(source.id);
+      if (!removing) _removedSourceIds.remove(source.id);
+      final delta = removing ? -1 : 1;
+      if (source.sourceType == SourceType.book) {
+        _bookCount += delta;
+      } else {
+        _articleCount += delta;
+      }
     });
   }
 
@@ -224,7 +226,7 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
     final deleted = await cubit.deleteCollection(widget.scope.id);
     if (!mounted || !deleted) return;
     widget.onCollectionChanged();
-    Navigator.of(context).pop(ManageCollectionSheetResult.deleted);
+    _finish(ManageCollectionSheetResult.deleted);
   }
 
   double _stepHeight(
@@ -296,18 +298,13 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
         if (!didPop) _goBack();
       },
       child: BlocBuilder<ManageCollectionCubit, ManageCollectionState>(
-        builder: (context, state) {
-          return AnimatedBuilder(
-            animation: _sourceRemovalController,
-            builder: (context, _) => _buildSheet(context, state),
-          );
-        },
+        builder: _buildSheet,
       ),
     );
   }
 
   Widget _buildSheet(BuildContext context, ManageCollectionState state) {
-    final visibleSources = List<LibrarySource>.unmodifiable(_displayedSources);
+    final visibleSources = _displayedSources;
     final canRename = widget.scope.canRename;
     final name = canRename ? _nameController.text.trim() : _currentName;
     final canSave =
@@ -315,7 +312,6 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
         (!canRename || name.isNotEmpty) &&
         ((canRename && name != _currentName) || _removedSourceIds.isNotEmpty);
 
-    final stepHeight = _currentStepHeight(context, visibleSources.length);
     final sizeDuration =
         _animateNextSizeChange && !MediaQuery.disableAnimationsOf(context)
         ? _manageCollectionTransitionDuration
@@ -330,19 +326,22 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
       _ManageCollectionStep.manage => _ManageCollectionStepView(
         key: const ValueKey('manageCollectionContent'),
         title: context.l10n.libraryManageCollectionTitle,
-        onClose: state.isBusy ? null : _requestClose,
+        hasPreviousStep: widget.onFinished != null,
+        onBack: state.isBusy || widget.onFinished == null ? null : _goBack,
+        onClose: state.isBusy ? null : () => _requestClose(closeFlow: true),
         child: _ManageCollectionContent(
           state: state,
           nameController: _nameController,
           visibleSources: visibleSources,
-          removingSourceId: _removingSource?.id,
-          removalProgress: _sourceRemovalController.value,
+          removedSourceIds: _removedSourceIds,
+          bookCount: _bookCount,
+          articleCount: _articleCount,
           canRename: widget.scope.canRename,
           canDelete: widget.scope.canDelete,
           canSave: canSave,
           onSave: _saveChanges,
           onCancel: _requestClose,
-          onRemoveSource: _stageSourceRemoval,
+          onToggleSource: _toggleSourceRemoval,
           onDeletePressed: _showDeleteConfirmation,
         ),
       ),
@@ -351,7 +350,7 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
         title: context.l10n.libraryDeleteCollectionTitle,
         hasPreviousStep: true,
         onBack: state.isBusy ? null : _goBack,
-        onClose: state.isBusy ? null : _requestClose,
+        onClose: state.isBusy ? null : () => _requestClose(closeFlow: true),
         child: _DeleteCollectionConfirmationContent(
           state: state,
           collectionName: _currentName,
@@ -364,7 +363,7 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
         title: context.l10n.libraryDiscardChangesTitle,
         hasPreviousStep: true,
         onBack: _goBack,
-        onClose: _requestClose,
+        onClose: () => _requestClose(closeFlow: true),
         child: Padding(
           padding: _sheetActionsPadding,
           child: Column(
@@ -383,7 +382,7 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
                 primaryLabel: context.l10n.libraryKeepEditing,
                 onPrimary: _returnToEditing,
                 secondaryLabel: context.l10n.libraryDiscardChanges,
-                onSecondary: () => Navigator.of(context).pop(),
+                onSecondary: _discard,
               ),
             ],
           ),
@@ -391,6 +390,7 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
       ),
     };
 
+    final stepHeight = _stepHeight(context, _step, visibleSources.length);
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(end: stepHeight),
       duration: sizeDuration,
@@ -418,26 +418,6 @@ class _ManageCollectionSheetState extends State<_ManageCollectionSheet>
         ),
       ),
     );
-  }
-
-  double _currentStepHeight(BuildContext context, int visibleSourceCount) {
-    final removal = _removingSource;
-    if (_step != _ManageCollectionStep.manage || removal == null) {
-      return _stepHeight(context, _step, visibleSourceCount);
-    }
-
-    final startHeight = _stepHeight(
-      context,
-      _ManageCollectionStep.manage,
-      removal.initialSourceCount,
-    );
-    final endHeight = _stepHeight(
-      context,
-      _ManageCollectionStep.manage,
-      removal.initialSourceCount - 1,
-    );
-    return startHeight +
-        (endHeight - startHeight) * _sourceRemovalController.value;
   }
 }
 
@@ -624,28 +604,30 @@ class _ManageCollectionContent extends StatelessWidget {
     required this.state,
     required this.nameController,
     required this.visibleSources,
-    required this.removingSourceId,
-    required this.removalProgress,
+    required this.removedSourceIds,
+    required this.bookCount,
+    required this.articleCount,
     required this.canRename,
     required this.canDelete,
     required this.canSave,
     required this.onSave,
     required this.onCancel,
-    required this.onRemoveSource,
+    required this.onToggleSource,
     required this.onDeletePressed,
   });
 
   final ManageCollectionState state;
   final TextEditingController nameController;
   final List<LibrarySource> visibleSources;
-  final String? removingSourceId;
-  final double removalProgress;
+  final Set<String> removedSourceIds;
+  final int bookCount;
+  final int articleCount;
   final bool canRename;
   final bool canDelete;
   final bool canSave;
   final Future<void> Function() onSave;
   final VoidCallback onCancel;
-  final ValueChanged<LibrarySource> onRemoveSource;
+  final ValueChanged<LibrarySource> onToggleSource;
   final VoidCallback onDeletePressed;
 
   @override
@@ -681,7 +663,7 @@ class _ManageCollectionContent extends StatelessWidget {
       Padding(
         padding: _sheetHorizontalPadding,
         child: Text(
-          _sourceCountLabel(context, visibleSources),
+          _sourceCountLabel(context),
           style: context.text.labelSmall.copyWith(
             color: context.colors.onSurfaceVariant,
           ),
@@ -746,14 +728,13 @@ class _ManageCollectionContent extends StatelessWidget {
                           itemCount: visibleSources.length,
                           itemBuilder: (context, index) {
                             final source = visibleSources[index];
-                            final removing = source.id == removingSourceId;
-                            return _CollapsibleCollectionSourceRow(
+                            return _CollectionSourceRow(
+                              key: ValueKey('collectionSource-${source.id}'),
                               source: source,
-                              enabled:
-                                  !state.isBusy && removingSourceId == null,
+                              enabled: !state.isBusy,
+                              removed: removedSourceIds.contains(source.id),
                               showDivider: index < visibleSources.length - 1,
-                              sizeFactor: removing ? 1 - removalProgress : 1,
-                              onRemovePressed: () => onRemoveSource(source),
+                              onTogglePressed: () => onToggleSource(source),
                             );
                           },
                         ),
@@ -779,10 +760,9 @@ class _ManageCollectionContent extends StatelessWidget {
             Expanded(
               child: _CollectionSourcesList(
                 visibleSources: visibleSources,
-                removingSourceId: removingSourceId,
-                removalProgress: removalProgress,
+                removedSourceIds: removedSourceIds,
                 enabled: !state.isBusy,
-                onRemoveSource: onRemoveSource,
+                onToggleSource: onToggleSource,
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -799,23 +779,10 @@ class _ManageCollectionContent extends StatelessWidget {
     );
   }
 
-  String _sourceCountLabel(BuildContext context, List<LibrarySource> sources) {
-    var books = 0;
-    var articles = 0;
-    for (final source in sources) {
-      switch (source.sourceType) {
-        case SourceType.book:
-          books++;
-          break;
-        case SourceType.article:
-          articles++;
-          break;
-      }
-    }
-
+  String _sourceCountLabel(BuildContext context) {
     final parts = [
-      if (books > 0) context.l10n.libraryBookCount(books),
-      if (articles > 0) context.l10n.libraryArticleCount(articles),
+      if (bookCount > 0) context.l10n.libraryBookCount(bookCount),
+      if (articleCount > 0) context.l10n.libraryArticleCount(articleCount),
     ];
     return parts.isEmpty
         ? context.l10n.libraryEmptySourceCount
@@ -842,21 +809,19 @@ class _CollectionFormActions extends StatelessWidget {
 class _CollectionSourcesList extends StatelessWidget {
   const _CollectionSourcesList({
     required this.visibleSources,
-    required this.removingSourceId,
-    required this.removalProgress,
+    required this.removedSourceIds,
     required this.enabled,
-    required this.onRemoveSource,
+    required this.onToggleSource,
   });
 
   final List<LibrarySource> visibleSources;
-  final String? removingSourceId;
-  final double removalProgress;
+  final Set<String> removedSourceIds;
   final bool enabled;
-  final ValueChanged<LibrarySource> onRemoveSource;
+  final ValueChanged<LibrarySource> onToggleSource;
 
   @override
   Widget build(BuildContext context) {
-    if (visibleSources.isEmpty && removingSourceId == null) {
+    if (visibleSources.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
@@ -884,13 +849,13 @@ class _CollectionSourcesList extends StatelessWidget {
             itemCount: visibleSources.length,
             itemBuilder: (context, index) {
               final source = visibleSources[index];
-              final isRemoving = source.id == removingSourceId;
-              return _CollapsibleCollectionSourceRow(
+              return _CollectionSourceRow(
+                key: ValueKey('collectionSource-${source.id}'),
                 source: source,
-                enabled: enabled && !isRemoving && removingSourceId == null,
+                enabled: enabled,
+                removed: removedSourceIds.contains(source.id),
                 showDivider: index < visibleSources.length - 1,
-                sizeFactor: isRemoving ? 1 - removalProgress : 1,
-                onRemovePressed: () => onRemoveSource(source),
+                onTogglePressed: () => onToggleSource(source),
               );
             },
           ),
@@ -955,100 +920,94 @@ class _DeleteCollectionConfirmationContent extends StatelessWidget {
   }
 }
 
-/// Source row wrapper that collapses vertically during staged removal.
-class _CollapsibleCollectionSourceRow extends StatelessWidget {
-  const _CollapsibleCollectionSourceRow({
-    required this.source,
-    required this.enabled,
-    required this.showDivider,
-    required this.sizeFactor,
-    required this.onRemovePressed,
-  });
-
-  final LibrarySource source;
-  final bool enabled;
-  final bool showDivider;
-  final double sizeFactor;
-  final VoidCallback onRemovePressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final clampedSizeFactor = sizeFactor.clamp(0.0, 1.0).toDouble();
-    return ClipRect(
-      child: Align(
-        alignment: Alignment.topCenter,
-        heightFactor: clampedSizeFactor,
-        child: Opacity(
-          opacity: clampedSizeFactor,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _CollectionSourceRow(
-                source: source,
-                enabled: enabled,
-                onRemovePressed: onRemovePressed,
-              ),
-              if (showDivider)
-                Divider(
-                  height: _collectionSourceDividerHeight,
-                  color: context.appColors.divider,
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _CollectionSourceRow extends StatelessWidget {
   const _CollectionSourceRow({
     required this.source,
     required this.enabled,
-    required this.onRemovePressed,
+    required this.removed,
+    required this.showDivider,
+    required this.onTogglePressed,
+    super.key,
   });
 
   final LibrarySource source;
   final bool enabled;
-  final VoidCallback onRemovePressed;
+  final bool removed;
+  final bool showDivider;
+  final VoidCallback onTogglePressed;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xl,
-        vertical: AppSpacing.sm,
-      ),
-      child: Row(
-        children: [
-          Icon(
-            _iconFor(source),
-            size: AppIconSize.sm,
-            color: colors.onSurfaceVariant,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(
+            AppSpacing.xl,
+            AppSpacing.sm,
+            AppSpacing.xl - _collectionSourceActionOutset,
+            AppSpacing.sm,
           ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Text(
-              source.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: context.text.bodyMedium.copyWith(
-                color: colors.onSurface,
+          child: Row(
+            children: [
+              Icon(
+                _iconFor(source),
+                size: AppIconSize.sm,
+                color: colors.onSurfaceVariant,
               ),
-            ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      source.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.text.bodyMedium.copyWith(
+                        color: removed
+                            ? colors.onSurfaceVariant
+                            : colors.onSurface,
+                      ),
+                    ),
+                    Visibility(
+                      visible: removed,
+                      maintainSize: true,
+                      maintainState: true,
+                      maintainAnimation: true,
+                      child: Text(
+                        context.l10n.libraryRemovalPending,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.text.bodySmall.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              AppPlainIconButton(
+                key: ValueKey(
+                  'collectionSource${removed ? 'Undo' : 'Remove'}-${source.id}',
+                ),
+                tooltip: removed
+                    ? context.l10n.commonUndo
+                    : context.l10n.libraryRemoveFromCollection(source.title),
+                color: removed
+                    ? context.actionForeground
+                    : colors.onSurfaceVariant,
+                onPressed: enabled ? onTogglePressed : null,
+                icon: removed ? AppIcons.undo : AppIcons.delete,
+              ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.md),
-          AppPlainIconButton(
-            key: ValueKey('collectionSourceRemove-${source.id}'),
-            tooltip: context.l10n.libraryRemoveFromCollection(source.title),
-            color: colors.onSurfaceVariant,
-            onPressed: enabled ? onRemovePressed : null,
-            icon: AppIcons.close,
-          ),
-        ],
-      ),
+        ),
+        if (showDivider) const Divider(height: _collectionSourceDividerHeight),
+      ],
     );
   }
 

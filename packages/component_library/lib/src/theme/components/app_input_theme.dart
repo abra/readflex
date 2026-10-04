@@ -11,6 +11,7 @@ class AppInputThemes {
   static InputDecorationTheme theme(
     AppColorPalette palette,
     TextTheme textTheme,
+    ColorScheme colors,
   ) {
     final inputRadius = BorderRadius.circular(AppRadius.lg);
 
@@ -18,10 +19,10 @@ class AppInputThemes {
       filled: true,
       fillColor: palette.secondary,
       hintStyle: textTheme.bodyMedium!.copyWith(
-        color: palette.foreground.withValues(alpha: 0.4),
+        color: colors.onSurfaceVariant,
       ),
       labelStyle: textTheme.bodyMedium!.copyWith(
-        color: palette.mutedForeground,
+        color: colors.onSurfaceVariant,
       ),
       contentPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,

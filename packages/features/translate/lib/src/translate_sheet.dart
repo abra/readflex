@@ -82,6 +82,14 @@ class _TranslateSheetViewState extends State<_TranslateSheetView> {
       builder: (context, state) {
         final cubit = context.read<TranslateCubit>();
         return ActionBottomSheetLayout.scrollable(
+          bodyPadding: state.status == TranslateSheetStatus.success
+              ? const EdgeInsets.only(bottom: AppSpacing.lg)
+              : const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  0,
+                  AppSpacing.xl,
+                  AppSpacing.lg,
+                ),
           title: context.l10n.translationTitle,
           onClose: () => Navigator.of(context).pop(),
           closeLabel: context.l10n.commonClose,
@@ -238,41 +246,50 @@ class _TranslationResultView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (!isTextTranslation) ...[
-          TranslationLexicalHeader(
-            selectedText: selectedText,
-            isSingleWord: isSingleWord,
-            analysis: result.analysis,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (!isTextTranslation) ...[
+                TranslationLexicalHeader(
+                  selectedText: selectedText,
+                  isSingleWord: isSingleWord,
+                  analysis: result.analysis,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+              ],
+              if (result.reliability ==
+                  ContextualTranslationReliability.offline) ...[
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: _OfflineBadge(label: context.l10n.translationOffline),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+              ],
+              if (showContextSection) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Semantics(
+                  header: true,
+                  child: Text(
+                    context.l10n.translationInContext,
+                    style: context.text.labelMedium.copyWith(
+                      color: context.colors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+              ],
+              if (expression != null)
+                SelectableText(
+                  expression.text,
+                  key: const ValueKey('translation-contextual-expression'),
+                  textDirection: translationTextDirection(expression.text),
+                  style: context.text.titleMedium.copyWith(letterSpacing: 0),
+                ),
+            ],
           ),
-          const SizedBox(height: AppSpacing.xs),
-        ],
-        if (result.reliability == ContextualTranslationReliability.offline) ...[
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: _OfflineBadge(label: context.l10n.translationOffline),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-        ],
-        if (showContextSection) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Semantics(
-            header: true,
-            child: Text(
-              context.l10n.translationInContext,
-              style: context.text.labelMedium.copyWith(
-                color: context.colors.onSurfaceVariant,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-        ],
-        if (expression != null)
-          SelectableText(
-            expression.text,
-            key: const ValueKey('translation-contextual-expression'),
-            textDirection: translationTextDirection(expression.text),
-            style: context.text.titleMedium.copyWith(letterSpacing: 0),
-          ),
+        ),
         if (primary != null)
           _TranslationAnswer(
             id: 'primary',
@@ -282,57 +299,68 @@ class _TranslationResultView extends StatelessWidget {
           ),
         if (showWordAnswer) ...[
           const SizedBox(height: AppSpacing.md),
-          Semantics(
-            header: true,
-            child: Text(
-              context.l10n.translationWordMeaning,
-              style: context.text.labelMedium.copyWith(
-                color: context.colors.onSurfaceVariant,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+            child: Semantics(
+              header: true,
+              child: Text(
+                context.l10n.translationWordMeaning,
+                style: context.text.labelMedium.copyWith(
+                  color: context.colors.onSurfaceVariant,
+                ),
               ),
             ),
           ),
           _TranslationAnswer(id: 'base', text: base, onCopy: onCopy),
         ],
-        const SizedBox(height: AppSpacing.md),
-        Divider(height: 1, color: context.colors.outlineVariant),
-        const SizedBox(height: AppSpacing.md),
-        Semantics(
-          header: true,
-          child: Text(
-            isTextTranslation
-                ? context.l10n.translationOriginal
-                : context.l10n.translationSentence,
-            style: context.text.labelMedium.copyWith(
-              color: context.colors.onSurfaceVariant,
-            ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: AppSpacing.md),
+              Divider(height: 1, color: context.colors.outlineVariant),
+              const SizedBox(height: AppSpacing.md),
+              Semantics(
+                header: true,
+                child: Text(
+                  isTextTranslation
+                      ? context.l10n.translationOriginal
+                      : context.l10n.translationSentence,
+                  style: context.text.labelMedium.copyWith(
+                    color: context.colors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TranslationSelectionPreview(
+                selection: selection,
+                showContext: !isTextTranslation,
+              ),
+              if (!isTextTranslation &&
+                  sentenceTranslation != null &&
+                  _normalizedAnswer(sentenceTranslation) !=
+                      _normalizedAnswer(primary ?? '')) ...[
+                const SizedBox(height: AppSpacing.sm),
+                SelectableText(
+                  sentenceTranslation,
+                  key: const ValueKey('translation-sentence-result'),
+                  textDirection: translationTextDirection(sentenceTranslation),
+                  style: context.text.bodyMedium,
+                ),
+              ],
+              if (!isTextTranslation &&
+                  (explanation != null || alternatives.isNotEmpty)) ...[
+                const SizedBox(height: AppSpacing.md),
+                TranslationDetails(
+                  key: ValueKey(result.requestId),
+                  explanation: explanation,
+                  alternatives: alternatives,
+                ),
+              ],
+            ],
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        TranslationSelectionPreview(
-          selection: selection,
-          showContext: !isTextTranslation,
-        ),
-        if (!isTextTranslation &&
-            sentenceTranslation != null &&
-            _normalizedAnswer(sentenceTranslation) !=
-                _normalizedAnswer(primary ?? '')) ...[
-          const SizedBox(height: AppSpacing.sm),
-          SelectableText(
-            sentenceTranslation,
-            key: const ValueKey('translation-sentence-result'),
-            textDirection: translationTextDirection(sentenceTranslation),
-            style: context.text.bodyMedium,
-          ),
-        ],
-        if (!isTextTranslation &&
-            (explanation != null || alternatives.isNotEmpty)) ...[
-          const SizedBox(height: AppSpacing.md),
-          TranslationDetails(
-            key: ValueKey(result.requestId),
-            explanation: explanation,
-            alternatives: alternatives,
-          ),
-        ],
       ],
     );
   }
@@ -360,33 +388,28 @@ class _TranslationAnswer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.sm),
-            child: LayoutBuilder(
-              builder: (context, constraints) => SelectableText(
-                text,
-                key: ValueKey('translation-$id-result'),
-                textDirection: translationTextDirection(text),
-                style: _answerStyle(context, constraints.maxWidth),
-              ),
-            ),
+    return AppSheetActionRow(
+      action: KeyedSubtree(
+        key: ValueKey('translation-$id-copy'),
+        child: AppCopyButton(
+          key: ValueKey(text),
+          onCopy: () => onCopy(text),
+          copyLabel: context.l10n.commonCopy,
+          copiedLabel: context.l10n.commonCopied,
+          failureLabel: context.l10n.commonCopyFailed,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.sm),
+        child: LayoutBuilder(
+          builder: (context, constraints) => SelectableText(
+            text,
+            key: ValueKey('translation-$id-result'),
+            textDirection: translationTextDirection(text),
+            style: _answerStyle(context, constraints.maxWidth),
           ),
         ),
-        KeyedSubtree(
-          key: ValueKey('translation-$id-copy'),
-          child: AppCopyButton(
-            key: ValueKey(text),
-            onCopy: () => onCopy(text),
-            copyLabel: context.l10n.commonCopy,
-            copiedLabel: context.l10n.commonCopied,
-            failureLabel: context.l10n.commonCopyFailed,
-          ),
-        ),
-      ],
+      ),
     );
   }
 

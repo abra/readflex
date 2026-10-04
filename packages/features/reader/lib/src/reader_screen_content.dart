@@ -375,13 +375,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
 
   void _deleteBookmark(SourceBookmark bookmark) {
     context.read<ReaderBloc>().add(
-      ReaderBookmarkChanged(
-        remove: true,
-        id: bookmark.id,
-        cfi: bookmark.cfi,
-        content: '',
-        progress: bookmark.progress,
-      ),
+      ReaderBookmarkDeleted(sourceId: bookmark.sourceId, id: bookmark.id),
     );
   }
 
@@ -699,6 +693,8 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                 ),
               _ReaderTocDrawerVisibilityDriver(
                 format: format,
+                loadThumbnail: (index) async =>
+                    _webViewKey.currentState?.comicThumbnail(index),
                 pageProgressionRtl: pageProgressionRtl,
                 readerTheme: readerTheme,
                 onClose: _closeTocDrawer,
@@ -787,6 +783,7 @@ class _ReaderSystemUiOverlayDriver extends StatelessWidget {
 /// the drawer widget.
 class _ReaderTocDrawerVisibilityDriver extends StatelessWidget {
   const _ReaderTocDrawerVisibilityDriver({
+    required this.loadThumbnail,
     required this.format,
     required this.pageProgressionRtl,
     required this.readerTheme,
@@ -797,6 +794,7 @@ class _ReaderTocDrawerVisibilityDriver extends StatelessWidget {
     required this.onBookmarkDeleted,
   });
 
+  final ComicThumbnailLoader loadThumbnail;
   final BookFormat? format;
   final bool pageProgressionRtl;
   final ReaderThemeData readerTheme;
@@ -812,16 +810,24 @@ class _ReaderTocDrawerVisibilityDriver extends StatelessWidget {
       (c) => c.state.overlay == ReaderOverlay.toc,
     );
 
-    return _ReaderTocDrawerDriver(
-      visible: visible,
-      format: format,
-      pageProgressionRtl: pageProgressionRtl,
-      readerTheme: readerTheme,
-      onClose: onClose,
-      onItemSelected: onItemSelected,
-      onBookmarkSelected: onBookmarkSelected,
-      onHighlightSelected: onHighlightSelected,
-      onBookmarkDeleted: onBookmarkDeleted,
+    return BlocListener<ReaderUiCubit, ReaderUiState>(
+      listenWhen: (previous, current) =>
+          previous.overlay == ReaderOverlay.toc &&
+          current.overlay != ReaderOverlay.toc,
+      listener: (context, _) =>
+          context.read<ReaderBloc>().add(const ReaderBookmarkUndoDismissed()),
+      child: _ReaderTocDrawerDriver(
+        loadThumbnail: loadThumbnail,
+        visible: visible,
+        format: format,
+        pageProgressionRtl: pageProgressionRtl,
+        readerTheme: readerTheme,
+        onClose: onClose,
+        onItemSelected: onItemSelected,
+        onBookmarkSelected: onBookmarkSelected,
+        onHighlightSelected: onHighlightSelected,
+        onBookmarkDeleted: onBookmarkDeleted,
+      ),
     );
   }
 }
@@ -1207,6 +1213,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       foliateStyle: foliateStyle,
       isArticle: state.sourceType == SourceType.article,
       isComic: state.document?.format == BookFormat.cbz,
+      comicPageOrderVersion: state.document?.comicPageOrderVersion ?? 0,
       pageProgressionRtl: state.pageProgressionRtl,
       highlights: highlights,
       bookmarks: bookmarks,

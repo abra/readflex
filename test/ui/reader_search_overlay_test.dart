@@ -1,13 +1,16 @@
+import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/src/reader_search_cubit.dart';
 import 'package:reader/src/reader_search_navigation_bar.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
 import 'package:reader_webview/reader_webview.dart';
 
 import '../support/reading_fixture.dart';
+import '../support/reader_test_platform.dart';
 import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';
 
@@ -29,7 +32,7 @@ void main() {
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
         final previous = InAppWebViewPlatform.instance;
-        final platform = _Platform();
+        final platform = ReaderTestPlatform();
         InAppWebViewPlatform.instance = platform;
         addTearDown(() {
           if (previous != null) InAppWebViewPlatform.instance = previous;
@@ -58,6 +61,33 @@ void main() {
         );
         final originalState = tester.state(webView);
         final originalBounds = tester.getRect(webView);
+        final readerContext = tester.element(webView);
+        final ui = readerContext.read<ReaderUiCubit>();
+        final l10n = readerContext.l10n;
+        ui.showChrome();
+        await tester.pumpAndSettle();
+        for (final label in [
+          l10n.readerBack,
+          l10n.readerFontAction,
+          l10n.readerBookmark,
+        ]) {
+          final button = find.byWidgetPredicate(
+            (widget) => widget is IconButton && widget.tooltip == label,
+          );
+          expect(
+            tester.getSize(button),
+            const Size.square(AppSizes.buttonHeight),
+          );
+          final style = tester.widget<IconButton>(button).style!;
+          expect(
+            style.shape?.resolve({WidgetState.pressed}),
+            isA<CircleBorder>(),
+          );
+        }
+        expect(tester.getRect(webView), originalBounds);
+        expect(tester.state(webView), same(originalState));
+        ui.hideChrome();
+        await tester.pumpAndSettle();
         final search = tester.element(webView).read<ReaderSearchCubit>();
         search.recentQuerySelected(
           'vision',
@@ -117,7 +147,6 @@ void main() {
           overlayUpdates,
           reason: 'Match changes need no viewport bridge update',
         );
-        final ui = tester.element(webView).read<ReaderUiCubit>();
         ui.openSearchDrawer();
         await tester.pumpAndSettle();
         expect(tester.getRect(webView), originalBounds);
@@ -179,83 +208,4 @@ void main() {
       }),
     );
   }
-}
-
-class _Platform extends InAppWebViewPlatform {
-  final views = <_WebView>[];
-  @override
-  PlatformInAppWebViewWidget createPlatformInAppWebViewWidget(
-    PlatformInAppWebViewWidgetCreationParams params,
-  ) {
-    final view = _WebView(params);
-    views.add(view);
-    return view;
-  }
-}
-
-class _WebView extends PlatformInAppWebViewWidget {
-  _WebView(super.params) : super.implementation();
-  final controller = _Controller();
-  bool created = false;
-  @override
-  Widget build(BuildContext context) => _NativeView(this);
-
-  @override
-  T controllerFromPlatform<T>(PlatformInAppWebViewController controller) =>
-      params.controllerFromPlatform!(controller) as T;
-  @override
-  void dispose() {}
-}
-
-// Like AndroidView/UiKitView, native creation belongs to the mounted State,
-// not to every new plugin configuration produced by a parent rebuild.
-class _NativeView extends StatefulWidget {
-  const _NativeView(this.owner);
-  final _WebView owner;
-  @override
-  State<_NativeView> createState() => _NativeViewState();
-}
-
-class _NativeViewState extends State<_NativeView> {
-  @override
-  void initState() {
-    super.initState();
-    final owner = widget.owner;
-    owner.created = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      owner.params.onWebViewCreated?.call(
-        owner.controllerFromPlatform<InAppWebViewController>(owner.controller),
-      );
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) => const SizedBox.expand();
-}
-
-class _Controller extends PlatformInAppWebViewController {
-  _Controller()
-    : super.implementation(
-        const PlatformInAppWebViewControllerCreationParams(id: 1),
-      );
-  final handlers = <String, JavaScriptHandlerCallback>{};
-  final scripts = <String>[];
-  @override
-  void addJavaScriptHandler({
-    required String handlerName,
-    required JavaScriptHandlerCallback callback,
-  }) => handlers[handlerName] = callback;
-  @override
-  Future<dynamic> evaluateJavascript({
-    required String source,
-    ContentWorld? contentWorld,
-  }) async {
-    scripts.add(source);
-    return null;
-  }
-
-  @override
-  Future<void> pause() async {}
-  @override
-  Future<void> resume() async {}
 }

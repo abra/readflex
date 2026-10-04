@@ -5,7 +5,10 @@ bool readerHighlightHasNavigableLocation(Highlight highlight) {
       highlight.imageArea != null;
 }
 
-String? readerHighlightLocationLabel(Highlight highlight) {
+String? readerHighlightLocationLabel(
+  Highlight highlight, {
+  String Function(int)? formatPage,
+}) {
   if (highlight.isImageArea) {
     final chapterTitle = highlight.chapterTitle?.trim();
     if (chapterTitle != null && chapterTitle.isNotEmpty) {
@@ -24,7 +27,7 @@ String? readerHighlightLocationLabel(Highlight highlight) {
   }
 
   final pageNumber = highlight.pageNumber;
-  if (pageNumber != null) return 'Page $pageNumber';
+  if (pageNumber != null) return formatPage?.call(pageNumber) ?? '$pageNumber';
 
   return null;
 }

@@ -6,6 +6,55 @@ import 'package:reader_webview/reader_webview.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 void main() {
+  for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+    testWidgets('selected search uses paired colors (${theme.brightness})', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: theme,
+          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          supportedLocales: ReadflexSupportedLocales.locales,
+          home: Scaffold(
+            body: ReaderSearchResultTile(
+              result: const ReaderSearchResult(
+                cfi: 'selected',
+                chapterTitle: 'Chapter',
+                excerpt: ReaderSearchExcerpt(
+                  pre: 'Before ',
+                  match: 'word',
+                  post: ' after',
+                ),
+              ),
+              selected: true,
+              pageProgressionRtl: false,
+              onTap: () {},
+            ),
+          ),
+        ),
+      );
+      final tile = tester.widget<ListTile>(find.byType(ListTile));
+      final colors = theme.colorScheme;
+      expect(tile.selectedTileColor, colors.selectedControlBackground);
+      final excerpt = tester.widget<RichText>(
+        find.byWidgetPredicate(
+          (w) => w is RichText && w.text.toPlainText() == 'Before word after',
+        ),
+      );
+      expect(excerpt.text.style?.color, colors.selectedControlForeground);
+      expect(
+        (excerpt.text as TextSpan).children![1].style?.color,
+        colors.selectedControlForeground,
+      );
+      final ink = colors.selectedControlForeground.computeLuminance();
+      final fill = Color.alphaBlend(
+        colors.selectedControlBackground,
+        colors.surface,
+      ).computeLuminance();
+      expect((fill + .05) / (ink + .05), greaterThanOrEqualTo(4.5));
+    });
+  }
+
   for (final rtl in [false, true]) {
     testWidgets(
       'search excerpt respects text scaling and direction (rtl=$rtl)',

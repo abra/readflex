@@ -1054,6 +1054,10 @@ void main() {
         // No ensureVisible: changing direction must work from the scrolled body.
         await tester.tap(target);
         await tester.pumpAndSettle();
+        // Large text uses a bounded, scrollable single-column menu.
+        await tester.ensureVisible(
+          find.widgetWithText(MenuItemButton, 'Deutsch'),
+        );
         await tester.tap(find.text('Deutsch').hitTestable().last);
         await tester.pumpAndSettle();
         expect(service.calls, 2);

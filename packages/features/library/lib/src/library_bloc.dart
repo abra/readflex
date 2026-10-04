@@ -100,7 +100,6 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     final deletion = _deletionDescriptorFor({event.sourceId});
     try {
       await _deleteSource(event.sourceId, event.scope);
-      await _removeCollectionMemberships({event.sourceId});
       await _loadItems(emit, deletion: deletion);
     } catch (e, st) {
       addError(e, st);
@@ -127,17 +126,14 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     // selection gone, the other half still in the list, and a generic
     // failure toast that says nothing about the split.
     var anyFailed = false;
-    final deletedIds = <String>{};
     for (final id in event.sourceIds) {
       try {
         await _deleteSource(id, event.scope);
-        deletedIds.add(id);
       } catch (e, st) {
         anyFailed = true;
         addError(e, st);
       }
     }
-    await _removeCollectionMemberships(deletedIds);
     // Keep successful deletions visible even when another item failed.
     await _loadItems(emit, deletion: deletion, deletionSuccess: !anyFailed);
   }
@@ -170,14 +166,22 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
         }
         return;
       }
+      final scopes = [
+        // A failed read is not an empty collection. Keep the last valid data.
+        ...snapshot.collectionScopes ??
+            state.collectionScopes.where((scope) => scope.canManage),
+        ..._buildSiteScopes(snapshot.sources),
+        ..._buildAuthorScopes(snapshot.sources),
+      ];
       emit(
         state.copyWith(
           status: LibraryStatus.success,
           sources: snapshot.sources,
-          collectionScopes: snapshot.collectionScopes,
+          collectionScopes: scopes,
+          collectionsLoadFailed: snapshot.collectionScopes == null,
           selectedCollectionScope: _resolveSelectedCollectionScope(
             state.selectedCollectionScope,
-            snapshot.collectionScopes,
+            scopes,
           ),
           deletionVersion: effect?.version,
           deletionEffect: effect,
@@ -223,24 +227,19 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
       ...books.map(LibrarySource.fromBook),
       ...articles,
     ];
-    final collectionScopes = await _loadCollectionScopes(sources);
+    List<LibraryCollectionScope>? collectionScopes;
+    try {
+      collectionScopes = [
+        await _loadFavouriteCollectionScope(),
+        ...await _loadManualCollectionScopes(),
+      ];
+    } catch (e, st) {
+      addError(e, st);
+    }
     return _LibrarySnapshot(
       sources: sources,
       collectionScopes: collectionScopes,
     );
-  }
-
-  Future<List<LibraryCollectionScope>> _loadCollectionScopes(
-    List<LibrarySource> sources,
-  ) async {
-    final favouriteScope = await _loadFavouriteCollectionScope();
-    final manualScopes = await _loadManualCollectionScopes();
-    return [
-      favouriteScope,
-      ...manualScopes,
-      ..._buildSiteScopes(sources),
-      ..._buildAuthorScopes(sources),
-    ];
   }
 
   Future<LibraryCollectionScope> _loadFavouriteCollectionScope() async {
@@ -249,35 +248,25 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
       return LibraryCollectionScope.favourites();
     }
 
-    try {
-      final sourceIds = await collectionRepository.getFavouriteSourceIds();
-      return LibraryCollectionScope.favourites(sourceIds: sourceIds);
-    } catch (e, st) {
-      addError(e, st);
-      return LibraryCollectionScope.favourites();
-    }
+    final sourceIds = await collectionRepository.getFavouriteSourceIds();
+    return LibraryCollectionScope.favourites(sourceIds: sourceIds);
   }
 
   Future<List<LibraryCollectionScope>> _loadManualCollectionScopes() async {
     final collectionRepository = _collectionRepository;
     if (collectionRepository == null) return const [];
 
-    try {
-      final collections = await collectionRepository.getCollections();
-      final sourceIdsByCollection = await collectionRepository
-          .getCollectionSourceIds();
-      return collections
-          .map(
-            (collection) => LibraryCollectionScope.manual(
-              collection: collection,
-              sourceIds: sourceIdsByCollection[collection.id] ?? const {},
-            ),
-          )
-          .toList(growable: false);
-    } catch (e, st) {
-      addError(e, st);
-      return const [];
-    }
+    final collections = await collectionRepository.getCollections();
+    final sourceIdsByCollection = await collectionRepository
+        .getCollectionSourceIds();
+    return collections
+        .map(
+          (collection) => LibraryCollectionScope.manual(
+            collection: collection,
+            sourceIds: sourceIdsByCollection[collection.id] ?? const {},
+          ),
+        )
+        .toList(growable: false);
   }
 
   List<LibraryCollectionScope> _buildSiteScopes(List<LibrarySource> sources) {
@@ -340,19 +329,6 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
       }
     }
     return null;
-  }
-
-  Future<void> _removeCollectionMemberships(Set<String> sourceIds) async {
-    if (sourceIds.isEmpty) return;
-    final collectionRepository = _collectionRepository;
-    if (collectionRepository == null) return;
-    try {
-      await collectionRepository.removeSourcesFromCollections(sourceIds);
-    } catch (e, st) {
-      // Deletion already succeeded; membership cleanup is best-effort so the
-      // library list does not report a false source-deletion failure.
-      addError(e, st);
-    }
   }
 
   Future<void> _deleteSource(String id, BookDeletionScope scope) async {
@@ -422,7 +398,7 @@ class _LibrarySnapshot {
   });
 
   final List<LibrarySource> sources;
-  final List<LibraryCollectionScope> collectionScopes;
+  final List<LibraryCollectionScope>? collectionScopes;
 }
 
 /// Temporary accumulator for smart collection scopes derived from source

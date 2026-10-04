@@ -127,20 +127,25 @@ class ArticleRepository {
         extracted.blocks,
         extracted.title,
       );
-      final localImages = await _downloadArticleImages(
+      final images = await _downloadArticleImages(
         blocks: blocks,
         articleDir: articleDir,
         baseUri: baseUri,
       );
       await File(
         p.join(articleDir.path, 'content.html'),
-      ).writeAsString(_htmlForBlocks(blocks, localImages), flush: true);
+      ).writeAsString(_htmlForBlocks(blocks, images.replacements), flush: true);
 
       String? coverFilename;
       if (extracted.imageUrl case final url? when url.isNotEmpty) {
         final uri = _resolveRemoteUri(url, baseUri);
         if (uri != null) {
-          coverFilename = await _tryDownloadCover(articleDir, uri);
+          if (images.byUri.containsKey(uri.toString())) {
+            final image = images.byUri[uri.toString()];
+            if (image != null) coverFilename = 'images/${image.filename}';
+          } else {
+            coverFilename = await _tryDownloadCover(articleDir, uri);
+          }
         }
       }
 
@@ -228,6 +233,7 @@ class ArticleRepository {
           [id],
         );
         await _dao.deleteArticle(id);
+        await _db.collectionsDao.deleteSourceMemberships([id]);
       });
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
@@ -248,7 +254,7 @@ class ArticleRepository {
     }
   }
 
-  Future<Map<String, String>> _downloadArticleImages({
+  Future<_DownloadedArticleImages> _downloadArticleImages({
     required List<ArticleBlock> blocks,
     required Directory articleDir,
     required Uri? baseUri,
@@ -269,42 +275,46 @@ class ArticleRepository {
       uniqueUris.add(uriKey);
       sources[source] = uri;
     }
-    if (sources.isEmpty) return const {};
+    if (sources.isEmpty) return const _DownloadedArticleImages({}, {});
 
     final replacements = <String, String>{};
     final downloadedByUri = <String, _DownloadedArticleImage?>{};
     final imagesDir = Directory(p.join(articleDir.path, 'images'));
     final totalDeadline = DateTime.now().add(_totalImageDownloadTimeout);
     final downloadBudget = _ImageDownloadBudget(_maxTotalImageBytes);
-
-    for (final entry in sources.entries) {
-      final now = DateTime.now();
-      final remainingBytes = downloadBudget.remainingBytes;
-      if (!now.isBefore(totalDeadline) || remainingBytes <= 0) break;
-
-      final uriKey = entry.value.toString();
-      _DownloadedArticleImage? image;
-      if (downloadedByUri.containsKey(uriKey)) {
-        image = downloadedByUri[uriKey];
-      } else {
-        await imagesDir.create(recursive: true);
+    await imagesDir.create(recursive: true);
+    final queue = uniqueUris.toList(growable: false);
+    var next = 0;
+    Future<void> downloadNext() async {
+      while (next < queue.length) {
+        final now = DateTime.now();
+        final remainingBytes = downloadBudget.remainingBytes;
+        if (!now.isBefore(totalDeadline) || remainingBytes <= 0) return;
+        final uriKey = queue[next++];
         final imageDeadline = _earlierOf(
           totalDeadline,
           now.add(_imageDownloadTimeout),
         );
-        image = await _tryDownloadImage(
+        downloadedByUri[uriKey] = await _tryDownloadImage(
           directory: imagesDir,
-          uri: entry.value,
+          uri: Uri.parse(uriKey),
           maxBytes: math.min(_maxImageBytes, remainingBytes),
           deadline: imageDeadline,
           downloadBudget: downloadBudget,
         );
-        downloadedByUri[uriKey] = image;
       }
+    }
+
+    // Bound open requests and share one byte/deadline budget across workers.
+    await Future.wait(
+      List.generate(math.min(2, queue.length), (_) => downloadNext()),
+    );
+    for (final entry in sources.entries) {
+      final image = downloadedByUri[entry.value.toString()];
       if (image == null) continue;
       replacements[entry.key] = 'images/${image.filename}';
     }
-    return replacements;
+    return _DownloadedArticleImages(replacements, downloadedByUri);
   }
 
   Future<_DownloadedArticleImage?> _tryDownloadImage({
@@ -426,15 +436,31 @@ class ArticleRepository {
           .timeout(
             _remainingUntil(deadline),
           );
-      final request = http.Request('GET', currentUri)
-        ..followRedirects = false
-        ..maxRedirects = 0
-        ..headers['accept'] =
-            'image/avif,image/webp,image/png,image/jpeg,image/gif;q=0.9,*/*;q=0.1';
+      final aborted = Completer<void>();
+      final request =
+          http.AbortableRequest('GET', currentUri, abortTrigger: aborted.future)
+            ..followRedirects = false
+            ..maxRedirects = 0
+            ..headers['accept'] =
+                'image/avif,image/webp,image/png,image/jpeg,image/gif;q=0.9,*/*;q=0.1';
       final response = await _httpClient
           .send(request)
+          .then((response) async {
+            // Cancel late responses from clients without AbortableRequest support.
+            if (aborted.isCompleted) {
+              await _cancelResponse(response);
+              throw TimeoutException(
+                'Image response arrived after its deadline',
+              );
+            }
+            return response;
+          })
           .timeout(
             _remainingUntil(deadline),
+            onTimeout: () {
+              aborted.complete();
+              throw TimeoutException('Image response deadline exceeded');
+            },
           );
 
       if (_isRedirectStatus(response.statusCode)) {
@@ -457,6 +483,13 @@ class ArticleRepository {
       return _ValidatedImageResponse(uri: currentUri, response: response);
     }
   }
+}
+
+class _DownloadedArticleImages {
+  const _DownloadedArticleImages(this.replacements, this.byUri);
+
+  final Map<String, String> replacements;
+  final Map<String, _DownloadedArticleImage?> byUri;
 }
 
 class _DownloadedArticleImage {

@@ -111,7 +111,7 @@ void main() {
   });
 
   testWidgets(
-    'selected grid cover border uses delete color and source radius',
+    'selected grid cover border uses selection color and source radius',
     (
       tester,
     ) async {
@@ -134,9 +134,9 @@ void main() {
         ),
       );
 
-      final deleteColor = Theme.of(
+      final selectionColor = Theme.of(
         tester.element(find.byType(BookLibraryGridTile)),
-      ).colorScheme.error;
+      ).colorScheme.selectionMarkerBackground;
       final selectionDecoration = tester
           .widgetList<DecoratedBox>(find.byType(DecoratedBox))
           .map((box) => box.decoration)
@@ -144,7 +144,7 @@ void main() {
           .singleWhere(
             (decoration) =>
                 decoration.border is Border &&
-                (decoration.border! as Border).top.color == deleteColor &&
+                (decoration.border! as Border).top.color == selectionColor &&
                 (decoration.border! as Border).top.width == 3,
           );
 

@@ -9,6 +9,9 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   ReadflexLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get libraryRemovalPending => '保存後に削除';
+
+  @override
   String librarySelectedCount(int count) {
     return '選択中：$count';
   }
@@ -18,6 +21,15 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
 
   @override
   String get libraryDiscardChangesTitle => '変更を破棄しますか？';
+
+  @override
+  String get commonDiscardChangesTitle => '変更を破棄しますか？';
+
+  @override
+  String get commonDiscardChanges => '破棄';
+
+  @override
+  String get commonKeepEditing => '編集を続ける';
 
   @override
   String get libraryDiscardChangesBody => 'このコレクションの変更は保存されていません。';
@@ -430,6 +442,9 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get libraryFavourites => 'お気に入り';
 
   @override
+  String get libraryFavouritesBadge => 'お気に入り';
+
+  @override
   String libraryCreateCollectionPrompt(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -627,7 +642,46 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get importArticleHintLibrary => 'ライブラリに追加します。';
 
   @override
-  String get importUploadingBook => '本をアップロード中...';
+  String get importUploadingBook => '本を追加中';
+
+  @override
+  String get importPreparingBook => '本を準備中';
+
+  @override
+  String get importCopyingBook => 'ファイルをコピー中';
+
+  @override
+  String get importFinishingBook => 'インポートを完了中';
+
+  @override
+  String get commonUndo => '元に戻す';
+
+  @override
+  String get readerExpandHighlight => '続きを読む';
+
+  @override
+  String get readerCollapseHighlight => '折りたたむ';
+
+  @override
+  String get readerGoToPassage => '該当箇所へ移動';
+
+  @override
+  String get readerBookmarkRemoved => 'ブックマークを削除しました';
+
+  @override
+  String get readerBookmarkUpdateFailed => 'ブックマークを更新できませんでした';
+
+  @override
+  String get readerPages => 'ページ';
+
+  @override
+  String get readerThumbnailUnavailable => 'プレビューを表示できません';
+
+  @override
+  String get libraryNewCollection => '新しいコレクション';
+
+  @override
+  String get libraryCreateAndAdd => '作成して追加';
 
   @override
   String get importFetchingArticle => '記事を取得中...';

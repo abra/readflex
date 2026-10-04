@@ -183,6 +183,19 @@ void main() {
       () => tile.evaluate().isNotEmpty,
       description: 'library',
     );
+    final collectionFill = find.byKey(
+      const ValueKey('library-collection-fill'),
+    );
+    expect(tester.getSize(collectionFill), const Size.square(32));
+    expect(
+      tester.getSize(find.byTooltip('Collections')),
+      const Size.square(48),
+    );
+    expect(
+      tester.getCenter(find.byIcon(AppIcons.collection)),
+      tester.getCenter(collectionFill),
+    );
+    await capture(tester, 'library-filters');
     final search = find.byType(TextField);
     final initialReads = app.bookRepository.reads;
     await tester.enterText(search, 'no matching title');
@@ -326,24 +339,47 @@ void main() {
     await tester.longPress(tile);
     await tester.pumpAndSettle();
     await tapUi(tester, find.byIcon(AppIcons.collectionAdd));
+    await tapUi(tester, find.text('New collection'));
     await tester.enterText(
       find.widgetWithText(TextField, 'New collection name'),
       'Reading',
     );
-    await tapUi(tester, find.text('Create'));
+    await tapUi(tester, find.text('Create and add'));
     await waitForUi(
       tester,
-      () => find.text('Create').evaluate().isEmpty,
+      () => find.text('Create and add').evaluate().isEmpty,
       description: 'saved collection',
     );
     final collection = (await app.collectionRepository.getCollections()).single;
     await tapUi(tester, find.byIcon(AppIcons.collection));
+    await tester.enterText(find.byType(TextField).last, 'Reading');
+    await tester.pumpAndSettle();
+    final collectionsSheet = tester.element(find.byType(BottomSheet));
     await tapUi(
       tester,
       find.byKey(ValueKey('collectionScopeManage-manual-${collection.id}')),
     );
     await capture(tester, 'collection-manage');
+    expect(tester.element(find.byType(BottomSheet)), same(collectionsSheet));
+    await tapUi(tester, find.byTooltip('Back'));
+    expect(
+      tester.widget<TextField>(find.byType(TextField).last).controller!.text,
+      'Reading',
+    );
+    await capture(tester, 'collection-return-to-query');
+    await tapUi(
+      tester,
+      find.byKey(ValueKey('collectionScopeManage-manual-${collection.id}')),
+    );
     expectSheetCloseAlignment(tester);
+    final remove = find.widgetWithIcon(AppPlainIconButton, AppIcons.delete);
+    final closeIcon = tester.getRect(find.byIcon(AppIcons.close).hitTestable());
+    final removeIcon = tester.getRect(
+      find.descendant(of: remove, matching: find.byIcon(AppIcons.delete)),
+    );
+    expect(removeIcon.size, closeIcon.size);
+    expect(removeIcon.center.dx, closeIcon.center.dx);
+    expect(tester.getSize(remove), const Size(48, 48));
     void expectShortCollectionFits() {
       final sheet = find.byKey(const ValueKey('manageCollectionContent'));
       final viewport = find.descendant(
@@ -366,6 +402,31 @@ void main() {
     }
 
     expectShortCollectionFits();
+    final removeBounds = tester.getRect(remove);
+    await tapUi(tester, remove);
+    final undo = find.widgetWithIcon(AppPlainIconButton, AppIcons.undo);
+    expect(tester.getRect(undo), removeBounds);
+    expect(find.text('Undo'), findsNothing);
+    expect(find.text('Removed after Save'), findsOneWidget);
+    expectShortCollectionFits();
+    final saveBottom = tester
+        .getRect(find.widgetWithText(FilledButton, 'Save'))
+        .bottom;
+    final logicalHeight =
+        tester.view.physicalSize.height / tester.view.devicePixelRatio;
+    final safeBottom =
+        tester.view.padding.bottom / tester.view.devicePixelRatio;
+    expect(
+      logicalHeight - saveBottom,
+      closeTo(
+        AppSpacing.lg +
+            (safeBottom > AppSpacing.lg ? safeBottom : AppSpacing.lg),
+        1,
+      ),
+    );
+    await capture(tester, 'collection-undo');
+    await tapUi(tester, undo);
+    expect(remove, findsOneWidget);
     await tapUi(tester, find.text('Delete collection'));
     await capture(tester, 'collection-delete');
     expectSheetCloseAlignment(tester);

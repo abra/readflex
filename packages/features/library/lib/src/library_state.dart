@@ -71,6 +71,7 @@ class LibraryState extends Equatable {
     this.sources = const [],
     this.filter = LibraryFilter.all,
     this.collectionScopes = const [],
+    this.collectionsLoadFailed = false,
     this.selectedCollectionScope,
     this.searchQuery = '',
     this.deletionVersion = 0,
@@ -84,6 +85,7 @@ class LibraryState extends Equatable {
 
   final LibraryFilter filter;
   final List<LibraryCollectionScope> collectionScopes;
+  final bool collectionsLoadFailed;
   final LibraryCollectionScope? selectedCollectionScope;
   final String searchQuery;
 
@@ -230,6 +232,7 @@ class LibraryState extends Equatable {
     List<LibrarySource>? sources,
     LibraryFilter? filter,
     List<LibraryCollectionScope>? collectionScopes,
+    bool? collectionsLoadFailed,
     Object? selectedCollectionScope = _absent,
     String? searchQuery,
     int? deletionVersion,
@@ -239,6 +242,7 @@ class LibraryState extends Equatable {
     sources: sources ?? this.sources,
     filter: filter ?? this.filter,
     collectionScopes: collectionScopes ?? this.collectionScopes,
+    collectionsLoadFailed: collectionsLoadFailed ?? this.collectionsLoadFailed,
     selectedCollectionScope: selectedCollectionScope == _absent
         ? this.selectedCollectionScope
         : selectedCollectionScope as LibraryCollectionScope?,
@@ -253,6 +257,7 @@ class LibraryState extends Equatable {
     sources,
     filter,
     collectionScopes,
+    collectionsLoadFailed,
     selectedCollectionScope,
     searchQuery,
     deletionVersion,

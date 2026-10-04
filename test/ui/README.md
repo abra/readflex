@@ -64,7 +64,7 @@ make coverage
 make test-performance
 ```
 
-- `test-ui-contracts`: component-library tests, import form/navigation, Display
+- `test-ui-contracts`: component-library/toast tests, import form/navigation, Display
   step navigation and representative root layout contracts. No goldens, devices
   or API keys; a focused subset, not a replacement for feature tests or `verify`.
   These tests also run in the existing full suite, without a second invocation.
@@ -105,15 +105,18 @@ OS keyboard overlay; the test additionally asserts real nonzero keyboard insets.
 | Surface or contract | Automated checks | Where |
 | --- | --- | --- |
 | Shared control accessibility | Named tap targets under iOS/Android policies, selected/disabled choice semantics, stable control geometry and named/noninteractive busy actions in LTR/RTL at normal/large text | `packages/component_library/test/control_accessibility_contract_test.dart` |
+| Toast feedback | 48dp circular/localized Close, full-message semantics, durations, independent swipe, idle insertion and responsive safe-area layout; full-screen success/error over Library in all profiles, with RTL overridden to 390 x 844 | Toast package tests, `toast_golden_test.dart`, `integration_test/toast_test.dart` |
 | Theme text roles | Primary/secondary text on surface, sheet and input backgrounds; foreground/fill contrast for primary, secondary and destructive controls in light/dark | `packages/component_library/test/app_theme_test.dart` |
 | Onboarding | Skip/complete, routing, saved preference after remount; all three pages in five visual profiles | `onboarding_test.dart` |
 | Library | Search/clear, empty results, layout preference; UI changes do not issue new storage reads | `app_flows_test.dart` |
-| Library appearance | Grid, display sheet, empty search results and pressed Display/search-clear actions in all profiles; list in light/dark and on an Arabic phone | `library_golden_test.dart` |
+| Library appearance | Grid, display sheet, empty search results and pressed Display/search-clear actions in all profiles; list and compact favourites badge in light/dark and on an Arabic phone | `library_golden_test.dart`, `collection_management_golden_test.dart` |
 | Settings consistency | Display and Appearance share header geometry, section typography/gaps, content gutters, 48dp stepper targets and full-width fades in light/dark themes | `settings_consistency_test.dart` |
-| Library scaling | Grid/list remain virtualized with 20k books, callbacks address the right item, cached projections are reused | `library_scaling_test.dart` |
+| Library scaling | Grid/list remain virtualized with 20k books, callbacks address the right item, cached projections are reused; 320/390dp grids adapt columns at 200% text | `library_scaling_test.dart` |
+| Collection recovery | Retain last loaded scopes on partial failure; Retry replaces the error inside the same sheet, including phone/landscape, 200% text and RTL | Library bloc and `collection_scope_recovery_test.dart` |
+| Collection button | Unselected folder paints a 32dp square inside its 48dp hit target; selected Favs keeps separately labelled open/clear actions | Library header tests, `integration_test/library_controls_test.dart` |
 | Collections | Create with selected book, rename, cancel/confirm deletion; preserve book and clean membership | `app_flows_test.dart` |
 | Sheet navigation | Header/system Back vs whole-flow dismissal, URL draft retention, guarded collection Close; delete/discard headers across visual profiles | Feature widget tests, `collection_management_golden_test.dart`, `integration_test/library_controls_test.dart` |
-| Collection layout | Light/dark, 200%, landscape, RTL; edit form and unsaved changes confirmation | `collection_management_golden_test.dart` |
+| Collection layout | Light/dark, 200%, landscape, RTL; selector menu alignment, active favourites badge, edit form and unsaved changes confirmation | `collection_management_golden_test.dart` |
 | Selection and languages | Bottom selection bar, explicit cancel, compact two-column language picker, one-column large-text fallback and full-width scroll fades in all visual profiles | `library_golden_test.dart` |
 | Native library controls | Selection, compact language grid without scrolling, one Display/Language modal with identical step height, immediate language changes without leaving the picker (including RTL and reselecting), explicit Back, light/dark choices, import header alignment, close-icon gutters and 48dp targets across import/Display/Language/Manage collection, keyboard, short collection without false overflow/fades, inline keep/discard edits on an isolated fixture library | `integration_test/library_controls_test.dart` |
 | Display step navigation | Stable bounds during slides, UI locale change including RTL, Back/Close/system Back, interrupted transitions, rotation, retained Display scroll, small screens, large text and reduced motion | `packages/features/library/test/library_display_sheet_test.dart` |
@@ -129,11 +132,13 @@ OS keyboard overlay; the test additionally asserts real nonzero keyboard insets.
 | Reader appearance | Portrait/landscape, 2x text and RTL; header/values readable, final control and font sample reachable, Appearance/Font retain equal height with manual return | `reader_appearance_golden_test.dart` |
 | Native book actions | Expand word to phrase, translate exact final range, copy result, Define fallback, dismiss selection menu | `integration_test/reader_flows_test.dart` |
 | Selected page continuation | Both endpoints in Slide/Vertical, one-page synthetic swipe, menu hides/reanchors, complete range reaches Translate | `integration_test/reader_flows_test.dart` |
-| Native persistence | Explicit highlight writes text/CFI to real repository and renders nonzero geometry after book reopen | `integration_test/reader_flows_test.dart` |
+| Native persistence | Explicit highlight writes text/CFI to real repository, renders nonzero geometry after reopen, and opens by tapping its Highlights row without copy/arrow controls | `integration_test/reader_flows_test.dart` |
+| Initial position persistence | Early close or load failure cannot save a transient chapter-start CFI; completed restoration publishes the settled position under both platform policies | `test/reader_position_persistence_test.dart`, reader WebView recovery tests |
+| Active chapter contrast | Actual selected TOC tile uses paired foreground/background colors, including alpha compositing; light/dark, large text and phone RTL snapshots | `reader_contents_golden_test.dart` |
 | Native reader lifecycle | Search navigation and CFI survive synthetic pause/resume without replacing WebView state; DOM remains readable | `integration_test/reader_flows_test.dart` |
 | Native article actions | Store fixture article, search near its end and return without remounting, keep one native tint when changing palette color, expand word to sentence, translate complete range, close menu | `integration_test/reader_flows_test.dart` |
-| Native search UI | Query actual book, previous/next matches, reopen without rescan, system Back, return to initial reading position without remounting, clear field/remove history, empty results | `integration_test/reader_flows_test.dart` |
-| Native bookmarks | Create, reopen book, confirm storage, delete from Contents and reopen again | `integration_test/reader_flows_test.dart` |
+| Native search UI | Query actual book, previous/next matches, reopen without rescan, system Back, return to initial reading position without remounting, clear field/remove history, empty results, trailing glyph alignment with 48dp targets | `integration_test/reader_flows_test.dart` |
+| Native bookmarks | Create, reopen book, confirm storage, delete/restore by icon from Contents and reopen again; trash/Undo/close glyph alignment with 48dp targets; same icon flow in CBZ | `integration_test/reader_flows_test.dart`, `integration_test/comic_highlights_test.dart` |
 | Native appearance | Font step preserves sheet height and waits for Back; theme/font/size/page-turn reach preferences and DOM, persist per book, reset without replacing live WebView | `integration_test/reader_flows_test.dart` |
 | Native translation failure | Failed response, closed selection menu, retry same range successfully | `integration_test/reader_flows_test.dart` |
 | Native translation controls | Expand details without a request; change target preserving auto source and exact range; return to selection in the same WebView | `integration_test/reader_flows_test.dart` |
@@ -235,6 +240,10 @@ the SDK screenshot callback can wait indefinitely for an already-consumed frame.
 
 The fifteen native scenarios write screenshots and `results.json` to a fresh
 `.local/ui-device/run-*/` directory, printed by the driver.
+Unlock the test device and dismiss first-run OS overlays before running them
+(for example Android's "Viewing full screen" prompt after a cold emulator boot).
+Flutter finders cannot detect these windows; inspect native screenshots when
+taps, clipboard access or WebView actions unexpectedly fail together.
 Screenshots are inspection artifacts, not cross-device golden assertions. The
 driver checks that screenshot data is nonempty; test assertions check actual
 widgets, service arguments, storage, DOM content, and highlight geometry.
@@ -304,7 +313,71 @@ simulator/emulator rather than a device holding valuable app data.
 Inactive feature stubs are not implemented or presented as tested end-to-end
 features. Add cases here as those contracts become real.
 
+## Consistency Regressions
+
+The component tests check 24dp sheet content edges independently from 48dp
+action targets, circular Copy feedback, and opaque selection-marker contrast.
+Feature tests cover selected collection semantics/background geometry in both
+directions and themes, retained query/scroll position through Manage, and
+Back/Close draft outcomes without extra Library reads. Reader tests cover mixed
+quote/note directions, localized page fallback labels and add/edit/clear notes.
+`reader_note_golden_test.dart` adds draft/discard states in all five profiles.
+Onboarding asserts the settled page/indicator and reduced-motion RTL behavior;
+toast tests distinguish short success feedback from readable error duration and
+the non-expiring accessible-navigation error policy.
+
+`library/test/sheet_layout_contract_test.dart` measures footer gaps for standalone
+and nested collection routes with 0/24/34dp system insets and an open keyboard,
+plus bulk-action glyph gutters in both directions. Manage tests cover independent
+trash/curved-arrow Undo toggles, stable row/footer bounds, cancel/save/failure
+and lazy source rows without removal-animation ticks. Collection goldens include
+the pending-removal state; native Library controls check the same Undo target
+and the footer's actual screen-to-button gap. The reader search-overlay test
+also checks equal 48dp chrome targets and circular feedback without remounting
+or resizing the reader.
+
+The native consistency batch combines existing Library/import controls and CBZ
+Highlights flows with the note editor's keyboard, discard and clear workflow:
+
+```sh
+READFLEX_NATIVE_DEVICE=<id> fvm flutter drive \
+  --driver=test_driver/ui_driver.dart \
+  --target=integration_test/ui_consistency_test.dart -d <id>
+```
+
+Use the same target on Android and iOS. Fixtures remain isolated, without live
+providers. The note-editor case checks the real sheet and keyboard, not dragging
+an image selection or opening its native context menu. Screenshots and results
+go to `.local/ui-device/`; this batch does not measure release FPS or replace
+VoiceOver/TalkBack and physical-device gesture checks. After device tests, run
+the normal `lib/main.dart` app so the test harness's empty final frame is not
+left on the device.
+
 ## Performance Guardrails
+
+Approved secondary-surface changes have additional production-widget coverage:
+`reader_contents_golden_test.dart` checks icon-only bookmark Undo geometry, full
+quote expansion, filtering and whole-row navigation without copy/arrow controls.
+`reader_highlight_list_tile_test.dart` covers text/image row actions, accessible
+navigation semantics, missing anchors and independent expansion at 2x text.
+`add_to_collection_golden_test.dart`
+checks destination membership, separate creation, stable height and draft return.
+Both use the real repositories and a phone-sized Arabic override for `tabletRtl`.
+Import phase and translation menu snapshots remain in the existing suites.
+Reader-native rendering is tested separately: `comic_zoom_test.dart` opens Pages,
+waits for actual bridge-generated previews and navigates from a thumbnail.
+The 500-page cubit/widget workloads bound active requests and retained previews;
+they do not assert FPS or peak browser image-decoder memory.
+
+`comic_highlights_golden_test.dart` exercises the production Highlights drawer
+with 100 saved areas, shared-page request deduplication, tab/close cancellation,
+retained filters, expandable notes, local preview retry and row navigation.
+New image-area snapshots cover light/dark, narrow 2x text, landscape and Arabic
+on a 390x844 phone. The thumbnail widget tests assert crop pixels, aspect ratio
+and clamping, rather than just finding an Image widget.
+`integration_test/comic_highlights_test.dart` verifies icon-only bookmark Undo, real
+WebView thumbnails and destination-page navigation on iOS and Android using the
+generated CBZ, without network access or changes to on-page selection gestures.
 
 No screenshot polling, fixture dependencies, or test font assets are added to
 the release app. Read-only WebView test accessors do not register listeners.

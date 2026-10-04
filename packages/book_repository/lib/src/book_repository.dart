@@ -100,14 +100,15 @@ class BookRepository {
         final sink = File(destPath).openWrite();
         var copied = 0;
         try {
-          await for (final chunk in sourceFile.openRead()) {
-            sink.add(chunk);
-            copied += chunk.length;
-            // Reserve last 5% of the bar for cover + DB insert below.
-            final scaled = total == 0 ? 0.95 : (copied / total) * 0.95;
-            onProgress(scaled.clamp(0.0, 0.95));
-          }
-          await sink.flush();
+          await sink.addStream(
+            sourceFile.openRead().map((chunk) {
+              copied += chunk.length;
+              // Reserve last 5% of the bar for cover + DB insert below.
+              final scaled = total == 0 ? 0.95 : (copied / total) * 0.95;
+              onProgress(scaled.clamp(0.0, 0.95));
+              return chunk;
+            }),
+          );
         } finally {
           await sink.close();
         }
@@ -149,6 +150,7 @@ class BookRepository {
         addedAt: now,
         author: author,
         coverImagePath: coverFileName,
+        comicPageOrderVersion: format == BookFormat.cbz ? 1 : 0,
       );
       await _dao.insertBook(book.toStorageModel());
       onProgress?.call(1.0);
@@ -274,34 +276,65 @@ class BookRepository {
         anchorSectionPage: anchorSectionPage,
         createdAt: DateTime.now(),
       );
-      await _db.customStatement(
-        '''
+      await _insertBookmark(bookmark);
+      return await _bookmarkById(sourceId, bookmark.id) ?? bookmark;
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  /// Restores the original identity/anchors/date, unless this location was
+  /// bookmarked again. That newer record wins instead of creating a duplicate.
+  Future<SourceBookmark> restoreBookmark(SourceBookmark bookmark) async {
+    try {
+      return await _db.transaction(() async {
+        final sourceExists = bookmark.sourceType == SourceType.book
+            ? await _dao.bookById(bookmark.sourceId) != null
+            : await _db.articlesDao.articleById(bookmark.sourceId) != null;
+        if (!sourceExists) throw StateError('Bookmark source no longer exists');
+        final existing = await _bookmarkBySourceAndAnchor(
+          sourceId: bookmark.sourceId,
+          cfi: bookmark.cfi,
+          anchorExact: bookmark.anchorExact,
+          anchorPrefix: bookmark.anchorPrefix,
+          anchorSuffix: bookmark.anchorSuffix,
+          anchorSectionIndex: bookmark.anchorSectionIndex,
+          anchorSectionPage: bookmark.anchorSectionPage,
+        );
+        if (existing != null) return existing;
+        await _insertBookmark(bookmark);
+        return bookmark;
+      });
+    } catch (error, stack) {
+      Error.throwWithStackTrace(StorageException(cause: error), stack);
+    }
+  }
+
+  Future<void> _insertBookmark(SourceBookmark bookmark) async {
+    await _db.customStatement(
+      '''
         INSERT INTO bookmarks_table
           (id, source_id, source_type, cfi, content, progress, chapter_title,
            anchor_exact, anchor_prefix, anchor_suffix, anchor_section_index,
            anchor_section_page, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''',
-        [
-          bookmark.id,
-          bookmark.sourceId,
-          bookmark.sourceType.name,
-          bookmark.cfi,
-          bookmark.content,
-          bookmark.progress,
-          bookmark.chapterTitle,
-          bookmark.anchorExact,
-          bookmark.anchorPrefix,
-          bookmark.anchorSuffix,
-          bookmark.anchorSectionIndex,
-          bookmark.anchorSectionPage,
-          bookmark.createdAt.toIso8601String(),
-        ],
-      );
-      return await _bookmarkById(sourceId, bookmark.id) ?? bookmark;
-    } catch (e, st) {
-      Error.throwWithStackTrace(StorageException(cause: e), st);
-    }
+      [
+        bookmark.id,
+        bookmark.sourceId,
+        bookmark.sourceType.name,
+        bookmark.cfi,
+        bookmark.content,
+        bookmark.progress,
+        bookmark.chapterTitle,
+        bookmark.anchorExact,
+        bookmark.anchorPrefix,
+        bookmark.anchorSuffix,
+        bookmark.anchorSectionIndex,
+        bookmark.anchorSectionPage,
+        bookmark.createdAt.toIso8601String(),
+      ],
+    );
   }
 
   Future<void> deleteBookmarkById(String sourceId, String bookmarkId) async {
@@ -474,6 +507,7 @@ class BookRepository {
           [id],
         );
         await _dao.deleteBook(id);
+        await _db.collectionsDao.deleteSourceMemberships([id]);
       });
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);

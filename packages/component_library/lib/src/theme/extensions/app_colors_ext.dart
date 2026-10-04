@@ -20,6 +20,8 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
     required this.info,
     required this.success,
     required this.successForeground,
+    required this.successContainer,
+    required this.onSuccessContainer,
     required this.proBadge,
     required this.proBadgeForeground,
     required this.divider,
@@ -39,6 +41,8 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
   final Color info;
   final Color success;
   final Color successForeground;
+  final Color successContainer;
+  final Color onSuccessContainer;
   final Color proBadge;
   final Color proBadgeForeground;
   final Color divider;
@@ -59,6 +63,8 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
     Color? info,
     Color? success,
     Color? successForeground,
+    Color? successContainer,
+    Color? onSuccessContainer,
     Color? proBadge,
     Color? proBadgeForeground,
     Color? divider,
@@ -78,6 +84,8 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
       info: info ?? this.info,
       success: success ?? this.success,
       successForeground: successForeground ?? this.successForeground,
+      successContainer: successContainer ?? this.successContainer,
+      onSuccessContainer: onSuccessContainer ?? this.onSuccessContainer,
       proBadge: proBadge ?? this.proBadge,
       proBadgeForeground: proBadgeForeground ?? this.proBadgeForeground,
       divider: divider ?? this.divider,
@@ -111,6 +119,16 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
       successForeground: Color.lerp(
         successForeground,
         other.successForeground,
+        t,
+      )!,
+      successContainer: Color.lerp(
+        successContainer,
+        other.successContainer,
+        t,
+      )!,
+      onSuccessContainer: Color.lerp(
+        onSuccessContainer,
+        other.onSuccessContainer,
         t,
       )!,
       proBadge: Color.lerp(proBadge, other.proBadge, t)!,

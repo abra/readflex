@@ -18,6 +18,7 @@ class Book extends Equatable {
     this.readingProgress = 0.0,
     this.lastOpenedAt,
     this.isFinished = false,
+    this.comicPageOrderVersion = 0,
   });
 
   final String id;
@@ -37,6 +38,9 @@ class Book extends Equatable {
   final DateTime addedAt;
   final DateTime? lastOpenedAt;
   final bool isFinished;
+
+  /// Stable archive indexing policy. Zero preserves pre-existing CBZ anchors.
+  final int comicPageOrderVersion;
 
   static const _absent = Object();
 
@@ -70,6 +74,7 @@ class Book extends Equatable {
         ? this.lastOpenedAt
         : lastOpenedAt as DateTime?,
     isFinished: isFinished ?? this.isFinished,
+    comicPageOrderVersion: comicPageOrderVersion,
   );
 
   @override
@@ -87,5 +92,6 @@ class Book extends Equatable {
     addedAt,
     lastOpenedAt,
     isFinished,
+    comicPageOrderVersion,
   ];
 }

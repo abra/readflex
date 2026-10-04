@@ -22,6 +22,7 @@ class BookReaderWebView extends StatefulWidget {
     this.initialProgress,
     this.isArticle = false,
     this.isComic = false,
+    this.comicPageOrderVersion = 0,
     this.pageProgressionRtl = false,
     this.foliateStyle = const FoliateStyle(),
     this.searchOverlayBottomFraction = 0,
@@ -65,6 +66,9 @@ class BookReaderWebView extends StatefulWidget {
   /// Enables the iOS comic tap bridge without changing text-reader gestures.
   final bool isComic;
 
+  /// Persisted CBZ indexing policy; never infer it from the presence of a CFI.
+  final int comicPageOrderVersion;
+
   /// Initial page progression hint when source metadata is missing or wrong.
   final bool pageProgressionRtl;
 
@@ -87,6 +91,8 @@ class BookReaderWebView extends StatefulWidget {
   final void Function(ReaderLoadFailure)? onLoadFailed;
 
   /// Fires on page turn with the new position.
+  /// Publishes positions only after the initial location has been restored.
+  /// Early content may be visible before this persistence-safe callback fires.
   final void Function(BookPosition position)? onPositionChanged;
 
   /// Fires when the user selects text.

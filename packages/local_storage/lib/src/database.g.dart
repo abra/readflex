@@ -1334,6 +1334,17 @@ class $BooksTableTable extends BooksTable
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _comicPageOrderVersionMeta =
+      const VerificationMeta('comicPageOrderVersion');
+  @override
+  late final GeneratedColumn<int> comicPageOrderVersion = GeneratedColumn<int>(
+    'comic_page_order_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1349,6 +1360,7 @@ class $BooksTableTable extends BooksTable
     addedAt,
     lastOpenedAt,
     isFinished,
+    comicPageOrderVersion,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1462,6 +1474,15 @@ class $BooksTableTable extends BooksTable
         isFinished.isAcceptableOrUnknown(data['is_finished']!, _isFinishedMeta),
       );
     }
+    if (data.containsKey('comic_page_order_version')) {
+      context.handle(
+        _comicPageOrderVersionMeta,
+        comicPageOrderVersion.isAcceptableOrUnknown(
+          data['comic_page_order_version']!,
+          _comicPageOrderVersionMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1523,6 +1544,10 @@ class $BooksTableTable extends BooksTable
         DriftSqlType.bool,
         data['${effectivePrefix}is_finished'],
       )!,
+      comicPageOrderVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}comic_page_order_version'],
+      )!,
     );
   }
 
@@ -1546,6 +1571,7 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
   final String addedAt;
   final String? lastOpenedAt;
   final bool isFinished;
+  final int comicPageOrderVersion;
   const BooksTableData({
     required this.id,
     required this.title,
@@ -1560,6 +1586,7 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
     required this.addedAt,
     this.lastOpenedAt,
     required this.isFinished,
+    required this.comicPageOrderVersion,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1585,6 +1612,7 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
       map['last_opened_at'] = Variable<String>(lastOpenedAt);
     }
     map['is_finished'] = Variable<bool>(isFinished);
+    map['comic_page_order_version'] = Variable<int>(comicPageOrderVersion);
     return map;
   }
 
@@ -1611,6 +1639,7 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
           ? const Value.absent()
           : Value(lastOpenedAt),
       isFinished: Value(isFinished),
+      comicPageOrderVersion: Value(comicPageOrderVersion),
     );
   }
 
@@ -1633,6 +1662,9 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
       addedAt: serializer.fromJson<String>(json['addedAt']),
       lastOpenedAt: serializer.fromJson<String?>(json['lastOpenedAt']),
       isFinished: serializer.fromJson<bool>(json['isFinished']),
+      comicPageOrderVersion: serializer.fromJson<int>(
+        json['comicPageOrderVersion'],
+      ),
     );
   }
   @override
@@ -1652,6 +1684,7 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
       'addedAt': serializer.toJson<String>(addedAt),
       'lastOpenedAt': serializer.toJson<String?>(lastOpenedAt),
       'isFinished': serializer.toJson<bool>(isFinished),
+      'comicPageOrderVersion': serializer.toJson<int>(comicPageOrderVersion),
     };
   }
 
@@ -1669,6 +1702,7 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
     String? addedAt,
     Value<String?> lastOpenedAt = const Value.absent(),
     bool? isFinished,
+    int? comicPageOrderVersion,
   }) => BooksTableData(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -1685,6 +1719,7 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
     addedAt: addedAt ?? this.addedAt,
     lastOpenedAt: lastOpenedAt.present ? lastOpenedAt.value : this.lastOpenedAt,
     isFinished: isFinished ?? this.isFinished,
+    comicPageOrderVersion: comicPageOrderVersion ?? this.comicPageOrderVersion,
   );
   BooksTableData copyWithCompanion(BooksTableCompanion data) {
     return BooksTableData(
@@ -1715,6 +1750,9 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
       isFinished: data.isFinished.present
           ? data.isFinished.value
           : this.isFinished,
+      comicPageOrderVersion: data.comicPageOrderVersion.present
+          ? data.comicPageOrderVersion.value
+          : this.comicPageOrderVersion,
     );
   }
 
@@ -1733,7 +1771,8 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
           ..write('readingProgress: $readingProgress, ')
           ..write('addedAt: $addedAt, ')
           ..write('lastOpenedAt: $lastOpenedAt, ')
-          ..write('isFinished: $isFinished')
+          ..write('isFinished: $isFinished, ')
+          ..write('comicPageOrderVersion: $comicPageOrderVersion')
           ..write(')'))
         .toString();
   }
@@ -1753,6 +1792,7 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
     addedAt,
     lastOpenedAt,
     isFinished,
+    comicPageOrderVersion,
   );
   @override
   bool operator ==(Object other) =>
@@ -1770,7 +1810,8 @@ class BooksTableData extends DataClass implements Insertable<BooksTableData> {
           other.readingProgress == this.readingProgress &&
           other.addedAt == this.addedAt &&
           other.lastOpenedAt == this.lastOpenedAt &&
-          other.isFinished == this.isFinished);
+          other.isFinished == this.isFinished &&
+          other.comicPageOrderVersion == this.comicPageOrderVersion);
 }
 
 class BooksTableCompanion extends UpdateCompanion<BooksTableData> {
@@ -1787,6 +1828,7 @@ class BooksTableCompanion extends UpdateCompanion<BooksTableData> {
   final Value<String> addedAt;
   final Value<String?> lastOpenedAt;
   final Value<bool> isFinished;
+  final Value<int> comicPageOrderVersion;
   final Value<int> rowid;
   const BooksTableCompanion({
     this.id = const Value.absent(),
@@ -1802,6 +1844,7 @@ class BooksTableCompanion extends UpdateCompanion<BooksTableData> {
     this.addedAt = const Value.absent(),
     this.lastOpenedAt = const Value.absent(),
     this.isFinished = const Value.absent(),
+    this.comicPageOrderVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   BooksTableCompanion.insert({
@@ -1818,6 +1861,7 @@ class BooksTableCompanion extends UpdateCompanion<BooksTableData> {
     required String addedAt,
     this.lastOpenedAt = const Value.absent(),
     this.isFinished = const Value.absent(),
+    this.comicPageOrderVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        title = Value(title),
@@ -1838,6 +1882,7 @@ class BooksTableCompanion extends UpdateCompanion<BooksTableData> {
     Expression<String>? addedAt,
     Expression<String>? lastOpenedAt,
     Expression<bool>? isFinished,
+    Expression<int>? comicPageOrderVersion,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1854,6 +1899,8 @@ class BooksTableCompanion extends UpdateCompanion<BooksTableData> {
       if (addedAt != null) 'added_at': addedAt,
       if (lastOpenedAt != null) 'last_opened_at': lastOpenedAt,
       if (isFinished != null) 'is_finished': isFinished,
+      if (comicPageOrderVersion != null)
+        'comic_page_order_version': comicPageOrderVersion,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1872,6 +1919,7 @@ class BooksTableCompanion extends UpdateCompanion<BooksTableData> {
     Value<String>? addedAt,
     Value<String?>? lastOpenedAt,
     Value<bool>? isFinished,
+    Value<int>? comicPageOrderVersion,
     Value<int>? rowid,
   }) {
     return BooksTableCompanion(
@@ -1888,6 +1936,8 @@ class BooksTableCompanion extends UpdateCompanion<BooksTableData> {
       addedAt: addedAt ?? this.addedAt,
       lastOpenedAt: lastOpenedAt ?? this.lastOpenedAt,
       isFinished: isFinished ?? this.isFinished,
+      comicPageOrderVersion:
+          comicPageOrderVersion ?? this.comicPageOrderVersion,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1934,6 +1984,11 @@ class BooksTableCompanion extends UpdateCompanion<BooksTableData> {
     if (isFinished.present) {
       map['is_finished'] = Variable<bool>(isFinished.value);
     }
+    if (comicPageOrderVersion.present) {
+      map['comic_page_order_version'] = Variable<int>(
+        comicPageOrderVersion.value,
+      );
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1956,6 +2011,7 @@ class BooksTableCompanion extends UpdateCompanion<BooksTableData> {
           ..write('addedAt: $addedAt, ')
           ..write('lastOpenedAt: $lastOpenedAt, ')
           ..write('isFinished: $isFinished, ')
+          ..write('comicPageOrderVersion: $comicPageOrderVersion, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -7453,6 +7509,7 @@ typedef $$BooksTableTableCreateCompanionBuilder =
       required String addedAt,
       Value<String?> lastOpenedAt,
       Value<bool> isFinished,
+      Value<int> comicPageOrderVersion,
       Value<int> rowid,
     });
 typedef $$BooksTableTableUpdateCompanionBuilder =
@@ -7470,6 +7527,7 @@ typedef $$BooksTableTableUpdateCompanionBuilder =
       Value<String> addedAt,
       Value<String?> lastOpenedAt,
       Value<bool> isFinished,
+      Value<int> comicPageOrderVersion,
       Value<int> rowid,
     });
 
@@ -7544,6 +7602,11 @@ class $$BooksTableTableFilterComposer
 
   ColumnFilters<bool> get isFinished => $composableBuilder(
     column: $table.isFinished,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get comicPageOrderVersion => $composableBuilder(
+    column: $table.comicPageOrderVersion,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7621,6 +7684,11 @@ class $$BooksTableTableOrderingComposer
     column: $table.isFinished,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get comicPageOrderVersion => $composableBuilder(
+    column: $table.comicPageOrderVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$BooksTableTableAnnotationComposer
@@ -7684,6 +7752,11 @@ class $$BooksTableTableAnnotationComposer
     column: $table.isFinished,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get comicPageOrderVersion => $composableBuilder(
+    column: $table.comicPageOrderVersion,
+    builder: (column) => column,
+  );
 }
 
 class $$BooksTableTableTableManager
@@ -7730,6 +7803,7 @@ class $$BooksTableTableTableManager
                 Value<String> addedAt = const Value.absent(),
                 Value<String?> lastOpenedAt = const Value.absent(),
                 Value<bool> isFinished = const Value.absent(),
+                Value<int> comicPageOrderVersion = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => BooksTableCompanion(
                 id: id,
@@ -7745,6 +7819,7 @@ class $$BooksTableTableTableManager
                 addedAt: addedAt,
                 lastOpenedAt: lastOpenedAt,
                 isFinished: isFinished,
+                comicPageOrderVersion: comicPageOrderVersion,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -7762,6 +7837,7 @@ class $$BooksTableTableTableManager
                 required String addedAt,
                 Value<String?> lastOpenedAt = const Value.absent(),
                 Value<bool> isFinished = const Value.absent(),
+                Value<int> comicPageOrderVersion = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => BooksTableCompanion.insert(
                 id: id,
@@ -7777,6 +7853,7 @@ class $$BooksTableTableTableManager
                 addedAt: addedAt,
                 lastOpenedAt: lastOpenedAt,
                 isFinished: isFinished,
+                comicPageOrderVersion: comicPageOrderVersion,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -9936,10 +10013,8 @@ final class $$CollectionsTableTableReferences
   _collectionSourcesTableRefsTable(_$AppDatabase db) =>
       MultiTypedResultKey.fromTable(
         db.collectionSourcesTable,
-        aliasName: $_aliasNameGenerator(
-          db.collectionsTable.id,
-          db.collectionSourcesTable.collectionId,
-        ),
+        aliasName:
+            'collections_table__id__collection_sources_table__collection_id',
       );
 
   $$CollectionSourcesTableTableProcessedTableManager
@@ -10238,10 +10313,7 @@ final class $$CollectionSourcesTableTableReferences
 
   static $CollectionsTableTable _collectionIdTable(_$AppDatabase db) =>
       db.collectionsTable.createAlias(
-        $_aliasNameGenerator(
-          db.collectionSourcesTable.collectionId,
-          db.collectionsTable.id,
-        ),
+        'collection_sources_table__collection_id__collections_table__id',
       );
 
   $$CollectionsTableTableProcessedTableManager get collectionId {

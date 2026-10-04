@@ -26,7 +26,7 @@ class ReaderSearchResultTile extends StatelessWidget {
 
     return ListTile(
       selected: selected,
-      selectedTileColor: colors.primary.withValues(alpha: 0.06),
+      selectedTileColor: colors.selectedControlBackground,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.xxs,
@@ -45,7 +45,9 @@ class ReaderSearchResultTile extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: context.text.bodySmall.copyWith(
-          color: colors.onSurfaceVariant,
+          color: selected
+              ? colors.selectedControlForeground
+              : colors.onSurfaceVariant,
         ),
       ),
       subtitle: Padding(
@@ -61,13 +63,19 @@ class ReaderSearchResultTile extends StatelessWidget {
           maxLines: 3,
           overflow: TextOverflow.ellipsis,
           text: TextSpan(
-            style: context.text.bodyMedium.copyWith(color: colors.onSurface),
+            style: context.text.bodyMedium.copyWith(
+              color: selected
+                  ? colors.selectedControlForeground
+                  : colors.onSurface,
+            ),
             children: [
               TextSpan(text: result.excerpt.pre),
               TextSpan(
                 text: result.excerpt.match,
                 style: context.text.bodyMedium.copyWith(
-                  color: context.actionForeground,
+                  color: selected
+                      ? colors.selectedControlForeground
+                      : context.actionForeground,
                   fontWeight: FontWeight.w700,
                 ),
               ),

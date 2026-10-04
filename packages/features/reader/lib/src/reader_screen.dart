@@ -6,6 +6,7 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/services.dart';
 import 'package:highlight_repository/highlight_repository.dart';
@@ -20,6 +21,8 @@ import 'book_custom_css.dart';
 import 'reader_appearance_cubit.dart';
 import 'reader_appearance_sheet.dart';
 import 'reader_bookmark_filter.dart';
+import 'reader_comic_pages.dart';
+import 'reader_comic_thumbnail_cubit.dart';
 import 'reader_bloc.dart';
 import 'reader_brightness_cubit.dart';
 import 'reader_chrome_actions.dart';
@@ -34,8 +37,10 @@ import 'reader_highlight_effect_listener.dart';
 import 'reader_highlight_color.dart';
 import 'reader_highlight_controls.dart';
 import 'reader_highlight_filter.dart';
-import 'reader_highlight_location_label.dart';
+import 'reader_highlight_list_tile.dart';
+import 'reader_highlight_note_sheet.dart';
 import 'reader_image_highlight_cubit.dart';
+import 'reader_image_highlight_preview.dart';
 import 'reader_image_selection_cubit.dart';
 import 'reader_keep_awake_cubit.dart';
 import 'reader_progress_label.dart';
@@ -130,13 +135,9 @@ String _readerBrightnessLabel(ReaderBrightnessState state) {
   return 'System';
 }
 
-final _readerDrawerCloseButtonStyle = IconButton.styleFrom(
-  backgroundColor: Colors.transparent,
-  disabledBackgroundColor: Colors.transparent,
-  hoverColor: Colors.transparent,
-  focusColor: Colors.transparent,
-  highlightColor: Colors.transparent,
-);
+// Share the header/row glyph edge while retaining a full 48dp action target.
+const _readerDrawerActionEndPadding =
+    AppSpacing.lg - (AppSizes.buttonHeight - AppIconSize.md) / 2;
 
 double _readerDrawerListBottomPadding(BuildContext context) {
   return MediaQuery.viewInsetsOf(context).bottom +

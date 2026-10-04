@@ -92,9 +92,43 @@ The header's Display action uses the shared `AppPlainIconButton`: a transparent
 resting surface, circular pressed feedback and a 48dp target. Search uses the
 same utility-action behavior for its smaller clear glyph.
 
+In the Collections picker, row menu icons align with the sheet's close icon.
+Their 48dp targets extend into the trailing list gutter; labels and counts in
+rows without a menu retain their content insets. Insets mirror in RTL.
+The selected-row background has symmetric 24dp gutters independently of the
+trailing action target. Selection includes a check, paired theme colors and
+selected semantics. Row press/focus feedback remains enabled.
+
+Collections -> Manage is one guarded sheet flow. Back/Cancel returns to the
+same query and scroll offset; Save/Delete refreshes that list in place. Close
+exits the whole flow after the existing draft guard. Like other guarded forms,
+this flow disables scrim/drag dismissal, reserving the normal handle height.
+The selector stays mounted offstage during editing; toggling staged removals
+does not read storage or rebuild its search. Standalone management remains
+available with its existing dismissal result. Both entry paths retain the
+route-owned bottom safe area across manage/delete/discard steps.
+The selected collection badge shrink-wraps its label, within the existing width
+cap, without intrinsic sizing. Its open and clear actions retain separate 48dp
+targets. English uses `Favs` on the badge only; menus, tooltip and semantics keep
+the full localized collection name.
+Without a selected collection, the folder's visible fill is 32dp square,
+trailing-aligned with the content gutter inside its unchanged 48dp hit target.
+The header reserves only the compact offline icon, not a hidden localized word.
+The lazy grid uses up to three columns, reducing the count on narrow viewports
+and with enlarged text. Generated cover titles budget the actual TextScaler
+height rather than the unscaled font size.
+
+A collection read failure retains the last valid stored scopes and selection,
+while books/articles still refresh. First-load failure does not manufacture an
+empty Favourites scope. The Collections sheet shows the localized failure and
+Retry, subscribing to Library state so recovery does not close/reopen the sheet.
+Source repositories, not LibraryBloc, own atomic membership cleanup on deletion.
+
 Selection replaces the import FAB with a bottom action bar: selected count,
 explicit cancel, add to collection, and secondary delete. Scaffold reserves its
-height, including the safe area. System Back still clears selection. Display and
+height, including `AppBottomSafeArea` and 16dp below the commands. Cancel/trash
+glyphs align with the screen's 16dp gutter while retaining 48dp targets.
+System Back still clears selection. Display and
 selection changes reuse loaded sources instead of querying storage again.
 
 Display shares `ActionBottomSheetLayout.scrollable`, `AppSettingsSection` and
@@ -137,6 +171,12 @@ within the common height. Full-width edge fades appear only where content
 continues offscreen. This eagerly lays out the fixed set of ten languages,
 without intrinsic sizing or per-scroll text measurement.
 
+Collection source rows use the shared trash icon to remove membership, not
+delete the book or article from the library. Their localized tooltips name the
+source; the close icon is reserved for dismissing the sheet.
+The 20dp trash glyph aligns with the header close glyph at the 24dp content
+gutter. Its 48dp target extends into that gutter without changing text insets;
+the geometry mirrors in RTL.
 Collection edits remain staged until Save. At the root, Cancel, Close and system
 Back prompt only when there are actual edits. Drag/scrim dismissal is disabled for this form
 so it cannot bypass the guard. Delete is secondary and has its own confirmation.
@@ -150,14 +190,36 @@ Large text and keyboard-constrained layouts scroll the form in a single lazy
 sliver viewport while keeping Save/Cancel available. No collection/source is
 deleted by canceling the form. Footer actions stack when localized labels at
 the user's text scale cannot fit side by side.
+Removing membership retains the row and replaces trash with `AppIcons.undo`,
+the same curved-arrow role as bookmark restoration. A localized status explains
+that removal takes effect after Save. The status slot retains its height;
+Undo does not shift neighboring rows, shrink the sheet or move the footer.
+Several removals can be staged/restored independently, including after a save
+failure. Only Save writes membership changes; restoring all edits disables it.
+The source snapshot and counts are prepared once; toggles update counts and a
+set in constant time without removal-animation ticks or whole-list copies.
+Rows remain lazily built. Only navigation between form steps animates height.
 The preferred height includes the source rows' 48dp action targets, row and list
 padding, dividers, and footer. A short list must fit without scrolling or edge
 shadows when the viewport permits; shadows only indicate real hidden content.
 
-Add to collection uses a lazy sliver list and shared footer actions. It stays
-usable with the keyboard open and large text; a failed initial load shows Retry,
-not a misleading empty collection form. Sheet titles, close targets and action
-layout come from `component_library` rather than feature-specific copies.
+Add to collection opens on destinations: Favourites and a lazy list of manual
+collections. The whole row adds sources, without a separate plus icon. A
+checkmark marks disabled destinations already containing every selected source;
+partially matching destinations still accept the missing sources. The checkmark
+slot remains reserved so item counts stay aligned.
+One grouped membership query (bounded parameter batches) supplies this state,
+not a query per visible row or a read of every collection's source IDs.
+New collection opens a separate name form in the same route. The complete
+destination step, including its wrapping header, determines both steps' height.
+Back/Cancel returns to destinations and preserves the draft; Close dismisses
+the flow. Slide direction follows the locale, with an immediate reduced-motion
+transition. Hidden steps retain layout but expose no input, focus or semantics.
+The keyboard and enlarged text leave actions reachable, with full-width fades
+only for genuinely overflowing content. A failed initial load shows Retry;
+mutation failures retain the current step and draft. Busy guards prevent double
+submission; closing during a write does not emit late state or reload its snapshot.
+Shared headers/actions remain in `component_library`.
 
 ## Dependencies
 

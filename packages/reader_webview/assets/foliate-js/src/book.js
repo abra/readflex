@@ -1523,7 +1523,9 @@ const getView = async file => {
     const modulePath = comic ? './comic-book.js' : zippedFB2 ? './fb2.js' : './epub.js'
     const [loader, format] = await Promise.all([makeZipLoader(file), import(modulePath)])
     if (comic) {
-      book = format.makeComicBook(loader, file)
+      book = format.makeComicBook(loader, file, {
+        pageOrderVersion: importing ? 1 : comicPageOrderVersion,
+      })
     } else if (zippedFB2) {
       const { entries } = loader
       const entry = entries.find(entry => entry.filename.endsWith('.fb2'))
@@ -4016,6 +4018,8 @@ window.renderAnnotations = (annotations) => reader.renderAnnotation(annotations)
 
 window.refreshBookmarkState = () => reader.refreshBookmarkState()
 
+window.readflexComicThumbnail = index => reader.view.book?.getThumbnail?.(index) ?? null
+
 window.theChapterContent = () => reader.getChapterContent()
 
 window.previousContent = (count = 2000) => reader.getPreviousContent(count)
@@ -4090,6 +4094,7 @@ var urlParams = new URLSearchParams(window.location.search)
 var importing = JSON.parse(urlParams.get('importing'))
 var url = JSON.parse(urlParams.get('url'))
 var initialCfi = JSON.parse(urlParams.get('initialCfi'))
+var comicPageOrderVersion = JSON.parse(urlParams.get('comicPageOrderVersion')) ?? 0
 var initialProgress = JSON.parse(urlParams.get('initialProgress'))
 var sourceType = JSON.parse(urlParams.get('sourceType') ?? '"book"')
 globalThis.readflexSourceType = sourceType

@@ -93,6 +93,8 @@ void main() {
           await tester.ensureVisible(finder);
           expect(finder.hitTestable(), findsOne);
           expect(tester.getSize(finder).shortestSide, greaterThanOrEqualTo(48));
+          final close = find.byTooltip(context.l10n.commonClose);
+          expect(tester.getCenter(finder).dx, tester.getCenter(close).dx);
         }
         await tester.ensureVisible(find.text('To stop a supply.'));
         expect(find.text('To stop a supply.').hitTestable(), findsOne);

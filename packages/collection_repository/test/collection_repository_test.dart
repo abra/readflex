@@ -52,6 +52,28 @@ void main() {
     );
   });
 
+  test(
+    'membership covers all selected sources across parameter batches',
+    () async {
+      final ids = List.generate(1201, (index) => 'source-$index');
+      final all = await repository.createCollectionWithSources(
+        name: 'All',
+        sourceIds: ids,
+      );
+      await repository.createCollectionWithSources(
+        name: 'Partial',
+        sourceIds: ids.take(600),
+      );
+      await repository.addSourcesToFavourites(sourceIds: ids);
+      expect(await repository.collectionsContainingAll([...ids, ids.first]), {
+        all.id,
+        CollectionRepository.favouritesCollectionId,
+      });
+      expect(await repository.collectionsContainingAll(const []), isEmpty);
+      expect(await repository.collectionsContainingAll(['unknown']), isEmpty);
+    },
+  );
+
   test('removeSourcesFromFavourites removes favourite memberships', () async {
     await repository.addSourcesToFavourites(
       sourceIds: const ['book-1', 'article-1'],

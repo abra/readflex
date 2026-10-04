@@ -29,6 +29,9 @@ class BooksTable extends Table {
   TextColumn get lastOpenedAt => text().nullable()(); // ISO 8601
   BoolColumn get isFinished => boolean().withDefault(const Constant(false))();
 
+  IntColumn get comicPageOrderVersion =>
+      integer().withDefault(const Constant(0))();
+
   @override
   Set<Column> get primaryKey => {id};
 }

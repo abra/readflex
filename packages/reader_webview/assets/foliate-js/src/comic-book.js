@@ -1,6 +1,6 @@
 const PREFETCH_BYTES = 8 * 1024 * 1024
 
-export const makeComicBook = ({ entries, loadBlob, getSize }, file) => {
+export const makeComicBook = ({ entries, loadBlob, getSize }, file, { pageOrderVersion = 1 } = {}) => {
     const cache = new Map()
     let destroyed = false
     let windowRevision = 0
@@ -38,14 +38,33 @@ export const makeComicBook = ({ entries, loadBlob, getSize }, file) => {
     }
 
     const exts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.jxl', '.avif']
-    const files = entries
-        .map(entry => entry.filename)
-        .filter(name => exts.some(ext => name.endsWith(ext)))
-        .sort()
+    const legacy = pageOrderVersion === 0
+    const files = entries.map(entry => entry.filename).filter(name => {
+        if (legacy) return exts.some(ext => name.endsWith(ext))
+        return exts.some(ext => name.toLowerCase().endsWith(ext))
+            && !name.split('/').some(part => part === '__MACOSX' || part.startsWith('._'))
+    })
+    if (legacy) files.sort()
+    else {
+        const order = new Intl.Collator('en', { numeric: true, sensitivity: 'variant' })
+        files.sort((a, b) => order.compare(a, b) || (a < b ? -1 : a > b ? 1 : 0))
+    }
     if (!files.length) throw new Error('No supported image files in archive')
 
     const book = {}
     book.getCover = () => loadBlob(files[0])
+    book.getThumbnail = async index => {
+        if (destroyed || !Number.isInteger(index) || !files[index]) return null
+        // getSize is the ZIP entry's uncompressed size. Reject oversized entries
+        // before inflation; page rendering and its adjacent cache stay separate.
+        if (Number(getSize?.(files[index])) > 16 * 1024 * 1024) return null
+        const { createComicThumbnail } = await import('./readflex_comic_thumbnail.js')
+        if (destroyed) return null
+        const blob = await loadBlob(files[index])
+        if (destroyed) return null
+        const result = await createComicThumbnail(blob)
+        return destroyed ? null : result
+    }
     // Strip the archive extension from the fallback title — `file.name` is
     // the original filename incl. `.cbz`/`.cbr`/`.cb7`/`.cbt`, and the
     // user sees this in library/chrome. Pass the URL pathname through

@@ -3,6 +3,22 @@ const CONTEXT_LENGTH = 50
 
 const normalizeWhitespace = str => str.replace(/\s+/g, ' ')
 
+const contextExcerpt = (text, offset, before) => {
+    // Read just enough context; normalizing a whole text node per hit is quadratic.
+    let length = CONTEXT_LENGTH
+    while (true) {
+        const fragment = before ? text.slice(Math.max(0, offset - length), offset)
+            : text.slice(offset, offset + length)
+        const normalized = normalizeWhitespace(fragment)
+        const trimmed = before ? normalized.trimStart() : normalized.trimEnd()
+        if (trimmed.length >= CONTEXT_LENGTH)
+            return before ? `…${trimmed.slice(-CONTEXT_LENGTH)}`
+                : `${trimmed.slice(0, CONTEXT_LENGTH)}…`
+        if (before ? length >= offset : offset + length >= text.length) return trimmed
+        length *= 2
+    }
+}
+
 const makeExcerpt = (strs, { startIndex, startOffset, endIndex, endOffset }) => {
     const start = strs[startIndex]
     const end = strs[endIndex]
@@ -11,33 +27,85 @@ const makeExcerpt = (strs, { startIndex, startOffset, endIndex, endOffset }) => 
         : start.slice(startOffset)
             + strs.slice(startIndex + 1, endIndex).join('')
             + end.slice(0, endOffset)
-    const trimmedStart = normalizeWhitespace(start.slice(0, startOffset)).trimStart()
-    const trimmedEnd = normalizeWhitespace(end.slice(endOffset)).trimEnd()
-    const ellipsisPre = trimmedStart.length < CONTEXT_LENGTH ? '' : '…'
-    const ellipsisPost = trimmedEnd.length < CONTEXT_LENGTH ? '' : '…'
-    const pre = `${ellipsisPre}${trimmedStart.slice(-CONTEXT_LENGTH)}`
-    const post = `${trimmedEnd.slice(0, CONTEXT_LENGTH)}${ellipsisPost}`
+    const pre = contextExcerpt(start, startOffset, true)
+    const post = contextExcerpt(end, endOffset, false)
     return { pre, match, post }
+}
+
+// Store only length-changing spans, not two offset arrays for every character.
+// ASCII runs avoid per-character normalization in mostly Latin chapters.
+const normalizeSearchText = (text, { locales, matchCase, matchDiacritics }) => {
+    const edits = []
+    const lower = value => matchCase ? value
+        : value.toLocaleLowerCase(locales).replace(/\u03c2/g, '\u03c3')
+    if (!/[^\x00-\x7f]/.test(text)) return { text: lower(text), edits }
+    // Repeated non-ASCII letters should not each invoke locale/Unicode tables.
+    // Bound both entries and key size; keep this cache local to one search text.
+    const normalizedSpans = new Map()
+    let delta = 0
+    const normalized = text.replace(
+        /[\x00-\x7f]+(?!\p{M})|\P{M}\p{M}*|\p{M}+/gu,
+        (span, offset) => {
+            let value = normalizedSpans.get(span)
+            if (value === undefined) {
+                value = lower(span).normalize(matchDiacritics ? 'NFC' : 'NFD')
+                if (!matchDiacritics) value = value.replace(/\p{M}/gu, '')
+                if (span.length <= 8 && normalizedSpans.size < 256)
+                    normalizedSpans.set(span, value)
+            }
+            if (value.length !== span.length) {
+                const start = offset + delta
+                delta += value.length - span.length
+                edits.push({ start, end: start + value.length,
+                    originalStart: offset, originalEnd: offset + span.length, delta })
+            }
+            return value
+        })
+    return { text: normalized, edits }
+}
+
+const originalOffsetMapper = (edits, endBoundary) => {
+    let cursor = 0
+    return offset => {
+        while (cursor < edits.length && (endBoundary
+            ? edits[cursor].end < offset : edits[cursor].end <= offset)) cursor++
+        const edit = edits[cursor]
+        if (edit && (endBoundary ? edit.start < offset : edit.start <= offset))
+            return endBoundary ? edit.originalEnd : edit.originalStart
+        return offset - (edits[cursor - 1]?.delta ?? 0)
+    }
 }
 
 const simpleSearch = function* (strs, query, options = {}) {
     if (!query || !strs.length) return
-    const { locales = 'en', sensitivity } = options
-    const matchCase = sensitivity === 'variant'
-    const haystack = strs.join('')
-    const lowerHaystack = matchCase ? haystack : haystack.toLocaleLowerCase(locales)
-    const needle = matchCase ? query : query.toLocaleLowerCase(locales)
+    const { sensitivity = 'base' } = options
+    let locales
+    try { locales = Intl.getCanonicalLocales(options.locales ?? 'en') }
+    catch { locales = ['en'] }
+    const normalization = {
+        locales,
+        matchCase: sensitivity === 'variant' || sensitivity === 'case',
+        matchDiacritics: sensitivity === 'variant' || sensitivity === 'accent',
+    }
+    const haystack = normalizeSearchText(strs.join(''), normalization)
+    const needle = normalizeSearchText(query, normalization).text
+    if (!needle) return
+    const originalStart = originalOffsetMapper(haystack.edits, false)
+    const originalEnd = originalOffsetMapper(haystack.edits, true)
     const needleLength = needle.length
     let index = -1
     // Separate forward-only cursors also support overlapping matches.
     let startIndex = -1, endIndex = -1
     let startSum = 0, endSum = 0
     do {
-        index = lowerHaystack.indexOf(needle, index + 1)
+        index = haystack.text.indexOf(needle, index + 1)
         if (index > -1) {
-            while (startSum <= index) startSum += strs[++startIndex].length
-            const startOffset = index - (startSum - strs[startIndex].length)
-            const end = index + needleLength
+            if (normalization.matchDiacritics && /^\p{M}/u.test(
+                haystack.text.slice(index + needleLength, index + needleLength + 2))) continue
+            const start = originalStart(index)
+            const end = originalEnd(index + needleLength)
+            while (startSum <= start) startSum += strs[++startIndex].length
+            const startOffset = start - (startSum - strs[startIndex].length)
             while (endSum < end) endSum += strs[++endIndex].length
             const endOffset = end - (endSum - strs[endIndex].length)
             const range = { startIndex, startOffset, endIndex, endOffset }
@@ -101,7 +169,7 @@ const segmenterSearch = function* (strs, query, options = {}) {
     }
 }
 
-export const search = (strs, query, options) => {
+export const search = (strs, query, options = {}) => {
     const { granularity = 'grapheme', sensitivity = 'base' } = options
     // Full-book search runs on the UI WebView process. Android WebView's
     // Intl.Segmenter can be extremely slow on long sections, so keep the
@@ -117,11 +185,11 @@ export const search = (strs, query, options) => {
 }
 
 export const searchMatcher = (textWalker, opts) => {
-    const { defalutLocale, matchCase, matchDiacritics, matchWholeWords } = opts
+    const { defaultLocale, matchCase, matchDiacritics, matchWholeWords } = opts
     return function* (doc, query) {
         const iter = textWalker(doc, function* (strs, makeRange) {
             for (const result of search(strs, query, {
-                locales: doc.body.lang || doc.documentElement.lang || defalutLocale || 'en',
+                locales: doc.body.lang || doc.documentElement.lang || defaultLocale || 'en',
                 granularity: matchWholeWords ? 'word' : 'grapheme',
                 sensitivity: matchDiacritics && matchCase ? 'variant'
                 : matchDiacritics && !matchCase ? 'accent'

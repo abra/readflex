@@ -9,6 +9,9 @@ class ReadflexLocalizationsPt extends ReadflexLocalizations {
   ReadflexLocalizationsPt([String locale = 'pt']) : super(locale);
 
   @override
+  String get libraryRemovalPending => 'Removido ao salvar';
+
+  @override
   String librarySelectedCount(int count) {
     return 'Selecionados: $count';
   }
@@ -18,6 +21,15 @@ class ReadflexLocalizationsPt extends ReadflexLocalizations {
 
   @override
   String get libraryDiscardChangesTitle => 'Descartar alterações?';
+
+  @override
+  String get commonDiscardChangesTitle => 'Descartar alterações?';
+
+  @override
+  String get commonDiscardChanges => 'Descartar';
+
+  @override
+  String get commonKeepEditing => 'Continuar editando';
 
   @override
   String get libraryDiscardChangesBody =>
@@ -445,6 +457,9 @@ class ReadflexLocalizationsPt extends ReadflexLocalizations {
   String get libraryFavourites => 'Favoritos';
 
   @override
+  String get libraryFavouritesBadge => 'Favoritos';
+
+  @override
   String libraryCreateCollectionPrompt(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -649,7 +664,47 @@ class ReadflexLocalizationsPt extends ReadflexLocalizations {
   String get importArticleHintLibrary => 'Adiciona à sua biblioteca.';
 
   @override
-  String get importUploadingBook => 'Enviando livro...';
+  String get importUploadingBook => 'Adicionando livro';
+
+  @override
+  String get importPreparingBook => 'Preparando livro';
+
+  @override
+  String get importCopyingBook => 'Copiando arquivo';
+
+  @override
+  String get importFinishingBook => 'Concluindo importação';
+
+  @override
+  String get commonUndo => 'Desfazer';
+
+  @override
+  String get readerExpandHighlight => 'Ler mais';
+
+  @override
+  String get readerCollapseHighlight => 'Mostrar menos';
+
+  @override
+  String get readerGoToPassage => 'Ir para o trecho';
+
+  @override
+  String get readerBookmarkRemoved => 'Marcador removido';
+
+  @override
+  String get readerBookmarkUpdateFailed =>
+      'Não foi possível atualizar o marcador';
+
+  @override
+  String get readerPages => 'Páginas';
+
+  @override
+  String get readerThumbnailUnavailable => 'Prévia indisponível';
+
+  @override
+  String get libraryNewCollection => 'Nova coleção';
+
+  @override
+  String get libraryCreateAndAdd => 'Criar e adicionar';
 
   @override
   String get importFetchingArticle => 'Buscando artigo...';

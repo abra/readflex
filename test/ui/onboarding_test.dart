@@ -12,6 +12,31 @@ import 'golden_support.dart';
 void main() {
   setUpAll(loadUiFonts);
 
+  testWidgets('reduced motion and RTL apply to onboarding controls', (
+    tester,
+  ) async {
+    await pumpGoldenSurface(
+      tester,
+      VisualProfile.tabletRtl,
+      (_) => OnboardingScreen(onComplete: () {}),
+      surfaceSize: const Size(390, 844),
+    );
+    final strings = ReadflexLocalizations.of(
+      tester.element(find.byType(OnboardingScreen)),
+    )!;
+    expect(tester.getCenter(find.text(strings.appSkip)).dx, lessThan(195));
+    await tester.tap(find.text(strings.appNext));
+    await tester.pump();
+    final view = tester.widget<PageView>(find.byType(PageView));
+    expect(view.controller!.page, 1);
+    expect(
+      tester
+          .widgetList<AnimatedContainer>(find.byType(AnimatedContainer))
+          .every((w) => w.duration == Duration.zero),
+      isTrue,
+    );
+  });
+
   for (final skip in [false, true]) {
     testWidgets('first launch completes and stays completed (skip=$skip)', (
       tester,
@@ -70,6 +95,11 @@ void main() {
       var scrolled = false;
       final pages = onboardingPages(strings);
       for (var page = 0; page < pages.length; page++) {
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<PageView>(find.byType(PageView)).controller!.page,
+          page,
+        );
         await expectUiGolden(tester, profile, 'onboarding-$page');
         if (profile == VisualProfile.largeText) {
           final content = find.byType(SingleChildScrollView).hitTestable();

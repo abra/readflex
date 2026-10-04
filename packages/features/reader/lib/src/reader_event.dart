@@ -158,7 +158,9 @@ final class ReaderHighlightNoteChangeRequested extends ReaderHighlightEvent {
   });
 
   final String highlightId;
-  final String note;
+
+  /// Null explicitly clears an existing note.
+  final String? note;
 
   @override
   List<Object?> get props => [highlightId, note];
@@ -185,8 +187,32 @@ final class ReaderDocumentFeaturesUpdated extends ReaderEvent {
   List<Object?> get props => [features];
 }
 
+sealed class ReaderBookmarkEvent extends ReaderEvent {
+  const ReaderBookmarkEvent();
+}
+
+final class ReaderBookmarkDeleted extends ReaderBookmarkEvent {
+  const ReaderBookmarkDeleted({required this.sourceId, required this.id});
+  final String sourceId;
+  final String id;
+  @override
+  List<Object?> get props => [sourceId, id];
+}
+
+final class ReaderBookmarkRestored extends ReaderBookmarkEvent {
+  const ReaderBookmarkRestored({required this.sourceId, required this.id});
+  final String sourceId;
+  final String id;
+  @override
+  List<Object?> get props => [sourceId, id];
+}
+
+final class ReaderBookmarkUndoDismissed extends ReaderBookmarkEvent {
+  const ReaderBookmarkUndoDismissed();
+}
+
 /// foliate-js requested adding/removing a bookmark at the current page.
-final class ReaderBookmarkChanged extends ReaderEvent {
+final class ReaderBookmarkChanged extends ReaderBookmarkEvent {
   const ReaderBookmarkChanged({
     required this.remove,
     required this.cfi,

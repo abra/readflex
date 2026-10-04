@@ -9,6 +9,9 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   ReadflexLocalizationsHi([String locale = 'hi']) : super(locale);
 
   @override
+  String get libraryRemovalPending => 'सहेजने के बाद हटेगा';
+
+  @override
   String librarySelectedCount(int count) {
     return 'चुने गए: $count';
   }
@@ -18,6 +21,15 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
 
   @override
   String get libraryDiscardChangesTitle => 'बदलाव छोड़ें?';
+
+  @override
+  String get commonDiscardChangesTitle => 'बदलाव छोड़ें?';
+
+  @override
+  String get commonDiscardChanges => 'छोड़ें';
+
+  @override
+  String get commonKeepEditing => 'संपादन जारी रखें';
 
   @override
   String get libraryDiscardChangesBody =>
@@ -439,6 +451,9 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get libraryFavourites => 'पसंदीदा';
 
   @override
+  String get libraryFavouritesBadge => 'पसंदीदा';
+
+  @override
   String libraryCreateCollectionPrompt(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -642,7 +657,46 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get importArticleHintLibrary => 'इसे आपकी लाइब्रेरी में जोड़ता है।';
 
   @override
-  String get importUploadingBook => 'किताब अपलोड हो रही है...';
+  String get importUploadingBook => 'किताब जोड़ी जा रही है';
+
+  @override
+  String get importPreparingBook => 'किताब तैयार की जा रही है';
+
+  @override
+  String get importCopyingBook => 'फ़ाइल कॉपी की जा रही है';
+
+  @override
+  String get importFinishingBook => 'आयात पूरा किया जा रहा है';
+
+  @override
+  String get commonUndo => 'पूर्ववत करें';
+
+  @override
+  String get readerExpandHighlight => 'पूरा पढ़ें';
+
+  @override
+  String get readerCollapseHighlight => 'कम दिखाएं';
+
+  @override
+  String get readerGoToPassage => 'अंश पर जाएं';
+
+  @override
+  String get readerBookmarkRemoved => 'बुकमार्क हटाया गया';
+
+  @override
+  String get readerBookmarkUpdateFailed => 'बुकमार्क अपडेट नहीं हो सका';
+
+  @override
+  String get readerPages => 'पृष्ठ';
+
+  @override
+  String get readerThumbnailUnavailable => 'पूर्वावलोकन उपलब्ध नहीं है';
+
+  @override
+  String get libraryNewCollection => 'नया संग्रह';
+
+  @override
+  String get libraryCreateAndAdd => 'बनाएं और जोड़ें';
 
   @override
   String get importFetchingArticle => 'लेख लाया जा रहा है...';

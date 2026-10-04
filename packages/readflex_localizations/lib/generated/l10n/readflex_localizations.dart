@@ -117,6 +117,12 @@ abstract class ReadflexLocalizations {
     Locale('ja'),
   ];
 
+  /// No description provided for @libraryRemovalPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed after Save'**
+  String get libraryRemovalPending;
+
   /// No description provided for @librarySelectedCount.
   ///
   /// In en, this message translates to:
@@ -134,6 +140,24 @@ abstract class ReadflexLocalizations {
   /// In en, this message translates to:
   /// **'Discard changes?'**
   String get libraryDiscardChangesTitle;
+
+  /// No description provided for @commonDiscardChangesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard changes?'**
+  String get commonDiscardChangesTitle;
+
+  /// No description provided for @commonDiscardChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get commonDiscardChanges;
+
+  /// No description provided for @commonKeepEditing.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep editing'**
+  String get commonKeepEditing;
 
   /// No description provided for @libraryDiscardChangesBody.
   ///
@@ -873,6 +897,12 @@ abstract class ReadflexLocalizations {
   /// **'Favourites'**
   String get libraryFavourites;
 
+  /// Compact label for the active favourites filter badge only. Menus, tooltips and accessibility use libraryFavourites.
+  ///
+  /// In en, this message translates to:
+  /// **'Favs'**
+  String get libraryFavouritesBadge;
+
   /// No description provided for @libraryCreateCollectionPrompt.
   ///
   /// In en, this message translates to:
@@ -1182,8 +1212,86 @@ abstract class ReadflexLocalizations {
   /// No description provided for @importUploadingBook.
   ///
   /// In en, this message translates to:
-  /// **'Uploading book...'**
+  /// **'Adding book'**
   String get importUploadingBook;
+
+  /// No description provided for @importPreparingBook.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing book'**
+  String get importPreparingBook;
+
+  /// No description provided for @importCopyingBook.
+  ///
+  /// In en, this message translates to:
+  /// **'Copying file'**
+  String get importCopyingBook;
+
+  /// No description provided for @importFinishingBook.
+  ///
+  /// In en, this message translates to:
+  /// **'Finishing import'**
+  String get importFinishingBook;
+
+  /// No description provided for @commonUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get commonUndo;
+
+  /// No description provided for @readerExpandHighlight.
+  ///
+  /// In en, this message translates to:
+  /// **'Read more'**
+  String get readerExpandHighlight;
+
+  /// No description provided for @readerCollapseHighlight.
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get readerCollapseHighlight;
+
+  /// No description provided for @readerGoToPassage.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to passage'**
+  String get readerGoToPassage;
+
+  /// No description provided for @readerBookmarkRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookmark removed'**
+  String get readerBookmarkRemoved;
+
+  /// No description provided for @readerBookmarkUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update bookmark'**
+  String get readerBookmarkUpdateFailed;
+
+  /// No description provided for @readerPages.
+  ///
+  /// In en, this message translates to:
+  /// **'Pages'**
+  String get readerPages;
+
+  /// No description provided for @readerThumbnailUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview unavailable'**
+  String get readerThumbnailUnavailable;
+
+  /// No description provided for @libraryNewCollection.
+  ///
+  /// In en, this message translates to:
+  /// **'New collection'**
+  String get libraryNewCollection;
+
+  /// No description provided for @libraryCreateAndAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Create and add'**
+  String get libraryCreateAndAdd;
 
   /// No description provided for @importFetchingArticle.
   ///

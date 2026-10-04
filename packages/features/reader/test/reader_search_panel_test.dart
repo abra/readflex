@@ -510,6 +510,7 @@ void main() {
                 (widget) => widget is IconButton && widget.tooltip == 'Close',
               ),
             );
+            final closeIcon = tester.getRect(find.byIcon(AppIcons.close));
             expect(field.left, safePadding.left + 16);
             expect(field.right, size.width - safePadding.right - 16);
             expect(heading.left, field.left);
@@ -519,7 +520,7 @@ void main() {
               rtl ? field.right : field.left,
             );
             expect(
-              rtl ? close.left : close.right,
+              rtl ? closeIcon.left : closeIcon.right,
               rtl ? field.left : field.right,
             );
             expect(close.size, const Size.square(48));
@@ -535,12 +536,18 @@ void main() {
               final remove = tester.getRect(
                 find.descendant(of: row, matching: find.byType(IconButton)),
               );
+              final removeIcon = tester.getRect(
+                find.descendant(
+                  of: row,
+                  matching: find.byIcon(AppIcons.delete),
+                ),
+              );
               expect(
                 rtl ? clock.right : clock.left,
                 rtl ? field.right : field.left,
               );
               expect(
-                rtl ? remove.left : remove.right,
+                rtl ? removeIcon.left : removeIcon.right,
                 rtl ? field.left : field.right,
               );
               expect(
@@ -554,6 +561,13 @@ void main() {
               expect(remove.width, greaterThanOrEqualTo(48));
               expect(remove.height, greaterThanOrEqualTo(48));
               expect(remove.center.dx, close.center.dx);
+              expect(removeIcon.size, closeIcon.size);
+              expect(removeIcon.center.dx, closeIcon.center.dx);
+              expect(remove.left, greaterThanOrEqualTo(safePadding.left));
+              expect(
+                remove.right,
+                lessThanOrEqualTo(size.width - safePadding.right),
+              );
             }
             await tester.tap(find.text('devices'));
             await tester.pumpAndSettle();
@@ -621,6 +635,14 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(find.byIcon(AppIcons.close), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byTooltip('Remove from history'),
+        matching: find.byIcon(AppIcons.delete),
+      ),
+      findsNWidgets(2),
+    );
     await tester.tap(find.byTooltip('Remove from history').last);
     await tester.pumpAndSettle();
     expect(cubit.state.recentQueries, ['devices']);

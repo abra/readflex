@@ -13,6 +13,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_highlight_controls.dart';
+import 'package:reader/src/reader_highlight_list_tile.dart';
 import 'package:reader/src/reader_search_cubit.dart';
 import 'package:reader/src/reader_search_result_tile.dart';
 import 'package:reader_webview/reader_webview.dart';
@@ -60,6 +61,28 @@ void main() {
 
   BookReaderWebViewState bookState(WidgetTester tester) =>
       tester.state<BookReaderWebViewState>(find.byType(BookReaderWebView));
+
+  void expectTrailingActionAligned(
+    WidgetTester tester,
+    Finder action, {
+    IconData iconData = AppIcons.delete,
+  }) {
+    final close = tester.getRect(find.byIcon(AppIcons.close).hitTestable());
+    final icon = tester.getRect(
+      find.descendant(of: action, matching: find.byIcon(iconData)),
+    );
+    final button = find.ancestor(
+      of: action,
+      matching: find.byType(IconButton),
+    );
+    final field = tester.getRect(find.byType(SearchField).hitTestable());
+    // Global rectangles include fractional native viewport transforms.
+    expect(icon.width, closeTo(close.width, .01));
+    expect(icon.height, closeTo(close.height, .01));
+    expect(icon.center.dx, closeTo(close.center.dx, .01));
+    expect(icon.right, closeTo(field.right, .01));
+    expect(tester.getSize(button), const Size(48, 48));
+  }
 
   Future<void> waitForBookDom(
     WidgetTester tester,
@@ -279,6 +302,11 @@ void main() {
       await tapUi(tester, find.byTooltip('Clear search'));
       expect(searchCubit.state.results, isEmpty);
       expect(searchCubit.state.recentQueries, contains('devices'));
+      expectTrailingActionAligned(
+        tester,
+        find.byTooltip('Remove from history'),
+      );
+      await capture(tester, 'book-search-history');
       await tapUi(tester, find.byTooltip('Remove from history'));
       expect(searchCubit.state.recentQueries, isEmpty);
       // Re-focus the retained field through a real gesture; enterText alone
@@ -308,7 +336,7 @@ void main() {
   );
 
   testWidgets(
-    'bookmark creates, survives reopening and deletes from contents',
+    'bookmark persists, has icon-only Undo and discards Undo on closing Contents',
     (tester) async {
       await openBook(tester);
       final bloc = tester
@@ -322,6 +350,7 @@ void main() {
         description: 'bookmark saved',
       );
       final cfi = bloc.state.bookmarks.single.cfi;
+      final original = bloc.state.bookmarks.single;
       await tapUi(tester, find.byTooltip('Back'));
       await openBook(tester, mount: false);
       final reopened = tester
@@ -331,6 +360,7 @@ void main() {
       await showChrome(tester);
       await tapUi(tester, find.byTooltip('Contents'));
       await tapUi(tester, find.text('Bookmarks'));
+      expectTrailingActionAligned(tester, find.byTooltip('Delete bookmark'));
       await capture(tester, 'book-bookmarks');
       await tapUi(tester, find.byTooltip('Delete bookmark'));
       await waitForUi(
@@ -338,8 +368,35 @@ void main() {
         () => reopened.state.bookmarks.isEmpty,
         description: 'bookmark deleted',
       );
-      expect(find.text('No bookmarks yet'), findsOneWidget);
+      expect(find.text('No bookmarks yet'), findsNothing);
+      expect(find.text('Undo'), findsNothing);
+      expectTrailingActionAligned(
+        tester,
+        find.byTooltip('Undo'),
+        iconData: AppIcons.undo,
+      );
+      await capture(tester, 'book-bookmark-undo');
+      await tapUi(tester, find.byTooltip('Undo'));
+      await waitForUi(
+        tester,
+        () =>
+            reopened.state.bookmarks.length == 1 &&
+            reopened.state.currentPageBookmarked,
+        description: 'bookmark and current-page badge restored',
+      );
+      expect(reopened.state.bookmarks.single, original);
+      await tapUi(tester, find.byTooltip('Delete bookmark'));
+      await waitForUi(
+        tester,
+        () => reopened.state.bookmarks.isEmpty,
+        description: 'bookmark deleted again',
+      );
       await tapUi(tester, find.byTooltip('Close'));
+      await waitForUi(
+        tester,
+        () => reopened.state.bookmarkEdits.removed.isEmpty,
+        description: 'Undo expires on Contents close',
+      );
       await showChrome(tester);
       await tapUi(tester, find.byTooltip('Back'));
       await openBook(tester, mount: false);
@@ -878,6 +935,24 @@ void main() {
             'window.reader.view.renderer.getContents()[0].doc.body.innerText.length',
       );
       expect(rendered, greaterThan(100));
+      await showChrome(tester);
+      await tapUi(tester, find.byTooltip('Contents'));
+      await tapUi(tester, find.text('Highlights'));
+      final rows = find.byType(ReaderHighlightListTile);
+      expect(rows, findsOneWidget);
+      for (final icon in [
+        AppIcons.copy,
+        AppIcons.arrowLeft,
+        AppIcons.arrowRight,
+      ]) {
+        expect(
+          find.descendant(of: rows, matching: find.byIcon(icon)),
+          findsNothing,
+        );
+      }
+      await capture(tester, 'book-highlights-list');
+      await tapUi(tester, find.text(ReadingFixture.phrase));
+      expect(find.byType(ReaderHighlightListTile).hitTestable(), findsNothing);
       await unmountUi(tester);
     },
     timeout: const Timeout(Duration(minutes: 3)),

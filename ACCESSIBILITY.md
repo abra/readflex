@@ -86,3 +86,15 @@ Theme tests check named foreground/background pairs in light and dark mode;
 they do not establish contrast over arbitrary images, overlays or book styles.
 The [UI review checklist](test/ui/README.md#review-checklist) links these checks
 to layout, navigation and performance contracts.
+
+Collections exposes selected state and a check as well as the selection fill.
+Reader active-result text and action icons use tested foreground/background
+pairs in both themes. Quote direction, note direction and interface direction
+are independent. Onboarding uses directional Skip placement and honors reduced
+motion for page changes and indicators. Errors do not expire automatically
+when accessible navigation is enabled; short success notifications remain 1s.
+Toasts expose the full message as a live region, separately from the localized
+48dp Close action. Large-text suffixes wrap instead of leaving the viewport;
+ordinary messages may be visually ellipsized without truncating semantics.
+Reduced motion disables both the slide and the list-size animation. Widget
+semantics assertions do not replace native VoiceOver/TalkBack announcement checks.

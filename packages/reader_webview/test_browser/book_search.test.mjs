@@ -2,6 +2,51 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createHarness, openEpub } from './harness.mjs'
 
+test('cancelled chapter load cannot publish or draw stale search results', async t => {
+    const { page, origin } = await createHarness(t)
+    await openEpub(page, origin, '<html xmlns="http://www.w3.org/1999/xhtml"><head><title>Search</title></head><body><p>vision vision</p></body></html>')
+    const result = await page.evaluate(async () => {
+        const view = window.testView
+        const section = view.book.sections[0]
+        const createDocument = section.createDocument.bind(section)
+        let release
+        let entered
+        const started = new Promise(resolve => { entered = resolve })
+        section.createDocument = async () => {
+            entered()
+            await new Promise(resolve => { release = resolve })
+            return createDocument()
+        }
+        const results = []
+        const search = (async () => {
+            for await (const item of view.search({ query: 'vision' })) results.push(item)
+        })()
+        await started
+        view.clearSearch()
+        release()
+        await search
+        return { results, annotations: view.renderer.getContents().flatMap(({ overlayer }) =>
+            [...overlayer.element.querySelectorAll('[data-search-active]')]).length }
+    })
+    assert.deepEqual(result.results, [])
+    assert.equal(result.annotations, 0)
+})
+
+test('large chapter search delivers bounded batches without losing matches', async t => {
+    const { page, origin } = await createHarness(t)
+    await openEpub(page, origin, `<html xmlns="http://www.w3.org/1999/xhtml"><head><title>Search</title></head><body><p>${'vision '.repeat(257)}</p></body></html>`)
+    const result = await page.evaluate(async () => {
+        const batches = []
+        for await (const item of window.testView.search({ query: 'vision' })) {
+            if (item.subitems) batches.push(item.subitems.length)
+        }
+        window.testView.clearSearch()
+        return batches
+    })
+    assert.equal(result.reduce((sum, count) => sum + count, 0), 257)
+    assert.ok(result.every(count => count <= 64))
+})
+
 test('search matcher returns complete DOM ranges and excerpts across inline markup', async t => {
     const { page, origin } = await createHarness(t)
     await page.goto(origin + '/blank')

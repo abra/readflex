@@ -3,11 +3,47 @@ import 'dart:ui' show Tristate;
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:translate/src/translation_language_direction.dart';
 
 void main() {
+  setUpAll(() async {
+    await (FontLoader('Geist')..addFont(
+          rootBundle.load(
+            'packages/component_library/fonts/Geist-Variable.ttf',
+          ),
+        ))
+        .load();
+  });
+  testWidgets('language menu uses two columns and keeps auto source-only', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await _pumpDirection(tester);
+    await tester.tap(find.byKey(_sourceKey));
+    await tester.pumpAndSettle();
+    final english = find.widgetWithText(MenuItemButton, 'English');
+    final chinese = find.widgetWithText(MenuItemButton, '中文（简体）');
+    expect(tester.getTopLeft(english).dy, tester.getTopLeft(chinese).dy);
+    expect(
+      tester.getTopLeft(english).dx,
+      lessThan(tester.getTopLeft(chinese).dx),
+    );
+    expect(find.widgetWithText(MenuItemButton, 'Auto'), findsOneWidget);
+    expect(tester.getSize(english).height, greaterThanOrEqualTo(48));
+    await tester.tap(english);
+    await tester.pumpAndSettle();
+    expect(find.byType(MenuItemButton), findsNothing);
+    await tester.tap(find.byKey(_targetKey));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(MenuItemButton, 'Auto'), findsNothing);
+  });
+
   for (final locale in ReadflexSupportedLocales.locales) {
     for (final scale in [1.0, 2.0]) {
       testWidgets('language menus fit a narrow phone: $locale at ${scale}x', (

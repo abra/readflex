@@ -498,7 +498,7 @@ void main() {
     expect(find.text('Sheet content'), findsOneWidget);
   });
 
-  testWidgets('showAppBottomSheet can skip external bottom safe area', (
+  testWidgets('guarded sheets retain the standard bottom safe area', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -513,7 +513,7 @@ void main() {
                     unawaited(
                       showAppBottomSheet<void>(
                         context,
-                        bottomSafeAreaMinimum: null,
+                        dismissible: false,
                         builder: (_) => const SizedBox(
                           height: 80,
                           child: Text('Sheet content'),
@@ -533,7 +533,7 @@ void main() {
     await tester.tap(find.text('Open sheet'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(AppBottomSafeArea), findsNothing);
+    expect(find.byType(AppBottomSafeArea), findsOneWidget);
     expect(find.text('Sheet content'), findsOneWidget);
   });
 

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/gestures.dart';
@@ -714,7 +716,7 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
   Widget build(BuildContext context) {
     final cubit = context.read<ImportFlowCubit>();
     final colors = context.colors;
-    final muted = colors.onSurface.withValues(alpha: 0.55);
+    final muted = colors.onSurfaceVariant;
     final l10n = context.l10n;
     final error = _errorMessageFor(context, widget.state.errorCode);
 
@@ -995,9 +997,7 @@ class _ArticleUrlHint extends StatelessWidget {
   }
 }
 
-/// Book is uploading. Shows either an indeterminate spinner (while
-/// metadata is being parsed) or a progress bar with percentage (during
-/// the byte-copy phase).
+/// Local import uses one bar; copy completion is not repository completion.
 class _BookUploadingView extends StatelessWidget {
   const _BookUploadingView({required this.state});
 
@@ -1007,7 +1007,7 @@ class _BookUploadingView extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = context.colors;
     final text = context.text;
-    final muted = cs.onSurface.withValues(alpha: 0.55);
+    final muted = cs.onSurfaceVariant;
     final progress = state.progress;
 
     return _StatusLayout(
@@ -1019,7 +1019,7 @@ class _BookUploadingView extends StatelessWidget {
           fontWeight: FontWeight.w500,
           color: cs.onSurface,
         ),
-        detailStyle: text.labelSmall.copyWith(color: muted),
+        detailStyle: text.bodySmall.copyWith(color: muted),
         progressBackgroundColor: cs.surfaceContainerHighest,
         progressColor: context.actionForeground,
       ),
@@ -1047,61 +1047,105 @@ class _BookUploadStatusContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: _kBookUploadProgressReserveHeight),
-        const Center(
-          child: _StatusIconSlot(
-            key: ValueKey('importFlowStatusIcon'),
-            child: CenteredCircularProgressIndicator(),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Text(
-          context.l10n.importUploadingBook,
-          textAlign: TextAlign.center,
-          style: titleStyle,
-        ),
-        const SizedBox(height: 2),
-        Text(
-          filename,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: detailStyle,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.full),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 6,
-            backgroundColor: progressBackgroundColor,
-            color: progressColor,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        ConstrainedBox(
-          constraints: const BoxConstraints(
-            minHeight: _kBookUploadProgressLabelHeight,
-          ),
-          child: Visibility(
-            visible: progress != null,
-            maintainSize: true,
-            maintainAnimation: true,
-            maintainState: true,
-            child: Text(
-              '${((progress ?? 0) * 100).clamp(0, 100).toInt()}%',
-              textAlign: TextAlign.center,
-              style: detailStyle.copyWith(
-                fontFeatures: const [FontFeature.tabularFigures()],
+    final l10n = context.l10n;
+    final finishing = progress != null && progress! >= 1;
+    final phase = progress == null
+        ? l10n.importPreparingBook
+        : finishing
+        ? l10n.importFinishingBook
+        : l10n.importCopyingBook;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final percent = TextPainter(
+          text: TextSpan(text: '100%', style: detailStyle),
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+        )..layout();
+        final labelWidth = math.max(
+          1.0,
+          constraints.maxWidth - percent.width - AppSpacing.sm,
+        );
+        var labelHeight = percent.height;
+        percent.dispose();
+        for (final label in [
+          l10n.importPreparingBook,
+          l10n.importCopyingBook,
+          l10n.importFinishingBook,
+        ]) {
+          final painter = TextPainter(
+            text: TextSpan(text: label, style: detailStyle),
+            textDirection: Directionality.of(context),
+            textScaler: MediaQuery.textScalerOf(context),
+          )..layout(maxWidth: labelWidth);
+          labelHeight = math.max(labelHeight, painter.height);
+          painter.dispose();
+        }
+        // Balance the footer above the status block, keeping its icon aligned
+        // with success/failure while translated phase labels change below it.
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(height: AppSpacing.md + 6 + AppSpacing.xs + labelHeight),
+            Center(
+              child: _StatusIconSlot(
+                key: const ValueKey('importFlowStatusIcon'),
+                child: Icon(
+                  AppIcons.book,
+                  color: context.actionForeground,
+                  size: 28,
+                ),
               ),
             ),
-          ),
-        ),
-      ],
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              context.l10n.importUploadingBook,
+              textAlign: TextAlign.center,
+              style: titleStyle,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              filename,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: detailStyle,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.full),
+              child: LinearProgressIndicator(
+                value: finishing ? null : progress,
+                minHeight: 6,
+                backgroundColor: progressBackgroundColor,
+                color: progressColor,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            SizedBox(
+              height: labelHeight,
+              child: Row(
+                children: [
+                  Expanded(child: Text(phase, style: detailStyle)),
+                  const SizedBox(width: AppSpacing.sm),
+                  Visibility(
+                    visible: progress != null && !finishing,
+                    maintainSize: true,
+                    maintainAnimation: true,
+                    maintainState: true,
+                    child: Text(
+                      '${((progress ?? 0) * 100).clamp(0, 100).toInt()}%',
+                      style: detailStyle.copyWith(
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -1130,8 +1174,8 @@ class _ArticleUploadingView extends StatelessWidget {
           color: colors.onSurface,
           fontWeight: FontWeight.w500,
         ),
-        detailStyle: text.labelSmall.copyWith(
-          color: colors.onSurface.withValues(alpha: 0.55),
+        detailStyle: text.bodySmall.copyWith(
+          color: colors.onSurfaceVariant,
         ),
       ),
     );
@@ -1232,9 +1276,6 @@ class _StatusContent extends StatelessWidget {
 }
 
 const _kStatusActionHeight = 48.0;
-const _kBookUploadProgressLabelHeight = 16.0;
-const _kBookUploadProgressReserveHeight =
-    AppSpacing.md + 6 + AppSpacing.xs + _kBookUploadProgressLabelHeight;
 
 /// Insets used by the title-less status views (uploading, done,
 /// failure) so they line up with the [_MenuView]'s ActionBottomSheet
@@ -1312,8 +1353,8 @@ class _FailureView extends StatelessWidget {
         title: _failureMessageFor(context, state),
         detail: state.filename,
         titleStyle: text.bodyMedium.copyWith(color: cs.onSurface),
-        detailStyle: text.labelSmall.copyWith(
-          color: cs.onSurface.withValues(alpha: 0.55),
+        detailStyle: text.bodySmall.copyWith(
+          color: cs.onSurfaceVariant,
         ),
       ),
       action: _FailureActions(
@@ -1360,7 +1401,7 @@ class _SuccessLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = context.colors;
     final text = context.text;
-    final muted = cs.onSurface.withValues(alpha: 0.55);
+    final muted = cs.onSurfaceVariant;
 
     return _StatusLayout(
       content: _StatusContent(
@@ -1381,7 +1422,7 @@ class _SuccessLayout extends StatelessWidget {
           fontWeight: FontWeight.w500,
           color: cs.onSurface,
         ),
-        detailStyle: text.labelSmall.copyWith(color: muted),
+        detailStyle: text.bodySmall.copyWith(color: muted),
       ),
       action: FilledButton(
         onPressed: onDone,

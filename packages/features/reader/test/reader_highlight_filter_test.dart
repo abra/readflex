@@ -56,8 +56,40 @@ void main() {
     expect(filterReaderHighlights(highlights, 'architecture'), [first]);
   });
 
+  test('combines color and text without mutating or reordering the source', () {
+    expect(filterReaderHighlights(highlights, '', color: HighlightColor.blue), [
+      second,
+    ]);
+    expect(
+      filterReaderHighlights(
+        highlights,
+        'architecture',
+        color: HighlightColor.yellow,
+      ),
+      [first],
+    );
+    expect(
+      filterReaderHighlights(
+        highlights,
+        'architecture',
+        color: HighlightColor.blue,
+      ),
+      isEmpty,
+    );
+    expect(filterReaderHighlights(highlights, ''), same(highlights));
+    expect(highlights, [first, second, imageArea]);
+  });
+
   test('matches legacy page labels', () {
     expect(filterReaderHighlights(highlights, 'page 42'), [second]);
+    expect(
+      filterReaderHighlights(
+        highlights,
+        'Страница 42',
+        formatPage: (page) => 'Страница $page',
+      ),
+      [second],
+    );
   });
 
   test('matches chapter titles', () {
@@ -86,7 +118,11 @@ void main() {
   });
 
   test('falls back to legacy page labels', () {
-    expect(readerHighlightLocationLabel(second), 'Page 42');
+    expect(readerHighlightLocationLabel(second), '42');
+    expect(
+      readerHighlightLocationLabel(second, formatPage: (page) => 'Page $page'),
+      'Page 42',
+    );
   });
 
   test('treats text CFI and image-area highlights as navigable', () {

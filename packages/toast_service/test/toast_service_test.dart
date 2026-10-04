@@ -6,6 +6,44 @@ import 'package:toastification/toastification.dart';
 void main() {
   setUp(() => toastification.managers.clear());
 
+  testWidgets('accessible error remains until explicitly dismissed', (
+    tester,
+  ) async {
+    late BuildContext context;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(
+            accessibleNavigation: true,
+            disableAnimations: true,
+          ),
+          child: ToastWrapper(
+            child: Builder(
+              builder: (value) {
+                context = value;
+                return const Scaffold(body: SizedBox.shrink());
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    showToast(context, type: NotificationType.error, message: 'Could not save');
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 10));
+    expect(
+      toastification.managers[Alignment.topCenter]!.notifications,
+      hasLength(1),
+    );
+    expect(find.text('Could not save'), findsOneWidget);
+    final close = find.byTooltip('Close');
+    expect(close.hitTestable(), findsOneWidget);
+    await tester.tap(close);
+    await tester.pumpAndSettle();
+    expect(find.text('Could not save'), findsNothing);
+  });
+
   testWidgets('ToastWrapper renders its child', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
@@ -43,7 +81,7 @@ void main() {
   });
 
   for (final type in NotificationType.values) {
-    testWidgets('${type.name} toast auto-closes after one second', (
+    testWidgets('${type.name} toast uses the notification reading time', (
       tester,
     ) async {
       late BuildContext capturedContext;
@@ -63,7 +101,8 @@ void main() {
       showToast(capturedContext, type: type, message: 'Toast message');
       await tester.pump();
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 999));
+      final milliseconds = type == NotificationType.error ? 6000 : 1000;
+      await tester.pump(Duration(milliseconds: milliseconds - 1));
       expect(find.text('Toast message'), findsOneWidget);
       final manager = toastification.managers[Alignment.topCenter]!;
       expect(manager.notifications, hasLength(1));

@@ -45,6 +45,7 @@ void main() {
           {'cfi': 'first', 'fraction': 0.1},
         ]);
         expect(ready, 1);
+        expect(positions, isEmpty);
         expect(
           timings.where((line) => line.contains('initial-location-ready')),
           isEmpty,
@@ -52,13 +53,17 @@ void main() {
         view.emit('onRelocated', [
           {'cfi': 'restored', 'fraction': 0.6},
         ]);
+        expect(positions, isEmpty);
         view.emit('onLoadEnd', []);
         view.emit('onLoadEnd', []);
         expect(ready, 1);
         expect(positions.map((position) => position.cfi), [
-          'first',
           'restored',
         ]);
+        view.emit('onRelocated', [
+          {'cfi': 'user-navigation', 'fraction': 0.7},
+        ]);
+        expect(positions.last.cfi, 'user-navigation');
         if (readerStartupTracingEnabled) {
           expect(timings, hasLength(3));
           expect(timings[0], contains('stage=webview-created'));

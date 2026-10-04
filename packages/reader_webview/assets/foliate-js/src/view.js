@@ -723,42 +723,59 @@ export class View extends HTMLElement {
   #getSearchResultCFI(index, range) {
     return this.getCFI(index, range)
   }
-  async * #searchSection(matcher, query, index) {
+  async * #searchSection(matcher, query, index, isCurrent) {
     const doc = await this.book.sections[index].createDocument()
-    for (const { range, excerpt } of matcher(doc, query))
+    if (!isCurrent()) return
+    let count = 0
+    for (const { range, excerpt } of matcher(doc, query)) {
+      if (!isCurrent()) return
       yield { cfi: this.#getSearchResultCFI(index, range), excerpt }
+      if (++count % 64 === 0) await new Promise(resolve => setTimeout(resolve, 0))
+    }
   }
-  async * #searchBook(matcher, query) {
+  async * #searchBook(matcher, query, isCurrent) {
     const { sections } = this.book
     for (const [index, { createDocument }] of sections.entries()) {
+      if (!isCurrent()) return
       if (!createDocument) continue
-      const doc = await createDocument()
-      const subitems = Array.from(matcher(doc, query), ({ range, excerpt }) =>
-        ({ cfi: this.#getSearchResultCFI(index, range), excerpt }))
-      const progress = (index + 1) / sections.length
-      yield { progress }
+      let subitems = []
+      for await (const item of this.#searchSection(matcher, query, index, isCurrent)) {
+        if (!isCurrent()) return
+        subitems.push(item)
+        if (subitems.length === 64) {
+          yield { index, subitems }
+          subitems = []
+        }
+      }
+      if (!isCurrent()) return
       if (subitems.length) yield { index, subitems }
+      yield { progress: (index + 1) / sections.length }
     }
   }
   async * search(opts) {
-    console.log('search', opts)
     this.clearSearch()
+    const generation = this.#searchGeneration
+    const isCurrent = () => generation === this.#searchGeneration
     const { searchMatcher } = await import('./search.js')
+    if (!isCurrent()) return
     const { query, index } = opts
     const matcher = searchMatcher(textWalker,
       { defaultLocale: this.language, ...opts })
     const iter = index != null
-      ? this.#searchSection(matcher, query, index)
-      : this.#searchBook(matcher, query)
+      ? this.#searchSection(matcher, query, index, isCurrent)
+      : this.#searchBook(matcher, query, isCurrent)
 
     const list = []
     this.#searchResults.set(index, list)
 
     for await (const result of iter) {
+      if (!isCurrent()) return
       if (result.subitems) {
         const list = result.subitems
           .map(({ cfi }) => ({ value: SEARCH_PREFIX + cfi }))
-        this.#searchResults.set(result.index, list)
+        const previous = this.#searchResults.get(result.index)
+        if (previous) previous.push(...list)
+        else this.#searchResults.set(result.index, list)
         for (const item of list) this.addAnnotation(item)
         yield {
           label: this.#tocProgress.getProgress(result.index)?.label ?? '',
@@ -774,7 +791,7 @@ export class View extends HTMLElement {
         yield result
       }
     }
-    yield 'done'
+    if (isCurrent()) yield 'done'
   }
   clearSearch() {
     this.#searchGeneration++

@@ -26,6 +26,8 @@ Future<ImportFlowResult?> showImportFlowSheet(
 
 - `onPickBookFile` — opens the platform picker and returns a selected file or
   `null` on cancel. The default helper is `pickBookFile()`.
+  Provider exceptions become the localized book-import failure/retry state;
+  cancellation remains silent and late picker errors do not emit after close.
 - `onImportBook` — called after a file is picked; returns the persisted
   `Book?`. The default helper is `importBookFile(...)`, which extracts
   metadata with `BookMetadataExtractor` from `reader_webview` (foliate-js via
@@ -121,9 +123,14 @@ After failure, **Choose file** reopens the book picker; cancelling the picker
 leaves the failure visible. For articles, **Edit link** returns to the previously
 submitted URL without making another request. Saving again remains explicit.
 Failure actions stack only when their localized labels cannot fit side by side.
-The book percentage label grows with text scaling and keeps the same space
-between indeterminate and determinate progress. Progress emission is still
-coalesced to visible one-percent changes.
+Book import has one progress bar, a static book icon and a readable filename.
+Preparing is indeterminate until copying starts; copying shows byte progress;
+finishing returns to indeterminate while persistence completes. Reaching 100%
+does not announce success or close the sheet. Phase labels reserve their largest
+localized height, including text scale, so neither the icon nor the bar moves
+between phases. Filename and status details use `bodySmall/onSurfaceVariant`.
+Progress emission remains coalesced to visible one-percent changes; no timer,
+artificial progress or new repository operation drives the presentation.
 
 ## Verification
 

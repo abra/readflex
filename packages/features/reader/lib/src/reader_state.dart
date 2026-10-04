@@ -4,6 +4,21 @@ enum ReaderStatus { initial, loading, ready, failure }
 
 enum ReaderHighlightOperation { color, note, delete }
 
+/// Undo is limited to the open Contents session; deletions are persisted first.
+final class ReaderBookmarkEdits extends Equatable {
+  const ReaderBookmarkEdits({
+    this.removed = const [],
+    this.busyId,
+    this.failedId,
+  });
+  final List<SourceBookmark> removed;
+  final String? busyId;
+  final String? failedId;
+
+  @override
+  List<Object?> get props => [removed, busyId, failedId];
+}
+
 final class ReaderHighlightEffect extends Equatable {
   const ReaderHighlightEffect({
     required this.version,
@@ -33,6 +48,7 @@ class ReaderState extends Equatable {
     this.highlights = const [],
     this.highlightEffect,
     this.bookmarks = const [],
+    this.bookmarkEdits = const ReaderBookmarkEdits(),
     this.tocItems = const [],
     this.documentFeatures,
     this.chapterTitle,
@@ -57,6 +73,7 @@ class ReaderState extends Equatable {
   final List<Highlight> highlights;
   final ReaderHighlightEffect? highlightEffect;
   final List<SourceBookmark> bookmarks;
+  final ReaderBookmarkEdits bookmarkEdits;
   final List<ReaderTocItem> tocItems;
   final ReaderDocumentFeatures? documentFeatures;
 
@@ -101,6 +118,7 @@ class ReaderState extends Equatable {
     List<Highlight>? highlights,
     ReaderHighlightEffect? highlightEffect,
     List<SourceBookmark>? bookmarks,
+    ReaderBookmarkEdits? bookmarkEdits,
     List<ReaderTocItem>? tocItems,
     Object? documentFeatures = _absent,
     Object? chapterTitle = _absent,
@@ -124,6 +142,7 @@ class ReaderState extends Equatable {
     highlights: highlights ?? this.highlights,
     highlightEffect: highlightEffect ?? this.highlightEffect,
     bookmarks: bookmarks ?? this.bookmarks,
+    bookmarkEdits: bookmarkEdits ?? this.bookmarkEdits,
     tocItems: tocItems ?? this.tocItems,
     documentFeatures: documentFeatures == _absent
         ? this.documentFeatures
@@ -166,6 +185,7 @@ class ReaderState extends Equatable {
     highlights,
     highlightEffect,
     bookmarks,
+    bookmarkEdits,
     tocItems,
     documentFeatures,
     chapterTitle,

@@ -32,6 +32,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _next() {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.jumpToPage(_currentPage + 1);
+      return;
+    }
     _controller.nextPage(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
@@ -52,7 +56,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: Column(
           children: [
             Align(
-              alignment: Alignment.topRight,
+              alignment: AlignmentDirectional.topEnd,
               child: TextButton(
                 onPressed: _complete,
                 child: AppButtonLabel(l10n.appSkip, maxLines: 1),
@@ -78,7 +82,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 children: List.generate(
                   pages.length,
                   (index) => AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
+                    duration: MediaQuery.disableAnimationsOf(context)
+                        ? Duration.zero
+                        : const Duration(milliseconds: 200),
                     margin: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.xs,
                     ),

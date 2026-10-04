@@ -26,6 +26,12 @@ routing.dart
 
 The sheet does not create HTTP clients, ML Kit translators, or repositories.
 Those are composed in the root app and passed through the action.
+Language selection remains an anchored menu in the fixed direction header,
+not another bottom sheet. Ten autonyms use two columns only when measured text
+and checkmark slots fit. Larger text falls back to a bounded scrollable list;
+targets remain at least 48dp. Auto is a separate full-width source-only option.
+Selection closes the menu and retains the existing translation request contract.
+Menu layout does not change the result's scroll offset or issue extra lookups.
 Request construction rejects a stale normalized single-word snapshot when the
 exact selection has already been expanded to multiple words.
 
@@ -140,6 +146,9 @@ callback; the View never accesses a service for copying. Success/error feedback
 is local to `AppCopyButton` and does not trigger another translation or rebuild
 the Reader WebView. The full source context and sentence translation remain
 visible in the existing scrollable body.
+Result rows use `AppSheetActionRow`: the Copy glyph follows the header's 24dp
+content edge, with a 48dp tap target extending into the gutter. Copy feedback
+uses the same circular control as Close, without moving the pinned language row.
 
 ## Verification
 

@@ -24,6 +24,7 @@ void main() {
     test('resolves paths against books directory', () {
       final row = BooksTableData(
         id: 'b1',
+        comicPageOrderVersion: 1,
         title: 'Test Book',
         author: 'Author',
         coverImagePath: 'cover.jpg',
@@ -42,6 +43,7 @@ void main() {
       final expectedDir = p.join(booksDir.path, 'b1');
 
       expect(book.id, 'b1');
+      expect(book.comicPageOrderVersion, 1);
       expect(book.title, 'Test Book');
       expect(book.author, 'Author');
       expect(book.coverImagePath, p.join(expectedDir, 'cover.jpg'));
@@ -59,6 +61,7 @@ void main() {
     test('handles null optional fields', () {
       final row = BooksTableData(
         id: 'b2',
+        comicPageOrderVersion: 0,
         title: 'Minimal',
         author: null,
         coverImagePath: null,
@@ -84,6 +87,7 @@ void main() {
     test('falls back to epoch for invalid date', () {
       final row = BooksTableData(
         id: 'b3',
+        comicPageOrderVersion: 0,
         title: 'T',
         author: null,
         coverImagePath: null,

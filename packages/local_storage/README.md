@@ -31,6 +31,11 @@ current app surface. They remain exported so existing databases keep migrating
 cleanly and the frozen learning features can be restored from history without a
 destructive schema reset.
 
+Schema v23 adds `books_table.comic_page_order_version` with a legacy default of
+0. Only new CBZ imports use version 1; migration leaves saved page anchors and
+annotation indices untouched. Source repositories remove collection memberships
+in the same transaction as the book/article row.
+
 ---
 
 ## Tables

@@ -16,12 +16,14 @@ class AddToCollectionState extends Equatable {
     this.collections = const [],
     this.favouritesSourceCount = 0,
     this.errorCode,
+    this.containingAll = const {},
   });
 
   final AddToCollectionStatus status;
   final List<LibraryCollection> collections;
   final int favouritesSourceCount;
   final AddToCollectionErrorCode? errorCode;
+  final Set<String> containingAll;
 
   bool get isBusy =>
       status == AddToCollectionStatus.loading ||
@@ -33,6 +35,7 @@ class AddToCollectionState extends Equatable {
     int? favouritesSourceCount,
     AddToCollectionErrorCode? errorCode,
     bool clearError = false,
+    Set<String>? containingAll,
   }) {
     return AddToCollectionState(
       status: status ?? this.status,
@@ -40,6 +43,7 @@ class AddToCollectionState extends Equatable {
       favouritesSourceCount:
           favouritesSourceCount ?? this.favouritesSourceCount,
       errorCode: clearError ? null : errorCode ?? this.errorCode,
+      containingAll: containingAll ?? this.containingAll,
     );
   }
 
@@ -49,5 +53,6 @@ class AddToCollectionState extends Equatable {
     collections,
     favouritesSourceCount,
     errorCode,
+    containingAll,
   ];
 }

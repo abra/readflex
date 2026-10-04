@@ -273,46 +273,44 @@ class _LibraryViewState extends State<_LibraryView> {
     final result = await showLibraryCollectionScopeSheet(
       context: context,
       state: state,
+      states: context.read<LibraryBloc>().stream,
+      onRetry: () =>
+          context.read<LibraryBloc>().add(const LibraryRefreshRequested()),
+      manageBuilder: (sheetContext, scope, onBack, onClose) {
+        final sourceIds = scope.sourceIds.toSet();
+        return BlocProvider.value(
+          value: context.read<ManageCollectionCubit>(),
+          child: ManageCollectionSheet(
+            scope: scope,
+            sources: context
+                .read<LibraryBloc>()
+                .state
+                .sources
+                .where((source) => sourceIds.contains(source.id))
+                .toList(growable: false),
+            onCollectionChanged: () => context.read<LibraryBloc>().add(
+              const LibraryRefreshRequested(),
+            ),
+            onCloseFlow: onClose,
+            onFinished: (result) {
+              onBack();
+              if (result == ManageCollectionSheetResult.deleted) {
+                showToast(
+                  context,
+                  type: NotificationType.success,
+                  message: context.l10n.libraryCollectionDeleted,
+                );
+              }
+            },
+          ),
+        );
+      },
     );
     if (result == null || !context.mounted) return;
 
-    switch (result) {
-      case LibraryCollectionScopeSelected(:final scope):
-        context.read<LibraryBloc>().add(LibraryCollectionScopeChanged(scope));
-      case LibraryCollectionScopeManageRequested(:final scope):
-        await _handleManageCollection(context, state, scope);
+    if (result case LibraryCollectionScopeSelected(:final scope)) {
+      context.read<LibraryBloc>().add(LibraryCollectionScopeChanged(scope));
     }
-  }
-
-  Future<void> _handleManageCollection(
-    BuildContext context,
-    LibraryState state,
-    LibraryCollectionScope scope,
-  ) async {
-    if (!scope.canManage) return;
-    final sourceIds = scope.sourceIds.toSet();
-    final sources = state.sources
-        .where((source) => sourceIds.contains(source.id))
-        .toList(growable: false);
-
-    final result = await showManageCollectionSheet(
-      context: context,
-      cubit: context.read<ManageCollectionCubit>(),
-      scope: scope,
-      sources: sources,
-      onCollectionChanged: () {
-        if (!context.mounted) return;
-        context.read<LibraryBloc>().add(const LibraryRefreshRequested());
-      },
-    );
-    if (!context.mounted || result != ManageCollectionSheetResult.deleted) {
-      return;
-    }
-    showToast(
-      context,
-      type: NotificationType.success,
-      message: context.l10n.libraryCollectionDeleted,
-    );
   }
 
   void _handleCollectionScopeCleared(BuildContext context) {
@@ -412,6 +410,8 @@ class _LibraryViewState extends State<_LibraryView> {
                       prev.sources != curr.sources ||
                       prev.filter != curr.filter ||
                       prev.collectionScopes != curr.collectionScopes ||
+                      prev.collectionsLoadFailed !=
+                          curr.collectionsLoadFailed ||
                       prev.selectedCollectionScope !=
                           curr.selectedCollectionScope ||
                       prev.searchQuery != curr.searchQuery,

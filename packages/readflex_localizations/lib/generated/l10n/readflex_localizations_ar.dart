@@ -9,6 +9,9 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   ReadflexLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
+  String get libraryRemovalPending => 'ستتم الإزالة بعد الحفظ';
+
+  @override
   String librarySelectedCount(int count) {
     return 'المحدد: $count';
   }
@@ -18,6 +21,15 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
 
   @override
   String get libraryDiscardChangesTitle => 'تجاهل التغييرات؟';
+
+  @override
+  String get commonDiscardChangesTitle => 'تجاهل التغييرات؟';
+
+  @override
+  String get commonDiscardChanges => 'تجاهل';
+
+  @override
+  String get commonKeepEditing => 'متابعة التحرير';
 
   @override
   String get libraryDiscardChangesBody => 'لم يتم حفظ تغييرات هذه المجموعة.';
@@ -449,6 +461,9 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get libraryFavourites => 'المفضلة';
 
   @override
+  String get libraryFavouritesBadge => 'المفضلة';
+
+  @override
   String libraryCreateCollectionPrompt(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -659,7 +674,46 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get importArticleHintLibrary => 'يضيفها إلى مكتبتك.';
 
   @override
-  String get importUploadingBook => 'جار رفع الكتاب...';
+  String get importUploadingBook => 'جار إضافة الكتاب';
+
+  @override
+  String get importPreparingBook => 'جار تجهيز الكتاب';
+
+  @override
+  String get importCopyingBook => 'جار نسخ الملف';
+
+  @override
+  String get importFinishingBook => 'جار إنهاء الاستيراد';
+
+  @override
+  String get commonUndo => 'تراجع';
+
+  @override
+  String get readerExpandHighlight => 'قراءة المزيد';
+
+  @override
+  String get readerCollapseHighlight => 'عرض أقل';
+
+  @override
+  String get readerGoToPassage => 'الانتقال إلى المقطع';
+
+  @override
+  String get readerBookmarkRemoved => 'تم حذف الإشارة المرجعية';
+
+  @override
+  String get readerBookmarkUpdateFailed => 'تعذر تحديث الإشارة المرجعية';
+
+  @override
+  String get readerPages => 'الصفحات';
+
+  @override
+  String get readerThumbnailUnavailable => 'المعاينة غير متاحة';
+
+  @override
+  String get libraryNewCollection => 'مجموعة جديدة';
+
+  @override
+  String get libraryCreateAndAdd => 'إنشاء وإضافة';
 
   @override
   String get importFetchingArticle => 'جار جلب المقالة...';

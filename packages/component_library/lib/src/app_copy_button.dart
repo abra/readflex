@@ -3,8 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'app_icons.dart';
-import 'theme/tokens/app_icon_size.dart';
-import 'theme/tokens/app_sizes.dart';
+import 'app_plain_icon_button.dart';
 
 /// Copy feedback is local UI state; the caller owns the clipboard operation.
 class AppCopyButton extends StatefulWidget {
@@ -66,25 +65,18 @@ class _AppCopyButtonState extends State<AppCopyButton> {
   Widget build(BuildContext context) {
     return Semantics(
       liveRegion: _succeeded != null,
-      child: IconButton(
+      child: AppPlainIconButton(
         tooltip: switch (_succeeded) {
           true => widget.copiedLabel,
           false => widget.failureLabel,
           null => widget.copyLabel,
         },
         onPressed: _copying ? null : _copy,
-        style: IconButton.styleFrom(
-          fixedSize: const Size.square(AppSizes.buttonHeight),
-          backgroundColor: Colors.transparent,
-        ),
-        icon: Icon(
-          switch (_succeeded) {
-            true => AppIcons.check,
-            false => AppIcons.error,
-            null => AppIcons.copy,
-          },
-          size: AppIconSize.sm,
-        ),
+        icon: switch (_succeeded) {
+          true => AppIcons.check,
+          false => AppIcons.error,
+          null => AppIcons.copy,
+        },
       ),
     );
   }

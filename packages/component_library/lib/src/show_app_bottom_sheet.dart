@@ -27,15 +27,14 @@ import 'theme/tokens/app_spacing.dart';
 /// the route instead of invoking the step's system-Back handler. Do not enable
 /// it for forms whose [PopScope] protects unsaved changes.
 ///
-/// [bottomSafeAreaMinimum] defaults to the app's standard bottom gap. Pass
-/// null only when the sheet content owns its own bottom scrolling boundary.
+/// The route owns the bottom safe area for every step, including nested forms.
+/// Content adds its visual bottom gap but must not consume system insets again.
 Future<T?> showAppBottomSheet<T>(
   BuildContext context, {
   required WidgetBuilder builder,
   bool dismissible = true,
   bool scrimClosesFlow = false,
   VoidCallback? onFullyHidden,
-  double? bottomSafeAreaMinimum = AppSpacing.lg,
 }) {
   final navigator = Navigator.of(context, rootNavigator: true);
   final controller = BottomSheet.createAnimationController(
@@ -99,14 +98,7 @@ Future<T?> showAppBottomSheet<T>(
         // Lift the sheet above the keyboard. Done once here so every
         // sheet body gets it, regardless of whether it has form fields.
         padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
-        child: bottomSafeAreaMinimum == null
-            ? sheetContent
-            : AppBottomSafeArea(
-                // Android immersive mode can report a zero bottom inset. Keep
-                // sheet actions off the physical screen edge in that case.
-                minimumBottom: bottomSafeAreaMinimum,
-                child: sheetContent,
-              ),
+        child: AppBottomSafeArea(child: sheetContent),
       );
     },
   );

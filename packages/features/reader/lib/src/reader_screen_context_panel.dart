@@ -204,8 +204,7 @@ class _ContextPanelDriver extends StatelessWidget {
         return const SizedBox.shrink();
       }
       final focusedHighlightNote = _normalizedNoteText(focusedHighlight.note);
-      final canEditFocusedHighlightNote =
-          focusedHighlight.isImageArea && focusedHighlightNote != null;
+      final canEditFocusedHighlightNote = focusedHighlight.isImageArea;
       return Positioned.fill(
         child: _SavedHighlightPopup(
           position: highlightFocus.position,
@@ -235,20 +234,16 @@ class _ContextPanelDriver extends StatelessWidget {
           },
           onEditNote: canEditFocusedHighlightNote
               ? () async {
-                  final result =
-                      await showAppBottomSheet<_ImageHighlightNoteResult>(
-                        context,
-                        builder: (_) => _ImageHighlightNoteSheet(
-                          initialNote: focusedHighlightNote,
-                        ),
-                      );
-                  if (!context.mounted) return;
-                  final note = _normalizedNoteText(result?.note);
-                  if (note == null) return;
+                  final result = await showReaderHighlightNoteSheet(
+                    context,
+                    initialNote: focusedHighlightNote,
+                    existingHighlight: true,
+                  );
+                  if (!context.mounted || result == null) return;
                   bloc.add(
                     ReaderHighlightNoteChangeRequested(
                       highlightId: focusedHighlight.id,
-                      note: note,
+                      note: result.note,
                     ),
                   );
                   highlightFocusCubit.clear();
@@ -604,12 +599,9 @@ class _ImageHighlightSelectionPopupState
     setState(() => _saving = true);
     _keepPreviewOnDispose = true;
     setDraftRetained(true);
-    late final _ImageHighlightNoteResult? result;
+    late final ReaderHighlightNoteResult? result;
     try {
-      result = await showAppBottomSheet<_ImageHighlightNoteResult>(
-        context,
-        builder: (_) => const _ImageHighlightNoteSheet(),
-      );
+      result = await showReaderHighlightNoteSheet(context);
     } catch (error, stack) {
       setDraftRetained(false);
       _keepPreviewOnDispose = false;
@@ -738,106 +730,6 @@ class _ImageHighlightSelectionPopupState
           ],
         );
       },
-    );
-  }
-}
-
-class _ImageHighlightNoteResult {
-  const _ImageHighlightNoteResult(this.note);
-
-  final String? note;
-}
-
-class _ImageHighlightNoteSheet extends StatefulWidget {
-  const _ImageHighlightNoteSheet({this.initialNote});
-
-  final String? initialNote;
-
-  @override
-  State<_ImageHighlightNoteSheet> createState() =>
-      _ImageHighlightNoteSheetState();
-}
-
-class _ImageHighlightNoteSheetState extends State<_ImageHighlightNoteSheet> {
-  late final TextEditingController _controller;
-  late final String? _initialNote;
-
-  String? get _normalizedNote {
-    return _normalizedNoteText(_controller.text);
-  }
-
-  bool get _isEditing => _initialNote != null;
-
-  @override
-  void initState() {
-    super.initState();
-    _initialNote = _normalizedNoteText(widget.initialNote);
-    _controller = TextEditingController(text: _initialNote ?? '');
-    _controller.addListener(_onTextChanged);
-  }
-
-  @override
-  void dispose() {
-    _controller
-      ..removeListener(_onTextChanged)
-      ..dispose();
-    super.dispose();
-  }
-
-  void _onTextChanged() => setState(() {});
-
-  void _complete(String? note) {
-    Navigator.of(context).pop(_ImageHighlightNoteResult(note));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final note = _normalizedNote;
-    final canSave = note != null && (!_isEditing || note != _initialNote);
-
-    return ActionBottomSheetLayout(
-      title: _isEditing
-          ? context.l10n.readerEditNoteTitle
-          : context.l10n.readerHighlightNoteTitle,
-      closeLabel: context.l10n.commonClose,
-      onClose: () => Navigator.of(context).pop(),
-      headerSpacing: AppSpacing.sm,
-      constrainBody: true,
-      bodyPadding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        0,
-        AppSpacing.xl,
-        AppSpacing.lg,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: _controller,
-              minLines: 3,
-              maxLines: 4,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                hintText: context.l10n.readerCommentHint,
-                isDense: true,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            AppSheetActions(
-              primaryLabel: context.l10n.commonSave,
-              onPrimary: canSave ? () => _complete(note) : null,
-              secondaryLabel: _isEditing
-                  ? context.l10n.commonCancel
-                  : context.l10n.readerSkip,
-              onSecondary: _isEditing
-                  ? () => Navigator.of(context).pop()
-                  : () => _complete(null),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

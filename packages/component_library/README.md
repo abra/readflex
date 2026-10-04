@@ -172,11 +172,75 @@ Reusable presentation-only widgets used across features:
 
 ### Search and Utility Actions
 
+Use `AppIcons.delete` for deleting saved items and removing collection
+memberships, including bookmarks and recent search entries. `AppIcons.close`
+is for dismissing surfaces or canceling modes, not deleting records. Search
+field clearing and filter reset retain the familiar non-destructive cross.
+Keep localized tooltips specific to the action and preserve existing save,
+confirmation and Undo behavior when changing an icon.
+Use `AppIcons.undo` for reversing a deletion, not the refresh/retry icon.
+Inline deletion/restoration actions use the same icon-only button and target;
+do not replace an icon with a variable-width text label. The localized tooltip
+names the action for both pointer users and assistive technology.
+
 `AppPlainIconButton` keeps a minimum 48dp target independently of `iconSize`; the default
 glyph is 20dp, while `SearchField` uses 16dp. Its resting background is
 transparent and pressed/focus feedback follows the circular shape, not the
 filled rectangular global icon-button theme. The localized `tooltip` supplies
 the accessible name through Flutter's `IconButton` semantics.
+For standalone trailing list actions, align the glyph with the content gutter
+and the surface header, not the outer edge of the target. Allow the target's
+inner inset to occupy the gutter without clipping its hit area; mirror this
+with directional padding. Do not shrink targets or globally remove padding
+from grouped controls to achieve alignment.
+
+Screen/drawer content uses a 16dp gutter; sheet content uses 24dp. The owning
+surface applies each outer gutter once. `AppSheetActionRow` accepts a full-width
+sheet row and aligns a 20dp utility glyph with `BottomSheetHeader`, preserving
+the full 48dp target. Definition/Translation use it for Copy; other body sections
+retain their 24dp padding. `AppCopyButton` delegates appearance to
+`AppPlainIconButton`, including circular feedback and disabled hit semantics.
+
+Filled success notifications use `AppColorsExt.successContainer` with
+`onSuccessContainer`; `successForeground` remains the text/icon role on ordinary
+surfaces. Error notifications use the existing `ColorScheme.error` / `onError`
+pair. The toast service owns notification layout and lifecycle, not this package.
+
+Selected controls use the paired `selectedControlBackground/Foreground` colors.
+Opaque `selectionMarkerBackground/Foreground` is for small checks on cover art;
+normal multi-selection must not use the destructive error color. Custom rows
+also expose `Semantics(selected: ...)`; color is not their only selection cue.
+
+### Placement by Role
+
+These are Readflex conventions, not a claim that platform guidelines prescribe
+one padding value for every component. Android recommends a 16dp compact-screen
+margin and 48dp touch targets; Apple recommends respecting layout margins/safe
+areas and at least 44pt touch targets. Readflex keeps 48 logical pixels for its
+utility buttons on both platforms. See [Android content structure](https://developer.android.com/design/ui/mobile/guides/layout-and-content/content-structure),
+[Android accessibility](https://developer.android.com/guide/topics/ui/accessibility/apps),
+[Apple layout](https://developer.apple.com/design/human-interface-guidelines/layout)
+and [Apple touch guidance](https://developer.apple.com/design/tips/).
+
+| Role | Alignment and spacing |
+| --- | --- |
+| Screen/drawer text and standalone row actions | 16dp content gutter, applied once by the surface |
+| Sheet title, form, standalone row action and footer | 24dp content gutter; a 20dp glyph in a 48dp target ends its target 10dp from the edge |
+| Nested chapter/row | Indent the leading content to convey hierarchy; keep trailing actions on the parent's trailing action line |
+| Search suffix, stepper, segmented choice | Use the control's internal layout; do not move its buttons to the outer screen gutter |
+| Reader toolbar group | Equal 48dp slots and circular feedback inside the toolbar gutter, including the custom bookmark glyph |
+| Related text/control | Use the existing 4/8/12dp tokens for local relationships, with 16/24dp between groups; do not add blank space merely to match another sheet's height |
+| Footer commands | 16dp visual space below the last command, plus the route's `max(16dp, bottom safe inset)`; keyboard lift is applied once |
+
+Measure glyph bounds, background bounds and hit bounds separately. Targets
+must stay inside their parent and must not overlap a neighboring row action.
+Mirror leading/trailing layout in RTL, not the direction of quoted book text.
+The hierarchy of gaps matters more than choosing a new numeric scale:
+[NN/G proximity guidance](https://www.nngroup.com/articles/gestalt-proximity/)
+explains why related content should remain closer than unrelated groups.
+Keep relevant actions near their content; the bottommost pixel is not inherently
+the easiest place to tap. [NN/G bottom-sheet guidance](https://www.nngroup.com/articles/bottom-sheet/)
+also recommends an explicit Close action and avoiding stacked sheets.
 
 `SearchField` rebuilds only its suffix when the controller changes. Clearing
 invokes `onChanged('')` once, retains field focus and keeps the suffix space
@@ -189,6 +253,11 @@ with large text. Root Library goldens check the painted press feedback.
 
 - `showAppBottomSheet` owns the 20dp handle area, keyboard lift and safe areas.
   A guarded form keeps the same top space without displaying a draggable handle.
+  Bottom protection belongs to the route, including every nested step; callers
+  cannot disable it. Child layouts add their visual bottom padding, not another
+  system inset. The footer gap is 32dp with no system inset and 50dp with a 34dp
+  inset; above the keyboard it is 32dp. This prevents nested collection forms
+  from placing Save/Cancel against the home indicator or keyboard.
 - `BottomSheetHeader` uses `titleMedium`, a minimum 48dp row and a heading
   semantics node. Adding Close does not change the title baseline. Long titles
   wrap; trailing actions wrap independently when needed.

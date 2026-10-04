@@ -9,6 +9,9 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   ReadflexLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get libraryRemovalPending => '保存后移除';
+
+  @override
   String librarySelectedCount(int count) {
     return '已选：$count';
   }
@@ -18,6 +21,15 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
 
   @override
   String get libraryDiscardChangesTitle => '放弃更改？';
+
+  @override
+  String get commonDiscardChangesTitle => '放弃更改？';
+
+  @override
+  String get commonDiscardChanges => '放弃';
+
+  @override
+  String get commonKeepEditing => '继续编辑';
 
   @override
   String get libraryDiscardChangesBody => '对此收藏的更改尚未保存。';
@@ -427,6 +439,9 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get libraryFavourites => '收藏';
 
   @override
+  String get libraryFavouritesBadge => '收藏';
+
+  @override
   String libraryCreateCollectionPrompt(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -623,7 +638,46 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get importArticleHintLibrary => '添加到你的书库。';
 
   @override
-  String get importUploadingBook => '正在上传图书...';
+  String get importUploadingBook => '正在添加图书';
+
+  @override
+  String get importPreparingBook => '正在准备图书';
+
+  @override
+  String get importCopyingBook => '正在复制文件';
+
+  @override
+  String get importFinishingBook => '正在完成导入';
+
+  @override
+  String get commonUndo => '撤销';
+
+  @override
+  String get readerExpandHighlight => '展开全文';
+
+  @override
+  String get readerCollapseHighlight => '收起';
+
+  @override
+  String get readerGoToPassage => '跳转到原文';
+
+  @override
+  String get readerBookmarkRemoved => '书签已移除';
+
+  @override
+  String get readerBookmarkUpdateFailed => '无法更新书签';
+
+  @override
+  String get readerPages => '页面';
+
+  @override
+  String get readerThumbnailUnavailable => '预览不可用';
+
+  @override
+  String get libraryNewCollection => '新建收藏集';
+
+  @override
+  String get libraryCreateAndAdd => '创建并添加';
 
   @override
   String get importFetchingArticle => '正在获取文章...';

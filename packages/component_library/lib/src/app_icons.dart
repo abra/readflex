@@ -11,10 +11,12 @@ abstract final class AppIcons {
 
   // ── Actions ───────────────────────────────────────────────
   static const IconData add = LucideIcons.plus;
+  // Dismissal or non-destructive clearing, never deletion of saved items.
   static const IconData close = LucideIcons.x;
   static const IconData search = LucideIcons.search;
   static const IconData searchOff = LucideIcons.searchX;
   static const IconData refresh = LucideIcons.rotateCcw;
+  static const IconData undo = LucideIcons.undo2;
   static const IconData remove = LucideIcons.minus;
   static const IconData delete = LucideIcons.trash2;
   static const IconData edit = LucideIcons.pencil;
@@ -29,6 +31,7 @@ abstract final class AppIcons {
   static const IconData chevronUp = LucideIcons.chevronUp;
   static const IconData returnToReading = LucideIcons.undo2;
   static const IconData arrowRight = LucideIcons.arrowRight;
+  static const IconData arrowLeft = LucideIcons.arrowLeft;
   static const IconData arrowDown = LucideIcons.arrowDown;
 
   // ── Content ───────────────────────────────────────────────

@@ -22,6 +22,7 @@ class ReaderDocument extends Equatable {
     this.readingProgress = 0,
     this.lastOpenedAt,
     this.isFinished = false,
+    this.comicPageOrderVersion = 0,
   });
 
   factory ReaderDocument.fromBook(Book book) {
@@ -41,6 +42,7 @@ class ReaderDocument extends Equatable {
       addedAt: book.addedAt,
       lastOpenedAt: book.lastOpenedAt,
       isFinished: book.isFinished,
+      comicPageOrderVersion: book.comicPageOrderVersion,
     );
   }
 
@@ -76,6 +78,7 @@ class ReaderDocument extends Equatable {
   final DateTime addedAt;
   final DateTime? lastOpenedAt;
   final bool isFinished;
+  final int comicPageOrderVersion;
 
   static const _absent = Object();
 
@@ -105,6 +108,7 @@ class ReaderDocument extends Equatable {
           ? this.lastOpenedAt
           : lastOpenedAt as DateTime?,
       isFinished: isFinished ?? this.isFinished,
+      comicPageOrderVersion: comicPageOrderVersion,
     );
   }
 
@@ -127,6 +131,7 @@ class ReaderDocument extends Equatable {
       addedAt: addedAt,
       lastOpenedAt: lastOpenedAt,
       isFinished: isFinished,
+      comicPageOrderVersion: comicPageOrderVersion,
     );
   }
 
@@ -147,5 +152,6 @@ class ReaderDocument extends Equatable {
     addedAt,
     lastOpenedAt,
     isFinished,
+    comicPageOrderVersion,
   ];
 }

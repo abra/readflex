@@ -170,6 +170,16 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
     final File? file;
     try {
       file = await _onPickBookFile();
+    } catch (error, stackTrace) {
+      if (!isClosed) {
+        addError(error, stackTrace);
+        emit(
+          const ImportFlowFailure(
+            errorCode: ImportFlowErrorCode.bookImportFailed,
+          ),
+        );
+      }
+      return;
     } finally {
       _isPickingFile = false;
     }

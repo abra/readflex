@@ -1,10 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:component_library/component_library.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
+import 'package:reader/src/reader_comic_pages.dart';
 import 'package:reader_webview/reader_webview.dart';
 
 import '../test/support/comic_fixture.dart';
@@ -130,6 +132,36 @@ void main() {
       await binding.takeScreenshot('comic-after-edge-turns');
     }
     expect(tester.takeException(), isNull);
+    // Exercise the real native async JS bridge and decoded thumbnail widgets.
+    uiCubit.showChrome();
+    await tester.pump(const Duration(milliseconds: 350));
+    await tapUi(tester, find.byIcon(AppIcons.toc));
+    await waitForUi(
+      tester,
+      () => find.byType(ReaderComicPages).evaluate().isNotEmpty,
+      description: 'comic Pages tab',
+    );
+    await waitForUi(
+      tester,
+      () =>
+          find
+              .descendant(
+                of: find.byType(ReaderComicPages),
+                matching: find.byType(Image),
+              )
+              .evaluate()
+              .length >=
+          2,
+      description: 'native thumbnails',
+    );
+    if (Platform.isAndroid) {
+      await captureAndroidScreenshot('comic-pages');
+    } else {
+      await binding.takeScreenshot('comic-pages');
+    }
+    await tapUi(tester, find.text('Page 3'));
+    await waitForPage(2);
+    expect(uiCubit.state.tocDrawerVisible, isFalse);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }

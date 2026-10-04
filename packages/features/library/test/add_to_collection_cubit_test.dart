@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,6 +13,41 @@ void main() {
   setUp(() {
     repository = FakeCollectionRepository();
   });
+
+  test('membership is refreshed after adding the selected sources', () async {
+    final cubit = AddToCollectionCubit(collectionRepository: repository);
+    addTearDown(cubit.close);
+    await cubit.load(sourceIds: {'book-1', 'book-2'});
+    expect(cubit.state.containingAll, isEmpty);
+    await cubit.addToCollection(
+      collectionId: 'reading',
+      sourceIds: ['book-1', 'book-2'],
+    );
+    expect(cubit.state.containingAll, {'reading'});
+    await cubit.addToFavourites(sourceIds: ['book-1', 'book-2']);
+    expect(cubit.state.containingAll, contains('reading'));
+    expect(cubit.state.containingAll, hasLength(2));
+  });
+
+  test(
+    'closing a pending mutation avoids late emissions and snapshot reads',
+    () async {
+      final repository = _DelayedCollectionRepository();
+      final cubit = AddToCollectionCubit(collectionRepository: repository);
+      await cubit.load(sourceIds: {'book'});
+      final pending = cubit.addToCollection(
+        collectionId: 'reading',
+        sourceIds: ['book'],
+      );
+      await cubit.addToCollection(collectionId: 'reading', sourceIds: ['book']);
+      expect(repository.writes, 1);
+      await cubit.close();
+      repository.complete.complete();
+      await pending;
+      expect(repository.reads, 1);
+      expect(repository.addedSourceIdsByCollection['reading'], {'book'});
+    },
+  );
 
   blocTest<AddToCollectionCubit, AddToCollectionState>(
     'load emits a typed failure when collections cannot be loaded',
@@ -56,4 +93,29 @@ void main() {
       ),
     ],
   );
+}
+
+class _DelayedCollectionRepository extends FakeCollectionRepository {
+  final complete = Completer<void>();
+  int writes = 0;
+  int reads = 0;
+
+  @override
+  Future<List<LibraryCollection>> getCollections() {
+    reads++;
+    return super.getCollections();
+  }
+
+  @override
+  Future<void> addSourcesToCollection({
+    required String collectionId,
+    required Iterable<String> sourceIds,
+  }) async {
+    writes++;
+    await complete.future;
+    await super.addSourcesToCollection(
+      collectionId: collectionId,
+      sourceIds: sourceIds,
+    );
+  }
 }

@@ -39,6 +39,26 @@ void main() {
   }
 
   test(
+    'v22 comics keep legacy indexing and saved anchors after upgrade',
+    () async {
+      final current = AppDatabase.forTesting(NativeDatabase(databaseFile));
+      await current.customSelect('SELECT 1').getSingle();
+      await current.customStatement(
+        'ALTER TABLE books_table DROP COLUMN comic_page_order_version',
+      );
+      await current.customStatement(
+        "INSERT INTO books_table (id, title, format, file_path, added_at, current_cfi) VALUES ('comic', 'Comic', 'cbz', 'book.cbz', '2026-01-01', 'epubcfi(/6/4)')",
+      );
+      await current.customStatement('PRAGMA user_version = 22');
+      await current.close();
+      final migrated = await openMigratedDatabase();
+      final row = (await migrated.booksDao.bookById('comic'))!;
+      expect(row.comicPageOrderVersion, 0);
+      expect(row.currentCfi, 'epubcfi(/6/4)');
+    },
+  );
+
+  test(
     'migrates v5 inline article HTML without deleting the article',
     () async {
       final legacy = _createLegacyDatabase(databaseFile, version: 5);

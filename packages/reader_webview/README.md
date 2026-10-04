@@ -61,6 +61,12 @@ workaround still restores by progress after an initial pagination crash.
 Metadata extraction treats renderer termination as an import error and disposes
 the headless WebView.
 
+Book position callbacks are persistence-safe: early `onRelocated` events can
+reveal content, but only the latest buffered position is published after
+`onLoadEnd`. Failure, disposal or renderer replacement discards that buffer.
+Recovery uses the last published position or the original saved anchor, never
+the temporary start of a chapter. This does not delay first-content display.
+
 This recovery addresses WebView renderer termination, not arbitrary Flutter
 engine/Impeller EGL failures. Device lifecycle and renderer-crash checks are
 still required before release.
@@ -459,6 +465,18 @@ Symbol-font pixel tests wait for the font loaded by production code rather than
 forcing a load or assuming a fixed delay is sufficient.
 Book search regression tests cover final-character matches, empty text nodes,
 overlapping matches, UTF-16 offsets and complete excerpts across inline markup.
+Substring matching keeps an ASCII fast path and maps length-changing Unicode
+case/normalization spans back to original DOM offsets. Case and diacritic
+sensitivity are independent; a missing document language uses `defaultLocale`.
+Unicode normalization reuses at most 256 short spans within one text scan;
+the cache is not retained across chapters. Excerpts expand a local window only
+until they have 50 normalized context characters, instead of normalizing the
+entire text node again for every match. Whitespace/truncation semantics remain
+covered independently of the performance checks.
+The owning View checks its search generation after asynchronous work and before
+annotation mutations. Book-wide results arrive in batches of at most 64, with
+an event-loop yield per batch. Chapter text extraction/normalization remains
+synchronous; this is bounded result delivery, not a hard per-frame CPU budget.
 The substring mapper advances separate start/end cursors without rescanning
 earlier nodes. `test_js/search.test.mjs` checks text-partition invariance;
 `test_browser/book_search.test.mjs` checks actual DOM ranges and EPUB search CFI
@@ -601,10 +619,28 @@ loads the bundled Panzoom module lazily, without network requests.
   Android uses DOM pointer taps. Neither text readers nor native plugin settings
   are changed by this workaround.
 
+### Comic Page Previews
+
+`BookReaderWebViewState.comicThumbnail(index)` asks the already-open CBZ loader
+for one preview; it does not turn a page, change zoom, or create a reading iframe.
+The thumbnail helper is dynamically imported on the first Pages or Highlights
+preview request, not on reader startup. Highlights crop the returned page
+thumbnail in Flutter; multiple areas do not cause separate archive decodes.
+Known oversized ZIP entries and extracted blobs above 16 MiB
+are rejected before image decoding. The browser decoder is limited to one
+request by the UI queue, with a 10-second decode timeout. Dimensions are checked
+after decode (40-megapixel cap), so this is not a strict peak-memory guarantee
+for unusually compressed source images. The output is at most 240x360, JPEG
+quality 0.72, with a 128 KiB base64 bridge limit. Temporary object URLs and canvas
+buffers are released on success and failure. The Flutter cache is separate from
+the visible-page/neighbour cache; failed or obsolete WebView generations return
+no preview. Unsupported formats retain their ordinary Contents list.
+
 Regression coverage: `test_browser/comic_zoom.test.mjs` (Chromium and WebKit)
 and `test_js/comic_book.test.mjs` (resource lifetime/budget), plus
 `integration_test/comic_zoom_test.dart` (native WebView rendering, zoom, chrome
-dismissal and bidirectional edge turns with an offline generated CBZ).
+dismissal, bidirectional edge turns and thumbnail-based page selection with an
+offline generated CBZ).
 The integration test dispatches Flutter touches on iOS
 and DOM taps on Android; it does not replace checking OS-generated touch
 sequences on both platforms. Native artifacts

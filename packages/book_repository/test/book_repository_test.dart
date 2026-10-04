@@ -40,6 +40,26 @@ void main() {
 
   group('BookRepository', () {
     test(
+      'new comic indexing policy survives metadata and position updates',
+      () async {
+        final book = await repo.addBook(
+          sourceFile: await createTempBookFile(name: 'comic.cbz'),
+          title: 'Comic',
+          format: BookFormat.cbz,
+        );
+        expect(book.comicPageOrderVersion, 1);
+        await repo.updateBook(book.copyWith(title: 'Renamed'));
+        await repo.updateReadingPosition(
+          book.id,
+          cfi: 'epubcfi(/6/4)',
+          progress: .5,
+        );
+        final stored = (await repo.getBookById(book.id))!;
+        expect(stored.comicPageOrderVersion, 1);
+        expect(stored.currentCfi, 'epubcfi(/6/4)');
+      },
+    );
+    test(
       'reader writes preserve metadata and do not recreate deleted books',
       () async {
         final book = await repo.addBook(
@@ -144,6 +164,50 @@ void main() {
       expect(bookmarks.first.chapterTitle, 'Early chapter');
       expect(bookmarks.last.content, 'Second bookmark');
     });
+
+    test(
+      'restoreBookmark preserves identity and all anchors without duplicates',
+      () async {
+        final book = await repo.addBook(
+          sourceFile: await createTempBookFile(),
+          title: 'Restored bookmark',
+          format: BookFormat.epub,
+        );
+        final original = await repo.addBookmark(
+          sourceId: book.id,
+          sourceType: SourceType.book,
+          cfi: 'epubcfi(/6/4)',
+          content: 'Exact text',
+          progress: .4,
+          chapterTitle: 'Chapter',
+          anchorExact: 'Exact',
+          anchorPrefix: 'before',
+          anchorSuffix: 'after',
+          anchorSectionIndex: 2,
+          anchorSectionPage: 4,
+        );
+        await repo.deleteBookmarkById(book.id, original.id);
+        expect(await repo.restoreBookmark(original), original);
+        expect(await repo.getBookmarksBySource(book.id), [original]);
+        expect(await repo.restoreBookmark(original), original);
+        expect(await repo.getBookmarksBySource(book.id), hasLength(1));
+        await repo.deleteBookmarkById(book.id, original.id);
+        final replacement = await repo.addBookmark(
+          sourceId: book.id,
+          sourceType: original.sourceType,
+          cfi: original.cfi,
+          content: 'New text',
+          progress: original.progress,
+          anchorExact: original.anchorExact,
+          anchorPrefix: original.anchorPrefix,
+          anchorSuffix: original.anchorSuffix,
+          anchorSectionIndex: original.anchorSectionIndex,
+          anchorSectionPage: original.anchorSectionPage,
+        );
+        expect(await repo.restoreBookmark(original), replacement);
+        expect(await repo.getBookmarksBySource(book.id), [replacement]);
+      },
+    );
 
     test('addBookmark is idempotent per source and cfi', () async {
       final book = await repo.addBook(
@@ -282,6 +346,28 @@ void main() {
         expect(bookmarks.single.content, 'Keep me');
       },
     );
+
+    test('undo cannot restore a bookmark whose source was deleted', () async {
+      final book = await repo.addBook(
+        sourceFile: await createTempBookFile(),
+        title: 'Deleted source',
+        format: BookFormat.epub,
+      );
+      final bookmark = await repo.addBookmark(
+        sourceId: book.id,
+        sourceType: SourceType.book,
+        cfi: 'epubcfi(/6/4)',
+        content: 'Saved',
+        progress: .2,
+      );
+      await repo.deleteBookmarkById(book.id, bookmark.id);
+      await repo.deleteBook(book.id);
+      await expectLater(
+        repo.restoreBookmark(bookmark),
+        throwsA(isA<StorageException>()),
+      );
+      expect(await repo.getBookmarksBySource(book.id), isEmpty);
+    });
 
     test('deleteBook removes bookmarks for deleted source', () async {
       final book = await repo.addBook(

@@ -8,6 +8,7 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers/fake_book_repository.dart';
+import 'helpers/fake_collection_repository.dart';
 
 final _book = Book(
   id: '1',
@@ -20,6 +21,66 @@ final _book = Book(
 final _favouritesScope = LibraryCollectionScope.favourites();
 
 void main() {
+  for (final initiallyLoaded in [false, true]) {
+    test(
+      'collection read failure preserves data and recovers: $initiallyLoaded',
+      () async {
+        final books = FakeBookRepository()..seedBooks([_book]);
+        final collections = FakeCollectionRepository();
+        final collection = LibraryCollection(
+          id: 'manual',
+          name: 'Reading',
+          sourceCount: 1,
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        );
+        collections.seedCollections([collection]);
+        collections.seedCollectionSourceIds({
+          'manual': {'1'},
+        });
+        final bloc = LibraryBloc(
+          bookRepository: books,
+          collectionRepository: collections,
+        );
+        addTearDown(bloc.close);
+        if (initiallyLoaded) {
+          final loaded = bloc.stream.firstWhere(
+            (s) => s.status == LibraryStatus.success,
+          );
+          bloc.add(const LibraryLoadRequested());
+          await loaded;
+          final selected = bloc.stream.firstWhere((s) => s.hasCollectionScope);
+          bloc.add(
+            LibraryCollectionScopeChanged(
+              bloc.state.manualCollectionScopes.single,
+            ),
+          );
+          await selected;
+        }
+        collections.shouldThrow = true;
+        final failed = bloc.stream.firstWhere((s) => s.collectionsLoadFailed);
+        bloc.add(const LibraryRefreshRequested());
+        await failed;
+        expect(bloc.state.status, LibraryStatus.success);
+        expect(bloc.state.sources, [LibrarySource.fromBook(_book)]);
+        expect(bloc.state.hasCollectionScope, initiallyLoaded);
+        if (initiallyLoaded) {
+          expect(bloc.state.selectedCollectionScope!.id, 'manual');
+          expect(bloc.state.visibleItems.map((s) => s.id), ['1']);
+        } else {
+          expect(bloc.state.collectionScopes, isEmpty);
+        }
+        collections.shouldThrow = false;
+        final recovered = bloc.stream.firstWhere(
+          (s) => !s.collectionsLoadFailed,
+        );
+        bloc.add(const LibraryRefreshRequested());
+        await recovered;
+        expect(bloc.state.manualCollectionScopes.single.sourceIds, ['1']);
+        expect(bloc.state.hasCollectionScope, initiallyLoaded);
+      },
+    );
+  }
   setUp(() {
     final previous = Bloc.transformer;
     Bloc.transformer = (events, mapper) => events.asyncExpand(mapper);

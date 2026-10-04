@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -99,6 +100,80 @@ void main() {
     expect(stored, isNotNull);
     expect(stored!.plainText, 'Hello world');
   });
+
+  test(
+    'image queue overlaps two requests and reuses a body image as cover',
+    () async {
+      var active = 0;
+      var peak = 0;
+      final requests = <String>[];
+      final firstPair = Completer<void>();
+      repository.dispose();
+      repository = ArticleRepository(
+        database: db,
+        articlesDirectory: Directory(p.join(tempDir.path, 'articles')),
+        remoteUriPolicy: _publicRemoteUriPolicy,
+        httpClient: MockClient((request) async {
+          requests.add(request.url.path);
+          active++;
+          if (active > peak) peak = active;
+          if (active == 2 && !firstPair.isCompleted) firstPair.complete();
+          await firstPair.future.timeout(const Duration(seconds: 2));
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          active--;
+          return http.Response.bytes(
+            _pngBytes,
+            200,
+            headers: {'content-type': 'image/png'},
+          );
+        }),
+      );
+      final article = await repository.addExtractedArticle(
+        _extractedArticle(
+          imageUrl: 'https://example.com/one.png',
+          blocks: const [
+            ArticleImageBlock(src: '/one.png'),
+            ArticleImageBlock(src: 'https://example.com/one.png'),
+            ArticleImageBlock(src: '/two.png'),
+            ArticleImageBlock(src: '/three.png'),
+          ],
+        ),
+      );
+      expect(peak, 2);
+      expect(requests, unorderedEquals(['/one.png', '/two.png', '/three.png']));
+      expect(await File(article.coverImagePath!).readAsBytes(), _pngBytes);
+      expect(
+        File(article.contentHtmlPath).readAsStringSync(),
+        contains(p.basename(article.coverImagePath!)),
+      );
+    },
+  );
+
+  test(
+    'a response deadline aborts the request, not the shared client',
+    () async {
+      final client = _WaitingImageClient();
+      repository.dispose();
+      repository = ArticleRepository(
+        database: db,
+        articlesDirectory: Directory(p.join(tempDir.path, 'articles')),
+        remoteUriPolicy: _publicRemoteUriPolicy,
+        httpClient: client,
+        imageDownloadTimeout: const Duration(milliseconds: 40),
+      );
+      final article = await repository.addExtractedArticle(
+        _extractedArticle(
+          blocks: const [ArticleImageBlock(src: '/slow.png')],
+        ),
+      );
+      expect(client.aborted, isTrue);
+      expect(client.closed, isFalse);
+      expect(
+        File(article.contentHtmlPath).readAsStringSync(),
+        isNot(contains('src=')),
+      );
+    },
+  );
 
   test('addExtractedArticle removes duplicate leading title heading', () async {
     final article = await repository.addExtractedArticle(_extractedArticle());
@@ -569,6 +644,7 @@ ExtractedArticle _extractedArticle({
   String plainText = 'Hello world',
   String? language,
   ArticleTextDirection? textDirection,
+  String? imageUrl,
   List<ArticleBlock> blocks = const [
     ArticleHeadingBlock(level: 1, text: 'Saved article'),
     ArticleParagraphBlock(text: 'Hello world'),
@@ -579,7 +655,22 @@ ExtractedArticle _extractedArticle({
   site: 'Example',
   language: language,
   textDirection: textDirection,
+  imageUrl: imageUrl,
   blocks: blocks,
   plainText: plainText,
   rawJson: jsonEncode({'title': title}),
 );
+
+class _WaitingImageClient extends http.BaseClient {
+  bool aborted = false;
+  bool closed = false;
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    await (request as http.AbortableRequest).abortTrigger;
+    aborted = true;
+    throw http.RequestAbortedException(request.url);
+  }
+
+  @override
+  void close() => closed = true;
+}

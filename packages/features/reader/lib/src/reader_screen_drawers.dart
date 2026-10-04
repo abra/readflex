@@ -3,6 +3,7 @@ part of 'reader_screen.dart';
 /// Collects TOC/bookmark state from [ReaderBloc] and feeds the drawer UI.
 class _ReaderTocDrawerDriver extends StatelessWidget {
   const _ReaderTocDrawerDriver({
+    required this.loadThumbnail,
     required this.visible,
     required this.format,
     required this.pageProgressionRtl,
@@ -14,6 +15,7 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
     required this.onBookmarkDeleted,
   });
 
+  final ComicThumbnailLoader loadThumbnail;
   final bool visible;
   final BookFormat? format;
   final bool pageProgressionRtl;
@@ -44,6 +46,7 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
     final colors = context.colors;
 
     return _ReaderTocDrawer(
+      loadThumbnail: loadThumbnail,
       visible: visible,
       format: format,
       pageProgressionRtl: pageProgressionRtl,
@@ -67,6 +70,7 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
 /// Sliding full-height drawer that hosts chapter and bookmark tabs.
 class _ReaderTocDrawer extends StatelessWidget {
   const _ReaderTocDrawer({
+    required this.loadThumbnail,
     required this.visible,
     required this.format,
     required this.pageProgressionRtl,
@@ -85,6 +89,7 @@ class _ReaderTocDrawer extends StatelessWidget {
     required this.onBookmarkDeleted,
   });
 
+  final ComicThumbnailLoader loadThumbnail;
   final bool visible;
   final BookFormat? format;
   final bool pageProgressionRtl;
@@ -117,6 +122,7 @@ class _ReaderTocDrawer extends StatelessWidget {
             child: SafeArea(
               bottom: false,
               child: _ReaderTocDrawerContent(
+                loadThumbnail: loadThumbnail,
                 format: format,
                 visible: visible,
                 pageProgressionRtl: pageProgressionRtl,
@@ -144,6 +150,7 @@ class _ReaderTocDrawer extends StatelessWidget {
 /// local text controllers.
 class _ReaderTocDrawerContent extends StatefulWidget {
   const _ReaderTocDrawerContent({
+    required this.loadThumbnail,
     required this.format,
     required this.visible,
     required this.pageProgressionRtl,
@@ -160,6 +167,7 @@ class _ReaderTocDrawerContent extends StatefulWidget {
     required this.onBookmarkDeleted,
   });
 
+  final ComicThumbnailLoader loadThumbnail;
   final BookFormat? format;
   final bool visible;
   final bool pageProgressionRtl;
@@ -206,10 +214,10 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
+            padding: const EdgeInsetsDirectional.fromSTEB(
+              AppSpacing.lg,
               AppSpacing.sm,
-              AppSpacing.xs,
+              _readerDrawerActionEndPadding,
               AppSpacing.xs,
             ),
             child: Row(
@@ -224,59 +232,120 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
                     ),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(AppIcons.close, size: AppIconSize.md),
+                AppPlainIconButton(
+                  icon: AppIcons.close,
+                  iconSize: AppIconSize.md,
                   tooltip: l10n.commonClose,
-                  style: _readerDrawerCloseButtonStyle,
                   onPressed: widget.onClose,
                 ),
               ],
             ),
           ),
-          TabBar(
-            labelPadding: EdgeInsets.zero,
-            tabs: [
-              Tab(
-                child: _ReaderDrawerTabLabel(
-                  icon: AppIcons.toc,
-                  label: l10n.readerChapters,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              var width = 0.0;
+              for (final label in [
+                widget.format == BookFormat.cbz
+                    ? l10n.readerPages
+                    : l10n.readerChapters,
+                l10n.readerBookmarks,
+                l10n.readerHighlights,
+              ]) {
+                final painter = TextPainter(
+                  text: TextSpan(text: label, style: context.text.labelSmall),
+                  textDirection: Directionality.of(context),
+                  textScaler: MediaQuery.textScalerOf(context),
+                )..layout();
+                width +=
+                    painter.width +
+                    AppIconSize.sm +
+                    AppSpacing.xxs +
+                    2 * AppSpacing.sm;
+                painter.dispose();
+              }
+              final scrollable = width > constraints.maxWidth;
+              return TabBar(
+                isScrollable: scrollable,
+                tabAlignment: scrollable
+                    ? TabAlignment.start
+                    : TabAlignment.fill,
+                labelPadding: EdgeInsets.symmetric(
+                  horizontal: scrollable ? AppSpacing.sm : 0,
                 ),
-              ),
-              Tab(
-                child: _ReaderDrawerTabLabel(
-                  icon: AppIcons.bookmark,
-                  label: l10n.readerBookmarks,
-                ),
-              ),
-              Tab(
-                child: _ReaderDrawerTabLabel(
-                  icon: AppIcons.highlight,
-                  label: l10n.readerHighlights,
-                ),
-              ),
-            ],
-            labelColor: colors.onSurface,
-            unselectedLabelColor: colors.onSurfaceVariant,
-            indicatorColor: colors.primary,
+                tabs: [
+                  Tab(
+                    child: _ReaderDrawerTabLabel(
+                      icon: AppIcons.toc,
+                      label: widget.format == BookFormat.cbz
+                          ? l10n.readerPages
+                          : l10n.readerChapters,
+                    ),
+                  ),
+                  Tab(
+                    child: _ReaderDrawerTabLabel(
+                      icon: AppIcons.bookmark,
+                      label: l10n.readerBookmarks,
+                    ),
+                  ),
+                  Tab(
+                    child: _ReaderDrawerTabLabel(
+                      icon: AppIcons.highlight,
+                      label: l10n.readerHighlights,
+                    ),
+                  ),
+                ],
+                labelColor: colors.onSurface,
+                unselectedLabelColor: colors.onSurfaceVariant,
+                indicatorColor: context.actionForeground,
+              );
+            },
           ),
           Expanded(
             child: TabBarView(
               children: [
-                _ReaderTocTab(
-                  controller: _chaptersSearchController,
-                  visible: widget.visible,
-                  format: widget.format,
-                  pageProgressionRtl: widget.pageProgressionRtl,
-                  currentProgress: widget.currentProgress,
-                  currentChapterTitle: widget.currentChapterTitle,
-                  query: _chaptersQuery,
-                  hintText: l10n.readerSearchChapters,
-                  items: widget.tocItems,
-                  onQueryChanged: (value) {
-                    setState(() => _chaptersQuery = value);
-                  },
-                  onItemSelected: widget.onItemSelected,
-                ),
+                if (widget.format == BookFormat.cbz)
+                  Builder(
+                    builder: (context) {
+                      final tabs = DefaultTabController.of(context);
+                      return AnimatedBuilder(
+                        animation: tabs,
+                        builder: (context, _) {
+                          if (!widget.visible || tabs.index != 0) {
+                            return const SizedBox.shrink();
+                          }
+                          return ReaderComicPages(
+                            items: widget.tocItems,
+                            pageProgressionRtl: widget.pageProgressionRtl,
+                            currentIndex:
+                                readerActiveTocIndex(
+                                  items: widget.tocItems,
+                                  readingProgress: widget.currentProgress,
+                                  chapterTitle: widget.currentChapterTitle,
+                                ) ??
+                                0,
+                            loadThumbnail: widget.loadThumbnail,
+                            onSelected: widget.onItemSelected,
+                          );
+                        },
+                      );
+                    },
+                  )
+                else
+                  _ReaderTocTab(
+                    controller: _chaptersSearchController,
+                    visible: widget.visible,
+                    format: widget.format,
+                    pageProgressionRtl: widget.pageProgressionRtl,
+                    currentProgress: widget.currentProgress,
+                    currentChapterTitle: widget.currentChapterTitle,
+                    query: _chaptersQuery,
+                    hintText: l10n.readerSearchChapters,
+                    items: widget.tocItems,
+                    onQueryChanged: (value) {
+                      setState(() => _chaptersQuery = value);
+                    },
+                    onItemSelected: widget.onItemSelected,
+                  ),
                 _ReaderBookmarksTab(
                   controller: _bookmarksSearchController,
                   pageProgressionRtl: widget.pageProgressionRtl,
@@ -288,16 +357,29 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
                   onBookmarkSelected: widget.onBookmarkSelected,
                   onBookmarkDeleted: widget.onBookmarkDeleted,
                 ),
-                _ReaderHighlightsTab(
-                  controller: _highlightsSearchController,
-                  pageProgressionRtl: widget.pageProgressionRtl,
-                  readerTheme: widget.readerTheme,
-                  query: _highlightsQuery,
-                  highlights: widget.highlights,
-                  onQueryChanged: (value) {
-                    setState(() => _highlightsQuery = value);
+                Builder(
+                  builder: (context) {
+                    final tabs = DefaultTabController.of(context);
+                    return AnimatedBuilder(
+                      animation: tabs,
+                      builder: (context, _) => _ReaderHighlightsTab(
+                        controller: _highlightsSearchController,
+                        pageProgressionRtl: widget.pageProgressionRtl,
+                        readerTheme: widget.readerTheme,
+                        query: _highlightsQuery,
+                        highlights: widget.highlights,
+                        previewsEnabled:
+                            widget.visible &&
+                            tabs.index == 2 &&
+                            widget.format == BookFormat.cbz,
+                        loadThumbnail: widget.loadThumbnail,
+                        onQueryChanged: (value) {
+                          setState(() => _highlightsQuery = value);
+                        },
+                        onHighlightSelected: widget.onHighlightSelected,
+                      ),
+                    );
                   },
-                  onHighlightSelected: widget.onHighlightSelected,
                 ),
               ],
             ),
@@ -487,7 +569,7 @@ class _ReaderTocTabState extends State<_ReaderTocTab> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: SearchField(
             controller: widget.controller,
             hintText: widget.hintText,
@@ -551,18 +633,20 @@ class _ReaderTocListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final levelInset =
-        AppSpacing.md + (item.level - 1).clamp(0, 4) * AppSpacing.md;
+        AppSpacing.lg + (item.level - 1).clamp(0, 4) * AppSpacing.md;
 
-    final titleColor = isActive ? colors.primary : colors.onSurface;
+    final titleColor = isActive
+        ? colors.selectedControlForeground
+        : colors.onSurface;
 
     return ListTile(
       selected: isActive,
-      selectedTileColor: colors.primary.withValues(alpha: 0.10),
+      selectedTileColor: colors.selectedControlBackground,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       contentPadding: readerDirectionalContentPadding(
         pageProgressionRtl: pageProgressionRtl,
         start: levelInset.toDouble(),
-        end: AppSpacing.md,
+        end: AppSpacing.lg,
         top: AppSpacing.xxs,
         bottom: AppSpacing.xxs,
       ),
@@ -584,7 +668,7 @@ class _ReaderTocListTile extends StatelessWidget {
   }
 }
 
-class _ReaderBookmarksTab extends StatelessWidget {
+class _ReaderBookmarksTab extends StatefulWidget {
   const _ReaderBookmarksTab({
     required this.controller,
     required this.pageProgressionRtl,
@@ -604,43 +688,84 @@ class _ReaderBookmarksTab extends StatelessWidget {
   final ValueChanged<SourceBookmark> onBookmarkDeleted;
 
   @override
+  State<_ReaderBookmarksTab> createState() => _ReaderBookmarksTabState();
+}
+
+class _ReaderBookmarksTabState extends State<_ReaderBookmarksTab> {
+  List<SourceBookmark>? _bookmarks;
+  List<SourceBookmark>? _removed;
+  String? _query;
+  List<SourceBookmark> _filtered = const [];
+  Set<String> _removedIds = const {};
+
+  @override
   Widget build(BuildContext context) {
     final listBottomPadding = _readerDrawerListBottomPadding(context);
-    final filteredBookmarks = filterReaderBookmarks(bookmarks, query);
+    final edits = context.select<ReaderBloc, ReaderBookmarkEdits>(
+      (b) => b.state.bookmarkEdits,
+    );
+    if (!identical(_bookmarks, widget.bookmarks) ||
+        !identical(_removed, edits.removed) ||
+        _query != widget.query) {
+      _bookmarks = widget.bookmarks;
+      _removed = edits.removed;
+      _query = widget.query;
+      _removedIds = edits.removed.map((b) => b.id).toSet();
+      final items = [...widget.bookmarks, ...edits.removed]
+        ..sort((a, b) {
+          final progress = a.progress.compareTo(b.progress);
+          return progress == 0 ? a.createdAt.compareTo(b.createdAt) : progress;
+        });
+      _filtered = filterReaderBookmarks(items, widget.query);
+    }
+    final hasItems = widget.bookmarks.isNotEmpty || edits.removed.isNotEmpty;
 
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: SearchField(
-            controller: controller,
+            controller: widget.controller,
             hintText: context.l10n.readerSearchBookmarks,
             clearButtonSemanticsLabel: context.l10n.commonClearSearch,
-            onChanged: onQueryChanged,
+            onChanged: widget.onQueryChanged,
           ),
         ),
         Expanded(
           child: _ReaderDrawerContentFrame(
-            child: filteredBookmarks.isEmpty
+            child: _filtered.isEmpty
                 ? _ReaderDrawerEmptyState(
-                    icon: bookmarks.isEmpty
-                        ? AppIcons.bookmark
-                        : AppIcons.searchOff,
-                    message: bookmarks.isEmpty
+                    icon: !hasItems ? AppIcons.bookmark : AppIcons.searchOff,
+                    message: !hasItems
                         ? context.l10n.readerNoBookmarksYet
                         : context.l10n.readerNoMatchingBookmarks,
                   )
                 : ScrollEdgeFadeStack(
                     child: ListView.builder(
                       padding: EdgeInsets.only(bottom: listBottomPadding),
-                      itemCount: filteredBookmarks.length,
+                      itemCount: _filtered.length,
                       itemBuilder: (context, index) {
-                        final bookmark = filteredBookmarks[index];
+                        final bookmark = _filtered[index];
+                        final removed = _removedIds.contains(bookmark.id);
                         return _ReaderBookmarkListTile(
                           bookmark: bookmark,
-                          pageProgressionRtl: pageProgressionRtl,
-                          onTap: () => onBookmarkSelected(bookmark),
-                          onDelete: () => onBookmarkDeleted(bookmark),
+                          pageProgressionRtl: widget.pageProgressionRtl,
+                          removed: removed,
+                          failed: edits.failedId == bookmark.id,
+                          onTap: removed
+                              ? null
+                              : () => widget.onBookmarkSelected(bookmark),
+                          onDelete: edits.busyId != null
+                              ? null
+                              : () => widget.onBookmarkDeleted(bookmark),
+                          onUndo: edits.busyId != null
+                              ? null
+                              : () => context.read<ReaderBloc>().add(
+                                  ReaderBookmarkRestored(
+                                    sourceId: bookmark.sourceId,
+                                    id: bookmark.id,
+                                  ),
+                                ),
                         );
                       },
                     ),
@@ -658,12 +783,18 @@ class _ReaderBookmarkListTile extends StatelessWidget {
     required this.pageProgressionRtl,
     required this.onTap,
     required this.onDelete,
+    required this.onUndo,
+    this.removed = false,
+    this.failed = false,
   });
 
   final SourceBookmark bookmark;
   final bool pageProgressionRtl;
-  final VoidCallback onTap;
-  final VoidCallback onDelete;
+  final VoidCallback? onTap;
+  final VoidCallback? onDelete;
+  final VoidCallback? onUndo;
+  final bool removed;
+  final bool failed;
 
   @override
   Widget build(BuildContext context) {
@@ -673,15 +804,17 @@ class _ReaderBookmarkListTile extends StatelessWidget {
     final percentage = (bookmark.progress * 100).clamp(0, 100).round();
 
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xxs,
+      contentPadding: const EdgeInsetsDirectional.fromSTEB(
+        AppSpacing.lg,
+        AppSpacing.xxs,
+        _readerDrawerActionEndPadding,
+        AppSpacing.xxs,
       ),
       minVerticalPadding: AppSpacing.xs,
       leading: Icon(
         AppIcons.bookmark,
         size: AppIconSize.sm,
-        color: colors.primary,
+        color: context.actionForeground,
       ),
       title: Text(
         content.isEmpty ? context.l10n.readerBookmarkedPage : content,
@@ -699,8 +832,13 @@ class _ReaderBookmarkListTile extends StatelessWidget {
         padding: const EdgeInsets.only(top: AppSpacing.xxs),
         child: Text(
           [
-            if (chapterTitle != null && chapterTitle.isNotEmpty) chapterTitle,
-            '$percentage%',
+            if (removed)
+              context.l10n.readerBookmarkRemoved
+            else ...[
+              if (chapterTitle != null && chapterTitle.isNotEmpty) chapterTitle,
+              '$percentage%',
+            ],
+            if (failed) context.l10n.readerBookmarkUpdateFailed,
           ].join(' · '),
           textAlign: readerDirectionalTextAlign(
             pageProgressionRtl: pageProgressionRtl,
@@ -708,36 +846,43 @@ class _ReaderBookmarkListTile extends StatelessWidget {
           textDirection: readerDirectionalTextDirection(
             pageProgressionRtl: pageProgressionRtl,
           ),
-          maxLines: 1,
+          maxLines: failed ? null : 1,
           overflow: TextOverflow.ellipsis,
+          strutStyle: StrutStyle.fromTextStyle(
+            context.text.bodySmall,
+            forceStrutHeight: true,
+          ),
           style: context.text.bodySmall.copyWith(
             color: colors.onSurfaceVariant,
           ),
         ),
       ),
-      trailing: IconButton(
-        tooltip: context.l10n.readerDeleteBookmark,
-        visualDensity: VisualDensity.compact,
-        style: _readerDrawerCloseButtonStyle,
-        icon: Icon(
-          AppIcons.close,
-          size: AppIconSize.xs,
-          color: colors.onSurfaceVariant,
+      trailing: SizedBox.square(
+        dimension: AppSizes.buttonHeight,
+        child: AppPlainIconButton(
+          tooltip: removed
+              ? context.l10n.commonUndo
+              : context.l10n.readerDeleteBookmark,
+          icon: removed ? AppIcons.undo : AppIcons.delete,
+          iconSize: AppIconSize.md,
+          color: removed ? context.actionForeground : colors.onSurfaceVariant,
+          onPressed: removed ? onUndo : onDelete,
         ),
-        onPressed: onDelete,
       ),
       onTap: onTap,
     );
   }
 }
 
-class _ReaderHighlightsTab extends StatelessWidget {
+class _ReaderHighlightsTab extends StatefulWidget {
   const _ReaderHighlightsTab({
     required this.controller,
     required this.pageProgressionRtl,
     required this.readerTheme,
     required this.query,
     required this.highlights,
+    required this.previewsEnabled,
+    required this.loadThumbnail,
     required this.onQueryChanged,
     required this.onHighlightSelected,
   });
@@ -747,47 +892,182 @@ class _ReaderHighlightsTab extends StatelessWidget {
   final ReaderThemeData readerTheme;
   final String query;
   final List<Highlight> highlights;
+  final bool previewsEnabled;
+  final ComicThumbnailLoader loadThumbnail;
   final ValueChanged<String> onQueryChanged;
   final ValueChanged<Highlight> onHighlightSelected;
 
   @override
-  Widget build(BuildContext context) {
-    final listBottomPadding = _readerDrawerListBottomPadding(context);
-    final filteredHighlights = filterReaderHighlights(highlights, query);
+  State<_ReaderHighlightsTab> createState() => _ReaderHighlightsTabState();
+}
 
+class _ReaderHighlightsTabState extends State<_ReaderHighlightsTab>
+    with AutomaticKeepAliveClientMixin<_ReaderHighlightsTab> {
+  HighlightColor? _color;
+  final _expanded = <String>{};
+  late List<Highlight> _filtered;
+  ReaderComicThumbnailCubit? _thumbnails;
+  ReadflexLocalizations? _strings;
+
+  // Preserve filters and note expansion, but release previews on inactive tabs.
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.previewsEnabled) {
+      _thumbnails = ReaderComicThumbnailCubit(widget.loadThumbnail);
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final strings = context.l10n;
+    if (!identical(_strings, strings)) {
+      _strings = strings;
+      _filter();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _ReaderHighlightsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.previewsEnabled != widget.previewsEnabled) {
+      final previous = _thumbnails;
+      _thumbnails = widget.previewsEnabled
+          ? ReaderComicThumbnailCubit(widget.loadThumbnail)
+          : null;
+      if (previous != null) unawaited(previous.close());
+    }
+    if (!identical(oldWidget.highlights, widget.highlights)) {
+      final ids = widget.highlights.map((h) => h.id).toSet();
+      _expanded.retainWhere(ids.contains);
+    }
+    if (!identical(oldWidget.highlights, widget.highlights) ||
+        oldWidget.query != widget.query) {
+      _filter();
+    }
+  }
+
+  void _filter() {
+    _filtered = filterReaderHighlights(
+      widget.highlights,
+      widget.query,
+      color: _color,
+      formatPage: _strings?.readerPageNumber,
+    );
+  }
+
+  @override
+  void dispose() {
+    final thumbnails = _thumbnails;
+    if (thumbnails != null) unawaited(thumbnails.close());
+    super.dispose();
+  }
+
+  void _selectColor(HighlightColor? color) {
+    if (_color == color) return;
+    setState(() {
+      _color = color;
+      _filter();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: SearchField(
-            controller: controller,
+            controller: widget.controller,
             hintText: context.l10n.readerSearchHighlights,
             clearButtonSemanticsLabel: context.l10n.commonClearSearch,
-            onChanged: onQueryChanged,
+            onChanged: widget.onQueryChanged,
           ),
         ),
+        if (widget.highlights.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  Semantics(
+                    selected: _color == null,
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size.square(48),
+                      ),
+                      onPressed: () => _selectColor(null),
+                      child: Text(context.l10n.libraryFilterAll),
+                    ),
+                  ),
+                  for (final color in HighlightColor.values)
+                    ReaderHighlightColorButton(
+                      color: color,
+                      readerTheme: widget.readerTheme,
+                      selected: _color == color,
+                      enabled: true,
+                      onPressed: () => _selectColor(color),
+                    ),
+                ],
+              ),
+            ),
+          ),
         Expanded(
           child: _ReaderDrawerContentFrame(
-            child: filteredHighlights.isEmpty
+            child: _filtered.isEmpty
                 ? _ReaderDrawerEmptyState(
-                    icon: highlights.isEmpty
+                    icon: widget.highlights.isEmpty
                         ? AppIcons.highlight
                         : AppIcons.searchOff,
-                    message: highlights.isEmpty
+                    message: widget.highlights.isEmpty
                         ? context.l10n.readerNoHighlightsYet
                         : context.l10n.readerNoMatchingHighlights,
                   )
                 : ScrollEdgeFadeStack(
                     child: ListView.builder(
-                      padding: EdgeInsets.only(bottom: listBottomPadding),
-                      itemCount: filteredHighlights.length,
+                      // Keep the ordinary text-list prefetch; only image
+                      // previews must wait until their rows are visible.
+                      scrollCacheExtent: widget.previewsEnabled
+                          ? const ScrollCacheExtent.pixels(0)
+                          : null,
+                      padding: EdgeInsets.only(
+                        bottom: _readerDrawerListBottomPadding(context),
+                      ),
+                      itemCount: _filtered.length,
                       itemBuilder: (context, index) {
-                        final highlight = filteredHighlights[index];
-                        return _ReaderHighlightListTile(
+                        final highlight = _filtered[index];
+                        final area = highlight.imageArea;
+                        final thumbnails = _thumbnails;
+                        return ReaderHighlightListTile(
+                          key: ValueKey(highlight.id),
                           highlight: highlight,
-                          pageProgressionRtl: pageProgressionRtl,
-                          readerTheme: readerTheme,
-                          onTap: () => onHighlightSelected(highlight),
+                          pageProgressionRtl: widget.pageProgressionRtl,
+                          readerTheme: widget.readerTheme,
+                          expanded: _expanded.contains(highlight.id),
+                          onExpanded: () => setState(() {
+                            _expanded.contains(highlight.id)
+                                ? _expanded.remove(highlight.id)
+                                : _expanded.add(highlight.id);
+                          }),
+                          onNavigate: () =>
+                              widget.onHighlightSelected(highlight),
+                          imagePreview:
+                              area != null &&
+                                  area.pageIndex >= 0 &&
+                                  thumbnails != null
+                              ? BlocProvider.value(
+                                  value: thumbnails,
+                                  child: ReaderImageHighlightPreview(
+                                    area: area,
+                                  ),
+                                )
+                              : null,
                         );
                       },
                     ),
@@ -795,107 +1075,6 @@ class _ReaderHighlightsTab extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _ReaderHighlightListTile extends StatelessWidget {
-  const _ReaderHighlightListTile({
-    required this.highlight,
-    required this.pageProgressionRtl,
-    required this.readerTheme,
-    required this.onTap,
-  });
-
-  final Highlight highlight;
-  final bool pageProgressionRtl;
-  final ReaderThemeData readerTheme;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final text = highlight.text.trim();
-    final note = highlight.note?.trim();
-    final hasNote = note != null && note.isNotEmpty;
-    final notePromotedToTitle =
-        highlight.kind == HighlightKind.imageArea && hasNote;
-    final fallbackTitle = text.isEmpty
-        ? context.l10n.readerHighlightedText
-        : text;
-    final title = notePromotedToTitle ? note : fallbackTitle;
-    final hasLocation = readerHighlightHasNavigableLocation(highlight);
-    final locationLabel = readerHighlightLocationLabel(highlight);
-    final subtitle = [
-      if (!notePromotedToTitle && hasNote) note,
-      ?locationLabel,
-      if (!hasLocation) context.l10n.readerLocationUnavailable,
-    ].join(' · ');
-
-    return ListTile(
-      enabled: hasLocation,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xxs,
-      ),
-      minVerticalPadding: AppSpacing.xs,
-      leading: _ReaderHighlightColorDot(
-        color: readerHighlightColor(highlight.color, readerTheme),
-      ),
-      title: Text(
-        title,
-        textAlign: readerDirectionalTextAlign(
-          pageProgressionRtl: pageProgressionRtl,
-        ),
-        textDirection: readerDirectionalTextDirection(
-          pageProgressionRtl: pageProgressionRtl,
-        ),
-        maxLines: 3,
-        overflow: TextOverflow.ellipsis,
-        style: context.text.bodyMedium.copyWith(
-          color: hasLocation ? colors.onSurface : colors.onSurfaceVariant,
-        ),
-      ),
-      subtitle: subtitle.isEmpty
-          ? null
-          : Padding(
-              padding: const EdgeInsets.only(top: AppSpacing.xxs),
-              child: Text(
-                subtitle,
-                textAlign: readerDirectionalTextAlign(
-                  pageProgressionRtl: pageProgressionRtl,
-                ),
-                textDirection: readerDirectionalTextDirection(
-                  pageProgressionRtl: pageProgressionRtl,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: context.text.bodySmall.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
-              ),
-            ),
-      onTap: hasLocation ? onTap : null,
-    );
-  }
-}
-
-class _ReaderHighlightColorDot extends StatelessWidget {
-  const _ReaderHighlightColorDot({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color,
-        border: Border.all(
-          color: context.colors.onSurface.withValues(alpha: 0.16),
-        ),
-      ),
-      child: const SizedBox.square(dimension: 18),
     );
   }
 }

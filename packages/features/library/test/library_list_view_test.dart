@@ -112,44 +112,51 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('selected list cover border uses delete color', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light(),
-        home: Scaffold(
-          body: BookLibraryListTile(
-            source: LibrarySource.fromBook(_books.first),
-            showTopDivider: false,
-            isSelected: true,
-            onTap: () {},
+  testWidgets(
+    'selected list cover uses the selection marker, not delete color',
+    (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: BookLibraryListTile(
+              source: LibrarySource.fromBook(_books.first),
+              showTopDivider: false,
+              isSelected: true,
+              onTap: () {},
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    final deleteColor = Theme.of(
-      tester.element(find.byType(BookLibraryListTile)),
-    ).colorScheme.error;
-    final selectionDecoration = tester
-        .widgetList<DecoratedBox>(find.byType(DecoratedBox))
-        .map((box) => box.decoration)
-        .whereType<BoxDecoration>()
-        .singleWhere(
-          (decoration) =>
-              decoration.border is Border &&
-              (decoration.border! as Border).top.color == deleteColor &&
-              (decoration.border! as Border).top.width == 2,
-        );
+      final colors = Theme.of(
+        tester.element(find.byType(BookLibraryListTile)),
+      ).colorScheme;
+      final selectionColor = colors.selectionMarkerBackground;
+      expect(selectionColor, isNot(colors.error));
+      final selectionDecoration = tester
+          .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+          .map((box) => box.decoration)
+          .whereType<BoxDecoration>()
+          .singleWhere(
+            (decoration) =>
+                decoration.border is Border &&
+                (decoration.border! as Border).top.color == selectionColor &&
+                (decoration.border! as Border).top.width == 2,
+          );
 
-    expect(selectionDecoration.color, deleteColor.withValues(alpha: 0.15));
+      expect(selectionDecoration.color, selectionColor.withValues(alpha: 0.15));
 
-    final coverRect = tester.getRect(find.byType(AppSourceCoverFrame));
-    final checkRect = tester.getRect(
-      find.byKey(const ValueKey('libraryListSelectionCheck')),
-    );
-    expect(checkRect.top, coverRect.top + AppSpacing.xs);
-    expect(checkRect.right, coverRect.right - AppSpacing.xs);
-  });
+      final coverRect = tester.getRect(find.byType(AppSourceCoverFrame));
+      final checkRect = tester.getRect(
+        find.byKey(const ValueKey('libraryListSelectionCheck')),
+      );
+      expect(checkRect.top, coverRect.top + AppSpacing.xs);
+      expect(checkRect.right, coverRect.right - AppSpacing.xs);
+    },
+  );
 
   testWidgets('selected list background follows cover height', (
     tester,

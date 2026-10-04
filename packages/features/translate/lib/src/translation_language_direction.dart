@@ -158,31 +158,78 @@ class _LanguageMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final options = [
-      if (includeAuto)
-        (
-          code: autoSourceLanguageCode,
-          name: context.l10n.translationAutoSource,
+    const options = ReadflexSupportedLocales.languages;
+    final menuWidth = math.min(
+      360.0,
+      MediaQuery.sizeOf(context).width - 2 * AppSpacing.xl,
+    );
+    final cellWidth = (menuWidth - AppSpacing.sm) / 2;
+    final painter = TextPainter(
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      locale: Localizations.localeOf(context),
+    );
+    var widest = 0.0;
+    for (final option in options) {
+      painter.text = TextSpan(
+        text: option.name,
+        style: context.text.bodyMedium,
+      );
+      painter.layout();
+      widest = math.max(widest, painter.width);
+    }
+    painter.dispose();
+    final twoColumns =
+        widest + 2 * AppSpacing.sm + AppIconSize.sm + AppSpacing.xs <=
+        cellWidth;
+
+    Widget item(String code, String name) => MenuItemButton(
+      onPressed: enabled ? () => onChanged(code) : null,
+      style: MenuItemButton.styleFrom(
+        minimumSize: const Size(0, AppSizes.buttonHeight),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.md,
         ),
-      ...ReadflexSupportedLocales.languages,
-    ];
+        textStyle: context.text.bodyMedium,
+      ),
+      trailingIcon: SizedBox.square(
+        dimension: AppIconSize.sm,
+        child: code == selectedCode
+            ? const Icon(AppIcons.check, size: AppIconSize.sm)
+            : null,
+      ),
+      child: Semantics(selected: code == selectedCode, child: Text(name)),
+    );
     return MenuAnchor(
       controller: controller,
+      style: MenuStyle(
+        minimumSize: WidgetStatePropertyAll(Size(menuWidth, 0)),
+        maximumSize: WidgetStatePropertyAll(Size(menuWidth, double.infinity)),
+        padding: const WidgetStatePropertyAll(EdgeInsets.all(AppSpacing.xs)),
+      ),
       menuChildren: [
-        for (final option in options)
-          MenuItemButton(
-            onPressed: enabled ? () => onChanged(option.code) : null,
-            leadingIcon: SizedBox(
-              width: AppIconSize.sm,
-              child: option.code == selectedCode
-                  ? const Icon(AppIcons.check, size: AppIconSize.sm)
-                  : null,
-            ),
-            child: Semantics(
-              selected: option.code == selectedCode,
-              child: Text(option.name),
-            ),
-          ),
+        if (includeAuto) ...[
+          item(autoSourceLanguageCode, context.l10n.translationAutoSource),
+          const Divider(height: 1),
+        ],
+        // A fixed small option set uses natural row heights. MenuAnchor owns
+        // scrolling; large text falls back to one column without tiny targets.
+        if (twoColumns)
+          for (var i = 0; i < options.length; i += 2)
+            Row(
+              children: [
+                Expanded(child: item(options[i].code, options[i].name)),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: i + 1 < options.length
+                      ? item(options[i + 1].code, options[i + 1].name)
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            )
+        else
+          for (final option in options) item(option.code, option.name),
       ],
       builder: (context, menu, child) {
         void toggle() => menu.isOpen ? menu.close() : menu.open();
