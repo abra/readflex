@@ -2,6 +2,8 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_progress_label.dart';
 
+String _format(int page, int total) => '$page / $total';
+
 void main() {
   group('readerProgressLabel', () {
     test('shows global percent and visual section page for text books', () {
@@ -12,6 +14,7 @@ void main() {
           chapterCurrentPage: 1,
           chapterTotalPages: 16,
           isDragging: false,
+          formatPageOfTotal: _format,
         ),
         '56% · 1 / 16',
       );
@@ -25,6 +28,7 @@ void main() {
           chapterCurrentPage: 1,
           chapterTotalPages: 16,
           isDragging: true,
+          formatPageOfTotal: _format,
         ),
         '56%',
       );
@@ -39,6 +43,7 @@ void main() {
           chapterCurrentPage: 2,
           chapterTotalPages: 3,
           isDragging: false,
+          formatPageOfTotal: _format,
         ),
         '2 / 3',
       );
@@ -53,6 +58,7 @@ void main() {
           chapterCurrentPage: 1,
           chapterTotalPages: 3,
           isDragging: true,
+          formatPageOfTotal: _format,
         ),
         '3 / 3',
       );
@@ -66,6 +72,7 @@ void main() {
           chapterCurrentPage: 11,
           chapterTotalPages: 50,
           isDragging: false,
+          formatPageOfTotal: _format,
         ),
         '12 / 50',
       );
@@ -79,6 +86,7 @@ void main() {
           chapterCurrentPage: 11,
           chapterTotalPages: 50,
           isDragging: true,
+          formatPageOfTotal: _format,
         ),
         '50 / 50',
       );
@@ -92,6 +100,7 @@ void main() {
           chapterCurrentPage: 22,
           chapterTotalPages: 25,
           isDragging: true,
+          formatPageOfTotal: _format,
         ),
         '23 / 25',
       );
@@ -102,6 +111,7 @@ void main() {
           chapterCurrentPage: 22,
           chapterTotalPages: 25,
           isDragging: true,
+          formatPageOfTotal: _format,
         ),
         '23 / 25',
       );
@@ -297,13 +307,92 @@ void main() {
 
     test('normalizes visual section page buffer values', () {
       expect(
-        visualSectionPageLabel(currentPage: 0, totalPages: 16),
+        visualSectionPageLabel(
+          currentPage: 0,
+          totalPages: 16,
+          formatPageOfTotal: _format,
+        ),
         '1 / 16',
       );
       expect(
-        visualSectionPageLabel(currentPage: 17, totalPages: 16),
+        visualSectionPageLabel(
+          currentPage: 17,
+          totalPages: 16,
+          formatPageOfTotal: _format,
+        ),
         '16 / 16',
       );
+    });
+  });
+  group('page-of-total formatting', () {
+    String localized(int page, int total) => 'стр. $page из $total';
+
+    test('comic and section labels use the injected formatter', () {
+      expect(
+        comicPageLabel(
+          currentPage: 2,
+          totalPages: 25,
+          formatPageOfTotal: localized,
+        ),
+        'стр. 3 из 25',
+      );
+      expect(
+        visualSectionPageLabel(
+          currentPage: 4,
+          totalPages: 16,
+          formatPageOfTotal: localized,
+        ),
+        'стр. 4 из 16',
+      );
+      expect(
+        readerProgressLabel(
+          sourceType: SourceType.article,
+          format: null,
+          progress: 0.2,
+          chapterCurrentPage: 2,
+          chapterTotalPages: 9,
+          isDragging: false,
+          formatPageOfTotal: localized,
+        ),
+        'стр. 2 из 9',
+      );
+      expect(
+        readerProgressLabel(
+          format: BookFormat.epub,
+          progress: 0.5,
+          chapterCurrentPage: 1,
+          chapterTotalPages: 16,
+          isDragging: false,
+          formatPageOfTotal: localized,
+        ),
+        '50% · стр. 1 из 16',
+      );
+    });
+
+    test('missing page metrics do not call the formatter', () {
+      var calls = 0;
+      String counting(int page, int total) {
+        calls++;
+        return '$page / $total';
+      }
+
+      expect(
+        comicPageLabel(
+          currentPage: null,
+          totalPages: 25,
+          formatPageOfTotal: counting,
+        ),
+        isNull,
+      );
+      expect(
+        visualSectionPageLabel(
+          currentPage: 1,
+          totalPages: 0,
+          formatPageOfTotal: counting,
+        ),
+        isNull,
+      );
+      expect(calls, 0);
     });
   });
 }

@@ -402,6 +402,15 @@ UI changes do not recreate the reader runtime unnecessarily. Books and comics
 use the foliate WebView; articles use a separate vertical HTML WebView that
 loads `content.html` and restores position through stable sentence anchors.
 
+Both shells intercept link taps in JS: in-document fragments navigate in place,
+everything else is reported through one `onExternalLink` callback that
+`routing.dart` hands to the system browser. `ReaderNavigationPolicy` in
+`reader_webview` limits WebView navigation to the loopback reader server and
+forwards any external main-frame http(s) navigation to the same callback, so
+neither shell can leave the reader inside the WebView. Highlight drawing,
+search tints, the symbol font fallback and the post-selection tap debounce
+come from shared modules so articles and books render the same tokens alike.
+
 Comic gesture arbitration lives in `reader_webview` JS: edge taps are immediate,
 centre taps distinguish chrome from double-tap zoom, and zoomed drags only pan.
 Flutter owns chrome visibility and physical/logical page commands, with the

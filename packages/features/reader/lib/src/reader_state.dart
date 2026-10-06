@@ -19,6 +19,22 @@ final class ReaderBookmarkEdits extends Equatable {
   List<Object?> get props => [removed, busyId, failedId];
 }
 
+/// Highlight deletions persist first; Undo re-adds the row while Contents
+/// stays open. The restored highlight gets a new id but keeps its date.
+final class ReaderHighlightEdits extends Equatable {
+  const ReaderHighlightEdits({
+    this.removed = const [],
+    this.busyId,
+    this.failedId,
+  });
+  final List<Highlight> removed;
+  final String? busyId;
+  final String? failedId;
+
+  @override
+  List<Object?> get props => [removed, busyId, failedId];
+}
+
 final class ReaderHighlightEffect extends Equatable {
   const ReaderHighlightEffect({
     required this.version,
@@ -46,6 +62,7 @@ class ReaderState extends Equatable {
     this.articleUrl,
     this.pageProgressionRtl = false,
     this.highlights = const [],
+    this.highlightEdits = const ReaderHighlightEdits(),
     this.highlightEffect,
     this.bookmarks = const [],
     this.bookmarkEdits = const ReaderBookmarkEdits(),
@@ -71,6 +88,7 @@ class ReaderState extends Equatable {
   final String? articleUrl;
   final bool pageProgressionRtl;
   final List<Highlight> highlights;
+  final ReaderHighlightEdits highlightEdits;
   final ReaderHighlightEffect? highlightEffect;
   final List<SourceBookmark> bookmarks;
   final ReaderBookmarkEdits bookmarkEdits;
@@ -116,6 +134,7 @@ class ReaderState extends Equatable {
     Object? articleUrl = _absent,
     bool? pageProgressionRtl,
     List<Highlight>? highlights,
+    ReaderHighlightEdits? highlightEdits,
     ReaderHighlightEffect? highlightEffect,
     List<SourceBookmark>? bookmarks,
     ReaderBookmarkEdits? bookmarkEdits,
@@ -140,6 +159,7 @@ class ReaderState extends Equatable {
     articleUrl: articleUrl == _absent ? this.articleUrl : articleUrl as String?,
     pageProgressionRtl: pageProgressionRtl ?? this.pageProgressionRtl,
     highlights: highlights ?? this.highlights,
+    highlightEdits: highlightEdits ?? this.highlightEdits,
     highlightEffect: highlightEffect ?? this.highlightEffect,
     bookmarks: bookmarks ?? this.bookmarks,
     bookmarkEdits: bookmarkEdits ?? this.bookmarkEdits,
@@ -183,6 +203,7 @@ class ReaderState extends Equatable {
     articleUrl,
     pageProgressionRtl,
     highlights,
+    highlightEdits,
     highlightEffect,
     bookmarks,
     bookmarkEdits,

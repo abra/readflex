@@ -1,28 +1,36 @@
 import * as CFI from './epubcfi.js'
 import { TOCProgress, SectionProgress } from './progress.js'
 import { Overlayer } from './overlayer.js'
-import { SearchOcclusionIndicator, ACTIVE_SEARCH_HIGHLIGHT_COLOR } from './readflex_search_occlusion.js'
+import { SearchOcclusionIndicator } from './readflex_search_occlusion.js'
+import {
+  SEARCH_HIGHLIGHT_PADDING,
+  SEARCH_HIGHLIGHT_RADIUS,
+  searchHighlightDefaults,
+  searchHighlightFill,
+} from './readflex_shell_constants.js'
 import { textWalker } from './text-walker.js'
 import { directionCountsFromText, languageInfo, normalizeDocumentLanguageAndDirection } from './readflex_document_normalizer.js'
 import { markReaderStartup } from './readflex_startup.js'
 const { TTS } = await import('./tts.js')
 
 const SEARCH_PREFIX = 'foliate-search:'
-const SEARCH_HIGHLIGHT_COLOR = '#00d4d8'
-const SEARCH_HIGHLIGHT_PADDING = 1
-const SEARCH_HIGHLIGHT_RADIUS = 3
 const BOOK_DIRECTION_SAMPLE_SECTION_LIMIT = 12
 const BOOK_DIRECTION_READ_CONCURRENCY = 2
 const SECTION_DIRECTION_SAMPLE_CHAR_LIMIT = 5000
 const SECTION_DIRECTION_SAMPLE_SLICE_LIMIT = 3
 
 const drawSearchHighlight = (rects, { active }) => {
+  const defaults = searchHighlightDefaults(active)
   const fill = Overlayer.highlight(rects, {
-    color: active ? ACTIVE_SEARCH_HIGHLIGHT_COLOR : SEARCH_HIGHLIGHT_COLOR,
-    opacity: active ? '.36' : '.16',
+    color: defaults.color,
+    opacity: defaults.opacity,
     padding: SEARCH_HIGHLIGHT_PADDING,
     radius: SEARCH_HIGHLIGHT_RADIUS,
   })
+  // customCSS in the chapter document may redefine the shared variables.
+  const vars = searchHighlightFill(active)
+  fill.style.fill = vars.color
+  fill.style.opacity = vars.opacity
   fill.dataset.searchActive = String(active)
   return fill
 }

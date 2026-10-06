@@ -1,8 +1,16 @@
-import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 
-class TranslationSourceQuote extends StatelessWidget {
-  const TranslationSourceQuote({
+import 'theme/extensions/build_context_ext.dart';
+import 'theme/tokens/app_spacing.dart';
+
+/// Quoted source phrase with a leading rule, used above dictionary and
+/// translation results.
+///
+/// The whole block, including the rule and its inset, follows
+/// [textDirection] — the direction of the quoted text — so the rule stays on
+/// the reading-start side of the quote regardless of the app locale.
+class AppSourceQuote extends StatelessWidget {
+  const AppSourceQuote({
     required this.textDirection,
     required this.child,
     super.key,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  _textInputActionTests();
   for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
     for (final brightness in Brightness.values) {
       for (final direction in TextDirection.values) {
@@ -90,4 +91,41 @@ void main() {
       }
     }
   }
+}
+
+void _textInputActionTests() {
+  testWidgets('textInputAction passes through to the text field', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: const Scaffold(
+          body: SearchField(
+            hintText: 'Search',
+            textInputAction: TextInputAction.search,
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).textInputAction,
+      TextInputAction.search,
+    );
+  });
+
+  testWidgets('textInputAction defaults to the platform keyboard action', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: const Scaffold(body: SearchField(hintText: 'Search')),
+      ),
+    );
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).textInputAction,
+      isNull,
+    );
+  });
 }

@@ -7,13 +7,19 @@ import 'theme/tokens/app_spacing.dart';
 
 /// A primary command and a secondary exit, stacked when labels need more room.
 /// Measures only two labels; never performs intrinsic layout on sheet content.
+///
+/// Confirmations follow a safe-default model: the filled [primaryLabel] is
+/// the non-destructive choice (Cancel, Keep editing) and a destructive
+/// command is the outlined [secondaryLabel] rendered in the error color via
+/// [destructiveSecondary]. An accidental tap on the most prominent button
+/// therefore never deletes or discards data.
 class AppSheetActions extends StatelessWidget {
   const AppSheetActions({
     required this.primaryLabel,
     required this.onPrimary,
     required this.secondaryLabel,
     required this.onSecondary,
-    this.destructive = false,
+    this.destructiveSecondary = false,
     this.busy = false,
     super.key,
   });
@@ -22,7 +28,7 @@ class AppSheetActions extends StatelessWidget {
   final VoidCallback? onPrimary;
   final String secondaryLabel;
   final VoidCallback? onSecondary;
-  final bool destructive;
+  final bool destructiveSecondary;
   final bool busy;
 
   @override
@@ -42,12 +48,6 @@ class AppSheetActions extends StatelessWidget {
       }
       final primary = FilledButton(
         onPressed: busy ? null : onPrimary,
-        style: destructive
-            ? FilledButton.styleFrom(
-                backgroundColor: context.colors.error,
-                foregroundColor: context.colors.onError,
-              )
-            : null,
         child: Stack(
           alignment: Alignment.center,
           children: [
@@ -67,8 +67,15 @@ class AppSheetActions extends StatelessWidget {
           ],
         ),
       );
+      final colors = context.colors;
       final secondary = OutlinedButton(
         onPressed: busy ? null : onSecondary,
+        style: destructiveSecondary
+            ? OutlinedButton.styleFrom(
+                foregroundColor: colors.error,
+                side: BorderSide(color: colors.error),
+              )
+            : null,
         child: AppButtonLabel(secondaryLabel),
       );
       return stacked

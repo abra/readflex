@@ -77,11 +77,6 @@ class _FontOption extends StatelessWidget {
         color: selected ? colors.selectedControlBackground : colors.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.sm),
-          side: BorderSide(
-            color: selected
-                ? context.actionForeground
-                : context.appColors.divider,
-          ),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(

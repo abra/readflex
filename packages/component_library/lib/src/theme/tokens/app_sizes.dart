@@ -19,4 +19,7 @@ abstract final class AppSizes {
   /// Use this for the row/box that wraps a chip strip; the chip itself
   /// sits centered inside.
   static const double chipTapTarget = 48;
+
+  /// Tinted circle behind the icon of an empty or error state.
+  static const double stateIconFrame = 56;
 }

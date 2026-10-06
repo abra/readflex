@@ -68,22 +68,27 @@ class _DictionarySheetView extends StatelessWidget {
             onCopy: onCopy,
           );
           if (state.status == DictionarySheetStatus.success) return body;
+          final phrase = selection.effectiveSelectedText;
+          final direction = _contentDirection(phrase);
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (state.status != DictionarySheetStatus.success) ...[
-                  Text(
-                    selection.effectiveSelectedText,
-                    textDirection: _contentDirection(
-                      selection.effectiveSelectedText,
+                AppSourceQuote(
+                  key: const ValueKey('dictionary-source-quote'),
+                  textDirection: direction,
+                  child: Text(
+                    phrase,
+                    key: const ValueKey('dictionary-source-phrase'),
+                    textDirection: direction,
+                    style: context.text.bodyMedium.copyWith(
+                      color: context.colors.onSurface,
                     ),
-                    style: context.text.titleLarge,
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                ],
+                ),
+                const SizedBox(height: AppSpacing.md),
                 body,
               ],
             ),
@@ -110,30 +115,28 @@ class _DictionaryBody extends StatelessWidget {
     final cubit = context.read<DictionaryCubit>();
     return switch (state.status) {
       DictionarySheetStatus.initial ||
-      DictionarySheetStatus.loading => const Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
-          child: CircularProgressIndicator(),
-        ),
+      DictionarySheetStatus.loading => const Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
+        child: CenteredCircularProgressIndicator(),
       ),
       DictionarySheetStatus.success => _DictionaryResultView(
         result: state.result!,
         selectedText: selection.effectiveSelectedText,
         onCopy: onCopy,
       ),
-      DictionarySheetStatus.notFound => _DictionaryMessage(
+      DictionarySheetStatus.notFound => AppStatusMessage(
         title: context.l10n.dictionaryNotFoundTitle,
         body: context.l10n.dictionaryNotFoundBody,
       ),
-      DictionarySheetStatus.unsupportedLanguage => _DictionaryMessage(
+      DictionarySheetStatus.unsupportedLanguage => AppStatusMessage(
         title: context.l10n.dictionaryUnsupportedLanguageTitle,
         body: context.l10n.dictionaryUnsupportedLanguageBody,
       ),
-      DictionarySheetStatus.failure => _DictionaryMessage(
+      DictionarySheetStatus.failure => AppStatusMessage(
         title: context.l10n.dictionaryFailureTitle,
         body: context.l10n.dictionaryFailureBody,
         actionLabel: context.l10n.commonRetry,
-        onPressed: () => cubit.lookup(selection),
+        onAction: () => cubit.lookup(selection),
       ),
     };
   }
@@ -204,11 +207,19 @@ class _DictionaryEntryView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final metadata = [
+    // The backend returns the part of speech in the term's own language; the
+    // sheet has no localization map for it, so the raw label is shown.
+    final metadata = AppLexicalMetadataRow(
+      reading: entry.reading,
+      pronunciation: entry.pronunciation,
+      partOfSpeech: entry.partOfSpeech,
+      textDirection: _contentDirection(entry.lemma),
+    );
+    final hasMetadata = [
       entry.reading,
       entry.pronunciation,
       entry.partOfSpeech,
-    ].whereType<String>().where((value) => value.isNotEmpty).toList();
+    ].any((value) => value != null && value.trim().isNotEmpty);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -239,15 +250,9 @@ class _DictionaryEntryView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (metadata.isNotEmpty) ...[
+              if (hasMetadata) ...[
                 const SizedBox(height: AppSpacing.xs),
-                Text(
-                  metadata.join(' · '),
-                  textDirection: _contentDirection(metadata.join(' ')),
-                  style: context.text.bodyMedium.copyWith(
-                    color: context.colors.onSurfaceVariant,
-                  ),
-                ),
+                metadata,
               ],
               const SizedBox(height: AppSpacing.md),
               for (var index = 0; index < entry.definitions.length; index++)
@@ -307,7 +312,7 @@ class _DictionaryLemma extends StatelessWidget {
           ],
           Semantics(
             header: true,
-            child: SelectableText(lemma, style: context.text.titleLarge),
+            child: SelectableText(lemma, style: context.text.headlineSmall),
           ),
         ],
       ),
@@ -321,6 +326,9 @@ class _DefinitionView extends StatelessWidget {
   final int number;
   final DictionaryDefinition definition;
 
+  /// Number column: two digits and a period at the base text size.
+  static const numberColumnWidth = AppSpacing.xl + AppSpacing.xs;
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -329,11 +337,13 @@ class _DefinitionView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 28,
+            // Scale with the user's text size so "10." never wraps.
+            width: MediaQuery.textScalerOf(context).scale(numberColumnWidth),
             child: Text(
-              '$number.',
+              context.l10n.dictionaryDefinitionNumber(number),
               style: context.text.bodyMedium.copyWith(
                 color: context.colors.onSurfaceVariant,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
           ),
@@ -341,13 +351,13 @@ class _DefinitionView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SelectableText(definition.text, style: context.text.bodyMedium),
+                SelectableText(definition.text, style: context.text.bodyLarge),
                 for (final example in definition.examples) ...[
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     example,
                     textDirection: _contentDirection(example),
-                    style: context.text.bodySmall.copyWith(
+                    style: context.text.bodyMedium.copyWith(
                       color: context.colors.onSurfaceVariant,
                       fontStyle: FontStyle.italic,
                     ),
@@ -364,41 +374,3 @@ class _DefinitionView extends StatelessWidget {
 
 TextDirection _contentDirection(String text) =>
     Bidi.detectRtlDirectionality(text) ? TextDirection.rtl : TextDirection.ltr;
-
-class _DictionaryMessage extends StatelessWidget {
-  const _DictionaryMessage({
-    required this.title,
-    required this.body,
-    this.actionLabel,
-    this.onPressed,
-  });
-
-  final String title;
-  final String body;
-  final String? actionLabel;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(title, style: context.text.titleMedium),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          body,
-          style: context.text.bodyMedium.copyWith(
-            color: context.colors.onSurfaceVariant,
-          ),
-        ),
-        if (actionLabel != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          FilledButton(
-            onPressed: onPressed,
-            child: AppButtonLabel(actionLabel!),
-          ),
-        ],
-      ],
-    );
-  }
-}

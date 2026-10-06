@@ -27,4 +27,12 @@ extension BuildContextThemeX on BuildContext {
   Color get actionForeground => colors.brightness == Brightness.dark
       ? colors.primaryFixedDim
       : colors.primary;
+
+  /// True when the platform asks to reduce motion.
+  bool get reduceMotion => MediaQuery.disableAnimationsOf(this);
+
+  /// Resolves an [AppMotion] token for an implicit animation: the token as
+  /// given, or [Duration.zero] under reduced motion so the widget settles in
+  /// one frame instead of tweening.
+  Duration motion(Duration duration) => reduceMotion ? Duration.zero : duration;
 }

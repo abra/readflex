@@ -41,6 +41,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(books.requestedIds, ['book-1']);
+    final failure = tester.widget<ErrorState>(find.byType(ErrorState));
+    expect(failure.icon, AppIcons.error);
+    expect(failure.secondaryLabel, 'Go Back');
+    expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Go Back'), findsOneWidget);
 
     await tester.tap(find.text('Retry'));
     await tester.pumpAndSettle();
@@ -48,6 +53,51 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('Go Back leaves the reader route', (tester) async {
+    SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.empty();
+    final preferences = await PreferencesService.create(
+      supportedCodes: const ['en'],
+    );
+    addTearDown(preferences.dispose);
+    final books = _UnavailableBookRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        supportedLocales: ReadflexLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ReaderScreen(
+                    sourceId: 'book-1',
+                    serverBaseUri: Uri.parse('http://127.0.0.1:8080'),
+                    bookRepository: books,
+                    highlightRepository: FakeHighlightRepository(),
+                    preferencesService: preferences,
+                    screenControlService: _ScreenControlService(),
+                    textActions: const [],
+                  ),
+                ),
+              ),
+              child: const Text('Open'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ErrorState), findsOneWidget);
+
+    await tester.tap(find.text('Go Back'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ReaderScreen), findsNothing);
+    expect(find.text('Open'), findsOneWidget);
   });
 }
 

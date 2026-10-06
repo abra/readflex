@@ -39,7 +39,7 @@ class _LibraryDisplaySheetState extends State<_LibraryDisplaySheet>
     with SingleTickerProviderStateMixin {
   late final _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 300),
+    duration: AppMotion.medium,
   )..addStatusListener(_onTransitionStatus);
   late final _curve = CurvedAnimation(
     parent: _controller,
@@ -71,7 +71,7 @@ class _LibraryDisplaySheetState extends State<_LibraryDisplaySheet>
       _transitionDirection = Directionality.of(context);
     });
     final target = visible ? 1.0 : 0.0;
-    if (MediaQuery.disableAnimationsOf(context)) {
+    if (context.reduceMotion) {
       _controller.value = target;
     } else {
       _controller.animateTo(target);
@@ -243,68 +243,12 @@ class _LanguagePickerRow extends StatelessWidget {
       final language = ReadflexSupportedLocales.languages.firstWhere(
         (item) => item.code == locale.languageCode,
       );
-      return ListTile(
+      return AppDrillInRow(
         key: const ValueKey('libraryLanguagePicker'),
-        contentPadding: EdgeInsets.zero,
-        title: LayoutBuilder(
-          builder: (context, constraints) {
-            final direction = Directionality.of(context);
-            final labelStyle = context.text.bodyMedium;
-            final valueStyle = context.text.bodyMedium.copyWith(
-              color: context.colors.onSurfaceVariant,
-            );
-            var width = AppSpacing.md + AppSpacing.sm + AppIconSize.sm;
-            for (final (text, style) in [
-              (context.l10n.libraryDisplayLanguage, labelStyle),
-              (language.name, valueStyle),
-            ]) {
-              final painter = TextPainter(
-                text: TextSpan(text: text, style: style),
-                textDirection: direction,
-                textScaler: MediaQuery.textScalerOf(context),
-              )..layout();
-              width += painter.width;
-              painter.dispose();
-            }
-            final label = Text(
-              context.l10n.libraryDisplayLanguage,
-              style: labelStyle,
-            );
-            final value = Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(child: Text(language.name, style: valueStyle)),
-                const SizedBox(width: AppSpacing.sm),
-                Icon(
-                  direction == TextDirection.rtl
-                      ? AppIcons.chevronLeft
-                      : AppIcons.chevronRight,
-                  size: AppIconSize.sm,
-                ),
-              ],
-            );
-            if (width > constraints.maxWidth) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  label,
-                  const SizedBox(height: AppSpacing.sm),
-                  Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: value,
-                  ),
-                ],
-              );
-            }
-            return Row(
-              children: [
-                Expanded(child: label),
-                const SizedBox(width: AppSpacing.md),
-                value,
-              ],
-            );
-          },
-        ),
+        title: context.l10n.libraryDisplayLanguage,
+        value: language.name,
+        // Settings rows keep the 56dp list-row height that sizes Display.
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
         onTap: onPressed,
       );
     },

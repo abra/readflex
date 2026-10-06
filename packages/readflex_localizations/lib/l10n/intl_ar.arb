@@ -283,8 +283,8 @@
   "readerThemeSnow": "ثلج",
   "readerThemePaper": "ورق",
   "readerThemeWarm": "دافئ",
-  "readerThemeMist": "غرافيت",
-  "readerThemeNight": "ليل",
+  "readerThemeMist": "ليل",
+  "readerThemeNight": "غرافيت",
   "readerIncreaseBrightness": "زيادة السطوع",
   "readerDecreaseBrightness": "تقليل السطوع",
   "readerUsingSystemBrightness": "استخدام سطوع النظام: {label}",
@@ -312,5 +312,16 @@
   "dictionaryUnsupportedLanguageTitle": "اللغة غير متاحة",
   "dictionaryUnsupportedLanguageBody": "قاموس Readflex لا يدعم هذه اللغة حتى الآن.",
   "dictionaryFailureTitle": "التعريف غير متاح",
-  "dictionaryFailureBody": "تحقق من الاتصال أو حاول مرة أخرى لاحقًا."
+  "dictionaryFailureBody": "تحقق من الاتصال أو حاول مرة أخرى لاحقًا.",
+  "readerHighlightFilterAll": "الكل",
+  "readerBrightnessSystem": "النظام",
+  "readerPageOfTotal": "{page} / {total}",
+  "readerAddComment": "إضافة تعليق",
+  "readerAppearanceSample": "أب",
+  "translationUnknownLanguage": "لغة غير معروفة",
+  "dictionaryDefinitionNumber": "{number}.",
+  "importDiscardUrlBody": "لن يتم حفظ العنوان الذي أدخلته.",
+  "readerTapAreaHint": "منطقة النقر",
+  "importOfflineHint": "لا يوجد اتصال",
+  "importArticleOfflineSubtitle": "يتطلب اتصالاً بالإنترنت"
 }

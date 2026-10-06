@@ -70,42 +70,33 @@ class _InitializationFailedScreenState
         body: Builder(
           builder: (context) {
             final text = context.text;
-            final colors = context.colors;
             final l10n = context.l10n;
 
             return SafeArea(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.xl),
+                padding: const EdgeInsets.all(AppSpacing.lg),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Text(
-                      l10n.appInitializationFailed,
-                      style: text.titleLarge,
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    Text(
-                      l10n.appInitializationFailedBody,
-                      textAlign: TextAlign.center,
-                      style: text.bodyMedium.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
                     if (widget.onRetryInitialization != null)
                       ValueListenableBuilder<bool>(
                         valueListenable: _inProgress,
-                        builder: (context, inProgress, _) => FilledButton.icon(
-                          onPressed: inProgress ? null : _retryInitialization,
-                          icon: inProgress
-                              ? const ButtonLoadingIndicator(
-                                  size: AppIconSize.sm,
-                                )
-                              : const Icon(AppIcons.refresh),
-                          label: AppButtonLabel(
-                            inProgress ? l10n.appRetrying : l10n.appRetry,
-                          ),
+                        builder: (context, inProgress, _) => ErrorState(
+                          icon: AppIcons.error,
+                          title: l10n.appInitializationFailed,
+                          message: l10n.appInitializationFailedBody,
+                          // One label keeps the busy geometry stable.
+                          retryLabel: l10n.appRetry,
+                          onRetry: _retryInitialization,
+                          busy: inProgress,
                         ),
+                      )
+                    else
+                      // No recovery callback: same frame, without a command.
+                      EmptyState(
+                        icon: AppIcons.error,
+                        message: l10n.appInitializationFailed,
+                        subtitle: l10n.appInitializationFailedBody,
                       ),
                     const SizedBox(height: AppSpacing.lg),
                     if (kDebugMode)

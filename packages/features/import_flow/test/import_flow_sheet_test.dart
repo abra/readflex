@@ -608,7 +608,7 @@ void main() {
         tester.getSemantics(find.byKey(const ValueKey('importMenu-article'))),
         matchesSemantics(
           label: 'Save Article',
-          value: 'Paste a web URL for offline reading',
+          value: 'Needs an internet connection',
           isButton: true,
           hasEnabledState: true,
           isEnabled: false,
@@ -699,9 +699,20 @@ void main() {
     await tester.tap(find.text('Save Article'));
     await tester.pumpAndSettle();
 
+    final fieldBefore = tester.getRect(find.byType(TextField));
     isOfflineController.add(true);
     await tester.pump();
     await tester.pump();
+    // The disabled Save is explained in the field's reserved helper slot,
+    // muted (not an error) and without moving the field.
+    final hint = find.text("You're offline");
+    expect(hint, findsOneWidget);
+    final context = tester.element(hint);
+    expect(
+      tester.widget<Text>(hint).style?.color,
+      Theme.of(context).colorScheme.onSurfaceVariant,
+    );
+    expect(tester.getRect(find.byType(TextField)), fieldBefore);
     await tester.enterText(find.byType(TextField), 'https://example.com/a');
     await tester.tap(find.text('Save'));
     await tester.pump();
@@ -713,6 +724,7 @@ void main() {
     isOfflineController.add(false);
     await tester.pump();
     await tester.pump();
+    expect(hint, findsNothing);
     await tester.tap(find.text('Save'));
     await tester.pump();
 
@@ -868,11 +880,13 @@ void main() {
     await tester.pumpAndSettle();
 
     final pasteButtonFinder = find.byIcon(AppIcons.paste);
-    final pasteIcon = tester.widget<Icon>(pasteButtonFinder);
-    expect(find.widgetWithIcon(IconButton, AppIcons.paste), findsNothing);
+    final pasteButton = tester.widget<AppPlainIconButton>(
+      find.byKey(const ValueKey('articleUrlPasteButton')),
+    );
+    expect(pasteButton.tooltip, 'Paste URL');
     expect(
-      pasteIcon.color,
-      Theme.of(tester.element(find.byType(TextField))).colorScheme.primary,
+      pasteButton.color,
+      tester.element(find.byType(TextField)).actionForeground,
     );
     final fieldRect = tester.getRect(find.byType(TextField));
     final pasteRect = tester.getRect(
@@ -913,11 +927,13 @@ void main() {
     await tester.enterText(find.byType(TextField), 'https://example.com/keep');
     await tester.pump();
 
-    final pasteIcon = tester.widget<Icon>(find.byIcon(AppIcons.paste));
-    expect(find.widgetWithIcon(IconButton, AppIcons.paste), findsNothing);
     expect(
-      pasteIcon.color,
-      Theme.of(tester.element(find.byType(TextField))).colorScheme.primary,
+      tester
+          .widget<AppPlainIconButton>(
+            find.byKey(const ValueKey('articleUrlPasteButton')),
+          )
+          .color,
+      tester.element(find.byType(TextField)).actionForeground,
     );
 
     await tester.tap(find.byIcon(AppIcons.paste));
@@ -1260,6 +1276,55 @@ void main() {
       tester.getTopLeft(find.text('Article saved!')).dy,
       closeTo(uploadingTitleTop, 1),
     );
+  });
+
+  testWidgets('article upload in flight ignores scrim, drag and Back', (
+    tester,
+  ) async {
+    final articleImportCompleter = Completer<Article?>();
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => null,
+          onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (_, {onStage}) => articleImportCompleter.future,
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Article'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'https://example.com/a');
+    await tester.pump();
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+    // Guard changes publish after the frame.
+    await tester.pump();
+
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(find.byType(BottomSheet), findsOneWidget);
+
+    await tester.drag(
+      find.byKey(const ValueKey('importFlowStatusIcon')),
+      const Offset(0, 400),
+    );
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(find.byType(BottomSheet), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(find.byType(BottomSheet), findsOneWidget);
+
+    articleImportCompleter.complete(_fakeArticle(title: 'Saved article'));
+    await tester.pumpAndSettle();
+    // Done step: dismissal works again.
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
   });
 
   testWidgets('book upload status icon matches article upload position', (
@@ -1616,6 +1681,268 @@ void main() {
     expect(find.text('File type not supported'), findsOneWidget);
     expect(find.text('Bad.epub'), findsOneWidget);
     expect(find.text('Choose file'), findsOneWidget);
+  });
+
+  testWidgets('paste is the shared 48dp utility action with a tooltip', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => null,
+          onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (_, {onStage}) async => null,
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Article'));
+    await tester.pumpAndSettle();
+    final paste = find.byKey(const ValueKey('articleUrlPasteButton'));
+    expect(tester.widget(paste), isA<AppPlainIconButton>());
+    expect(tester.getSize(paste), const Size(48, 48));
+    expect(find.byTooltip('Paste URL'), findsOneWidget);
+    final style = tester
+        .widget<IconButton>(
+          find.descendant(of: paste, matching: find.byType(IconButton)),
+        )
+        .style!;
+    expect(style.shape!.resolve({}), const CircleBorder());
+  });
+
+  testWidgets('menu rows are shared drill-in rows', (tester) async {
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => null,
+          onImportBook: (file, {onProgress}) async => null,
+          onImportArticle: (_, {onStage}) async => null,
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AppDrillInRow), findsNWidgets(2));
+  });
+
+  testWidgets('status steps keep the flow header and gate Close on work', (
+    tester,
+  ) async {
+    final imported = Completer<Book?>();
+    ImportFlowResult? result;
+    var completed = false;
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) async {
+          result = await showImportFlowSheet(
+            context,
+            onPickBookFile: () async => File('/tmp/Test.epub'),
+            onImportBook: (file, {onProgress}) => imported.future,
+            onImportArticle: (_, {onStage}) async => null,
+          );
+          completed = true;
+        },
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    final menuSheet = tester.getRect(find.byType(BottomSheet));
+    await tester.tap(find.text('Upload Book'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    IconButton closeButton() => tester.widget<IconButton>(
+      find.ancestor(
+        of: find.byIcon(AppIcons.close),
+        matching: find.byType(IconButton),
+      ),
+    );
+    expect(find.text('Adding book'), findsOneWidget);
+    expect(find.byType(BottomSheetHeader), findsOneWidget);
+    expect(find.text('Add to Library'), findsOneWidget);
+    expect(closeButton().onPressed, isNull);
+    expect(
+      tester.getRect(find.byType(BottomSheet)).height,
+      closeTo(menuSheet.height + AppSizes.buttonHeight + AppSpacing.sm, 1),
+    );
+
+    imported.complete(null);
+    await tester.pumpAndSettle();
+    expect(find.text('Choose file'), findsOneWidget);
+    expect(closeButton().onPressed, isNotNull);
+    await tester.tap(find.byIcon(AppIcons.close));
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(completed, isTrue);
+    expect(result, isNull);
+  });
+
+  testWidgets('done step enables Close without reporting an import', (
+    tester,
+  ) async {
+    final imported = Completer<Book?>();
+    ImportFlowResult? result;
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) async {
+          result = await showImportFlowSheet(
+            context,
+            onPickBookFile: () async => File('/tmp/Test.epub'),
+            onImportBook: (file, {onProgress}) => imported.future,
+            onImportArticle: (_, {onStage}) async => null,
+          );
+        },
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Upload Book'));
+    await tester.pump();
+    imported.complete(_fakeBook());
+    await tester.pumpAndSettle();
+    expect(find.text('Done'), findsOneWidget);
+    final close = tester.widget<IconButton>(
+      find.ancestor(
+        of: find.byIcon(AppIcons.close),
+        matching: find.byType(IconButton),
+      ),
+    );
+    expect(close.onPressed, isNotNull);
+    await tester.tap(find.byIcon(AppIcons.close));
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(result, isNull);
+  });
+
+  Future<void> openDraftForm(WidgetTester tester) async {
+    await _openArticleForm(tester);
+    await tester.enterText(find.byType(TextField), 'https://example.com/a');
+    tester.testTextInput.hide();
+    // The dismiss guard publishes after the frame.
+    await tester.pumpAndSettle();
+  }
+
+  Finder sheetDragHandle() => find.byWidgetPredicate(
+    (w) => w is Container && w.constraints?.maxWidth == 32,
+  );
+
+  for (final method in ['close', 'scrim']) {
+    testWidgets('typed URL: $method asks to discard; Discard closes', (
+      tester,
+    ) async {
+      await openDraftForm(tester);
+      expect(sheetDragHandle(), findsNothing);
+      if (method == 'close') {
+        await tester.tap(find.byTooltip('Close'));
+      } else {
+        await tester.tapAt(const Offset(10, 20));
+      }
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsOneWidget);
+      expect(find.text('Discard changes?'), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+      final discard = find.widgetWithText(OutlinedButton, 'Discard');
+      final style = tester.widget<OutlinedButton>(discard).style!;
+      expect(
+        style.foregroundColor!.resolve({}),
+        Theme.of(tester.element(discard)).colorScheme.error,
+      );
+      expect(
+        find.widgetWithText(FilledButton, 'Keep editing'),
+        findsOneWidget,
+      );
+      // Repeated Close keeps the decision visible.
+      await tester.tap(find.byTooltip('Close'));
+      await tester.pumpAndSettle();
+      expect(find.text('Discard changes?'), findsOneWidget);
+      await tester.tap(discard);
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('typed URL: Keep editing restores the form and its draft', (
+    tester,
+  ) async {
+    await openDraftForm(tester);
+    final sheet = tester.getRect(find.byType(BottomSheet));
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byType(BottomSheet)), sheet);
+    await tester.tap(find.text('Keep editing'));
+    await tester.pumpAndSettle();
+    expect(find.text('Discard changes?'), findsNothing);
+    expect(
+      find.widgetWithText(TextField, 'https://example.com/a'),
+      findsOneWidget,
+    );
+    expect(tester.getRect(find.byType(BottomSheet)), sheet);
+    // Header Back from the decision does the same.
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    expect(
+      find.widgetWithText(TextField, 'https://example.com/a'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('typed URL: drag-down is swallowed and the draft survives', (
+    tester,
+  ) async {
+    await openDraftForm(tester);
+    final sheet = tester.getRect(find.byType(BottomSheet));
+    await tester.dragFrom(
+      Offset(sheet.center.dx, sheet.top + 10),
+      const Offset(0, 450),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(tester.getRect(find.byType(BottomSheet)), sheet);
+    expect(
+      find.widgetWithText(TextField, 'https://example.com/a'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('typed URL: system Back from the decision keeps the draft', (
+    tester,
+  ) async {
+    await openDraftForm(tester);
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Discard changes?'), findsNothing);
+    expect(
+      find.widgetWithText(TextField, 'https://example.com/a'),
+      findsOneWidget,
+    );
+    // From the form, system Back is a step back; the cubit keeps the URL.
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Add to Library'), findsOneWidget);
+    expect(sheetDragHandle(), findsOneWidget);
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+  });
+
+  testWidgets('empty URL form still closes on scrim and keeps its handle', (
+    tester,
+  ) async {
+    await _openArticleForm(tester);
+    await tester.pumpAndSettle();
+    expect(sheetDragHandle(), findsOneWidget);
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
   });
 }
 

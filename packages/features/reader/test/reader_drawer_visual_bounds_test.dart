@@ -10,7 +10,6 @@ void main() {
     final frameSource = _classSource(
       source,
       className: '_ReaderDrawerContentFrame',
-      beforeMarker: '/// Compact empty-state',
     );
 
     expect(frameSource, contains('return Material('));
@@ -19,22 +18,25 @@ void main() {
     expect(frameSource, contains('DecoratedBox('));
   });
 
+  test('drawer placeholders use the shared EmptyState', () {
+    final source = _readSource(
+      packagePath: 'lib/src/reader_screen_drawers.dart',
+    );
+    expect(source, isNot(contains('_ReaderDrawerEmptyState')));
+    expect('EmptyState(\n'.allMatches(source).length, 3);
+    expect('compact: true,'.allMatches(source).length, 3);
+  });
+
   // Image-area title promotion is exercised with the real widget and copy
   // action in reader_highlight_list_tile_test.dart, not source-string matching.
 }
 
-String _classSource(
-  String source, {
-  required String className,
-  required String beforeMarker,
-}) {
+String _classSource(String source, {required String className}) {
   final start = source.indexOf('class $className');
-  final end = source.indexOf(beforeMarker, start);
-
   expect(start, isNot(-1), reason: 'Expected $className to exist');
-  expect(end, isNot(-1), reason: 'Expected marker after $className');
+  final next = source.indexOf('\nclass ', start + 1);
 
-  return source.substring(start, end);
+  return next == -1 ? source.substring(start) : source.substring(start, next);
 }
 
 String _readSource({required String packagePath}) {

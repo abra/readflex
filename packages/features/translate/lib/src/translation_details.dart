@@ -29,9 +29,7 @@ class _TranslationDetailsState extends State<TranslationDetails> {
         width: DividerTheme.of(context).thickness,
       ),
     );
-    final duration = MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : const Duration(milliseconds: 180);
+    final duration = context.motion(AppMotion.short);
     return ExpansionTile(
       title: Text(
         context.l10n.translationDetails,

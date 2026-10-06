@@ -32,12 +32,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _next() {
-    if (MediaQuery.disableAnimationsOf(context)) {
+    if (context.reduceMotion) {
       _controller.jumpToPage(_currentPage + 1);
       return;
     }
     _controller.nextPage(
-      duration: const Duration(milliseconds: 300),
+      duration: context.motion(AppMotion.medium),
       curve: Curves.easeInOut,
     );
   }
@@ -82,9 +82,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 children: List.generate(
                   pages.length,
                   (index) => AnimatedContainer(
-                    duration: MediaQuery.disableAnimationsOf(context)
-                        ? Duration.zero
-                        : const Duration(milliseconds: 200),
+                    duration: context.motion(AppMotion.short),
                     margin: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.xs,
                     ),
@@ -137,7 +135,7 @@ class _OnboardingPage extends StatelessWidget {
     final colorScheme = context.colors;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: LayoutBuilder(
         builder: (context, constraints) => SingleChildScrollView(
           child: ConstrainedBox(

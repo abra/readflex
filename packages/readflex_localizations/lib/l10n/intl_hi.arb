@@ -283,8 +283,8 @@
   "readerThemeSnow": "स्नो",
   "readerThemePaper": "पेपर",
   "readerThemeWarm": "वार्म",
-  "readerThemeMist": "ग्रेफाइट",
-  "readerThemeNight": "नाइट",
+  "readerThemeMist": "नाइट",
+  "readerThemeNight": "ग्रेफाइट",
   "readerIncreaseBrightness": "ब्राइटनेस बढ़ाएं",
   "readerDecreaseBrightness": "ब्राइटनेस घटाएं",
   "readerUsingSystemBrightness": "सिस्टम ब्राइटनेस उपयोग में: {label}",
@@ -312,5 +312,16 @@
   "dictionaryUnsupportedLanguageTitle": "भाषा उपलब्ध नहीं है",
   "dictionaryUnsupportedLanguageBody": "Readflex शब्दकोश अभी इस भाषा का समर्थन नहीं करता।",
   "dictionaryFailureTitle": "परिभाषा उपलब्ध नहीं है",
-  "dictionaryFailureBody": "अपना कनेक्शन जांचें या बाद में पुनः प्रयास करें।"
+  "dictionaryFailureBody": "अपना कनेक्शन जांचें या बाद में पुनः प्रयास करें।",
+  "readerHighlightFilterAll": "सभी",
+  "readerBrightnessSystem": "सिस्टम",
+  "readerPageOfTotal": "{page} / {total}",
+  "readerAddComment": "टिप्पणी जोड़ें",
+  "readerAppearanceSample": "अआ",
+  "translationUnknownLanguage": "अज्ञात भाषा",
+  "dictionaryDefinitionNumber": "{number}.",
+  "importDiscardUrlBody": "दर्ज किया गया पता सहेजा नहीं जाएगा।",
+  "readerTapAreaHint": "टैप क्षेत्र",
+  "importOfflineHint": "आप ऑफ़लाइन हैं",
+  "importArticleOfflineSubtitle": "इंटरनेट कनेक्शन आवश्यक है"
 }

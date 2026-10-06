@@ -2,11 +2,17 @@
 // Widgets
 export 'src/action_bottom_sheet_layout.dart';
 export 'src/app_action_card.dart';
+export 'src/app_drill_in_row.dart';
 export 'src/app_bottom_safe_area.dart';
 export 'src/app_button_label.dart';
 export 'src/app_choice_control.dart';
 export 'src/app_settings_section.dart';
 export 'src/app_sheet_action_row.dart';
+export 'src/app_sheet_dismiss_guard.dart';
+export 'src/app_source_quote.dart';
+export 'src/app_lexical_metadata_row.dart';
+export 'src/app_color_swatch_button.dart';
+export 'src/app_status_message.dart';
 export 'src/app_copy_button.dart';
 export 'src/app_cover_art.dart';
 export 'src/app_filter_chip.dart';
@@ -40,6 +46,7 @@ export 'src/theme/reader_appearance.dart';
 export 'src/theme/tokens/app_colors.dart';
 export 'src/theme/tokens/app_elevation.dart';
 export 'src/theme/tokens/app_icon_size.dart';
+export 'src/theme/tokens/app_motion.dart';
 export 'src/theme/tokens/app_radius.dart';
 export 'src/theme/tokens/app_shadows.dart';
 export 'src/theme/tokens/app_sizes.dart';

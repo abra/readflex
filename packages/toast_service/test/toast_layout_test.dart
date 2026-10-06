@@ -1,5 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:toast_service/toast_service.dart';
 import 'package:toastification/toastification.dart';
@@ -81,6 +82,39 @@ void main() {
       await _dismiss(tester);
     });
   }
+
+  testWidgets('large text lets a long title wrap to a second line', (
+    tester,
+  ) async {
+    final context = await _mount(
+      tester,
+      TextDirection.ltr,
+      Brightness.light,
+      size: const Size(320, 568),
+      scale: 2,
+    );
+    const title = 'A Small Book About Reading Habits';
+    showToast(
+      context,
+      type: NotificationType.success,
+      message: title,
+      messageSuffix: ' deleted',
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 650));
+    final text = tester.widget<Text>(find.text(title));
+    expect(text.maxLines, 2);
+    final paragraph = tester.renderObject<RenderParagraph>(
+      find.descendant(of: find.text(title), matching: find.byType(RichText)),
+    );
+    // Taller than one line of the same style: the title wrapped once.
+    final oneLine = paragraph.getFullHeightForCaret(
+      const TextPosition(offset: 0),
+    );
+    expect(paragraph.size.height, greaterThan(oneLine * 1.5));
+    await _dismiss(tester);
+  });
 
   testWidgets('swiping dismisses only the selected notification', (
     tester,

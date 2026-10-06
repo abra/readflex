@@ -286,11 +286,11 @@ void main() {
               return SizedBox(
                 width: 300,
                 child: AppSheetActions(
-                  primaryLabel: 'Delete',
+                  primaryLabel: 'Cancel',
                   onPrimary: () => commands++,
-                  secondaryLabel: 'Cancel',
+                  secondaryLabel: 'Delete',
                   onSecondary: () => commands++,
-                  destructive: true,
+                  destructiveSecondary: true,
                   busy: busy,
                 ),
               );

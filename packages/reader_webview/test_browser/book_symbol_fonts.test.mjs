@@ -183,3 +183,32 @@ test('switching reader fonts preserves text nodes, selection and CFI', async t =
         assert.deepEqual(result, { sameNode: true, sameText: true, sameCfi: true, selected: symbols })
     }
 })
+
+test('book shell host document and footnote dialog follow the reader palette', async t => {
+    const { page } = await openBook(t)
+    const colors = await page.evaluate(() => {
+        const dialog = document.getElementById('footnote-dialog')
+        const root = document.documentElement
+        return {
+            html: getComputedStyle(root).backgroundColor,
+            body: getComputedStyle(document.body).backgroundColor,
+            dialogBackground: dialog.style.backgroundColor,
+            dialogBorder: getComputedStyle(dialog).borderTopColor,
+            dialogColor: getComputedStyle(dialog).color,
+            divider: root.style.getPropertyValue('--rf-divider-color'),
+        }
+    })
+    assert.equal(colors.html, 'rgb(250, 248, 244)')
+    assert.equal(colors.body, 'rgb(250, 248, 244)')
+    assert.match(colors.dialogBackground, /^rgba\(250, 248, 244, 0\.9/)
+    assert.notEqual(colors.dialogBorder, 'rgb(128, 128, 128)', 'the dialog border must not stay grey')
+    // Chromium serializes color-mix() as color(srgb ...), WebKit as rgba().
+    assert.match(colors.dialogBorder, /^(rgba\(41, 37, 33, 0\.22\)|color\(srgb 0\.16\d* 0\.14\d* 0\.12\d* \/ 0\.22\))$/)
+    assert.equal(colors.dialogColor, 'rgb(41, 37, 33)')
+    assert.ok(colors.divider.includes('#292521'))
+    const dark = await page.evaluate(() => {
+        window.changeStyle({ backgroundColor: '#121212', fontColor: '#e8e6e3' })
+        return getComputedStyle(document.documentElement).backgroundColor
+    })
+    assert.equal(dark, 'rgb(18, 18, 18)')
+})

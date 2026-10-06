@@ -27,8 +27,10 @@ enum ReaderThemePreset {
     snow => 'Snow',
     paper => 'Paper',
     warm => 'Warm',
-    mist => 'Graphite',
-    night => 'Night',
+    // Matches the localized names: the near-black page is Night, the slate
+    // one Graphite. Stored ids stay unchanged.
+    mist => 'Night',
+    night => 'Graphite',
   };
 }
 

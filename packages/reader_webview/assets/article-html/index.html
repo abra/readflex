@@ -211,13 +211,15 @@
       scroll-margin-block: 45vh;
     }
 
+    /* The rgba values are resolved by the shell from the shared search
+       variables (readflex_shell_constants.js), which customCSS may override. */
     .readflex-search-active {
-      background: rgb(255 179 0 / 28%);
+      background: var(--rf-search-active-background, rgb(255 179 0 / 36%));
       border-radius: var(--rf-search-highlight-radius);
     }
 
     mark.readflex-search-match {
-      background: rgb(255 179 0 / 36%);
+      background: var(--rf-search-active-background, rgb(255 179 0 / 36%));
       border-radius: var(--rf-search-highlight-radius);
       color: inherit;
       padding-inline: 0.05em;
@@ -239,6 +241,17 @@
     import { installArticleSelection } from '../foliate-js/src/readflex_article_selection.js'
     import { selectionViewportPosition } from '../foliate-js/src/readflex_selection_navigation.js'
     import { SearchOcclusionIndicator } from '../foliate-js/src/readflex_search_occlusion.js'
+    import {
+      READFLEX_SELECTION_CLICK_SUPPRESS_MS,
+      SEARCH_HIGHLIGHT_PADDING,
+      SEARCH_HIGHLIGHT_RADIUS,
+      searchHighlightDefaults,
+      searchHighlightRootCSS,
+      searchHighlightVars,
+    } from '../foliate-js/src/readflex_shell_constants.js'
+    import { highlightDrawOptions, parseHexColor, premixHighlightColor } from '../foliate-js/src/readflex_highlight_style.js'
+    import { readerFontFaceCSS, readerFontFamilyChain, symbolFontFaceCSS } from '../foliate-js/src/readflex_reader_fonts.js'
+    import { anchorFromEvent, classifyArticleLink } from '../foliate-js/src/readflex_article_links.js'
     (() => {
       const positionPrefix = 'readflex-html-position:'
       const centerHysteresisPx = 24
@@ -247,8 +260,10 @@
       const progressEndThreshold = 0.999
       const minEmitIntervalMs = 140
       const scrollRestoreSuppressMs = 700
-      const selectionClickSuppressMs = 800
+      const selectionClickSuppressMs = READFLEX_SELECTION_CLICK_SUPPRESS_MS
       const contextWindowChars = 200
+      const searchMatchHighlightName = 'readflex-search-matches'
+      const searchMatchRenderLimit = 1000
 
       const params = new URLSearchParams(location.search)
       const content = document.getElementById('article-content')
@@ -264,15 +279,21 @@
         onSettled: () => emitSettledSelection(),
       })
       const fontStyle = document.createElement('style')
+      const searchDefaultsStyle = document.createElement('style')
       const customStyle = document.createElement('style')
       const articleLayoutStyle = document.createElement('style')
       const articleHighlightStyle = document.createElement('style')
       const selectionPreviewStyle = document.createElement('style')
+      const searchTintStyle = document.createElement('style')
       document.head.append(fontStyle)
+      // Shared defaults precede customCSS so Flutter overrides win by order.
+      document.head.append(searchDefaultsStyle)
       document.head.append(customStyle)
       document.head.append(articleLayoutStyle)
       document.head.append(articleHighlightStyle)
       document.head.append(selectionPreviewStyle)
+      document.head.append(searchTintStyle)
+      searchDefaultsStyle.textContent = searchHighlightRootCSS()
       articleLayoutStyle.textContent = `
         #article-content blockquote,
         #article-content pre,
@@ -330,6 +351,9 @@
       let activeSearch = null
       let activeSearchElement = null
       let activeSearchMarker = null
+      let activeSearchCfi = null
+      let searchMatchRanges = []
+      let searchMatchDrawOptions = null
       const searchOcclusion = new SearchOcclusionIndicator({
         resizeTarget: content,
         getRects: () => activeSearchMarker?.isConnected
@@ -404,8 +428,10 @@
         const inlineCodeFontSizePx = rootFontSizePx * 0.9
         const kbdFontSizePx = rootFontSizePx * 0.85
         const codeBlockFontSizePx = rootFontSizePx * 0.875
-        const fontFamily = String(style.fontName || '').trim() || 'serif'
-        root.setProperty('--rf-font-family', JSON.stringify(fontFamily))
+        const fontName = String(style.fontName || '').trim()
+        // Articles have no publisher fonts: the book preset reads as serif.
+        const fontFamily = !fontName || fontName === 'book' ? 'serif' : fontName
+        root.setProperty('--rf-font-family', readerFontFamilyChain(fontFamily))
         root.setProperty('--readflex-font-size', `${safeFontSize}em`)
         root.setProperty('--readflex-text-scale', safeTextScale)
         root.setProperty('--readflex-prose-font-size', `${proseFontSizePx}px`)
@@ -434,12 +460,49 @@
         root.setProperty('--readflex-text-align', align === 'end' ? 'end' : align)
 
         const fontPath = String(style.fontPath || '').trim()
-        fontStyle.textContent = fontPath && fontFamily
-          ? `@font-face { font-family: ${JSON.stringify(fontFamily)}; src: url(${JSON.stringify(fontPath)}) format("truetype"); font-weight: 100 900; font-display: swap; }`
-          : ''
+        fontStyle.textContent =
+          readerFontFaceCSS({ fontName: fontFamily, fontPath }) + symbolFontFaceCSS()
         customStyle.textContent = style.customCSSEnabled && typeof style.customCSS === 'string'
           ? style.customCSS
           : ''
+        syncSearchTints()
+        refreshArticleHighlightRules()
+      }
+
+      function pageBackgroundColor() {
+        return parseHexColor(style?.backgroundColor) ? style.backgroundColor : '#ffffff'
+      }
+
+      // One style read per search/style change, never per frame or per tap.
+      function resolvedSearchTint(active) {
+        const vars = searchHighlightVars(active)
+        const defaults = searchHighlightDefaults(active)
+        const computed = getComputedStyle(document.documentElement)
+        const color = parseHexColor(computed.getPropertyValue(vars.color))
+          ?? parseHexColor(defaults.color)
+        const opacityValue = Number(computed.getPropertyValue(vars.opacity))
+        const opacity = Number.isFinite(opacityValue) && opacityValue > 0
+          ? Math.min(1, opacityValue)
+          : defaults.opacity
+        return { color: `#${color.map(c => c.toString(16).padStart(2, '0')).join('')}`, opacity }
+      }
+
+      function syncSearchTints() {
+        const active = resolvedSearchTint(true)
+        const match = resolvedSearchTint(false)
+        const rgba = ({ color, opacity }) =>
+          `rgba(${parseHexColor(color).join(', ')}, ${opacity})`
+        searchMatchDrawOptions = {
+          color: match.color,
+          opacity: match.opacity,
+          padding: SEARCH_HIGHLIGHT_PADDING,
+          radius: SEARCH_HIGHLIGHT_RADIUS,
+        }
+        searchTintStyle.textContent = [
+          `:root { --rf-search-active-background: ${rgba(active)}; }`,
+          `::highlight(${searchMatchHighlightName}) { background-color: ${rgba(match)}; }`,
+        ].join('\n')
+        if (searchMatchRanges.length) renderSearchMatches()
       }
 
       function normalizeText(value) {
@@ -819,6 +882,10 @@
               suppressNextSelectionClear = false
               return
             }
+            // The tap that dismissed the selection must not toggle chrome
+            // or follow a link; same debounce as the book shell.
+            selectionClickSuppressedUntil = performance.now() +
+              selectionClickSuppressMs
             callHandler('onSelectionCleared', null)
             return
           }
@@ -1266,18 +1333,38 @@
         searchOcclusion.hide()
         activeSearchElement?.classList?.remove('readflex-search-active')
         activeSearchElement = null
-        if (!activeSearchMarker) return
-        const parent = activeSearchMarker.parentNode
-        if (!parent) {
+        const previousCfi = activeSearchCfi
+        activeSearchCfi = null
+        if (activeSearchMarker) {
+          const parent = activeSearchMarker.parentNode
+          if (parent) {
+            while (activeSearchMarker.firstChild) {
+              parent.insertBefore(activeSearchMarker.firstChild, activeSearchMarker)
+            }
+            activeSearchMarker.remove()
+            parent.normalize()
+          }
           activeSearchMarker = null
-          return
         }
-        while (activeSearchMarker.firstChild) {
-          parent.insertBefore(activeSearchMarker.firstChild, activeSearchMarker)
+        // Wrapping the active match collapsed its live range; resolve it again.
+        const entry = previousCfi
+          ? searchMatchRanges.find(item => item.cfi === previousCfi)
+          : null
+        if (entry) {
+          entry.range = matchRangeForAnchor(entry.element, entry.anchor)
+          renderSearchMatches()
         }
-        activeSearchMarker.remove()
-        parent.normalize()
-        activeSearchMarker = null
+      }
+
+      // Inactive matches use the non-mutating highlighter, like book overlays.
+      function renderSearchMatches() {
+        const ranges = searchMatchRanges.map(entry => entry.range)
+        articleHighlighter.setMany(searchMatchHighlightName, ranges, searchMatchDrawOptions)
+      }
+
+      function clearSearchMatches() {
+        searchMatchRanges = []
+        articleHighlighter.delete(searchMatchHighlightName)
       }
 
       function textRangeForNormalizedOffset(root, start, length) {
@@ -1425,13 +1512,25 @@
         return `readflex-article-highlight-${(hash >>> 0).toString(36)}`
       }
 
-      function articleHighlightBackground(annotation) {
-        const color = /^#[0-9a-f]{6}$/i.test(String(annotation?.color || ''))
-          ? annotation.color
-          : '#FFE600'
-        const opacity = Math.min(1, Math.max(0, Number(annotation?.opacity) || 0.38))
-        const rgb = [1, 3, 5].map(offset => parseInt(color.slice(offset, offset + 2), 16))
-        return `rgba(${rgb.join(',')},${opacity})`
+      // SVG fallback draws the book's option set; `::highlight` gets the same
+      // tint pre-mixed against the page background (CSS highlights cannot blend).
+      function articleHighlightCssColor(annotation) {
+        return premixHighlightColor(annotation, pageBackgroundColor())
+      }
+
+      function articleHighlightRule(name, annotation) {
+        return `::highlight(${name}) { background-color: ${articleHighlightCssColor(annotation)}; }`
+      }
+
+      function refreshArticleHighlightRules() {
+        if (!renderedArticleHighlights?.size) return
+        articleHighlightStyle.textContent = Array.from(renderedArticleHighlights.values())
+          .map(({ name, annotation }) => articleHighlightRule(name, annotation))
+          .join('\n')
+        if (selectionHighlightPreview) {
+          selectionPreviewStyle.textContent =
+            articleHighlightRule(selectionHighlightPreview.name, selectionHighlightPreview.options)
+        }
       }
 
       function renderArticleHighlights() {
@@ -1462,11 +1561,9 @@
             continue
           }
           const name = articleHighlightName(annotation.id)
-          articleHighlighter.set(name, range, articleHighlightBackground(annotation))
+          articleHighlighter.set(name, range, highlightDrawOptions(annotation))
           renderedArticleHighlights.set(annotation.id, { name, range, annotation })
-          rules.push(
-            `::highlight(${name}) { background-color: ${articleHighlightBackground(annotation)}; }`,
-          )
+          rules.push(articleHighlightRule(name, annotation))
         }
         articleHighlightStyle.textContent = rules.join('\n')
         const result = {
@@ -1491,10 +1588,9 @@
         const range = rangeForArticleAnchor(anchor)
         if (!range) return
         const name = 'readflex-article-selection-preview'
-        articleHighlighter.set(name, range, articleHighlightBackground(options))
-        selectionHighlightPreview = { name, range }
-        selectionPreviewStyle.textContent =
-          `::highlight(${name}) { background-color: ${articleHighlightBackground(options)}; }`
+        articleHighlighter.set(name, range, highlightDrawOptions(options))
+        selectionHighlightPreview = { name, range, options }
+        selectionPreviewStyle.textContent = articleHighlightRule(name, options)
       }
 
       function clearSelectionHighlightPreview() {
@@ -1531,10 +1627,11 @@
         }
       }
 
-      function setActiveSearchElement(element, anchor = null) {
+      function setActiveSearchElement(element, anchor = null, cfi = null) {
         clearActiveSearchElement()
         if (!element) return
         activeSearchElement = element
+        activeSearchCfi = cfi
         if (markSearchMatch(element, anchor)) {
           searchOcclusion.invalidate()
           return
@@ -1552,6 +1649,7 @@
       function clearSearch() {
         cancelSearch()
         clearActiveSearchElement()
+        clearSearchMatches()
       }
 
       function startSearch(requestId, query) {
@@ -1567,6 +1665,7 @@
         activeSearch = state
         let index = 0
         let batch = []
+        let renderedCount = 0
 
         const step = () => {
           if (state.cancelled) return
@@ -1580,14 +1679,20 @@
             while (anchor) {
               const matchIndex = lower.indexOf(needle, from)
               if (matchIndex < 0) break
+              const matchAnchor = {
+                ...anchor,
+                ...searchMatchAnchor(text, matchIndex, needle.length),
+              }
+              const cfi = encodePosition(matchAnchor)
               batch.push({
-                cfi: encodePosition({
-                  ...anchor,
-                  ...searchMatchAnchor(text, matchIndex, needle.length),
-                }),
+                cfi,
                 chapterTitle: chapterTitleForElement(element),
                 excerpt: searchExcerpt(text, matchIndex, needle.length),
               })
+              if (searchMatchRanges.length < searchMatchRenderLimit) {
+                const range = textRangeForNormalizedOffset(element, matchIndex, needle.length)
+                if (range) searchMatchRanges.push({ cfi, element, anchor: matchAnchor, range })
+              }
               from = matchIndex + Math.max(needle.length, 1)
               if (batch.length >= 25) {
                 emitSearchBatch(requestId, batch)
@@ -1597,6 +1702,14 @@
             index += 1
           }
 
+          if (searchMatchRanges.length !== renderedCount) {
+            articleHighlighter.append(
+              searchMatchHighlightName,
+              searchMatchRanges.slice(renderedCount).map(entry => entry.range),
+              searchMatchDrawOptions,
+            )
+            renderedCount = searchMatchRanges.length
+          }
           emitSearchProgress(requestId, index, sentences.length)
           if (index >= sentences.length) {
             emitSearchBatch(requestId, batch)
@@ -1734,7 +1847,7 @@
         scrollElementToCenter(target)
         activeSentenceKey = target.id
         if (Number.isFinite(Number(decoded?.matchIndex))) {
-          setActiveSearchElement(target, decoded)
+          setActiveSearchElement(target, decoded, value)
         } else {
           clearActiveSearchElement()
         }
@@ -1803,13 +1916,29 @@
 
       window.addEventListener('resize', () => schedulePosition('resize', true))
 
+      function openArticleLink(link) {
+        const result = classifyArticleLink(link.getAttribute('href'), {
+          documentUrl: location.href,
+          baseUrl: document.baseURI,
+        })
+        if (result.kind === 'fragment') window.goToHref(result.hash)
+        else if (result.kind === 'external') callHandler('onExternalLink', result.href)
+      }
+
       document.addEventListener('click', event => {
+        // The shell owns link activation; the WebView must never navigate.
+        const link = anchorFromEvent(event)
+        if (link) event.preventDefault()
         if (performance.now() < selectionClickSuppressedUntil) {
           event.preventDefault()
           event.stopPropagation()
           return
         }
         if (window.getSelection?.().toString().trim()) return
+        if (link) {
+          openArticleLink(link)
+          return
+        }
         const highlight = highlightAtPoint(event.clientX, event.clientY)
         if (highlight) {
           callHandler('onAnnotationClick', {

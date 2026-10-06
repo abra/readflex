@@ -46,12 +46,12 @@ class _ConfirmBookDeletionSheet extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             AppSheetActions(
-              primaryLabel: l10n.commonDelete,
-              destructive: true,
-              onPrimary: () =>
+              primaryLabel: l10n.commonCancel,
+              onPrimary: () => Navigator.of(context).pop(),
+              secondaryLabel: l10n.commonDelete,
+              onSecondary: () =>
                   Navigator.of(context).pop(BookDeletionScope.keepLearningData),
-              secondaryLabel: l10n.commonCancel,
-              onSecondary: () => Navigator.of(context).pop(),
+              destructiveSecondary: true,
             ),
           ],
         ),

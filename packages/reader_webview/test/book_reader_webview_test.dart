@@ -473,7 +473,7 @@ void main() {
         final viewJs = _readPackageSource('assets/foliate-js/src/view.js');
         final webViewDart = readBookReaderWebViewLibrarySource();
 
-        expect(viewJs, contains('const SEARCH_HIGHLIGHT_RADIUS = 3'));
+        expect(viewJs, contains("from './readflex_shell_constants.js'"));
         expect(viewJs, contains('radius: SEARCH_HIGHLIGHT_RADIUS'));
         expect(viewJs, contains('async goToSearchResult(cfi)'));
         expect(viewJs, contains('await this.#nextFrame()'));
@@ -811,8 +811,22 @@ void main() {
       );
       expect(bookJs, contains('annotations.length === 0'));
       expect(bookJs, contains('dataset.imageAreaHandle'));
-      expect(bookJs, contains('READFLEX_IMAGE_AREA_BORDER_WIDTH = 24'));
-      expect(bookJs, contains('READFLEX_IMAGE_AREA_HANDLE_SIZE = 96'));
+      // Border and corner zones are sized in screen pixels, then divided by
+      // the iframe scale, so they feel the same on every comic page size.
+      expect(bookJs, contains('READFLEX_IMAGE_AREA_BORDER_PX = 6'));
+      expect(bookJs, contains('READFLEX_IMAGE_AREA_HANDLE_TARGET_PX = 64'));
+      expect(bookJs, contains('READFLEX_IMAGE_AREA_HANDLE_MAX_FRACTION = 0.4'));
+      expect(bookJs, contains('READFLEX_IMAGE_AREA_CORNER_MARK_PX = 22'));
+      expect(bookJs, contains('imageAreaBorderWidth(doc)'));
+      expect(bookJs, contains('layoutImageAreaHandles(doc, element)'));
+      expect(bookJs, contains("background: 'transparent'"));
+      expect(bookJs, isNot(contains("borderRadius: '999px'")));
+      expect(
+        bookJs,
+        contains(
+          "closest?.('[data-image-area-handle]')?.dataset?.imageAreaHandle",
+        ),
+      );
       expect(bookJs, contains('READFLEX_IMAGE_AREA_CANCEL_SUPPRESS_MS = 80'));
       expect(
         bookJs,
@@ -874,7 +888,7 @@ void main() {
       expect(
         bookJs,
         contains(
-          r'border: `${READFLEX_IMAGE_AREA_BORDER_WIDTH}px solid ${color}`',
+          r'border: `${imageAreaBorderWidth(doc)}px solid ${color}`',
         ),
       );
       expect(bookJs, contains('window.showImageAreaSelectionPreview'));
@@ -1009,7 +1023,10 @@ void main() {
       expect(html, contains('window.toggleBookmarkHere = () =>'));
       expect(html, contains('window.setArticleBookmarks = bookmarks =>'));
       expect(html, contains('mark.readflex-search-match'));
-      expect(html, contains('rgb(255 179 0 / 36%)'));
+      expect(html, contains('var(--rf-search-active-background'));
+      expect(html, contains('readflex_shell_constants.js'));
+      expect(html, contains('searchHighlightRootCSS()'));
+      expect(html, contains("articleHighlighter.append(\n"));
       expect(html, contains('--rf-search-highlight-radius: 3px'));
       expect(html, contains('function searchMatchAnchor('));
       expect(
@@ -1017,7 +1034,7 @@ void main() {
         contains('matchPrefix: text.slice(prefixStart, matchIndex)'),
       );
       expect(html, contains('function contextMatchOffset('));
-      expect(html, contains('setActiveSearchElement(target, decoded)'));
+      expect(html, contains('setActiveSearchElement(target, decoded, value)'));
       expect(html, contains('textRangeForNormalizedOffset'));
       expect(
         html,
@@ -1795,7 +1812,7 @@ void main() {
     });
 
     test('versions bundled reader assets independently of app version', () {
-      expect(AssetExtractor.assetRevision, 'reader_webview_assets_152');
+      expect(AssetExtractor.assetRevision, 'reader_webview_assets_154');
       expect(
         AssetExtractor.extractionVersionFor('1.0.0+1'),
         '1.0.0+1|${AssetExtractor.assetRevision}',

@@ -351,6 +351,11 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       onConsoleMessage: _onConsoleMessage,
       onRenderProcessGone: (controller, _) =>
           _onContentProcessTerminated(controller),
+      shouldOverrideUrlLoading: readerNavigationActionHandler(
+        policy: ReaderNavigationPolicy(serverBaseUri: widget.serverBaseUri),
+        isActive: (controller) => mounted && identical(controller, _controller),
+        onExternalLink: (href) => widget.onExternalLink?.call(href),
+      ),
       onReceivedError: (controller, request, _) {
         if (request.isForMainFrame == true &&
             identical(controller, _controller)) {
@@ -557,16 +562,6 @@ class BookReaderWebViewState extends State<BookReaderWebView>
     );
 
     handlers.add(
-      handlerName: 'onExternalLink',
-      callback: (args) {
-        if (args.isEmpty) return;
-        final href = parseReaderExternalLinkPayload(args.first);
-        if (href == null) return;
-        widget.onExternalLink?.call(href);
-      },
-    );
-
-    handlers.add(
       handlerName: 'onSelectionInteractionChanged',
       callback: (args) {
         if (args.isNotEmpty && args.first is bool) {
@@ -590,6 +585,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       },
       onTextDeselected: () => widget.onTextDeselected?.call(),
       onTapped: (x, y) => widget.onTapped?.call(x, y),
+      onExternalLink: (href) => widget.onExternalLink?.call(href),
     );
   }
 

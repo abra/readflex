@@ -159,12 +159,7 @@ class _SplitToastTitle extends StatelessWidget {
       spacing: tail == suffix ? 0 : AppSpacing.xs,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Text(
-          message,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          softWrap: false,
-        ),
+        Text(message, maxLines: 2, overflow: TextOverflow.ellipsis),
         Text(tail),
       ],
     );

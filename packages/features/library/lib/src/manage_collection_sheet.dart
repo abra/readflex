@@ -20,16 +20,14 @@ const double _collectionSourceDividerHeight = 1;
 // Align the glyph with the header; keep the full hit target in the gutter.
 const double _collectionSourceActionOutset =
     (AppSizes.buttonHeight - AppIconSize.sm) / 2;
-const double _emptyCollectionListHeightEstimate = 56;
+// EmptyState(compact) adds its own 16dp padding around one bodyMedium line.
+const double _emptyCollectionListHeightEstimate = 80;
 const double _manageCollectionTextFieldHeightEstimate = 56;
 const double _manageCollectionCountLabelHeightEstimate = 18;
 const double _manageCollectionDeleteBodyHeightEstimate = 88;
 const double _manageCollectionManageMinStepHeight = 336;
 const double _manageCollectionDeleteMinStepHeight = 224;
 const double _manageCollectionViewportTopReserve = 96;
-const Duration _manageCollectionTransitionDuration = Duration(
-  milliseconds: 300,
-);
 const EdgeInsets _sheetHorizontalPadding = EdgeInsets.symmetric(
   horizontal: AppSpacing.xl,
 );
@@ -52,8 +50,8 @@ Future<ManageCollectionSheetResult?> showManageCollectionSheet({
 }) {
   return showAppBottomSheet<ManageCollectionSheetResult>(
     context,
-    // Closing goes through the form guard; a swipe must not discard edits.
-    dismissible: false,
+    // Scrim and drag go through the same draft guard as Close.
+    scrimClosesFlow: true,
     builder: (_) => BlocProvider.value(
       value: cubit,
       child: ManageCollectionSheet(
@@ -150,6 +148,7 @@ class _ManageCollectionSheetState extends State<ManageCollectionSheet> {
   @override
   void initState() {
     super.initState();
+    context.read<ManageCollectionCubit>().clearError();
     _currentName = widget.scope.label;
     _displayedSources = List.unmodifiable(widget.sources);
     _bookCount = _displayedSources
@@ -298,7 +297,16 @@ class _ManageCollectionSheetState extends State<ManageCollectionSheet> {
         if (!didPop) _goBack();
       },
       child: BlocBuilder<ManageCollectionCubit, ManageCollectionState>(
-        builder: _buildSheet,
+        builder: (context, state) => AppSheetDismissGuard(
+          // Edits, a pending confirmation or a write in flight: a stray tap
+          // on the scrim must ask (or wait), never discard.
+          enabled:
+              state.isBusy ||
+              _hasChanges ||
+              _step != _ManageCollectionStep.manage,
+          onDismissAttempt: () => _requestClose(closeFlow: true),
+          child: _buildSheet(context, state),
+        ),
       ),
     );
   }
@@ -312,9 +320,8 @@ class _ManageCollectionSheetState extends State<ManageCollectionSheet> {
         (!canRename || name.isNotEmpty) &&
         ((canRename && name != _currentName) || _removedSourceIds.isNotEmpty);
 
-    final sizeDuration =
-        _animateNextSizeChange && !MediaQuery.disableAnimationsOf(context)
-        ? _manageCollectionTransitionDuration
+    final sizeDuration = _animateNextSizeChange
+        ? context.motion(AppMotion.medium)
         : Duration.zero;
     if (_animateNextSizeChange) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -383,6 +390,7 @@ class _ManageCollectionSheetState extends State<ManageCollectionSheet> {
                 onPrimary: _returnToEditing,
                 secondaryLabel: context.l10n.libraryDiscardChanges,
                 onSecondary: _discard,
+                destructiveSecondary: true,
               ),
             ],
           ),
@@ -454,9 +462,7 @@ class _ManageCollectionStepSwitcherState
 
   @override
   Widget build(BuildContext context) {
-    final duration = MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : _manageCollectionTransitionDuration;
+    final duration = context.motion(AppMotion.medium);
     return AnimatedSwitcher(
       duration: duration,
       reverseDuration: duration,
@@ -714,13 +720,9 @@ class _ManageCollectionContent extends StatelessWidget {
                       ),
                       if (visibleSources.isEmpty)
                         SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppSpacing.xl),
-                            child: Text(
-                              context.l10n.libraryNoItemsInCollection,
-                              style: context.text.bodyMedium,
-                              textAlign: TextAlign.center,
-                            ),
+                          child: EmptyState(
+                            message: context.l10n.libraryNoItemsInCollection,
+                            compact: true,
                           ),
                         )
                       else
@@ -822,17 +824,9 @@ class _CollectionSourcesList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (visibleSources.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Text(
-            context.l10n.libraryNoItemsInCollection,
-            textAlign: TextAlign.center,
-            style: context.text.bodyMedium.copyWith(
-              color: context.colors.onSurfaceVariant,
-            ),
-          ),
-        ),
+      return EmptyState(
+        message: context.l10n.libraryNoItemsInCollection,
+        compact: true,
       );
     }
 
@@ -907,12 +901,12 @@ class _DeleteCollectionConfirmationContent extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           AppSheetActions(
-            primaryLabel: context.l10n.commonDelete,
-            onPrimary: onDelete,
-            destructive: true,
+            primaryLabel: context.l10n.commonCancel,
+            onPrimary: onCancel,
+            secondaryLabel: context.l10n.commonDelete,
+            onSecondary: onDelete,
+            destructiveSecondary: true,
             busy: state.isBusy,
-            secondaryLabel: context.l10n.commonCancel,
-            onSecondary: onCancel,
           ),
         ],
       ),

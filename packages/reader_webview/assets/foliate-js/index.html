@@ -14,6 +14,7 @@
       margin: 0 !important;
       height: 100vh;
       height: var(--readflex-viewport-height, 100dvh);
+      background-color: var(--rf-background-color, transparent);
     }
 
 
@@ -29,7 +30,9 @@
       min-width: 300px;
       min-height: 200px;
       border-radius: 15px;
-      border: 1px solid grey;
+      border: 1px solid var(--rf-divider-color, grey);
+      background-color: var(--rf-background-color, transparent);
+      color: var(--rf-font-color, inherit);
       user-select: none;
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);

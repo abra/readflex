@@ -7,8 +7,12 @@ class FakeHighlightRepository implements HighlightRepository {
 
   bool shouldThrow = false;
 
+  /// Awaited before any re-add completes, so tests can observe busy rows.
+  Future<void>? addGate;
+
   final Map<String, List<Highlight>> highlightsBySourceId = {};
   final List<Highlight> imageAreaHighlights = [];
+  final List<Highlight> addedHighlights = [];
   final List<String> deletedHighlightIds = [];
   final List<Highlight> updatedHighlights = [];
 
@@ -20,6 +24,41 @@ class FakeHighlightRepository implements HighlightRepository {
   Future<List<Highlight>> getHighlightsBySource(String sourceId) async {
     if (shouldThrow) throw Exception('getHighlightsBySource failed');
     return List.of(highlightsBySourceId[sourceId] ?? []);
+  }
+
+  @override
+  Future<Highlight> addHighlight({
+    required String sourceId,
+    required SourceType sourceType,
+    required String text,
+    String? note,
+    String? cfiRange,
+    int? pageNumber,
+    double? scrollOffset,
+    double? progress,
+    String? chapterTitle,
+    HighlightColor color = HighlightColor.yellow,
+    List<String> replaceHighlightIds = const [],
+  }) async {
+    await addGate;
+    if (shouldThrow) throw Exception('addHighlight failed');
+    final highlight = Highlight(
+      id: 'highlight-${addedHighlights.length + 1}',
+      sourceId: sourceId,
+      sourceType: sourceType,
+      text: text,
+      note: note,
+      cfiRange: cfiRange,
+      pageNumber: pageNumber,
+      scrollOffset: scrollOffset,
+      progress: progress,
+      chapterTitle: chapterTitle,
+      color: color,
+      createdAt: DateTime(2030),
+    );
+    addedHighlights.add(highlight);
+    highlightsBySourceId.putIfAbsent(sourceId, () => []).add(highlight);
+    return highlight;
   }
 
   @override
@@ -36,6 +75,7 @@ class FakeHighlightRepository implements HighlightRepository {
     String? chapterTitle,
     HighlightColor color = HighlightColor.yellow,
   }) async {
+    await addGate;
     if (shouldThrow) throw Exception('addImageAreaHighlight failed');
     final highlight = Highlight(
       id: 'image-highlight-${imageAreaHighlights.length + 1}',
@@ -55,7 +95,7 @@ class FakeHighlightRepository implements HighlightRepository {
       progress: progress,
       chapterTitle: chapterTitle,
       color: color,
-      createdAt: DateTime.now(),
+      createdAt: DateTime(2030),
     );
     imageAreaHighlights.add(highlight);
     highlightsBySourceId.putIfAbsent(sourceId, () => []).add(highlight);

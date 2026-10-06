@@ -2,6 +2,7 @@ import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/src/reader_tap_action.dart';
 import 'package:reader/src/reader_tap_zone_hint.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
@@ -11,10 +12,12 @@ void main() {
     testWidgets('renders the latest requested tap zones', (tester) async {
       final cubit = ReaderUiCubit();
       await tester.pumpWidget(
-        BlocProvider.value(
-          value: cubit,
-          child: Directionality(
-            textDirection: TextDirection.ltr,
+        MaterialApp(
+          theme: AppTheme.light(),
+          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          supportedLocales: ReadflexLocalizations.supportedLocales,
+          home: BlocProvider.value(
+            value: cubit,
             child: SizedBox(
               width: 300,
               height: 600,
@@ -30,28 +33,28 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(Icons.keyboard_arrow_up_rounded), findsNothing);
-      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsNothing);
+      expect(find.byIcon(AppIcons.chevronUp), findsNothing);
+      expect(find.byIcon(AppIcons.chevronDown), findsNothing);
 
       cubit.showTapZoneHint(ReaderTapAxis.vertical);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.byIcon(Icons.keyboard_arrow_up_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.keyboard_arrow_left_rounded), findsNothing);
-      expect(find.byIcon(Icons.keyboard_arrow_right_rounded), findsNothing);
-      expect(find.text('TAP AREA'), findsNWidgets(2));
+      expect(find.byIcon(AppIcons.chevronUp), findsOneWidget);
+      expect(find.byIcon(AppIcons.chevronDown), findsOneWidget);
+      expect(find.byIcon(AppIcons.chevronLeft), findsNothing);
+      expect(find.byIcon(AppIcons.chevronRight), findsNothing);
+      expect(find.text('Tap area'), findsNWidgets(2));
 
       cubit.showTapZoneHint(ReaderTapAxis.horizontal);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.byIcon(Icons.keyboard_arrow_left_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.keyboard_arrow_right_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.keyboard_arrow_up_rounded), findsNothing);
-      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsNothing);
-      expect(find.text('TAP AREA'), findsNWidgets(2));
+      expect(find.byIcon(AppIcons.chevronLeft), findsOneWidget);
+      expect(find.byIcon(AppIcons.chevronRight), findsOneWidget);
+      expect(find.byIcon(AppIcons.chevronUp), findsNothing);
+      expect(find.byIcon(AppIcons.chevronDown), findsNothing);
+      expect(find.text('Tap area'), findsNWidgets(2));
     });
 
     testWidgets(
@@ -175,5 +178,28 @@ void main() {
         expect(leftLine.height, 25.0);
       },
     );
+  });
+
+  group('readerTapZoneHintInk', () {
+    double contrast(Color a, Color b) {
+      final la = a.computeLuminance();
+      final lb = b.computeLuminance();
+      return (la > lb ? la + 0.05 : lb + 0.05) /
+          (la > lb ? lb + 0.05 : la + 0.05);
+    }
+
+    for (final preset in ReaderThemePreset.values) {
+      test('hint text reaches 4.5:1 on ${preset.id}', () {
+        final theme = preset.data;
+        final composite = Color.alphaBlend(
+          theme.accentColor.withValues(alpha: 0.45),
+          theme.backgroundColor,
+        );
+        for (final app in [AppTheme.light(), AppTheme.dark()]) {
+          final ink = readerTapZoneHintInk(app.ext, composite);
+          expect(contrast(ink, composite), greaterThanOrEqualTo(4.5));
+        }
+      });
+    }
   });
 }

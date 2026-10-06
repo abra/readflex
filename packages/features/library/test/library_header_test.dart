@@ -203,4 +203,78 @@ void main() {
       semantics.dispose();
     }
   });
+
+  Future<void> pumpHeader(
+    WidgetTester tester, {
+    LibraryCollectionScope? scope,
+    ThemeData? theme,
+  }) async {
+    final controller = TextEditingController();
+    final focus = FocusNode();
+    addTearDown(controller.dispose);
+    addTearDown(focus.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: theme ?? AppTheme.light(),
+        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        supportedLocales: ReadflexSupportedLocales.locales,
+        home: Scaffold(
+          body: LibraryHeader(
+            state: LibraryState(selectedCollectionScope: scope),
+            isOffline: false,
+            searchController: controller,
+            searchFocusNode: focus,
+            onSearchChanged: (_) {},
+            onFilterChanged: (_) {},
+            onCollectionScopePressed: () {},
+            onCollectionScopeCleared: () {},
+          ),
+        ),
+      ),
+    );
+  }
+
+  testWidgets('clear collection action is the shared plain icon button', (
+    tester,
+  ) async {
+    await pumpHeader(tester, scope: LibraryCollectionScope.favourites());
+    final strings = tester.element(find.byType(LibraryHeader)).l10n;
+    final clear = find.byTooltip(strings.libraryClearCollectionFilter);
+    final button = find.ancestor(
+      of: clear,
+      matching: find.byType(AppPlainIconButton),
+    );
+    expect(button, findsOneWidget);
+    expect(tester.getSize(button), const Size(48, 48));
+    final plain = tester.widget<AppPlainIconButton>(button);
+    expect(plain.icon, AppIcons.close);
+    expect(plain.iconSize, AppIconSize.xs);
+    expect(plain.color, tester.element(button).colors.onPrimary);
+    final style = tester
+        .widget<IconButton>(
+          find.descendant(of: button, matching: find.byType(IconButton)),
+        )
+        .style!;
+    expect(style.shape!.resolve({}), const CircleBorder());
+  });
+
+  for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+    testWidgets('muted header glyphs use onSurfaceVariant: '
+        '${theme.brightness}', (tester) async {
+      await pumpHeader(tester, theme: theme);
+      final colors = theme.colorScheme;
+      expect(
+        tester.widget<Icon>(find.byIcon(AppIcons.collection)).color,
+        colors.onSurfaceVariant,
+      );
+      expect(
+        tester
+            .widget<AppPlainIconButton>(
+              find.byKey(const ValueKey('libraryHeaderDisplayButton')),
+            )
+            .color,
+        colors.onSurfaceVariant,
+      );
+    });
+  }
 }

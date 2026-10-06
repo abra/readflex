@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app_bottom_safe_area.dart';
+import 'app_sheet_dismiss_guard.dart';
 import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_radius.dart';
 import 'theme/tokens/app_spacing.dart';
@@ -26,6 +27,11 @@ import 'theme/tokens/app_spacing.dart';
 /// For unguarded multi-step flows, [scrimClosesFlow] makes a scrim tap close
 /// the route instead of invoking the step's system-Back handler. Do not enable
 /// it for forms whose [PopScope] protects unsaved changes.
+///
+/// A step that holds an unsaved draft wraps itself in [AppSheetDismissGuard]:
+/// while the guard is enabled, scrim tap and drag-down call the guard instead
+/// of popping, and the drag handle gives way to a same-height spacer. Steps
+/// without a draft keep the route's normal dismissal.
 ///
 /// The route owns the bottom safe area for every step, including nested forms.
 /// Content adds its visual bottom gap but must not consume system insets again.
@@ -65,8 +71,10 @@ Future<T?> showAppBottomSheet<T>(
   controller.addStatusListener(statusListener);
 
   final localizations = MaterialLocalizations.of(context);
+  final dismissRegistry = AppSheetDismissRegistry();
   final route = _AppBottomSheetRoute<T>(
     scrimClosesFlow: scrimClosesFlow,
+    dismissRegistry: dismissRegistry,
     capturedThemes: InheritedTheme.capture(
       from: context,
       to: navigator.context,
@@ -82,23 +90,50 @@ Future<T?> showAppBottomSheet<T>(
     useSafeArea: true,
     transitionAnimationController: controller,
     builder: (ctx) {
-      final sheetContent = Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (dismissible)
-            const _SheetDragHandle()
-          else
-            // Keep the title position without suggesting a disabled drag.
-            const SizedBox(height: AppSpacing.sm * 2 + 4),
-          Flexible(child: builder(ctx)),
-        ],
+      final body = Flexible(child: builder(ctx));
+      final sheetContent = ValueListenableBuilder<VoidCallback?>(
+        valueListenable: dismissRegistry,
+        child: body,
+        builder: (context, guard, body) {
+          final draggable = dismissible && guard == null;
+          final column = Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (draggable)
+                const _SheetDragHandle()
+              else
+                // Keep the title position without suggesting a disabled drag.
+                const SizedBox(height: AppSpacing.sm * 2 + 4),
+              body!,
+            ],
+          );
+          // ModalBottomSheetRoute's drag-to-dismiss recognizer cannot be
+          // toggled after construction. A child vertical-drag recognizer
+          // wins the arena (as scrollables inside sheets already do), so a
+          // guarded step swallows the drag instead of popping the route.
+          // The detector is always present so toggling the guard never
+          // re-inflates the body and loses its state.
+          final swallowDrag = dismissible && guard != null;
+          return GestureDetector(
+            onVerticalDragStart: swallowDrag ? _ignoreDragStart : null,
+            onVerticalDragUpdate: swallowDrag ? _ignoreDragUpdate : null,
+            onVerticalDragEnd: swallowDrag ? _ignoreDragEnd : null,
+            behavior: HitTestBehavior.translucent,
+            child: column,
+          );
+        },
       );
 
       return Padding(
         // Lift the sheet above the keyboard. Done once here so every
         // sheet body gets it, regardless of whether it has form fields.
         padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
-        child: AppBottomSafeArea(child: sheetContent),
+        child: AppBottomSafeArea(
+          child: AppSheetDismissScope(
+            registry: dismissRegistry,
+            child: sheetContent,
+          ),
+        ),
       );
     },
   );
@@ -116,15 +151,21 @@ Future<T?> showAppBottomSheet<T>(
       }
       controller.removeStatusListener(statusListener);
       controller.dispose();
+      dismissRegistry.dispose();
     }),
   );
 
   return sheetFuture;
 }
 
+void _ignoreDragStart(DragStartDetails _) {}
+void _ignoreDragUpdate(DragUpdateDetails _) {}
+void _ignoreDragEnd(DragEndDetails _) {}
+
 class _AppBottomSheetRoute<T> extends ModalBottomSheetRoute<T> {
   _AppBottomSheetRoute({
     required this.scrimClosesFlow,
+    required this.dismissRegistry,
     required super.builder,
     required super.isScrollControlled,
     required super.capturedThemes,
@@ -138,22 +179,33 @@ class _AppBottomSheetRoute<T> extends ModalBottomSheetRoute<T> {
   });
 
   final bool scrimClosesFlow;
+  final AppSheetDismissRegistry dismissRegistry;
 
   void _closeFlow() {
     if (isCurrent) navigator?.pop();
   }
 
+  void _onScrimTap() {
+    final guard = dismissRegistry.value;
+    if (guard != null) {
+      guard();
+    } else if (scrimClosesFlow) {
+      _closeFlow();
+    } else if (isCurrent) {
+      navigator?.maybePop();
+    }
+  }
+
   @override
   Widget buildModalBarrier() {
     final barrier = super.buildModalBarrier();
-    if (!scrimClosesFlow) return barrier;
-    // Preserve Flutter's animation and accessibility clipping. Only separate
-    // explicit scrim dismissal from maybePop's nested step navigation.
+    // Preserve Flutter's animation and accessibility clipping. Only route the
+    // tap through the dismiss guard and the explicit scrim policy.
     return switch (barrier) {
       AnimatedModalBarrier() => AnimatedModalBarrier(
         color: barrier.color,
         dismissible: barrier.dismissible,
-        onDismiss: _closeFlow,
+        onDismiss: _onScrimTap,
         semanticsLabel: barrier.semanticsLabel,
         barrierSemanticsDismissible: barrier.barrierSemanticsDismissible,
         clipDetailsNotifier: barrier.clipDetailsNotifier,
@@ -162,7 +214,7 @@ class _AppBottomSheetRoute<T> extends ModalBottomSheetRoute<T> {
       ModalBarrier() => ModalBarrier(
         color: barrier.color,
         dismissible: barrier.dismissible,
-        onDismiss: _closeFlow,
+        onDismiss: _onScrimTap,
         semanticsLabel: barrier.semanticsLabel,
         barrierSemanticsDismissible: barrier.barrierSemanticsDismissible,
         clipDetailsNotifier: barrier.clipDetailsNotifier,

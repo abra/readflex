@@ -51,32 +51,10 @@ class ReaderSearchNavigationBar extends StatelessWidget {
   final VoidCallback onEndSearch;
   final VoidCallback onReturn;
 
-  static const _actionStyle = ButtonStyle(
-    backgroundColor: WidgetStatePropertyAll(Colors.transparent),
-    shape: WidgetStatePropertyAll(CircleBorder()),
-  );
-
-  ButtonStyle _textActionStyle(BuildContext context, EdgeInsets padding) {
-    final focusColor = context.actionForeground;
-    return ButtonStyle(
-      padding: WidgetStatePropertyAll(padding),
-      overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-      splashFactory: NoSplash.splashFactory,
-      side: WidgetStateProperty.resolveWith(
-        (states) => states.contains(WidgetState.focused)
-            ? BorderSide(color: focusColor, width: 1.5)
-            : BorderSide.none,
-      ),
-      foregroundBuilder: (_, states, child) => Opacity(
-        opacity: states.contains(WidgetState.pressed)
-            ? 0.6
-            : states.contains(WidgetState.hovered)
-            ? 0.8
-            : 1,
-        child: child,
-      ),
-    );
-  }
+  // Only the row padding differs from the themed text button; press feedback
+  // stays the theme's ink.
+  static ButtonStyle _textActionStyle(EdgeInsets padding) =>
+      TextButton.styleFrom(padding: padding);
 
   @override
   Widget build(BuildContext context) {
@@ -98,13 +76,18 @@ class ReaderSearchNavigationBar extends StatelessWidget {
                     child: TextButton(
                       key: const ValueKey('reader-search-reopen'),
                       style: _textActionStyle(
-                        context,
                         const EdgeInsets.all(AppSpacing.sm),
                       ),
                       onPressed: onOpenSearch,
                       child: Row(
                         children: [
-                          const Icon(AppIcons.search, size: AppIconSize.sm),
+                          // Muted like the counter; only the return row is
+                          // accent-coloured.
+                          Icon(
+                            AppIcons.search,
+                            size: AppIconSize.sm,
+                            color: context.colors.onSurfaceVariant,
+                          ),
                           const SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: Column(
@@ -165,7 +148,6 @@ class ReaderSearchNavigationBar extends StatelessWidget {
               child: TextButton(
                 key: const ValueKey('reader-search-return'),
                 style: _textActionStyle(
-                  context,
                   const EdgeInsets.symmetric(
                     horizontal: AppSpacing.lg,
                     vertical: AppSpacing.sm,
@@ -207,13 +189,5 @@ class ReaderSearchNavigationBar extends StatelessWidget {
     required String label,
     required IconData icon,
     required VoidCallback? onPressed,
-  }) => SizedBox.square(
-    dimension: AppSizes.buttonHeight,
-    child: IconButton(
-      style: _actionStyle,
-      tooltip: label,
-      onPressed: onPressed,
-      icon: Icon(icon, size: AppIconSize.sm),
-    ),
-  );
+  }) => AppPlainIconButton(tooltip: label, onPressed: onPressed, icon: icon);
 }

@@ -11,6 +11,13 @@ class ManageCollectionCubit extends Cubit<ManageCollectionState> {
 
   final CollectionRepository _collectionRepository;
 
+  /// The cubit outlives the sheet; a failure from a previous session must
+  /// not greet the next collection the user opens.
+  void clearError() {
+    if (state.errorCode == null) return;
+    emit(state.copyWith(clearError: true));
+  }
+
   Future<bool> saveChanges({
     required String collectionId,
     String? name,

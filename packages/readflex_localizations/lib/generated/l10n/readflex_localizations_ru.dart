@@ -980,10 +980,10 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get readerThemeWarm => 'Теплая';
 
   @override
-  String get readerThemeMist => 'Графит';
+  String get readerThemeMist => 'Ночь';
 
   @override
-  String get readerThemeNight => 'Ночь';
+  String get readerThemeNight => 'Графит';
 
   @override
   String get readerIncreaseBrightness => 'Увеличить яркость';
@@ -1073,4 +1073,41 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   @override
   String get dictionaryFailureBody =>
       'Проверьте подключение или повторите попытку позже.';
+
+  @override
+  String get readerHighlightFilterAll => 'Все';
+
+  @override
+  String get readerBrightnessSystem => 'Системная';
+
+  @override
+  String readerPageOfTotal(int page, int total) {
+    return '$page / $total';
+  }
+
+  @override
+  String get readerAddComment => 'Добавить комментарий';
+
+  @override
+  String get readerAppearanceSample => 'Аа';
+
+  @override
+  String get translationUnknownLanguage => 'Неизвестный язык';
+
+  @override
+  String dictionaryDefinitionNumber(int number) {
+    return '$number.';
+  }
+
+  @override
+  String get importDiscardUrlBody => 'Введённый адрес не будет сохранён.';
+
+  @override
+  String get readerTapAreaHint => 'Зона нажатия';
+
+  @override
+  String get importOfflineHint => 'Нет подключения';
+
+  @override
+  String get importArticleOfflineSubtitle => 'Нужно подключение к интернету';
 }

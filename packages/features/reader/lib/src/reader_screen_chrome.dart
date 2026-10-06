@@ -1,48 +1,8 @@
 part of 'reader_screen.dart';
 
-/// Plain icon button used in the reader action chrome — no background,
-/// no theme-injected `secondary` fill. Reader controls should inherit the
-/// current foreground color so they stay readable on both light and dark
-/// chrome surfaces.
-class _ReaderChromeIconButton extends StatelessWidget {
-  const _ReaderChromeIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.foregroundColor,
-    this.iconSize = AppIconSize.md,
-    this.onPressed,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final Color foregroundColor;
-  final double iconSize;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final disabled = onPressed == null;
-    return SizedBox.square(
-      dimension: AppSizes.buttonHeight,
-      child: IconButton(
-        icon: Icon(icon, size: iconSize),
-        tooltip: tooltip,
-        onPressed: onPressed,
-        style: IconButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          foregroundColor: disabled
-              ? foregroundColor.withValues(alpha: 0.35)
-              : foregroundColor,
-          minimumSize: const Size.square(AppSizes.buttonHeight),
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          shape: const CircleBorder(),
-          visualDensity: VisualDensity.standard,
-        ),
-      ),
-    );
-  }
-}
-
+/// Toolbar bookmark action: the shared plain icon button with the custom
+/// filled/outline glyph. The glyph paints its own color, so the disabled
+/// dimming is applied here rather than by the button's foreground.
 class _ReaderBookmarkIconButton extends StatelessWidget {
   const _ReaderBookmarkIconButton({
     required this.active,
@@ -62,21 +22,15 @@ class _ReaderBookmarkIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final disabled = onPressed == null;
     final color = active ? activeColor : foregroundColor;
-    return IconButton(
-      icon: _ReaderBookmarkGlyph(
+    return AppPlainIconButton(
+      iconWidget: _ReaderBookmarkGlyph(
         filled: active,
-        color: disabled ? color.withValues(alpha: 0.35) : color,
+        color: disabled ? color.withValues(alpha: 0.38) : color,
         size: AppIconSize.md,
       ),
       tooltip: tooltip,
+      color: color,
       onPressed: onPressed,
-      style: IconButton.styleFrom(
-        backgroundColor: Colors.transparent,
-        foregroundColor: disabled ? color.withValues(alpha: 0.35) : color,
-        minimumSize: const Size.square(AppSizes.buttonHeight),
-        shape: const CircleBorder(),
-        visualDensity: VisualDensity.standard,
-      ),
     );
   }
 }
@@ -240,7 +194,10 @@ class ReaderBrightnessChromeDriver extends StatelessWidget {
       value: controlValue,
       systemValue: brightnessState.systemBrightness,
       overrideValue: brightnessState.brightnessOverride,
-      label: _readerBrightnessLabel(brightnessState),
+      label: _readerBrightnessLabel(
+        brightnessState,
+        systemLabel: context.l10n.readerBrightnessSystem,
+      ),
       usesSystemBrightness: brightnessState.usesSystemBrightness,
       dragEnabled: !waitingForSystemBrightness,
       canIncrease:
@@ -384,13 +341,17 @@ class _ReaderBrightnessChromeState extends State<_ReaderBrightnessChrome> {
     final cs = context.colors;
     final borderColor = cs.outlineVariant.withValues(alpha: 0.72);
     final foreground = cs.onSurface.withValues(alpha: 0.74);
+    final motion = context.motion(AppMotion.short);
+    // The pill sits at the trailing edge, so it slides out toward that edge.
+    final hiddenOffset = Directionality.of(context) == TextDirection.rtl
+        ? const Offset(-0.18, 0)
+        : const Offset(0.18, 0);
 
-    return Positioned(
+    return PositionedDirectional(
       top: 0,
-      right: AppSpacing.md,
+      end: AppSpacing.md,
       bottom: 0,
       child: SafeArea(
-        left: false,
         top: false,
         bottom: false,
         child: Center(
@@ -399,11 +360,11 @@ class _ReaderBrightnessChromeState extends State<_ReaderBrightnessChrome> {
             ignoring: !widget.visible,
             child: AnimatedOpacity(
               opacity: widget.visible ? 1 : 0,
-              duration: _kChromeAnimDuration,
+              duration: motion,
               curve: curve,
               child: AnimatedSlide(
-                offset: widget.visible ? Offset.zero : const Offset(0.18, 0),
-                duration: _kChromeAnimDuration,
+                offset: widget.visible ? Offset.zero : hiddenOffset,
+                duration: motion,
                 curve: curve,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
@@ -426,12 +387,13 @@ class _ReaderBrightnessChromeState extends State<_ReaderBrightnessChrome> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _ReaderBrightnessStepButton(
+                          AppPlainIconButton(
                             tooltip: context.l10n.readerIncreaseBrightness,
                             icon: AppIcons.lightMode,
-                            enabled: widget.canIncrease,
-                            foreground: foreground,
-                            onPressed: widget.onIncrease,
+                            color: foreground,
+                            onPressed: widget.canIncrease
+                                ? widget.onIncrease
+                                : null,
                           ),
                           GestureDetector(
                             key: const ValueKey(
@@ -449,12 +411,13 @@ class _ReaderBrightnessChromeState extends State<_ReaderBrightnessChrome> {
                                   : widget.onUseSystem,
                             ),
                           ),
-                          _ReaderBrightnessStepButton(
+                          AppPlainIconButton(
                             tooltip: context.l10n.readerDecreaseBrightness,
                             icon: AppIcons.brightnessLow,
-                            enabled: widget.canDecrease,
-                            foreground: foreground,
-                            onPressed: widget.onDecrease,
+                            color: foreground,
+                            onPressed: widget.canDecrease
+                                ? widget.onDecrease
+                                : null,
                           ),
                         ],
                       ),
@@ -470,43 +433,8 @@ class _ReaderBrightnessChromeState extends State<_ReaderBrightnessChrome> {
   }
 }
 
-class _ReaderBrightnessStepButton extends StatelessWidget {
-  const _ReaderBrightnessStepButton({
-    required this.tooltip,
-    required this.icon,
-    required this.enabled,
-    required this.foreground,
-    required this.onPressed,
-  });
-
-  final String tooltip;
-  final IconData icon;
-  final bool enabled;
-  final Color foreground;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final iconColor = foreground.withValues(alpha: enabled ? 1 : 0.32);
-
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: enabled ? onPressed : null,
-          child: SizedBox.square(
-            dimension: 36,
-            child: Icon(icon, size: AppIconSize.sm, color: iconColor),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
+/// Current brightness value; a custom value is the selected state and tapping
+/// it returns to the system level.
 class _ReaderBrightnessValueButton extends StatelessWidget {
   const _ReaderBrightnessValueButton(
     this.label, {
@@ -523,43 +451,52 @@ class _ReaderBrightnessValueButton extends StatelessWidget {
     final cs = context.colors;
     final text = context.text;
     final active = !usesSystemBrightness;
+    final radius = BorderRadius.circular(AppRadius.md);
 
     return Semantics(
       button: true,
       enabled: onPressed != null,
+      selected: active,
       label: usesSystemBrightness
           ? context.l10n.readerUsingSystemBrightness(label)
           : context.l10n.readerUseSystemBrightness,
+      excludeSemantics: true,
+      onTap: onPressed,
       child: Material(
-        color: active
-            ? cs.primary.withValues(alpha: 0.12)
-            : cs.secondary.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        color: active ? cs.selectedControlBackground : Colors.transparent,
+        borderRadius: radius,
         child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderRadius: radius,
           onTap: onPressed,
           child: SizedBox(
-            width: 44,
-            height: 34,
-            child: Center(
-              child: usesSystemBrightness
-                  ? Icon(
-                      AppIcons.deviceMode,
-                      size: AppIconSize.sm,
-                      color: cs.onSurface,
-                    )
-                  : FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        style: text.labelSmall.copyWith(
-                          color: cs.primary,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.1,
+            width: AppSizes.buttonHeight,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minHeight: AppSizes.buttonHeight,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                child: Center(
+                  child: usesSystemBrightness
+                      ? Icon(
+                          AppIcons.deviceMode,
+                          size: AppIconSize.sm,
+                          color: cs.onSurfaceVariant,
+                        )
+                      : FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            style: text.labelSmall.copyWith(
+                              color: cs.selectedControlForeground,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.1,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
+                ),
+              ),
             ),
           ),
         ),
@@ -569,8 +506,9 @@ class _ReaderBrightnessValueButton extends StatelessWidget {
 }
 
 /// Shows the small page-bookmark marker only when chrome/overlays are hidden.
-class _ReaderPageBookmarkIndicatorDriver extends StatelessWidget {
-  const _ReaderPageBookmarkIndicatorDriver();
+@visibleForTesting
+class ReaderPageBookmarkIndicatorDriver extends StatelessWidget {
+  const ReaderPageBookmarkIndicatorDriver({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -601,7 +539,7 @@ class _ReaderPageBookmarkIndicatorDriver extends StatelessWidget {
 
     return _ReaderPageBookmarkIndicator(
       visible: visible,
-      color: context.colors.primary,
+      color: context.actionForeground,
       topOffset: topOffset,
     );
   }
@@ -622,13 +560,13 @@ class _ReaderPageBookmarkIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     final curve = visible ? _kChromeAnimCurve : _kChromeHideAnimCurve;
 
-    return Positioned(
+    return PositionedDirectional(
       top: topOffset,
-      right: AppSpacing.md,
+      end: AppSpacing.md,
       child: IgnorePointer(
         child: AnimatedOpacity(
           opacity: visible ? 1 : 0,
-          duration: _kChromeAnimDuration,
+          duration: context.motion(AppMotion.short),
           curve: curve,
           child: Semantics(
             label: context.l10n.readerPageBookmarked,
@@ -645,8 +583,9 @@ class _ReaderPageBookmarkIndicator extends StatelessWidget {
 }
 
 /// Pulls title and chrome visibility from blocs/cubits for the top chrome bar.
-class _ReaderTopChromeDriver extends StatelessWidget {
-  const _ReaderTopChromeDriver({this.onArticleTitlePressed});
+@visibleForTesting
+class ReaderTopChromeDriver extends StatelessWidget {
+  const ReaderTopChromeDriver({this.onArticleTitlePressed, super.key});
 
   final void Function(String url, String title)? onArticleTitlePressed;
 
@@ -707,6 +646,7 @@ class _ReaderTopChrome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final chromeAnimCurve = visible ? _kChromeAnimCurve : _kChromeHideAnimCurve;
+    final motion = context.motion(AppMotion.short);
     final baseTitleStyle = context.text.bodyMedium.copyWith(
       fontFamily: ReaderFontPreset.serif.fontFamily,
       color: titleColor,
@@ -721,11 +661,11 @@ class _ReaderTopChrome extends StatelessWidget {
         ignoring: !visible,
         child: AnimatedSlide(
           offset: visible ? Offset.zero : const Offset(0, -1),
-          duration: _kChromeAnimDuration,
+          duration: motion,
           curve: chromeAnimCurve,
           child: AnimatedOpacity(
             opacity: visible ? 1 : 0,
-            duration: _kChromeAnimDuration,
+            duration: motion,
             curve: chromeAnimCurve,
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -763,18 +703,10 @@ class _ReaderTopChrome extends StatelessWidget {
                         );
                         final titleChild = onTitlePressed == null
                             ? titleText
-                            : Tooltip(
-                                message: context.l10n.readerOpenOriginalArticle,
-                                child: Semantics(
-                                  button: true,
-                                  label: context.l10n.readerOpenOriginalArticle,
-                                  value: title,
-                                  child: GestureDetector(
-                                    behavior: HitTestBehavior.opaque,
-                                    onTap: onTitlePressed,
-                                    child: titleText,
-                                  ),
-                                ),
+                            : _ReaderArticleTitleButton(
+                                title: title,
+                                onPressed: onTitlePressed!,
+                                child: titleText,
                               );
                         return Center(child: titleChild);
                       },
@@ -782,6 +714,52 @@ class _ReaderTopChrome extends StatelessWidget {
                   ),
                 ),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Article title that opens the original URL. Keeps the title's text size and
+/// adds a full-height ink target with button semantics.
+class _ReaderArticleTitleButton extends StatelessWidget {
+  const _ReaderArticleTitleButton({
+    required this.title,
+    required this.onPressed,
+    required this.child,
+  });
+
+  final String title;
+  final VoidCallback onPressed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = context.l10n.readerOpenOriginalArticle;
+    final radius = BorderRadius.circular(AppRadius.sm);
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        button: true,
+        enabled: true,
+        label: label,
+        value: title,
+        excludeSemantics: true,
+        onTap: onPressed,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: radius,
+          child: InkWell(
+            key: const ValueKey('readerArticleTitleButton'),
+            borderRadius: radius,
+            onTap: onPressed,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minHeight: AppSizes.buttonHeight,
+              ),
+              child: Center(child: child),
             ),
           ),
         ),
@@ -842,14 +820,16 @@ bool _readerTopChromeTitleFits({
 
 /// Combines chrome visibility from [ReaderUiCubit], selection state from
 /// [ReaderSelectionCubit], and reading progress from [ReaderBloc].
-class _ReaderBottomChromeDriver extends StatelessWidget {
-  const _ReaderBottomChromeDriver({
+@visibleForTesting
+class ReaderBottomChromeDriver extends StatelessWidget {
+  const ReaderBottomChromeDriver({
     required this.onTocPressed,
     required this.onFontPressed,
     required this.onPageTurnPressed,
     required this.onBookmarkPressed,
     required this.onSearchPressed,
     required this.onSeekFraction,
+    super.key,
   });
 
   final VoidCallback onTocPressed;
@@ -886,7 +866,7 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
       ),
       builder: (context, snapshot) {
         _debugTraceReader(
-          '_ReaderBottomChromeDriver build '
+          'ReaderBottomChromeDriver build '
           'visible=${snapshot.visible} '
           'progress=${snapshot.progress.toStringAsFixed(3)} '
           'chapterPage=${snapshot.chapterCurrentPage}/'
@@ -907,10 +887,13 @@ class _ReaderBottomChromeDriver extends StatelessWidget {
           format: snapshot.format,
           panelColor: colors.surface,
           textColor: colors.onSurfaceVariant,
+          // The filled slider keeps primary; glyphs use the surface accent.
           accentColor: colors.primary,
+          actionColor: context.actionForeground,
           dividerColor: colors.outlineVariant,
           foregroundColor: colors.onSurface,
           bookmarkActive: snapshot.currentPageBookmarked,
+          formatPageOfTotal: context.l10n.readerPageOfTotal,
           showTocAction: actions.contains(ReaderChromeAction.contents),
           showFontAction: actions.contains(ReaderChromeAction.textAppearance),
           showPageTurnAction: actions.contains(ReaderChromeAction.pageTurn),
@@ -963,15 +946,18 @@ class _ReaderBottomChromeSnapshot {
     required bool visible,
     required ReaderPageTurnStyle pageTurnStyle,
   }) {
+    final format = state.document?.format;
     return _ReaderBottomChromeSnapshot(
       visible: visible,
       progress: state.document?.readingProgress ?? 0,
-      chapterTitle: state.chapterTitle,
+      // Comic "chapters" are archive file names; only the page counter is
+      // meaningful there.
+      chapterTitle: isImagePageFormat(format) ? null : state.chapterTitle,
       chapterCurrentPage: state.chapterCurrentPage,
       chapterTotalPages: state.chapterTotalPages,
       sourceType: state.sourceType,
       pageProgressionRtl: state.pageProgressionRtl,
-      format: state.document?.format,
+      format: format,
       currentPageBookmarked: state.currentPageBookmarked,
       documentFeatures: state.documentFeatures,
       pageTurnStyle: pageTurnStyle,
@@ -1044,9 +1030,11 @@ class _ReaderBottomChrome extends StatefulWidget {
     required this.panelColor,
     required this.textColor,
     required this.accentColor,
+    required this.actionColor,
     required this.dividerColor,
     required this.foregroundColor,
     required this.bookmarkActive,
+    required this.formatPageOfTotal,
     required this.showTocAction,
     required this.showFontAction,
     required this.showPageTurnAction,
@@ -1075,9 +1063,11 @@ class _ReaderBottomChrome extends StatefulWidget {
   final Color panelColor;
   final Color textColor;
   final Color accentColor;
+  final Color actionColor;
   final Color dividerColor;
   final Color foregroundColor;
   final bool bookmarkActive;
+  final String Function(int page, int total) formatPageOfTotal;
   final bool showTocAction;
   final bool showFontAction;
   final bool showPageTurnAction;
@@ -1222,7 +1212,9 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
       chapterCurrentPage: widget.chapterCurrentPage,
       chapterTotalPages: widget.chapterTotalPages,
       isDragging: _dragValue != null,
+      formatPageOfTotal: widget.formatPageOfTotal,
     );
+    final motion = context.motion(AppMotion.short);
 
     return Positioned(
       left: 0,
@@ -1232,11 +1224,11 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
         ignoring: !widget.visible,
         child: AnimatedSlide(
           offset: widget.visible ? Offset.zero : const Offset(0, 1),
-          duration: _kChromeAnimDuration,
+          duration: motion,
           curve: chromeAnimCurve,
           child: AnimatedOpacity(
             opacity: widget.visible ? 1 : 0,
-            duration: _kChromeAnimDuration,
+            duration: motion,
             curve: chromeAnimCurve,
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -1399,19 +1391,20 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
                         ),
                         child: Row(
                           children: [
-                            _ReaderChromeIconButton(
+                            AppPlainIconButton(
                               icon: AppIcons.back,
                               iconSize: AppIconSize.lg,
                               tooltip: context.l10n.readerBack,
-                              foregroundColor: widget.foregroundColor,
+                              color: widget.foregroundColor,
                               onPressed: widget.onBack,
                             ),
                             if (widget.showTocAction) ...[
                               const SizedBox(width: AppSpacing.sm),
-                              _ReaderChromeIconButton(
+                              AppPlainIconButton(
                                 icon: AppIcons.toc,
+                                iconSize: AppIconSize.md,
                                 tooltip: context.l10n.readerContents,
-                                foregroundColor: widget.foregroundColor,
+                                color: widget.foregroundColor,
                                 onPressed: widget.onTocPressed,
                               ),
                             ],
@@ -1443,10 +1436,11 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
 
     if (widget.showFontAction) {
       addButton(
-        _ReaderChromeIconButton(
+        AppPlainIconButton(
           icon: AppIcons.font,
+          iconSize: AppIconSize.md,
           tooltip: context.l10n.readerFontAction,
-          foregroundColor: widget.foregroundColor,
+          color: widget.foregroundColor,
           onPressed: widget.onFontPressed,
         ),
       );
@@ -1454,14 +1448,15 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
 
     if (widget.showPageTurnAction) {
       addButton(
-        _ReaderChromeIconButton(
+        AppPlainIconButton(
           icon: widget.pageTurnStyle == ReaderPageTurnStyle.vertical
               ? AppIcons.pageTurnVertical
               : AppIcons.pageTurnHorizontal,
+          iconSize: AppIconSize.md,
           tooltip: widget.pageTurnStyle == ReaderPageTurnStyle.vertical
               ? context.l10n.readerPageTurnVertical
               : context.l10n.readerPageTurnHorizontal,
-          foregroundColor: widget.accentColor,
+          color: widget.actionColor,
           onPressed: widget.onPageTurnPressed,
         ),
       );
@@ -1475,7 +1470,7 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
               ? context.l10n.readerRemoveBookmark
               : context.l10n.readerBookmark,
           foregroundColor: widget.foregroundColor,
-          activeColor: widget.accentColor,
+          activeColor: widget.actionColor,
           onPressed: widget.onBookmarkPressed,
         ),
       );
@@ -1483,10 +1478,11 @@ class _ReaderBottomChromeState extends State<_ReaderBottomChrome> {
 
     if (widget.showSearchAction) {
       addButton(
-        _ReaderChromeIconButton(
+        AppPlainIconButton(
           icon: AppIcons.search,
+          iconSize: AppIconSize.md,
           tooltip: widget.searchActionTooltip,
-          foregroundColor: widget.foregroundColor,
+          color: widget.foregroundColor,
           onPressed: widget.searchActionEnabled ? widget.onSearchPressed : null,
         ),
       );

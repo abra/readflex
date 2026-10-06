@@ -945,10 +945,10 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get readerThemeWarm => '暖色';
 
   @override
-  String get readerThemeMist => '石墨';
+  String get readerThemeMist => '夜间';
 
   @override
-  String get readerThemeNight => '夜间';
+  String get readerThemeNight => '石墨';
 
   @override
   String get readerIncreaseBrightness => '提高亮度';
@@ -1035,4 +1035,41 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
 
   @override
   String get dictionaryFailureBody => '请检查网络连接或稍后重试。';
+
+  @override
+  String get readerHighlightFilterAll => '全部';
+
+  @override
+  String get readerBrightnessSystem => '系统';
+
+  @override
+  String readerPageOfTotal(int page, int total) {
+    return '$page / $total';
+  }
+
+  @override
+  String get readerAddComment => '添加评论';
+
+  @override
+  String get readerAppearanceSample => '文字';
+
+  @override
+  String get translationUnknownLanguage => '未知语言';
+
+  @override
+  String dictionaryDefinitionNumber(int number) {
+    return '$number.';
+  }
+
+  @override
+  String get importDiscardUrlBody => '输入的地址将不会保存。';
+
+  @override
+  String get readerTapAreaHint => '点击区域';
+
+  @override
+  String get importOfflineHint => '未连接网络';
+
+  @override
+  String get importArticleOfflineSubtitle => '需要互联网连接';
 }

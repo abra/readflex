@@ -33,12 +33,19 @@ void main() {
     test('theme options keep three light and two dark reader presets', () {
       expect(
         ReaderThemePreset.values.map((preset) => preset.label),
-        ['Snow', 'Paper', 'Warm', 'Night', 'Graphite'],
+        ['Snow', 'Paper', 'Warm', 'Graphite', 'Night'],
       );
       expect(ReaderThemePreset.snow.id, 'snow');
       expect(ReaderThemePreset.fromId('snow'), ReaderThemePreset.snow);
       expect(ReaderThemePreset.fromId('white'), ReaderThemePreset.snow);
-      expect(ReaderThemePreset.fromId('mist').label, 'Graphite');
+      expect(ReaderThemePreset.fromId('mist').label, 'Night');
+      // The darker of the two dark presets carries the Night name.
+      expect(
+        ReaderThemePreset.mist.data.backgroundColor.computeLuminance(),
+        lessThan(
+          ReaderThemePreset.night.data.backgroundColor.computeLuminance(),
+        ),
+      );
     });
 
     test('snow theme uses a pure white page with soft dark text', () {

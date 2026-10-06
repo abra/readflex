@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
@@ -160,7 +162,12 @@ void main() {
       tester.widget<TextField>(find.byType(TextField)).controller!.text,
       'Draft',
     );
+    // Close with a typed name asks first; Discard leaves the flow.
     await tester.tap(find.byTooltip('Close').hitTestable());
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.text('Discard changes?'), findsOneWidget);
+    await tester.tap(find.text('Discard'));
     await tester.pumpAndSettle();
     expect(find.byType(BottomSheet), findsNothing);
   });
@@ -242,5 +249,239 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(BottomSheet), findsNothing);
     expect(repository.addedSourceIdsByCollection.values.single, {'book'});
+  });
+
+  testWidgets('load failure renders the shared error state', (tester) async {
+    final repository = FakeCollectionRepository()..shouldThrow = true;
+    await open(tester, repository);
+    expect(find.byType(ErrorState), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
+    expect(find.byIcon(AppIcons.refresh), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('new collection is a drill-in row that opens the form', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await open(tester, FakeCollectionRepository());
+    final row = find.byKey(const ValueKey('libraryNewCollectionRow'));
+    expect(tester.widget(row), isA<AppDrillInRow>());
+    expect(
+      tester.getSemantics(row),
+      matchesSemantics(
+        label: 'New collection',
+        isButton: true,
+        hasEnabledState: true,
+        isEnabled: true,
+        hasTapAction: true,
+      ),
+    );
+    expect(
+      find.descendant(of: row, matching: find.byIcon(AppIcons.chevronRight)),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<Icon>(
+            find.descendant(
+              of: row,
+              matching: find.byIcon(AppIcons.collectionAdd),
+            ),
+          )
+          .color,
+      tester.element(row).actionForeground,
+    );
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsOneWidget);
+    semantics.dispose();
+  });
+
+  testWidgets('destination rows clip their ripple to the shared radius', (
+    tester,
+  ) async {
+    await open(tester, FakeCollectionRepository());
+    final row = find.ancestor(
+      of: find.text('Favourites'),
+      matching: find.byType(InkWell),
+    );
+    expect(
+      tester.widget<InkWell>(row.first).borderRadius,
+      BorderRadius.circular(AppRadius.sm),
+    );
+    final colors = tester.element(row.first).colors;
+    expect(
+      tester.widget<Text>(find.text('Favourites')).style!.color,
+      colors.onSurface,
+    );
+  });
+
+  Future<void> openForm(WidgetTester tester, {String draft = ''}) async {
+    await open(tester, FakeCollectionRepository());
+    await tester.tap(find.text('New collection'));
+    await tester.pumpAndSettle();
+    if (draft.isNotEmpty) {
+      await tester.enterText(find.byType(TextField), draft);
+      tester.testTextInput.hide();
+    }
+    // The dismiss guard publishes after the frame.
+    await tester.pumpAndSettle();
+  }
+
+  Finder dragHandle() => find.byWidgetPredicate(
+    (w) => w is Container && w.constraints?.maxWidth == 32,
+  );
+
+  testWidgets('typed name: scrim tap asks to discard and Discard closes', (
+    tester,
+  ) async {
+    await openForm(tester, draft: 'Draft');
+    expect(dragHandle(), findsNothing);
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.text('Discard changes?'), findsOneWidget);
+    final discard = find.widgetWithText(OutlinedButton, 'Discard');
+    final style = tester.widget<OutlinedButton>(discard).style!;
+    expect(
+      style.foregroundColor!.resolve({}),
+      Theme.of(tester.element(discard)).colorScheme.error,
+    );
+    expect(find.widgetWithText(FilledButton, 'Keep editing'), findsOneWidget);
+    // Another scrim tap keeps the decision visible.
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pumpAndSettle();
+    expect(find.text('Discard changes?'), findsOneWidget);
+    await tester.tap(discard);
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('typed name: Keep editing returns to the form with the draft', (
+    tester,
+  ) async {
+    await openForm(tester, draft: 'Draft');
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Keep editing'));
+    await tester.pumpAndSettle();
+    expect(find.text('Discard changes?'), findsNothing);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      'Draft',
+    );
+    // Header Back from the decision also keeps the draft.
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    expect(find.text('Discard changes?'), findsNothing);
+    expect(find.widgetWithText(TextField, 'Draft'), findsOneWidget);
+  });
+
+  testWidgets('empty name: scrim tap and drag-down close the flow', (
+    tester,
+  ) async {
+    await openForm(tester);
+    expect(dragHandle(), findsOneWidget);
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+
+    await openForm(tester);
+    final sheet = tester.getRect(find.byType(BottomSheet));
+    await tester.dragFrom(
+      Offset(sheet.center.dx, sheet.top + 10),
+      const Offset(0, 450),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+  });
+
+  testWidgets('typed name: drag-down is swallowed and the draft survives', (
+    tester,
+  ) async {
+    await openForm(tester, draft: 'Draft');
+    final sheet = tester.getRect(find.byType(BottomSheet));
+    await tester.dragFrom(
+      Offset(sheet.center.dx, sheet.top + 10),
+      const Offset(0, 450),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(tester.getRect(find.byType(BottomSheet)), sheet);
+    expect(find.widgetWithText(TextField, 'Draft'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('destination step: scrim and drag-down wait for the write', (
+    tester,
+  ) async {
+    final repository = FakeCollectionRepository();
+    final cubit = await open(tester, repository);
+    final gate = Completer<void>();
+    repository.writeGate = gate;
+    await tester.tap(find.text('Favourites'));
+    // The guard publishes after the frame.
+    await tester.pump();
+    await tester.pump();
+    expect(cubit.state.status, AddToCollectionStatus.submitting);
+    expect(dragHandle(), findsNothing);
+
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pump();
+    final sheet = tester.getRect(find.byType(BottomSheet));
+    await tester.dragFrom(
+      Offset(sheet.center.dx, sheet.top + 10),
+      const Offset(0, 450),
+    );
+    await tester.pump();
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(tester.getRect(find.byType(BottomSheet)), sheet);
+    expect(cubit.state.status, AddToCollectionStatus.submitting);
+    expect(tester.takeException(), isNull);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(repository.favouriteSourceIds, {'book'});
+  });
+
+  testWidgets('destination step: a failed write restores dismissal', (
+    tester,
+  ) async {
+    final repository = FakeCollectionRepository();
+    final cubit = await open(tester, repository);
+    repository.shouldThrow = true;
+    await tester.tap(find.text('Favourites'));
+    await tester.pumpAndSettle();
+    expect(cubit.state.status, AddToCollectionStatus.failure);
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(dragHandle(), findsOneWidget);
+
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+  });
+
+  testWidgets('system Back from the decision keeps editing the draft', (
+    tester,
+  ) async {
+    await openForm(tester, draft: 'Draft');
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pumpAndSettle();
+    expect(find.text('Discard changes?'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.text('Discard changes?'), findsNothing);
+    expect(find.widgetWithText(TextField, 'Draft'), findsOneWidget);
+    // System Back from the form is a step back that keeps the draft.
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Collection 0'), findsOneWidget);
+    expect(find.byType(BottomSheet), findsOneWidget);
   });
 }

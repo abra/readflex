@@ -1,9 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
+import 'reader_directional_layout.dart';
 import 'reader_drawer_messages.dart';
 import 'reader_search_cubit.dart';
 import 'reader_search_result_tile.dart';
@@ -35,23 +38,74 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
   final _field = TextEditingController();
   final _focus = FocusNode();
   final _scroll = ScrollController();
+  final _activeTileKey = GlobalKey();
+  int _revealAttempts = 0;
+
+  // Builder tiles far from the current offset do not exist yet; each pass
+  // jumps by the list's extrapolated extent before aligning precisely.
+  static const _maxRevealPasses = 3;
 
   // Content gutters align glyphs, not the outer edges of 48dp targets.
   static const _actionEndPadding =
-      AppSpacing.lg - (AppSizes.buttonHeight - AppIconSize.md) / 2;
+      AppSpacing.lg - (AppSizes.buttonHeight - AppIconSize.sm) / 2;
 
   @override
   void initState() {
     super.initState();
     _field.text = context.read<ReaderSearchCubit>().state.query;
-    if (widget.visible) _focusEmptyQuery();
+    if (widget.visible) {
+      _focusEmptyQuery();
+      _revealActiveResult();
+    }
   }
 
   @override
   void didUpdateWidget(ReaderSearchPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.visible && !oldWidget.visible) _focusEmptyQuery();
+    if (widget.visible && !oldWidget.visible) {
+      _focusEmptyQuery();
+      _revealActiveResult();
+    }
     if (!widget.visible && oldWidget.visible) _focus.unfocus();
+  }
+
+  /// Reopening during match navigation brings the active result into view.
+  void _revealActiveResult() {
+    final state = context.read<ReaderSearchCubit>().state;
+    final index = state.activeResultIndex;
+    if (index == null || index < 0 || index >= state.results.length) return;
+    _revealAttempts = 0;
+    _scheduleReveal(index);
+  }
+
+  void _scheduleReveal(int index) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !widget.visible) return;
+      final state = context.read<ReaderSearchCubit>().state;
+      if (state.activeResultIndex != index) return;
+      final tile = _activeTileKey.currentContext;
+      if (tile != null) {
+        Scrollable.ensureVisible(
+          tile,
+          alignment: 0.5,
+          duration: context.motion(AppMotion.short),
+          curve: Curves.easeOutCubic,
+        );
+        return;
+      }
+      if (!_scroll.hasClients || _revealAttempts++ >= _maxRevealPasses) {
+        return;
+      }
+      final position = _scroll.position;
+      final count = state.results.length;
+      final estimate = count <= 1
+          ? 0.0
+          : position.maxScrollExtent * index / (count - 1);
+      position.jumpTo(
+        estimate.clamp(position.minScrollExtent, position.maxScrollExtent),
+      );
+      _scheduleReveal(index);
+    });
   }
 
   void _focusEmptyQuery() {
@@ -88,10 +142,10 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
           child: ExcludeSemantics(
             excluding: !widget.visible,
             child: AnimatedSlide(
-              offset: widget.visible ? Offset.zero : const Offset(-1, 0),
-              duration: MediaQuery.disableAnimationsOf(context)
-                  ? Duration.zero
-                  : const Duration(milliseconds: 200),
+              offset: widget.visible
+                  ? Offset.zero
+                  : readerSidePanelHiddenOffset(Directionality.of(context)),
+              duration: context.motion(AppMotion.short),
               curve: Curves.easeOutCubic,
               child: Material(
                 color: context.colors.surface,
@@ -138,21 +192,18 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
                   tooltip: l10n.commonClose,
                   onPressed: widget.onClose,
                   icon: AppIcons.close,
-                  iconSize: AppIconSize.md,
                 ),
               ],
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md,
-            ),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             child: SearchField(
               controller: _field,
               focusNode: _focus,
               hintText: l10n.readerSearchInBook,
               clearButtonSemanticsLabel: l10n.commonClearSearch,
+              textInputAction: TextInputAction.search,
               onChanged: (value) => context
                   .read<ReaderSearchCubit>()
                   .queryChanged(value, searchBook: widget.onSearch),
@@ -204,13 +255,19 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
         controller: _scroll,
         padding: bottom,
         itemCount: state.results.length,
-        itemBuilder: (_, index) => ReaderSearchResultTile(
-          key: ValueKey('reader-search-result-$index'),
-          result: state.results[index],
-          selected: state.activeResultIndex == index,
-          pageProgressionRtl: widget.pageProgressionRtl,
-          onTap: () => widget.onResultSelected(index),
-        ),
+        itemBuilder: (_, index) {
+          final selected = state.activeResultIndex == index;
+          return KeyedSubtree(
+            key: selected ? _activeTileKey : null,
+            child: ReaderSearchResultTile(
+              key: ValueKey('reader-search-result-$index'),
+              result: state.results[index],
+              selected: selected,
+              pageProgressionRtl: widget.pageProgressionRtl,
+              onTap: () => widget.onResultSelected(index),
+            ),
+          );
+        },
       );
     }
     if (state.query.isEmpty && state.recentQueries.isNotEmpty) {
@@ -256,7 +313,6 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
             trailing: AppPlainIconButton(
               tooltip: l10n.readerRemoveFromHistory,
               icon: AppIcons.delete,
-              iconSize: AppIconSize.md,
               onPressed: () =>
                   context.read<ReaderSearchCubit>().recentQueryRemoved(query),
             ),
@@ -271,32 +327,43 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
         },
       );
     }
-    final message =
-        state.errorMessage ??
-        (state.errorCode != null
-            ? l10n.readerSearchFailed
-            : state.query.trim().length < ReaderSearchCubit.minQueryLength
-            ? readerSearchPromptMessage(l10n, widget.format)
-            : state.isLoading
-            ? ''
-            : l10n.readerNoResultsFound);
-    return ListView(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Text(message, textAlign: TextAlign.center),
+    final Widget placeholder;
+    if (state.errorCode != null || state.errorMessage != null) {
+      placeholder = ErrorState(
+        message: state.errorMessage ?? l10n.readerSearchFailed,
+        retryLabel: l10n.commonRetry,
+        busy: state.isLoading,
+        onRetry: () => context.read<ReaderSearchCubit>().retry(
+          searchBook: widget.onSearch,
         ),
-        if (state.errorCode != null || state.errorMessage != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: FilledButton(
-              onPressed: () => context.read<ReaderSearchCubit>().retry(
-                searchBook: widget.onSearch,
-              ),
-              child: AppButtonLabel(l10n.commonRetry),
-            ),
+      );
+    } else if (state.query.trim().length < ReaderSearchCubit.minQueryLength) {
+      placeholder = EmptyState(
+        compact: true,
+        message: readerSearchPromptMessage(l10n, widget.format),
+      );
+    } else if (state.isLoading) {
+      return const SizedBox.shrink();
+    } else {
+      placeholder = EmptyState(
+        compact: true,
+        icon: AppIcons.searchOff,
+        message: l10n.readerNoResultsFound,
+      );
+    }
+    // Centered like a list body, but scrollable when the keyboard leaves
+    // less room than the placeholder needs.
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        controller: _scroll,
+        padding: bottom,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: math.max(0, constraints.maxHeight - bottom.bottom),
           ),
-      ],
+          child: placeholder,
+        ),
+      ),
     );
   }
 }

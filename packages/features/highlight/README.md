@@ -18,7 +18,10 @@ Future<void> showHighlightSheet(
   BuildContext context, {
   required HighlightRepository highlightRepository,
   required TextSelectionContext selection,
+  HighlightColorResolver? resolveColor, // defaults to the app palette
 });
+
+typedef HighlightColorResolver = Color Function(HighlightColor color);
 ```
 
 `HighlightAction` is wired into the reader's `List<TextAction>` in the
@@ -32,8 +35,10 @@ Changing the color of an already saved highlight is a separate Reader edit.
 The localized label comes from `labelFor(context)` and the icon is
 `AppIcons.highlight`.
 
-`showHighlightSheet` can also be used directly by non-reader flows that need
-the same highlight creation UI.
+`showHighlightSheet` has no caller yet; it is kept on the shared sheet
+contract so it can be wired later as "highlight with note". A reader caller
+passes `resolveColor` with its reader-theme palette so the swatches and the
+preview tint match the page; without it the sheet uses `AppColorsExt`.
 
 ## Architecture
 
@@ -46,10 +51,16 @@ The standalone sheet owns a `HighlightCubit` (state in `highlight_state.dart`,
   `note`
 - On `save()` the cubit calls `HighlightRepository.addHighlight(...)`.
 - Sheet uses `BlocConsumer` to auto-pop on `success`; `failure` renders an
-  inline error line above the save button.
+  inline `bodyMedium` error line in the error color, announced as a live
+  region, above the Save button. Save is the retry. There is no localized
+  retry hint yet, so this is not an `AppStatusMessage`.
 
-The sheet is stateless UI over the cubit, plus a `SelectionPreviewCard`
-tinted with the currently selected highlight color (from `AppColorsExt`).
+The sheet is stateless UI over the cubit. It uses `ActionBottomSheetLayout`
+with the explicit Close action and the shared 8dp header/body gap, a
+`SelectionPreviewCard` whose direction follows the selected text and whose
+tint is the selected swatch, one `AppColorSwatchButton` per `HighlightColor`
+(48dp target, selected ring and luminance-chosen check, disabled while
+saving), the note field and a filled Save.
 
 ## Dependencies
 
@@ -57,5 +68,7 @@ tinted with the currently selected highlight color (from `AppColorsExt`).
 - `shared` — `TextAction`, `TextSelectionContext`
 - `domain_models` — `HighlightColor`, `SourceType`
 - `component_library` — `ActionBottomSheetLayout`, `SelectionPreviewCard`,
-  `ButtonLoadingIndicator`, `showAppBottomSheet`, `AppColorsExt`
+  `AppColorSwatchButton`, `ButtonLoadingIndicator`, `showAppBottomSheet`,
+  `AppColorsExt`
+- `intl` — bidi detection for the preview direction
 - `flutter_bloc`, `equatable`

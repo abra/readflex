@@ -38,12 +38,25 @@ press/focus feedback with other standalone utility actions.
 
 ## Presentation
 
-The resolved term appears once as a compact Geist `titleLarge` heading, without
-a selection preview card. If the selected form differs from the canonical lemma,
-the heading preserves the connection (for example, `shutting -> shut`). Long
-forms wrap within the available width instead of truncating. Further lexical
-entries remain separate below an **In this context** label; definitions and
-examples retain their existing ordering and per-entry Copy action.
+The resolved term appears once as a selectable serif `headlineSmall` headword,
+the same role Translation uses for a selected word, without a selection
+preview card. If the selected form differs from the canonical lemma, the
+heading preserves the connection (for example, `shutting -> shut`). Long forms
+wrap within the available width instead of truncating. Reading, IPA and part
+of speech sit below it in the shared `AppLexicalMetadataRow`: IPA stays
+left-to-right in the phonetic font and the backend's part-of-speech tag is
+shown as sent, because definitions are monolingual and there is no dictionary
+POS catalog. Definitions are `bodyLarge` with a localized number
+(`dictionaryDefinitionNumber`) in a tabular-figure column that scales with the
+user's text size; examples stay muted `bodyMedium`. Further lexical entries
+remain separate below an **In this context** label; definitions and examples
+retain their existing ordering and per-entry Copy action.
+
+While loading and in every non-success state the selected phrase is quoted
+with the shared `AppSourceQuote`, whose rule follows the phrase's own writing
+direction. Loading uses `CenteredCircularProgressIndicator` inside the same
+24dp vertical padding; not-found, unsupported-language and failure states use
+`AppStatusMessage`, with Retry as its filled action.
 
 `ActionBottomSheetLayout.scrollable` supplies the same title/Close, gutters and
 bounded body as Translation, Display and Appearance. Full-width top/bottom fades
@@ -52,7 +65,7 @@ their content; long results, landscape screens and large system text remain
 scrollable. `intl` bidi detection gives lexical content its own writing direction,
 independent of the interface locale. Clipboard feedback and scrolling do not
 perform lookups. Loading and failure states retain the original selected text
-without introducing a duplicate success preview.
+as a quote without introducing a duplicate success preview.
 
 ## Verification
 

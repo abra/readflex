@@ -981,10 +981,10 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get readerThemeWarm => 'دافئ';
 
   @override
-  String get readerThemeMist => 'غرافيت';
+  String get readerThemeMist => 'ليل';
 
   @override
-  String get readerThemeNight => 'ليل';
+  String get readerThemeNight => 'غرافيت';
 
   @override
   String get readerIncreaseBrightness => 'زيادة السطوع';
@@ -1074,4 +1074,41 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   @override
   String get dictionaryFailureBody =>
       'تحقق من الاتصال أو حاول مرة أخرى لاحقًا.';
+
+  @override
+  String get readerHighlightFilterAll => 'الكل';
+
+  @override
+  String get readerBrightnessSystem => 'النظام';
+
+  @override
+  String readerPageOfTotal(int page, int total) {
+    return '$page / $total';
+  }
+
+  @override
+  String get readerAddComment => 'إضافة تعليق';
+
+  @override
+  String get readerAppearanceSample => 'أب';
+
+  @override
+  String get translationUnknownLanguage => 'لغة غير معروفة';
+
+  @override
+  String dictionaryDefinitionNumber(int number) {
+    return '$number.';
+  }
+
+  @override
+  String get importDiscardUrlBody => 'لن يتم حفظ العنوان الذي أدخلته.';
+
+  @override
+  String get readerTapAreaHint => 'منطقة النقر';
+
+  @override
+  String get importOfflineHint => 'لا يوجد اتصال';
+
+  @override
+  String get importArticleOfflineSubtitle => 'يتطلب اتصالاً بالإنترنت';
 }

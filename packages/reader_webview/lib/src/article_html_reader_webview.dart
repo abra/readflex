@@ -10,6 +10,7 @@ import 'asset_extractor.dart';
 import 'reader_bridge.dart';
 import 'reader_common_handlers.dart';
 import 'reader_load_session.dart';
+import 'reader_navigation_policy.dart';
 import 'reader_webview_lifecycle.dart';
 
 /// Vertical WebView reader for saved article HTML fragments.
@@ -42,6 +43,7 @@ class ArticleHtmlReaderWebView extends StatefulWidget {
     this.onSelectionInteractionChanged,
     this.selectionStartLabel = 'Selection start',
     this.selectionEndLabel = 'Selection end',
+    this.onExternalLink,
     this.onTapped,
     super.key,
   });
@@ -74,6 +76,11 @@ class ArticleHtmlReaderWebView extends StatefulWidget {
   final ValueChanged<bool>? onSelectionInteractionChanged;
   final String selectionStartLabel;
   final String selectionEndLabel;
+
+  /// Fires with the absolute URL when the user taps a link that leaves the
+  /// article. Same-document fragments scroll in place and never reach here;
+  /// the WebView itself never navigates away from the article shell.
+  final ValueChanged<String>? onExternalLink;
   final void Function(double x, double y)? onTapped;
 
   @override
@@ -179,6 +186,11 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
       onConsoleMessage: _onConsoleMessage,
       onRenderProcessGone: (controller, _) => _onRendererTerminated(controller),
       onWebContentProcessDidTerminate: _onRendererTerminated,
+      shouldOverrideUrlLoading: readerNavigationActionHandler(
+        policy: ReaderNavigationPolicy(serverBaseUri: widget.serverBaseUri),
+        isActive: (controller) => mounted && identical(controller, _controller),
+        onExternalLink: (href) => widget.onExternalLink?.call(href),
+      ),
       onReceivedError: (controller, request, _) {
         if (request.isForMainFrame == true &&
             identical(controller, _controller)) {
@@ -328,6 +340,7 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
       onTextSelected: (selection) => widget.onTextSelected?.call(selection),
       onTextDeselected: () => widget.onTextDeselected?.call(),
       onTapped: (x, y) => widget.onTapped?.call(x, y),
+      onExternalLink: (href) => widget.onExternalLink?.call(href),
     );
   }
 

@@ -283,8 +283,8 @@
   "readerThemeSnow": "Снег",
   "readerThemePaper": "Бумага",
   "readerThemeWarm": "Теплая",
-  "readerThemeMist": "Графит",
-  "readerThemeNight": "Ночь",
+  "readerThemeMist": "Ночь",
+  "readerThemeNight": "Графит",
   "readerIncreaseBrightness": "Увеличить яркость",
   "readerDecreaseBrightness": "Уменьшить яркость",
   "readerUsingSystemBrightness": "Системная яркость: {label}",
@@ -312,5 +312,16 @@
   "dictionaryUnsupportedLanguageTitle": "Язык недоступен",
   "dictionaryUnsupportedLanguageBody": "Словарь Readflex пока не поддерживает этот язык.",
   "dictionaryFailureTitle": "Определение недоступно",
-  "dictionaryFailureBody": "Проверьте подключение или повторите попытку позже."
+  "dictionaryFailureBody": "Проверьте подключение или повторите попытку позже.",
+  "readerHighlightFilterAll": "Все",
+  "readerBrightnessSystem": "Системная",
+  "readerPageOfTotal": "{page} / {total}",
+  "readerAddComment": "Добавить комментарий",
+  "readerAppearanceSample": "Аа",
+  "translationUnknownLanguage": "Неизвестный язык",
+  "dictionaryDefinitionNumber": "{number}.",
+  "importDiscardUrlBody": "Введённый адрес не будет сохранён.",
+  "readerTapAreaHint": "Зона нажатия",
+  "importOfflineHint": "Нет подключения",
+  "importArticleOfflineSubtitle": "Нужно подключение к интернету"
 }

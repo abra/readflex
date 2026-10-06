@@ -136,6 +136,21 @@ final class ReaderHighlightDeleteRequested extends ReaderHighlightEvent {
   List<Object?> get props => [highlightId];
 }
 
+/// Re-adds a highlight removed during the open Contents session.
+final class ReaderHighlightRestored extends ReaderHighlightEvent {
+  const ReaderHighlightRestored({required this.highlightId});
+
+  final String highlightId;
+
+  @override
+  List<Object?> get props => [highlightId];
+}
+
+/// Contents closed: pending Undo rows are purged, deletions stay persisted.
+final class ReaderHighlightUndoDismissed extends ReaderHighlightEvent {
+  const ReaderHighlightUndoDismissed();
+}
+
 /// Changes the color of a saved highlight.
 final class ReaderHighlightColorChangeRequested extends ReaderHighlightEvent {
   const ReaderHighlightColorChangeRequested({

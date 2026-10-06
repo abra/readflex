@@ -328,10 +328,7 @@ void main() {
         )!;
         expect(find.text(l10n.translationPosNoun), findsOneWidget);
         expect(find.text(l10n.translationInContext), findsOneWidget);
-        expect(
-          find.byKey(const ValueKey('translation-pronunciation')).hitTestable(),
-          findsOneWidget,
-        );
+        expect(find.text('/ˈpaʊər/').hitTestable(), findsOneWidget);
         for (final id in ['primary', 'base']) {
           final result = find.byKey(ValueKey('translation-$id-result'));
           await tester.ensureVisible(result);
@@ -433,33 +430,48 @@ void main() {
     (word: 'rather', locale: const Locale('ar'), direction: TextDirection.ltr),
     (word: 'قدرة', locale: const Locale('en'), direction: TextDirection.rtl),
   ]) {
-    testWidgets('word metadata follows source direction for ${example.word}', (
-      tester,
-    ) async {
-      await _pumpTranslateSheet(
-        tester,
-        locale: example.locale,
-        selection: TextSelectionContext(
-          selectedText: example.word,
-          sourceId: 'source-1',
-          sourceType: SourceType.book,
-        ),
-        service: _WordTranslationService(
-          const ContextualTranslationText(baseTranslation: 'word meaning'),
-          analysis: ContextualTranslationAnalysis(
-            surfaceForm: example.word,
-            pronunciation: '/ipa/',
-            partOfSpeech: 'noun',
+    testWidgets(
+      'word metadata row keeps the UI direction for ${example.word}',
+      (tester) async {
+        await _pumpTranslateSheet(
+          tester,
+          locale: example.locale,
+          selection: TextSelectionContext(
+            selectedText: example.word,
+            sourceId: 'source-1',
+            sourceType: SourceType.book,
           ),
-        ),
-      );
-      final metadata = find.ancestor(
-        of: find.byKey(const ValueKey('translation-pronunciation')),
-        matching: find.byType(Wrap),
-      );
-      expect(tester.widget<Wrap>(metadata).textDirection, example.direction);
-      expect(tester.takeException(), isNull);
-    });
+          service: _WordTranslationService(
+            const ContextualTranslationText(baseTranslation: 'word meaning'),
+            analysis: ContextualTranslationAnalysis(
+              surfaceForm: example.word,
+              pronunciation: '/ipa/',
+              partOfSpeech: 'noun',
+            ),
+          ),
+        );
+        final metadata = find.descendant(
+          of: find.byType(AppLexicalMetadataRow),
+          matching: find.byType(Wrap),
+        );
+        // The row is UI chrome: it follows the app locale, not the headword.
+        expect(tester.widget<Wrap>(metadata).textDirection, isNull);
+        expect(
+          Directionality.of(tester.element(metadata)),
+          example.locale.languageCode == 'ar'
+              ? TextDirection.rtl
+              : TextDirection.ltr,
+        );
+        // The headword still renders in its own direction.
+        expect(
+          tester
+              .widget<AppLexicalMetadataRow>(find.byType(AppLexicalMetadataRow))
+              .textDirection,
+          example.direction,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
   }
 
   for (final surface in <String?>[null, 'powered', 'power bank']) {
@@ -479,11 +491,9 @@ void main() {
             ),
           ),
         );
-        expect(
-          find.byKey(const ValueKey('translation-pronunciation')),
-          findsNothing,
-        );
-        expect(find.byKey(const ValueKey('translation-reading')), findsNothing);
+        expect(find.text('/wrong/'), findsNothing);
+        expect(find.text('wrong reading'), findsNothing);
+        expect(find.byType(AppLexicalMetadataRow), findsNothing);
         expect(find.text('Verb'), findsNothing);
         expect(find.text('питание'), findsOneWidget);
       },
@@ -507,11 +517,7 @@ void main() {
         ),
       ),
     );
-    expect(
-      find.byKey(const ValueKey('translation-pronunciation')),
-      findsNothing,
-    );
-    expect(find.byKey(const ValueKey('translation-reading')), findsNothing);
+    expect(find.byType(AppLexicalMetadataRow), findsNothing);
     expect(find.byKey(const ValueKey('translation-lemma')), findsNothing);
     expect(find.text('unrecognized_tag'), findsNothing);
     expect(find.byType(ExpansionTile), findsNothing);
@@ -540,8 +546,8 @@ void main() {
         );
         expect(find.text(entry.value).hitTestable(), findsOneWidget);
         expect(
-          find.byKey(const ValueKey('translation-pronunciation')),
-          findsNothing,
+          tester.widget<Text>(find.text(entry.value)).style!.fontFamily,
+          isNot(AppTypography.fontFamilyPhonetic),
         );
         expect(find.byType(ExpansionTile), findsNothing);
       },
@@ -579,7 +585,7 @@ void main() {
         );
         expect(find.text('идти в банк'), findsOneWidget);
         expect(find.text('банк'), findsNothing);
-        expect(find.byKey(const ValueKey('translation-reading')), findsNothing);
+        expect(find.text('ぎんこうにいく'), findsNothing);
         _expectSourceQuote(tester, _selectedFragmentFinder);
       },
     );
@@ -712,11 +718,9 @@ void main() {
       expect(translationWidget.data, 'сила');
       expect(
         translationWidget.style,
-        Theme.of(tester.element(translation)).textTheme.titleLarge!.copyWith(
-          fontSize: 22,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0,
-        ),
+        Theme.of(
+          tester.element(translation),
+        ).textTheme.headlineSmall!.copyWith(letterSpacing: 0),
       );
       semantics.dispose();
     },
@@ -735,7 +739,7 @@ void main() {
       final theme = Theme.of(tester.element(_previewFinder));
       expect(baseStyle.color, theme.colorScheme.onSurface);
       expect(
-        tester.widget<Text>(_selectedFragmentFinder).style!.color,
+        tester.widget<SelectableText>(_selectedFragmentFinder).style!.color,
         theme.colorScheme.onSurface,
       );
       final background =
@@ -766,10 +770,10 @@ void main() {
       findsNothing,
     );
     expect(
-      tester.widget<Text>(_selectedFragmentFinder).style!.fontSize,
+      tester.widget<SelectableText>(_selectedFragmentFinder).style!.fontSize,
       Theme.of(
         tester.element(_selectedFragmentFinder),
-      ).textTheme.titleLarge!.fontSize,
+      ).textTheme.headlineSmall!.fontSize,
     );
     _expectSourceQuote(tester, _previewFinder);
     expect(
@@ -1280,7 +1284,7 @@ void main() {
     );
     expect(_previewText(tester).textDirection, TextDirection.ltr);
     expect(
-      tester.widget<Text>(_selectedFragmentFinder).textDirection,
+      tester.widget<SelectableText>(_selectedFragmentFinder).textDirection,
       TextDirection.ltr,
     );
     _expectSourceQuote(tester, _previewFinder);
@@ -1311,7 +1315,7 @@ void main() {
     );
     expect(_previewText(tester).textDirection, TextDirection.rtl);
     expect(
-      tester.widget<Text>(_selectedFragmentFinder).textDirection,
+      tester.widget<SelectableText>(_selectedFragmentFinder).textDirection,
       TextDirection.rtl,
     );
     _expectSourceQuote(tester, _previewFinder, direction: TextDirection.rtl);

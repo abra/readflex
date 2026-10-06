@@ -1,7 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { zipSync } from 'fflate'
-import { createHarness, openEpub } from './harness.mjs'
+import { createHarness, openComic, openEpub, pointer } from './harness.mjs'
 
 test('thumbnail decoding and export failures release temporary object URLs', async t => {
     const { page, origin } = await createHarness(t)
@@ -36,59 +35,6 @@ test('thumbnail decoding and export failures release temporary object URLs', asy
     assert.deepEqual(results, { decodeFailed: true, exportFailed: true, afterDecode: 0, afterExport: 0 })
 })
 
-async function openComic(t, { axis = 'slide', rtl = false, hostTaps = false, controlledClock = false } = {}) {
-    const harness = await createHarness(t)
-    const { page, origin } = harness
-    const errors = []
-    page.on('pageerror', error => errors.push(error.message))
-    t.after(() => assert.deepEqual(errors, []))
-    if (controlledClock) await page.clock.install()
-    await page.setViewportSize({ width: 390, height: 844 })
-    await page.goto(origin + '/blank')
-    const images = await page.evaluate(() => Array.from({ length: 5 }, (_, index) => {
-        const canvas = document.createElement('canvas')
-        canvas.width = 600; canvas.height = 900
-        const ctx = canvas.getContext('2d')
-        ctx.fillStyle = '#ddedef'; ctx.fillRect(0, 0, 600, 900)
-        ctx.fillStyle = '#40898d'; ctx.fillRect(20, 20, 560, 390)
-        ctx.fillStyle = '#b76474'; ctx.fillRect(20, 430, 560, 450)
-        ctx.fillStyle = '#ffffff'; ctx.font = '30px sans-serif'
-        ctx.fillText('Comic page ' + index, 100, 200)
-        return canvas.toDataURL().split(',')[1]
-    }))
-    const archive = zipSync(Object.fromEntries(images.map((image, index) =>
-        [`page${index}.png`, Buffer.from(image, 'base64')])), { level: 0 })
-    // Replace transport only: real archive decoding, comic loader, view and bridge.
-    await page.route('**/foliate-js/src/remote_file.js', route => route.fulfill({
-        contentType: 'text/javascript',
-        body: `export class RemoteFile {
-            async open() {
-                return new File([Uint8Array.from(${JSON.stringify([...archive])})], 'zoom.cbz');
-            }
-        }`,
-    }))
-    const params = new URLSearchParams({
-        url: JSON.stringify(origin + '/zoom.cbz'),
-        comicHostTaps: JSON.stringify(hostTaps),
-        pageProgressionDirection: JSON.stringify(rtl ? 'rtl' : 'ltr'),
-        style: JSON.stringify({ pageTurnStyle: axis, allowScript: false,
-            fontName: 'serif', fontColor: '#000000', backgroundColor: '#ffffff',
-            fontSize: 1, textScale: 1, fontWeight: 400, spacing: 1.5,
-            topMargin: 0, bottomMargin: 0, sideMargin: 0,
-            maxColumnCount: 1, backgroundImage: 'none', writingMode: 'horizontal-tb' }),
-        readingRules: JSON.stringify({ convertChineseMode: 'none' }),
-    })
-    await page.goto(origin + '/foliate-js/index.html?' + params)
-    await page.waitForFunction(() => window.bridgeCalls.some(([name]) => name === 'onLoadEnd'))
-    await page.waitForFunction(() => {
-        const renderer = window.reader?.view?.renderer
-        const doc = renderer?.getContents().find(({ index }) => index === renderer.index)?.doc
-        return doc?.querySelector('img')?.complete && doc.defaultView.frameElement.getBoundingClientRect().width > 300
-    })
-    await page.waitForTimeout(50)
-    await page.evaluate(() => { window.bridgeCalls.length = 0 })
-    return harness
-}
 
 const state = page => page.evaluate(() => {
     const renderer = window.reader.view.renderer
@@ -258,26 +204,6 @@ test('host-forwarded edge taps are still recognized while the next spread loads'
     assert.equal((await state(page)).index, 2)
 })
 
-async function pointer(page, type, x, y, id = 1) {
-    return page.evaluate(({ type, x, y, id }) => {
-        const renderer = window.reader.view.renderer
-        const doc = renderer.getContents().find(({index}) => index === renderer.index).doc
-        const frame = doc.defaultView.frameElement
-        const rect = frame.getBoundingClientRect()
-        const clientX = (x - rect.left) * frame.clientWidth / rect.width
-        const clientY = (y - rect.top) * frame.clientHeight / rect.height
-        const target = doc.elementFromPoint(clientX, clientY) ?? doc.body
-        target.dispatchEvent(new doc.defaultView.PointerEvent(type, {
-            pointerId: id, pointerType: 'touch', bubbles: true, cancelable: true,
-            clientX, clientY, screenX: x, screenY: y, button: 0,
-        }))
-        const touchType = {pointerdown: 'touchstart', pointermove: 'touchmove', pointerup: 'touchend', pointercancel: 'touchcancel'}[type]
-        const event = new Event(touchType, { bubbles: true, cancelable: true })
-        const touch = { identifier: id, clientX, clientY, screenX: x, screenY: y }
-        Object.defineProperties(event, { touches: { value: type === 'pointerup' ? [] : [touch] }, changedTouches: { value: [touch] } })
-        target.dispatchEvent(event)
-    }, { type, x, y, id })
-}
 
 test('comic double tap zooms at the tapped area without toggling chrome', async t => {
     const { page } = await openComic(t, { controlledClock: true })

@@ -53,6 +53,9 @@ are supplied by sibling packages such as `highlight`, `translate`, and
 `dictionary`; the UI-only `CopyTextAction` remains in Reader.
 The popup captures input only inside its visible controls, leaving the WebView
 selection handles interactive so the selected range can be resized in place.
+The saved-highlight popup (`ReaderSavedHighlightPopup`) is different: its
+full-screen barrier exists only while the popup is open and is opaque, so the
+dismissing tap never also toggles chrome or turns the page.
 Each action starts resolving the current WebView range on pointer down, before
 focus can collapse the native WebKit selection, and awaits that same snapshot
 on execution. The reader runtime also retains the latest changed range as a
@@ -74,7 +77,12 @@ three-line excerpt limit. Neither leaf owns repositories or WebView lifecycle.
 Appearance uses `ActionBottomSheetLayout.scrollable`, the same shell as Display,
 Language and the text-action result sheets. `AppSettingsSection` and
 `AppChoiceControl` share settings typography, spacing and selection states.
-Theme swatches retain book colors. The Font row shows the active typeface and
+Theme swatches retain the preset's page colors for the localized sample
+(`readerAppearanceSample`); each swatch is an ink tile with a 48dp target,
+`Semantics(button, selected)` and the shared `selectedControlBackground/
+Foreground` pair behind the active sample and label. Font options use the
+same fill-plus-check selection as the Language sheet, without an extra border.
+The Font row shows the active typeface and
 opens a sample picker inside the same route. Appearance's content determines
 both steps' height; the picker scrolls only when its samples need more space.
 Selection applies immediately through `ReaderAppearanceCubit` and stays in the
@@ -138,8 +146,13 @@ explicitly clears/skips. `ReaderBloc` persists the patch through the existing
 repository method. Close/Cancel/system Back protect dirty text; scrim/drag
 dismissal is disabled. Confirmation retains the draft field and its geometry.
 
-Image-area rows instead show a cropped preview, the original page title, a
-localized page number, and an optional expandable note. Tapping the row opens
+Image-area rows instead show a cropped preview, the localized page number as
+their primary line, and an optional expandable note. Comic "chapter titles"
+are archive file names, so they are never surfaced: the bottom chrome header
+shows only the page counter for CBZ, image-area selections are saved without a
+chapter title, comic bookmarks store none, and image rows ignore any stored
+one. The TOC model itself is untouched (the Pages grid is unaffected).
+Tapping the row opens
 the saved page with its existing area annotations; it does not automatically
 zoom or change the selection. Image rows have no clipboard or arrow action and
 do not expose the stored `Page highlight` placeholder. Missing preview data does
@@ -149,6 +162,14 @@ unsupported thumbnail request. Note expansion and color filters survive tab
 switches, independently of the shorter-lived thumbnail cache.
 Titles/notes use their own text direction; page labels and row layout follow
 the app locale, so Latin filenames/notes remain readable in an RTL interface.
+Chapter rows indent with `EdgeInsetsDirectional` (app locale) while the chapter
+text keeps the book direction; active chapter, active search result and
+bookmark rows share the plain `ListTile(selected:)` fill, drawn edge to edge
+with an explicit rectangular shape: the app-wide 16dp tile radius is for inset
+rows and must not bleed into full-bleed panel rows. The highlight color
+filter's "All" entry is an `AppFilterChip` with a visible selected state.
+Empty tabs render `EmptyState(compact: true)`. The drawer slides in from the
+leading edge of the app locale.
 
 Deleting a bookmark persists immediately and atomically replaces its row with
 an Undo state. Undo restores the original ID, date and complete anchor. It is
@@ -157,10 +178,23 @@ deletions can be restored independently; errors retain a retryable row. Delete,
 restore, normal bookmark toggles and dismissal share the existing serialized
 bookmark event bucket. Closing during deletion clears Undo after that write.
 The trailing trash changes to `AppIcons.undo`, never a text button or refresh
-icon. Both use the same 48dp target and 24dp glyph in every locale/text scale,
+icon. Both use the same 48dp target and 20dp glyph in every locale/text scale,
 with a localized tooltip/accessibility name. No label measurement is needed,
-and adjacent rows stay in place. Oversized Contents tab labels scroll
-horizontally rather than overlapping.
+and adjacent rows stay in place. Only the row whose write is in flight
+disables its own action; the serialized event bucket orders the rest.
+Oversized Contents tab labels scroll horizontally rather than overlapping.
+
+Deleting a highlight from the saved-highlight popup follows the same model
+(`highlightEdits` in `ReaderState`): the page annotation disappears and the
+existing toast shows, while the Highlights tab keeps the row muted as
+"Highlight removed" with an icon-only Undo until Contents closes
+(`ReaderHighlightUndoDismissed` purges it). There is no restore API, so Undo
+re-adds the highlight through the repository (`addHighlight` /
+`addImageAreaHighlight`) and then writes back the original `createdAt`; the
+restored highlight has a new id but returns to its former list position and
+the page overlay refreshes from the repository. Restore failures keep the row
+with Undo. Removed rows neither navigate nor expand; image rows keep their
+preview.
 
 CBZ Contents replaces Chapters with a Pages grid, initially revealing the saved
 page. Page order follows the book's progression direction independently of the
@@ -199,8 +233,10 @@ Search keeps its full-height side-sliding panel with the input above the lazy
 results list. The list avoids the keyboard. Closing the panel preserves the
 query, result snapshot, list offset and in-progress search; reopening a populated
 query neither focuses the input nor repeats the document scan.
-Search failures offer an explicit Retry for the same query without adding a
-duplicate history entry; retry is ignored while a search is already loading.
+Search failures render the shared `ErrorState` with a filled Retry for the same
+query, without adding a duplicate history entry; retry is ignored while a
+search is already loading. The prompt and "no results" placeholders are
+`EmptyState(compact: true)`, the same primitive the Contents drawer tabs use.
 
 Selecting a result starts a navigation session with previous/next match controls
 and a return-to-reading action. The return anchor is captured before opening the
@@ -214,22 +250,32 @@ projects its horizontal position just above the panel; fully visible matches
 and matches on other pages have no marker. The search drawer hides this marker.
 Ending search,
 opening contents/appearance or seeking the progress slider clears the session.
-System Back closes the search panel first, then ends match navigation before
-leaving the reader. Widget tests cover keyboard/large-text layouts and preserved
+System Back (and the iOS edge swipe) dismisses the topmost overlay only:
+`ReaderBackGuard` resolves `readerBackTargetFor` (search panel, then Contents
+drawer, then the saved-highlight popup, then match navigation) and lets the
+route pop only when nothing is layered over the page. Appearance and note
+sheets are modal routes and are popped by the navigator before the reader is
+consulted. Reopening the panel during match navigation scrolls the active
+result into view (an off-screen builder tile is approached in up to three
+extrapolated passes before `Scrollable.ensureVisible` aligns it); the field
+uses `TextInputAction.search`. Widget tests cover keyboard/large-text layouts and preserved
 state; native tests exercise navigation and return in the actual renderer.
 Navigation buttons are unfilled with 48dp tap targets. Widget and golden tests
 cover icon/text spacing, both themes, RTL and large text, including held presses.
 Search content uses a 16 logical-pixel horizontal inset inside the safe area:
 the header, field, recent queries, result count and excerpts share this inset.
-Close and history-removal buttons use equal 24dp glyphs on the same trailing
-axis, with glyph edges aligned to the field. Their 48dp targets extend into the
+Close and history-removal buttons are `AppPlainIconButton`s with the default
+20dp glyph on the same trailing axis, with glyph edges aligned to the field. Their 48dp targets extend into the
 gutter and stay inside the safe area, including RTL.
 History removal uses the shared trash icon; Close and field clearing keep the
 cross. Removing a history entry does not run a search or close the panel.
 Geometry tests and search goldens cover narrow/wide layouts, large text, RTL,
 long queries and asymmetric landscape safe-area padding.
-Icon controls use circular feedback. The query and return actions dim their
-content instead of filling the row; a focus outline remains for keyboard use.
+Icon controls are `AppPlainIconButton`s with circular feedback. The query and
+return actions are themed `TextButton`s (padding only), so press feedback is
+the theme's overlay rather than a custom opacity or splash override.
+The panel slides in from the leading edge of the app locale
+(`readerSidePanelHiddenOffset`), like the Contents drawer.
 
 `ReaderBloc.reportError(e, st)` is a public facade over the protected
 `addError()` so widgets (e.g. the context panel) can route non-fatal errors
@@ -241,16 +287,29 @@ position has not changed meanwhile. Bookmark revisions also prevent an older
 source-load snapshot from overwriting edits made while it was pending.
 Bookmark rows use the shared trash icon for deletion and retain the existing
 in-place icon-only Undo action; the cross in the header only closes the drawer.
-All three glyphs are 24dp, aligned to the Contents field's 16dp gutter with full
-48dp targets. Geometry tests compare the visible icon boxes, not only button
+All three glyphs are the default 20dp, aligned to the Contents field's 16dp
+gutter with full 48dp targets (`_readerDrawerActionEndPadding`). Geometry tests compare the visible icon boxes, not only button
 bounds; native flows also exercise deletion and Undo.
-The reader's bottom toolbar keeps equal 48dp targets and circular pressed
-feedback for all commands, including its custom filled/outline bookmark glyph.
+The reader's bottom toolbar is built from `AppPlainIconButton` (48dp targets,
+circular pressed feedback), including its custom filled/outline bookmark glyph
+passed as `iconWidget`. Page-turn and active-bookmark glyphs, the page-bookmark
+indicator and the Contents tab indicator use `context.actionForeground`; only
+the filled progress slider keeps `colors.primary`. The article title in the top
+chrome is an ink button with button semantics and a 48dp-high target.
 Changing chrome visibility must not resize or recreate the WebView; the root
 search-overlay regression verifies both contracts under iOS/Android policies.
+Status-bar icon brightness follows the surface under the status bar: the app
+chrome while the toolbar or a full-height panel (Contents, Search) is shown,
+otherwise the page colour; the appearance sheet only scrims the page and keeps
+the page-derived brightness (`readerSystemUiOverlayStyle(panelVisible:)`).
 Active bookmark/Undo icons and the tab indicator use the accessible action
 foreground. Active search results use the same selected color pair as Contents
 and settings controls; text and emphasized matches remain readable on that fill.
+The brightness pill beside the page uses `PositionedDirectional(end:)`, so it
+sits at the trailing edge and slides toward it in RTL. Its step buttons are
+`AppPlainIconButton`s; the value button is a 48dp selected control
+(`selectedControlBackground/Foreground` while a custom level is active) whose
+"System" label comes from `readerBrightnessSystem`.
 Brightness diagnostic formatting/logging runs only in debug builds.
 
 Position persistence keeps the 500ms trailing debounce and serializes writes,
@@ -270,7 +329,8 @@ the Highlight action still explicitly saves it.
 
 WebView recovery clears stale selection UI and temporarily clears readiness.
 `ReaderWebViewFailed` reports terminal failure through the bloc's error pipeline
-and switches to the localized failure surface with Retry and Go Back. Retry
+and switches to the shared `ErrorState` (error icon, filled Retry, outlined
+Go Back). Retry
 recreates the reading surface from the retained document, while a late source
 load cannot erase a renderer failure.
 
@@ -296,8 +356,14 @@ load cannot erase a renderer failure.
   anchors in `content.html`, expose contents/search/bookmark chrome actions,
   and render text highlights through stable article anchors. Image-area
   selection remains specific to the foliate comic/fixed-layout path.
+- Every reader motion (chrome/drawer/search slides, brightness pill, loading
+  scrim, dimming tween, swatch rings, page overlay) resolves its duration
+  through `context.motion(AppMotion.x)`, so reduced motion settles in one
+  frame; the appearance step and tap-zone hint controllers jump instead.
 - Reader theme (`ReaderThemeData`, font preset, layout preset) is resolved
-  from `ReaderAppearanceCubit` and passed as CSS / URL params to the WebView; the
+  from `ReaderAppearanceCubit` and passed as CSS / URL params to the WebView
+  (`--rf-accent-color` is the reader theme's `accentColor`, not the app
+  primary); the
   WebView bodies subscribe to the document, readiness, appearance and annotation
   state they need, not to each selection-menu update. Rebuilding a body does not
   recreate its keyed WebView unless source/recovery identity changes.
@@ -361,5 +427,6 @@ differ, so geometry-only browser results are not a native visual guarantee.
 - `shared` — `TextAction`, `TextSelectionContext`
 - `domain_models` — `Book`, `SourceType`
 - `component_library` — `ReaderThemePreset`, `AppIcons`, `AppSpacing`,
-  `AppIconSize`
+  `AppIconSize`, `AppMotion`, `AppPlainIconButton`, `AppFilterChip`,
+  `EmptyState`, `ErrorState`
 - `flutter_bloc`, `equatable`, `stream_transform`

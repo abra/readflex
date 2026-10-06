@@ -3,6 +3,7 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
+import 'library_selection_tint.dart';
 import 'library_source_semantics.dart';
 
 const double _kArticleIconAlpha = 0.4;
@@ -95,7 +96,7 @@ class BookLibraryListTile extends StatelessWidget {
       ),
       onTap: onTap,
       onLongPress: onLongPress,
-      metaBuilder: (context, mutedColor) {
+      metaBuilder: (context, mutedColor, emphasisColor) {
         final sourceName = _secondarySourceName(source, subtitle);
 
         return [
@@ -127,7 +128,13 @@ class BookLibraryListTile extends StatelessWidget {
           ],
           _MetaDot(mutedColor: mutedColor),
           if (source.isFinished)
-            ..._doneBadge(context)
+            ..._doneBadge(
+              context,
+              // A selected row's tonal fill needs the paired foreground.
+              color: isSelected
+                  ? emphasisColor
+                  : context.appColors.successForeground,
+            )
           else if (source.lastOpenedAt == null)
             Text(l10n.librarySourceNew, style: _metaStyle(context, mutedColor))
           else
@@ -137,9 +144,10 @@ class BookLibraryListTile extends StatelessWidget {
             // having been read.
             Text(
               '$progress%',
-              style: _metaStyle(context, context.colors.onSurface).copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+              style: _metaStyle(
+                context,
+                emphasisColor,
+              ).copyWith(fontWeight: FontWeight.w500),
             ),
         ];
       },
@@ -182,7 +190,11 @@ class _ListRowShell extends StatelessWidget {
   final String title;
   final String? subtitle;
   final TextDirection textDirection;
-  final List<Widget> Function(BuildContext context, Color mutedColor)
+  final List<Widget> Function(
+    BuildContext context,
+    Color mutedColor,
+    Color emphasisColor,
+  )
   metaBuilder;
   final bool showTopDivider;
   final bool isSelected;
@@ -198,9 +210,20 @@ class _ListRowShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final selectionColor = colors.selectionMarkerBackground;
-    final mutedColor = colors.onSurfaceVariant;
+    final coverTint = selectionColor.withValues(
+      alpha: kLibraryCoverSelectionTintAlpha,
+    );
+    // The row fill is a selected control: its paired foreground keeps text
+    // readable on the opaque dark-mode tonal accent.
+    final rowTint = colors.selectedControlBackground;
+    final emphasisColor = isSelected
+        ? colors.selectedControlForeground
+        : colors.onSurface;
+    final mutedColor = isSelected
+        ? colors.selectedControlForeground
+        : colors.onSurfaceVariant;
 
-    final metaSegments = metaBuilder(context, mutedColor);
+    final metaSegments = metaBuilder(context, mutedColor, emphasisColor);
     final hasSubtitle = subtitle != null && subtitle!.isNotEmpty;
     final isRtl = textDirection == TextDirection.rtl;
 
@@ -232,7 +255,7 @@ class _ListRowShell extends StatelessWidget {
                 child: DecoratedBox(
                   key: const ValueKey('libraryListSelectionBackground'),
                   decoration: BoxDecoration(
-                    color: selectionColor.withValues(alpha: 0.18),
+                    color: rowTint,
                     borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                 ),
@@ -266,13 +289,13 @@ class _ListRowShell extends StatelessWidget {
                                   color: selectionColor,
                                   width: 2,
                                 ),
-                                color: selectionColor.withValues(alpha: 0.15),
+                                color: coverTint,
                               ),
                             ),
                           ),
-                          Positioned(
+                          PositionedDirectional(
                             top: _kListSelectionCheckInset,
-                            right: _kListSelectionCheckInset,
+                            end: _kListSelectionCheckInset,
                             child: _SelectionCheck(color: selectionColor),
                           ),
                         ],
@@ -297,7 +320,7 @@ class _ListRowShell extends StatelessWidget {
                           maxLines: 4,
                           overflow: TextOverflow.ellipsis,
                           style: context.text.sourceListTitle.copyWith(
-                            color: colors.onSurface,
+                            color: emphasisColor,
                           ),
                         ),
                         // Demo uses 6dp title-to-meta gap (between xs=4 and
@@ -353,7 +376,7 @@ class _ListRowShell extends StatelessWidget {
 }
 
 /// Filled selection marker with a contrasting check icon, sitting in the
-/// top-right corner of the cover when the row is selected. Same visual
+/// top-end corner of the cover when the row is selected. Same visual
 /// vocabulary as the grid tile's selection check so list/grid selection
 /// reads identically.
 class _SelectionCheck extends StatelessWidget {
@@ -417,19 +440,17 @@ String? _secondarySourceName(LibrarySource source, String? subtitle) {
 IconData _sourceIcon(LibrarySource source) =>
     source.sourceType == SourceType.article ? AppIcons.article : AppIcons.book;
 
-/// Builds the green ` ✓ Done` kicker that replaces the progress segment
-/// when an item is fully read. Colour comes from the semantic
-/// `successForeground` token so it stays legible in both themes.
-List<Widget> _doneBadge(BuildContext context) {
-  final success = context.appColors.successForeground;
+/// Builds the ` ✓ Done` kicker that replaces the progress segment when an
+/// item is fully read.
+List<Widget> _doneBadge(BuildContext context, {required Color color}) {
   return [
-    Icon(AppIcons.check, size: 10, color: success),
+    Icon(AppIcons.check, size: 10, color: color),
     const SizedBox(width: 2),
     Text(
       context.l10n.librarySourceDone,
       style: context.text.sourceMetadata.copyWith(
         fontWeight: FontWeight.w500,
-        color: success,
+        color: color,
       ),
     ),
   ];

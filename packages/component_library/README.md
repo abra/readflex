@@ -18,11 +18,12 @@ src/theme/
     primitive_colors.dart       # Raw color values (gray50, orange500, etc.)
     primitive_spacing.dart      # Raw spacing values (s2, s4, s8, s12, etc.)
     app_colors.dart             # Semantic palette: AppColorPalette, lightPalette, darkPalette
-    app_spacing.dart            # Semantic spacing: AppSpacing (xxs, xs, sm, md, lg, xl, xxl, xxxl, xxxxl)
+    app_spacing.dart            # Semantic spacing: AppSpacing (xxs, xs, sm, md, lg, xl, xxl)
     app_radius.dart             # Border radius scale: AppRadius (xs, sm, md, lg, xl, full)
     app_sizes.dart              # Control heights: AppSizes (buttonHeight, navBarHeight, etc.)
     app_elevation.dart          # Elevation levels: AppElevation (level0..level3)
     app_icon_size.dart          # Icon size scale
+    app_motion.dart             # Motion durations: AppMotion (quick, short, medium)
     app_shadows.dart            # Shared shadow recipes
   extensions/
     app_colors_ext.dart         # ThemeExtension for colors beyond ColorScheme (AppColorsExt)
@@ -54,12 +55,16 @@ context.appColors.highlightYellow // highlight/rating/status colors
 // Typography
 context.text.bodyLarge            // TextTheme roles
 context.text.headlineSmall        // serif headlines
-AppTypography.serif(fontSize: 18) // one-off serif style
+AppTypography.serif(...)          // theme-level helper; UI code uses text roles
 
 // Static constants (for const contexts and component themes)
 const EdgeInsets.all(AppSpacing.lg)
 BorderRadius.circular(AppRadius.md)
 const Icon(Icons.search, size: AppIconSize.md)
+
+// Motion: tokens resolve to Duration.zero under reduced motion
+AnimatedOpacity(duration: context.motion(AppMotion.short), ...)
+if (context.reduceMotion) controller.jumpTo(...) else controller.animateTo(...)
 ```
 
 ### AppColorsExt Fields
@@ -68,13 +73,12 @@ Colors that go beyond `ColorScheme`, delivered via `ThemeExtension`:
 
 | Group        | Fields                                                                                   |
 |--------------|------------------------------------------------------------------------------------------|
-| Reading      | `readingSurface`, `readingText`                                                          |
 | Highlights   | `highlightYellow`, `highlightBlue`, `highlightGreen`, `highlightPink`, `highlightPurple` |
 | FSRS ratings | `ratingAgain`, `ratingHard`, `ratingGood`, `ratingEasy`                                  |
-| Status       | `warning`/`warningForeground`, `info`/`infoForeground`, `success`/`successForeground`    |
+| Status       | `warning`/`warningForeground`, `info`, `success`/`successForeground`, `successContainer`/`onSuccessContainer` |
 | Pro badge    | `proBadge`, `proBadgeForeground`                                                         |
-| Navigation   | `tabActive`, `tabInactive`                                                               |
-| Other        | `divider`, `aiAccent`                                                                    |
+| Swatch inks  | `onLightSwatch`, `onDarkSwatch` — check/glyph drawn over a sample color                  |
+| Other        | `divider`                                                                                |
 
 ### Token Fields
 
@@ -83,10 +87,11 @@ as static semantic token classes:
 
 | Token class | Purpose |
 |-------------|---------|
-| `AppSpacing` | Layout gaps and insets (`xxs` … `xxxxl`) |
+| `AppSpacing` | Layout gaps and insets (`xxs` … `xxl`) |
 | `AppRadius` | Shape scale (`xs`, `sm`, `md`, `lg`, `xl`, `full`) |
 | `AppSizes` | Control heights and tap targets |
 | `AppIconSize` | Standard icon sizes |
+| `AppMotion` | Implicit-animation durations (`quick` 120ms, `short` 200ms, `medium` 300ms) |
 | `AppElevation` / `AppShadows` | Shared depth language |
 
 ### Typography
@@ -136,8 +141,22 @@ source quote and translated sentence for native screenshot inspection.
 - **Static constants** are OK for spacing/radius in `const` contexts and component theme
   assembly.
 - **Component themes** read from palette and static tokens (no BuildContext available).
+- **Global tile shape is rectangular.** `listTileTheme` sets colours and a 4dp
+  content padding only; rows that want a radius (inset sheet options) draw it
+  themselves. Full-bleed panel rows never inherit a radius. `MenuAnchor` menus
+  use `AppRadius.sm` through `menuTheme`.
+- **Buttons own their spinner colour.** `ButtonLoadingIndicator` reads
+  `IconTheme.of(context).color`, which every Material button sets to its
+  resolved foreground, so a busy filled button shows an `onPrimary` spinner.
 - **No ternary operators in theme assembly** -- separate `_buildLight()` / `_buildDark()`
   functions.
+- **Motion goes through `context.motion(AppMotion.x)`** -- never pass a literal
+  `Duration` to an implicit animation or transition in UI code. The helper returns
+  `Duration.zero` when the platform reduces motion, so one call site serves both
+  settings; explicit controllers check `context.reduceMotion` and jump instead.
+- **Swatch inks come from `AppColorsExt`** -- a check drawn over a highlight or
+  theme sample picks `onLightSwatch`/`onDarkSwatch` by the sample's luminance;
+  raw `Colors.black`/`Colors.white` are not allowed in feature code.
 
 ## Reusable UI API
 
@@ -146,26 +165,32 @@ Reusable presentation-only widgets used across features:
 | Widget                              | Purpose                                        |
 |-------------------------------------|------------------------------------------------|
 | `ActionBottomSheetLayout`           | Bottom sheet shell; optional constrained scroll body and wrapping header actions |
-| `AppPlainIconButton`                | Labeled 48dp utility action with transparent background and circular press feedback |
+| `AppPlainIconButton`                | Labeled 48dp utility action with transparent background and circular press feedback; `icon` or a custom `iconWidget` |
 | `AppActionCard`                     | Reusable command card for action pickers       |
+| `AppDrillInRow`                     | Row that opens a nested step: accent leading icon, `bodyMedium` title, muted subtitle, directional chevron, 48dp minimum, muted and ripple-free when disabled |
 | `AppBottomSafeArea`                 | Bottom inset handling for app-owned surfaces   |
 | `AppButtonLabel`                    | Bounded label for localized button text        |
-| `AppSheetActions`                   | Primary/secondary sheet commands with adaptive stacking and stable busy geometry |
+| `AppSheetDismissGuard`              | Per-step scrim/drag guard inside `showAppBottomSheet` flows |
+| `AppSheetActions`                   | Primary/secondary sheet commands with adaptive stacking and stable busy geometry; `destructiveSecondary` for confirmations |
+| `AppSourceQuote`                    | Quoted source phrase with a leading rule that follows the quote's own direction |
+| `AppLexicalMetadataRow`             | Muted reading / IPA pronunciation / part-of-speech line under a headword; IPA stays LTR in the phonetic font, wraps when narrow |
+| `AppColorSwatchButton`              | Round color sample in a 48dp circular-ink target; selected ring plus a check inked by swatch luminance |
+| `AppStatusMessage`                  | Inline sheet status: start-aligned title/body, optional full-width filled action and progress |
 | `AppSettingsSection`                | Shared settings heading and label/control spacing |
 | `AppChoiceControl` / `AppChoiceOption` | Single-choice settings, with the same themed states for text, icons and font previews |
 | `AppCopyButton`                     | 48px copy command with local success/error feedback |
 | `AppFilterChip`                     | App-styled filter chip with stable tap target  |
 | `BottomSheetHeader`                 | Bottom sheet title row                         |
-| `ButtonLoadingIndicator`            | Compact circular progress for buttons          |
+| `ButtonLoadingIndicator`            | Compact circular progress for buttons; takes the button's own foreground via `IconTheme` |
 | `CenteredCircularProgressIndicator` | Centered loading spinner                       |
-| `EmptyState`                        | Centered empty state with optional recovery action |
-| `ErrorState`                        | Error message with retry button                |
+| `EmptyState`                        | Centered empty state; `compact` for list/panel placeholders |
+| `ErrorState`                        | Centered failure with filled Retry, optional title/icon/secondary exit and busy geometry |
 | `AppSourceCover` / `AppSourceCoverFrame` | Shared source cover rendering and frame |
 | `appSourceCoverImageFromPath`       | Resolves an optional local cover image path    |
 | `SearchField`                       | App search field with an adaptive primary-tone clear action and circular press feedback |
 | `ScrollEdgeFadeStack`               | Scroll-edge fade/scrim wrapper                 |
-| `ScrollEdgeFade`                    | Individual top/bottom scroll-edge fade         |
-| `SelectionPreviewCard`              | Compact preview of selected text               |
+| `ScrollEdgeFade`                    | Scroll-edge fade: top/bottom darken (0.14 alpha in light mode); start/end dissolve a horizontal strip into `surfaceColor` (default scaffold background) |
+| `SelectionPreviewCard`              | Compact preview of selected text with its own `textDirection` |
 | `showAppBottomSheet`                | Shared modal bottom-sheet presentation helper  |
 
 ## What Belongs Here
@@ -187,7 +212,12 @@ names the action for both pointer users and assistive technology.
 glyph is 20dp, while `SearchField` uses 16dp. Its resting background is
 transparent and pressed/focus feedback follows the circular shape, not the
 filled rectangular global icon-button theme. The localized `tooltip` supplies
-the accessible name through Flutter's `IconButton` semantics.
+the accessible name through Flutter's `IconButton` semantics. Pass `iconWidget`
+for a custom-painted glyph (the reader bookmark) or a busy indicator; disabled
+state dims the given `color` to 38% rather than swapping to `onSurface`, so
+reader toolbars keep their page tone. It is the only primitive for standalone
+utility icon actions: features do not style a bare `IconButton`, `InkWell` or
+`GestureDetector` for that role.
 For standalone trailing list actions, align the glyph with the content gutter
 and the surface header, not the outer edge of the target. Allow the target's
 inner inset to occupy the gutter without clipping its hit area; mirror this
@@ -197,7 +227,8 @@ from grouped controls to achieve alignment.
 Screen/drawer content uses a 16dp gutter; sheet content uses 24dp. The owning
 surface applies each outer gutter once. `AppSheetActionRow` accepts a full-width
 sheet row and aligns a 20dp utility glyph with `BottomSheetHeader`, preserving
-the full 48dp target. Definition/Translation use it for Copy; other body sections
+the full 48dp target; `textDirection` lets a Copy action trail LTR content in
+an RTL interface. Definition/Translation use it for Copy; other body sections
 retain their 24dp padding. `AppCopyButton` delegates appearance to
 `AppPlainIconButton`, including circular feedback and disabled hit semantics.
 
@@ -210,6 +241,35 @@ Selected controls use the paired `selectedControlBackground/Foreground` colors.
 Opaque `selectionMarkerBackground/Foreground` is for small checks on cover art;
 normal multi-selection must not use the destructive error color. Custom rows
 also expose `Semantics(selected: ...)`; color is not their only selection cue.
+
+### Generic States
+
+`EmptyState` and `ErrorState` are the only full-panel placeholders: Library,
+reader drawers, reader search, reader load failure and collection lists use them
+rather than a hand-rolled `Center(Text)`. Retry is always the filled primary
+command; a secondary exit (reader "Go back") is outlined beside it, and when
+the two labels do not fit side by side the filled Retry comes first in the
+stack, like `AppSheetActions`. `busy`
+keeps button geometry and blocks duplicate taps. `EmptyState(compact: true)`
+renders a muted `bodyMedium` for short list/panel placeholders; screen-level
+states keep `titleMedium`. Both share the 56dp tinted icon frame and
+`AppIconSize.md` glyph. `CenteredCircularProgressIndicator` is the loading
+counterpart; sheets do not build their own padded spinner.
+
+`AppStatusMessage` is the inline variant for sheet bodies that keep other
+content visible (Definition and Translation "no result", offline and failure
+states under the source phrase). It is left-aligned to the sheet gutter and
+can append a linear progress bar for a long-running action such as a model
+download.
+
+### Confirmations
+
+`AppSheetActions` follows a safe-default model: the filled primary is the
+non-destructive choice (Cancel, Keep editing) and the destructive command is
+the outlined secondary in the error color (`destructiveSecondary: true`).
+Delete collection, delete source and discard-changes confirmations all use
+this pairing, so the most prominent button never destroys data. Cancel on a
+destructive confirmation cancels that operation; it does not close the flow.
 
 ### Placement by Role
 
@@ -281,6 +341,14 @@ with large text. Root Library goldens check the painted press feedback.
   The helper preserves Flutter's barrier animation, labels and accessibility
   clipping. The default still respects `PopScope` guards. Guarded collection
   forms disable drag/scrim; their explicit Close requests a discard decision.
+  A flow whose guard depends on the step wraps that step in
+  `AppSheetDismissGuard(enabled:, onDismissAttempt:)`: while enabled, scrim tap
+  and drag-down run the callback (the same discard confirmation as Close) and
+  the drag handle gives way to a same-height spacer; when disabled the route's
+  normal dismissal, including `scrimClosesFlow`, applies. Guard changes publish
+  after the frame; system Back stays with the step's `PopScope`. Create
+  collection and Save Article use it so an unsaved draft survives a stray tap
+  while an empty form still closes freely.
   Step transitions follow reading direction and respect reduced motion; import
   height changes bypass `AnimatedSize` when animations are disabled.
 - `ActionBottomSheetLayout` supplies 24dp horizontal gutters and an 8dp

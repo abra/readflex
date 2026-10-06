@@ -85,7 +85,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('power'), findsOneWidget);
-    expect(find.text('/paur/ · noun'), findsOneWidget);
+    expect(find.text('/paur/'), findsOneWidget);
+    expect(find.text('noun'), findsOneWidget);
     expect(
       find.text('The capacity to act or produce an effect.'),
       findsOneWidget,

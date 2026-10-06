@@ -1,3 +1,4 @@
+import 'package:library_feature/src/library_selection_tint.dart';
 import 'package:library_feature/src/library_list_view.dart';
 import 'package:library_feature/src/library_list_tile.dart';
 import 'package:library_feature/src/library_selection_cubit.dart';
@@ -417,4 +418,151 @@ void main() {
     expect(metaRow.textDirection, TextDirection.rtl);
     expect(titleRect.right, closeTo(rowRect.right - AppSpacing.xs, 1));
   });
+
+  testWidgets('RTL swipe reveals the delete icon inside the revealed area', (
+    tester,
+  ) async {
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Scaffold(
+            body: LibraryListView(
+              sources: [LibrarySource.fromBook(_books.first)],
+              selection: const LibrarySelectionState(),
+              scrollController: controller,
+              onSourcePressed: (_) {},
+              onSourceLongPressed: (_) {},
+              onConfirmSwipeDelete: (_) async => false,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final tile = find.byType(BookLibraryListTile);
+    final restingRect = tester.getRect(tile);
+    final gesture = await tester.startGesture(tester.getCenter(tile));
+    // endToStart in RTL is a left-to-right drag; the first move only
+    // resolves the gesture arena, the second one moves the row.
+    await gesture.moveBy(const Offset(30, 0));
+    await tester.pump();
+    await gesture.moveBy(const Offset(120, 0));
+    await tester.pump();
+
+    final movedRect = tester.getRect(tile);
+    expect(movedRect.left, greaterThan(restingRect.left + 60));
+    final revealed = Rect.fromLTRB(
+      restingRect.left,
+      restingRect.top,
+      movedRect.left,
+      restingRect.bottom,
+    );
+    final icon = tester.getRect(find.byIcon(AppIcons.delete));
+    expect(revealed.contains(icon.topLeft), isTrue);
+    expect(revealed.contains(icon.bottomRight), isTrue);
+    expect(icon.left, closeTo(restingRect.left + AppSpacing.lg, 1));
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(tester.getRect(tile), restingRect);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('list selection check sits at the top-end corner in RTL', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Scaffold(
+            body: BookLibraryListTile(
+              source: LibrarySource.fromBook(_books.first),
+              showTopDivider: false,
+              isSelected: true,
+              onTap: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    final coverRect = tester.getRect(find.byType(AppSourceCoverFrame));
+    final checkRect = tester.getRect(
+      find.byKey(const ValueKey('libraryListSelectionCheck')),
+    );
+    expect(checkRect.top, coverRect.top + AppSpacing.xs);
+    expect(checkRect.left, coverRect.left + AppSpacing.xs);
+  });
+
+  for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+    testWidgets(
+      'selected row uses the paired selected-control colors: '
+      '${theme.brightness}',
+      (tester) async {
+        final finished = _books.first.copyWith(
+          isFinished: true,
+          lastOpenedAt: DateTime(2026, 1, 2),
+        );
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: theme,
+            home: Scaffold(
+              body: BookLibraryListTile(
+                source: LibrarySource.fromBook(finished),
+                showTopDivider: false,
+                isSelected: true,
+                onTap: () {},
+              ),
+            ),
+          ),
+        );
+        final colors = theme.colorScheme;
+        final background =
+            tester
+                    .widget<DecoratedBox>(
+                      find.byKey(
+                        const ValueKey('libraryListSelectionBackground'),
+                      ),
+                    )
+                    .decoration
+                as BoxDecoration;
+        expect(background.color, colors.selectedControlBackground);
+        expect(
+          tester.widget<Text>(find.text(_books.first.title)).style!.color,
+          colors.selectedControlForeground,
+        );
+        final metadata = find.descendant(
+          of: find.byKey(const ValueKey('libraryListRowMeta')),
+          matching: find.byType(Text),
+        );
+        for (final text in tester.widgetList<Text>(metadata)) {
+          expect(
+            text.style!.color,
+            colors.selectedControlForeground,
+            reason: text.data,
+          );
+        }
+        final coverTint = tester
+            .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+            .map((box) => box.decoration)
+            .whereType<BoxDecoration>()
+            .singleWhere(
+              (decoration) =>
+                  decoration.border is Border &&
+                  (decoration.border! as Border).top.width == 2,
+            );
+        expect(
+          coverTint.color,
+          colors.selectionMarkerBackground.withValues(
+            alpha: kLibraryCoverSelectionTintAlpha,
+          ),
+        );
+      },
+    );
+  }
 }

@@ -10,17 +10,12 @@ TextDirection readerDirectionalTextDirection({
   return pageProgressionRtl ? TextDirection.rtl : TextDirection.ltr;
 }
 
-EdgeInsets readerDirectionalContentPadding({
-  required bool pageProgressionRtl,
-  required double start,
-  required double end,
-  double top = 0,
-  double bottom = 0,
-}) {
-  return EdgeInsets.only(
-    left: pageProgressionRtl ? end : start,
-    right: pageProgressionRtl ? start : end,
-    top: top,
-    bottom: bottom,
-  );
+/// Hidden slide offset for a full-height side panel (contents, search).
+///
+/// Panels enter from the leading edge of the app locale, not the book's
+/// progression direction, so RTL interfaces slide from the right.
+Offset readerSidePanelHiddenOffset(TextDirection textDirection) {
+  return textDirection == TextDirection.rtl
+      ? const Offset(1, 0)
+      : const Offset(-1, 0);
 }

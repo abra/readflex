@@ -175,6 +175,24 @@ void main() {
       ],
     );
 
+    test('refresh completes its completer after the reload, even when the '
+        'state does not change', () async {
+      repository.seedBooks([_book]);
+      final bloc = LibraryBloc(bookRepository: repository);
+      addTearDown(bloc.close);
+      bloc.add(const LibraryLoadRequested());
+      await bloc.stream.firstWhere((s) => s.status == LibraryStatus.success);
+
+      final first = Completer<void>();
+      bloc.add(LibraryRefreshRequested(completer: first));
+      await first.future.timeout(const Duration(seconds: 2));
+      // Same data again: no new state, the completer still finishes.
+      final second = Completer<void>();
+      bloc.add(LibraryRefreshRequested(completer: second));
+      await second.future.timeout(const Duration(seconds: 2));
+      expect(bloc.state.sources, [_book].map(LibrarySource.fromBook).toList());
+    });
+
     blocTest<LibraryBloc, LibraryState>(
       'emits success with empty list when library is empty',
       build: () => LibraryBloc(bookRepository: repository),
@@ -269,7 +287,7 @@ void main() {
           deletionEffect: const LibraryDeletionEffect(
             version: 1,
             success: true,
-            count: 1,
+            sourceIds: {'1'},
             singleTitle: 'Test Book',
           ),
         ),
@@ -307,7 +325,7 @@ void main() {
           const LibraryDeletionEffect(
             version: 1,
             success: true,
-            count: 2,
+            sourceIds: {'1', '2'},
           ),
         );
       },
@@ -336,7 +354,7 @@ void main() {
           const LibraryDeletionEffect(
             version: 1,
             success: true,
-            count: 1,
+            sourceIds: {'1'},
             singleTitle: 'Test Book',
           ),
         );
@@ -380,7 +398,7 @@ void main() {
           const LibraryDeletionEffect(
             version: 1,
             success: false,
-            count: 2,
+            sourceIds: {'1', '2'},
           ),
         );
         // Id '2' was deleted even though id '1' failed.
@@ -405,7 +423,8 @@ void main() {
           scope: BookDeletionScope.keepLearningData,
         ),
       ),
-      errors: () => [isA<Object>()],
+      // The delete and the follow-up storage re-read both fail here.
+      errors: () => [isA<StorageException>(), isA<Object>()],
       verify: (bloc) {
         expect(bloc.state.status, LibraryStatus.success);
         expect(bloc.state.sources, [LibrarySource.fromBook(_book)]);
@@ -415,7 +434,50 @@ void main() {
           const LibraryDeletionEffect(
             version: 1,
             success: false,
-            count: 1,
+            sourceIds: {'1'},
+            singleTitle: 'Test Book',
+          ),
+        );
+      },
+    );
+
+    // A failed single delete re-reads storage rather than re-emitting the
+    // pre-delete list, so the screen shows what is really persisted.
+    blocTest<LibraryBloc, LibraryState>(
+      'LibrarySourceDeleted failure re-reads storage',
+      setUp: () {
+        final second = Book(
+          id: '2',
+          title: 'Second',
+          filePath: '/two.epub',
+          format: BookFormat.epub,
+          addedAt: DateTime(2026, 1, 2),
+        );
+        repository.seedBooks([_book, second]);
+        repository.failOnIds = const {'1'};
+      },
+      build: () => LibraryBloc(bookRepository: repository),
+      seed: () => LibraryState(
+        status: LibraryStatus.success,
+        sources: [_book].map(LibrarySource.fromBook).toList(),
+      ),
+      act: (bloc) => bloc.add(
+        LibrarySourceDeleted(
+          _book.id,
+          scope: BookDeletionScope.keepLearningData,
+        ),
+      ),
+      errors: () => [isA<Object>()],
+      verify: (bloc) {
+        expect(repository.getBooksCallCount, 1);
+        expect(bloc.state.status, LibraryStatus.success);
+        expect(bloc.state.sources.map((s) => s.id), ['1', '2']);
+        expect(
+          bloc.state.deletionEffect,
+          const LibraryDeletionEffect(
+            version: 1,
+            success: false,
+            sourceIds: {'1'},
             singleTitle: 'Test Book',
           ),
         );
@@ -600,6 +662,32 @@ void main() {
       );
 
       expect(state.visibleItems, [LibrarySource.fromBook(epub)]);
+    });
+
+    test('New filter excludes a source that was opened but not read', () {
+      final untouched = Book(
+        id: 'book-new',
+        title: 'Untouched',
+        filePath: '/books/new.epub',
+        format: BookFormat.epub,
+        addedAt: DateTime(2026, 1, 1),
+      );
+      final opened = Book(
+        id: 'book-opened',
+        title: 'Opened',
+        filePath: '/books/opened.epub',
+        format: BookFormat.epub,
+        addedAt: DateTime(2026, 1, 1),
+        lastOpenedAt: DateTime(2026, 1, 2),
+      );
+      final state = LibraryState(
+        status: LibraryStatus.success,
+        sources: [untouched, opened].map(LibrarySource.fromBook).toList(),
+        filter: LibraryFilter.unread,
+      );
+
+      // Same rule as the row's "New" label.
+      expect(state.visibleItems, [LibrarySource.fromBook(untouched)]);
     });
 
     test('visibleItems applies smart site collection scope', () {

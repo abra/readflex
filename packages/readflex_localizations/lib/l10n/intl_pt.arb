@@ -283,8 +283,8 @@
   "readerThemeSnow": "Neve",
   "readerThemePaper": "Papel",
   "readerThemeWarm": "Quente",
-  "readerThemeMist": "Grafite",
-  "readerThemeNight": "Noite",
+  "readerThemeMist": "Noite",
+  "readerThemeNight": "Grafite",
   "readerIncreaseBrightness": "Aumentar brilho",
   "readerDecreaseBrightness": "Diminuir brilho",
   "readerUsingSystemBrightness": "Usando brilho do sistema: {label}",
@@ -312,5 +312,16 @@
   "dictionaryUnsupportedLanguageTitle": "Idioma indisponível",
   "dictionaryUnsupportedLanguageBody": "O dicionário Readflex ainda não oferece suporte a este idioma.",
   "dictionaryFailureTitle": "Definição indisponível",
-  "dictionaryFailureBody": "Verifique sua conexão ou tente novamente mais tarde."
+  "dictionaryFailureBody": "Verifique sua conexão ou tente novamente mais tarde.",
+  "readerHighlightFilterAll": "Tudo",
+  "readerBrightnessSystem": "Sistema",
+  "readerPageOfTotal": "{page} / {total}",
+  "readerAddComment": "Adicionar comentário",
+  "readerAppearanceSample": "Aa",
+  "translationUnknownLanguage": "Idioma desconhecido",
+  "dictionaryDefinitionNumber": "{number}.",
+  "importDiscardUrlBody": "O endereço inserido não será salvo.",
+  "readerTapAreaHint": "Área de toque",
+  "importOfflineHint": "Sem conexão",
+  "importArticleOfflineSubtitle": "Requer conexão com a internet"
 }

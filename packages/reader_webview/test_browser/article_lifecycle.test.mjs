@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createHarness } from './harness.mjs'
+import { READFLEX_HIGHLIGHT_VERTICAL_INSET } from '../assets/foliate-js/src/readflex_shell_constants.js'
 
 test('article HTTP failure reports a terminal load failure to Flutter', async t => {
     const { page, articleUrl } = await createHarness(t)
@@ -150,16 +151,17 @@ test('article highlights remain visible without CSS Custom Highlight support', a
             await document.fonts.ready
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
         })
-        const geometry = await page.evaluate(() => {
+        // The fallback draws the book's shape: inset vertically, same inline extent.
+        const geometry = await page.evaluate(inset => {
             const text = document.getElementById('block-0-s0').firstChild
             const range = document.createRange()
             range.setStart(text, 6)
             range.setEnd(text, 12)
             const expected = range.getBoundingClientRect()
             const actual = document.querySelector('[data-rf-highlight-overlay] rect').getBoundingClientRect()
-            return { dx: actual.x - expected.x, dy: actual.y - expected.y,
-                dw: actual.width - expected.width, dh: actual.height - expected.height }
-        })
+            return { dx: actual.x - expected.x, dy: actual.y - expected.y - inset,
+                dw: actual.width - expected.width, dh: actual.height - expected.height + inset * 2 }
+        }, READFLEX_HIGHLIGHT_VERTICAL_INSET)
         for (const delta of Object.values(geometry)) assert.ok(Math.abs(delta) < 1, JSON.stringify(geometry))
         const visible = await page.screenshot({ animations: 'disabled' })
         await page.locator('[data-rf-highlight-overlay]').evaluate(el => { el.style.visibility = 'hidden' })

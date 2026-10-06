@@ -283,8 +283,8 @@
   "readerThemeSnow": "Neige",
   "readerThemePaper": "Papier",
   "readerThemeWarm": "Chaud",
-  "readerThemeMist": "Graphite",
-  "readerThemeNight": "Nuit",
+  "readerThemeMist": "Nuit",
+  "readerThemeNight": "Graphite",
   "readerIncreaseBrightness": "Augmenter la luminosité",
   "readerDecreaseBrightness": "Réduire la luminosité",
   "readerUsingSystemBrightness": "Luminosité système : {label}",
@@ -312,5 +312,16 @@
   "dictionaryUnsupportedLanguageTitle": "Langue indisponible",
   "dictionaryUnsupportedLanguageBody": "Le dictionnaire Readflex ne prend pas encore en charge cette langue.",
   "dictionaryFailureTitle": "Définition indisponible",
-  "dictionaryFailureBody": "Vérifiez votre connexion ou réessayez plus tard."
+  "dictionaryFailureBody": "Vérifiez votre connexion ou réessayez plus tard.",
+  "readerHighlightFilterAll": "Tout",
+  "readerBrightnessSystem": "Système",
+  "readerPageOfTotal": "{page} / {total}",
+  "readerAddComment": "Ajouter un commentaire",
+  "readerAppearanceSample": "Aa",
+  "translationUnknownLanguage": "Langue inconnue",
+  "dictionaryDefinitionNumber": "{number}.",
+  "importDiscardUrlBody": "L’adresse saisie ne sera pas enregistrée.",
+  "readerTapAreaHint": "Zone de toucher",
+  "importOfflineHint": "Hors ligne",
+  "importArticleOfflineSubtitle": "Nécessite une connexion internet"
 }

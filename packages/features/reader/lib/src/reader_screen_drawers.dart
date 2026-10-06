@@ -1,8 +1,9 @@
 part of 'reader_screen.dart';
 
 /// Collects TOC/bookmark state from [ReaderBloc] and feeds the drawer UI.
-class _ReaderTocDrawerDriver extends StatelessWidget {
-  const _ReaderTocDrawerDriver({
+@visibleForTesting
+class ReaderTocDrawerDriver extends StatelessWidget {
+  const ReaderTocDrawerDriver({
     required this.loadThumbnail,
     required this.visible,
     required this.format,
@@ -13,6 +14,7 @@ class _ReaderTocDrawerDriver extends StatelessWidget {
     required this.onBookmarkSelected,
     required this.onHighlightSelected,
     required this.onBookmarkDeleted,
+    super.key,
   });
 
   final ComicThumbnailLoader loadThumbnail;
@@ -113,8 +115,10 @@ class _ReaderTocDrawer extends StatelessWidget {
       child: IgnorePointer(
         ignoring: !visible,
         child: AnimatedSlide(
-          offset: visible ? Offset.zero : const Offset(-1, 0),
-          duration: _kChromeAnimDuration,
+          offset: visible
+              ? Offset.zero
+              : readerSidePanelHiddenOffset(Directionality.of(context)),
+          duration: context.motion(AppMotion.short),
           curve: _kChromeAnimCurve,
           child: Material(
             color: panelColor,
@@ -234,7 +238,6 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
                 ),
                 AppPlainIconButton(
                   icon: AppIcons.close,
-                  iconSize: AppIconSize.md,
                   tooltip: l10n.commonClose,
                   onPressed: widget.onClose,
                 ),
@@ -580,7 +583,8 @@ class _ReaderTocTabState extends State<_ReaderTocTab> {
         Expanded(
           child: _ReaderDrawerContentFrame(
             child: filteredItems.isEmpty
-                ? _ReaderDrawerEmptyState(
+                ? EmptyState(
+                    compact: true,
                     icon: widget.items.isEmpty
                         ? AppIcons.toc
                         : AppIcons.searchOff,
@@ -639,12 +643,14 @@ class _ReaderTocListTile extends StatelessWidget {
         ? colors.selectedControlForeground
         : colors.onSurface;
 
+    // Row layout follows the app locale; only the chapter text keeps the
+    // book's direction. The active fill spans the panel edge to edge: the
+    // themed 16dp tile radius is for inset rows, not full-bleed panel rows.
     return ListTile(
       selected: isActive,
       selectedTileColor: colors.selectedControlBackground,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-      contentPadding: readerDirectionalContentPadding(
-        pageProgressionRtl: pageProgressionRtl,
+      shape: const RoundedRectangleBorder(),
+      contentPadding: EdgeInsetsDirectional.only(
         start: levelInset.toDouble(),
         end: AppSpacing.lg,
         top: AppSpacing.xxs,
@@ -734,7 +740,8 @@ class _ReaderBookmarksTabState extends State<_ReaderBookmarksTab> {
         Expanded(
           child: _ReaderDrawerContentFrame(
             child: _filtered.isEmpty
-                ? _ReaderDrawerEmptyState(
+                ? EmptyState(
+                    compact: true,
                     icon: !hasItems ? AppIcons.bookmark : AppIcons.searchOff,
                     message: !hasItems
                         ? context.l10n.readerNoBookmarksYet
@@ -755,10 +762,12 @@ class _ReaderBookmarksTabState extends State<_ReaderBookmarksTab> {
                           onTap: removed
                               ? null
                               : () => widget.onBookmarkSelected(bookmark),
-                          onDelete: edits.busyId != null
+                          // Only the row being written disables its action;
+                          // the bookmark event bucket serializes the rest.
+                          onDelete: edits.busyId == bookmark.id
                               ? null
                               : () => widget.onBookmarkDeleted(bookmark),
-                          onUndo: edits.busyId != null
+                          onUndo: edits.busyId == bookmark.id
                               ? null
                               : () => context.read<ReaderBloc>().add(
                                   ReaderBookmarkRestored(
@@ -826,7 +835,9 @@ class _ReaderBookmarkListTile extends StatelessWidget {
         ),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
-        style: context.text.bodyMedium.copyWith(color: colors.onSurface),
+        style: context.text.bodyMedium.copyWith(
+          color: removed ? colors.onSurfaceVariant : colors.onSurface,
+        ),
       ),
       subtitle: Padding(
         padding: const EdgeInsets.only(top: AppSpacing.xxs),
@@ -864,7 +875,6 @@ class _ReaderBookmarkListTile extends StatelessWidget {
               ? context.l10n.commonUndo
               : context.l10n.readerDeleteBookmark,
           icon: removed ? AppIcons.undo : AppIcons.delete,
-          iconSize: AppIconSize.md,
           color: removed ? context.actionForeground : colors.onSurfaceVariant,
           onPressed: removed ? onUndo : onDelete,
         ),
@@ -906,6 +916,8 @@ class _ReaderHighlightsTabState extends State<_ReaderHighlightsTab>
   HighlightColor? _color;
   final _expanded = <String>{};
   late List<Highlight> _filtered;
+  List<Highlight> _removed = const [];
+  Set<String> _removedIds = const {};
   ReaderComicThumbnailCubit? _thumbnails;
   ReadflexLocalizations? _strings;
 
@@ -952,8 +964,13 @@ class _ReaderHighlightsTabState extends State<_ReaderHighlightsTab>
   }
 
   void _filter() {
+    // Removed rows keep their place: the list is ordered by creation date.
+    final items = _removed.isEmpty
+        ? widget.highlights
+        : ([...widget.highlights, ..._removed]
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
     _filtered = filterReaderHighlights(
-      widget.highlights,
+      items,
       widget.query,
       color: _color,
       formatPage: _strings?.readerPageNumber,
@@ -978,6 +995,15 @@ class _ReaderHighlightsTabState extends State<_ReaderHighlightsTab>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final edits = context.select<ReaderBloc, ReaderHighlightEdits>(
+      (b) => b.state.highlightEdits,
+    );
+    if (!identical(_removed, edits.removed)) {
+      _removed = edits.removed;
+      _removedIds = edits.removed.map((h) => h.id).toSet();
+      _filter();
+    }
+    final hasItems = widget.highlights.isNotEmpty || _removed.isNotEmpty;
     return Column(
       children: [
         Padding(
@@ -989,23 +1015,19 @@ class _ReaderHighlightsTabState extends State<_ReaderHighlightsTab>
             onChanged: widget.onQueryChanged,
           ),
         ),
-        if (widget.highlights.isNotEmpty)
+        if (hasItems)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  Semantics(
+                  AppFilterChip(
+                    label: context.l10n.readerHighlightFilterAll,
                     selected: _color == null,
-                    child: TextButton(
-                      style: TextButton.styleFrom(
-                        minimumSize: const Size.square(48),
-                      ),
-                      onPressed: () => _selectColor(null),
-                      child: Text(context.l10n.libraryFilterAll),
-                    ),
+                    onTap: () => _selectColor(null),
                   ),
+                  const SizedBox(width: AppSpacing.xs),
                   for (final color in HighlightColor.values)
                     ReaderHighlightColorButton(
                       color: color,
@@ -1021,11 +1043,10 @@ class _ReaderHighlightsTabState extends State<_ReaderHighlightsTab>
         Expanded(
           child: _ReaderDrawerContentFrame(
             child: _filtered.isEmpty
-                ? _ReaderDrawerEmptyState(
-                    icon: widget.highlights.isEmpty
-                        ? AppIcons.highlight
-                        : AppIcons.searchOff,
-                    message: widget.highlights.isEmpty
+                ? EmptyState(
+                    compact: true,
+                    icon: !hasItems ? AppIcons.highlight : AppIcons.searchOff,
+                    message: !hasItems
                         ? context.l10n.readerNoHighlightsYet
                         : context.l10n.readerNoMatchingHighlights,
                   )
@@ -1044,11 +1065,21 @@ class _ReaderHighlightsTabState extends State<_ReaderHighlightsTab>
                         final highlight = _filtered[index];
                         final area = highlight.imageArea;
                         final thumbnails = _thumbnails;
+                        final removed = _removedIds.contains(highlight.id);
                         return ReaderHighlightListTile(
                           key: ValueKey(highlight.id),
                           highlight: highlight,
                           pageProgressionRtl: widget.pageProgressionRtl,
                           readerTheme: widget.readerTheme,
+                          removed: removed,
+                          failed: edits.failedId == highlight.id,
+                          onUndo: edits.busyId == highlight.id
+                              ? null
+                              : () => context.read<ReaderBloc>().add(
+                                  ReaderHighlightRestored(
+                                    highlightId: highlight.id,
+                                  ),
+                                ),
                           expanded: _expanded.contains(highlight.id),
                           onExpanded: () => setState(() {
                             _expanded.contains(highlight.id)
@@ -1100,47 +1131,6 @@ class _ReaderDrawerContentFrame extends StatelessWidget {
           ),
         ),
         child: child,
-      ),
-    );
-  }
-}
-
-/// Compact empty-state message used inside reader drawers.
-class _ReaderDrawerEmptyState extends StatelessWidget {
-  const _ReaderDrawerEmptyState({
-    required this.message,
-    this.icon,
-  });
-
-  final String message;
-  final IconData? icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                size: AppIconSize.lg,
-                color: colors.onSurfaceVariant.withValues(alpha: 0.72),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-            ],
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: context.text.bodyMedium.copyWith(
-                color: colors.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

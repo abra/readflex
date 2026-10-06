@@ -37,12 +37,20 @@ void main() {
       contains('ReaderHighlightsRefreshed'),
     );
     expect(contextPanelSource, contains('ReaderHighlightDeleteRequested'));
+    // Closing Contents purges both bookmark and highlight Undo rows.
+    expect(
+      contentSource,
+      contains('''
+      listener: (context, _) => context.read<ReaderBloc>()
+        ..add(const ReaderBookmarkUndoDismissed())
+        ..add(const ReaderHighlightUndoDismissed()),'''),
+    );
     expect(
       contextPanelSource,
       contains('ReaderHighlightColorChangeRequested'),
     );
     expect(contextPanelSource, contains('ReaderHighlightNoteChangeRequested'));
-    expect(contextPanelSource, contains('_SavedHighlightPopup'));
+    expect(contextPanelSource, contains('ReaderSavedHighlightPopup'));
     expect(contextPanelSource, isNot(contains('_HighlightDeletePopup')));
     expect(contextPanelSource, contains('ColorHighlightTextAction'));
     expect(contextPanelSource, contains('readerHighlightSaved'));
@@ -51,7 +59,9 @@ void main() {
       contextPanelSource,
       contains('_kHighlightPopupHorizontalPadding * 2'),
     );
-    expect(contextPanelSource, contains('HitTestBehavior.translucent'));
+    // The saved-highlight barrier consumes its dismissing tap; no popup
+    // lets a page tap fall through to the WebView.
+    expect(contextPanelSource, isNot(contains('HitTestBehavior.translucent')));
     expect(contextPanelSource, contains('AppShadows.popover'));
     expect(
       contextPanelSource,
@@ -76,6 +86,18 @@ void main() {
       contains('progress: currentState.document?.readingProgress'),
     );
     expect(contentSource, contains('chapterTitle: currentState.chapterTitle'));
+    // Image-area selections never carry the comic's archive file name.
+    expect(
+      contentSource,
+      contains('''
+        imageSelectionCubit.select(
+          pageIndex: selection.pageIndex,
+          rect: selection.rect,
+          position: selection.position,
+          progress: currentState.document?.readingProgress,
+          chapterTitle: null,
+        );'''),
+    );
     expect(contextPanelSource, contains('showSelectionHighlightPreview'));
     expect(
       contextPanelSource,
@@ -244,6 +266,24 @@ void main() {
     expect(contextPanelSource, contains('_TextSelectionPopupSurface'));
     expect(contextPanelSource, contains('_kTextSelectionPopupHeight'));
     expect(contextPanelSource, contains('_TextSelectionActionButton'));
+    final actionButtonStart = contextPanelSource.indexOf(
+      'class _TextSelectionActionButton',
+    );
+    final actionButtonEnd = contextPanelSource.indexOf(
+      'class _HighlightPopupSurface',
+      actionButtonStart,
+    );
+    expect(actionButtonStart, greaterThanOrEqualTo(0));
+    final actionButtonSource = contextPanelSource.substring(
+      actionButtonStart,
+      actionButtonEnd,
+    );
+    expect(actionButtonSource, contains('Semantics('));
+    expect(actionButtonSource, contains('button: true'));
+    expect(actionButtonSource, contains('enabled: enabled'));
+    expect(actionButtonSource, contains('InkWell('));
+    expect(actionButtonSource, contains('minHeight: AppSizes.buttonHeight'));
+    expect(actionButtonSource, isNot(contains('GestureDetector(')));
     expect(contextPanelSource, isNot(contains('if (action.loading)')));
     expect(
       contextPanelSource,
@@ -255,8 +295,18 @@ void main() {
     );
     expect(
       contextPanelSource,
-      contains('tooltip: context.l10n.readerEditComment'),
+      contains('hasNote: focusedHighlightNote != null'),
     );
+    expect(
+      contextPanelSource,
+      contains(
+        'tooltip: hasNote\n'
+        '                          ? context.l10n.readerEditComment\n'
+        '                          : context.l10n.readerAddComment',
+      ),
+    );
+    expect(contextPanelSource, isNot(contains('return IconButton(')));
+    expect(contextPanelSource, contains('return AppPlainIconButton('));
     expect(contentSource, contains('onHighlightTapped: (tap)'));
     expect(contentSource, contains('highlightFocusCubit.focus(tap)'));
   });

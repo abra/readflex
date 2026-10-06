@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'reader_tap_action.dart';
 import 'reader_ui_cubit.dart';
 
 const _kReaderTapZoneHintVisibleDuration = Duration(milliseconds: 1700);
-const _kReaderTapZoneHintFadeDuration = Duration(milliseconds: 180);
 const _kReaderTapEdgeThickness = 2.0;
 const _kReaderTapEdgeInset = 4.0;
 const _kReaderTapEdgeMinLength = 18.0;
@@ -212,8 +212,8 @@ class _ReaderTapZoneHintDriverState extends State<ReaderTapZoneHintDriver>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: _kReaderTapZoneHintFadeDuration,
-      reverseDuration: _kReaderTapZoneHintFadeDuration,
+      duration: AppMotion.short,
+      reverseDuration: AppMotion.short,
     );
   }
 
@@ -227,10 +227,20 @@ class _ReaderTapZoneHintDriverState extends State<ReaderTapZoneHintDriver>
   void _show(ReaderTapAxis axis) {
     _hideTimer?.cancel();
     setState(() => _axis = axis);
-    _controller.forward(from: 0);
+    // Explicit controller: jump instead of fading under reduced motion.
+    final reduceMotion = context.reduceMotion;
+    if (reduceMotion) {
+      _controller.value = 1;
+    } else {
+      _controller.forward(from: 0);
+    }
     _hideTimer = Timer(_kReaderTapZoneHintVisibleDuration, () {
       if (!mounted) return;
-      _controller.reverse();
+      if (reduceMotion) {
+        _controller.value = 0;
+      } else {
+        _controller.reverse();
+      }
     });
   }
 
@@ -278,16 +288,19 @@ class _ReaderTapZoneHintOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final fill = readerTheme.accentColor.withValues(alpha: 0.45);
     final border = readerTheme.accentColor.withValues(alpha: 0.65);
-    final icon = Colors.white;
+    final icon = readerTapZoneHintInk(
+      context.appColors,
+      Color.alphaBlend(fill, readerTheme.backgroundColor),
+    );
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final previousIcon = axis == ReaderTapAxis.vertical
-            ? Icons.keyboard_arrow_up_rounded
-            : Icons.keyboard_arrow_left_rounded;
+            ? AppIcons.chevronUp
+            : AppIcons.chevronLeft;
         final nextIcon = axis == ReaderTapAxis.vertical
-            ? Icons.keyboard_arrow_down_rounded
-            : Icons.keyboard_arrow_right_rounded;
+            ? AppIcons.chevronDown
+            : AppIcons.chevronRight;
         return Stack(
           children: [
             Positioned(
@@ -349,15 +362,16 @@ class _ReaderTapZoneHintPanel extends StatelessWidget {
             children: [
               Icon(
                 icon,
-                size: 44,
+                // FittedBox scales the whole hint; this only sets the
+                // glyph-to-label ratio.
+                size: _kTapZoneHintGlyphSize,
                 color: iconColor,
               ),
               const SizedBox(height: AppSpacing.xxs),
               Text(
-                'TAP AREA',
-                style: TextStyle(
+                context.l10n.readerTapAreaHint,
+                style: context.text.labelLarge.copyWith(
                   color: iconColor,
-                  fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -367,4 +381,25 @@ class _ReaderTapZoneHintPanel extends StatelessWidget {
       ),
     );
   }
+}
+
+const double _kTapZoneHintGlyphSize = 44;
+
+/// Ink for the hint label and glyph: whichever swatch ink contrasts more with
+/// the tinted zone as it is actually painted over the page. White on the
+/// accent tint failed (about 2.4:1) on Snow, Paper and Warm pages.
+@visibleForTesting
+Color readerTapZoneHintInk(AppColorsExt colors, Color composite) {
+  double contrast(Color a, Color b) {
+    final la = a.computeLuminance();
+    final lb = b.computeLuminance();
+    final hi = la > lb ? la : lb;
+    final lo = la > lb ? lb : la;
+    return (hi + 0.05) / (lo + 0.05);
+  }
+
+  return contrast(colors.onLightSwatch, composite) >=
+          contrast(colors.onDarkSwatch, composite)
+      ? colors.onLightSwatch
+      : colors.onDarkSwatch;
 }

@@ -148,38 +148,43 @@ class _TranslateBody extends StatelessWidget {
     final cubit = context.read<TranslateCubit>();
     return switch (state.status) {
       TranslateSheetStatus.initial ||
-      TranslateSheetStatus.loading => const _LoadingTranslation(),
-      TranslateSheetStatus.downloadingOfflineModel => _MessageWithAction(
+      TranslateSheetStatus.loading => const Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
+        child: CenteredCircularProgressIndicator(),
+      ),
+      TranslateSheetStatus.downloadingOfflineModel => AppStatusMessage(
         title: l10n.translationDownloadingModels,
         body: l10n.translationDownloadingModelsBody,
-        loading: true,
+        busy: true,
       ),
       TranslateSheetStatus.success => _TranslationResultView(
         selection: selection,
         result: state.result!,
         onCopy: onCopy,
       ),
-      TranslateSheetStatus.sourceLanguageRequired => _MessageWithAction(
+      TranslateSheetStatus.sourceLanguageRequired => AppStatusMessage(
         title: l10n.translationSourceRequiredTitle,
         body: l10n.translationSourceRequiredBody,
         actionLabel: l10n.translationSelectLanguage,
-        onPressed: onChooseSourceLanguage,
+        onAction: onChooseSourceLanguage,
       ),
-      TranslateSheetStatus.offlineModelRequired => _MessageWithAction(
+      TranslateSheetStatus.offlineModelRequired => AppStatusMessage(
         title: l10n.translationOfflineModelTitle,
         body: l10n.translationOfflineModelBody(
-          translationLanguageName(state.failure?.sourceLanguage) ?? '?',
-          translationLanguageName(state.failure?.targetLanguage) ?? '?',
+          translationLanguageName(state.failure?.sourceLanguage) ??
+              l10n.translationUnknownLanguage,
+          translationLanguageName(state.failure?.targetLanguage) ??
+              l10n.translationUnknownLanguage,
         ),
         actionLabel: l10n.translationDownloadModels,
-        onPressed: () =>
+        onAction: () =>
             cubit.translate(selection, allowOfflineModelDownload: true),
       ),
-      TranslateSheetStatus.failure => _MessageWithAction(
+      TranslateSheetStatus.failure => AppStatusMessage(
         title: l10n.translationFailureTitle,
         body: l10n.translationFailureBody,
         actionLabel: l10n.commonRetry,
-        onPressed: () => cubit.translate(selection),
+        onAction: () => cubit.translate(selection),
       ),
     };
   }
@@ -389,6 +394,8 @@ class _TranslationAnswer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppSheetActionRow(
+      // An LTR answer in an RTL UI keeps Copy trailing the text it copies.
+      textDirection: translationTextDirection(text),
       action: KeyedSubtree(
         key: ValueKey('translation-$id-copy'),
         child: AppCopyButton(
@@ -417,11 +424,7 @@ class _TranslationAnswer extends StatelessWidget {
     final body = context.text.bodyLarge.copyWith(letterSpacing: 0);
     // Wide screens must not turn a sentence-length answer into a heading.
     if (!emphasized || text.characters.take(49).length > 48) return body;
-    final heading = context.text.titleLarge.copyWith(
-      fontSize: 22,
-      fontWeight: FontWeight.w600,
-      letterSpacing: 0,
-    );
+    final heading = context.text.headlineSmall.copyWith(letterSpacing: 0);
     final painter = TextPainter(
       text: TextSpan(text: text, style: heading),
       textDirection: translationTextDirection(text),
@@ -445,64 +448,6 @@ String? _firstNonEmptyText(Iterable<String?> values) {
 String? _nonEmptyText(String? value) {
   final text = value?.trim();
   return text == null || text.isEmpty ? null : text;
-}
-
-class _LoadingTranslation extends StatelessWidget {
-  const _LoadingTranslation();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
-        child: CircularProgressIndicator(),
-      ),
-    );
-  }
-}
-
-class _MessageWithAction extends StatelessWidget {
-  const _MessageWithAction({
-    required this.title,
-    required this.body,
-    this.actionLabel,
-    this.onPressed,
-    this.loading = false,
-  });
-
-  final String title;
-  final String body;
-  final String? actionLabel;
-  final VoidCallback? onPressed;
-  final bool loading;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(title, style: context.text.titleMedium),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          body,
-          style: context.text.bodyMedium.copyWith(
-            color: context.colors.onSurfaceVariant,
-          ),
-        ),
-        if (loading) ...[
-          const SizedBox(height: AppSpacing.md),
-          const LinearProgressIndicator(),
-        ],
-        if (actionLabel != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          FilledButton(
-            onPressed: onPressed,
-            child: AppButtonLabel(actionLabel!),
-          ),
-        ],
-      ],
-    );
-  }
 }
 
 class _OfflineBadge extends StatelessWidget {

@@ -46,7 +46,7 @@ class _ReaderAppearanceSheetState extends State<_ReaderAppearanceSheet>
     with SingleTickerProviderStateMixin {
   late final _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 300),
+    duration: AppMotion.medium,
   )..addStatusListener(_onTransitionStatus);
   late final _curve = CurvedAnimation(
     parent: _controller,
@@ -77,7 +77,7 @@ class _ReaderAppearanceSheetState extends State<_ReaderAppearanceSheet>
       _transitionDirection = Directionality.of(context);
     });
     final target = visible ? 1.0 : 0.0;
-    if (MediaQuery.disableAnimationsOf(context)) {
+    if (context.reduceMotion) {
       _controller.value = target;
     } else {
       _controller.animateTo(target);
@@ -316,54 +316,71 @@ class _ThemeSwatchButton extends StatelessWidget {
     final text = context.text;
     final theme = preset.data;
     final label = _themePresetLabel(context, preset);
+    final radius = BorderRadius.circular(AppRadius.sm);
+    // The sample keeps the preset's own page colors; the selected fill and
+    // label color are the shared selected-control pair.
     return Semantics(
+      key: ValueKey('reader-theme-swatch-${preset.id}'),
       button: true,
       selected: active,
+      inMutuallyExclusiveGroup: true,
       label: label,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: double.infinity,
-              height:
-                  (MediaQuery.textScalerOf(context).scale(15) * 1.28 +
-                          AppSpacing.sm)
-                      .clamp(_themeSwatchHeight, double.infinity),
-              decoration: BoxDecoration(
-                color: theme.backgroundColor,
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                border: Border.all(
-                  color: active
-                      ? context.actionForeground
-                      : context.appColors.divider,
-                  width: active ? 2 : 1,
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                'Aa',
-                style: text.titleSmall.copyWith(
-                  color: theme.primaryTextColor,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0,
-                ),
+      excludeSemantics: true,
+      onTap: onTap,
+      child: Material(
+        color: active ? cs.selectedControlBackground : Colors.transparent,
+        borderRadius: radius,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: AppSizes.buttonHeight),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.xs),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    height:
+                        (MediaQuery.textScalerOf(context).scale(15) * 1.28 +
+                                AppSpacing.sm)
+                            .clamp(_themeSwatchHeight, double.infinity),
+                    decoration: BoxDecoration(
+                      color: theme.backgroundColor,
+                      borderRadius: radius,
+                      border: Border.all(
+                        color: active
+                            ? context.actionForeground
+                            : context.appColors.divider,
+                        width: active ? 2 : 1,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      context.l10n.readerAppearanceSample,
+                      style: text.titleSmall.copyWith(
+                        color: theme.primaryTextColor,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: text.labelSmall.copyWith(
+                      color: active
+                          ? cs.selectedControlForeground
+                          : cs.onSurfaceVariant,
+                      fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: text.labelSmall.copyWith(
-                color: active
-                    ? context.actionForeground
-                    : cs.onSurface.withValues(alpha: 0.62),
-                fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -392,37 +409,16 @@ class _FontPickerRow extends StatelessWidget {
       (c) => c.state.effectiveAppearance.fontId,
     );
     final preset = ReaderFontPreset.fromId(fontId);
-    return ListTile(
+    // Same drill-in row as Display's Language; the value previews the face.
+    return AppDrillInRow(
       key: const ValueKey('reader-font-picker'),
-      contentPadding: EdgeInsets.zero,
-      minVerticalPadding: 0,
-      minTileHeight: AppSizes.buttonHeight,
-      onTap: onPressed,
-      title: _AppearanceSettingRow(
-        label: context.l10n.readerFont,
-        control: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text(
-                preset.label,
-                style: context.text.bodyMedium.copyWith(
-                  fontFamily: preset.fontFamily,
-                  fontWeight: FontWeight.w600,
-                  color: context.colors.onSurfaceVariant,
-                ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Icon(
-              Directionality.of(context) == TextDirection.rtl
-                  ? AppIcons.chevronLeft
-                  : AppIcons.chevronRight,
-              size: AppIconSize.sm,
-            ),
-          ],
-        ),
+      title: context.l10n.readerFont,
+      value: preset.label,
+      valueStyle: TextStyle(
+        fontFamily: preset.fontFamily,
+        fontWeight: FontWeight.w600,
       ),
+      onTap: onPressed,
     );
   }
 }

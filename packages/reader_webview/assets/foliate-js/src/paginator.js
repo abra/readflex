@@ -37,6 +37,16 @@ const uncollapse = range => {
 
 // Some EPUBs hide empty TOC markers. Navigate to nearby rendered content
 // without changing publisher markup, which also anchors saved CFIs.
+// A collapsed range before a replaced element (an image-only cover) has no
+// client rects of its own; its container still has a box on the right page.
+const getRangeContainerRect = anchor => {
+  const node = anchor?.startContainer
+  if (!node) return
+  const element = node.nodeType === 1 ? node : node.parentElement
+  const rect = element?.getBoundingClientRect?.()
+  return rect && (rect.width > 0 || rect.height > 0) ? rect : undefined
+}
+
 const getBoxlessAnchorRect = anchor => {
   const doc = anchor?.ownerDocument
   if (anchor?.nodeType !== 1 || !doc?.body?.contains(anchor)) return
@@ -853,7 +863,9 @@ export class Paginator extends HTMLElement {
     const maxInlineSize = parseFloat(style.getPropertyValue('--_max-inline-size'))
     const maxColumnCount = parseInt(style.getPropertyValue('--_max-column-count'))
     const margin = parseFloat(style.getPropertyValue('--_top-margin'))
-    this.#margin = margin
+    // Readflex patch: an unset margin must not poison every anchor page
+    // computation with NaN (a NaN scroll target is silently ignored).
+    this.#margin = Number.isFinite(margin) ? margin : 0
 
     const g = parseFloat(style.getPropertyValue('--_gap')) / 100
     // The gap will be a percentage of the #container, not the whole view.
@@ -1517,7 +1529,20 @@ export class Paginator extends HTMLElement {
     const pageEnd = pageStart + this.size
     const nudgedLeft = Math.min(left + this.#margin / 2, pageEnd - 1)
     const normalizedLeft = Math.max(pageStart, nudgedLeft)
-    return this.#scrollToPage(Math.floor(normalizedLeft / this.size) + (this.#rtl ? -1 : 1), reason)
+    const page = Math.floor(normalizedLeft / this.size) + (this.#rtl ? -1 : 1)
+    return this.#scrollToPage(this.#clampToContentPage(page), reason)
+  }
+  // Readflex patch: an anchor can resolve to a swipe-overshoot buffer column
+  // (a collapsed range before an image-only cover maps to offset 0). Those
+  // columns hold no content and, on the first/last chapter, lead nowhere, so
+  // navigation lands on the nearest content column instead of a blank page.
+  #clampToContentPage(page) {
+    const { pages } = this
+    if (!pages) return page
+    const minPage = this.#adjacentIndex(-1) == null ? 1 : 0
+    const maxPage = this.#adjacentIndex(1) == null ? pages - 2 : pages - 1
+    if (maxPage < minPage) return page
+    return Math.max(minPage, Math.min(maxPage, page))
   }
   async #scrollTo(offset, reason, smooth) {
     const element = this.#container
@@ -1685,8 +1710,14 @@ export class Paginator extends HTMLElement {
       // previous column, there is an extra zero width rect in that column
       const rect = Array.from(rects)
         .find(r => r.width > 0 && r.height > 0) || rects[0]
-        || getBoxlessAnchorRect(anchor)
-      if (!rect) return
+        || getBoxlessAnchorRect(anchor) || getRangeContainerRect(anchor)
+      if (!rect) {
+        // Readflex patch: a freshly loaded section rests on the leading
+        // buffer column; without a rect to scroll to it would stay there as
+        // a blank page. Show the first content column instead.
+        if (!this.scrolled) await this.#scrollToPage(this.#clampToContentPage(this.page), 'anchor')
+        return
+      }
       await this.#scrollToRect(rect, 'anchor')
       if (select) this.#selectAnchor()
       return

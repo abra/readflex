@@ -71,4 +71,47 @@ void main() {
       );
     }
   }
+
+  for (final locale in [const Locale('en'), const Locale('ar')]) {
+    testWidgets('counts share one column with and without a row menu '
+        '($locale)', (tester) async {
+      final favourites = LibraryCollectionScope.favourites(sourceIds: ['a']);
+      const author = LibraryCollectionScope.smart(
+        type: LibraryCollectionScopeType.author,
+        id: 'author:readflex',
+        label: 'Readflex Tests',
+        sourceCount: 7,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          locale: locale,
+          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          supportedLocales: ReadflexSupportedLocales.locales,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showLibraryCollectionScopeSheet(
+                  context: context,
+                  state: LibraryState(collectionScopes: [favourites, author]),
+                  manageBuilder: (_, _, _, _) => const SizedBox(),
+                ),
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      final managed = tester.getRect(find.text('1'));
+      final plain = tester.getRect(find.text('7'));
+      // Same trailing edge whether or not the row has a ⋮ menu.
+      if (locale.languageCode == 'ar') {
+        expect(plain.left, closeTo(managed.left, 1));
+      } else {
+        expect(plain.right, closeTo(managed.right, 1));
+      }
+    });
+  }
 }

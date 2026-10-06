@@ -1459,6 +1459,36 @@ void main() {
       );
 
       blocTest<ReaderBloc, ReaderState>(
+        'comic bookmarks do not store the archive file name as a chapter',
+        setUp: () => bookRepository.seedBook(
+          testBook.copyWith(format: BookFormat.cbz),
+        ),
+        build: buildBloc,
+        seed: () => ReaderState(
+          status: ReaderStatus.ready,
+          document: ReaderDocument.fromBook(
+            testBook.copyWith(format: BookFormat.cbz),
+          ),
+          chapterTitle: 'IMG_0007.jpg',
+        ),
+        act: (bloc) => bloc.add(
+          const ReaderBookmarkChanged(
+            remove: false,
+            cfi: 'epubcfi(/6/14)',
+            content: '',
+            progress: 0.4,
+          ),
+        ),
+        expect: () => [
+          isA<ReaderState>().having(
+            (s) => s.bookmarks.single.chapterTitle,
+            'chapter title',
+            isNull,
+          ),
+        ],
+      );
+
+      blocTest<ReaderBloc, ReaderState>(
         'removes bookmark by id',
         setUp: () {
           bookRepository.seedBook(testBook);

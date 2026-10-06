@@ -1,4 +1,5 @@
 import 'package:library_feature/src/library_grid_tile.dart';
+import 'package:library_feature/src/library_selection_tint.dart';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
@@ -393,6 +394,198 @@ void main() {
     expect(titleRect.top, lessThan(coverRect.top + 56));
     expect(authorRect.top, greaterThan(titleRect.bottom));
   });
+
+  for (final direction in TextDirection.values) {
+    testWidgets('cover badges follow the layout direction: $direction', (
+      tester,
+    ) async {
+      final finished = _book.copyWith(
+        isFinished: true,
+        lastOpenedAt: DateTime(2026, 1, 2),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Directionality(
+            textDirection: direction,
+            child: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 120,
+                  height: 180,
+                  child: BookLibraryGridTile(
+                    source: LibrarySource.fromBook(finished),
+                    isSelected: true,
+                    onTap: () {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final cover = tester.getRect(find.byType(AppSourceCoverFrame));
+      final format = tester.getRect(find.text('EPUB'));
+      final finishedBadge = tester.getRect(
+        find.byKey(const ValueKey('libraryGridFinishedBadge')),
+      );
+      final check = tester.getRect(
+        find.byIcon(AppIcons.check).last,
+      );
+      if (direction == TextDirection.ltr) {
+        expect(format.left, greaterThan(cover.left));
+        expect(format.left, lessThan(cover.center.dx));
+        expect(finishedBadge.right, closeTo(cover.right - AppSpacing.xs, 1));
+        expect(check.center.dx, greaterThan(cover.center.dx));
+      } else {
+        expect(format.right, lessThan(cover.right));
+        expect(format.right, greaterThan(cover.center.dx));
+        expect(finishedBadge.left, closeTo(cover.left + AppSpacing.xs, 1));
+        expect(check.center.dx, lessThan(cover.center.dx));
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+    testWidgets('finished badge uses the success container pair: '
+        '${theme.brightness}', (tester) async {
+      final finished = _book.copyWith(
+        isFinished: true,
+        lastOpenedAt: DateTime(2026, 1, 2),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: theme,
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 120,
+                height: 180,
+                child: BookLibraryGridTile(
+                  source: LibrarySource.fromBook(finished),
+                  onTap: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final badge = find.byKey(const ValueKey('libraryGridFinishedBadge'));
+      final decoration =
+          tester.widget<Container>(badge).decoration as BoxDecoration;
+      final appColors = theme.ext;
+      expect(decoration.color, appColors.successContainer);
+      expect(
+        tester
+            .widget<Icon>(
+              find.descendant(of: badge, matching: find.byIcon(AppIcons.check)),
+            )
+            .color,
+        appColors.onSuccessContainer,
+      );
+    });
+
+    testWidgets(
+      'selected cover keeps a translucent wash: ${theme.brightness}',
+      (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: theme,
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 120,
+                  height: 180,
+                  child: BookLibraryGridTile(
+                    source: LibrarySource.fromBook(_book),
+                    isSelected: true,
+                    onTap: () {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        final colors = theme.colorScheme;
+        final wash = tester
+            .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+            .map((box) => box.decoration)
+            .whereType<BoxDecoration>()
+            .singleWhere(
+              (decoration) =>
+                  decoration.border is Border &&
+                  (decoration.border! as Border).top.width == 3,
+            );
+        expect(
+          wash.color,
+          colors.selectionMarkerBackground.withValues(
+            alpha: kLibraryCoverSelectionTintAlpha,
+          ),
+        );
+        expect(wash.color!.a, lessThan(0.5));
+      },
+    );
+  }
+
+  for (final reduceMotion in [false, true]) {
+    testWidgets('selection scale and progress fill use motion tokens: '
+        'reduceMotion=$reduceMotion', (tester) async {
+      final opened = _book.copyWith(
+        readingProgress: 0.4,
+        lastOpenedAt: DateTime(2026, 1, 2),
+      );
+      Future<void> pump({required bool selected}) => tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              disableAnimations: reduceMotion,
+            ),
+            child: child!,
+          ),
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 120,
+                height: 180,
+                child: BookLibraryGridTile(
+                  source: LibrarySource.fromBook(opened),
+                  isSelected: selected,
+                  onTap: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await pump(selected: false);
+      final restingWidth = tester
+          .getSize(find.byType(AppSourceCoverFrame))
+          .width;
+      await pump(selected: true);
+      final scale = tester.widget<AnimatedScale>(find.byType(AnimatedScale));
+      final fill = tester.widget<AnimatedContainer>(
+        find.byKey(const Key('libraryGridProgressFill')),
+      );
+      if (reduceMotion) {
+        expect(scale.duration, Duration.zero);
+        expect(fill.duration, Duration.zero);
+        await tester.pump();
+        expect(
+          tester.getRect(find.byType(AppSourceCoverFrame)).width,
+          closeTo(restingWidth * 0.92, 0.5),
+        );
+      } else {
+        expect(scale.duration, AppMotion.quick);
+        expect(fill.duration, AppMotion.short);
+        await tester.pumpAndSettle();
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
 }
 
 Future<void> _pumpGridTile(

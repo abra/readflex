@@ -67,29 +67,24 @@ class ReaderHighlightControls extends StatelessWidget {
           height: AppSizes.chipHeight,
           child: VerticalDivider(
             color: dividerColor,
-            thickness: 1,
             width: AppSpacing.sm,
           ),
         ),
         for (final action in actions)
-          IconButton(
-            tooltip: action.tooltip,
-            onPressed: busy ? null : action.onPressed,
-            style: IconButton.styleFrom(
-              fixedSize: const Size.square(
-                ReaderHighlightControls.tapTargetSize,
-              ),
-              backgroundColor: Colors.transparent,
-              shape: const CircleBorder(),
+          if (action.loading)
+            AppPlainIconButton(
+              tooltip: action.tooltip,
+              onPressed: null,
+              color: action.color,
+              iconWidget: const ButtonLoadingIndicator(size: AppIconSize.sm),
+            )
+          else
+            AppPlainIconButton(
+              tooltip: action.tooltip,
+              onPressed: busy ? null : action.onPressed,
+              color: action.color,
+              icon: action.icon,
             ),
-            icon: action.loading
-                ? const ButtonLoadingIndicator(size: AppIconSize.sm)
-                : Icon(
-                    action.icon,
-                    size: AppIconSize.sm,
-                    color: action.color,
-                  ),
-          ),
       ],
     );
   }
@@ -114,56 +109,13 @@ class ReaderHighlightColorButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final swatch = readerHighlightColor(color, readerTheme);
-    final checkColor = swatch.computeLuminance() > 0.45
-        ? Colors.black.withValues(alpha: 0.78)
-        : Colors.white.withValues(alpha: 0.92);
-    final borderColor = context.colors.onSurface.withValues(
-      alpha: selected ? 0.42 : 0.16,
-    );
-    return Semantics(
-      label: _localizedHighlightColorName(context, color),
-      button: true,
-      enabled: enabled,
+    final name = _localizedHighlightColorName(context, color);
+    return AppColorSwatchButton(
+      color: readerHighlightColor(color, readerTheme),
       selected: selected,
-      excludeSemantics: true,
-      onTap: enabled ? onPressed : null,
-      child: SizedBox(
-        width: ReaderHighlightControls.tapTargetSize,
-        height: ReaderHighlightControls.tapTargetSize,
-        child: Tooltip(
-          message: _localizedHighlightColorName(context, color),
-          excludeFromSemantics: true,
-          child: InkResponse(
-            radius: ReaderHighlightControls.tapTargetSize / 2,
-            onTap: enabled ? onPressed : null,
-            child: Center(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 120),
-                curve: Curves.easeOutCubic,
-                alignment: Alignment.center,
-                width: selected ? 24.0 : 20,
-                height: selected ? 24.0 : 20,
-                decoration: BoxDecoration(
-                  color: swatch,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: borderColor,
-                    width: selected ? 2 : 1,
-                  ),
-                ),
-                child: selected
-                    ? Icon(
-                        AppIcons.check,
-                        size: AppIconSize.xs,
-                        color: checkColor,
-                      )
-                    : null,
-              ),
-            ),
-          ),
-        ),
-      ),
+      tooltip: name,
+      size: AppIconSize.md,
+      onPressed: enabled ? onPressed : null,
     );
   }
 }

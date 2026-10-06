@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:book_repository/book_repository.dart';
 import 'package:domain_models/domain_models.dart';
 
@@ -13,6 +15,10 @@ class FakeBookRepository implements BookRepository {
   /// to simulate partial-failure bulk deletes without affecting other
   /// ids in the same batch.
   Set<String> failOnIds = const {};
+
+  /// When set, `deleteBook` waits for it before writing, so a test can
+  /// observe the UI while a delete is in flight.
+  Completer<void>? deleteGate;
 
   void seedBooks(List<Book> books) => _books
     ..clear()
@@ -30,6 +36,7 @@ class FakeBookRepository implements BookRepository {
     String id, {
     BookDeletionScope scope = BookDeletionScope.keepLearningData,
   }) async {
+    await deleteGate?.future;
     if (shouldThrow || failOnIds.contains(id)) {
       throw StorageException(cause: 'fake error');
     }

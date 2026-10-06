@@ -7,6 +7,9 @@ class FakeBookRepository implements BookRepository {
 
   bool shouldThrow = false;
 
+  /// Awaited before a restore completes, so tests can observe busy rows.
+  Future<void>? restoreGate;
+
   final List<Book> books = [];
   final Map<String, List<SourceBookmark>> bookmarksBySourceId = {};
 
@@ -148,6 +151,7 @@ class FakeBookRepository implements BookRepository {
 
   @override
   Future<SourceBookmark> restoreBookmark(SourceBookmark bookmark) async {
+    await restoreGate;
     if (shouldThrow) throw Exception('restoreBookmark failed');
     bookmarksBySourceId.update(
       bookmark.sourceId,

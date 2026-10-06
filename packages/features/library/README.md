@@ -79,7 +79,17 @@ reading storage. Reset and query events share a switchable debounce stream so
 pending search text cannot restore an obsolete filter. Collection selection
 and clearing use separate labeled 48px targets; clearing never opens the picker.
 Load errors go through `addError` and a `LibraryStatus.failure` retry surface.
-Delete errors keep the list usable and report failure through a deletion effect.
+Delete errors keep the list usable and report failure through a deletion effect;
+a failed single delete re-reads storage rather than re-emitting the old list.
+The list swipe's `confirmDismiss` awaits that effect (matched by source id): the
+row leaves only after storage confirms, and a failed write springs it back
+beside the error toast.
+Delete confirmations follow the shared safe-default model: Cancel is the filled
+primary and Delete the outlined error-coloured secondary (`AppSheetActions`,
+`destructiveSecondary: true`). The list swipe background, cover format/finished
+badges and selection checks use directional placement, so they mirror in RTL.
+Grid selection scale, progress fill and the list/grid cross-fade resolve their
+durations through `context.motion`, settling in one frame under reduced motion.
 
 ## Library Controls
 
@@ -88,9 +98,16 @@ reducing text opacity. Widget tests check at least 4.5:1 contrast on the actual
 list, selected-row and count-badge backgrounds in both themes. Title styles,
 row geometry and cover badges are unchanged.
 
-The header's Display action uses the shared `AppPlainIconButton`: a transparent
-resting surface, circular pressed feedback and a 48dp target. Search uses the
-same utility-action behavior for its smaller clear glyph.
+The header's Display action and the collection-filter clear action use the
+shared `AppPlainIconButton`: a transparent resting surface, circular pressed
+feedback and a 48dp target. Search uses the same utility-action behavior for its
+smaller clear glyph. Muted header glyphs use `onSurfaceVariant`, not an alpha
+over `onSurface`; the import FAB is opaque `primary` at `AppElevation.level2`.
+A selected row fills with `selectedControlBackground` and switches its title
+and metadata to `selectedControlForeground`; the cover itself keeps a shared
+translucent marker wash (`kLibraryCoverSelectionTintAlpha`) under the opaque
+`selectionMarker*` check so artwork stays visible. The grid's finished badge
+uses the `successContainer`/`onSuccessContainer` pair.
 
 In the Collections picker, row menu icons align with the sheet's close icon.
 Their 48dp targets extend into the trailing list gutter; labels and counts in
@@ -120,8 +137,12 @@ height rather than the unscaled font size.
 
 A collection read failure retains the last valid stored scopes and selection,
 while books/articles still refresh. First-load failure does not manufacture an
-empty Favourites scope. The Collections sheet shows the localized failure and
-Retry, subscribing to Library state so recovery does not close/reopen the sheet.
+empty Favourites scope. The Collections sheet shows the shared `ErrorState`
+(filled Retry), subscribing to Library state so recovery does not close/reopen
+the sheet. Its empty and no-match placeholders, the manage sheet's empty
+collection (in both its fixed and scrolling layouts) and Add to collection's
+load failure use `EmptyState(compact: true)` / `ErrorState` rather than ad hoc
+text and buttons.
 Source repositories, not LibraryBloc, own atomic membership cleanup on deletion.
 
 Selection replaces the import FAB with a bottom action bar: selected count,
@@ -132,7 +153,8 @@ System Back still clears selection. Display and
 selection changes reuse loaded sources instead of querying storage again.
 
 Display shares `ActionBottomSheetLayout.scrollable`, `AppSettingsSection` and
-`AppChoiceControl` with reader Appearance. Layout/theme segments adapt to rows
+`AppChoiceControl` with reader Appearance. The Language row is the shared
+`AppDrillInRow` with a `value`, padded to the 56dp settings-row height. Layout/theme segments adapt to rows
 when localized labels at the current text scale do not fit. Groups are separated
 by spacing, without an extra divider above Language. The language row
 shows the current language beside the chevron, mirrored for RTL. When they do
@@ -181,6 +203,8 @@ Collection edits remain staged until Save. At the root, Cancel, Close and system
 Back prompt only when there are actual edits. Drag/scrim dismissal is disabled for this form
 so it cannot bypass the guard. Delete is secondary and has its own confirmation.
 Discard and delete confirmations are steps in the same sheet, not nested dialogs.
+Both use the safe-default pairing: Keep editing / Cancel is filled, Discard /
+Delete is the outlined error-coloured secondary.
 Header/system Back from a confirmation returns to the draft without writing it.
 Cancel on delete also returns to editing without deleting anything. Close on
 delete exits the flow or requests the discard decision when there are edits;
@@ -210,15 +234,25 @@ partially matching destinations still accept the missing sources. The checkmark
 slot remains reserved so item counts stay aligned.
 One grouped membership query (bounded parameter batches) supplies this state,
 not a query per visible row or a read of every collection's source IDs.
-New collection opens a separate name form in the same route. The complete
+New collection is an `AppDrillInRow`; it opens a separate name form in the
+same route. Destination rows clip their ripple to `AppRadius.sm`. The complete
 destination step, including its wrapping header, determines both steps' height.
 Back/Cancel returns to destinations and preserves the draft; Close dismisses
-the flow. Slide direction follows the locale, with an immediate reduced-motion
-transition. Hidden steps retain layout but expose no input, focus or semantics.
+the flow. While the name field is non-empty the form wraps itself in
+`AppSheetDismissGuard`: Close, a scrim tap and drag-down do not dismiss but show
+the same Keep editing / Discard decision as Manage (Keep editing filled,
+Discard outlined in the error color); Discard leaves the flow, Keep editing or
+header/system Back return to the form with the draft intact, and repeated
+Close/scrim attempts keep the decision visible. An empty form keeps the handle
+and dismisses freely. System Back from the form remains a step back to
+destinations, not a dismissal, so it never asks. Slide direction follows the
+locale, with an immediate reduced-motion transition. Hidden steps retain layout but expose no input, focus or semantics.
 The keyboard and enlarged text leave actions reachable, with full-width fades
 only for genuinely overflowing content. A failed initial load shows Retry;
 mutation failures retain the current step and draft. Busy guards prevent double
-submission; closing during a write does not emit late state or reload its snapshot.
+submission; while a write is in flight the destination step also holds
+`AppSheetDismissGuard`, so scrim tap and drag-down wait like Close and system
+Back. Closing during a write does not emit late state or reload its snapshot.
 Shared headers/actions remain in `component_library`.
 
 ## Dependencies
@@ -229,5 +263,6 @@ Shared headers/actions remain in `component_library`.
 - `preferences_service` — layout, theme, and locale persistence
 - `domain_models` — `Book`, `Article`, `LibrarySource`
 - `component_library` — theme, `SearchField`, `ScrollEdgeFadeStack`, `EmptyState`,
-  `ErrorState`, `AppIcons`, `AppSpacing`, `AppRadius`
+  `ErrorState`, `AppDrillInRow`, `AppPlainIconButton`, `AppSheetActions`,
+  `AppIcons`, `AppSpacing`, `AppRadius`, `AppMotion`
 - `flutter_bloc`, `equatable`, `stream_transform` (for debounce)

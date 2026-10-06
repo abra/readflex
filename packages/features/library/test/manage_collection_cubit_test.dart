@@ -139,4 +139,24 @@ void main() {
       ),
     ],
   );
+
+  blocTest<ManageCollectionCubit, ManageCollectionState>(
+    'clearError drops a failure left by a previous sheet',
+    build: () => ManageCollectionCubit(collectionRepository: repository),
+    seed: () => const ManageCollectionState(
+      status: ManageCollectionStatus.failure,
+      errorCode: ManageCollectionErrorCode.saveCollectionFailed,
+    ),
+    act: (cubit) => cubit.clearError(),
+    expect: () => [
+      const ManageCollectionState(status: ManageCollectionStatus.failure),
+    ],
+  );
+
+  blocTest<ManageCollectionCubit, ManageCollectionState>(
+    'clearError without an error emits nothing',
+    build: () => ManageCollectionCubit(collectionRepository: repository),
+    act: (cubit) => cubit.clearError(),
+    expect: () => <ManageCollectionState>[],
+  );
 }

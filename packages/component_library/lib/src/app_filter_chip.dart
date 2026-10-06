@@ -37,9 +37,7 @@ class AppFilterChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = context.colors;
     final text = context.text;
-    final foreground = selected
-        ? cs.surface
-        : cs.onSurface.withValues(alpha: 0.6);
+    final foreground = selected ? cs.surface : cs.onSurfaceVariant;
     final background = selected
         ? cs.onSurface
         : cs.surfaceContainerHighest.withValues(alpha: 0.5);
@@ -94,7 +92,7 @@ class AppFilterChip extends StatelessWidget {
                               fontFeatures: const [
                                 FontFeature.tabularFigures(),
                               ],
-                              color: foreground.withValues(alpha: 0.7),
+                              color: foreground,
                             ),
                           ),
                         ],

@@ -68,6 +68,8 @@ void main() {
           isButton: true,
           hasSelectedState: true,
           isSelected: true,
+          hasEnabledState: true,
+          isEnabled: true,
           hasTapAction: true,
           onTapHint: 'Выбрать цвет выделения',
         ),
@@ -83,20 +85,23 @@ void main() {
     }
   });
 
-  testWidgets('renders color picker row with circular containers', (
+  testWidgets('renders one shared swatch button per color with 48dp targets', (
     tester,
   ) async {
     await tester.pumpWidget(buildSubject());
 
-    // Each color circle is a 32x32 Container inside a GestureDetector.
-    // Verify we have at least as many as HighlightColor values.
-    final containers = find.byWidgetPredicate(
-      (widget) =>
-          widget is Container &&
-          widget.constraints?.maxWidth == 32 &&
-          widget.constraints?.maxHeight == 32,
+    final swatches = find.byType(AppColorSwatchButton);
+    expect(swatches, findsNWidgets(HighlightColor.values.length));
+    for (final swatch in swatches.evaluate()) {
+      expect(tester.getSize(find.byWidget(swatch.widget)), const Size(48, 48));
+    }
+    final context = tester.element(find.byType(HighlightSheet));
+    final yellow = tester.widget<AppColorSwatchButton>(
+      find.byKey(const ValueKey('highlightColorSemantics-yellow')),
     );
-    expect(containers, findsNWidgets(HighlightColor.values.length));
+    expect(yellow.color, context.appColors.highlightYellow);
+    expect(yellow.selected, isTrue);
+    expect(yellow.tooltip, 'Yellow');
   });
 
   testWidgets('color picker exposes labels and selected state to semantics', (
@@ -113,6 +118,8 @@ void main() {
         isButton: true,
         hasSelectedState: true,
         isSelected: true,
+        hasEnabledState: true,
+        isEnabled: true,
         hasTapAction: true,
         onTapHint: 'Select highlight color',
       ),
@@ -124,6 +131,8 @@ void main() {
         isButton: true,
         hasSelectedState: true,
         isSelected: false,
+        hasEnabledState: true,
+        isEnabled: true,
         hasTapAction: true,
         onTapHint: 'Select highlight color',
       ),
@@ -141,6 +150,8 @@ void main() {
         isButton: true,
         hasSelectedState: true,
         isSelected: true,
+        hasEnabledState: true,
+        isEnabled: true,
         hasTapAction: true,
         onTapHint: 'Select highlight color',
       ),

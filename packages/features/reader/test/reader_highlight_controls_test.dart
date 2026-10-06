@@ -53,12 +53,21 @@ void main() {
         HighlightColor.yellow,
         ReaderThemePreset.paper.data,
       );
+      final appColors = tester.element(find.byIcon(AppIcons.check)).appColors;
       expect(
         tester.widget<Icon>(find.byIcon(AppIcons.check)).color,
         swatchColor.computeLuminance() > 0.45
-            ? Colors.black.withValues(alpha: 0.78)
-            : Colors.white.withValues(alpha: 0.92),
+            ? appColors.onLightSwatch
+            : appColors.onDarkSwatch,
       );
+      expect(
+        find.ancestor(
+          of: find.byTooltip('Highlight'),
+          matching: find.byType(AppPlainIconButton),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.getSize(find.byTooltip('Highlight')), const Size(48, 48));
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     } finally {
@@ -95,6 +104,29 @@ void main() {
     },
   );
 
+  testWidgets('swatch ring snaps under reduced motion', (tester) async {
+    await _pumpControls(
+      tester,
+      width: 360,
+      onColor: (_) {},
+      onSave: () {},
+      disableAnimations: true,
+    );
+    for (final swatch in tester.widgetList<AnimatedContainer>(
+      find.byType(AnimatedContainer),
+    )) {
+      expect(swatch.duration, Duration.zero);
+    }
+    await _pumpControls(tester, width: 360, onColor: (_) {}, onSave: () {});
+    expect(
+      tester
+          .widgetList<AnimatedContainer>(find.byType(AnimatedContainer))
+          .first
+          .duration,
+      AppMotion.quick,
+    );
+  });
+
   testWidgets('saving disables palette and commands', (tester) async {
     final semantics = tester.ensureSemantics();
     try {
@@ -130,11 +162,18 @@ Future<void> _pumpControls(
   required ValueChanged<HighlightColor> onColor,
   required VoidCallback onSave,
   bool busy = false,
+  bool disableAnimations = false,
 }) => tester.pumpWidget(
   MaterialApp(
     theme: AppTheme.light(),
     localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
     supportedLocales: ReadflexSupportedLocales.locales,
+    builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(
+        context,
+      ).copyWith(disableAnimations: disableAnimations),
+      child: child!,
+    ),
     home: Scaffold(
       body: Center(
         child: SizedBox(

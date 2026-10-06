@@ -974,10 +974,10 @@ class ReadflexLocalizationsEs extends ReadflexLocalizations {
   String get readerThemeWarm => 'Cálido';
 
   @override
-  String get readerThemeMist => 'Grafito';
+  String get readerThemeMist => 'Noche';
 
   @override
-  String get readerThemeNight => 'Noche';
+  String get readerThemeNight => 'Grafito';
 
   @override
   String get readerIncreaseBrightness => 'Aumentar brillo';
@@ -1067,4 +1067,41 @@ class ReadflexLocalizationsEs extends ReadflexLocalizations {
   @override
   String get dictionaryFailureBody =>
       'Comprueba la conexión o inténtalo de nuevo más tarde.';
+
+  @override
+  String get readerHighlightFilterAll => 'Todo';
+
+  @override
+  String get readerBrightnessSystem => 'Sistema';
+
+  @override
+  String readerPageOfTotal(int page, int total) {
+    return '$page / $total';
+  }
+
+  @override
+  String get readerAddComment => 'Añadir comentario';
+
+  @override
+  String get readerAppearanceSample => 'Aa';
+
+  @override
+  String get translationUnknownLanguage => 'Idioma desconocido';
+
+  @override
+  String dictionaryDefinitionNumber(int number) {
+    return '$number.';
+  }
+
+  @override
+  String get importDiscardUrlBody => 'La dirección introducida no se guardará.';
+
+  @override
+  String get readerTapAreaHint => 'Zona de toque';
+
+  @override
+  String get importOfflineHint => 'Sin conexión';
+
+  @override
+  String get importArticleOfflineSubtitle => 'Requiere conexión a internet';
 }

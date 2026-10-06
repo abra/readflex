@@ -27,6 +27,8 @@ class ReaderSearchResultTile extends StatelessWidget {
     return ListTile(
       selected: selected,
       selectedTileColor: colors.selectedControlBackground,
+      // Full-bleed active row, like the Chapters tab; no themed tile radius.
+      shape: const RoundedRectangleBorder(),
       contentPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.xxs,

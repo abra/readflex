@@ -57,6 +57,10 @@ flutter:
     - assets/foliate-js/src/readflex_range.js
     - assets/foliate-js/src/readflex_content_security.js
     - assets/foliate-js/src/readflex_article_highlighter.js
+    - assets/foliate-js/src/readflex_article_links.js
+    - assets/foliate-js/src/readflex_highlight_style.js
+    - assets/foliate-js/src/readflex_reader_fonts.js
+    - assets/foliate-js/src/readflex_shell_constants.js
     - assets/foliate-js/src/vendor/purify.js
     - assets/foliate-js/src/vendor/DOMPurify-LICENSE
     - assets/foliate-js/src/pdf.js

@@ -9,7 +9,13 @@
   "libraryDiscardChangesBody": "Your changes to this collection have not been saved.",
   "libraryDiscardChanges": "Discard",
   "libraryKeepEditing": "Keep editing",
-  "@librarySelectedCount": {"placeholders": {"count": {"type": "int"}}},
+  "@librarySelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "readerSelectionStart": "Selection start",
   "readerSelectionEnd": "Selection end",
   "translationOriginal": "Original",
@@ -27,7 +33,9 @@
   "translationInExpression": "In the expression",
   "@translationGeneralMeaningOf": {
     "placeholders": {
-      "word": {"type": "String"}
+      "word": {
+        "type": "String"
+      }
     }
   },
   "translationBaseForm": "Base form:",
@@ -431,8 +439,8 @@
   "readerThemeSnow": "Snow",
   "readerThemePaper": "Paper",
   "readerThemeWarm": "Warm",
-  "readerThemeMist": "Graphite",
-  "readerThemeNight": "Night",
+  "readerThemeMist": "Night",
+  "readerThemeNight": "Graphite",
   "readerIncreaseBrightness": "Increase brightness",
   "readerDecreaseBrightness": "Decrease brightness",
   "readerUsingSystemBrightness": "Using system brightness: {label}",
@@ -467,5 +475,33 @@
   "dictionaryUnsupportedLanguageTitle": "Language unavailable",
   "dictionaryUnsupportedLanguageBody": "The Readflex dictionary does not support this language yet.",
   "dictionaryFailureTitle": "Definition unavailable",
-  "dictionaryFailureBody": "Check your connection or try again later."
+  "dictionaryFailureBody": "Check your connection or try again later.",
+  "readerHighlightFilterAll": "All",
+  "readerBrightnessSystem": "System",
+  "readerPageOfTotal": "{page} / {total}",
+  "@readerPageOfTotal": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "readerAddComment": "Add comment",
+  "readerAppearanceSample": "Aa",
+  "translationUnknownLanguage": "Unknown language",
+  "dictionaryDefinitionNumber": "{number}.",
+  "@dictionaryDefinitionNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "importDiscardUrlBody": "The address you entered will not be saved.",
+  "readerTapAreaHint": "Tap area",
+  "importOfflineHint": "You're offline",
+  "importArticleOfflineSubtitle": "Needs an internet connection"
 }

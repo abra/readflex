@@ -10,7 +10,6 @@ import 'library_layout_cubit.dart';
 import 'library_list_view.dart';
 import 'library_selection_cubit.dart';
 
-const _layoutTransitionDuration = Duration(milliseconds: 180);
 const _layoutTransitionOffset = 8.0;
 
 /// Scrollable body of the library: renders the right layout (list / grid)
@@ -135,9 +134,7 @@ class _LibraryLayoutTransition extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final animationDisabled =
-        MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    if (animationDisabled) {
+    if (context.reduceMotion) {
       return KeyedSubtree(
         key: ValueKey(layoutMode),
         child: child,
@@ -147,7 +144,7 @@ class _LibraryLayoutTransition extends StatelessWidget {
     return TweenAnimationBuilder<double>(
       key: ValueKey(layoutMode),
       tween: Tween(begin: 0, end: 1),
-      duration: _layoutTransitionDuration,
+      duration: context.motion(AppMotion.short),
       curve: Curves.easeOutCubic,
       child: child,
       builder: (context, value, child) {

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'library_list_tile.dart';
 import 'library_selection_cubit.dart';
+import 'library_layout.dart';
 
 /// Vertically scrolling list of library source rows.
 ///
@@ -16,8 +17,8 @@ import 'library_selection_cubit.dart';
 ///
 /// [onConfirmSwipeDelete] is invoked from `Dismissible.confirmDismiss`:
 /// the parent screen shows a confirmation bottom sheet, dispatches the
-/// delete on confirm, and returns true to let the row finish dismissing
-/// (or false to spring it back).
+/// delete on confirm, and resolves true only once the write succeeded so
+/// the row finishes dismissing (false on cancel or failure springs it back).
 class LibraryListView extends StatelessWidget {
   const LibraryListView({
     required this.sources,
@@ -44,7 +45,7 @@ class LibraryListView extends StatelessWidget {
         AppSpacing.lg,
         0,
         AppSpacing.lg,
-        AppSpacing.xxl,
+        kLibraryContentBottomPadding,
       ),
       // Bouncing parent guarantees the elastic snap-back even on
       // short lists where ClampingScrollPhysics (the Android default)
@@ -87,8 +88,9 @@ class _SwipeDeleteBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Container(
-      alignment: Alignment.centerRight,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      key: const ValueKey('librarySwipeDeleteBackground'),
+      alignment: AlignmentDirectional.centerEnd,
+      padding: const EdgeInsetsDirectional.symmetric(horizontal: AppSpacing.lg),
       color: colors.error,
       child: Icon(AppIcons.delete, color: colors.onError),
     );

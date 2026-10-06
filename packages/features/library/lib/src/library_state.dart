@@ -51,17 +51,22 @@ class LibraryDeletionEffect extends Equatable {
   const LibraryDeletionEffect({
     required this.version,
     required this.success,
-    required this.count,
+    required this.sourceIds,
     this.singleTitle,
   });
 
   final int version;
   final bool success;
-  final int count;
+
+  /// Ids the finished delete covered, so a pending swipe can be matched to
+  /// its own completion even when deletes overlap.
+  final Set<String> sourceIds;
   final String? singleTitle;
 
+  int get count => sourceIds.length;
+
   @override
-  List<Object?> get props => [version, success, count, singleTitle];
+  List<Object?> get props => [version, success, sourceIds, singleTitle];
 }
 
 class LibraryState extends Equatable {
@@ -202,7 +207,8 @@ class LibraryState extends Equatable {
           source.sourceType == SourceType.book && !source.isComic,
         LibraryFilter.articles => source.sourceType == SourceType.article,
         LibraryFilter.comics => source.isComic,
-        LibraryFilter.unread => source.readingProgress == 0,
+        // Same rule as the row's "New" label: never opened, nothing read.
+        LibraryFilter.unread => source.isNew,
       };
       if (!matchesFilter) return false;
 

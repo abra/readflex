@@ -38,12 +38,14 @@ class _AddToCollectionSheet extends StatefulWidget {
 
 class _AddToCollectionSheetState extends State<_AddToCollectionSheet>
     with SingleTickerProviderStateMixin {
-  final _nameController = TextEditingController();
+  late final _nameController = TextEditingController()
+    ..addListener(_onDraftChanged);
   bool _creating = false;
+  bool _confirmingDiscard = false;
   late final _transition =
       AnimationController(
         vsync: this,
-        duration: const Duration(milliseconds: 300),
+        duration: AppMotion.medium,
       )..addStatusListener((status) {
         if (status == AnimationStatus.completed ||
             status == AnimationStatus.dismissed) {
@@ -63,6 +65,28 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet>
     end: Offset.zero,
   ).animate(_curve);
 
+  bool get _hasDraft => _nameController.text.trim().isNotEmpty;
+
+  // The guard follows the typed name, so the sheet must rebuild on edits.
+  void _onDraftChanged() => setState(() {});
+
+  /// Close, scrim and drag-down: a typed name asks before leaving the flow.
+  void _requestClose() {
+    if (context.read<AddToCollectionCubit>().state.isBusy) return;
+    if (!_creating || !_hasDraft) {
+      Navigator.of(context).pop(false);
+      return;
+    }
+    // Repeated attempts keep the decision visible until the user chooses.
+    if (_confirmingDiscard) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _confirmingDiscard = true);
+  }
+
+  void _keepEditing() => setState(() => _confirmingDiscard = false);
+
+  void _discardDraft() => Navigator.of(context).pop(false);
+
   void _showCreation(bool creating) {
     if (_creating == creating ||
         context.read<AddToCollectionCubit>().state.isBusy) {
@@ -70,8 +94,11 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet>
     }
     FocusScope.of(context).unfocus();
     context.read<AddToCollectionCubit>().clearError();
-    setState(() => _creating = creating);
-    if (MediaQuery.disableAnimationsOf(context)) {
+    setState(() {
+      _creating = creating;
+      _confirmingDiscard = false;
+    });
+    if (context.reduceMotion) {
       _transition.value = creating ? 1 : 0;
     } else {
       _transition.animateTo(creating ? 1 : 0);
@@ -101,7 +128,9 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet>
   void dispose() {
     _curve.dispose();
     _transition.dispose();
-    _nameController.dispose();
+    _nameController
+      ..removeListener(_onDraftChanged)
+      ..dispose();
     super.dispose();
   }
 
@@ -141,7 +170,13 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet>
       builder: (context, state) => PopScope(
         canPop: !_creating && !state.isBusy,
         onPopInvokedWithResult: (didPop, _) {
-          if (!didPop && _creating) _showCreation(false);
+          if (didPop || !_creating) return;
+          // Back is a step back, not a dismissal: the draft stays in place.
+          if (_confirmingDiscard) {
+            _keepEditing();
+          } else {
+            _showCreation(false);
+          }
         },
         child: ClipRect(
           child: Stack(
@@ -156,83 +191,77 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet>
                 child: _step(
                   active: !_creating,
                   offset: _listOffset,
-                  child: ActionBottomSheetLayout(
-                    title: context.l10n.libraryAddToCollectionTitle,
-                    closeLabel: context.l10n.commonClose,
-                    onClose: state.isBusy
-                        ? null
-                        : () => Navigator.of(context).pop(false),
-                    constrainBody: true,
-                    bodyPadding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+                  // Scrim and drag-down wait for the write like Close and
+                  // system Back do; there is no decision to show.
+                  child: AppSheetDismissGuard(
+                    enabled: state.isBusy,
+                    onDismissAttempt: _ignoreDismissAttempt,
+                    child: ActionBottomSheetLayout(
+                      title: context.l10n.libraryAddToCollectionTitle,
+                      closeLabel: context.l10n.commonClose,
+                      onClose: state.isBusy ? null : _requestClose,
+                      constrainBody: true,
+                      bodyPadding: const EdgeInsets.only(
+                        bottom: AppSpacing.lg,
                       ),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final content = switch (state.status) {
-                            AddToCollectionStatus.initial ||
-                            AddToCollectionStatus.loading => const Padding(
-                              padding: EdgeInsets.symmetric(
-                                vertical: AppSpacing.xl,
-                              ),
-                              child: CenteredCircularProgressIndicator(),
-                            ),
-                            AddToCollectionStatus.failure
-                                when state.errorCode ==
-                                    AddToCollectionErrorCode
-                                        .loadCollectionsFailed =>
-                              SingleChildScrollView(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.xl,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+                        ),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final content = switch (state.status) {
+                              AddToCollectionStatus.initial ||
+                              AddToCollectionStatus.loading => const Padding(
+                                padding: EdgeInsets.symmetric(
+                                  vertical: AppSpacing.xl,
                                 ),
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    Text(
-                                      context.l10n.libraryLoadCollectionsFailed,
-                                    ),
-                                    const SizedBox(height: AppSpacing.lg),
-                                    FilledButton(
-                                      onPressed: context
-                                          .read<AddToCollectionCubit>()
-                                          .load,
-                                      child: AppButtonLabel(
-                                        context.l10n.commonRetry,
-                                      ),
-                                    ),
-                                  ],
+                                child: CenteredCircularProgressIndicator(),
+                              ),
+                              AddToCollectionStatus.failure
+                                  when state.errorCode ==
+                                      AddToCollectionErrorCode
+                                          .loadCollectionsFailed =>
+                                SingleChildScrollView(
+                                  child: ErrorState(
+                                    message: context
+                                        .l10n
+                                        .libraryLoadCollectionsFailed,
+                                    retryLabel: context.l10n.commonRetry,
+                                    onRetry: context
+                                        .read<AddToCollectionCubit>()
+                                        .load,
+                                  ),
+                                ),
+                              _ => ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: math.min(
+                                    constraints.maxHeight,
+                                    2 * 48 +
+                                        2 * AppSpacing.lg +
+                                        2 * AppSpacing.md +
+                                        MediaQuery.textScalerOf(
+                                          context,
+                                        ).scale(32),
+                                  ),
+                                ),
+                                child: _CollectionContent(
+                                  state: state,
+                                  sourceCount: widget.sourceIds.length,
+                                  onCollectionPressed: _addToCollection,
+                                  onFavouritesPressed: state.isBusy
+                                      ? null
+                                      : _addToFavourites,
+                                  onCreatePressed: state.isBusy
+                                      ? null
+                                      : () => _showCreation(true),
                                 ),
                               ),
-                            _ => ConstrainedBox(
-                              constraints: BoxConstraints(
-                                minHeight: math.min(
-                                  constraints.maxHeight,
-                                  2 * 48 +
-                                      2 * AppSpacing.lg +
-                                      2 * AppSpacing.md +
-                                      MediaQuery.textScalerOf(
-                                        context,
-                                      ).scale(32),
-                                ),
-                              ),
-                              child: _CollectionContent(
-                                state: state,
-                                sourceCount: widget.sourceIds.length,
-                                onCollectionPressed: _addToCollection,
-                                onFavouritesPressed: state.isBusy
-                                    ? null
-                                    : _addToFavourites,
-                                onCreatePressed: state.isBusy
-                                    ? null
-                                    : () => _showCreation(true),
-                              ),
-                            ),
-                          };
+                            };
 
-                          return content;
-                        },
+                            return content;
+                          },
+                        ),
                       ),
                     ),
                   ),
@@ -243,27 +272,87 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet>
                   child: _step(
                     active: _creating,
                     offset: _formOffset,
-                    child: ActionBottomSheetLayout(
-                      title: context.l10n.libraryNewCollection,
-                      onBack: () => _showCreation(false),
-                      backLabel: context.l10n.commonBack,
-                      closeLabel: context.l10n.commonClose,
-                      onClose: state.isBusy
-                          ? null
-                          : () => Navigator.of(context).pop(false),
-                      constrainBody: true,
-                      bodyPadding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                      child: _CreateCollectionContent(
-                        state: state,
-                        controller: _nameController,
-                        onCreate: _createAndAdd,
-                        onCancel: () => _showCreation(false),
+                    child: AppSheetDismissGuard(
+                      enabled: _creating && _hasDraft,
+                      onDismissAttempt: _requestClose,
+                      child: AnimatedSwitcher(
+                        duration: context.motion(AppMotion.short),
+                        child: _confirmingDiscard
+                            ? _DiscardDraftStep(
+                                key: const ValueKey(
+                                  'addToCollectionDiscardStep',
+                                ),
+                                onKeepEditing: _keepEditing,
+                                onDiscard: _discardDraft,
+                                onClose: _requestClose,
+                              )
+                            : ActionBottomSheetLayout(
+                                key: const ValueKey(
+                                  'addToCollectionCreateStep',
+                                ),
+                                title: context.l10n.libraryNewCollection,
+                                onBack: () => _showCreation(false),
+                                backLabel: context.l10n.commonBack,
+                                closeLabel: context.l10n.commonClose,
+                                onClose: state.isBusy ? null : _requestClose,
+                                constrainBody: true,
+                                bodyPadding: const EdgeInsets.only(
+                                  bottom: AppSpacing.lg,
+                                ),
+                                child: _CreateCollectionContent(
+                                  state: state,
+                                  controller: _nameController,
+                                  onCreate: _createAndAdd,
+                                  onCancel: () => _showCreation(false),
+                                ),
+                              ),
                       ),
                     ),
                   ),
                 ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Discard decision for a typed collection name; same copy and safe-default
+/// pairing as the Manage flow. Close keeps the decision visible.
+class _DiscardDraftStep extends StatelessWidget {
+  const _DiscardDraftStep({
+    required this.onKeepEditing,
+    required this.onDiscard,
+    required this.onClose,
+    super.key,
+  });
+
+  final VoidCallback onKeepEditing;
+  final VoidCallback onDiscard;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return ActionBottomSheetLayout(
+      title: l10n.libraryDiscardChangesTitle,
+      onBack: onKeepEditing,
+      backLabel: l10n.commonBack,
+      onClose: onClose,
+      closeLabel: l10n.commonClose,
+      constrainBody: true,
+      footer: AppSheetActions(
+        primaryLabel: l10n.libraryKeepEditing,
+        onPrimary: onKeepEditing,
+        secondaryLabel: l10n.libraryDiscardChanges,
+        onSecondary: onDiscard,
+        destructiveSecondary: true,
+      ),
+      child: SingleChildScrollView(
+        child: Text(
+          l10n.libraryDiscardChangesBody,
+          style: context.text.bodyMedium,
         ),
       ),
     );
@@ -391,21 +480,11 @@ class _CollectionContent extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(
-              AppIcons.collectionAdd,
-              color: context.actionForeground,
-            ),
-            title: Text(
-              l10n.libraryNewCollection,
-              style: text.bodyMedium.copyWith(color: context.actionForeground),
-            ),
-            trailing: Icon(
-              Directionality.of(context) == TextDirection.rtl
-                  ? AppIcons.chevronLeft
-                  : AppIcons.chevronRight,
-            ),
+          child: AppDrillInRow(
+            key: const ValueKey('libraryNewCollectionRow'),
+            icon: AppIcons.collectionAdd,
+            title: l10n.libraryNewCollection,
+            enabled: onCreatePressed != null,
             onTap: onCreatePressed,
           ),
         ),
@@ -491,6 +570,9 @@ class _CreateCollectionContent extends StatelessWidget {
   }
 }
 
+// Guarded only while a write is in flight: the attempt is simply ignored.
+void _ignoreDismissAttempt() {}
+
 String _addToCollectionErrorMessage(
   ReadflexLocalizations l10n,
   AddToCollectionErrorCode errorCode,
@@ -530,12 +612,15 @@ class _CollectionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.text;
+    // Included rows stay readable; only a busy sheet mutes the destination.
+    final titleColor = enabled ? colors.onSurface : colors.onSurfaceVariant;
 
     return Semantics(
       label: included ? context.l10n.libraryAddedToCollection : null,
       selected: included,
       child: InkWell(
         onTap: enabled && !included ? onPressed : null,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         child: Padding(
           padding: const EdgeInsets.symmetric(
             vertical: AppSpacing.md,
@@ -554,7 +639,7 @@ class _CollectionRow extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: text.bodyLarge.copyWith(color: colors.onSurface),
+                  style: text.bodyLarge.copyWith(color: titleColor),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),

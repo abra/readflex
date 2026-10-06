@@ -56,6 +56,18 @@ import {
 import { buildSelectionContext } from './readflex_selection_context.js'
 import { installSelectionNavigation, selectionPageEndpoint, selectionViewportPosition } from './readflex_selection_navigation.js'
 import { markReaderStartup, finishReaderStartup } from './readflex_startup.js'
+import {
+  READFLEX_HIGHLIGHT_OPACITY,
+  READFLEX_HIGHLIGHT_RADIUS,
+  READFLEX_HIGHLIGHT_VERTICAL_INSET,
+  READFLEX_SELECTION_CLICK_SUPPRESS_MS,
+  READFLEX_SELECTION_PREVIEW_HIGHLIGHT_OPACITY,
+} from './readflex_shell_constants.js'
+import {
+  readerFontFaceCSS,
+  readerFontFamilyChain,
+  symbolFontFaceCSS,
+} from './readflex_reader_fonts.js'
 markReaderStartup('modules-ready')
 
 var isPdf = false;
@@ -63,12 +75,21 @@ var isPdf = false;
 const READFLEX_IMAGE_AREA_ROOT_ID = 'readflex-image-area-highlights';
 const READFLEX_IMAGE_AREA_PREVIEW_ID = '__readflex-image-area-preview';
 const READFLEX_IMAGE_AREA_LONG_PRESS_MS = 280;
+// Screen px; divided by the iframe scale per press (see `press.tolerance`).
 const READFLEX_IMAGE_AREA_MOVE_TOLERANCE = 10;
 const READFLEX_IMAGE_AREA_MIN_SIZE = 0.015;
 const READFLEX_IMAGE_AREA_DEFAULT_WIDTH = 0.213333;
 const READFLEX_IMAGE_AREA_DEFAULT_HEIGHT = 0.146667;
-const READFLEX_IMAGE_AREA_BORDER_WIDTH = 24;
-const READFLEX_IMAGE_AREA_HANDLE_SIZE = 96;
+// Screen-space border: the page iframe is scaled to fit, so a document-px
+// width would be hairline on large pages and chunky on small ones.
+const READFLEX_IMAGE_AREA_BORDER_PX = 6;
+// Corner drag zones are sized in screen pixels (the page iframe is scaled
+// to fit), sit inside the rectangle and are capped so opposite corners never
+// overlap; the visible cue is an L-shaped mark on the inner corner.
+const READFLEX_IMAGE_AREA_HANDLE_TARGET_PX = 64;
+const READFLEX_IMAGE_AREA_HANDLE_MAX_FRACTION = 0.4;
+const READFLEX_IMAGE_AREA_CORNER_MARK_PX = 22;
+const READFLEX_IMAGE_AREA_CORNER_STROKE_PX = 4;
 const READFLEX_IMAGE_AREA_TOUCH_SUPPRESS_MS = 900;
 const READFLEX_IMAGE_AREA_CANCEL_SUPPRESS_MS = 80;
 const READFLEX_IMAGE_AREA_CANCEL_ACTION_SUPPRESS_MS = 240;
@@ -333,28 +354,89 @@ const imageAreaAnnotationHit = (reader, doc, index, event) => {
 const imageAreaAnnotationPosition = (doc, annotation) =>
   imageAreaViewportPosition(doc, annotation?.rect);
 
+const imageAreaFrameScale = doc => {
+  const frame = doc?.defaultView?.frameElement;
+  const rect = frame?.getBoundingClientRect?.();
+  const scale = frame?.clientWidth && rect?.width ? rect.width / frame.clientWidth : 1;
+  return scale > 0 ? scale : 1;
+};
+
+const imageAreaHandleEdges = handle => ({
+  vertical: handle.includes('n') ? 'top' : 'bottom',
+  horizontal: handle.includes('w') ? 'left' : 'right',
+});
+
+// Transparent drag zones inside each corner; `layoutImageAreaHandles` sizes
+// them for the current rectangle and iframe scale.
 const addImageAreaHandles = (doc, element) => {
   const color = element.dataset.imageAreaColor ?? '#FFE600';
   for (const handle of ['nw', 'ne', 'sw', 'se']) {
+    const { vertical, horizontal } = imageAreaHandleEdges(handle);
     const marker = doc.createElement('span');
     marker.dataset.imageAreaHandle = handle;
     Object.assign(marker.style, {
       position: 'absolute',
-      width: `${READFLEX_IMAGE_AREA_HANDLE_SIZE}px`,
-      height: `${READFLEX_IMAGE_AREA_HANDLE_SIZE}px`,
-      borderRadius: '999px',
-      background: color,
-      border: '3px solid rgba(255,255,255,.95)',
-      boxShadow: '0 2px 8px rgba(0,0,0,.28)',
+      background: 'transparent',
       boxSizing: 'border-box',
       touchAction: 'none',
       cursor: imageAreaHandleCursor(handle),
     });
-    if (handle.includes('n')) marker.style.top = `${-READFLEX_IMAGE_AREA_HANDLE_SIZE / 2}px`;
-    if (handle.includes('s')) marker.style.bottom = `${-READFLEX_IMAGE_AREA_HANDLE_SIZE / 2}px`;
-    if (handle.includes('w')) marker.style.left = `${-READFLEX_IMAGE_AREA_HANDLE_SIZE / 2}px`;
-    if (handle.includes('e')) marker.style.right = `${-READFLEX_IMAGE_AREA_HANDLE_SIZE / 2}px`;
+    const mark = doc.createElement('span');
+    mark.dataset.imageAreaCornerMark = handle;
+    Object.assign(mark.style, {
+      position: 'absolute',
+      [vertical]: '0',
+      [horizontal]: '0',
+      boxSizing: 'border-box',
+      borderStyle: 'solid',
+      borderColor: color,
+      borderWidth: '0',
+      filter: 'drop-shadow(0 0 1.5px rgba(255,255,255,.95))',
+      pointerEvents: 'none',
+    });
+    marker.append(mark);
     element.append(marker);
+  }
+  layoutImageAreaHandles(doc, element);
+};
+
+const imageAreaBorderWidth = doc =>
+  READFLEX_IMAGE_AREA_BORDER_PX / imageAreaFrameScale(doc);
+
+// Zones cover the outer corner of the rectangle, border included, and are
+// measured against the full box so the border never eats the target.
+const layoutImageAreaHandles = (doc, element) => {
+  const scale = imageAreaFrameScale(doc);
+  const border = imageAreaBorderWidth(doc);
+  const outerWidth = element.offsetWidth;
+  const outerHeight = element.offsetHeight;
+  const size = Math.max(0, Math.min(
+    READFLEX_IMAGE_AREA_HANDLE_TARGET_PX / scale,
+    outerWidth * READFLEX_IMAGE_AREA_HANDLE_MAX_FRACTION,
+    outerHeight * READFLEX_IMAGE_AREA_HANDLE_MAX_FRACTION,
+  ));
+  const markLength = Math.min(READFLEX_IMAGE_AREA_CORNER_MARK_PX / scale, size * 0.6);
+  const stroke = Math.min(markLength / 2, Math.max(2, READFLEX_IMAGE_AREA_CORNER_STROKE_PX / scale));
+  for (const marker of element.querySelectorAll?.('[data-image-area-handle]') ?? []) {
+    const { vertical, horizontal } = imageAreaHandleEdges(marker.dataset.imageAreaHandle ?? 'nw');
+    marker.style.width = `${size}px`;
+    marker.style.height = `${size}px`;
+    marker.style.top = marker.style.bottom = marker.style.left = marker.style.right = '';
+    marker.style[vertical] = `${-border}px`;
+    marker.style[horizontal] = `${-border}px`;
+    const mark = marker.querySelector('[data-image-area-corner-mark]');
+    if (!mark) continue;
+    mark.style.width = `${markLength}px`;
+    mark.style.height = `${markLength}px`;
+    mark.style.borderWidth = '0';
+    mark.style[vertical === 'top' ? 'borderTopWidth' : 'borderBottomWidth'] = `${stroke}px`;
+    mark.style[horizontal === 'left' ? 'borderLeftWidth' : 'borderRightWidth'] = `${stroke}px`;
+  }
+};
+
+const setImageAreaHandleColor = (element, color) => {
+  for (const mark of element.querySelectorAll?.('[data-image-area-corner-mark]') ?? []) {
+    mark.style.borderColor = color;
   }
 };
 
@@ -374,7 +456,7 @@ const drawImageArea = (doc, annotation, { preview = false } = {}) => {
   Object.assign(element.style, {
     position: 'fixed',
     boxSizing: 'border-box',
-    border: `${READFLEX_IMAGE_AREA_BORDER_WIDTH}px solid ${color}`,
+    border: `${imageAreaBorderWidth(doc)}px solid ${color}`,
     borderRadius: '4px',
     padding: '0',
     margin: '0',
@@ -409,14 +491,14 @@ const renderImageAreaPreview = (doc, annotation) => {
   existing.dataset.imageAreaColor = color;
   existing.dataset.imageAreaOpacity = String(opacity);
   Object.assign(existing.style, {
-    border: `${READFLEX_IMAGE_AREA_BORDER_WIDTH}px solid ${color}`,
+    border: `${imageAreaBorderWidth(doc)}px solid ${color}`,
     background: imageAreaFillColor(color),
   });
-  for (const marker of existing.querySelectorAll?.('[data-image-area-handle]') ?? []) {
-    marker.style.background = color;
-  }
+  setImageAreaHandleColor(existing, color);
   if (!positionImageAreaElement(doc, existing, rect)) return null;
-  if (!existing.querySelector?.('[data-image-area-handle]')) {
+  if (existing.querySelector?.('[data-image-area-handle]')) {
+    layoutImageAreaHandles(doc, existing);
+  } else {
     addImageAreaHandles(doc, existing);
   }
   return existing;
@@ -564,7 +646,7 @@ const installImageAreaSelectionHandler = (reader, doc, index) => {
     const preview = event.target?.closest?.('[data-image-area-preview="true"]');
     if (preview) {
       if (!currentRect) return;
-      const handle = event.target?.dataset?.imageAreaHandle;
+      const handle = event.target?.closest?.('[data-image-area-handle]')?.dataset?.imageAreaHandle;
       beginEdit(event, handle ? `resize:${handle}` : 'move', currentRect);
       return;
     }
@@ -594,6 +676,9 @@ const installImageAreaSelectionHandler = (reader, doc, index) => {
       pointerId: event.pointerId,
       target: event.target,
       annotation,
+      // Document px of the scaled iframe: a screen-space jitter allowance
+      // keeps a steady finger from cancelling the press on large pages.
+      tolerance: READFLEX_IMAGE_AREA_MOVE_TOLERANCE / imageAreaFrameScale(doc),
     };
     clearTimer();
     timer = setTimeout(() => {
@@ -643,7 +728,7 @@ const installImageAreaSelectionHandler = (reader, doc, index) => {
     if (!press || event.pointerId !== press.pointerId) return;
     const dx = Math.abs(event.clientX - press.x);
     const dy = Math.abs(event.clientY - press.y);
-    if (Math.max(dx, dy) > READFLEX_IMAGE_AREA_MOVE_TOLERANCE) {
+    if (Math.max(dx, dy) > press.tolerance) {
       resetPress();
     }
   }, true);
@@ -719,7 +804,7 @@ const installImageAreaSelectionHandler = (reader, doc, index) => {
     if (!point) return;
     const dx = Math.abs(point.x - press.x);
     const dy = Math.abs(point.y - press.y);
-    if (Math.max(dx, dy) > READFLEX_IMAGE_AREA_MOVE_TOLERANCE) {
+    if (Math.max(dx, dy) > press.tolerance) {
       resetPress();
       return;
     }
@@ -1047,14 +1132,10 @@ const allowImmediateClickAfterTextAction = doc => {
 
 const unwrapCFI = cfi => cfi?.match(/^epubcfi\((.+)\)$/)?.[1] ?? cfi
 
-const READFLEX_HIGHLIGHT_OPACITY = '0.62';
-const READFLEX_HIGHLIGHT_RADIUS = 3;
-const READFLEX_HIGHLIGHT_VERTICAL_INSET = 1.5;
 const READFLEX_SELECTION_PREVIEW_HIGHLIGHT_ID =
   '__readflex-selection-preview-highlight';
 const READFLEX_SELECTION_PREVIEW_HIGHLIGHT_VALUE_PREFIX =
   '__readflex-selection-preview-highlight:';
-const READFLEX_SELECTION_PREVIEW_HIGHLIGHT_OPACITY = '0.50';
 
 const _collapseWhitespace = (text) =>
   typeof text === 'string'
@@ -1565,19 +1646,6 @@ const readflexInitialProgressRestore = progress => {
   return value >= 1 ? 0.999999 : value
 }
 
-const escapeCSSString = value => value
-  .replaceAll('\\', '\\\\')
-  .replaceAll('"', '\\"')
-
-const quoteFontFamily = value => `"${escapeCSSString(value)}"`
-
-const symbolFontFamily = 'Noto Sans Symbols'
-// Chapters use blob URLs, so resolve the shared font against the reader module.
-const symbolFontURL = new URL('../../fonts/NotoSansSymbols-Regular.ttf', import.meta.url).href
-
-const getFontFamilyToken = fontName =>
-  fontName === 'system' ? 'system-ui' : quoteFontFamily(fontName)
-
 const getReaderStylePrelude = ({ fontSize,
   textScale = 1,
   fontName,
@@ -1601,19 +1669,11 @@ const getReaderStylePrelude = ({ fontSize,
   overrideColor = true,
   useBookLayout = true,
 }) => {
-  const fontFaceDecl =
-    !fontName || fontName === 'book' || fontName === 'system' || !fontPath
-      ? ''
-      : `
-    @font-face {
-      font-family: ${quoteFontFamily(fontName)};
-      src: url('${fontPath}');
-      font-display: swap;
-    }`
+  const fontFaceDecl = readerFontFaceCSS({ fontName, fontPath })
 
   const fontFamilyVarDecl = !overrideFont || fontName === 'book'
     ? ''
-    : `--readflex-font-family: ${getFontFamilyToken(fontName)}, ${quoteFontFamily(symbolFontFamily)};`
+    : `--readflex-font-family: ${readerFontFamilyChain(fontName)};`
   const safeFontSize = Number(fontSize) || 1
   const safeTextScale = Number(textScale) || 1
   const rootFontSizePx = 16 * safeFontSize
@@ -1633,11 +1693,7 @@ const getReaderStylePrelude = ({ fontSize,
 
   return `
     ${fontFaceDecl}
-    @font-face {
-      font-family: ${quoteFontFamily(symbolFontFamily)};
-      src: url('${symbolFontURL}');
-      font-display: swap;
-    }
+    ${symbolFontFaceCSS()}
     :root {
       ${fontFamilyVarDecl}
       --readflex-font-size: ${fontSize}em;
@@ -2067,9 +2123,24 @@ const replaceFootnote = (view) => {
     useBookLayout: style.useBookLayout,
   }
   renderer.setStyles(getCSS(footNoteStyle))
-  // set background color of dialog
-  // if #rrggbbaa, replace aa to ee
-  footnoteDialog.style.backgroundColor = style.backgroundColor.slice(0, 7) + '33'
+  applyShellThemeColors()
+}
+
+// Keeps the host document and footnote dialog on the reader palette, so no
+// grey flashes between pages or around popups on dark themes.
+const applyShellThemeColors = () => {
+  const background = String(style?.backgroundColor || '').slice(0, 7) || '#ffffff'
+  const foreground = String(style?.fontColor || '').slice(0, 7) || '#000000'
+  const root = document.documentElement.style
+  root.setProperty('--rf-background-color', background)
+  root.setProperty('--rf-font-color', foreground)
+  root.setProperty('--rf-divider-color', `color-mix(in srgb, ${foreground} 22%, transparent)`)
+  root.backgroundColor = background
+  if (!footnoteDialog) return
+  // Translucent so the backdrop blur still reads as a sheet over the page.
+  footnoteDialog.style.backgroundColor = `${background}e6`
+  footnoteDialog.style.borderColor = `color-mix(in srgb, ${foreground} 22%, transparent)`
+  footnoteDialog.style.color = foreground
 }
 
 class Reader {
@@ -2136,8 +2207,7 @@ class Reader {
       }
     }
 
-    // set html bg color to grey 
-    document.documentElement.style.backgroundColor = 'grey'
+    applyShellThemeColors()
   }
 
   setView(view) {
@@ -2194,18 +2264,8 @@ class Reader {
         canGoForward: view.history.canGoForward
       })
     })
-    view.addEventListener('click-image', async e => {
-      // console.log('click-image', e.detail.img.src)
-      const blobUrl = e.detail.img.src
-      const blob = await fetch(blobUrl).then(r => r.blob())
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result)
-        reader.onerror = reject
-        reader.readAsDataURL(blob)
-      })
-      callFlutter('onImageClick', base64)
-    })
+    // No Flutter handler consumes image taps; view.js still emits
+    // 'click-image' for tap arbitration, but nothing is fetched or encoded.
   }
 
   renderAnnotation(annotations) {
@@ -3076,9 +3136,9 @@ class Reader {
       return
     }
 
-    // debounce for 200ms after selection cleared
+    // Debounce taps that follow a cleared selection; shared with the article shell.
     const lastClearedAt = this.#doc?.__anxSelectionClearedAt ?? 0
-    if (lastClearedAt && Date.now() - lastClearedAt < 200) {
+    if (lastClearedAt && Date.now() - lastClearedAt < READFLEX_SELECTION_CLICK_SUPPRESS_MS) {
       return
     }
 
@@ -3549,6 +3609,7 @@ const setStyle = (oldStyle) => {
   setRendererAttribute(renderer, 'bottom-margin', `${style.bottomMargin}px`)
   setRendererAttribute(renderer, 'gap', `${style.sideMargin}%`)
   setRendererAttribute(renderer, 'background-color', style.backgroundColor)
+  applyShellThemeColors()
   setRendererAttribute(renderer, 'max-column-count', style.maxColumnCount)
   setRendererAttribute(renderer, 'bgimg-url', style.backgroundImage)
 

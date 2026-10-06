@@ -47,8 +47,9 @@ Future<LibraryCollectionScopeSheetResult?> showLibraryCollectionScopeSheet({
 }) {
   return showAppBottomSheet<LibraryCollectionScopeSheetResult>(
     context,
-    // This flow can contain an unsaved form; Close/Back own dismissal.
-    dismissible: manageBuilder == null,
+    // The list dismisses like other sheets; the nested Manage step guards
+    // its own draft with AppSheetDismissGuard.
+    scrimClosesFlow: true,
     builder: (_) => StreamBuilder<LibraryState>(
       initialData: state,
       stream: states,
@@ -179,25 +180,10 @@ class _CollectionScopeSheetState extends State<_CollectionScopeSheet> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (widget.state.collectionsLoadFailed)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xl,
-                    ),
-                    child: Column(
-                      children: [
-                        Text(
-                          l10n.libraryLoadCollectionsFailed,
-                          style: context.text.bodyMedium.copyWith(
-                            color: context.colors.error,
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: widget.onRetry,
-                          icon: const Icon(AppIcons.refresh),
-                          label: Text(l10n.commonRetry),
-                        ),
-                      ],
-                    ),
+                  ErrorState(
+                    message: l10n.libraryLoadCollectionsFailed,
+                    retryLabel: l10n.commonRetry,
+                    onRetry: () => widget.onRetry?.call(),
                   ),
                 if (hasScopes) ...[
                   Padding(
@@ -225,16 +211,7 @@ class _CollectionScopeSheetState extends State<_CollectionScopeSheet> {
                 ],
               ],
             )
-          : Padding(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              child: Text(
-                l10n.libraryNoCollectionsYet,
-                textAlign: TextAlign.center,
-                style: context.text.bodyMedium.copyWith(
-                  color: context.colors.onSurfaceVariant,
-                ),
-              ),
-            ),
+          : EmptyState(message: l10n.libraryNoCollectionsYet, compact: true),
     );
   }
 }
@@ -282,14 +259,9 @@ class _CollectionScopeSections extends StatelessWidget {
         authorScopes.isNotEmpty;
 
     if (!hasMatches) {
-      return Center(
-        child: Text(
-          l10n.libraryNoMatchingCollections,
-          textAlign: TextAlign.center,
-          style: context.text.bodyMedium.copyWith(
-            color: context.colors.onSurfaceVariant,
-          ),
-        ),
+      return EmptyState(
+        message: l10n.libraryNoMatchingCollections,
+        compact: true,
       );
     }
 
@@ -448,11 +420,8 @@ class _CollectionScopeRow extends StatelessWidget {
                 ),
                 height: _collectionScopeRowHeight,
                 child: Padding(
-                  padding: EdgeInsetsDirectional.only(
+                  padding: const EdgeInsetsDirectional.only(
                     start: AppSpacing.sm,
-                    end: scope.canManage
-                        ? 0
-                        : AppSpacing.sm + _collectionScopeActionOutset,
                   ),
                   child: Row(
                     children: [
@@ -481,8 +450,10 @@ class _CollectionScopeRow extends StatelessWidget {
                           color: foreground,
                         ),
                       ),
-                      if (scope.canManage) ...[
-                        const SizedBox(width: AppSpacing.md),
+                      const SizedBox(width: AppSpacing.md),
+                      // Rows without a menu keep its 48dp slot so every
+                      // count sits on one column.
+                      if (scope.canManage)
                         AppPlainIconButton(
                           tooltip: l10n.libraryManageCollection(label),
                           color: foreground,
@@ -491,8 +462,9 @@ class _CollectionScopeRow extends StatelessWidget {
                             'collectionScopeManage-${scope.type.name}-${scope.id}',
                           ),
                           onPressed: onManage,
-                        ),
-                      ],
+                        )
+                      else
+                        const SizedBox(width: AppSizes.buttonHeight),
                     ],
                   ),
                 ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'library_grid_tile.dart';
 import 'library_selection_cubit.dart';
+import 'library_layout.dart';
 
 /// Lazy grid with up to three columns, leaving room for scaled cover text.
 class LibraryGridView extends StatelessWidget {
@@ -33,14 +34,16 @@ class LibraryGridView extends StatelessWidget {
             ((constraints.maxWidth - AppSpacing.lg * 2 + AppSpacing.md) /
                     (minTileWidth + AppSpacing.md))
                 .floor()
-                .clamp(1, 3);
+                // Phones stay at three columns; tablets get more instead of
+                // oversized covers.
+                .clamp(1, 6);
         return GridView.builder(
           controller: scrollController,
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.lg,
             0,
             AppSpacing.lg,
-            AppSpacing.xxl,
+            kLibraryContentBottomPadding,
           ),
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),

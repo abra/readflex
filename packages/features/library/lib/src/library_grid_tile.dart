@@ -3,15 +3,16 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
+import 'library_selection_tint.dart';
 import 'library_source_semantics.dart';
 
 /// Alpha for the format badge background (dark overlay on cover art).
 const double _kBadgeBackgroundAlpha = 0.55;
+
 const double _kGridCoverInset = AppSpacing.xxs;
 const double _kFormatBadgeTextReserve = 24.0;
 const double _kProgressOverlayReserve = 16.0;
 const double _kProgressOverlayInset = AppSpacing.xxs;
-const _kProgressFillAnimationDuration = Duration(milliseconds: 240);
 const _kProgressFillAnimationCurve = Curves.easeOutCubic;
 
 /// Grid-mode tile for a library source.
@@ -43,6 +44,8 @@ class BookLibraryGridTile extends StatelessWidget {
         source.lastOpenedAt != null || source.readingProgress > 0;
     final showsProgressOverlay = hasReadingActivity && !source.isFinished;
     final coverTextDirection = _sourceTextDirection(source);
+    // Badges are chrome: they follow the layout, not the cover's text.
+    final layoutDirection = Directionality.of(context);
     final l10n = context.l10n;
 
     return _GridTileShell(
@@ -74,9 +77,11 @@ class BookLibraryGridTile extends StatelessWidget {
             ? _kFormatBadgeTextReserve
             : 0,
         bottomReserve: showsProgressOverlay ? _kProgressOverlayReserve : 0,
-        articleBadgeAlignment: isArticle
-            ? Alignment.topRight
-            : Alignment.topLeft,
+        articleBadgeAlignment:
+            (isArticle
+                    ? AlignmentDirectional.topEnd
+                    : AlignmentDirectional.topStart)
+                .resolve(layoutDirection),
       ),
       isFinished: source.isFinished,
       progress: source.readingProgress,
@@ -145,8 +150,11 @@ class _GridTileShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final colors = context.colors;
     final selectionColor = colors.selectionMarkerBackground;
+    final selectionTint = selectionColor.withValues(
+      alpha: kLibraryCoverSelectionTintAlpha,
+    );
 
     return Semantics(
       container: true,
@@ -170,21 +178,21 @@ class _GridTileShell extends StatelessWidget {
             // multi-select: tile shrinks slightly so the unselected siblings
             // visually "stay in place" when a checkmark appears.
             scale: isSelected ? 0.92 : 1.0,
-            duration: const Duration(milliseconds: 150),
+            duration: context.motion(AppMotion.quick),
             curve: Curves.easeOut,
             child: AppSourceCoverFrame(
               cover: cover,
               overlays: [
                 if (formatLabel != null)
-                  Positioned(
+                  PositionedDirectional(
                     top: AppSpacing.xs,
-                    left: AppSpacing.xs,
+                    start: AppSpacing.xs,
                     child: _FormatBadge(label: formatLabel!),
                   ),
                 if (isFinished)
-                  const Positioned(
+                  const PositionedDirectional(
                     top: AppSpacing.xs,
-                    right: AppSpacing.xs,
+                    end: AppSpacing.xs,
                     child: _FinishedBadge(),
                   ),
                 if (isSelected)
@@ -195,21 +203,21 @@ class _GridTileShell extends StatelessWidget {
                           appSourceCoverRadius,
                         ),
                         border: Border.all(color: selectionColor, width: 3),
-                        color: selectionColor.withValues(alpha: 0.15),
+                        color: selectionTint,
                       ),
                     ),
                   ),
                 if (isSelected)
-                  Positioned(
+                  PositionedDirectional(
                     top: AppSpacing.xs,
-                    right: AppSpacing.xs,
+                    end: AppSpacing.xs,
                     child: _SelectionCheck(color: selectionColor),
                   ),
                 if (showProgress && !isFinished) ...[
-                  const Positioned.fill(
+                  Positioned.fill(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.only(
+                        borderRadius: const BorderRadius.only(
                           bottomLeft: Radius.circular(
                             appSourceCoverRadius - 2,
                           ),
@@ -220,8 +228,11 @@ class _GridTileShell extends StatelessWidget {
                         gradient: LinearGradient(
                           begin: Alignment.bottomCenter,
                           end: Alignment.topCenter,
-                          stops: [0.0, 0.20],
-                          colors: [Color(0x4D1B1F30), Color(0x001B1F30)],
+                          stops: const [0.0, 0.20],
+                          colors: [
+                            appSourceCoverScrimColor,
+                            appSourceCoverScrimColor.withValues(alpha: 0),
+                          ],
                         ),
                       ),
                     ),
@@ -245,7 +256,7 @@ class _GridTileShell extends StatelessWidget {
                               ),
                               AnimatedContainer(
                                 key: const Key('libraryGridProgressFill'),
-                                duration: _kProgressFillAnimationDuration,
+                                duration: context.motion(AppMotion.short),
                                 curve: _kProgressFillAnimationCurve,
                                 width:
                                     constraints.maxWidth *
@@ -296,7 +307,7 @@ class _FormatBadge extends StatelessWidget {
   }
 }
 
-/// Filled circle with a checkmark, sitting in the top-right corner of a
+/// Filled circle with a checkmark, sitting in the top-end corner of a
 /// selected grid tile. Same 20×20 footprint as [_FinishedBadge] so a
 /// selection state replaces the finished badge in the same slot.
 class _SelectionCheck extends StatelessWidget {
@@ -326,18 +337,21 @@ class _FinishedBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Size, icon size and palette role copied from readwell_demo's grid
-    // tile: 20x20 success-colored circle with a white check icon of
-    // 11px. Uses `appColors.successForeground` (same role as demo's
-    // `ext.successForeground`).
+    // 20x20 disc with an 11px check; the filled success pair matches toasts.
+    final appColors = context.appColors;
     return Container(
+      key: const ValueKey('libraryGridFinishedBadge'),
       width: 20,
       height: 20,
       decoration: BoxDecoration(
-        color: context.appColors.successForeground,
+        color: appColors.successContainer,
         shape: BoxShape.circle,
       ),
-      child: const Icon(AppIcons.check, size: 11, color: Colors.white),
+      child: Icon(
+        AppIcons.check,
+        size: 11,
+        color: appColors.onSuccessContainer,
+      ),
     );
   }
 }

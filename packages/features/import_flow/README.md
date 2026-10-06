@@ -61,8 +61,10 @@ Helpers exported from `import_flow.dart`:
 ## Architecture
 
 Multi-step animated sheet driven by `ImportFlowCubit` — menu → uploading →
-done / failure. Menu, URL entry, and status steps share a stable preferred body
-height (272dp at normal text scale), with more space for larger system text.
+done / failure. Menu and URL entry share a stable preferred body height (272dp
+at normal text scale), with more space for larger system text. Status steps
+(uploading, done, failure) add the shared header row and its 8dp gap (56dp) on
+top of that same content box, so progress content keeps its room.
 The **Before uploading** consent step uses that height as its minimum and grows
 only when its content needs more room, up to the available viewport. Compact
 consent and the menu keep the same top edge throughout forward/back transitions,
@@ -80,8 +82,9 @@ Links wrap with the surrounding text at the shared `bodySmall` line height;
 button-sized widgets must not inflate the paragraph's line boxes. Recognizers
 are owned and disposed by the consent widget. Menu and URL forms scroll when
 content exceeds the viewport or the keyboard leaves less room. The menu uses
-two full-width flat action rows with book/link icons and directional chevrons;
-their divider spans the full row width within the sheet padding. The close
+two full-width `AppDrillInRow`s (24dp vertical padding inside the ripple) with
+book/link icons and directional chevrons; their divider spans the full row
+width within the sheet padding. The close
 action stays in the header while the rows scroll.
 Divider color and thickness come from the shared `DividerTheme`, as in Library.
 The rows use 24dp vertical padding and share any unused body space equally
@@ -102,16 +105,26 @@ Clipboard errors use compact localized copy to avoid reserving a paragraph of
 empty space at large text sizes. No validation message is clipped or ellipsized.
 It uses finite minimum height without intrinsic measurement or unbounded flex
 children. Status content also scrolls
-when necessary. Clipboard access is still explicit: Paste has a full 52x48px
-target and never reads on sheet open.
+when necessary, and on very short viewports the whole status step scrolls
+like the URL form. Clipboard access is still explicit: Paste is an
+`AppPlainIconButton` suffix with a labeled 48dp circular target and never
+reads on sheet open.
 
 URL entry and Before uploading use the shared leading header Back action,
 not a footer Back/Cancel button. Header/system Back returns to Add to Library;
 the consent footer contains only Continue. Close, scrim and handle dismissal
-close the entire flow from either step. Returning to the menu retains the URL
-draft in the cubit until the sheet closes; it does not submit, open a picker or
-accept consent. Import progress/result screens are not editable navigation steps:
+close the entire flow from either step while the URL field is empty. A typed
+URL wraps the form in `AppSheetDismissGuard`: Close, scrim tap and drag-down
+then show a Keep editing / Discard step (`commonDiscardChangesTitle`, filled
+Keep editing, outlined error-colored Discard) at the same step height instead
+of dismissing; Discard closes the flow, Keep editing or header/system Back
+return to the form, and the handle gives way to a same-height spacer. Header
+and system Back from the form remain a step back to the menu, which retains the
+URL draft in the cubit until the sheet closes; it does not submit, open a picker
+or accept consent. Import progress/result screens are not editable navigation steps:
 system Back closes them and does not cancel already-started storage work.
+They keep the flow header: Close is disabled while storage work is in flight
+and enabled on done/failure, where it dismisses without reporting an import.
 
 Invalid or empty clipboard text produces an inline URL error without replacing
 the current input. Clipboard access failures have a separate inline message.
@@ -163,6 +176,7 @@ and live extraction require separate device checks.
 - `reader_webview` — `BookMetadataExtractor` for supported document metadata
 - `domain_models` — `BookFormat`
 - `component_library` — `showAppBottomSheet`, `BottomSheetHeader`,
-  `ActionBottomSheetLayout`, `AppIcons`, `AppSpacing`
+  `ActionBottomSheetLayout`, `AppDrillInRow`, `AppPlainIconButton`,
+  `AppSheetActions`, `AppIcons`, `AppSpacing`, `AppMotion`
 - `monitoring` — non-fatal logging
 - `file_picker` — file picker integration

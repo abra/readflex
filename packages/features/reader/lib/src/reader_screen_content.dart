@@ -105,28 +105,16 @@ class _ReaderBodyState extends State<_ReaderBody> {
       children: [
         Positioned.fill(
           child: switch (widget.status) {
-            ReaderStatus.failure => Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(AppIcons.error, size: 48),
-                  const SizedBox(height: AppSpacing.md),
-                  Text(context.l10n.readerFailedToLoadContent),
-                  const SizedBox(height: AppSpacing.md),
-                  FilledButton(
-                    onPressed: () {
-                      setState(() => _readyWebViewSourceId = null);
-                      widget.onRetry();
-                    },
-                    child: AppButtonLabel(context.l10n.commonRetry),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: AppButtonLabel(context.l10n.readerGoBack),
-                  ),
-                ],
-              ),
+            ReaderStatus.failure => ErrorState(
+              icon: AppIcons.error,
+              message: context.l10n.readerFailedToLoadContent,
+              retryLabel: context.l10n.commonRetry,
+              onRetry: () {
+                setState(() => _readyWebViewSourceId = null);
+                widget.onRetry();
+              },
+              secondaryLabel: context.l10n.readerGoBack,
+              onSecondary: () => Navigator.of(context).pop(),
             ),
             ReaderStatus.ready when contentReady => _ReadyContent(
               serverBaseUri: widget.serverBaseUri,
@@ -144,7 +132,7 @@ class _ReaderBodyState extends State<_ReaderBody> {
           ignoring: !loadingVisible,
           child: AnimatedOpacity(
             opacity: loadingVisible ? 1 : 0,
-            duration: _kReaderLoadingScrimFadeDuration,
+            duration: context.motion(AppMotion.short),
             curve: Curves.easeOutCubic,
             child: _ReaderLoadingScrim(theme: readerTheme),
           ),
@@ -262,9 +250,11 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     final initialPageTurnStyle =
         appearanceCubit.state.effectiveAppearance.pageTurnStyle;
     final wasChromeVisible = uiCubit.state.chromeVisible;
+    // Let the chrome finish sliding out before the sheet route starts.
+    final chromeHideDuration = context.motion(AppMotion.short);
     if (!uiCubit.beginAppearanceSheet()) return;
     if (wasChromeVisible) {
-      await Future<void>.delayed(_kChromeAnimDuration);
+      await Future<void>.delayed(chromeHideDuration);
       if (!mounted) return;
     }
     await showReaderAppearanceSheet(
@@ -522,16 +512,11 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
       'layout=${appearance.layoutId}',
     );
 
-    return PopScope(
-      canPop: !searchPanelVisible && !searchNavigation.active,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        if (searchPanelVisible) {
-          _closeSearchDrawer();
-        } else if (searchNavigation.active) {
-          _endSearch();
-        }
-      },
+    return ReaderBackGuard(
+      onCloseSearchPanel: _closeSearchDrawer,
+      onCloseTocDrawer: _closeTocDrawer,
+      onDismissHighlightPopup: context.read<ReaderHighlightFocusCubit>().clear,
+      onEndSearch: _endSearch,
       child: _ReaderSystemUiOverlayDriver(
         readerTheme: readerTheme,
         child: MultiBlocListener(
@@ -578,6 +563,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                                   serverBaseUri: widget.serverBaseUri,
                                   readerTheme: readerTheme,
                                   webViewKey: _articleWebViewKey,
+                                  onExternalLink: widget.onExternalLink,
                                   onLoading: () {
                                     if (!mounted) return;
                                     _latestLocation = null;
@@ -648,13 +634,13 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                           visible:
                               webViewReady && sourceType != SourceType.article,
                         ),
-                        _ReaderTopChromeDriver(
+                        ReaderTopChromeDriver(
                           onArticleTitlePressed: widget.onArticleTitlePressed,
                         ),
-                        const _ReaderPageBookmarkIndicatorDriver(),
+                        const ReaderPageBookmarkIndicatorDriver(),
                         const ReaderBrightnessChromeDriver(),
                         if (!searchNavigation.active)
-                          _ReaderBottomChromeDriver(
+                          ReaderBottomChromeDriver(
                             onTocPressed: _openTocDrawer,
                             onFontPressed: _openAppearanceSheet,
                             onPageTurnPressed: _togglePageTurnStyle,
@@ -733,11 +719,13 @@ class _ReaderBrightnessDimmingOverlayDriver extends StatelessWidget {
       child: IgnorePointer(
         child: TweenAnimationBuilder<double>(
           tween: Tween<double>(end: opacity),
-          duration: _kReaderBrightnessDimmingDuration,
+          duration: context.motion(AppMotion.quick),
           curve: Curves.easeOutCubic,
           builder: (_, value, _) {
+            // Screen dimming is a pure luminance reduction: the scrim role,
+            // not a themed surface color.
             return ColoredBox(
-              color: Colors.black.withValues(alpha: value),
+              color: context.colors.scrim.withValues(alpha: value),
             );
           },
         ),
@@ -762,14 +750,19 @@ class _ReaderSystemUiOverlayDriver extends StatelessWidget {
     final chromeVisible = context.select<ReaderUiCubit, bool>(
       (c) => c.state.chromeVisible,
     );
+    final panelVisible = context.select<ReaderUiCubit, bool>(
+      (c) => c.state.tocDrawerVisible || c.state.searchDrawerVisible,
+    );
     final systemUiStyle = readerSystemUiOverlayStyle(
       readerTheme: readerTheme,
       chromeVisible: chromeVisible,
+      panelVisible: panelVisible,
       chromeSurfaceColor: context.colors.surface,
       appNavigationBarColor: Theme.of(context).scaffoldBackgroundColor,
     );
     _debugTraceReader(
-      '_ReaderSystemUiOverlayDriver build chrome=$chromeVisible',
+      '_ReaderSystemUiOverlayDriver build '
+      'chrome=$chromeVisible panel=$panelVisible',
     );
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -814,9 +807,10 @@ class _ReaderTocDrawerVisibilityDriver extends StatelessWidget {
       listenWhen: (previous, current) =>
           previous.overlay == ReaderOverlay.toc &&
           current.overlay != ReaderOverlay.toc,
-      listener: (context, _) =>
-          context.read<ReaderBloc>().add(const ReaderBookmarkUndoDismissed()),
-      child: _ReaderTocDrawerDriver(
+      listener: (context, _) => context.read<ReaderBloc>()
+        ..add(const ReaderBookmarkUndoDismissed())
+        ..add(const ReaderHighlightUndoDismissed()),
+      child: ReaderTocDrawerDriver(
         loadThumbnail: loadThumbnail,
         visible: visible,
         format: format,
@@ -957,7 +951,7 @@ FoliateStyle _readerWebViewStyle({
     pageTurnStyle: appearance.pageTurnStyle.id,
     fontColor: colorToHex(readerTheme.primaryTextColor),
     backgroundColor: colorToHex(readerTheme.backgroundColor),
-    accentColor: colorToHex(context.colors.primary),
+    accentColor: colorToHex(readerTheme.accentColor),
     customCSS: customCSS,
     customCSSEnabled: customCSS.isNotEmpty,
     overrideFont: appearance.overrideFont,
@@ -1337,15 +1331,22 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       onImageAreaSelected: (selection) {
         final currentState = bloc.state;
         if (!isImagePageFormat(currentState.document?.format)) return;
+        // Long press has no native selection feedback; confirm the moment
+        // the area appears, not on every later move or resize.
+        if (!imageSelectionCubit.state.hasSelection) {
+          unawaited(HapticFeedback.selectionClick());
+        }
         highlightFocusCubit.clear();
         selectionCubit.deselect();
         uiCubit.hideChrome();
+        // Image-page chapter titles are archive file names; leave the saved
+        // area without one so rows fall back to the localized page label.
         imageSelectionCubit.select(
           pageIndex: selection.pageIndex,
           rect: selection.rect,
           position: selection.position,
           progress: currentState.document?.readingProgress,
-          chapterTitle: currentState.chapterTitle,
+          chapterTitle: null,
         );
       },
       onTextDeselected: () {
@@ -1379,6 +1380,7 @@ class _ReaderArticleHtmlBody extends StatefulWidget {
     this.onPositionChanged,
     this.onReady,
     this.onLoading,
+    this.onExternalLink,
   });
 
   final String? sourceId;
@@ -1389,6 +1391,7 @@ class _ReaderArticleHtmlBody extends StatefulWidget {
   final ValueChanged<BookPosition>? onPositionChanged;
   final VoidCallback? onReady;
   final VoidCallback? onLoading;
+  final ValueChanged<String>? onExternalLink;
 
   @override
   State<_ReaderArticleHtmlBody> createState() => _ReaderArticleHtmlBodyState();
@@ -1501,6 +1504,7 @@ class _ReaderArticleHtmlBodyState extends State<_ReaderArticleHtmlBody> {
       foliateStyle: articleStyle,
       bookmarks: bookmarks,
       highlights: highlights,
+      onExternalLink: widget.onExternalLink,
       onSelectionInteractionChanged: selectionCubit.setAdjusting,
       selectionStartLabel: context.l10n.readerSelectionStart,
       selectionEndLabel: context.l10n.readerSelectionEnd,

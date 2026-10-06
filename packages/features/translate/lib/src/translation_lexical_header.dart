@@ -3,7 +3,6 @@ import 'package:contextual_translation_service/contextual_translation_service.da
 import 'package:flutter/material.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
-import 'translation_source_quote.dart';
 import 'translation_text_direction.dart';
 
 class TranslationLexicalHeader extends StatelessWidget {
@@ -40,53 +39,55 @@ class TranslationLexicalHeader extends StatelessWidget {
     final secondaryStyle = context.text.bodyMedium.copyWith(
       color: context.colors.onSurfaceVariant,
     );
-    final selected = Text(
-      selectedText,
-      key: const ValueKey('translation-selected-fragment'),
-      textDirection: sourceDirection,
-      style: (isSingleWord ? context.text.titleLarge : context.text.bodyMedium)
-          .copyWith(color: context.colors.onSurface),
-    );
+    // Identical reading/pronunciation is shown once; a reading equal to the
+    // word itself adds nothing.
+    final visibleReading =
+        reading != null && _normalized(reading) != _normalized(selectedText)
+        ? reading
+        : null;
+    final visiblePronunciation =
+        pronunciation != null &&
+            _normalized(pronunciation) != _normalized(reading)
+        ? pronunciation
+        : null;
+    final hasMetadata =
+        visibleReading != null ||
+        visiblePronunciation != null ||
+        partOfSpeech != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (isSingleWord)
-          Semantics(header: true, child: selected)
+          Semantics(
+            header: true,
+            child: SelectableText(
+              selectedText,
+              key: const ValueKey('translation-selected-fragment'),
+              textDirection: sourceDirection,
+              style: context.text.headlineSmall.copyWith(
+                color: context.colors.onSurface,
+              ),
+            ),
+          )
         else
-          TranslationSourceQuote(
+          AppSourceQuote(
             textDirection: sourceDirection,
-            child: selected,
+            child: Text(
+              selectedText,
+              key: const ValueKey('translation-selected-fragment'),
+              textDirection: sourceDirection,
+              style: context.text.bodyMedium.copyWith(
+                color: context.colors.onSurface,
+              ),
+            ),
           ),
-        if (pronunciation != null ||
-            reading != null ||
-            partOfSpeech != null) ...[
+        if (hasMetadata) ...[
           const SizedBox(height: AppSpacing.xs),
-          Wrap(
+          AppLexicalMetadataRow(
+            reading: visibleReading,
+            pronunciation: visiblePronunciation,
+            partOfSpeech: partOfSpeech,
             textDirection: sourceDirection,
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.xs,
-            children: [
-              if (reading != null &&
-                  _normalized(reading) != _normalized(selectedText))
-                Text(
-                  reading,
-                  key: const ValueKey('translation-reading'),
-                  textDirection: translationTextDirection(reading),
-                  style: secondaryStyle,
-                ),
-              if (pronunciation != null &&
-                  _normalized(pronunciation) != _normalized(reading))
-                Text(
-                  pronunciation,
-                  key: const ValueKey('translation-pronunciation'),
-                  textDirection: TextDirection.ltr,
-                  style: secondaryStyle.copyWith(
-                    fontFamily: AppTypography.fontFamilyPhonetic,
-                  ),
-                ),
-              if (partOfSpeech != null)
-                Text(partOfSpeech, style: secondaryStyle),
-            ],
           ),
         ],
         if (showLemma) ...[

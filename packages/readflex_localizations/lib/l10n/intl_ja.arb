@@ -283,8 +283,8 @@
   "readerThemeSnow": "スノー",
   "readerThemePaper": "ペーパー",
   "readerThemeWarm": "ウォーム",
-  "readerThemeMist": "グラファイト",
-  "readerThemeNight": "ナイト",
+  "readerThemeMist": "ナイト",
+  "readerThemeNight": "グラファイト",
   "readerIncreaseBrightness": "明るさを上げる",
   "readerDecreaseBrightness": "明るさを下げる",
   "readerUsingSystemBrightness": "システムの明るさを使用中: {label}",
@@ -312,5 +312,16 @@
   "dictionaryUnsupportedLanguageTitle": "利用できない言語",
   "dictionaryUnsupportedLanguageBody": "Readflex辞書はこの言語にまだ対応していません。",
   "dictionaryFailureTitle": "定義を利用できません",
-  "dictionaryFailureBody": "接続を確認するか、後でもう一度お試しください。"
+  "dictionaryFailureBody": "接続を確認するか、後でもう一度お試しください。",
+  "readerHighlightFilterAll": "すべて",
+  "readerBrightnessSystem": "システム",
+  "readerPageOfTotal": "{page} / {total}",
+  "readerAddComment": "コメントを追加",
+  "readerAppearanceSample": "あア",
+  "translationUnknownLanguage": "不明な言語",
+  "dictionaryDefinitionNumber": "{number}.",
+  "importDiscardUrlBody": "入力したアドレスは保存されません。",
+  "readerTapAreaHint": "タップ領域",
+  "importOfflineHint": "オフラインです",
+  "importArticleOfflineSubtitle": "インターネット接続が必要です"
 }

@@ -20,6 +20,7 @@ import 'package:toast_service/toast_service.dart';
 import 'book_custom_css.dart';
 import 'reader_appearance_cubit.dart';
 import 'reader_appearance_sheet.dart';
+import 'reader_back_guard.dart';
 import 'reader_bookmark_filter.dart';
 import 'reader_comic_pages.dart';
 import 'reader_comic_thumbnail_cubit.dart';
@@ -30,6 +31,7 @@ import 'reader_chrome_progress_layout.dart';
 import 'reader_image_page_progress_overlay.dart';
 import 'reader_color_utils.dart';
 import 'reader_device_font_scale.dart';
+import 'reader_drawer_layout.dart';
 import 'reader_drawer_messages.dart';
 import 'reader_directional_layout.dart';
 import 'reader_highlight_focus_cubit.dart';
@@ -66,8 +68,8 @@ part 'reader_screen_context_panel.dart';
 // cannot trap the reader chrome with a stale action panel.
 bool _selectionActionsVisible(bool hasSelection) => hasSelection;
 
-/// Duration and curve for the reader chrome slide animation.
-const _kChromeAnimDuration = Duration(milliseconds: 200);
+/// Curves for the reader chrome slide animation; durations come from
+/// `context.motion(AppMotion.short)` so reduced motion settles in one frame.
 const _kChromeAnimCurve = Curves.easeOutCubic;
 const _kChromeHideAnimCurve = Curves.easeInCubic;
 const _kReaderTopChromeHeight = 64.0;
@@ -77,14 +79,14 @@ const _kReaderTopChromeTitleFontStep = 0.25;
 const _kReaderTopChromeTitleLineHeight = 1.30;
 const _kReaderWebViewRouteMountDelay = Duration.zero;
 const _kReaderLoadingIconSize = 28.0;
-const _kReaderLoadingScrimFadeDuration = Duration(milliseconds: 180);
 const _kReaderPageBookmarkIndicatorLift = 28.0;
 const _kReaderPageBookmarkIndicatorSize = AppIconSize.md;
 const _kReaderBrightnessStep = 0.05;
 const _kReaderBrightnessEpsilon = 0.0001;
-const _kReaderBrightnessDimmingDuration = Duration(milliseconds: 120);
-const _kReaderBrightnessChromeWidth = 56.0;
-const _kReaderBrightnessChromeHeight = 190.0;
+// Three 48dp controls stacked inside the pill's horizontal/vertical padding.
+const _kReaderBrightnessChromeWidth = AppSizes.buttonHeight + AppSpacing.xs * 2;
+const _kReaderBrightnessChromeHeight =
+    AppSizes.buttonHeight * 3 + AppSpacing.sm * 2 + AppSpacing.md * 2;
 const _kReaderBrightnessChromeDragHeight =
     _kReaderBrightnessChromeHeight - AppSpacing.sm * 2;
 const _kArticleReaderTopMargin = 32.0;
@@ -130,14 +132,16 @@ String _readerBrightnessDebugValue(double? value) {
   return '${(value * 100).round()}% (${value.toStringAsFixed(3)})';
 }
 
-String _readerBrightnessLabel(ReaderBrightnessState state) {
+String _readerBrightnessLabel(
+  ReaderBrightnessState state, {
+  required String systemLabel,
+}) {
   if (!state.usesSystemBrightness) return '${state.percent}%';
-  return 'System';
+  return systemLabel;
 }
 
 // Share the header/row glyph edge while retaining a full 48dp action target.
-const _readerDrawerActionEndPadding =
-    AppSpacing.lg - (AppSizes.buttonHeight - AppIconSize.md) / 2;
+const _readerDrawerActionEndPadding = readerDrawerActionEndPadding;
 
 double _readerDrawerListBottomPadding(BuildContext context) {
   return MediaQuery.viewInsetsOf(context).bottom +

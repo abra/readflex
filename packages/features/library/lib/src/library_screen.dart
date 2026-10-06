@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:collection_repository/collection_repository.dart';
@@ -150,8 +152,16 @@ class _LibraryViewState extends State<_LibraryView> {
   bool _addInFlight = false;
   final _scrollController = ScrollController();
 
+  /// Swipe deletes awaiting their write, keyed by source id. Each completer
+  /// is resolved by the matching [LibraryDeletionEffect] so `Dismissible`
+  /// only finishes the row once storage has confirmed the delete.
+  final _pendingSwipeDeletions = <String, Completer<bool>>{};
+
   @override
   void dispose() {
+    for (final pending in _pendingSwipeDeletions.values) {
+      if (!pending.isCompleted) pending.complete(false);
+    }
     _searchController.dispose();
     _searchFocusNode.dispose();
     _scrollController.dispose();
@@ -332,25 +342,34 @@ class _LibraryViewState extends State<_LibraryView> {
     selection.clear();
   }
 
-  /// Confirms the swipe-to-delete via the same bottom sheet. Returns
-  /// `true` to let `Dismissible` finish the row dismissal, `false` to
-  /// spring it back. The actual delete event is dispatched here so we
-  /// know the chosen scope at dispatch time.
+  /// Confirms the swipe-to-delete via the same bottom sheet, then waits for
+  /// the write. Resolves `true` once storage confirms the delete so
+  /// `Dismissible` finishes the row, `false` (cancel or failure) to spring
+  /// it back. The delete event is dispatched here so we know the chosen
+  /// scope at dispatch time.
   Future<bool> _confirmAndDispatchSwipe(
     BuildContext context,
     LibrarySource source,
   ) async {
     final scope = await showConfirmBookDeletionSheet(context, count: 1);
     if (scope == null || !context.mounted) return false;
+    final completer = Completer<bool>();
+    _pendingSwipeDeletions[source.id] = completer;
     context.read<LibraryBloc>().add(
       LibrarySourceDeleted(source.id, scope: scope),
     );
-    return true;
+    return completer.future;
   }
 
-  void _onLibraryStateForToast(BuildContext context, LibraryState state) {
+  void _onDeletionEffect(BuildContext context, LibraryState state) {
     final effect = state.deletionEffect;
     if (effect == null) return;
+    for (final id in effect.sourceIds) {
+      final pending = _pendingSwipeDeletions.remove(id);
+      if (pending != null && !pending.isCompleted) {
+        pending.complete(effect.success);
+      }
+    }
     if (effect.success) {
       if (effect.count == 1 && effect.singleTitle != null) {
         showToast(
@@ -383,7 +402,7 @@ class _LibraryViewState extends State<_LibraryView> {
       listenWhen: (prev, curr) =>
           prev.deletionEffect != curr.deletionEffect &&
           curr.deletionEffect != null,
-      listener: _onLibraryStateForToast,
+      listener: _onDeletionEffect,
       child: _LibrarySelectionPopScope(
         onCancelSelection: () => context.read<LibrarySelectionCubit>().clear(),
         child: Scaffold(
@@ -459,10 +478,13 @@ class _LibraryViewState extends State<_LibraryView> {
                                       context,
                                       source,
                                     ),
-                                onRefresh: () async {
+                                onRefresh: () {
+                                  // Keep the indicator until the reload ends.
+                                  final done = Completer<void>();
                                   bloc.add(
-                                    const LibraryRefreshRequested(),
+                                    LibraryRefreshRequested(completer: done),
                                   );
+                                  return done.future;
                                 },
                                 onResetFilters: () {
                                   _searchController.clear();
@@ -557,19 +579,19 @@ class _LibraryFab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final colors = context.colors;
 
     return FloatingActionButton(
       onPressed: onAddPressed,
       tooltip: context.l10n.importAddToLibraryTitle,
-      backgroundColor: colors.primary.withValues(alpha: 0.9),
+      backgroundColor: colors.primary,
       foregroundColor: colors.onPrimary,
       shape: const CircleBorder(),
-      elevation: 3,
+      elevation: AppElevation.level2,
       // Keep the FAB out of Hero transitions; this screen can be opened
       // beside other FAB-based surfaces when frozen tabs are re-enabled.
       heroTag: null,
-      child: const Icon(AppIcons.add, size: 24),
+      child: const Icon(AppIcons.add, size: AppIconSize.md),
     );
   }
 }

@@ -14,7 +14,7 @@ can serve them over localhost.
 | Symbol                   | Kind      | Purpose                                                              |
 |--------------------------|-----------|----------------------------------------------------------------------|
 | `BookReaderWebView`      | Widget    | Loads foliate-js `index.html`, which fetches the book file from `/book/<path>`. Emits position, selection, search, highlight-tap and bookmark events; accepts imperative calls (goToCfi, pageLeft/pageRight, nextPage, changeStyle, addAnnotation, toggleBookmark). |
-| `ArticleHtmlReaderWebView` | Widget  | Loads the vertical article shell, fetches saved `content.html` from `/article/<dir>/content.html`, emits progress/TOC/document-feature/search/bookmark events, and accepts `goToPercent`, `goToHref`, `goToCfi`, `changeStyle`, `startSearch`, `cancelSearch`, `clearSearch`, `toggleBookmarkHere`, and `setArticleBookmarks`. |
+| `ArticleHtmlReaderWebView` | Widget  | Loads the vertical article shell, fetches saved `content.html` from `/article/<dir>/content.html`, emits progress/TOC/document-feature/search/bookmark/external-link events, and accepts `goToPercent`, `goToHref`, `goToCfi`, `changeStyle`, `startSearch`, `cancelSearch`, `clearSearch`, `toggleBookmarkHere`, and `setArticleBookmarks`. |
 | `AssetExtractor`         | Utility   | Copies book/article reader assets and reading fonts from rootBundle. Version/build plus asset revision controls replacement; matching existing files are skipped and missing files are retried. DEV bootstrap forces extraction. |
 | `BookMetadataExtractor`  | Utility   | Spawns a timeout-bounded `HeadlessInAppWebView` running foliate-js in import mode to extract `{title, author, description, coverData, coverMimeType}` from any supported format. Malformed bridge payloads fail promptly; an invalid optional cover does not discard valid metadata. Used by the import flow. |
 | Bridge types             | Models    | `BookPosition`, `ReaderSelection`, `ReaderImageAreaSelection`, `ReaderHighlight`, `ReaderBookmark`, `ReaderBookmarkChange`, `FoliateStyle` — DTOs exchanged with JS. |
@@ -36,9 +36,11 @@ Flutter -> JS:  goToCfi, goToBookmark, goToSectionIndex, goToPercent, goToHref,
                 showImageAreaSelectionPreview, clearImageAreaSelectionPreview
 ```
 
-Shared selection/click handlers are registered by
+Shared selection/click/external-link handlers are registered by
 `registerSharedReaderHandlers` so the widget body stays focused on
-position + annotation glue.
+position + annotation glue. `onImageClick` is not part of the bridge: the book
+shell no longer fetches and base64-encodes a tapped image, because no Dart
+handler consumed it.
 
 On Android, visible reader WebViews retain Hybrid Composition and the existing
 platform-view lifecycle contract. Selection handles are reader-owned (see below);
@@ -71,9 +73,34 @@ This recovery addresses WebView renderer termination, not arbitrary Flutter
 engine/Impeller EGL failures. Device lifecycle and renderer-crash checks are
 still required before release.
 
-EPUB link events cross the bridge as the destination URL only. The reader
-feature forwards that value through its callback boundary, and app routing
-opens only validated HTTP(S) links with the platform URL launcher.
+Link events from both shells cross the bridge as the destination URL only
+(`onExternalLink`, `ValueChanged<String>` on `BookReaderWebView` and
+`ArticleHtmlReaderWebView`). The reader feature forwards that value through its
+callback boundary, and app routing opens only validated HTTP(S) links with the
+platform URL launcher.
+
+### Links and navigation policy
+
+The article shell intercepts every `a[href]` click (`closest('a[href]')`, no
+wider DOM scan) and always prevents the default navigation. A `#fragment`, or an
+absolute URL that resolves to the article document/base plus a fragment, scrolls
+in place through `goToHref`. An `http(s)`/`mailto`/`tel` destination outside the
+reader server emits `onExternalLink` with the absolute URL, resolved against the
+installed `<base>`. Loopback links (same origin as the reader server) and other
+schemes are inert so the token-scoped server URL never leaves the reader.
+Clicks are ignored while a native text selection exists and inside the shared
+post-selection debounce (`readflex_article_links.js`,
+`readflex_shell_constants.js`).
+
+Both visible readers also enable `useShouldOverrideUrlLoading` with
+`ReaderNavigationPolicy` (`lib/src/reader_navigation_policy.dart`), a pure rule
+set that is unit-tested without a WebView: the reader server origin
+(scheme + host + port of `serverBaseUri`), `about:`, `blob:` and `data:` are
+allowed in every frame; an external `http(s)` main-frame navigation is cancelled
+and forwarded to `onExternalLink` as a safety net for anything JS missed; every
+other request (external sub-frames, `javascript:`, `file:`, custom schemes) is
+cancelled silently. Sub-frames stay limited to the loopback origin, matching the
+section CSP. Decisions from a replaced native WebView are ignored.
 
 ### Book Startup
 
@@ -165,6 +192,13 @@ declares the fallback with an absolute local URL, because chapter documents use
 blob URLs. The browser fetches the symbol fallback only when needed; it is not
 preloaded. There is no remote font service, text-node rewrite or per-character scan.
 
+`readflex_reader_fonts.js` owns the `@font-face` declarations and the family
+chain for both shells; the article shell builds `--rf-font-family` and its font
+faces from the same helpers, so articles get the symbol fallback too. Only the
+variable TTFs (`*-Variable.ttf`: Literata, Open Sans, Geist) declare
+`font-weight: 100 900`; the static PT Serif face keeps the default descriptor so
+bold is synthesized instead of drawn at regular weight.
+
 `overrideFont: false` and the `book` preset retain publisher families. The reader
 feature's code overlay retains its monospace families first and adds the same
 symbol fallback last. Fixed-layout documents are not replaced. This is supplemental
@@ -196,6 +230,12 @@ this is not a guarantee of contrast for text over arbitrary artwork.
 and styling in Chromium/WebKit: nested publisher blocks, tables, semantic
 overrides, inline priority, fixed layout, and selection/CFI stability on theme
 changes. The guard's unit tests also bound repeated ancestor style reads.
+
+The book shell's host document and footnote dialog follow the same palette:
+`book.js` writes `--rf-background-color`, `--rf-font-color` and
+`--rf-divider-color` on the shell root at open and on every style change, the
+host background matches the reader background (no grey between pages), and the
+dialog uses a translucent reader background with a divider-coloured border.
 
 ### Text Selection
 
@@ -321,6 +361,13 @@ updates article text highlights through stable article anchors.
 CSS Custom Highlights is preferred. Older WebViews use the existing SVG
 `Overlayer` implementation without wrapping or changing text nodes. Fallback
 redraws are coalesced on layout/font/image changes; scrolling needs no redraw.
+Both shells draw saved highlights with one option set: colour, opacity,
+`mixBlendMode`, `verticalOffset`, radius 3 and vertical inset 1.5, with the
+fallback opacity shared in `readflex_shell_constants.js`. The article SVG
+fallback passes that set to `Overlayer.highlight`; the `::highlight` path cannot
+blend, so `readflex_highlight_style.js` pre-mixes the tint against the page
+background (`multiply`/`lighten`/normal) and the rules are rebuilt on theme
+changes without re-resolving anchors.
 On both iOS and Android, articles suppress the temporary color preview while a
 native text selection exists. A fallback preview is removed when the native
 range returns, without clearing selection, mutating text or rebuilding saved
@@ -371,6 +418,11 @@ restoration, repeated upward/downward continuation, the app's empty-content
 normalization and the absence of per-update style mutations. Native gesture
 probes supplement, but do not replace, real-device testing of the full app,
 including the Flutter action menu's visibility transitions.
+
+Both shells debounce the tap that follows a cleared selection by the shared
+`READFLEX_SELECTION_CLICK_SUPPRESS_MS` (200 ms), the value the book selection
+gesture tests already rely on; the article previously waited 800 ms and did not
+arm the window on user-initiated clears.
 
 `onSelectionEnd` carries both the exact selected text and, when the user
 selects only part of a word/span, a lexical `normalizedText` expanded to
@@ -485,8 +537,17 @@ amber fill without an outline; other book matches retain a softer cyan tint.
 Arrow navigation repaints only the previous and current match, preserves saved
 highlights and does not create a native text selection. Tests cover repeated
 words, redraw after resizing, light/dark pages, paginated/scrolled layouts and
-stale navigation after a new result or search reset. Articles use the same
-amber fill on their single active search marker.
+stale navigation after a new result or search reset. Articles tint every match
+through the non-mutating highlighter (CSS highlight set or SVG fallback, capped
+at 1000 rendered matches, appended incrementally per search slice) and wrap only
+the active match in `mark.readflex-search-match`; the active match's live range
+is re-resolved after unwrapping. Colours live in `readflex_shell_constants.js`
+and are exposed as `--rf-search-match-color`, `--rf-search-match-opacity`,
+`--rf-search-active-color` and `--rf-search-active-opacity`. Flutter sends
+nothing for them today; to override, put `:root { --rf-search-active-color: …; }`
+in `FoliateStyle.customCSS`. The book reads them as CSS `var()` fallbacks on
+the SVG fill; the article resolves them once per search start or style change
+into the match rule and the active marker background.
 `searchOverlayBottomFraction` describes the Flutter search panel's occlusion,
 not padding. Both reader widgets synchronize it on readiness and when it changes,
 including renderer recovery. `readflex_search_occlusion.js` projects covered
@@ -599,6 +660,12 @@ loads the bundled Panzoom module lazily, without network requests.
   chrome. Return to page fit to resume gesture-based page navigation.
 - Long press still selects an image area. Editing an active area takes precedence
   over pan. Selection popups use the effective iframe scale, including zoom.
+  The draft rectangle's border (6px) and its four corner drag zones (64px
+  target, capped at 40% of the rectangle so opposite corners never meet) are
+  sized in screen pixels and divided by the iframe scale, so they feel the same
+  on a 600px and a 2400px page. Zones are transparent, sit inside the
+  rectangle over its outer corners and show an L-shaped corner mark; the
+  centre moves the rectangle. Zones are re-laid out on every resize.
 - Page changes and viewport resizing reset zoom. Blur, document hiding and
   disposal cancel pending tap/gesture work. Zoom never changes the reading CFI
   or persists temporary scale to reading progress.
@@ -646,3 +713,12 @@ and DOM taps on Android; it does not replace checking OS-generated touch
 sequences on both platforms. Native artifacts
 belong under `.local/`. Panzoom provenance and update steps are documented in
 `assets/foliate-js/src/vendor/Panzoom-README.md`.
+
+## Paginated navigation at section edges
+
+Paginated sections keep one swipe-overshoot buffer column on each side. An
+anchor that resolves to no box (a collapsed range before an image-only cover)
+falls back to its container's box, and failing that to the first content
+column, so returning to the cover by CFI never shows the leading buffer as a
+blank page. Anchor page targets are clamped to content columns, and an unset
+`top-margin` no longer poisons the page computation with NaN.

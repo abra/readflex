@@ -72,6 +72,8 @@ const _lightColorsExt = AppColorsExt(
   proBadge: PrimitiveColors.proBadgeLight,
   proBadgeForeground: PrimitiveColors.proBadgeFgLight,
   divider: PrimitiveColors.gray250,
+  onLightSwatch: PrimitiveColors.gray900,
+  onDarkSwatch: PrimitiveColors.white,
 );
 
 ThemeData _buildLight() {
@@ -149,6 +151,8 @@ const _darkColorsExt = AppColorsExt(
   proBadge: PrimitiveColors.proBadgeDark,
   proBadgeForeground: PrimitiveColors.proBadgeFgDark,
   divider: PrimitiveColors.darkGray700,
+  onLightSwatch: PrimitiveColors.darkGray900,
+  onDarkSwatch: PrimitiveColors.white,
 );
 
 ThemeData _buildDark() {
@@ -268,8 +272,18 @@ ThemeData _assembleTheme({
       iconColor: palette.mutedForeground,
       textColor: palette.foreground,
       tileColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+      // Rectangular by default: tiles are full-bleed rows in panels and
+      // sheets; a radius would bleed into their selected fill and press ink.
+    ),
+
+    // --- MenuAnchor menus share the popup radius of rows and sheets ---
+    menuTheme: MenuThemeData(
+      style: MenuStyle(
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+        ),
       ),
     ),
 

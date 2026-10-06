@@ -19,6 +19,7 @@ class SearchField extends StatelessWidget {
     this.controller,
     this.focusNode,
     this.onChanged,
+    this.textInputAction,
     super.key,
   });
 
@@ -27,6 +28,9 @@ class SearchField extends StatelessWidget {
   final TextEditingController? controller;
   final FocusNode? focusNode;
   final ValueChanged<String>? onChanged;
+
+  /// Keyboard action key; null keeps the platform default.
+  final TextInputAction? textInputAction;
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +43,7 @@ class SearchField extends StatelessWidget {
       controller: controller,
       focusNode: focusNode,
       onChanged: onChanged,
+      textInputAction: textInputAction,
       style: context.text.bodyMedium.copyWith(color: colors.onSurface),
       decoration: InputDecoration(
         hintText: hintText,

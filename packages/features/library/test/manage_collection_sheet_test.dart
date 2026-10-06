@@ -382,4 +382,112 @@ void main() {
     expect((await repository.getCollections()).single.name, 'Reading');
     expect(tester.takeException(), isNull);
   });
+
+  void expectSafeDefault(
+    WidgetTester tester, {
+    required String safe,
+    required String destructive,
+  }) {
+    final filled = find.widgetWithText(FilledButton, safe);
+    final outlined = find.widgetWithText(OutlinedButton, destructive);
+    expect(filled, findsOneWidget);
+    expect(outlined, findsOneWidget);
+    expect(find.widgetWithText(FilledButton, destructive), findsNothing);
+    final colors = Theme.of(tester.element(outlined)).colorScheme;
+    final style = tester.widget<OutlinedButton>(outlined).style!;
+    expect(style.foregroundColor!.resolve({}), colors.error);
+    expect(style.side!.resolve({})!.color, colors.error);
+    expect(
+      tester.getCenter(outlined).dx,
+      lessThan(tester.getCenter(filled).dx),
+    );
+  }
+
+  testWidgets('delete confirmation keeps Cancel filled and Delete outlined', (
+    tester,
+  ) async {
+    await open(tester);
+    await tester.tap(find.text('Delete collection'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete collection?'), findsOneWidget);
+    expectSafeDefault(tester, safe: 'Cancel', destructive: 'Delete');
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Manage collection'), findsOneWidget);
+    expect(await repository.getCollections(), hasLength(1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('discard confirmation keeps editing filled, Discard outlined', (
+    tester,
+  ) async {
+    await open(tester);
+    await tester.enterText(find.byType(TextField), 'Renamed');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Discard changes?'), findsOneWidget);
+    expectSafeDefault(tester, safe: 'Keep editing', destructive: 'Discard');
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Keep editing'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      'Renamed',
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final scale in [1.0, 2.0]) {
+    testWidgets('empty collection uses one compact placeholder: $scale', (
+      tester,
+    ) async {
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await open(tester);
+      final empty = find.byType(EmptyState);
+      expect(empty, findsOneWidget);
+      expect(tester.widget<EmptyState>(empty).compact, isTrue);
+      final message = find.text('No items in this collection');
+      expect(message, findsOneWidget);
+      final context = tester.element(message);
+      expect(
+        tester.widget<Text>(message).style!.color,
+        context.colors.onSurfaceVariant,
+      );
+      expect(
+        tester.widget<Text>(message).style!.fontSize,
+        context.text.bodyMedium.fontSize,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('scrim closes an unchanged sheet', (tester) async {
+    await open(tester);
+    await tester.pump();
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pumpAndSettle();
+    expect(find.byType(ManageCollectionSheet), findsNothing);
+  });
+
+  testWidgets('scrim and drag with a renamed draft ask to discard', (
+    tester,
+  ) async {
+    await open(tester);
+    await tester.enterText(find.byType(TextField), 'Renamed');
+    // Guard changes publish after the frame.
+    await tester.pump();
+    await tester.pump();
+
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pumpAndSettle();
+    expect(find.byType(ManageCollectionSheet), findsOneWidget);
+    expect(find.text('Discard changes?'), findsOneWidget);
+
+    await tester.drag(find.text('Discard changes?'), const Offset(0, 400));
+    await tester.pumpAndSettle();
+    expect(find.byType(ManageCollectionSheet), findsOneWidget);
+  });
 }

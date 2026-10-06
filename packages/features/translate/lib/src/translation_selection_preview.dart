@@ -2,7 +2,6 @@ import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:shared/shared.dart';
 
-import 'translation_source_quote.dart';
 import 'translation_text_direction.dart';
 
 class TranslationSelectionPreview extends StatelessWidget {
@@ -28,7 +27,7 @@ class TranslationSelectionPreview extends StatelessWidget {
     final textDirection = translationTextDirection(
       '${preview.before}${preview.selected}${preview.after}',
     );
-    return TranslationSourceQuote(
+    return AppSourceQuote(
       key: const ValueKey('translation-selection-preview'),
       textDirection: textDirection,
       child: Text.rich(

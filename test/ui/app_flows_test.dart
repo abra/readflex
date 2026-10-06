@@ -114,12 +114,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save Article'));
     await tester.pumpAndSettle();
-    expect(find.bySemanticsLabel('Paste URL'), findsNothing);
+    expect(find.byTooltip('Paste URL'), findsNothing);
     expect(app.articleExtractionService.requests, isEmpty);
     app.connectivityService.setStatus(ConnectivityStatus.online);
     await tester.pumpAndSettle();
     await tapUi(tester, find.text('Save Article'));
-    expect(find.bySemanticsLabel('Paste URL'), findsOneWidget);
+    expect(find.byTooltip('Paste URL'), findsOneWidget);
     await unmountUi(tester);
   });
 

@@ -965,10 +965,10 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get readerThemeWarm => 'वार्म';
 
   @override
-  String get readerThemeMist => 'ग्रेफाइट';
+  String get readerThemeMist => 'नाइट';
 
   @override
-  String get readerThemeNight => 'नाइट';
+  String get readerThemeNight => 'ग्रेफाइट';
 
   @override
   String get readerIncreaseBrightness => 'ब्राइटनेस बढ़ाएं';
@@ -1058,4 +1058,41 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   @override
   String get dictionaryFailureBody =>
       'अपना कनेक्शन जांचें या बाद में पुनः प्रयास करें।';
+
+  @override
+  String get readerHighlightFilterAll => 'सभी';
+
+  @override
+  String get readerBrightnessSystem => 'सिस्टम';
+
+  @override
+  String readerPageOfTotal(int page, int total) {
+    return '$page / $total';
+  }
+
+  @override
+  String get readerAddComment => 'टिप्पणी जोड़ें';
+
+  @override
+  String get readerAppearanceSample => 'अआ';
+
+  @override
+  String get translationUnknownLanguage => 'अज्ञात भाषा';
+
+  @override
+  String dictionaryDefinitionNumber(int number) {
+    return '$number.';
+  }
+
+  @override
+  String get importDiscardUrlBody => 'दर्ज किया गया पता सहेजा नहीं जाएगा।';
+
+  @override
+  String get readerTapAreaHint => 'टैप क्षेत्र';
+
+  @override
+  String get importOfflineHint => 'आप ऑफ़लाइन हैं';
+
+  @override
+  String get importArticleOfflineSubtitle => 'इंटरनेट कनेक्शन आवश्यक है';
 }

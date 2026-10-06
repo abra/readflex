@@ -224,9 +224,7 @@ class _CollectionScopeButton extends StatelessWidget {
     final badgeLabel = scope?.isFavourites == true
         ? context.l10n.libraryFavouritesBadge
         : label;
-    final foreground = selected
-        ? colors.onPrimary
-        : colors.onSurface.withValues(alpha: 0.55);
+    final foreground = selected ? colors.onPrimary : colors.onSurfaceVariant;
     final background = selected
         ? colors.primary
         : colors.surfaceContainerHighest.withValues(alpha: 0.5);
@@ -322,16 +320,12 @@ class _CollectionScopeButton extends StatelessWidget {
                     ),
                   ),
                   if (selected)
-                    IconButton(
+                    AppPlainIconButton(
                       tooltip: context.l10n.libraryClearCollectionFilter,
                       onPressed: onClearPressed,
-                      style: IconButton.styleFrom(
-                        fixedSize: const Size.square(AppSizes.chipTapTarget),
-                        backgroundColor: Colors.transparent,
-                        foregroundColor: foreground,
-                        padding: EdgeInsets.zero,
-                      ),
-                      icon: const Icon(AppIcons.close, size: AppIconSize.xs),
+                      icon: AppIcons.close,
+                      iconSize: AppIconSize.xs,
+                      color: foreground,
                     ),
                 ],
               ),
@@ -355,28 +349,81 @@ class _CollectionScopeButton extends StatelessWidget {
 /// Horizontally scrolling strip of filter chips
 /// (`All / Books / Comics / New`). Built on the shared
 /// [AppFilterChip] to keep Library filters visually consistent.
-class _FilterSegments extends StatelessWidget {
+class _FilterSegments extends StatefulWidget {
   const _FilterSegments({required this.active, required this.onChanged});
 
   final LibraryFilter active;
   final ValueChanged<LibraryFilter> onChanged;
 
   @override
+  State<_FilterSegments> createState() => _FilterSegmentsState();
+}
+
+class _FilterSegmentsState extends State<_FilterSegments> {
+  final _controller = ScrollController();
+  bool _moreAtEnd = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_updateFade);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateFade());
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  // A chip cut mid-glyph reads as broken; the fade says "scroll for more".
+  void _updateFade() {
+    if (!_controller.hasClients) return;
+    final position = _controller.position;
+    final more = position.maxScrollExtent - position.pixels > 1;
+    if (more != _moreAtEnd && mounted) setState(() => _moreAtEnd = more);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final active = widget.active;
+    final onChanged = widget.onChanged;
     return SizedBox(
       height: AppSizes.chipTapTarget,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: LibraryFilter.values.length,
-        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.xs),
-        itemBuilder: (_, i) {
-          final filter = LibraryFilter.values[i];
-          return AppFilterChip(
-            label: _labelFor(context, filter),
-            selected: filter == active,
-            onTap: () => onChanged(filter),
-          );
-        },
+      child: Stack(
+        children: [
+          NotificationListener<ScrollMetricsNotification>(
+            onNotification: (_) {
+              _updateFade();
+              return false;
+            },
+            child: ListView.separated(
+              controller: _controller,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
+              itemCount: LibraryFilter.values.length,
+              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.xs),
+              itemBuilder: (_, i) {
+                final filter = LibraryFilter.values[i];
+                return AppFilterChip(
+                  label: _labelFor(context, filter),
+                  selected: filter == active,
+                  onTap: () => onChanged(filter),
+                );
+              },
+            ),
+          ),
+          PositionedDirectional(
+            end: 0,
+            top: 0,
+            bottom: 0,
+            child: ScrollEdgeFade(
+              edge: ScrollFadeEdge.end,
+              visible: _moreAtEnd,
+              height: AppSpacing.xl,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -402,7 +449,7 @@ class _DisplayMenuButton extends StatelessWidget {
       key: const ValueKey('libraryHeaderDisplayButton'),
       tooltip: context.l10n.libraryDisplayOptions,
       icon: AppIcons.moreVertical,
-      color: context.colors.onSurface.withValues(alpha: 0.78),
+      color: context.colors.onSurfaceVariant,
       onPressed: () => showLibraryDisplaySheet(
         context: context,
         layoutCubit: context.read<LibraryLayoutCubit>(),

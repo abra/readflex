@@ -7,13 +7,15 @@ import 'package:reader_webview/reader_webview.dart';
 import 'package:reader_webview/src/reader_load_session.dart'
     show readerStartupTracingEnabled;
 
+import 'support/fake_inappwebview_platform.dart';
+
 void main() {
   testWidgets(
     'book exposes first content once before reporting completed initial location',
     (tester) async {
       final previousPlatform = InAppWebViewPlatform.instance;
       final previousPrint = debugPrint;
-      final platform = _Platform();
+      final platform = FakeInAppWebViewPlatform();
       final timings = <String>[];
       InAppWebViewPlatform.instance = platform;
       debugPrint = (message, {wrapWidth}) {
@@ -87,7 +89,7 @@ void main() {
     'metadata extraction reports renderer death during native startup and disposes it',
     () async {
       final previous = InAppWebViewPlatform.instance;
-      final platform = _Platform();
+      final platform = FakeInAppWebViewPlatform();
       InAppWebViewPlatform.instance = platform;
       addTearDown(() {
         if (previous != null) InAppWebViewPlatform.instance = previous;
@@ -112,7 +114,7 @@ void main() {
       '${article ? 'article' : 'book'} replaces a dead renderer and ignores its late events',
       (tester) async {
         final previous = InAppWebViewPlatform.instance;
-        final platform = _Platform();
+        final platform = FakeInAppWebViewPlatform();
         InAppWebViewPlatform.instance = platform;
         addTearDown(() {
           if (previous != null) InAppWebViewPlatform.instance = previous;
@@ -216,115 +218,4 @@ void main() {
       variant: TargetPlatformVariant.only(TargetPlatform.android),
     );
   }
-}
-
-class _Platform extends InAppWebViewPlatform {
-  final views = <_WebView>[];
-  _Headless? headless;
-
-  @override
-  PlatformHeadlessInAppWebView createPlatformHeadlessInAppWebView(
-    PlatformHeadlessInAppWebViewCreationParams params,
-  ) {
-    return headless = _Headless(params);
-  }
-
-  @override
-  PlatformInAppWebViewWidget createPlatformInAppWebViewWidget(
-    PlatformInAppWebViewWidgetCreationParams params,
-  ) {
-    final view = _WebView(params);
-    views.add(view);
-    return view;
-  }
-}
-
-class _Headless extends PlatformHeadlessInAppWebView {
-  _Headless(super.params) : super.implementation();
-
-  bool disposed = false;
-  @override
-  final _Controller webViewController = _Controller();
-
-  @override
-  Future<void> run() async {
-    final controller = params.controllerFromPlatform!(webViewController);
-    params.onRenderProcessGone!(
-      controller,
-      RenderProcessGoneDetail(didCrash: true),
-    );
-    await Future<void>.delayed(Duration.zero);
-  }
-
-  @override
-  Future<void> dispose() async {
-    disposed = true;
-  }
-}
-
-class _WebView extends PlatformInAppWebViewWidget {
-  _WebView(super.params) : super.implementation();
-
-  final nativeController = _Controller();
-  late final controller = controllerFromPlatform<InAppWebViewController>(
-    nativeController,
-  );
-  bool created = false;
-  bool disposed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!created) {
-      created = true;
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => params.onWebViewCreated?.call(controller),
-      );
-    }
-    return const SizedBox.expand();
-  }
-
-  void emit(String name, List<dynamic> args) =>
-      nativeController.handlers[name]!(args);
-  void crash() => params.onRenderProcessGone!(
-    controller,
-    RenderProcessGoneDetail(didCrash: true),
-  );
-
-  @override
-  T controllerFromPlatform<T>(PlatformInAppWebViewController controller) =>
-      params.controllerFromPlatform!(controller) as T;
-
-  @override
-  void dispose() => disposed = true;
-}
-
-class _Controller extends PlatformInAppWebViewController {
-  _Controller()
-    : super.implementation(
-        const PlatformInAppWebViewControllerCreationParams(id: 1),
-      );
-
-  final handlers = <String, JavaScriptHandlerCallback>{};
-  final scripts = <String>[];
-
-  @override
-  void addJavaScriptHandler({
-    required String handlerName,
-    required JavaScriptHandlerCallback callback,
-  }) => handlers[handlerName] = callback;
-
-  @override
-  Future<dynamic> evaluateJavascript({
-    required String source,
-    ContentWorld? contentWorld,
-  }) async {
-    scripts.add(source);
-    return null;
-  }
-
-  @override
-  Future<void> pause() async {}
-
-  @override
-  Future<void> resume() async {}
 }

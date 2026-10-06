@@ -20,7 +20,7 @@ void main() {
     );
     expect(
       tester.widget<SelectableText>(lemma).style,
-      Theme.of(tester.element(lemma)).textTheme.titleLarge,
+      Theme.of(tester.element(lemma)).textTheme.headlineSmall,
     );
     expect(tester.getSize(find.byType(DictionarySheet)).height, lessThan(400));
   });

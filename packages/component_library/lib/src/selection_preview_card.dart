@@ -5,15 +5,21 @@ import 'theme/tokens/app_radius.dart';
 import 'theme/tokens/app_spacing.dart';
 
 /// Compact preview of currently selected text.
+///
+/// [textDirection] is the direction of the quoted content, detected by the
+/// caller from the text itself; it must not follow the app locale, so an
+/// Arabic quote stays right-aligned in an English UI and vice versa.
 class SelectionPreviewCard extends StatelessWidget {
   const SelectionPreviewCard({
     required this.text,
+    this.textDirection,
     this.backgroundColor,
     this.maxLines = 3,
     super.key,
   });
 
   final String text;
+  final TextDirection? textDirection;
   final Color? backgroundColor;
   final int maxLines;
 
@@ -27,6 +33,7 @@ class SelectionPreviewCard extends StatelessWidget {
       ),
       child: Text(
         text,
+        textDirection: textDirection,
         maxLines: maxLines,
         overflow: TextOverflow.ellipsis,
       ),

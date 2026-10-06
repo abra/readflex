@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'state_icon_frame.dart';
 import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_spacing.dart';
 
@@ -9,12 +10,18 @@ import 'theme/tokens/app_spacing.dart';
 ///   1. `EmptyState(message: '...')` — plain centered text.
 ///   2. Add [icon] — shows the icon inside a tinted circle above the message.
 ///   3. Add [subtitle] — secondary hint below the message.
+///
+/// [compact] uses `bodyMedium` in `onSurfaceVariant` for the message so a
+/// short placeholder inside a sheet list or reader side panel reads as a
+/// hint, not a heading. Screen-level empty states keep the default
+/// `titleMedium`.
 class EmptyState extends StatelessWidget {
   const EmptyState({
     required this.message,
     this.icon,
     this.subtitle,
     this.action,
+    this.compact = false,
     super.key,
   });
 
@@ -22,6 +29,7 @@ class EmptyState extends StatelessWidget {
   final IconData? icon;
   final String? subtitle;
   final Widget? action;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -29,38 +37,36 @@ class EmptyState extends StatelessWidget {
     final text = context.text;
 
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null)
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: colors.surfaceContainerHighest,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                size: 24,
-                color: colors.onSurfaceVariant,
-              ),
-            ),
-          if (icon != null) const SizedBox(height: AppSpacing.md),
-          Text(message, style: text.titleMedium, textAlign: TextAlign.center),
-          if (subtitle != null) ...[
-            const SizedBox(height: AppSpacing.xs),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              StateIconFrame(icon: icon!, color: colors.onSurfaceVariant),
+              const SizedBox(height: AppSpacing.md),
+            ],
             Text(
-              subtitle!,
-              style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
+              message,
+              style: compact
+                  ? text.bodyMedium.copyWith(color: colors.onSurfaceVariant)
+                  : text.titleMedium,
               textAlign: TextAlign.center,
             ),
+            if (subtitle != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                subtitle!,
+                style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
+                textAlign: TextAlign.center,
+              ),
+            ],
+            if (action != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              action!,
+            ],
           ],
-          if (action != null) ...[
-            const SizedBox(height: AppSpacing.md),
-            action!,
-          ],
-        ],
+        ),
       ),
     );
   }

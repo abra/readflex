@@ -1,4 +1,5 @@
-export const ACTIVE_SEARCH_HIGHLIGHT_COLOR = '#ffb300'
+import { ACTIVE_SEARCH_HIGHLIGHT_COLOR } from './readflex_shell_constants.js'
+export { ACTIVE_SEARCH_HIGHLIGHT_COLOR }
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
 // Project only fragments inside the viewport's covered band, never a match

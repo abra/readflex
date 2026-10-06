@@ -27,30 +27,15 @@ void main() {
     });
   });
 
-  group('readerDirectionalContentPadding', () {
-    test('keeps start inset on the left for LTR progression', () {
+  group('readerSidePanelHiddenOffset', () {
+    test('hides toward the leading edge of the app locale', () {
       expect(
-        readerDirectionalContentPadding(
-          pageProgressionRtl: false,
-          start: 24,
-          end: 8,
-          top: 2,
-          bottom: 4,
-        ),
-        const EdgeInsets.only(left: 24, right: 8, top: 2, bottom: 4),
+        readerSidePanelHiddenOffset(TextDirection.ltr),
+        const Offset(-1, 0),
       );
-    });
-
-    test('moves start inset to the right for RTL progression', () {
       expect(
-        readerDirectionalContentPadding(
-          pageProgressionRtl: true,
-          start: 24,
-          end: 8,
-          top: 2,
-          bottom: 4,
-        ),
-        const EdgeInsets.only(left: 8, right: 24, top: 2, bottom: 4),
+        readerSidePanelHiddenOffset(TextDirection.rtl),
+        const Offset(1, 0),
       );
     });
   });

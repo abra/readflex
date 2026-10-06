@@ -206,14 +206,15 @@ class _ContextPanelDriver extends StatelessWidget {
       final focusedHighlightNote = _normalizedNoteText(focusedHighlight.note);
       final canEditFocusedHighlightNote = focusedHighlight.isImageArea;
       return Positioned.fill(
-        child: _SavedHighlightPopup(
+        child: ReaderSavedHighlightPopup(
           position: highlightFocus.position,
           selectedColor: focusedHighlight.color,
           readerTheme: readerTheme,
           panelColor: colors.surface,
           foregroundColor: colors.onSurface,
-          destructiveColor: Theme.of(context).colorScheme.error,
+          destructiveColor: context.colors.error,
           dividerColor: colors.outlineVariant,
+          hasNote: focusedHighlightNote != null,
           onDismiss: highlightFocusCubit.clear,
           onColorChanged: (color) {
             if (color == focusedHighlight.color) return;
@@ -735,8 +736,12 @@ class _ImageHighlightSelectionPopupState
 }
 
 /// Compact floating edit menu for an already saved highlight.
-class _SavedHighlightPopup extends StatelessWidget {
-  const _SavedHighlightPopup({
+///
+/// The full-screen barrier exists only while the popup is open and consumes
+/// the dismissing tap, so the page under it neither toggles chrome nor turns.
+@visibleForTesting
+class ReaderSavedHighlightPopup extends StatelessWidget {
+  const ReaderSavedHighlightPopup({
     required this.selectedColor,
     required this.readerTheme,
     required this.panelColor,
@@ -746,8 +751,10 @@ class _SavedHighlightPopup extends StatelessWidget {
     required this.onDismiss,
     required this.onColorChanged,
     required this.onDelete,
+    this.hasNote = false,
     this.onEditNote,
     this.position,
+    super.key,
   });
 
   final ReaderSelectionPosition? position;
@@ -760,6 +767,10 @@ class _SavedHighlightPopup extends StatelessWidget {
   final VoidCallback onDismiss;
   final ValueChanged<HighlightColor> onColorChanged;
   final VoidCallback onDelete;
+
+  /// Whether the focused highlight already carries a note; names the note
+  /// action "Add" or "Edit" accordingly.
+  final bool hasNote;
   final VoidCallback? onEditNote;
 
   @override
@@ -791,7 +802,7 @@ class _SavedHighlightPopup extends StatelessWidget {
           children: [
             Positioned.fill(
               child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
+                behavior: HitTestBehavior.opaque,
                 onTap: onDismiss,
                 child: const SizedBox.expand(),
               ),
@@ -813,7 +824,9 @@ class _SavedHighlightPopup extends StatelessWidget {
                     ReaderHighlightAction(
                       color: foregroundColor,
                       icon: AppIcons.edit,
-                      tooltip: context.l10n.readerEditComment,
+                      tooltip: hasNote
+                          ? context.l10n.readerEditComment
+                          : context.l10n.readerAddComment,
                       onPressed: onEditNote!,
                     ),
                   ReaderHighlightAction(
@@ -1159,26 +1172,45 @@ class _TextSelectionActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final foreground = enabled
+        ? action.color
+        : action.color.withValues(alpha: 0.38);
     return Tooltip(
       message: action.label,
-      child: InkWell(
+      child: Semantics(
+        button: true,
+        enabled: enabled,
+        label: action.label,
+        excludeSemantics: true,
         onTap: enabled ? action.onPressed : null,
-        child: SizedBox.expand(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(action.icon, size: AppIconSize.sm, color: action.color),
-              const SizedBox(height: AppSpacing.xxs),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-                child: Text(
-                  action.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.text.labelSmall.copyWith(color: action.color),
-                ),
+        child: InkWell(
+          onTap: enabled ? action.onPressed : null,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: AppSizes.buttonHeight,
+            ),
+            child: SizedBox.expand(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(action.icon, size: AppIconSize.sm, color: foreground),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xs,
+                    ),
+                    child: Text(
+                      action.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.text.labelSmall.copyWith(
+                        color: foreground,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -1301,8 +1333,10 @@ class _ContextPanel extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: textActions.map((action) {
-                return IconButton(
-                  icon: Icon(action.icon, color: iconColor),
+                return AppPlainIconButton(
+                  icon: action.icon,
+                  iconSize: AppIconSize.md,
+                  color: iconColor,
                   tooltip: action.labelFor(context),
                   onPressed: () async {
                     try {

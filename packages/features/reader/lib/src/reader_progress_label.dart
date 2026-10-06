@@ -1,5 +1,9 @@
 import 'package:domain_models/domain_models.dart';
 
+/// Localized "{page} / {total}" formatter supplied by the View
+/// (`l10n.readerPageOfTotal`); these helpers stay context-free.
+typedef ReaderPageOfTotalFormatter = String Function(int page, int total);
+
 String readerProgressLabel({
   SourceType sourceType = SourceType.book,
   required BookFormat? format,
@@ -7,6 +11,7 @@ String readerProgressLabel({
   required int? chapterCurrentPage,
   required int? chapterTotalPages,
   required bool isDragging,
+  required ReaderPageOfTotalFormatter formatPageOfTotal,
 }) {
   if (isImagePageFormat(format)) {
     return comicPageLabel(
@@ -14,6 +19,7 @@ String readerProgressLabel({
               ? _zeroIndexedPageFromProgress(progress, chapterTotalPages)
               : chapterCurrentPage,
           totalPages: chapterTotalPages,
+          formatPageOfTotal: formatPageOfTotal,
         ) ??
         '';
   }
@@ -24,6 +30,7 @@ String readerProgressLabel({
               ? _oneIndexedPageFromProgress(progress, chapterTotalPages)
               : chapterCurrentPage,
           totalPages: chapterTotalPages,
+          formatPageOfTotal: formatPageOfTotal,
         ) ??
         readingPercentLabel(progress);
   }
@@ -34,6 +41,7 @@ String readerProgressLabel({
   final sectionPage = visualSectionPageLabel(
     currentPage: chapterCurrentPage,
     totalPages: chapterTotalPages,
+    formatPageOfTotal: formatPageOfTotal,
   );
   return sectionPage == null ? percent : '$percent · $sectionPage';
 }
@@ -128,16 +136,21 @@ double readerSliderValue({
 String? visualSectionPageLabel({
   required int? currentPage,
   required int? totalPages,
+  required ReaderPageOfTotalFormatter formatPageOfTotal,
 }) {
   if (currentPage == null || totalPages == null || totalPages <= 0) return null;
   final page = _displayVisualSectionPage(currentPage, totalPages);
-  return '$page / $totalPages';
+  return formatPageOfTotal(page, totalPages);
 }
 
-String? comicPageLabel({required int? currentPage, required int? totalPages}) {
+String? comicPageLabel({
+  required int? currentPage,
+  required int? totalPages,
+  required ReaderPageOfTotalFormatter formatPageOfTotal,
+}) {
   if (currentPage == null || totalPages == null || totalPages <= 0) return null;
   final page = displayZeroIndexedPage(currentPage, totalPages);
-  return '$page / $totalPages';
+  return formatPageOfTotal(page, totalPages);
 }
 
 int displayZeroIndexedPage(int pageIndex, int totalPages) {

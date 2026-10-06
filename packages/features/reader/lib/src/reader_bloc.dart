@@ -9,12 +9,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:reader_webview/reader_webview.dart';
 
+import 'reader_progress_label.dart';
+
 part 'reader_event.dart';
 
 part 'reader_document.dart';
 
 part 'reader_state.dart';
 part 'reader_bookmark_operations.dart';
+part 'reader_highlight_operations.dart';
 
 // Shares the reader trace flag with the screen so bloc events align with UI logs.
 const _traceReaderBuilds = bool.fromEnvironment(
@@ -216,6 +219,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             bookmarkEdits: hasInitialSource
                 ? state.bookmarkEdits
                 : const ReaderBookmarkEdits(),
+            highlightEdits: hasInitialSource
+                ? state.highlightEdits
+                : const ReaderHighlightEdits(),
             documentFeatures: hasInitialSource ? state.documentFeatures : null,
           ),
         );
@@ -247,6 +253,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             bookmarkEdits: hasInitialSource
                 ? state.bookmarkEdits
                 : const ReaderBookmarkEdits(),
+            highlightEdits: hasInitialSource
+                ? state.highlightEdits
+                : const ReaderHighlightEdits(),
             articleUrl: updatedArticle.url,
             pageProgressionRtl: _inferredArticlePageProgressionRtl(
               updatedArticle,
@@ -520,15 +529,24 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     final sourceId = state.sourceId;
     if (sourceId == null) return;
     final operation = switch (event) {
-      ReaderHighlightsRefreshed() => null,
+      ReaderHighlightsRefreshed() ||
+      ReaderHighlightRestored() ||
+      ReaderHighlightUndoDismissed() => null,
       ReaderHighlightColorChangeRequested() => ReaderHighlightOperation.color,
       ReaderHighlightNoteChangeRequested() => ReaderHighlightOperation.note,
       ReaderHighlightDeleteRequested() => ReaderHighlightOperation.delete,
     };
     Future<void> Function()? write;
+    Highlight? undoHighlight;
     switch (event) {
       case ReaderHighlightsRefreshed():
         break;
+      case ReaderHighlightUndoDismissed():
+        emit(state.copyWith(highlightEdits: const ReaderHighlightEdits()));
+        return;
+      case ReaderHighlightRestored(:final highlightId):
+        await _restoreHighlight(highlightId, sourceId, emit);
+        return;
       case ReaderHighlightColorChangeRequested(
         :final highlightId,
         :final color,
@@ -547,6 +565,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         write = () =>
             _highlightRepository.updateHighlightNote(highlightId, normalized);
       case ReaderHighlightDeleteRequested(:final highlightId):
+        // Unknown ids are still deleted; only a known row gets an Undo entry.
+        undoHighlight = _highlightById(state.highlights, highlightId);
         write = () => _highlightRepository.deleteHighlight(highlightId);
     }
 
@@ -571,7 +591,21 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         'refresh-success source=$sourceId count=${highlights.length}',
       );
       emit(
-        state.copyWith(highlights: highlights, highlightEffect: effect(true)),
+        state.copyWith(
+          highlights: highlights,
+          highlightEffect: effect(true),
+          highlightEdits: undoHighlight == null
+              ? state.highlightEdits
+              : ReaderHighlightEdits(
+                  removed: [
+                    for (final h in state.highlightEdits.removed)
+                      if (h.id != undoHighlight.id) h,
+                    undoHighlight,
+                  ],
+                  busyId: state.highlightEdits.busyId,
+                  failedId: state.highlightEdits.failedId,
+                ),
+        ),
       );
     } catch (e, st) {
       addError(e, st);
@@ -657,7 +691,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         cfi: event.cfi,
         content: event.content,
         progress: event.progress,
-        chapterTitle: state.chapterTitle,
+        chapterTitle: isImagePageFormat(document.format)
+            ? null
+            : state.chapterTitle,
         anchorExact: event.anchorExact,
         anchorPrefix: event.anchorPrefix,
         anchorSuffix: event.anchorSuffix,

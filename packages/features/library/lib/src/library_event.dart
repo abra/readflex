@@ -9,7 +9,11 @@ final class LibraryLoadRequested extends LibraryEvent {
 }
 
 final class LibraryRefreshRequested extends LibraryEvent {
-  const LibraryRefreshRequested();
+  const LibraryRefreshRequested({this.completer});
+
+  /// Completed when the reload has finished, so pull-to-refresh can keep its
+  /// indicator up for exactly that long (an unchanged state emits nothing).
+  final Completer<void>? completer;
 }
 
 final class LibrarySourceDeleted extends LibraryEvent {

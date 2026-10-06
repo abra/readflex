@@ -14,7 +14,11 @@ void main() {
       contains('_kReaderWebViewRouteMountDelay = Duration.zero'),
     );
     expect(screenSource, contains('_kReaderLoadingIconSize = 28.0'));
-    expect(screenSource, contains('_kReaderLoadingScrimFadeDuration'));
+    expect(screenSource, isNot(contains('_kReaderLoadingScrimFadeDuration')));
+    expect(
+      contentSource,
+      contains('duration: context.motion(AppMotion.short)'),
+    );
     expect(contentSource, contains('class _ReaderLoadingScrim'));
     expect(contentSource, contains('class _ReaderLoadingMark'));
     expect(contentSource, contains('AppIcons.book'));

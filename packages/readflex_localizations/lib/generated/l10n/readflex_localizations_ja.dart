@@ -949,10 +949,10 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get readerThemeWarm => 'ウォーム';
 
   @override
-  String get readerThemeMist => 'グラファイト';
+  String get readerThemeMist => 'ナイト';
 
   @override
-  String get readerThemeNight => 'ナイト';
+  String get readerThemeNight => 'グラファイト';
 
   @override
   String get readerIncreaseBrightness => '明るさを上げる';
@@ -1039,4 +1039,41 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
 
   @override
   String get dictionaryFailureBody => '接続を確認するか、後でもう一度お試しください。';
+
+  @override
+  String get readerHighlightFilterAll => 'すべて';
+
+  @override
+  String get readerBrightnessSystem => 'システム';
+
+  @override
+  String readerPageOfTotal(int page, int total) {
+    return '$page / $total';
+  }
+
+  @override
+  String get readerAddComment => 'コメントを追加';
+
+  @override
+  String get readerAppearanceSample => 'あア';
+
+  @override
+  String get translationUnknownLanguage => '不明な言語';
+
+  @override
+  String dictionaryDefinitionNumber(int number) {
+    return '$number.';
+  }
+
+  @override
+  String get importDiscardUrlBody => '入力したアドレスは保存されません。';
+
+  @override
+  String get readerTapAreaHint => 'タップ領域';
+
+  @override
+  String get importOfflineHint => 'オフラインです';
+
+  @override
+  String get importArticleOfflineSubtitle => 'インターネット接続が必要です';
 }

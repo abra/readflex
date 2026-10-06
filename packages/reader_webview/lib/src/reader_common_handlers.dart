@@ -102,12 +102,14 @@ final class ReaderHandlerScope {
   }
 }
 
-/// Wires selection and tap bridge messages to the active reader callbacks.
+/// Wires selection, tap and external-link bridge messages to the active
+/// reader callbacks.
 void registerSharedReaderHandlers(
   InAppWebViewController controller, {
   void Function(ReaderSelection)? onTextSelected,
   VoidCallback? onTextDeselected,
   void Function(double x, double y)? onTapped,
+  ValueChanged<String>? onExternalLink,
   bool Function()? isActive,
 }) {
   final handlers = ReaderHandlerScope(
@@ -182,11 +184,23 @@ void registerSharedReaderHandlers(
       onTapped?.call(tap.x, tap.y);
     },
   );
+
+  handlers.add(
+    handlerName: 'onExternalLink',
+    callback: (args) {
+      if (args.isEmpty) return;
+      final href = parseReaderExternalLinkPayload(args.first);
+      if (href == null) return;
+      onExternalLink?.call(href);
+    },
+  );
 }
 
 /// Base [InAppWebViewSettings] for the reader WebView: zoom off,
 /// transparent background, native hybrid composition on Android, JS enabled,
-/// native text action menu off, DevTools inspectable only in debug.
+/// native text action menu off, DevTools inspectable only in debug, and
+/// navigation routed through `shouldOverrideUrlLoading` (see
+/// `ReaderNavigationPolicy`).
 InAppWebViewSettings baseReaderSettings() => _ReaderWebViewSettings();
 
 class _ReaderWebViewSettings extends InAppWebViewSettings {
@@ -197,6 +211,7 @@ class _ReaderWebViewSettings extends InAppWebViewSettings {
         isInspectable: kDebugMode,
         useHybridComposition: true,
         useOnRenderProcessGone: true,
+        useShouldOverrideUrlLoading: true,
         javaScriptEnabled: true,
         disableContextMenu: true,
         disableLongPressContextMenuOnLinks: true,

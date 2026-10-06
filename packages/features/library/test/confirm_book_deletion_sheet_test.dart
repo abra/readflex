@@ -45,4 +45,47 @@ void main() {
 
     expect(result, BookDeletionScope.keepLearningData);
   });
+
+  testWidgets('cancel is the filled default and delete the outlined action', (
+    tester,
+  ) async {
+    BookDeletionScope? result;
+    var completed = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: FilledButton(
+              onPressed: () async {
+                result = await showConfirmBookDeletionSheet(context, count: 2);
+                completed = true;
+              },
+              child: const Text('Open'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    final cancel = find.widgetWithText(FilledButton, 'Cancel');
+    final delete = find.widgetWithText(OutlinedButton, 'Delete');
+    expect(cancel, findsOneWidget);
+    expect(delete, findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Delete'), findsNothing);
+    final colors = Theme.of(tester.element(delete)).colorScheme;
+    final style = tester.widget<OutlinedButton>(delete).style!;
+    expect(style.foregroundColor!.resolve({}), colors.error);
+    expect(style.side!.resolve({})!.color, colors.error);
+    expect(tester.getCenter(delete).dx, lessThan(tester.getCenter(cancel).dx));
+
+    await tester.tap(cancel);
+    await tester.pumpAndSettle();
+    expect(completed, isTrue);
+    expect(result, isNull);
+    expect(find.text('Delete 2 items?'), findsNothing);
+  });
 }

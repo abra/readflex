@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:collection_repository/collection_repository.dart';
 import 'package:domain_models/domain_models.dart';
 
@@ -8,6 +10,10 @@ class FakeCollectionRepository implements CollectionRepository {
   final List<LibraryCollection> _collections = [];
   final Map<String, Set<String>> addedSourceIdsByCollection = {};
   bool shouldThrow = false;
+
+  /// When set, membership writes wait for it, so a test can observe the
+  /// sheet while a write is in flight.
+  Completer<void>? writeGate;
 
   Set<String> get favouriteSourceIds => Set.unmodifiable(
     addedSourceIdsByCollection[CollectionRepository.favouritesCollectionId] ??
@@ -53,6 +59,7 @@ class FakeCollectionRepository implements CollectionRepository {
     required String collectionId,
     required Iterable<String> sourceIds,
   }) async {
+    await writeGate?.future;
     if (shouldThrow) throw StorageException(cause: 'fake error');
     addedSourceIdsByCollection
         .putIfAbsent(collectionId, () => <String>{})
@@ -63,6 +70,7 @@ class FakeCollectionRepository implements CollectionRepository {
   Future<void> addSourcesToFavourites({
     required Iterable<String> sourceIds,
   }) async {
+    await writeGate?.future;
     if (shouldThrow) throw StorageException(cause: 'fake error');
     addedSourceIdsByCollection
         .putIfAbsent(

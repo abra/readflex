@@ -5,6 +5,7 @@ import 'package:component_library/component_library.dart';
 import 'package:library_feature/library_feature.dart';
 import 'package:library_feature/src/library_grid_view.dart';
 import 'package:library_feature/src/library_language_sheet.dart';
+import 'package:library_feature/src/library_layout_cubit.dart';
 import 'package:library_feature/src/library_list_view.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
@@ -2212,7 +2213,7 @@ void main() {
     );
     final deleteButton = find.descendant(
       of: deleteStep,
-      matching: find.widgetWithText(FilledButton, 'Delete'),
+      matching: find.widgetWithText(OutlinedButton, 'Delete'),
     );
     final messageAreaTop =
         tester.getBottomLeft(deleteHeader).dy + AppSpacing.sm;
@@ -2349,6 +2350,149 @@ void main() {
     );
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('import FAB is opaque primary with token elevation and icon', (
+    tester,
+  ) async {
+    bookRepository.seedBooks([_book]);
+    await tester.pumpWidget(buildSubject());
+    await tester.pumpAndSettle();
+    final fab = tester.widget<FloatingActionButton>(
+      find.byType(FloatingActionButton),
+    );
+    final colors = AppTheme.light().colorScheme;
+    expect(fab.backgroundColor, colors.primary);
+    expect(fab.backgroundColor!.a, 1);
+    expect(fab.elevation, AppElevation.level2);
+    final icon = tester.widget<Icon>(
+      find.descendant(
+        of: find.byType(FloatingActionButton),
+        matching: find.byIcon(AppIcons.add),
+      ),
+    );
+    expect(icon.size, AppIconSize.md);
+  });
+
+  // Swipe-delete waits for the real write: the row only leaves the tree
+  // once storage confirms, and a failure springs it back with a toast.
+  Future<void> pumpListLayout(WidgetTester tester) async {
+    await preferencesService.update(
+      (prefs) => prefs.copyWith(libraryLayoutMode: LibraryLayoutMode.list.id),
+    );
+    await tester.pumpWidget(buildSubject());
+    await tester.pumpAndSettle();
+    expect(find.byType(LibraryListView), findsOneWidget);
+  }
+
+  Finder listRow(Book book) => find.descendant(
+    of: find.byType(LibraryListView),
+    matching: find.text(book.title),
+  );
+
+  // The toast overlay has a Dismissible of its own; count only list rows.
+  Finder listRows() => find.descendant(
+    of: find.byType(LibraryListView),
+    matching: find.byType(Dismissible),
+  );
+
+  Future<void> swipeRow(WidgetTester tester, Book book) async {
+    final gesture = await tester.startGesture(tester.getCenter(listRow(book)));
+    // The first move only resolves the gesture arena; the second moves it
+    // past the dismiss threshold.
+    await gesture.moveBy(const Offset(-30, 0));
+    await tester.pump();
+    await gesture.moveBy(const Offset(-470, 0));
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(find.text('Delete this item?'), findsOneWidget);
+  }
+
+  Future<void> swipeAndConfirmDelete(WidgetTester tester, Book book) async {
+    await swipeRow(tester, book);
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+    await tester.pumpAndSettle();
+  }
+
+  // The toast overlay inserts after a frame of its own.
+  Future<void> pumpUntilToast(WidgetTester tester, Finder toast) async {
+    for (var frame = 0; frame < 10 && toast.evaluate().isEmpty; frame++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(toast, findsOneWidget);
+  }
+
+  testWidgets('swipe delete removes the row only after the write completes', (
+    tester,
+  ) async {
+    bookRepository.seedBooks([_book, _secondBook]);
+    final gate = Completer<void>();
+    bookRepository.deleteGate = gate;
+    await pumpListLayout(tester);
+
+    await swipeAndConfirmDelete(tester, _book);
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Write still in flight: the row is held, not collapsed or removed.
+    expect(listRows(), findsNWidgets(2));
+    expect(listRow(_book), findsOneWidget);
+    expect(find.textContaining('deleted'), findsNothing);
+    expect(await bookRepository.getBooks(), hasLength(2));
+
+    gate.complete();
+    await tester.pumpAndSettle();
+
+    expect(listRows(), findsOneWidget);
+    expect(listRow(_book), findsNothing);
+    expect(listRow(_secondBook), findsOneWidget);
+    await pumpUntilToast(tester, find.textContaining('deleted'));
+    expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('swipe delete failure keeps the row and shows the toast', (
+    tester,
+  ) async {
+    bookRepository.seedBooks([_book, _secondBook]);
+    bookRepository.failOnIds = {_book.id};
+    await pumpListLayout(tester);
+    final restingRect = tester.getRect(listRow(_book));
+
+    await swipeAndConfirmDelete(tester, _book);
+
+    await pumpUntilToast(tester, find.text('Failed to delete the item'));
+    expect(listRows(), findsNWidgets(2));
+    // The row sprang back to its resting position.
+    expect(tester.getRect(listRow(_book)), restingRect);
+    expect(listRow(_book).hitTestable(), findsOneWidget);
+    expect(await bookRepository.getBooks(), hasLength(2));
+    expect(tester.takeException(), isNull);
+
+    // Another swipe still works after the failed attempt.
+    bookRepository.failOnIds = const {};
+    await swipeAndConfirmDelete(tester, _book);
+    expect(listRow(_book), findsNothing);
+    expect(listRows(), findsOneWidget);
+    await tester.pump(const Duration(seconds: 7));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('swipe delete cancel springs the row back without a write', (
+    tester,
+  ) async {
+    bookRepository.seedBooks([_book]);
+    await pumpListLayout(tester);
+    final restingRect = tester.getRect(listRow(_book));
+
+    await swipeRow(tester, _book);
+    await tester.tap(find.widgetWithText(FilledButton, 'Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(tester.getRect(listRow(_book)), restingRect);
+    expect(await bookRepository.getBooks(), hasLength(1));
+    expect(find.textContaining('deleted'), findsNothing);
   });
 }
 

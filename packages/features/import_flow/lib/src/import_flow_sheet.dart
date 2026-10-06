@@ -63,7 +63,7 @@ Future<ImportFlowResult?> showImportFlowSheet(
 }
 
 /// Import-flow shell bound to [ImportFlowCubit].
-class _ImportFlowSheet extends StatelessWidget {
+class _ImportFlowSheet extends StatefulWidget {
   const _ImportFlowSheet({
     required this.isOffline,
     required this.isOfflineStream,
@@ -77,12 +77,45 @@ class _ImportFlowSheet extends StatelessWidget {
   final Future<void> Function() onOpenPrivacy;
 
   @override
+  State<_ImportFlowSheet> createState() => _ImportFlowSheetState();
+}
+
+class _ImportFlowSheetState extends State<_ImportFlowSheet> {
+  // UI-only: the cubit keeps the URL draft; this only shows the decision.
+  var _confirmingDiscard = false;
+
+  bool _hasDraft(ImportFlowState state) =>
+      state is ImportFlowArticleUrlEntry && state.url.trim().isNotEmpty;
+
+  /// Close, scrim and drag-down: a typed URL asks before leaving the flow.
+  void _requestClose() {
+    if (!_hasDraft(context.read<ImportFlowCubit>().state)) {
+      Navigator.of(context).pop();
+      return;
+    }
+    // Repeated attempts keep the decision visible until the user chooses.
+    if (_confirmingDiscard) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _confirmingDiscard = true);
+  }
+
+  void _keepEditing() => setState(() => _confirmingDiscard = false);
+
+  void _discardDraft() => Navigator.of(context).pop();
+
+  void _backToMenu() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    _confirmingDiscard = false;
+    context.read<ImportFlowCubit>().backToMenu();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<bool>(
-      stream: isOfflineStream,
-      initialData: isOffline,
+      stream: widget.isOfflineStream,
+      initialData: widget.isOffline,
       builder: (context, snapshot) {
-        final isOffline = snapshot.data ?? this.isOffline;
+        final isOffline = snapshot.data ?? widget.isOffline;
         return BlocBuilder<ImportFlowCubit, ImportFlowState>(
           builder: (context, state) {
             // Keep compact steps level; consent can grow for longer text.
@@ -96,24 +129,53 @@ class _ImportFlowSheet extends StatelessWidget {
             final hasPreviousStep =
                 state is ImportFlowArticleUrlEntry ||
                 state is ImportFlowBookTermsRequired;
+            final confirmingDiscard = _confirmingDiscard && _hasDraft(state);
+            // Status steps carry the flow header above the same content box.
+            final isStatusStep = switch (state) {
+              ImportFlowBookUploading() ||
+              ImportFlowArticleUploading() ||
+              ImportFlowBookDone() ||
+              ImportFlowArticleDone() ||
+              ImportFlowFailure() => true,
+              ImportFlowMenu() ||
+              ImportFlowBookTermsRequired() ||
+              ImportFlowArticleUrlEntry() => false,
+            };
             final step = _ImportFlowStepSwitcher(
               state: state,
+              confirmingDiscard: confirmingDiscard,
               child: ConstrainedBox(
-                key: ValueKey(state.runtimeType),
+                key: confirmingDiscard
+                    ? const ValueKey('importFlowDiscardStep')
+                    : ValueKey(state.runtimeType),
                 constraints: BoxConstraints(minHeight: stepHeight),
                 child: SizedBox(
                   height: state is ImportFlowBookTermsRequired
                       ? null
+                      : isStatusStep
+                      ? stepHeight + _kStatusHeaderExtent
                       : stepHeight,
                   child: switch (state) {
                     ImportFlowMenu() => _MenuView(isOffline: isOffline),
                     ImportFlowBookTermsRequired() => _BookTermsView(
-                      onOpenTerms: onOpenTerms,
-                      onOpenPrivacy: onOpenPrivacy,
+                      onOpenTerms: widget.onOpenTerms,
+                      onOpenPrivacy: widget.onOpenPrivacy,
                     ),
-                    ImportFlowArticleUrlEntry() => _ArticleUrlEntryView(
-                      state: state,
-                      isOffline: isOffline,
+                    ImportFlowArticleUrlEntry() => AppSheetDismissGuard(
+                      enabled: _hasDraft(state),
+                      onDismissAttempt: _requestClose,
+                      child: confirmingDiscard
+                          ? _DiscardDraftView(
+                              onKeepEditing: _keepEditing,
+                              onDiscard: _discardDraft,
+                              onClose: _requestClose,
+                            )
+                          : _ArticleUrlEntryView(
+                              state: state,
+                              isOffline: isOffline,
+                              onBack: _backToMenu,
+                              onClose: _requestClose,
+                            ),
                     ),
                     ImportFlowBookUploading() => _BookUploadingView(
                       state: state,
@@ -128,18 +190,26 @@ class _ImportFlowSheet extends StatelessWidget {
                 ),
               ),
             );
+            // Storage work in flight: the greyed Close already says "wait",
+            // so scrim, drag and system Back must not dismiss either.
+            final working =
+                state is ImportFlowBookUploading ||
+                state is ImportFlowArticleUploading;
             return PopScope(
-              canPop: !hasPreviousStep,
+              canPop: !hasPreviousStep && !working,
               onPopInvokedWithResult: (didPop, _) {
-                if (!didPop && hasPreviousStep) {
-                  FocusManager.instance.primaryFocus?.unfocus();
-                  context.read<ImportFlowCubit>().backToMenu();
+                if (didPop || working || !hasPreviousStep) return;
+                // Back is a step back, not a dismissal: the draft is kept.
+                if (confirmingDiscard) {
+                  _keepEditing();
+                } else {
+                  _backToMenu();
                 }
               },
-              child: MediaQuery.disableAnimationsOf(context)
+              child: context.reduceMotion
                   ? step
                   : AnimatedSize(
-                      duration: const Duration(milliseconds: 300),
+                      duration: context.motion(AppMotion.medium),
                       curve: Curves.easeInOutCubic,
                       alignment: Alignment.bottomCenter,
                       child: step,
@@ -159,10 +229,12 @@ class _ImportFlowSheet extends StatelessWidget {
 class _ImportFlowStepSwitcher extends StatefulWidget {
   const _ImportFlowStepSwitcher({
     required this.state,
+    required this.confirmingDiscard,
     required this.child,
   });
 
   final ImportFlowState state;
+  final bool confirmingDiscard;
   final Widget child;
 
   @override
@@ -180,14 +252,16 @@ class _ImportFlowStepSwitcherState extends State<_ImportFlowStepSwitcher> {
     if (oldWidget.state.runtimeType != widget.state.runtimeType) {
       _slideDirection = _transitionDirection(oldWidget.state, widget.state);
       _transitionStyle = _transitionStyleFor(oldWidget.state, widget.state);
+    } else if (oldWidget.confirmingDiscard != widget.confirmingDiscard) {
+      // The discard decision is one step deeper than the form.
+      _slideDirection = widget.confirmingDiscard ? 1 : -1;
+      _transitionStyle = _ImportFlowTransitionStyle.slide;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final duration = MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : const Duration(milliseconds: 300);
+    final duration = context.motion(AppMotion.medium);
     return AnimatedSwitcher(
       duration: duration,
       reverseDuration: duration,
@@ -355,20 +429,30 @@ class _MenuView extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _ImportMenuAction(
+                  AppDrillInRow(
                     key: const ValueKey('importMenu-book'),
                     icon: AppIcons.book,
                     title: l10n.importUploadBook,
                     subtitle: l10n.importUploadBookFormats,
+                    padding: _kMenuRowPadding,
                     onTap: cubit.requestBookImport,
                   ),
                   const Divider(),
-                  _ImportMenuAction(
+                  AppDrillInRow(
                     key: const ValueKey('importMenu-article'),
                     icon: isOffline ? AppIcons.offline : AppIcons.link,
-                    title: l10n.importSaveArticle,
-                    subtitle: l10n.importSaveArticleDescription,
                     iconColor: isOffline ? warning : null,
+                    title: l10n.importSaveArticle,
+                    // Say why the row is disabled instead of a stale promise.
+                    subtitle: isOffline
+                        ? l10n.importArticleOfflineSubtitle
+                        : l10n.importSaveArticleDescription,
+                    padding: _kMenuRowPadding,
+                    // Offline keeps the warning glyph and drops the chevron.
+                    trailing: isOffline
+                        ? const SizedBox(width: AppIconSize.sm)
+                        : null,
+                    enabled: !isOffline,
                     onTap: isOffline ? null : cubit.showArticleUrlEntry,
                   ),
                 ],
@@ -381,96 +465,7 @@ class _MenuView extends StatelessWidget {
   }
 }
 
-class _ImportMenuAction extends StatelessWidget {
-  const _ImportMenuAction({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-    this.iconColor,
-    super.key,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback? onTap;
-  final Color? iconColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final enabled = onTap != null;
-    final disabledColor = colors.onSurface.withValues(alpha: 0.38);
-
-    return Semantics(
-      container: true,
-      excludeSemantics: true,
-      button: true,
-      enabled: enabled,
-      label: title,
-      value: subtitle,
-      onTap: onTap,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
-          child: Row(
-            children: [
-              SizedBox(
-                width: AppSizes.iconButtonSize,
-                child: Icon(
-                  icon,
-                  size: AppIconSize.md,
-                  color:
-                      iconColor ??
-                      (enabled ? context.actionForeground : disabledColor),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: context.text.titleSmall.copyWith(
-                        color: enabled ? colors.onSurface : disabledColor,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      subtitle,
-                      style: context.text.bodySmall.copyWith(
-                        color: enabled
-                            ? colors.onSurfaceVariant
-                            : disabledColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              SizedBox(
-                width: AppIconSize.sm,
-                child: enabled
-                    ? Icon(
-                        Directionality.of(context) == TextDirection.rtl
-                            ? AppIcons.chevronLeft
-                            : AppIcons.chevronRight,
-                        size: AppIconSize.sm,
-                        color: colors.onSurfaceVariant,
-                      )
-                    : null,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+const _kMenuRowPadding = EdgeInsets.symmetric(vertical: AppSpacing.xl);
 
 /// Terms acceptance step shown before importing a local book file.
 class _BookTermsView extends StatefulWidget {
@@ -499,6 +494,7 @@ class _BookTermsViewState extends State<_BookTermsView> {
     return _ImportFormLayout(
       title: l10n.importBeforeUploadingTitle,
       onBack: cubit.cancelBookImportTerms,
+      onClose: () => Navigator.of(context).pop(),
       fitContent: true,
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -540,7 +536,7 @@ class _BookTermsCheckbox extends StatelessWidget {
   Widget build(BuildContext context) {
     return MergeSemantics(
       child: InkWell(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         onTap: () => onChanged(!accepted),
         child: Row(
           children: [
@@ -659,10 +655,14 @@ class _ArticleUrlEntryView extends StatefulWidget {
   const _ArticleUrlEntryView({
     required this.state,
     required this.isOffline,
+    required this.onBack,
+    required this.onClose,
   });
 
   final ImportFlowArticleUrlEntry state;
   final bool isOffline;
+  final VoidCallback onBack;
+  final VoidCallback onClose;
 
   @override
   State<_ArticleUrlEntryView> createState() => _ArticleUrlEntryViewState();
@@ -722,10 +722,8 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
 
     return _ImportFormLayout(
       title: l10n.importSaveArticle,
-      onBack: () {
-        FocusManager.instance.primaryFocus?.unfocus();
-        cubit.backToMenu();
-      },
+      onBack: widget.onBack,
+      onClose: widget.onClose,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -737,14 +735,23 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
             autocorrect: false,
             decoration: InputDecoration(
               hintText: l10n.importArticleUrlHint,
-              helper: const _ArticleUrlFeedback(),
+              // Offline disables Save; say so where the eye already is.
+              helper: _ArticleUrlFeedback(
+                key: const ValueKey('articleUrlOfflineHint'),
+                message: widget.isOffline ? l10n.importOfflineHint : null,
+                isError: false,
+              ),
               error: error == null ? null : _ArticleUrlFeedback(message: error),
-              suffixIcon: _PasteUrlButton(
+              suffixIcon: AppPlainIconButton(
+                key: const ValueKey('articleUrlPasteButton'),
+                tooltip: l10n.importPasteUrl,
+                icon: AppIcons.paste,
+                color: context.actionForeground,
                 onPressed: _pasteClipboardArticleUrl,
               ),
               suffixIconConstraints: const BoxConstraints.tightFor(
-                width: 52,
-                height: 48,
+                width: AppSizes.buttonHeight,
+                height: AppSizes.buttonHeight,
               ),
             ),
             onSubmitted: widget.isOffline
@@ -768,14 +775,19 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
 /// Reserves the same space for every localized validation message, even when
 /// there is no error. Layout follows the actual font, text scale, and width.
 class _ArticleUrlFeedback extends StatelessWidget {
-  const _ArticleUrlFeedback({this.message});
+  const _ArticleUrlFeedback({this.message, this.isError = true, super.key});
 
   final String? message;
+
+  /// Errors use the error colour; status hints (offline) stay muted.
+  final bool isError;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final style = context.text.bodySmall.copyWith(color: context.colors.error);
+    final style = context.text.bodySmall.copyWith(
+      color: isError ? context.colors.error : context.colors.onSurfaceVariant,
+    );
     return Stack(
       alignment: AlignmentDirectional.topStart,
       children: [
@@ -788,6 +800,7 @@ class _ArticleUrlFeedback extends StatelessWidget {
                   l10n.importArticleUrlRequired,
                   l10n.importInvalidArticleUrl,
                   l10n.importClipboardUnavailable,
+                  l10n.importOfflineHint,
                 ])
                   RichText(
                     text: TextSpan(text: text, style: style),
@@ -810,41 +823,12 @@ class _ArticleUrlFeedback extends StatelessWidget {
   }
 }
 
-class _PasteUrlButton extends StatelessWidget {
-  const _PasteUrlButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: context.l10n.importPasteUrl,
-      button: true,
-      child: GestureDetector(
-        key: const ValueKey('articleUrlPasteButton'),
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: SizedBox(
-          width: 52,
-          height: 48,
-          child: Center(
-            child: Icon(
-              AppIcons.paste,
-              size: AppIconSize.sm,
-              color: context.actionForeground,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// Uses the available height without intrinsic layout or unbounded flex.
 class _ImportFormLayout extends StatelessWidget {
   const _ImportFormLayout({
     required this.title,
     required this.onBack,
+    required this.onClose,
     required this.content,
     this.hints,
     required this.actions,
@@ -853,6 +837,7 @@ class _ImportFormLayout extends StatelessWidget {
 
   final String title;
   final VoidCallback onBack;
+  final VoidCallback onClose;
   final Widget content;
   final Widget? hints;
   final Widget actions;
@@ -884,7 +869,7 @@ class _ImportFormLayout extends StatelessWidget {
                   onBack: onBack,
                   backLabel: context.l10n.commonBack,
                   closeLabel: context.l10n.commonClose,
-                  onClose: () => Navigator.of(context).pop(),
+                  onClose: onClose,
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Padding(
@@ -908,7 +893,7 @@ class _ImportFormLayout extends StatelessWidget {
           onBack: onBack,
           backLabel: context.l10n.commonBack,
           closeLabel: context.l10n.commonClose,
-          onClose: () => Navigator.of(context).pop(),
+          onClose: onClose,
           constrainBody: true,
           bodyPadding: EdgeInsets.zero,
           footer: actions,
@@ -934,6 +919,44 @@ class _ImportFormLayout extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Discard decision for a typed article URL. Keep editing is the filled
+/// default; Close keeps the decision visible until the user chooses.
+class _DiscardDraftView extends StatelessWidget {
+  const _DiscardDraftView({
+    required this.onKeepEditing,
+    required this.onDiscard,
+    required this.onClose,
+  });
+
+  final VoidCallback onKeepEditing;
+  final VoidCallback onDiscard;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return _ImportFormLayout(
+      title: l10n.commonDiscardChangesTitle,
+      onBack: onKeepEditing,
+      onClose: onClose,
+      fitContent: true,
+      content: Text(
+        l10n.importDiscardUrlBody,
+        style: context.text.bodyMedium.copyWith(
+          color: context.colors.onSurfaceVariant,
+        ),
+      ),
+      actions: AppSheetActions(
+        primaryLabel: l10n.commonKeepEditing,
+        onPrimary: onKeepEditing,
+        secondaryLabel: l10n.commonDiscardChanges,
+        onSecondary: onDiscard,
+        destructiveSecondary: true,
+      ),
     );
   }
 }
@@ -1011,6 +1034,7 @@ class _BookUploadingView extends StatelessWidget {
     final progress = state.progress;
 
     return _StatusLayout(
+      closable: false,
       reserveActionSpace: true,
       content: _BookUploadStatusContent(
         filename: state.filename,
@@ -1093,7 +1117,7 @@ class _BookUploadStatusContent extends StatelessWidget {
                 child: Icon(
                   AppIcons.book,
                   color: context.actionForeground,
-                  size: 28,
+                  size: AppIconSize.lg,
                 ),
               ),
             ),
@@ -1162,6 +1186,7 @@ class _ArticleUploadingView extends StatelessWidget {
     final text = context.text;
 
     return _StatusLayout(
+      closable: false,
       reserveActionSpace: true,
       content: _StatusContent(
         icon: const _StatusIconSlot(
@@ -1190,38 +1215,99 @@ String _articleUploadingTitle(
   ImportFlowArticleStage.saving => context.l10n.importSavingArticle,
 };
 
-/// Shared vertical layout for upload/progress states.
+/// Shared vertical layout for upload/progress states, under the flow's
+/// header so Close stays where the menu put it.
 ///
 /// [reserveActionSpace] keeps the sheet height stable before a retry/done action
-/// appears.
+/// appears. [closable] is false while storage work is in flight; the step
+/// then swallows scrim and drag dismissal as well.
+void _ignoreDismissAttempt() {}
+
 class _StatusLayout extends StatelessWidget {
   const _StatusLayout({
     required this.content,
+    required this.closable,
     this.action,
     this.reserveActionSpace = false,
   });
 
   final Widget content;
+  final bool closable;
   final Widget? action;
   final bool reserveActionSpace;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: _kStatusViewPadding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Center(child: SingleChildScrollView(child: content)),
+    final layout = _buildLayout(context);
+    if (closable) return layout;
+    return AppSheetDismissGuard(
+      enabled: true,
+      onDismissAttempt: _ignoreDismissAttempt,
+      child: layout,
+    );
+  }
+
+  Widget _buildLayout(BuildContext context) {
+    final l10n = context.l10n;
+    final onClose = closable ? () => Navigator.of(context).pop() : null;
+    final actionSlot =
+        action ??
+        (reserveActionSpace
+            ? const SizedBox(height: _kStatusActionHeight)
+            : null);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        // Keyboard or large text can leave less than the header and stacked
+        // actions need; scroll the whole step like the URL form does.
+        if (constraints.maxHeight < 240 * scale) {
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                BottomSheetHeader(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                  ),
+                  title: l10n.importAddToLibraryTitle,
+                  closeLabel: l10n.commonClose,
+                  onClose: onClose,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Padding(
+                  padding: _kStatusViewPadding,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      content,
+                      const SizedBox(height: AppSpacing.sm),
+                      ?actionSlot,
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        return ActionBottomSheetLayout(
+          title: l10n.importAddToLibraryTitle,
+          onClose: onClose,
+          closeLabel: l10n.commonClose,
+          headerSpacing: AppSpacing.sm,
+          constrainBody: true,
+          bodyPadding: _kStatusViewPadding,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Center(child: SingleChildScrollView(child: content)),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              ?actionSlot,
+            ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          if (action case final action?)
-            action
-          else if (reserveActionSpace)
-            const SizedBox(height: _kStatusActionHeight),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -1275,11 +1361,14 @@ class _StatusContent extends StatelessWidget {
   }
 }
 
-const _kStatusActionHeight = 48.0;
+const _kStatusActionHeight = AppSizes.buttonHeight;
 
-/// Insets used by the title-less status views (uploading, done,
-/// failure) so they line up with the [_MenuView]'s ActionBottomSheet
-/// gutter.
+/// Header row plus its body gap, added to the shared step height so status
+/// content keeps the room it had before the header was introduced.
+const _kStatusHeaderExtent = AppSizes.buttonHeight + AppSpacing.sm;
+
+/// Body insets for the status steps (uploading, done, failure), matching the
+/// [_MenuView] gutter below the shared header.
 const _kStatusViewPadding = EdgeInsets.fromLTRB(
   AppSpacing.xl,
   0,
@@ -1338,6 +1427,7 @@ class _FailureView extends StatelessWidget {
     final cubit = context.read<ImportFlowCubit>();
 
     return _StatusLayout(
+      closable: true,
       content: _StatusContent(
         icon: _StatusIconSlot(
           child: _IconDisc(
@@ -1404,6 +1494,7 @@ class _SuccessLayout extends StatelessWidget {
     final muted = cs.onSurfaceVariant;
 
     return _StatusLayout(
+      closable: true,
       content: _StatusContent(
         icon: _StatusIconSlot(
           child: _IconDisc(
@@ -1411,7 +1502,7 @@ class _SuccessLayout extends StatelessWidget {
             child: Icon(
               AppIcons.check,
               color: context.actionForeground,
-              size: 24,
+              size: AppIconSize.md,
             ),
           ),
         ),
@@ -1440,8 +1531,8 @@ class _StatusIconSlot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 56,
-      height: 56,
+      width: AppSizes.stateIconFrame,
+      height: AppSizes.stateIconFrame,
       child: Center(child: child),
     );
   }
@@ -1465,8 +1556,8 @@ class _IconDisc extends StatelessWidget {
     final fill = (tint ?? cs.primary).withValues(alpha: 0.10);
 
     return Container(
-      width: 56,
-      height: 56,
+      width: AppSizes.stateIconFrame,
+      height: AppSizes.stateIconFrame,
       decoration: BoxDecoration(color: fill, shape: BoxShape.circle),
       alignment: Alignment.center,
       child: child,

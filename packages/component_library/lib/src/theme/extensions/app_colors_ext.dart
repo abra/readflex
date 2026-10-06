@@ -25,6 +25,8 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
     required this.proBadge,
     required this.proBadgeForeground,
     required this.divider,
+    required this.onLightSwatch,
+    required this.onDarkSwatch,
   });
 
   final Color highlightYellow;
@@ -47,6 +49,11 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
   final Color proBadgeForeground;
   final Color divider;
 
+  /// Ink for a check or glyph drawn over a light sample color (a highlight
+  /// swatch, a reader theme preview); [onDarkSwatch] is its counterpart.
+  final Color onLightSwatch;
+  final Color onDarkSwatch;
+
   @override
   ThemeExtension<AppColorsExt> copyWith({
     Color? highlightYellow,
@@ -68,6 +75,8 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
     Color? proBadge,
     Color? proBadgeForeground,
     Color? divider,
+    Color? onLightSwatch,
+    Color? onDarkSwatch,
   }) {
     return AppColorsExt(
       highlightYellow: highlightYellow ?? this.highlightYellow,
@@ -89,6 +98,8 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
       proBadge: proBadge ?? this.proBadge,
       proBadgeForeground: proBadgeForeground ?? this.proBadgeForeground,
       divider: divider ?? this.divider,
+      onLightSwatch: onLightSwatch ?? this.onLightSwatch,
+      onDarkSwatch: onDarkSwatch ?? this.onDarkSwatch,
     );
   }
 
@@ -138,6 +149,8 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
         t,
       )!,
       divider: Color.lerp(divider, other.divider, t)!,
+      onLightSwatch: Color.lerp(onLightSwatch, other.onLightSwatch, t)!,
+      onDarkSwatch: Color.lerp(onDarkSwatch, other.onDarkSwatch, t)!,
     );
   }
 }

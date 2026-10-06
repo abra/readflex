@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:collection_repository/collection_repository.dart';
@@ -89,7 +91,11 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     LibraryRefreshRequested event,
     Emitter<LibraryState> emit,
   ) async {
-    await _loadItems(emit);
+    try {
+      await _loadItems(emit);
+    } finally {
+      event.completer?.complete();
+    }
   }
 
   Future<void> _onSourceDeleted(
@@ -98,20 +104,16 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
   ) async {
     _loadGeneration++;
     final deletion = _deletionDescriptorFor({event.sourceId});
+    var deleted = true;
     try {
       await _deleteSource(event.sourceId, event.scope);
-      await _loadItems(emit, deletion: deletion);
     } catch (e, st) {
+      deleted = false;
       addError(e, st);
-      final effect = _deletionEffect(deletion, success: false);
-      emit(
-        state.copyWith(
-          status: LibraryStatus.success,
-          deletionVersion: effect.version,
-          deletionEffect: effect,
-        ),
-      );
     }
+    // A failed delete still re-reads storage: the list must show what is
+    // really there, not an unchanged copy of the pre-delete list.
+    await _loadItems(emit, deletion: deletion, deletionSuccess: deleted);
   }
 
   Future<void> _onSourcesDeleted(
@@ -341,10 +343,10 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
   }
 
   _LibraryDeletionDescriptor _deletionDescriptorFor(Iterable<String> ids) {
-    final idList = ids.toList(growable: false);
+    final idSet = Set.unmodifiable(ids);
     return _LibraryDeletionDescriptor(
-      count: idList.length,
-      singleTitle: idList.length == 1 ? _titleOf(idList.first) : null,
+      sourceIds: idSet,
+      singleTitle: idSet.length == 1 ? _titleOf(idSet.first) : null,
     );
   }
 
@@ -356,7 +358,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     return LibraryDeletionEffect(
       version: version,
       success: success,
-      count: deletion.count,
+      sourceIds: deletion.sourceIds,
       singleTitle: deletion.singleTitle,
     );
   }
@@ -382,11 +384,11 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
 /// from [LibraryState.sources].
 class _LibraryDeletionDescriptor {
   const _LibraryDeletionDescriptor({
-    required this.count,
+    required this.sourceIds,
     this.singleTitle,
   });
 
-  final int count;
+  final Set<String> sourceIds;
   final String? singleTitle;
 }
 

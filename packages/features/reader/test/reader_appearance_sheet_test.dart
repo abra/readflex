@@ -1,3 +1,5 @@
+import 'dart:ui' show Tristate;
+
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -752,6 +754,88 @@ void main() {
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);
+  });
+  testWidgets('theme swatches are selectable ink tiles with sample colors', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await tester.openAppearanceSheet(cubit);
+    final context = tester.element(find.text('Snow'));
+    final l10n = context.l10n;
+    expect(
+      find.text(l10n.readerAppearanceSample),
+      findsNWidgets(ReaderThemePreset.values.length),
+    );
+    final paper = find.byKey(const ValueKey('reader-theme-swatch-paper'));
+    final snow = find.byKey(const ValueKey('reader-theme-swatch-snow'));
+    final paperNode = tester.getSemantics(paper);
+    expect(paperNode.flagsCollection.isButton, isTrue);
+    expect(paperNode.flagsCollection.isSelected, Tristate.isTrue);
+    expect(paperNode.label, 'Paper');
+    expect(
+      tester.getSemantics(snow).flagsCollection.isSelected,
+      Tristate.isFalse,
+    );
+    expect(tester.getSize(paper).height, greaterThanOrEqualTo(48));
+    expect(
+      find.descendant(of: paper, matching: find.byType(InkWell)),
+      findsOneWidget,
+    );
+    final selectedMaterial = tester.widget<Material>(
+      find.descendant(of: paper, matching: find.byType(Material)).first,
+    );
+    expect(selectedMaterial.color, context.colors.selectedControlBackground);
+    final unselectedMaterial = tester.widget<Material>(
+      find.descendant(of: snow, matching: find.byType(Material)).first,
+    );
+    expect(unselectedMaterial.color, Colors.transparent);
+    final sample = tester.widget<Container>(
+      find.descendant(of: paper, matching: find.byType(Container)).first,
+    );
+    expect(
+      (sample.decoration! as BoxDecoration).color,
+      ReaderThemePreset.paper.data.backgroundColor,
+    );
+    expect(
+      tester.widget<Text>(find.text('Paper')).style?.color,
+      context.colors.selectedControlForeground,
+    );
+    expect(
+      tester.widget<Text>(find.text('Snow')).style?.color,
+      context.colors.onSurfaceVariant,
+    );
+    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    semantics.dispose();
+  });
+
+  testWidgets('theme sample text is localized', (tester) async {
+    await tester.openAppearanceSheet(cubit, locale: const Locale('ru'));
+    final l10n = tester.element(find.byType(BottomSheet)).l10n;
+    expect(l10n.readerAppearanceSample, isNot('Aa'));
+    expect(
+      find.text(l10n.readerAppearanceSample),
+      findsNWidgets(ReaderThemePreset.values.length),
+    );
+    expect(find.text('Aa'), findsNothing);
+  });
+
+  testWidgets('font options use fill and check without an extra border', (
+    tester,
+  ) async {
+    await tester.openAppearanceSheet(cubit);
+    await tester.openFontStep();
+    for (final preset in ReaderFontPreset.values) {
+      final option = find.byKey(ValueKey('reader-font-option-${preset.id}'));
+      final material = tester.widget<Material>(
+        find.descendant(of: option, matching: find.byType(Material)).first,
+      );
+      expect(
+        (material.shape! as RoundedRectangleBorder).side,
+        BorderSide.none,
+        reason: preset.id,
+      );
+    }
+    expect(find.byIcon(AppIcons.check), findsOneWidget);
   });
 }
 

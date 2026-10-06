@@ -10,6 +10,7 @@ import 'comic_touch_tap_forwarder.dart';
 import 'reader_bridge.dart';
 import 'reader_common_handlers.dart';
 import 'reader_load_session.dart';
+import 'reader_navigation_policy.dart';
 import 'reader_webview_lifecycle.dart';
 
 part 'book_reader_webview_helpers.dart';

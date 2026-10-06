@@ -226,13 +226,14 @@ void main() {
         onNavigate: () => navigated++,
       );
       expect(find.text('My image note'), findsOneWidget);
-      expect(find.text('The arrival.jpg'), findsOneWidget);
+      // Comic chapter titles are archive file names; the page label leads.
+      expect(find.text('The arrival.jpg'), findsNothing);
       expect(find.text('Page 3'), findsOneWidget);
       expect(find.text('Page highlight'), findsNothing);
       expect(find.byIcon(AppIcons.copy), findsNothing);
       expect(find.byIcon(AppIcons.arrowRight), findsNothing);
       expect(find.byIcon(AppIcons.arrowLeft), findsNothing);
-      await tester.tap(find.text('The arrival.jpg'));
+      await tester.tap(find.text('Page 3'));
       expect(navigated, 1);
     },
   );
@@ -285,13 +286,151 @@ void main() {
           tester.widget<Text>(find.text(sample.$1)).textDirection,
           sample.$2,
         );
-        expect(
-          tester.widget<Text>(find.text('The arrival.jpg')).textDirection,
-          TextDirection.ltr,
-        );
+        expect(find.text('The arrival.jpg'), findsNothing);
       }
     },
   );
+
+  group('removed rows', () {
+    Future<void> pumpRemoved(
+      WidgetTester tester,
+      Highlight value, {
+      bool failed = false,
+      VoidCallback? onUndo,
+      VoidCallback? onNavigate,
+    }) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          supportedLocales: ReadflexSupportedLocales.locales,
+          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: ReaderHighlightListTile(
+                highlight: value,
+                readerTheme: ReaderThemePreset.paper.data,
+                pageProgressionRtl: false,
+                expanded: false,
+                removed: true,
+                failed: failed,
+                onUndo: onUndo,
+                onExpanded: () => fail('removed rows do not expand'),
+                onNavigate: onNavigate ?? () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('text row keeps its quote muted with an icon-only Undo', (
+      tester,
+    ) async {
+      var undone = 0;
+      var navigated = 0;
+      await pumpRemoved(
+        tester,
+        highlight(text: 'Gone passage').copyWith(progress: .4),
+        onUndo: () => undone++,
+        onNavigate: () => navigated++,
+      );
+      final context = tester.element(find.byType(ReaderHighlightListTile));
+      final l10n = context.l10n;
+      final colors = context.colors;
+      expect(find.text(l10n.readerHighlightRemoved), findsOneWidget);
+      expect(find.text('40%'), findsNothing);
+      expect(find.text(l10n.readerExpandHighlight), findsNothing);
+      expect(
+        tester.widget<Text>(find.text('Gone passage')).style?.color,
+        colors.onSurfaceVariant,
+      );
+      final undo = find.byTooltip(l10n.commonUndo);
+      expect(undo, findsOneWidget);
+      expect(find.byIcon(AppIcons.undo), findsOneWidget);
+      expect(find.byType(TextButton), findsNothing);
+      expect(tester.getSize(undo), const Size.square(AppSizes.buttonHeight));
+      // Glyph edge on the 16dp content gutter, like the bookmark rows.
+      final width = tester.getSize(find.byType(Scaffold)).width;
+      expect(
+        width - tester.getRect(find.byIcon(AppIcons.undo)).right,
+        AppSpacing.lg,
+      );
+      await tester.tap(find.text('Gone passage'));
+      expect(navigated, 0);
+      await tester.tap(undo);
+      expect(undone, 1);
+    });
+
+    testWidgets('a busy row disables only its Undo', (tester) async {
+      await pumpRemoved(tester, highlight(text: 'Gone passage'));
+      final l10n = tester.element(find.byType(ReaderHighlightListTile)).l10n;
+      expect(
+        tester
+            .widget<AppPlainIconButton>(find.byType(AppPlainIconButton))
+            .onPressed,
+        isNull,
+      );
+      expect(find.byTooltip(l10n.commonUndo), findsOneWidget);
+    });
+
+    testWidgets('restore failure stays on the row with Undo', (tester) async {
+      await pumpRemoved(
+        tester,
+        highlight(text: 'Gone passage'),
+        failed: true,
+        onUndo: () {},
+      );
+      final l10n = tester.element(find.byType(ReaderHighlightListTile)).l10n;
+      expect(
+        find.text(
+          '${l10n.readerHighlightRemoved} · ${l10n.readerHighlightSaveFailed}',
+        ),
+        findsOneWidget,
+      );
+      expect(find.byIcon(AppIcons.undo), findsOneWidget);
+    });
+
+    testWidgets('image row shows the page label, status and Undo', (
+      tester,
+    ) async {
+      var undone = 0;
+      var navigated = 0;
+      await pumpRemoved(
+        tester,
+        highlight(text: 'Page highlight', cfi: null).copyWith(
+          kind: HighlightKind.imageArea,
+          note: 'Image note',
+          imageArea: const HighlightImageArea(
+            pageIndex: 2,
+            x: .1,
+            y: .1,
+            width: .2,
+            height: .2,
+          ),
+        ),
+        onUndo: () => undone++,
+        onNavigate: () => navigated++,
+      );
+      final context = tester.element(find.byType(ReaderHighlightListTile));
+      final l10n = context.l10n;
+      expect(find.text(l10n.readerPageNumber(3)), findsOneWidget);
+      expect(find.text(l10n.readerHighlightRemoved), findsOneWidget);
+      expect(find.text('Image note'), findsOneWidget);
+      expect(
+        tester.widget<Text>(find.text(l10n.readerPageNumber(3))).style?.color,
+        context.colors.onSurfaceVariant,
+      );
+      await tester.tap(find.text(l10n.readerPageNumber(3)));
+      expect(navigated, 0);
+      await tester.tap(find.byTooltip(l10n.commonUndo));
+      expect(undone, 1);
+    });
+  });
 
   for (final locale in [
     const Locale('en'),

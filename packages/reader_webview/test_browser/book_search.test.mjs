@@ -154,8 +154,8 @@ async function expectActiveMatch(page, cfi) {
             outlines: active[0]?.querySelectorAll('[stroke]').length ?? 0,
             activeColor: fill ? getComputedStyle(fill).fill : null,
             inactiveColor: inactive[0] ? getComputedStyle(inactive[0]).fill : null,
-            activeOpacity: Number(active[0]?.style.opacity),
-            inactiveOpacity: Number(inactive[0]?.style.opacity),
+            activeOpacity: Number(active[0] ? getComputedStyle(active[0]).opacity : NaN),
+            inactiveOpacity: Number(inactive[0] ? getComputedStyle(inactive[0]).opacity : NaN),
             selected: doc.defaultView.getSelection().toString(),
             visible: bounds && bounds.left < viewport.right && bounds.right > viewport.left
                 && bounds.top < viewport.bottom && bounds.bottom > viewport.top,

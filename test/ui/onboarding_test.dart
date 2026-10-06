@@ -1,3 +1,4 @@
+import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/library_feature.dart';
@@ -129,4 +130,44 @@ void main() {
       await unmountUi(tester);
     }, tags: ['golden']);
   }
+
+  testWidgets('page body and primary action share the 16dp gutter', (
+    tester,
+  ) async {
+    await pumpGoldenSurface(
+      tester,
+      VisualProfile.phone,
+      (_) => OnboardingScreen(onComplete: () {}),
+      surfaceSize: const Size(390, 844),
+    );
+    final body = tester.getRect(find.byType(SingleChildScrollView).first);
+    final button = tester.getRect(find.byType(FilledButton));
+    expect(body.left, AppSpacing.lg);
+    expect(body.right, 390 - AppSpacing.lg);
+    expect(button.left, body.left);
+    expect(button.right, body.right);
+  });
+
+  testWidgets('page changes use the medium motion token', (tester) async {
+    await pumpGoldenSurface(
+      tester,
+      VisualProfile.phone,
+      (_) => OnboardingScreen(onComplete: () {}),
+      surfaceSize: const Size(390, 844),
+    );
+    final strings = ReadflexLocalizations.of(
+      tester.element(find.byType(OnboardingScreen)),
+    )!;
+    expect(
+      tester
+          .widgetList<AnimatedContainer>(find.byType(AnimatedContainer))
+          .every((w) => w.duration == Duration.zero),
+      isTrue,
+      reason: 'golden surfaces disable animations',
+    );
+    await tester.tap(find.text(strings.appNext));
+    await tester.pump();
+    final view = tester.widget<PageView>(find.byType(PageView));
+    expect(view.controller!.page, 1);
+  });
 }

@@ -4,7 +4,7 @@ import { Overlayer } from './overlayer.js'
 export class ArticleHighlighter {
     #native = Boolean(globalThis.Highlight && globalThis.CSS?.highlights)
     #overlay = null
-    #keys = new Set()
+    #keys = new Map()
     #redrawPending = false
 
     constructor(content) {
@@ -29,23 +29,54 @@ export class ArticleHighlighter {
         document.fonts?.addEventListener('loadingdone', redraw)
     }
 
-    set(name, range, background) {
-        this.#keys.add(name)
+    get isNative() {
+        return this.#native
+    }
+
+    // `style` holds the Overlayer.highlight option set (color, opacity,
+    // mixBlendMode, verticalOffset, radius, verticalInset); the CSS path
+    // receives its colour through a `::highlight` rule owned by the caller.
+    set(name, range, style) {
+        this.setMany(name, [range], style)
+    }
+
+    setMany(name, ranges, style) {
+        this.delete(name)
+        this.append(name, ranges, style)
+    }
+
+    // Adds ranges to an existing group without redrawing the earlier ones.
+    append(name, ranges, style) {
+        const list = ranges.filter(Boolean)
+        if (!list.length) return
         if (this.#native) {
-            CSS.highlights.set(name, new Highlight(range))
+            const existing = CSS.highlights.get(name)
+            if (existing) for (const range of list) existing.add(range)
+            else CSS.highlights.set(name, new Highlight(...list))
+            this.#keys.set(name, [])
             return
         }
-        this.#overlay.add(name, range, rects => {
-            const origin = this.#overlay.element.getBoundingClientRect()
-            return Overlayer.highlight(rects.map(rect => ({
-                ...rect, left: rect.left - origin.left, top: rect.top - origin.top,
-            })), { color: background, opacity: 1 })
-        })
+        const keys = this.#keys.get(name) ?? []
+        this.#keys.set(name, keys)
+        for (const range of list) {
+            const key = `${name}:${keys.length}`
+            keys.push(key)
+            this.#overlay.add(key, range, rects => {
+                const origin = this.#overlay.element.getBoundingClientRect()
+                return Overlayer.highlight(rects.map(rect => ({
+                    ...rect, left: rect.left - origin.left, top: rect.top - origin.top,
+                })), style)
+            })
+        }
     }
 
     delete(name) {
+        const keys = this.#keys.get(name)
         this.#keys.delete(name)
-        if (this.#native) CSS.highlights.delete(name)
-        else this.#overlay.remove(name)
+        if (this.#native) {
+            CSS.highlights.delete(name)
+            return
+        }
+        for (const key of keys ?? []) this.#overlay.remove(key)
     }
 }

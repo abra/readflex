@@ -4,6 +4,7 @@ import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex/app/screens/initialization_failed_screen.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 void main() {
   testWidgets('recovery keeps app theme and hides diagnostics initially', (
@@ -97,5 +98,54 @@ void main() {
       tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
       isNotNull,
     );
+  });
+
+  testWidgets('uses the shared error state inside a 16dp gutter', (
+    tester,
+  ) async {
+    await tester.pumpWidget(screen(() async {}));
+    final state = find.byType(ErrorState);
+    expect(state, findsOneWidget);
+    final context = tester.element(state);
+    final l10n = ReadflexLocalizations.of(context)!;
+    expect(find.byIcon(AppIcons.error), findsOneWidget);
+    expect(find.byIcon(AppIcons.refresh), findsNothing);
+    expect(find.widgetWithText(FilledButton, l10n.appRetry), findsOneWidget);
+    final title = tester.widget<Text>(find.text(l10n.appInitializationFailed));
+    expect(title.style!.fontSize, context.text.titleMedium.fontSize);
+    expect(title.textAlign, TextAlign.center);
+    final scroll = tester.widget<SingleChildScrollView>(
+      find.byType(SingleChildScrollView),
+    );
+    expect(scroll.padding, const EdgeInsets.all(AppSpacing.lg));
+  });
+
+  testWidgets('busy retry keeps its geometry and shows progress', (
+    tester,
+  ) async {
+    final completion = Completer<void>();
+    await tester.pumpWidget(screen(() => completion.future));
+    final idle = tester.getSize(find.byType(FilledButton));
+    await tester.tap(find.byType(FilledButton));
+    await tester.pump();
+    expect(find.byType(ButtonLoadingIndicator), findsOneWidget);
+    expect(tester.getSize(find.byType(FilledButton)), idle);
+    completion.complete();
+    await tester.pumpAndSettle();
+    expect(find.byType(ButtonLoadingIndicator), findsNothing);
+  });
+
+  testWidgets('without a retry callback the message keeps the frame', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      InitializationFailedScreen(
+        error: StateError('x'),
+        stackTrace: StackTrace.empty,
+      ),
+    );
+    expect(find.byType(EmptyState), findsOneWidget);
+    expect(find.byIcon(AppIcons.error), findsOneWidget);
+    expect(find.byType(FilledButton), findsNothing);
   });
 }

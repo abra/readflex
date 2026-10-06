@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'reader_progress_label.dart';
 
 const _kOverlayVisibleDuration = Duration(seconds: 3);
-const _kOverlayAnimDuration = Duration(milliseconds: 200);
 const _kOverlayShowCurve = Curves.easeOutCubic;
 const _kOverlayHideCurve = Curves.easeInCubic;
 
@@ -115,6 +115,7 @@ class _ReaderImagePageProgressOverlayState
       metric.totalPages,
     );
     final colors = context.colors;
+    final l10n = context.l10n;
     final visible =
         _visible && !widget.chromeVisible && !widget.selectionActionsVisible;
     return Positioned(
@@ -126,12 +127,15 @@ class _ReaderImagePageProgressOverlayState
         child: AnimatedOpacity(
           key: const ValueKey('readerImagePageProgressOverlayOpacity'),
           opacity: visible ? 1 : 0,
-          duration: _kOverlayAnimDuration,
+          duration: context.motion(AppMotion.short),
           curve: visible ? _kOverlayShowCurve : _kOverlayHideCurve,
           child: Center(
             child: _ImagePageProgressOverlayPill(
-              text: '$displayed / ${metric.totalPages}',
-              maxText: '${metric.totalPages} / ${metric.totalPages}',
+              text: l10n.readerPageOfTotal(displayed, metric.totalPages),
+              maxText: l10n.readerPageOfTotal(
+                metric.totalPages,
+                metric.totalPages,
+              ),
               panelColor: colors.surface,
               textColor: colors.onSurfaceVariant,
               dividerColor: colors.outlineVariant,

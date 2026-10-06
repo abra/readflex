@@ -1818,13 +1818,13 @@ abstract class ReadflexLocalizations {
   /// No description provided for @readerThemeMist.
   ///
   /// In en, this message translates to:
-  /// **'Graphite'**
+  /// **'Night'**
   String get readerThemeMist;
 
   /// No description provided for @readerThemeNight.
   ///
   /// In en, this message translates to:
-  /// **'Night'**
+  /// **'Graphite'**
   String get readerThemeNight;
 
   /// No description provided for @readerIncreaseBrightness.
@@ -1994,6 +1994,72 @@ abstract class ReadflexLocalizations {
   /// In en, this message translates to:
   /// **'Check your connection or try again later.'**
   String get dictionaryFailureBody;
+
+  /// No description provided for @readerHighlightFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get readerHighlightFilterAll;
+
+  /// No description provided for @readerBrightnessSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get readerBrightnessSystem;
+
+  /// No description provided for @readerPageOfTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'{page} / {total}'**
+  String readerPageOfTotal(int page, int total);
+
+  /// No description provided for @readerAddComment.
+  ///
+  /// In en, this message translates to:
+  /// **'Add comment'**
+  String get readerAddComment;
+
+  /// No description provided for @readerAppearanceSample.
+  ///
+  /// In en, this message translates to:
+  /// **'Aa'**
+  String get readerAppearanceSample;
+
+  /// No description provided for @translationUnknownLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown language'**
+  String get translationUnknownLanguage;
+
+  /// No description provided for @dictionaryDefinitionNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'{number}.'**
+  String dictionaryDefinitionNumber(int number);
+
+  /// No description provided for @importDiscardUrlBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The address you entered will not be saved.'**
+  String get importDiscardUrlBody;
+
+  /// No description provided for @readerTapAreaHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap area'**
+  String get readerTapAreaHint;
+
+  /// No description provided for @importOfflineHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline'**
+  String get importOfflineHint;
+
+  /// No description provided for @importArticleOfflineSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs an internet connection'**
+  String get importArticleOfflineSubtitle;
 }
 
 class _ReadflexLocalizationsDelegate

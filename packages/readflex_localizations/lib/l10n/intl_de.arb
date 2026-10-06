@@ -283,8 +283,8 @@
   "readerThemeSnow": "Schnee",
   "readerThemePaper": "Papier",
   "readerThemeWarm": "Warm",
-  "readerThemeMist": "Graphit",
-  "readerThemeNight": "Nacht",
+  "readerThemeMist": "Nacht",
+  "readerThemeNight": "Graphit",
   "readerIncreaseBrightness": "Helligkeit erhöhen",
   "readerDecreaseBrightness": "Helligkeit verringern",
   "readerUsingSystemBrightness": "Systemhelligkeit: {label}",
@@ -312,5 +312,16 @@
   "dictionaryUnsupportedLanguageTitle": "Sprache nicht verfügbar",
   "dictionaryUnsupportedLanguageBody": "Das Readflex-Wörterbuch unterstützt diese Sprache noch nicht.",
   "dictionaryFailureTitle": "Definition nicht verfügbar",
-  "dictionaryFailureBody": "Prüfe die Verbindung oder versuche es später erneut."
+  "dictionaryFailureBody": "Prüfe die Verbindung oder versuche es später erneut.",
+  "readerHighlightFilterAll": "Alle",
+  "readerBrightnessSystem": "System",
+  "readerPageOfTotal": "{page} / {total}",
+  "readerAddComment": "Kommentar hinzufügen",
+  "readerAppearanceSample": "Aa",
+  "translationUnknownLanguage": "Unbekannte Sprache",
+  "dictionaryDefinitionNumber": "{number}.",
+  "importDiscardUrlBody": "Die eingegebene Adresse wird nicht gespeichert.",
+  "readerTapAreaHint": "Tippbereich",
+  "importOfflineHint": "Du bist offline",
+  "importArticleOfflineSubtitle": "Benötigt eine Internetverbindung"
 }

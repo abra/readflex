@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
+import 'package:reader/src/reader_drawer_messages.dart';
 import 'package:reader/src/reader_search_cubit.dart';
 import 'package:reader/src/reader_search_navigation_bar.dart';
 import 'package:reader/src/reader_search_panel.dart';
@@ -40,8 +41,11 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(find.byType(ErrorState), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
     await tester.tap(find.text('Retry'));
     await tester.pumpAndSettle();
+    expect(find.byType(ErrorState), findsNothing);
     expect(requests, 2);
     expect(cubit.state.query, 'devices');
     expect(cubit.state.recentQueries, ['earlier']);
@@ -173,6 +177,83 @@ void main() {
     }
   }
 
+  testWidgets('reopening scrolls the active result into view', (tester) async {
+    viewport(tester, const Size(390, 844));
+    final cubit = await seed(tester);
+    cubit.resultSelected(index: 600);
+    final visible = ValueNotifier(false);
+    addTearDown(visible.dispose);
+    await tester.pumpWidget(
+      _app(
+        cubit: cubit,
+        child: ValueListenableBuilder<bool>(
+          valueListenable: visible,
+          builder: (_, shown, _) => ReaderSearchPanel(
+            visible: shown,
+            format: BookFormat.epub,
+            pageProgressionRtl: false,
+            onClose: () => visible.value = false,
+            onSearch: (_) => const Stream.empty(),
+            onResultSelected: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final active = find.byKey(const ValueKey('reader-search-result-600'));
+    expect(active, findsNothing);
+
+    visible.value = true;
+    await tester.pumpAndSettle();
+    expect(active, findsOneWidget);
+    final list = tester.getRect(find.byType(ListView));
+    final tile = tester.getRect(active);
+    expect(tile.top, greaterThanOrEqualTo(list.top));
+    expect(tile.bottom, lessThanOrEqualTo(list.bottom));
+    expect(tester.widget<ReaderSearchResultTile>(active).selected, isTrue);
+
+    // Reopening without an active result does not move the list.
+    visible.value = false;
+    await tester.pumpAndSettle();
+    final offset = tester
+        .state<ScrollableState>(find.byType(Scrollable).first)
+        .position
+        .pixels;
+    cubit.reset();
+    visible.value = true;
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .state<ScrollableState>(find.byType(Scrollable).first)
+          .position
+          .pixels,
+      offset,
+    );
+  });
+
+  testWidgets('search field uses the keyboard search action', (tester) async {
+    final cubit = ReaderSearchCubit();
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      _app(
+        cubit: cubit,
+        child: ReaderSearchPanel(
+          visible: true,
+          format: BookFormat.epub,
+          pageProgressionRtl: false,
+          onClose: () {},
+          onSearch: (_) => const Stream.empty(),
+          onResultSelected: (_) {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).textInputAction,
+      TextInputAction.search,
+    );
+  });
+
   testWidgets('result tap passes its index and exposes the active result', (
     tester,
   ) async {
@@ -196,6 +277,15 @@ void main() {
     await tester.pumpAndSettle();
     final tile = find.byKey(const ValueKey('reader-search-result-1'));
     expect(tester.widget<ReaderSearchResultTile>(tile).selected, isTrue);
+    // Active result fills the panel edge to edge without the themed radius.
+    expect(
+      tester
+          .widget<ListTile>(
+            find.descendant(of: tile, matching: find.byType(ListTile)),
+          )
+          .shape,
+      const RoundedRectangleBorder(),
+    );
     await tester.tap(tile);
     expect(selected, 1);
   });
@@ -329,6 +419,7 @@ void main() {
             ),
           );
           await tester.pumpAndSettle();
+          expect(find.byType(AppPlainIconButton), findsNWidgets(3));
           for (final element in find.byType(IconButton).evaluate()) {
             final button = element.widget as IconButton;
             final ink = tester.widget<InkWell>(
@@ -338,6 +429,9 @@ void main() {
               ),
             );
             expect(ink.customBorder, isA<CircleBorder>());
+            // Resolve like IconButton does: widget style, then the global
+            // theme, then Material's transparent default.
+            final themed = IconButtonTheme.of(element).style?.backgroundColor;
             for (final states in [
               <WidgetState>{},
               {WidgetState.disabled},
@@ -346,7 +440,9 @@ void main() {
               {WidgetState.hovered},
             ]) {
               expect(
-                button.style?.backgroundColor?.resolve(states),
+                button.style?.backgroundColor?.resolve(states) ??
+                    themed?.resolve(states) ??
+                    Colors.transparent,
                 Colors.transparent,
               );
             }
@@ -383,71 +479,73 @@ void main() {
     }
   }
 
-  testWidgets(
-    'text actions dim on press without painting a rectangular overlay',
-    (
-      tester,
-    ) async {
-      viewport(tester, const Size(390, 844));
-      final cubit = await seed(tester, count: 22);
-      cubit.resultSelected(
-        index: 5,
-        returnLocation: const ReaderSearchLocation(
-          cfi: 'origin',
-          fraction: 0.12,
-        ),
-      );
-      var opened = 0;
-      var returned = 0;
-      await tester.pumpWidget(
-        _app(
-          cubit: cubit,
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: ReaderSearchNavigationBar(
-              state: cubit.state,
-              onOpenSearch: () => opened++,
-              onPrevious: () {},
-              onNext: () {},
-              onEndSearch: () {},
-              onReturn: () => returned++,
-            ),
+  testWidgets('text actions keep the themed ink without an opacity wrapper', (
+    tester,
+  ) async {
+    viewport(tester, const Size(390, 844));
+    final cubit = await seed(tester, count: 22);
+    cubit.resultSelected(
+      index: 5,
+      returnLocation: const ReaderSearchLocation(
+        cfi: 'origin',
+        fraction: 0.12,
+      ),
+    );
+    var opened = 0;
+    var returned = 0;
+    await tester.pumpWidget(
+      _app(
+        cubit: cubit,
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: ReaderSearchNavigationBar(
+            state: cubit.state,
+            onOpenSearch: () => opened++,
+            onPrevious: () {},
+            onNext: () {},
+            onEndSearch: () {},
+            onReturn: () => returned++,
           ),
         ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    for (final key in ['reader-search-reopen', 'reader-search-return']) {
+      final action = find.byKey(ValueKey(key));
+      expect(
+        find.descendant(of: action, matching: find.byType(Opacity)),
+        findsNothing,
       );
+      final button = tester.widget<TextButton>(action);
+      expect(button.style?.splashFactory, isNull);
+      expect(button.style?.overlayColor, isNull);
+      expect(button.style?.foregroundBuilder, isNull);
+      final ink = tester.widget<InkWell>(
+        find.descendant(of: action, matching: find.byType(InkWell)),
+      );
+      // The themed press feedback is the pressed overlay tint.
+      expect(
+        ink.overlayColor!.resolve({WidgetState.pressed}),
+        isNot(Colors.transparent),
+      );
+      final rect = tester.getRect(action);
+      final gesture = await tester.startGesture(rect.center);
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(tester.getRect(action), rect);
+      await gesture.up();
       await tester.pumpAndSettle();
-      for (final key in ['reader-search-reopen', 'reader-search-return']) {
-        final action = find.byKey(ValueKey(key));
-        final rect = tester.getRect(action);
-        final gesture = await tester.startGesture(rect.center);
-        await tester.pump(const Duration(milliseconds: 150));
-        final ink = tester.widget<InkWell>(
-          find.descendant(of: action, matching: find.byType(InkWell)),
-        );
-        expect(
-          ink.overlayColor!.resolve({WidgetState.pressed}),
-          Colors.transparent,
-        );
-        expect(ink.splashFactory, NoSplash.splashFactory);
-        final content = find.descendant(
-          of: action,
-          matching: find.byType(Opacity),
-        );
-        expect(tester.widget<Opacity>(content).opacity, lessThan(1));
-        expect(tester.getRect(action), rect);
-        await gesture.up();
-        await tester.pumpAndSettle();
-        expect(tester.widget<Opacity>(content).opacity, 1);
-        Focus.of(tester.element(content)).requestFocus();
-        await tester.pumpAndSettle();
-        final material = tester.widget<Material>(
-          find.descendant(of: action, matching: find.byType(Material)),
-        );
-        expect((material.shape! as OutlinedBorder).side.width, greaterThan(0));
-      }
-      expect((opened, returned), (1, 1));
-    },
-  );
+    }
+    for (final tooltip in ['Previous match', 'Next match', 'End search']) {
+      expect(
+        find.ancestor(
+          of: find.byTooltip(tooltip),
+          matching: find.byType(AppPlainIconButton),
+        ),
+        findsOneWidget,
+      );
+    }
+    expect((opened, returned), (1, 1));
+  });
 
   for (final size in [
     const Size(320, 568),
@@ -599,11 +697,16 @@ void main() {
                   Stream.value(const ReaderSearchDone(requestId: 2)),
             );
             await tester.pumpAndSettle();
+            expect(find.byType(EmptyState), findsOneWidget);
             final emptyMessage = tester.getRect(
               find.text(l10n.readerNoResultsFound),
             );
-            expect(emptyMessage.left, field.left);
-            expect(emptyMessage.right, field.right);
+            expect(emptyMessage.left, greaterThanOrEqualTo(field.left));
+            expect(emptyMessage.right, lessThanOrEqualTo(field.right));
+            expect(
+              emptyMessage.center.dx,
+              moreOrLessEquals(field.center.dx, epsilon: 1),
+            );
             expect(tester.takeException(), isNull);
           },
         );
@@ -693,6 +796,165 @@ void main() {
       }
     },
   );
+  testWidgets('search placeholders use the shared states', (tester) async {
+    viewport(tester, const Size(390, 844));
+    final cubit = ReaderSearchCubit();
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      _app(
+        cubit: cubit,
+        child: ReaderSearchPanel(
+          visible: true,
+          format: BookFormat.epub,
+          pageProgressionRtl: false,
+          onClose: () {},
+          onResultSelected: (_) {},
+          onSearch: (_) => Stream.value(const ReaderSearchDone(requestId: 1)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = tester.element(find.byType(SearchField)).l10n;
+    final prompt = tester.widget<EmptyState>(find.byType(EmptyState));
+    expect(prompt.compact, isTrue);
+    expect(prompt.icon, isNull);
+    expect(
+      find.text(readerSearchPromptMessage(l10n, BookFormat.epub)),
+      findsOneWidget,
+    );
+    expect(find.byType(ErrorState), findsNothing);
+
+    final fieldPadding = tester.widget<Padding>(
+      find
+          .ancestor(
+            of: find.byType(SearchField),
+            matching: find.byType(Padding),
+          )
+          .first,
+    );
+    expect(fieldPadding.padding, const EdgeInsets.all(AppSpacing.lg));
+
+    cubit.recentQuerySelected(
+      'unmatched',
+      searchBook: (_) => Stream.value(const ReaderSearchDone(requestId: 2)),
+    );
+    await tester.pumpAndSettle();
+    final empty = tester.widget<EmptyState>(find.byType(EmptyState));
+    expect(empty.compact, isTrue);
+    expect(empty.icon, AppIcons.searchOff);
+    expect(empty.message, l10n.readerNoResultsFound);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('search header close uses the default 20dp glyph', (
+    tester,
+  ) async {
+    viewport(tester, const Size(390, 844));
+    final cubit = ReaderSearchCubit(initialRecentQueries: ['devices']);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      _app(
+        cubit: cubit,
+        child: ReaderSearchPanel(
+          visible: true,
+          format: BookFormat.epub,
+          pageProgressionRtl: false,
+          onClose: () {},
+          onResultSelected: (_) {},
+          onSearch: (_) => const Stream.empty(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final close = find.byTooltip('Close');
+    expect(tester.getSize(close), const Size.square(AppSizes.buttonHeight));
+    final closeIcon = tester.getRect(find.byIcon(AppIcons.close));
+    expect(closeIcon.size, const Size.square(AppIconSize.sm));
+    expect(390 - closeIcon.right, AppSpacing.lg);
+    final removeIcon = tester.getRect(find.byIcon(AppIcons.delete));
+    expect(removeIcon.size, const Size.square(AppIconSize.sm));
+    expect(removeIcon.right, closeIcon.right);
+  });
+
+  for (final rtl in [false, true]) {
+    testWidgets('hidden search panel slides toward the leading edge rtl=$rtl', (
+      tester,
+    ) async {
+      viewport(tester, const Size(390, 844));
+      final cubit = ReaderSearchCubit();
+      addTearDown(cubit.close);
+      await tester.pumpWidget(
+        _app(
+          cubit: cubit,
+          rtl: rtl,
+          child: ReaderSearchPanel(
+            visible: false,
+            format: BookFormat.epub,
+            pageProgressionRtl: false,
+            onClose: () {},
+            onResultSelected: (_) {},
+            onSearch: (_) => const Stream.empty(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final slide = tester.widget<AnimatedSlide>(find.byType(AnimatedSlide));
+      expect(slide.offset, Offset(rtl ? 1 : -1, 0));
+      expect(slide.duration, AppMotion.short);
+    });
+  }
+
+  testWidgets('search panel settles in one frame under reduced motion', (
+    tester,
+  ) async {
+    viewport(tester, const Size(390, 844));
+    final cubit = ReaderSearchCubit();
+    addTearDown(cubit.close);
+    final visible = ValueNotifier(false);
+    addTearDown(visible.dispose);
+    await tester.pumpWidget(
+      _app(
+        cubit: cubit,
+        disableAnimations: true,
+        child: ValueListenableBuilder<bool>(
+          valueListenable: visible,
+          builder: (_, shown, _) => ReaderSearchPanel(
+            visible: shown,
+            format: BookFormat.epub,
+            pageProgressionRtl: false,
+            onClose: () {},
+            onResultSelected: (_) {},
+            onSearch: (_) => const Stream.empty(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<AnimatedSlide>(find.byType(AnimatedSlide)).duration,
+      Duration.zero,
+    );
+    visible.value = true;
+    await tester.pump();
+    expect(
+      tester.widget<AnimatedSlide>(find.byType(AnimatedSlide)).offset,
+      Offset.zero,
+    );
+    expect(
+      tester
+          .getRect(
+            find
+                .descendant(
+                  of: find.byType(ReaderSearchPanel),
+                  matching: find.byType(Material),
+                )
+                .first,
+          )
+          .left,
+      0,
+    );
+    expect(tester.hasRunningAnimations, isFalse);
+  });
 }
 
 Widget _app({
@@ -703,6 +965,7 @@ Widget _app({
   EdgeInsets safePadding = EdgeInsets.zero,
   bool dark = false,
   bool rtl = false,
+  bool disableAnimations = false,
 }) {
   return MaterialApp(
     theme: dark ? AppTheme.dark() : AppTheme.light(),
@@ -714,6 +977,7 @@ Widget _app({
         viewInsets: EdgeInsets.only(bottom: inset),
         padding: safePadding,
         viewPadding: safePadding,
+        disableAnimations: disableAnimations,
       ),
       child: Directionality(
         textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
